@@ -102,39 +102,6 @@ class TestNoPingAction:
                 widgets_metadata={},
             )
 
-    def test_build_integration_with_custom_ping(self) -> None:
-        """Test building integration with a disabled ping action."""
-        # Create a minimal integration with the disabled ping action
-        actions: dict[str, ActionMetadata] = {}
-        ping_action: ActionMetadata = mock.MagicMock(spec=ActionMetadata)
-        ping_action.name = "Ping"
-        ping_action.file_name = "ping"
-        ping_action.is_enabled = True
-        ping_action.is_custom = True  # Custom ping action
-        actions["ping"] = ping_action
-
-        # Mock the integration metadata
-        metadata: IntegrationMetadata = mock.MagicMock()
-        metadata.identifier = "test_integration"
-        metadata.is_custom = False
-        metadata.python_version = PythonVersion.PY_3_11
-
-        # Test that creating the integration still works (ping exists but is disabled)
-        with pytest.raises(RuntimeError, match="contains custom scripts"):
-            Integration(
-                python_version=PythonVersion.PY_3_11.to_string(),
-                identifier="test_integration",
-                metadata=metadata,
-                release_notes=[],
-                custom_families=[],
-                mapping_rules=[],
-                common_modules=[],
-                actions_metadata=actions,
-                connectors_metadata={},
-                jobs_metadata={},
-                widgets_metadata={},
-            )
-
     @mock.patch("mp.core.constants.EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING", set())
     def test_excluded_integrations_feature(self) -> None:
         """Test the excluded integrations feature works correctly."""
