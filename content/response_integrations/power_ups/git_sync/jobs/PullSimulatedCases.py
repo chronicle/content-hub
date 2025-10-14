@@ -17,6 +17,8 @@ from __future__ import annotations
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
+from TIPCommon.rest.soar_api import import_simulated_case
+
 from ..core.GitSyncManager import GitSyncManager
 
 SCRIPT_NAME = "Pull Simulated Cases"
@@ -42,7 +44,10 @@ def main():
         for case_name in case_names:
             siemplify.LOGGER.info(f"Pulling {case_name}")
             case = gitsync.content.get_simulated_case(case_name)
-            gitsync.api.import_simulated_case(case)
+            import_simulated_case(
+                chronicle_soar=siemplify,
+                case_data=case
+            )
             siemplify.LOGGER.info(f"Successfully pulled simulated case: {case_name}")
 
     except Exception as e:
