@@ -20,7 +20,6 @@ Used for things such as path manipulation and file content operations.
 from __future__ import annotations
 
 import base64
-import dataclasses
 import json
 import pathlib
 import shutil
@@ -29,14 +28,15 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 import mp.core.constants
+from mp.validate.validators import IntegrationParityValidator
 
 from . import config, constants
-from .custom_types import JsonString, ManagerName, Products
+from .custom_types import JsonString, ManagerName, Products, YamlFileContent
 from .validators import validate_png_content, validate_svg_content
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Sequence
 
 VALID_REPEATED_FILES: set[str] = {"__init__.py"}
 
@@ -383,7 +383,7 @@ def flatten_dir(path: pathlib.Path, dest: pathlib.Path) -> None:
             flatten_dir(child, dest)
 
 
-def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: pathlib.Path) -> None:
+def write_yaml_to_file(content: YamlFileContent | Sequence[Any], path: pathlib.Path) -> None:
     """Write content into a YAML file.
 
     Args:
@@ -406,80 +406,6 @@ def remove_files_by_suffix_from_dir(dir_: pathlib.Path, suffix: str) -> None:
     for file in dir_.rglob(f"*{suffix}"):
         if file.is_file() and is_path_in_marketplace(file):
             file.unlink(missing_ok=True)
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class IntegrationParityValidator:
-    path: pathlib.Path
-
-    def validate_integration_components_parity(self) -> None:
-        """Validate the components of the integration.
-
-        This method ensures that all critical parts of the integration,
-        including actions, connectors, jobs, and widgets,
-        adhere to the required validation rules.
-        Meaning there is parity between scripts and metadata files 1:1
-
-        """
-        self._validate_actions()
-        self._validate_connectors()
-        self._validate_jobs()
-        self._validate_widgets()
-
-    def _validate_actions(self) -> None:
-        actions: pathlib.Path = self.path / constants.ACTIONS_DIR
-        if actions.exists():
-            _validate_script_metadata_parity(actions, ".py", constants.DEF_FILE_SUFFIX)
-
-    def _validate_connectors(self) -> None:
-        connectors: pathlib.Path = self.path / constants.CONNECTORS_DIR
-        if connectors.exists():
-            _validate_script_metadata_parity(
-                directory=connectors,
-                script_suffix=".py",
-                metadata_suffix=constants.DEF_FILE_SUFFIX,
-            )
-
-    def _validate_jobs(self) -> None:
-        jobs: pathlib.Path = self.path / constants.JOBS_DIR
-        if jobs.exists():
-            _validate_script_metadata_parity(jobs, ".py", constants.DEF_FILE_SUFFIX)
-
-    def _validate_widgets(self) -> None:
-        widgets: pathlib.Path = self.path / constants.WIDGETS_DIR
-        if widgets.exists():
-            _validate_script_metadata_parity(
-                directory=widgets,
-                script_suffix=".html",
-                metadata_suffix=constants.DEF_FILE_SUFFIX,
-            )
-
-
-def _validate_script_metadata_parity(
-    directory: pathlib.Path,
-    script_suffix: str,
-    metadata_suffix: str,
-) -> None:
-    _validate_matching_files(directory, script_suffix, metadata_suffix)
-    _validate_matching_files(directory, metadata_suffix, script_suffix)
-
-
-def _validate_matching_files(
-    directory: pathlib.Path,
-    primary_suffix: str,
-    secondary_suffix: str,
-) -> None:
-    for file in directory.rglob(f"*{primary_suffix}"):
-        if file.name == constants.PACKAGE_FILE:
-            continue
-
-        expected_file: pathlib.Path = file.with_suffix(secondary_suffix)
-        if not expected_file.exists():
-            msg: str = (
-                f"The {directory.name} directory has a file '{file.name}' without a"
-                f"  matching '{secondary_suffix}' file"
-            )
-            raise RuntimeError(msg)
 
 
 def is_commercial_integration(path: pathlib.Path) -> bool:
@@ -591,8 +517,8 @@ def write_str_to_json_file(json_path: pathlib.Path, json_content: JsonString) ->
         json.dump(json_content, f_json, indent=4)
 
 
-def load_yaml_file(path: pathlib.Path) -> dict[str, Any]:
-    """Read a file and loads its content as YAML.
+def load_yaml_file(path: pathlib.Path) -> YamlFileContent:
+    """Read a file and load its content as YAML.
 
     Raises:
         ValueError: If the file doesn't exist or is an invalid YAML.

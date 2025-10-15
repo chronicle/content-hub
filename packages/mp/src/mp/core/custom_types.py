@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, Generic, NamedTuple, TypeAlias, TypeVar
 
 from . import constants
@@ -38,6 +38,7 @@ JsonString: TypeAlias = str
 JobName: TypeAlias = str
 WidgetName: TypeAlias = str
 ManagerName: TypeAlias = str
+YamlFileContent: TypeAlias = Mapping[str, Any]
 
 
 class RepositoryType(enum.Enum):
