@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_job_param, extract_configuration_param
+from TIPCommon.extraction import extract_configuration_param, extract_job_param
 
-
-from ..core.data_table_manager import DataTableManager
 from ..core.config import Config
+from ..core.data_table_manager import DataTableManager
 
 
 @output_handler

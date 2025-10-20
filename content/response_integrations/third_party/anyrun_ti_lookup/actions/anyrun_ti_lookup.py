@@ -27,13 +27,13 @@ def initialize_lookup(
     lookup_entity: str,
     entity_identifier: str,
     lookup_depth: int,
-    verify_ssl: bool
+    verify_ssl: bool,
 ) -> str:
     with LookupConnector(
         token,
         integration=Config.VERSION,
         proxy=setup_action_proxy(siemplify),
-        verify_ssl=verify_ssl
+        verify_ssl=verify_ssl,
     ) as connector:
         report = connector.get_intelligence(
             lookup_depth=lookup_depth, **{lookup_entity: entity_identifier}
@@ -77,7 +77,9 @@ def main():
         verdict = initialize_lookup(siemplify, token, "query", query, lookup_depth, verify_ssl)
         results.append(("Query", "query", verdict))
     else:
-        entity_identifiers = convert_comma_separated_to_list(siemplify.extract_action_param("Identifiers"))
+        entity_identifiers = convert_comma_separated_to_list(
+            siemplify.extract_action_param("Identifiers")
+        )
         entity_types = convert_comma_separated_to_list(siemplify.extract_action_param("Types"))
 
         if not any([entity_identifiers, entity_types]):

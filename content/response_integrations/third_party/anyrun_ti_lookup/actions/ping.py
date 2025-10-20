@@ -35,7 +35,7 @@ def main():
         with LookupConnector(
             api_key=lookup_token,
             integration=Config.VERSION,
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         ) as connector:
             connector.check_authorization()
 
@@ -55,11 +55,7 @@ def main():
     siemplify.end(output_message, is_succes, status)
 
 
-def check_proxy(
-    siemplify: SiemplifyAction,
-    token: str,
-    verify_ssl: bool
-) -> None:
+def check_proxy(siemplify: SiemplifyAction, token: str, verify_ssl: bool) -> None:
     try:
         host = extract_configuration_param(
             siemplify, Config.INTEGRATION_NAME, param_name="Proxy host"
@@ -81,11 +77,7 @@ def check_proxy(
         else:
             proxy_url = f"https://{host}:{port}"
 
-        with LookupConnector(
-            api_key=token,
-            proxy=proxy_url,
-            verify_ssl=verify_ssl
-        ) as connector:
+        with LookupConnector(api_key=token, proxy=proxy_url, verify_ssl=verify_ssl) as connector:
             connector.check_proxy()
 
     except TypeError:

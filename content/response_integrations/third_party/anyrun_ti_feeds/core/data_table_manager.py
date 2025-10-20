@@ -72,7 +72,7 @@ class DataTableManager:
             api_key=self._token,
             integration=Config.VERSION,
             proxy=setup_job_proxy(self._siemplify),
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         ) as connector:
             for collection, data_table_name in Config.TAXII_DATATABLES.items():
                 if self._is_datatable_exists(data_table_name):

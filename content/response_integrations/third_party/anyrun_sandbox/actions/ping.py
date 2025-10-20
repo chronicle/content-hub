@@ -32,7 +32,7 @@ def main():
         with BaseSandboxConnector(
             api_key=sandbox_token,
             integration=Config.VERSION,
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         ) as connector:
             connector.check_authorization()
 
@@ -77,7 +77,7 @@ def check_proxy(siemplify: SiemplifyAction, token: str, verify_ssl: bool) -> Non
         with BaseSandboxConnector(
             api_key=token,
             proxy=proxy_url,
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         ) as connector:
             connector.check_proxy()
 

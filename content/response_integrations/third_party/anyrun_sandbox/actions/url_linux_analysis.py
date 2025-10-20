@@ -37,7 +37,7 @@ def main():
             token,
             ntegration=Config.VERSION,
             proxy=setup_action_proxy(siemplify),
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         ) as connector:
             task_uuid = connector.run_url_analysis(
                 obj_url=obj_url,

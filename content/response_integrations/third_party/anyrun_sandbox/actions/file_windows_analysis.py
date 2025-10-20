@@ -39,7 +39,7 @@ def main():
         token,
         integration=Config.VERSION,
         proxy=setup_action_proxy(siemplify),
-        verify_ssl=verify_ssl
+        verify_ssl=verify_ssl,
     ) as connector:
         task_uuid = connector.run_file_analysis(
             attachment_data,
