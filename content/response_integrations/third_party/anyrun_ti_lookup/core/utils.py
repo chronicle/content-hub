@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shlex import quote
+
 from TIPCommon.extraction import extract_configuration_param
 
 from ..core.config import Config
@@ -55,27 +57,13 @@ def setup_action_proxy(siemplify) -> str | None:
     if extract_configuration_param(
         siemplify, Config.INTEGRATION_NAME, param_name="Enable proxy", input_type=bool
     ):
-        host = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Proxy host"
+        host = quote(
+            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy host")
         )
-        port = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Proxy port"
+        port = quote(
+            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy port")
         )
 
-        proxy_url = f"https://{host}:{port}"
-
-        if extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Enable proxy auth", input_type=bool
-        ):
-            username = extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Proxy username"
-            )
-            password = extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Proxy password"
-            )
-
-            proxy_url = f"https://{username}:{password}@{host}:{port}"
-
-        return proxy_url
+        return f"https://{host}:{port}"
 
     return None

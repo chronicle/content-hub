@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shlex import quote
+
 from TIPCommon.extraction import extract_job_param
 
 
@@ -90,17 +92,9 @@ def build_taxii_indicators_payload(feeds: list[dict]) -> dict[str, list[dict]] |
 def setup_job_proxy(siemplify) -> str | None:
     """Generates a proxy connection string"""
     if extract_job_param(siemplify, param_name="Enable proxy", input_type=bool):
-        host = extract_job_param(siemplify, param_name="Proxy host")
-        port = extract_job_param(siemplify, param_name="Proxy port")
+        host = quote(extract_job_param(siemplify, param_name="Proxy host"))
+        port = quote(extract_job_param(siemplify, param_name="Proxy port"))
 
-        proxy_url = f"https://{host}:{port}"
-
-        if extract_job_param(siemplify, param_name="Enable proxy auth", input_type=bool):
-            username = extract_job_param(siemplify, param_name="Proxy username")
-            password = extract_job_param(siemplify, param_name="Proxy password")
-
-            proxy_url = f"https://{username}:{password}@{host}:{port}"
-
-        return proxy_url
+        return f"https://{host}:{port}"
 
     return None

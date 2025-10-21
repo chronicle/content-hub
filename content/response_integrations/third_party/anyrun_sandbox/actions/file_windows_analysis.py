@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from base64 import b64encode
+from shlex import quote
 
 from anyrun.connectors import SandboxConnector
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -19,14 +20,18 @@ from ..core.utils import prepare_base_params, prepare_report_comment, setup_acti
 def main():
     siemplify = SiemplifyAction()
 
-    token = extract_configuration_param(
-        siemplify, Config.INTEGRATION_NAME, param_name="ANYRUN Sandbox API KEY", is_mandatory=True
+    token = quote(
+        extract_configuration_param(
+            siemplify,
+            Config.INTEGRATION_NAME,
+            param_name="ANYRUN Sandbox API KEY",
+            is_mandatory=True,
+        )
     )
 
-    verify_ssl = extract_configuration_param(
-        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL"
+    verify_ssl = quote(
+        extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL")
     )
-
     attachments = siemplify.get_attachments()
 
     if not attachments:
@@ -44,12 +49,16 @@ def main():
         task_uuid = connector.run_file_analysis(
             attachment_data,
             attachment_name,
-            env_version=extract_action_param(siemplify, param_name="Env Version"),
-            env_bitness=extract_action_param(siemplify, param_name="Env Bitness"),
-            env_type=extract_action_param(siemplify, param_name="Env Type"),
-            obj_ext_startfolder=extract_action_param(siemplify, param_name="Obj Ext StartFolder"),
-            obj_ext_cmd=extract_action_param(siemplify, param_name="Obj Ext Cmd"),
-            obj_force_elevation=extract_action_param(siemplify, param_name="Obj Force Elevation"),
+            env_version=quote(extract_action_param(siemplify, param_name="Env Version")),
+            env_bitness=quote(extract_action_param(siemplify, param_name="Env Bitness")),
+            env_type=quote(extract_action_param(siemplify, param_name="Env Type")),
+            obj_ext_startfolder=quote(
+                extract_action_param(siemplify, param_name="Obj Ext StartFolder")
+            ),
+            obj_ext_cmd=quote(extract_action_param(siemplify, param_name="Obj Ext Cmd")),
+            obj_force_elevation=quote(
+                extract_action_param(siemplify, param_name="Obj Force Elevation")
+            ),
             **prepare_base_params(siemplify),
         )
 

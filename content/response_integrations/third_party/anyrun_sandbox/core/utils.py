@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shlex import quote
+
 from TIPCommon.extraction import (
     extract_action_param,
     extract_configuration_param,
@@ -32,21 +34,25 @@ def prepare_report_comment(results: list[dict]) -> str:
 def prepare_base_params(siemplify) -> dict[str, str]:
     """Extracts analysis options"""
     return {
-        "opt_timeout": extract_action_param(siemplify, param_name="Opt Timeout"),
-        "opt_network_connect": extract_action_param(siemplify, param_name="Opt Network Connect"),
-        "opt_network_fakenet": extract_action_param(siemplify, param_name="Opt Network Fakenet"),
-        "opt_network_tor": extract_action_param(siemplify, param_name="Opt Network Tor"),
-        "opt_network_geo": extract_action_param(siemplify, param_name="Opt Network Geo"),
-        "opt_network_mitm": extract_action_param(siemplify, param_name="Opt Network Mitm"),
-        "opt_network_residential_proxy": extract_action_param(
-            siemplify, param_name="Opt Network Residential Proxy"
+        "opt_timeout": quote(extract_action_param(siemplify, param_name="Opt Timeout In Seconds")),
+        "opt_network_connect": quote(
+            extract_action_param(siemplify, param_name="Opt Network Connect")
         ),
-        "opt_network_residential_proxy_geo": extract_action_param(
-            siemplify, param_name="Opt Network Residential Proxy Geo"
+        "opt_network_fakenet": quote(
+            extract_action_param(siemplify, param_name="Opt Network Fakenet")
         ),
-        "opt_privacy_type": extract_action_param(siemplify, param_name="Opt Privacy Type"),
-        "env_locale": extract_action_param(siemplify, param_name="Env Locale"),
-        "user_tags": extract_action_param(siemplify, param_name="User Tags"),
+        "opt_network_tor": quote(extract_action_param(siemplify, param_name="Opt Network Tor")),
+        "opt_network_geo": quote(extract_action_param(siemplify, param_name="Opt Network Geo")),
+        "opt_network_mitm": quote(extract_action_param(siemplify, param_name="Opt Network Mitm")),
+        "opt_network_residential_proxy": quote(
+            extract_action_param(siemplify, param_name="Opt Network Residential Proxy")
+        ),
+        "opt_network_residential_proxy_geo": quote(
+            extract_action_param(siemplify, param_name="Opt Network Residential Proxy Geo")
+        ),
+        "opt_privacy_type": quote(extract_action_param(siemplify, param_name="Opt Privacy Type")),
+        "env_locale": quote(extract_action_param(siemplify, param_name="Env Locale")),
+        "user_tags": quote(extract_action_param(siemplify, param_name="User Tags")),
     }
 
 
@@ -128,27 +134,13 @@ def setup_action_proxy(siemplify) -> str | None:
     if extract_configuration_param(
         siemplify, Config.INTEGRATION_NAME, param_name="Enable proxy", input_type=bool
     ):
-        host = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Proxy host"
+        host = quote(
+            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy host")
         )
-        port = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Proxy port"
+        port = quote(
+            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy port")
         )
 
-        proxy_url = f"https://{host}:{port}"
-
-        if extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Enable proxy auth", input_type=bool
-        ):
-            username = extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Proxy username"
-            )
-            password = extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Proxy password"
-            )
-
-            proxy_url = f"https://{username}:{password}@{host}:{port}"
-
-        return proxy_url
+        return f"https://{host}:{port}"
 
     return None

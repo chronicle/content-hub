@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from base64 import b64encode
+from shlex import quote
 
 from anyrun.connectors import SandboxConnector
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -19,15 +20,20 @@ from ..core.utils import prepare_base_params, prepare_report_comment, setup_acti
 def main():
     siemplify = SiemplifyAction()
 
-    token = extract_configuration_param(
-        siemplify, Config.INTEGRATION_NAME, param_name="ANYRUN Sandbox API KEY", is_mandatory=True
+    token = quote(
+        extract_configuration_param(
+            siemplify,
+            Config.INTEGRATION_NAME,
+            param_name="ANYRUN Sandbox API KEY",
+            is_mandatory=True,
+        )
     )
 
-    verify_ssl = extract_configuration_param(
-        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL"
+    verify_ssl = quote(
+        extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL")
     )
 
-    urls = extract_action_param(siemplify, param_name="Url", is_mandatory=True)
+    urls = quote(extract_action_param(siemplify, param_name="Url", is_mandatory=True))
 
     if not urls:
         siemplify.end("Destination URL is not found.", False, EXECUTION_STATE_FAILED)

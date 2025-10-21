@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shlex import quote
+
 from anyrun import RunTimeException
 from anyrun.connectors.sandbox.base_connector import BaseSandboxConnector
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -15,12 +17,17 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{Config.INTEGRATION_NAME} - Ping"
 
-    sandbox_token = extract_configuration_param(
-        siemplify, Config.INTEGRATION_NAME, param_name="ANYRUN Sandbox API KEY", is_mandatory=True
+    sandbox_token = quote(
+        extract_configuration_param(
+            siemplify,
+            Config.INTEGRATION_NAME,
+            param_name="ANYRUN Sandbox API KEY",
+            is_mandatory=True,
+        )
     )
 
-    verify_ssl = extract_configuration_param(
-        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL"
+    verify_ssl = quote(
+        extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL")
     )
 
     try:
@@ -30,9 +37,7 @@ def main():
             check_proxy(siemplify, sandbox_token, verify_ssl)
 
         with BaseSandboxConnector(
-            api_key=sandbox_token,
-            integration=Config.VERSION,
-            verify_ssl=verify_ssl,
+            api_key=sandbox_token, integration=Config.VERSION, verify_ssl=verify_ssl
         ) as connector:
             connector.check_authorization()
 
@@ -54,30 +59,16 @@ def main():
 
 def check_proxy(siemplify: SiemplifyAction, token: str, verify_ssl: bool) -> None:
     try:
-        host = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Proxy host"
-        )
-        port = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Proxy port"
+        host = quote(
+            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy host")
         )
 
-        if extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Enable proxy auth", input_type=bool
-        ):
-            username = extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Proxy username"
-            )
-            password = extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Proxy password"
-            )
-            proxy_url = f"https://{username}:{password}@{host}:{port}"
-        else:
-            proxy_url = f"https://{host}:{port}"
+        port = quote(
+            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy port")
+        )
 
         with BaseSandboxConnector(
-            api_key=token,
-            proxy=proxy_url,
-            verify_ssl=verify_ssl,
+            api_key=token, proxy=f"https://{host}:{port}", verify_ssl=verify_ssl
         ) as connector:
             connector.check_proxy()
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from http import HTTPStatus
+from shlex import quote
 
 from google.auth.transport import Response, requests
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -20,24 +21,32 @@ class DataTableManager:
     """Provides methods to manage IOCs and interact with DataTables"""
 
     def __init__(self, siemplify: SiemplifyAction) -> None:
-        google_secops_project_id = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Project ID", is_mandatory=True
+        google_secops_project_id = quote(
+            extract_configuration_param(
+                siemplify, Config.INTEGRATION_NAME, param_name="Project ID", is_mandatory=True
+            )
         )
 
-        google_secops_project_location = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Project location", is_mandatory=True
+        google_secops_project_location = quote(
+            extract_configuration_param(
+                siemplify, Config.INTEGRATION_NAME, param_name="Project location", is_mandatory=True
+            )
         )
 
-        google_secops_instance_id = extract_configuration_param(
-            siemplify, Config.INTEGRATION_NAME, param_name="Instance ID", is_mandatory=True
+        google_secops_instance_id = quote(
+            extract_configuration_param(
+                siemplify, Config.INTEGRATION_NAME, param_name="Instance ID", is_mandatory=True
+            )
         )
 
         google_secops_sevice_account_json = json.loads(
-            extract_configuration_param(
-                siemplify,
-                Config.INTEGRATION_NAME,
-                param_name="Google service account",
-                is_mandatory=True,
+            quote(
+                extract_configuration_param(
+                    siemplify,
+                    Config.INTEGRATION_NAME,
+                    param_name="Google service account",
+                    is_mandatory=True,
+                )
             )
         )
 
