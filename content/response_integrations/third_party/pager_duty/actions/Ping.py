@@ -27,7 +27,11 @@ def main():
         output_message = f"Failed to connect to the PagerDuty API. Error: {e}"
         result_value = False
         status = EXECUTION_STATE_FAILED
-
+    
+    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
+    siemplify.LOGGER.info(
+        f"\n  output_message: {output_message}"
+    )
     siemplify.end(output_message, result_value, status)
 
 
