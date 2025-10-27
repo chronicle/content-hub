@@ -20,7 +20,7 @@ import mp.build_project.restructure.dependencies
 import mp.core.constants
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.build_project.restructure.dependencies import Dependencies
 
@@ -39,8 +39,8 @@ dependencies = ["black>=24.10.0"]
 """
 
 
-def test_restructure(tmp_path: pathlib.Path) -> None:
-    integration_path: pathlib.Path = tmp_path / "integration"
+def test_restructure(tmp_path: Path) -> None:
+    integration_path: Path = tmp_path / "integration"
     integration_path.mkdir()
     integration_out_path = tmp_path / "integration_out"
     integration_out_path.mkdir()
@@ -49,10 +49,10 @@ def test_restructure(tmp_path: pathlib.Path) -> None:
         out_path=integration_out_path,
     )
 
-    pyproject_path: pathlib.Path = dependencies.path / mp.core.constants.PROJECT_FILE
+    pyproject_path: Path = dependencies.path / mp.core.constants.PROJECT_FILE
     pyproject_path.write_text(TOML_CONTENT, encoding="utf-8")
 
     dependencies.restructure()
 
-    deps_path: pathlib.Path = dependencies.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+    deps_path: Path = dependencies.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
     assert list(deps_path.iterdir())

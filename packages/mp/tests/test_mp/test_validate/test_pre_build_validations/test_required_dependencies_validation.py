@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-import pathlib
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -26,7 +26,7 @@ from mp.validate.pre_build_validation.required_dependencies_validation import (
 )
 
 
-def test_required_dependencies_present_success(temp_integration: pathlib.Path) -> None:
+def test_required_dependencies_present_success(temp_integration: Path) -> None:
     pyproject_content = {
         "dependency-groups": {
             "dev": ["soar-sdk>=1.0.0", "pytest>=7.0.0", "pytest-json-report==1.2.3"]
@@ -36,7 +36,7 @@ def test_required_dependencies_present_success(temp_integration: pathlib.Path) -
     RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
 
-def test_required_dependencies_with_extra_success(temp_integration: pathlib.Path) -> None:
+def test_required_dependencies_with_extra_success(temp_integration: Path) -> None:
     pyproject_content = {
         "dependency-groups": {
             "dev": ["soar-sdk", "pytest", "pytest-json-report", "black", "flake8"]
@@ -46,7 +46,7 @@ def test_required_dependencies_with_extra_success(temp_integration: pathlib.Path
     RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
 
-def test_missing_one_required_dependency_fail(temp_integration: pathlib.Path) -> None:
+def test_missing_one_required_dependency_fail(temp_integration: Path) -> None:
     pyproject_content = {"dependency-groups": {"dev": ["soar-sdk", "pytest"]}}
     _create_pyproject_toml(temp_integration, pyproject_content)
     error_msg: str = (
@@ -56,7 +56,7 @@ def test_missing_one_required_dependency_fail(temp_integration: pathlib.Path) ->
         RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
 
-def test_missing_multiple_required_dependencies_fail(temp_integration: pathlib.Path) -> None:
+def test_missing_multiple_required_dependencies_fail(temp_integration: Path) -> None:
     pyproject_content = {"dependency-groups": {"dev": ["soar-sdk"]}}
     _create_pyproject_toml(temp_integration, pyproject_content)
     error_msg: str = (
@@ -66,7 +66,7 @@ def test_missing_multiple_required_dependencies_fail(temp_integration: pathlib.P
         RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
 
-def test_missing_dev_dependencies_section_fail(temp_integration: pathlib.Path) -> None:
+def test_missing_dev_dependencies_section_fail(temp_integration: Path) -> None:
     pyproject_content = {"dependency-groups": {}}
     _create_pyproject_toml(temp_integration, pyproject_content)
     error_msg: str = "Could not find \\[dev-dependencies]\ndev = \\[...] section in pyproject.toml."
@@ -74,7 +74,7 @@ def test_missing_dev_dependencies_section_fail(temp_integration: pathlib.Path) -
         RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
 
-def test_custom_required_dependencies_success(temp_integration: pathlib.Path) -> None:
+def test_custom_required_dependencies_success(temp_integration: Path) -> None:
     pyproject_content = {"dependency-groups": {"dev": ["black", "flake8"]}}
     _create_pyproject_toml(temp_integration, pyproject_content)
     custom_required = {"black", "flake8"}
@@ -83,7 +83,7 @@ def test_custom_required_dependencies_success(temp_integration: pathlib.Path) ->
     )
 
 
-def test_custom_required_dependencies_missing_fail(temp_integration: pathlib.Path) -> None:
+def test_custom_required_dependencies_missing_fail(temp_integration: Path) -> None:
     pyproject_content = {"dependency-groups": {"dev": ["black"]}}
     _create_pyproject_toml(temp_integration, pyproject_content)
     custom_required = {"black", "flake8"}
@@ -94,7 +94,7 @@ def test_custom_required_dependencies_missing_fail(temp_integration: pathlib.Pat
         )
 
 
-def _create_pyproject_toml(integration_path: pathlib.Path, content: dict[str, Any]) -> None:
+def _create_pyproject_toml(integration_path: Path, content: dict[str, Any]) -> None:
     pyproject_path = integration_path / "pyproject.toml"
-    with pathlib.Path.open(pyproject_path, "w") as f:
+    with Path.open(pyproject_path, "w") as f:
         f.write(toml.dumps(content))
