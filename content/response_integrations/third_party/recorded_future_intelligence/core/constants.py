@@ -80,7 +80,7 @@ ENTITY_URL = "entity_urls"
 ENTITY_VULN = "entity_vulns"
 
 TOPIC_MAP = {
-    "None": "",
+    "None": None,
     "Actor Profile": "TXSFt2",
     "Analyst On-Demand Report": "VlIhvH",
     "Cyber Threat Analysis": "TXSFt1",
