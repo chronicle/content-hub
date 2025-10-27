@@ -18,6 +18,8 @@ import pathlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from mp.run_pre_build_tests.process_test_output import IntegrationTestResults, TestIssue
 
 
@@ -65,11 +67,12 @@ class MarkdownFormat:
             self._report_lines.append(issue.stack_trace)
             self._report_lines.append("```")
             self._report_lines.append("</details>")
+
         self._report_lines.append("")
 
 
 def _save_report_file(markdown_content_str: str, output_filename: str) -> None:
-    output_dir = pathlib.Path("./artifacts")
+    output_dir: Path = pathlib.Path("./artifacts")
     output_dir.mkdir(exist_ok=True)
-    report_path = output_dir / output_filename
+    report_path: Path = output_dir / output_filename
     report_path.write_text(markdown_content_str, encoding="utf-8")

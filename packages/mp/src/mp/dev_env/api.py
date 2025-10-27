@@ -22,7 +22,7 @@ import rich
 import typer
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class BackendAPI:
@@ -80,7 +80,7 @@ class BackendAPI:
 
     def get_integration_details(
         self,
-        zip_path: pathlib.Path,
+        zip_path: Path,
         *,
         is_staging: bool = False,
     ) -> dict[str, Any]:
@@ -106,7 +106,7 @@ class BackendAPI:
 
     def upload_integration(
         self,
-        zip_path: pathlib.Path,
+        zip_path: Path,
         integration_id: str,
         *,
         is_staging: bool = False,

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import mp.build_project.marketplace
+import mp.build_project.integrations
 import mp.core.constants
 import test_mp.common
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import Callable
 
-    from mp.build_project.marketplace import Marketplace
+    from mp.build_project.integrations import Integrations
 
 
 def test_deconstruct_half_built_integration(
@@ -88,7 +88,7 @@ def assert_deconstruct_integration(
             requirements.write_text("requests==2.32.4\n", encoding="utf-8")
             py_version.write_text("3.11", encoding="utf-8")
 
-        marketplace: Marketplace = mp.build_project.marketplace.Marketplace(commercial)
+        marketplace: Integrations = mp.build_project.integrations.Integrations(commercial)
         marketplace.deconstruct_integration(integration)
 
         out_integration: pathlib.Path = marketplace.out_dir / integration.name

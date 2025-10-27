@@ -12,14 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from mp.core.config import get_marketplace_path
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 ENDPOINT: str = "https://34-36-216-242.sslip.io/v1/ingest"
 REQUEST_TIMEOUT: int = 3
-MP_CACHE_DIR: pathlib.Path = get_marketplace_path() / ".mp_cache"
-CONFIG_FILE_PATH: pathlib.Path = MP_CACHE_DIR / "config.yaml"
+MP_CACHE_DIR: Path = get_marketplace_path() / ".mp_cache"
+CONFIG_FILE_PATH: Path = MP_CACHE_DIR / "config.yaml"
 
 
 NAME_MAPPER: dict[str, str] = {

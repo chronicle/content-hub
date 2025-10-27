@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -49,7 +49,7 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
     match_type: MatchType
 
     @classmethod
-    def _from_built(cls, built: BuiltCondition) -> Condition:
+    def _from_built(cls, built: BuiltCondition) -> Self:
         return cls(
             field_name=built["fieldName"],
             value=built["value"],
@@ -57,7 +57,7 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltCondition) -> Condition:
+    def _from_non_built(cls, non_built: NonBuiltCondition) -> Self:
         return cls(
             field_name=non_built["field_name"],
             value=non_built["value"],

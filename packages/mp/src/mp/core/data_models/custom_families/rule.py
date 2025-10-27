@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -60,7 +60,7 @@ class CustomFamilyRule(
     visual_family: str
 
     @classmethod
-    def _from_built(cls, built: BuiltCustomFamilyRule) -> CustomFamilyRule:
+    def _from_built(cls, built: BuiltCustomFamilyRule) -> Self:
         return cls(
             primary_source=built["PrimarySource"],
             secondary_source=built["SecondarySource"],
@@ -75,7 +75,7 @@ class CustomFamilyRule(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltCustomFamilyRule) -> CustomFamilyRule:
+    def _from_non_built(cls, non_built: NonBuiltCustomFamilyRule) -> Self:
         return cls(
             primary_source=non_built["primary_source"],
             secondary_source=non_built["secondary_source"],

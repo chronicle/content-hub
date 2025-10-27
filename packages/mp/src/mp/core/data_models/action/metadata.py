@@ -35,7 +35,7 @@ from .parameter import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.custom_types import JsonString
 
@@ -76,7 +76,7 @@ class NonBuiltActionMetadata(TypedDict):
 
 
 class ActionMetadata(
-    mp.core.data_models.abc.ScriptMetadata[BuiltActionMetadata, NonBuiltActionMetadata]
+    mp.core.data_models.abc.ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]
 ):
     file_name: str
     description: Annotated[
@@ -115,7 +115,7 @@ class ActionMetadata(
     ]
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the built integration path.
 
         Args:
@@ -125,17 +125,17 @@ class ActionMetadata(
             A list of `ActionMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.OUT_ACTIONS_META_DIR
+        meta_path: Path = path / mp.core.constants.OUT_ACTIONS_META_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_built_integration_path(p)
+            cls._from_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.ACTIONS_META_SUFFIX}")
         ]
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -145,7 +145,7 @@ class ActionMetadata(
             A list of `ActionMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.ACTIONS_DIR
+        meta_path: Path = path / mp.core.constants.ACTIONS_DIR
         if not meta_path.exists():
             return []
 
@@ -162,7 +162,7 @@ class ActionMetadata(
         return metadata_objects
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltActionMetadata) -> ActionMetadata:
+    def _from_built(cls, file_name: str, built: BuiltActionMetadata) -> Self:
         """Create the obj from a built action metadata dict.
 
         Args:
@@ -194,7 +194,7 @@ class ActionMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltActionMetadata) -> ActionMetadata:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltActionMetadata) -> Self:
         """Create the obj from a non-built action metadata dict.
 
         Args:
@@ -289,15 +289,14 @@ class ActionMetadata(
                 continue
 
             json_file_name: str = (
-                f"{mp.core.utils.str_to_snake_case(self.name)}"
-                f"_{drm.result_name}_example.json"
+                f"{mp.core.utils.str_to_snake_case(self.name)}_{drm.result_name}_example.json"
             )
             json_file_path: str = f"{mp.core.constants.RESOURCES_DIR}/{json_file_name}"
             drm.result_example = json_file_path
 
 
 def _load_json_examples(
-    drms: list[NonBuiltDynamicResultsMetadata], actions_dir_path: pathlib.Path
+    drms: list[NonBuiltDynamicResultsMetadata], actions_dir_path: Path
 ) -> list[NonBuiltDynamicResultsMetadata]:
     """Load JSON examples from files and return a new list of DRMs with their content.
 
@@ -314,7 +313,7 @@ def _load_json_examples(
             drm["result_example_path"] = "{}"
             continue
 
-        json_filepath: pathlib.Path = actions_dir_path.parent / example_path
+        json_filepath: Path = actions_dir_path.parent / example_path
         json_content: JsonString = mp.core.file_utils.read_and_validate_json_file(json_filepath)
         drm["result_example_path"] = json_content
 

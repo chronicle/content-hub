@@ -18,8 +18,8 @@ import re
 from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Iterable
+    from pathlib import Path
 
 
 class Configurations(NamedTuple):
@@ -28,22 +28,22 @@ class Configurations(NamedTuple):
 
 def get_marketplace_paths_from_names(
     names: Iterable[str],
-    marketplace_paths: Iterable[pathlib.Path],
-) -> set[pathlib.Path]:
+    marketplace_paths: Iterable[Path],
+) -> set[Path]:
     """Retrieve existing marketplace paths from a list of names.
 
     Args:
         names: An iterable of names, where each name can be a string
             representing a file/directory name of integration or group.
-        marketplace_paths: The base `pathlib.Path` objects representing the
+        marketplace_paths: The base `Path` objects representing the
             integrations directories of the marketplace.
 
     Returns:
-        A `set` of `pathlib.Path` objects representing the paths that
+        A `set` of `Path` objects representing the paths that
         were found to exist within the `marketplace_path`.
 
     """
-    results: set[pathlib.Path] = set()
+    results: set[Path] = set()
     for path in marketplace_paths:
         for n in names:
             if (p := path / n).exists():

@@ -35,8 +35,8 @@ from mp.core.data_models.release_notes.metadata import ReleaseNote
 from .data_models import FullDetailsExtraAttrs
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Iterable, Sequence
+    from pathlib import Path
 
     from mp.core.custom_types import Products
     from mp.core.data_models.action.metadata import BuiltActionMetadata
@@ -65,7 +65,7 @@ class ReleaseTimes(NamedTuple):
     new_notification: int | None
 
 
-def write_marketplace_json(dst: pathlib.Path) -> None:
+def write_marketplace_json(dst: Path) -> None:
     """Write the marketplace JSON file to a path.
 
     Args:
@@ -77,17 +77,13 @@ def write_marketplace_json(dst: pathlib.Path) -> None:
             `marketplace.json` file
 
     """
-    products: Products[set[pathlib.Path]] = (
-        mp.core.file_utils.get_integrations_and_groups_from_paths(dst)
-    )
+    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(dst)
     identifiers: set[str] = set()
     duplicates: list[tuple[str, str]] = []
     def_files: list[BuiltFullDetailsIntegrationMetadata] = []
     for i in products.integrations:
         mjd: MarketplaceJsonDefinition = MarketplaceJsonDefinition(i)
-        def_file_path: pathlib.Path = i / mp.core.constants.INTEGRATION_DEF_FILE.format(
-            i.name,
-        )
+        def_file_path: Path = i / mp.core.constants.INTEGRATION_DEF_FILE.format(i.name)
         def_file: BuiltFullDetailsIntegrationMetadata = mjd.get_def_file(def_file_path)
 
         identifier: str = def_file["Identifier"]
@@ -102,18 +98,15 @@ def write_marketplace_json(dst: pathlib.Path) -> None:
         msg: str = f"The following integrations have duplicates: {names}"
         raise DuplicateIntegrationIdentifierInMarketplaceError(msg)
 
-    marketplace_json: pathlib.Path = dst / mp.core.constants.MARKETPLACE_JSON_NAME
+    marketplace_json: Path = dst / mp.core.constants.MARKETPLACE_JSON_NAME
     marketplace_json.write_text(json.dumps(def_files, sort_keys=True, indent=4), encoding="UTF-8")
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class MarketplaceJsonDefinition:
-    integration_path: pathlib.Path
+    integration_path: Path
 
-    def get_def_file(
-        self,
-        def_file_path: pathlib.Path,
-    ) -> BuiltFullDetailsIntegrationMetadata:
+    def get_def_file(self, def_file_path: Path) -> BuiltFullDetailsIntegrationMetadata:
         """Get an integration's marketplace JSON definition.
 
         Args:
@@ -147,9 +140,7 @@ class MarketplaceJsonDefinition:
         mp.core.utils.remove_none_entries_from_mapping(metadata)
 
     def _get_integration_release_time(self) -> ReleaseTimes:
-        release_notes: Sequence[ReleaseNote] = ReleaseNote.from_built_integration_path(
-            self.integration_path,
-        )
+        release_notes: Sequence[ReleaseNote] = ReleaseNote.from_built_path(self.integration_path)
         latest_release_time: int | None = _get_latest_release_time(release_notes)
         if latest_release_time is None or latest_release_time < 0:
             return ReleaseTimes(None, None, None)
@@ -159,12 +150,10 @@ class MarketplaceJsonDefinition:
         return ReleaseTimes(latest_release_time, update_notification, new_notification)
 
     def _has_connectors(self) -> bool:
-        return any(ConnectorMetadata.from_built_integration_path(self.integration_path))
+        return any(ConnectorMetadata.from_built_path(self.integration_path))
 
     def _get_supported_actions(self) -> list[BuiltSupportedAction]:
-        actions_definitions: pathlib.Path = (
-            self.integration_path / mp.core.constants.OUT_ACTIONS_META_DIR
-        )
+        actions_definitions: Path = self.integration_path / mp.core.constants.OUT_ACTIONS_META_DIR
         if not actions_definitions.exists():
             return []
 

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -73,7 +73,7 @@ class WidgetDataDefinition(
     widget_definition_scope: WidgetDefinitionScope
 
     @classmethod
-    def _from_built(cls, built: BuiltWidgetDataDefinition) -> WidgetDataDefinition:
+    def _from_built(cls, built: BuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
@@ -84,7 +84,7 @@ class WidgetDataDefinition(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltWidgetDataDefinition) -> WidgetDataDefinition:
+    def _from_non_built(cls, non_built: NonBuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],

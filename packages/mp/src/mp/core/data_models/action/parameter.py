@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, NotRequired, TypedDict
+from typing import Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -85,7 +85,7 @@ class ActionParameter(
     type_: ActionParamType
     default_value: str | bool | float | int | None
 
-    def model_post_init(self, context: Any, /) -> None:  # noqa: D102, ANN401, ARG002
+    def model_post_init(self, context: Any, /) -> None:  # noqa: ANN401, ARG002
         self._validate_optional_values()
         self._validate_default_value_is_in_optional_values()
 
@@ -122,7 +122,7 @@ class ActionParameter(
         )
 
     @classmethod
-    def _from_built(cls, built: BuiltActionParameter) -> ActionParameter:
+    def _from_built(cls, built: BuiltActionParameter) -> Self:
         """Create the obj from a built action param dict.
 
         Args:
@@ -142,7 +142,7 @@ class ActionParameter(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltActionParameter) -> ActionParameter:
+    def _from_non_built(cls, non_built: NonBuiltActionParameter) -> Self:
         """Create the obj from a non-built action param dict.
 
         Args:

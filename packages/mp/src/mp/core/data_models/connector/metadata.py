@@ -30,7 +30,7 @@ from .parameter import (
 from .rule import BuiltConnectorRule, ConnectorRule, NonBuiltConnectorRule
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class BuiltConnectorMetadata(TypedDict):
@@ -65,7 +65,7 @@ class NonBuiltConnectorMetadata(TypedDict):
 
 
 class ConnectorMetadata(
-    mp.core.data_models.abc.ScriptMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]
+    mp.core.data_models.abc.ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]
 ):
     file_name: str
     creator: str
@@ -92,12 +92,12 @@ class ConnectorMetadata(
     rules: list[ConnectorRule]
     version: float
 
-    def model_post_init(self, context: Any) -> None:  # noqa: D102, ANN401, ARG002
+    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002
         if self.parameters:
             mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the built-integration path.
 
         Args:
@@ -107,17 +107,17 @@ class ConnectorMetadata(
             A list of `ConnectorMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.OUT_CONNECTORS_META_DIR
+        meta_path: Path = path / mp.core.constants.OUT_CONNECTORS_META_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_built_integration_path(p)
+            cls._from_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.CONNECTORS_META_SUFFIX}")
         ]
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -127,21 +127,17 @@ class ConnectorMetadata(
             A list of `ConnectorMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.CONNECTORS_DIR
+        meta_path: Path = path / mp.core.constants.CONNECTORS_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_non_built_integration_path(p)
+            cls._from_non_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
         ]
 
     @classmethod
-    def _from_built(
-        cls,
-        file_name: str,
-        built: BuiltConnectorMetadata,
-    ) -> ConnectorMetadata:
+    def _from_built(cls, file_name: str, built: BuiltConnectorMetadata) -> Self:
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -158,11 +154,7 @@ class ConnectorMetadata(
         )
 
     @classmethod
-    def _from_non_built(
-        cls,
-        file_name: str,
-        non_built: NonBuiltConnectorMetadata,
-    ) -> ConnectorMetadata:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltConnectorMetadata) -> Self:
         return cls(
             file_name=file_name,
             creator=non_built["creator"],

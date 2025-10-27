@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class CliDisplay:
     def __init__(self, tests_report: list[IntegrationTestResults]) -> None:
         self.tests_report: list[IntegrationTestResults] = tests_report
-        self.console = Console()
+        self.console: Console = Console()
 
     def display(self) -> None:
         """Display the test results in the cli."""
@@ -39,7 +39,7 @@ class CliDisplay:
 
 
 def _build_table(integration_report: IntegrationTestResults) -> Table:
-    table = Table(
+    table: Table = Table(
         title=f"🧩 {integration_report.integration_name}",
         title_style="bold",
         show_lines=True,
@@ -50,8 +50,10 @@ def _build_table(integration_report: IntegrationTestResults) -> Table:
         table.add_row("❌  Failed Tests:", style="red")
         for test_issue in integration_report.failed_tests_summary:
             table.add_row(test_issue.test_name)
+
     if integration_report.skipped_tests > 0:
         table.add_row("⏭️  Skipped Tests:", style="red")
         for test_issue in integration_report.skipped_tests_summary:
             table.add_row(test_issue.test_name)
+
     return table

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -43,14 +43,14 @@ class ConditionGroup(
     logical_operator: LogicalOperator
 
     @classmethod
-    def _from_built(cls, built: BuiltConditionGroup) -> ConditionGroup:
+    def _from_built(cls, built: BuiltConditionGroup) -> Self:
         return cls(
             conditions=[Condition.from_built(condition) for condition in built["conditions"]],
             logical_operator=LogicalOperator(built["logicalOperator"]),
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltConditionGroup) -> ConditionGroup:
+    def _from_non_built(cls, non_built: NonBuiltConditionGroup) -> Self:
         return cls(
             conditions=[
                 Condition.from_non_built(condition) for condition in non_built["conditions"]

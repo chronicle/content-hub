@@ -26,25 +26,25 @@ from .uv_lock_validation import UvLockValidation as UvLockValidation
 from .version_bump_validation import VersionBumpValidation as VersionBumpValidation
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class Validator(Protocol):
     name: str
 
-    def run(self, validation_path: pathlib.Path) -> None:
+    def run(self, validation_path: Path) -> None:
         """Execute the validation process on the specified path.
 
         Args:
-            validation_path: A `pathlib.Path` object pointing to the directory
+            validation_path: A `Path` object pointing to the directory
                 or file that needs to be validated.
 
         """
 
 
 class PreBuildValidations:
-    def __init__(self, integration_path: pathlib.Path) -> None:
-        self.integration_path: pathlib.Path = integration_path
+    def __init__(self, integration_path: Path) -> None:
+        self.integration_path: Path = integration_path
         self.results: ValidationResults = ValidationResults(
             integration_path.name, ValidationTypes.PRE_BUILD
         )
