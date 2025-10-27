@@ -11,11 +11,11 @@
 # title           :version.py                                       noqa: ERA001
 # description     :This Module contains the package version
 # author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
+# date            :10-31-2025
 # python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
+# product_version :8.0
 # ============================================================================#
 
 from __future__ import annotations
 
-__version__ = "1.3"
+__version__ = "8.0"
