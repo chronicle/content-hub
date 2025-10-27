@@ -16,30 +16,29 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mp.core.unix import NonFatalCommandError
-from mp.validate.validators import IntegrationValidator
+import mp.core.file_utils
+from mp.core.exceptions import FatalValidationError
 
 if TYPE_CHECKING:
     import pathlib
 
 
-class IntegrationValidation:
-    name: str = "Integration Validation"
+class StructureValidation:
+    name: str = "Integration Structure Check"
 
-    @staticmethod
-    def run(integration_path: pathlib.Path) -> None:
-        """Check if the integration and its components passes all checks.
+    def run(self, integration_path: pathlib.Path) -> None:  # noqa: PLR6301
+        """Check basic integration structure, including file presence and parity.
 
         Args:
             integration_path: Path to the integration directory.
 
         Raises:
-        NonFatalCommandError: If the integration is invalid or if another error
-                      occurs during the check.
+            FatalValidationError: If the structure is invalid (missing files, parity error).
 
         """
         try:
-            integration = IntegrationValidator(integration_path)
-            integration.run_all_validations()
-        except NonFatalCommandError as e:
-            raise NonFatalCommandError(str(e)) from e
+            if not mp.core.file_utils.is_integration(integration_path):
+                msg = "Missing essential files like pyproject.toml or integration def file."
+                raise FatalValidationError(msg)
+        except RuntimeError as e:
+            raise FatalValidationError(str(e)) from e

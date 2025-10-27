@@ -289,8 +289,7 @@ class ActionMetadata(
                 continue
 
             json_file_name: str = (
-                f"{mp.core.utils.str_to_snake_case(self.name)}"
-                f"_{drm.result_name}_example.json"
+                f"{mp.core.utils.str_to_snake_case(self.name)}_{drm.result_name}_example.json"
             )
             json_file_path: str = f"{mp.core.constants.RESOURCES_DIR}/{json_file_name}"
             drm.result_example = json_file_path
