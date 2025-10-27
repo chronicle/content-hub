@@ -48,7 +48,7 @@ def test_filtered_incident_list_no_incidents_found(
     pagerduty: PagerDuty,
 ) -> None:
     """
-    Tests the FilteredIncidentList action for a successful API call
+    Tests the FilteredIncidentList action for the successful API call
     that returns no incidents.
     """
     pagerduty.set_incidents({})
