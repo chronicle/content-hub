@@ -33,8 +33,9 @@ class PagerDuty:
         self.snoozed_incidents[incident_id] = {
             "status": "snoozed", "snooze_until": "2025-10-06T14:05:03Z"
             }
+        until = "2025-10-06T14:05:03Z"
         return {
-            "incident": {"id": incident_id, "status": "snoozed", "snooze_until": "2025-10-06T14:05:03Z"}
+            "incident": {"id": incident_id, "status": "snoozed", "snooze_until": until}
             }
 
     def set_incidents(self, mock_incidents: SingleJson) -> None:

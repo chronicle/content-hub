@@ -86,8 +86,13 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
                 status_code=400, content={"error": {"message": "Missing From header"}}
             )
 
-        incident_exists = any(inc.get("id") == incident_id for inc in self._product.incidents.get("incidents", []))
+        incident_exists = any(
+            inc.get("id") == incident_id 
+            for inc in self._product.incidents.get("incidents", [])
+            )
         if not incident_exists:
-            return MockResponse(status_code=404, content={"error": {"message": "Incident not found"}})
+            return MockResponse(
+                status_code=404, content={"error": {"message": "Incident not found"}}
+                )
 
         return MockResponse(content=self._product.snooze_incident(incident_id))

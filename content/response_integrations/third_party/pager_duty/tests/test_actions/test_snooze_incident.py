@@ -61,7 +61,7 @@ def test_snooze_incident_not_found(
 
     mock_incidents = json.loads(MOCK_INCIDENTS_FILE.read_text())
     pagerduty.set_incidents(mock_incidents)
-    expected_output_msg = f"Incident wasnt snoozed\nPagerDuty API error: 404 None"
+    expected_output_msg = "Incident wasnt snoozed\nPagerDuty API error: 404 None"
 
     SnoozeIncident.main()
 

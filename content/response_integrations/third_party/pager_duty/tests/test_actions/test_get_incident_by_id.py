@@ -41,7 +41,6 @@ def test_get_incident_by_id_success(
     assert "Successfully retrieved Incident" in action_output.results.output_message
 
 
-
 @set_metadata(
     integration_config_file_path=CONFIG_PATH,
     parameters={

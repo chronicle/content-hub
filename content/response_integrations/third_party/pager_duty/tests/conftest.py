@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 from integration_testing.common import use_live_api
-from soar_sdk.SiemplifyBase import SiemplifyBase
 
 from .core.product import PagerDuty
 from .core.session import PagerDutySession

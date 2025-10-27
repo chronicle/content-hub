@@ -35,7 +35,7 @@ def test_filtered_incident_list_success(
     assert len(script_session.request_history) == 1
     assert action_output.results.output_message == success_output_msg
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value == True
+    assert action_output.results.result_value is True
 
 
 @set_metadata(
