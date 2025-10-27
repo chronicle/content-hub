@@ -20,15 +20,13 @@ def main():
     try:
         siemplify.LOGGER.info("Getting all the incidents")
         incidents = pager_duty.get_all_incidents()
+        output_message = "Incidents not found\n"
+        siemplify.result.add_result_json(incidents)
+        result_value = True
+        status = EXECUTION_STATE_COMPLETED
+        
         if incidents:
-            siemplify.result.add_result_json(incidents)
             output_message = "Successfully retrieved Incidents\n"
-            result_value = True
-            status = EXECUTION_STATE_COMPLETED
-        else:
-            output_message = "Incidents not found\n"
-            result_value = True
-            status = EXECUTION_STATE_COMPLETED
 
     except Exception as e:
         output_message = f"There was an error to retrieve all incidents.{e!s}"

@@ -9,7 +9,7 @@ from ..core.constants import INTEGRATION_NAME, SCRIPT_NAME_FILTEREDLIST
 from ..core.PagerDutyManager import PagerDutyManager
 
 
-def parse_json_param(param_value):
+def parse_json_param(siemplify: SiemplifyAction, param_value: str | list | None):
     """
     Parses a parameter value that might be a JSON-formatted string list.
     """
@@ -17,12 +17,19 @@ def parse_json_param(param_value):
         try:
             return json.loads(param_value)
         except json.JSONDecodeError:
+            siemplify.LOGGER.warning(
+                f"Parameter value '{param_value}' is not a valid JSON list. "
+                "The value will be ignored."
+            )
             return None
     return param_value
 
 
-def add_list_value_to_dict(param_list: list | None, params_dict: dict, param_key: str):
-    """Adds a list of values directly to the parameters dictionary."""
+def remove_falsys_from_list(param_list: list | None, params_dict: dict, param_key: str):
+    """
+    Removes falsy values from a list.
+    Falsy values include None, False, 0, empty strings, and empty collections.
+    """
     if param_list:
         cleaned_list = [item for item in param_list if item]
         if cleaned_list:
@@ -46,15 +53,23 @@ def main():
     api_token = configurations["api_key"]
     filter_params_dic = {}
 
-    urgencies_list = parse_json_param(siemplify.extract_action_param("Urgencies"))
-    service_ids_list = parse_json_param(siemplify.extract_action_param("Service_IDS"))
-    team_ids_list = parse_json_param(siemplify.extract_action_param("Team_IDS"))
-    user_ids_list = parse_json_param(siemplify.extract_action_param("User_IDS"))
-    additional_data_list = parse_json_param(
-        siemplify.extract_action_param("Additional_Data")
+    urgencies_list = parse_json_param(
+        siemplify, siemplify.extract_action_param("Urgencies")
     )
-    statuses_list = parse_json_param(
-        siemplify.extract_action_param("Incidents_Statuses")
+    service_ids_list = parse_json_param(
+        siemplify, siemplify.extract_action_param("Service_IDS")
+    )
+    team_ids_list = parse_json_param(
+        siemplify, siemplify.extract_action_param("Team_IDS")
+    )
+    user_ids_list = parse_json_param(
+        siemplify, siemplify.extract_action_param("User_IDS")
+    )
+    additional_data_list = parse_json_param(siemplify, 
+        siemplify.extract_action_param("Additional_Data"),
+    )
+    statuses_list = parse_json_param(siemplify, 
+        siemplify.extract_action_param("Incidents_Statuses"),
     )
 
     since = siemplify.extract_action_param("Since")
@@ -69,22 +84,22 @@ def main():
     try:
         siemplify.LOGGER.info("Started processing the parameters")
 
-        filter_params_dic = add_list_value_to_dict(
+        filter_params_dic = remove_falsys_from_list(
             statuses_list, filter_params_dic, "statuses[]"
         )
-        filter_params_dic = add_list_value_to_dict(
+        filter_params_dic = remove_falsys_from_list(
             service_ids_list, filter_params_dic, "service_ids[]"
         )
-        filter_params_dic = add_list_value_to_dict(
+        filter_params_dic = remove_falsys_from_list(
             team_ids_list, filter_params_dic, "team_ids[]"
         )
-        filter_params_dic = add_list_value_to_dict(
+        filter_params_dic = remove_falsys_from_list(
             user_ids_list, filter_params_dic, "user_ids[]"
         )
-        filter_params_dic = add_list_value_to_dict(
+        filter_params_dic = remove_falsys_from_list(
             additional_data_list, filter_params_dic, "include[]"
         )
-        filter_params_dic = add_list_value_to_dict(
+        filter_params_dic = remove_falsys_from_list(
             urgencies_list, filter_params_dic, "urgencies[]"
         )
 

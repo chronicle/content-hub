@@ -7,7 +7,7 @@ from ..core.constants import INTEGRATION_NAME, SCRIPT_NAME_PING
 from ..core.PagerDutyManager import PagerDutyManager
 
 
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME}{SCRIPT_NAME_PING}"
 

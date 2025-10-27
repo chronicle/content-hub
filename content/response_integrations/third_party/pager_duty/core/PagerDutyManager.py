@@ -9,7 +9,7 @@ class PagerDutyManager:
     BASE_URL = "https://api.pagerduty.com"
     INCIDENTS_URI = "/incidents"
 
-    def __init__(self, api_key, verify_ssl=False):
+    def __init__(self, api_key: str, verify_ssl: bool = False):
         """Initializes PagerDutyManager with params as set in connector config"""
         self.api_key = api_key
         self.verify_ssl = verify_ssl
