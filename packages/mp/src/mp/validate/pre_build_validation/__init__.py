@@ -16,12 +16,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-import typer
-
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ValidationResults, ValidationTypes
+from mp.validate.validators import IntegrationValidator as IntegrationValidator
 
+from .custom_validation import CustomValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
+from .structure_validation import StructureValidation
 from .uv_lock_validation import UvLockValidation as UvLockValidation
 from .version_bump_validation import VersionBumpValidation as VersionBumpValidation
 
@@ -43,31 +44,39 @@ class Validator(Protocol):
 
 
 class PreBuildValidations:
-    def __init__(self, integration_path: pathlib.Path) -> None:
-        self.integration_path: pathlib.Path = integration_path
+    def __init__(self, validation_path: pathlib.Path) -> None:
+        self.validation_path: pathlib.Path = validation_path
         self.results: ValidationResults = ValidationResults(
-            integration_path.name, ValidationTypes.PRE_BUILD
+            validation_path.name, ValidationTypes.PRE_BUILD
         )
 
     def run_pre_build_validation(self) -> None:
-        """Run all the pre-build validations.
-
-        Raises:
-            typer.Exit: If a `FatalValidationError` is encountered during any
-                of the validation checks.
-
-        """
-        for validator in self._get_validation():
+        """Run all the pre-build validations."""
+        for validator in self._get_validation_list():
             try:
-                validator.run(self.integration_path)
+                validator.run(self.validation_path)
 
             except NonFatalValidationError as e:
-                self.results.validation_report.add_non_fatal_validation(validator.name, str(e))
-                self.results.is_success = False
+                self._handle_non_fatal_error(validator.name, str(e))
 
-            except FatalValidationError as error:
-                raise typer.Exit(code=1) from error
+            except FatalValidationError as e:
+                self._handle_fatal_error(validator.name, str(e))
+                return
 
     @classmethod
-    def _get_validation(cls) -> list[Validator]:
-        return [UvLockValidation(), VersionBumpValidation(), RequiredDevDependenciesValidation()]
+    def _get_validation_list(cls) -> list[Validator]:
+        return [
+            StructureValidation(),
+            UvLockValidation(),
+            VersionBumpValidation(),
+            RequiredDevDependenciesValidation(),
+            CustomValidation(),
+        ]
+
+    def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:
+        self.results.validation_report.add_fatal_validation(validation_name, error_msg)
+        self.results.is_success = False
+
+    def _handle_non_fatal_error(self, validation_name: str, error_msg: str) -> None:
+        self.results.validation_report.add_non_fatal_validation(validation_name, error_msg)
+        self.results.is_success = False
