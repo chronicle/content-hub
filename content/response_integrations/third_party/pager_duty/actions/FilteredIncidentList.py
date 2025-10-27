@@ -117,10 +117,12 @@ def main():
         siemplify.LOGGER.info("Finished processing all the parameters")
 
         incidents = pager_duty.list_filtered_incidents(filter_params_dic)
+        output_message = "Incidents not found\n"
         siemplify.result.add_result_json(incidents)
-        output_message = "Successfully retrieved Incidents\n"
-        result_value = "true"
+        result_value = True
         status = EXECUTION_STATE_COMPLETED
+        if incidents:
+            output_message = "Successfully retrieved Incidents\n"
 
     except Exception as e:
         output_message = (

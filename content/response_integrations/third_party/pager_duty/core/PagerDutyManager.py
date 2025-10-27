@@ -187,12 +187,7 @@ class PagerDutyManager:
         )
 
         response.raise_for_status()
-        if response.json().get("incidents"):
-            return response.json()
-        return {
-            "incidents": [],
-            "message": "No incident found with the filters entered",
-        }
+        return response.json().get("incidents")
 
     def snooze_incident(self, email_from, incident_id):
         self.requests_session.headers.update(
