@@ -25,15 +25,20 @@ def parse_json_param(siemplify: SiemplifyAction, param_value: str | list | None)
     return param_value
 
 
-def remove_falsys_from_list(param_list: list | None, params_dict: dict, param_key: str):
+def remove_falsys_from_list(param_list: list | None) -> list | None:
     """
     Removes falsy values from a list.
     Falsy values include None, False, 0, empty strings, and empty collections.
     """
+    if param_list is None:
+        return None
+    return [item for item in param_list if item]
+
+
+def add_list_to_dict_if_not_empty(param_list: list | None, params_dict: dict, param_key: str):
+    """Adds a list to the dictionary if it is not None or empty."""
     if param_list:
-        cleaned_list = [item for item in param_list if item]
-        if cleaned_list:
-            params_dict[param_key] = cleaned_list
+        params_dict[param_key] = param_list
     return params_dict
 
 
@@ -84,23 +89,25 @@ def main():
     try:
         siemplify.LOGGER.info("Started processing the parameters")
 
-        filter_params_dic = remove_falsys_from_list(
-            statuses_list, filter_params_dic, "statuses[]"
+        add_list_to_dict_if_not_empty(
+            remove_falsys_from_list(statuses_list), filter_params_dic, "statuses[]"
         )
-        filter_params_dic = remove_falsys_from_list(
-            service_ids_list, filter_params_dic, "service_ids[]"
+        add_list_to_dict_if_not_empty(
+            remove_falsys_from_list(service_ids_list),
+            filter_params_dic,
+            "service_ids[]"
         )
-        filter_params_dic = remove_falsys_from_list(
-            team_ids_list, filter_params_dic, "team_ids[]"
+        add_list_to_dict_if_not_empty(
+            remove_falsys_from_list(team_ids_list), filter_params_dic, "team_ids[]"
         )
-        filter_params_dic = remove_falsys_from_list(
-            user_ids_list, filter_params_dic, "user_ids[]"
+        add_list_to_dict_if_not_empty(
+            remove_falsys_from_list(user_ids_list), filter_params_dic, "user_ids[]"
         )
-        filter_params_dic = remove_falsys_from_list(
-            additional_data_list, filter_params_dic, "include[]"
+        add_list_to_dict_if_not_empty(
+            remove_falsys_from_list(additional_data_list), filter_params_dic, "include[]"
         )
-        filter_params_dic = remove_falsys_from_list(
-            urgencies_list, filter_params_dic, "urgencies[]"
+        add_list_to_dict_if_not_empty(
+            remove_falsys_from_list(urgencies_list), filter_params_dic, "urgencies[]"
         )
 
         filter_params_dic = add_filter_to_dict(since, filter_params_dic, "since")
