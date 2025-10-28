@@ -23,7 +23,8 @@ class TestPing:
         MOCK_RATES_DEFAULT["date"]: str = datetime.date.today().isoformat()
         vatcomply.set_rates(MOCK_RATES_DEFAULT)
         success_output_msg = (
-            "Successfully connected to the PagerDuty API."
+            "Successfully connected to the API Service server with "
+            "the provided connection parameters!"
         )
 
         ping.main()
