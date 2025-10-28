@@ -180,7 +180,7 @@ def main():
         result_data = all_alerts
 
     siemplify.result.add_result_json(result_data)
-    siemplify.end(output_message or "See technical details", json.dumps(result_data))
+    siemplify.end(output_message, json.dumps(result_data))
 
 
 if __name__ == "__main__":
