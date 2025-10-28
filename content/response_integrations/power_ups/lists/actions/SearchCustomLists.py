@@ -49,7 +49,7 @@ def main():
 
     try:
         siemplify.LOGGER.info("Getting custom list records")
-        records = get_traking_list_record(siemplify)
+        records = get_traking_list_record(siemplify, string)
         records = (
             records.get("custom_lists", [])
             if isinstance(records, dict) else records
