@@ -14,14 +14,20 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, NotRequired, Self, TypedDict
-
-import pydantic
+import json
+from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.data_models.abc
 import mp.core.utils
 
-from .step_debug_enrichment_data import BuiltStepDebugEnrichmentData, DebugStepEnrichmentData
+if TYPE_CHECKING:
+    from mp.core.custom_types import JsonString
+
+from .step_debug_enrichment_data import (
+    BuiltStepDebugEnrichmentData,
+    DebugStepEnrichmentData,
+    NonBuiltStepDebugEnrichmentData,
+)
 
 
 class BuiltStepDebugData(TypedDict):
@@ -30,8 +36,9 @@ class BuiltStepDebugData(TypedDict):
     ModificationTimeUnixTimeInMs: int
     CreationTimeUnixTimeInMs: int
     ResultValue: str
-    ResultJson: str
+    ResultJson: JsonString
     ScopeEntitiesEnrichmentDataJson: str
+    ScopeEntitiesEnrichmentData: list[BuiltStepDebugEnrichmentData]
     TenantId: NotRequired[str | None]
 
 
@@ -41,8 +48,8 @@ class NonBuiltStepDebugData(TypedDict):
     creation_time: int
     modification_time: int
     result_value: str
-    result_json: pydantic.Json
-    scope_entities_enrichment_data: BuiltStepDebugEnrichmentData
+    result_json: str
+    scope_entities_enrichment_data: list[NonBuiltStepDebugEnrichmentData]
     tenant_id: str | None
 
 
@@ -54,8 +61,8 @@ class StepDebugData(
     creation_time: int
     modification_time: int
     result_value: str
-    result_json: pydantic.Json[Any]
-    scope_entities_enrichment_data: Annotated[DebugStepEnrichmentData, pydantic.PlainValidator()]
+    result_json: JsonString
+    scope_entities_enrichment_data: list[DebugStepEnrichmentData]
     tenant_id: str | None = None
 
     @classmethod
@@ -76,8 +83,8 @@ class StepDebugData(
             modification_time=built["ModificationTimeUnixTimeInMs"],
             result_value=built["ResultValue"],
             result_json=built["ResultJson"],
-            scope_entities_enrichment_data=DebugStepEnrichmentData.model_validate_json(
-                built["ScopeEntitiesEnrichmentDataJson"]
+            scope_entities_enrichment_data=DebugStepEnrichmentData.from_built(
+                built["ScopeEntitiesEnrichmentData"]
             ),
         )
 
@@ -112,6 +119,9 @@ class StepDebugData(
             A built version of the action parameter dict
 
         """
+        enrichment_data: list[BuiltStepDebugEnrichmentData] = [
+            e.to_built() for e in self.scope_entities_enrichment_data
+        ]
         return BuiltStepDebugData(
             OriginalStepIdentifier=self.step_id,
             OriginalWorkflowIdentifier=self.playbook_id,
@@ -119,7 +129,8 @@ class StepDebugData(
             CreationTimeUnixTimeInMs=self.creation_time,
             ResultValue=self.result_value,
             ResultJson=self.result_json,
-            ScopeEntitiesEnrichmentDataJson=self.scope_entities_enrichment_data.model_dump_json(),
+            ScopeEntitiesEnrichmentData=enrichment_data,
+            ScopeEntitiesEnrichmentDataJson=json.dumps(enrichment_data),
             TenantId=self.tenant_id,
         )
 
@@ -137,7 +148,9 @@ class StepDebugData(
             modification_time=self.modification_time,
             result_value=self.result_value,
             result_json=self.result_json,
-            scope_entities_enrichment_data=self.scope_entities_enrichment_data.model_dump(),
+            scope_entities_enrichment_data=[
+                e.to_non_built() for e in self.scope_entities_enrichment_data
+            ],
             tenant_id=self.tenant_id,
         )
         mp.core.utils.remove_none_entries_from_mapping(non_built)
