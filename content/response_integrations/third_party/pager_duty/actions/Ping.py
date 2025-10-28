@@ -1,38 +1,47 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
+from typing import TYPE_CHECKING
+
+from TIPCommon.base.action import Action
+from TIPCommon.extraction import extract_configuration_param
 
 from ..core.constants import INTEGRATION_NAME, SCRIPT_NAME_PING
 from ..core.PagerDutyManager import PagerDutyManager
 
+if TYPE_CHECKING:
+    from typing import NoReturn
 
-def main() -> None:
-    siemplify = SiemplifyAction()
-    siemplify.script_name = f"{INTEGRATION_NAME}{SCRIPT_NAME_PING}"
 
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
-    configurations = siemplify.get_configuration(INTEGRATION_NAME)
-    api_token = configurations["api_key"]
+SUCCESS_MESSAGE: str = (
+    "Successfully connected to the PagerDuty API."
+)
+ERROR_MESSAGE: str = "Failed to connect to the PagerDuty API."
 
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    try:
-        pager_duty = PagerDutyManager(api_token)
-        pager_duty.test_connectivity()
-        output_message = "Successfully connected to the PagerDuty API."
-        result_value = True
-        status = EXECUTION_STATE_COMPLETED
-    except Exception as e:
-        output_message = f"Failed to connect to the PagerDuty API. Error: {e}"
-        result_value = False
-        status = EXECUTION_STATE_FAILED
-    
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(
-        f"\n  output_message: {output_message}"
-    )
-    siemplify.end(output_message, result_value, status)
+class Ping(Action):
+    def __init__(self) -> None:
+        super().__init__(SCRIPT_NAME_PING)
+        self.output_message: str = SUCCESS_MESSAGE
+        self.error_output_message: str = ERROR_MESSAGE
+
+    def _extract_action_parameters(self) -> None:
+        self.api_key = extract_configuration_param(
+            self.soar_action,
+            provider_name=INTEGRATION_NAME,
+            param_name="api_key",
+            is_mandatory=True,
+        )
+
+    def _init_api_clients(self):
+        """Prepare API client"""
+        return PagerDutyManager(self.api_key)
+
+    def _perform_action(self, _=None) -> None:
+        self.api_client.test_connectivity()
+
+
+def main() -> NoReturn:
+    Ping().run()
 
 
 if __name__ == "__main__":
