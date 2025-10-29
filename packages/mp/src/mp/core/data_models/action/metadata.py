@@ -91,9 +91,15 @@ class ActionMetadata(
             pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
         ),
     ]
-    is_async: bool
-    is_custom: bool
-    is_enabled: bool
+    is_async: Annotated[
+        bool, pydantic.BeforeValidator(mp.core.validators.coerce_bool_from_str_or_none)
+    ]
+    is_custom: Annotated[
+        bool, pydantic.BeforeValidator(mp.core.validators.coerce_bool_from_str_or_none)
+    ]
+    is_enabled: Annotated[
+        bool, pydantic.BeforeValidator(mp.core.validators.coerce_bool_from_str_or_none)
+    ]
     name: Annotated[
         str,
         pydantic.Field(
@@ -173,6 +179,9 @@ class ActionMetadata(
             An `ActionMetadata` object
 
         """
+        version = built.get("Version")
+        if version is None or version < mp.core.constants.MINIMUM_SCRIPT_VERSION:
+            version = mp.core.constants.MINIMUM_SCRIPT_VERSION
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -186,11 +195,11 @@ class ActionMetadata(
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
             name=built["Name"],
-            parameters=[ActionParameter.from_built(p) for p in built["Parameters"]],
-            script_result_name=built.get("ScriptResultName", "is_success"),
-            simulation_data_json=built.get("SimulationDataJson", '{"Entities": []}'),
+            parameters=[ActionParameter.from_built(p) for p in built.get("Parameters", [])],
+            script_result_name=built.get("ScriptResultName") or "is_success",
+            simulation_data_json=built.get("SimulationDataJson") or '{"Entities": []}',
             default_result_value=built.get("DefaultResultValue"),
-            version=built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
+            version=version,
         )
 
     @classmethod
@@ -314,7 +323,7 @@ def _load_json_examples(
             drm["result_example_path"] = "{}"
             continue
 
-        json_filepath: pathlib.Path = actions_dir_path.parent / example_path
+        json_filepath: pathlib.Path = actions_dir_path.parent / pathlib.Path(example_path)
         json_content: JsonString = mp.core.file_utils.read_and_validate_json_file(json_filepath)
         drm["result_example_path"] = json_content
 
