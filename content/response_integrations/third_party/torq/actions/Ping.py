@@ -4,10 +4,10 @@ import base64
 import json
 from datetime import date, datetime
 
-from SiemplifyAction import SiemplifyAction  # type: ignore[import-not-found]
-from SiemplifyUtils import output_handler  # type: ignore[import-not-found]
+from soar_sdk.SiemplifyAction import SiemplifyAction  # type: ignore[import-not-found]
+from soar_sdk.SiemplifyUtils import output_handler  # type: ignore[import-not-found]
 
-from ..core.TorqManager import TorqConfig, TorqManager
+from ..core.torq_manager import TorqConfig, TorqManager  # type: ignore[import-not-found]
 
 PROVIDER = "Torq"
 ACTION_UI = "Ping"
@@ -47,7 +47,31 @@ def _ci_instance_params(si):
 
     bearer_override = lower.get("bearer token (override)") or lower.get("bearer token") or None
 
-    return url, secret, region, client_id, client_secret, api_base_url, token_url, bearer_override
+    verify_ssl_raw = lower.get("verify ssl", "true")
+    verify_ssl = _to_bool(verify_ssl_raw, default=True)
+
+    return (
+        url,
+        secret,
+        region,
+        client_id,
+        client_secret,
+        api_base_url,
+        token_url,
+        bearer_override,
+        verify_ssl,
+    )
+
+
+def _to_bool(val, default=False) -> bool:
+    if isinstance(val, bool):
+        return val
+    s = str(val).strip().lower()
+    if s in ("true", "1", "yes", "y", "on"):
+        return True
+    if s in ("false", "0", "no", "n", "off"):
+        return False
+    return bool(default)
 
 
 def _ci_action_params(si):
@@ -107,9 +131,17 @@ def main():
     si.script_name = f"{PROVIDER} - {ACTION_UI}"
     si.LOGGER.info("Reading configuration from Server")
 
-    url, secret, region, client_id, client_secret, api_base, token_url, bearer_override = (
-        _ci_instance_params(si)
-    )
+    (
+        url,
+        secret,
+        region,
+        client_id,
+        client_secret,
+        api_base,
+        token_url,
+        bearer_override,
+        verify_ssl,
+    ) = _ci_instance_params(si)
     if not url:
         si.end("Missing required integration parameter: Torq URL", False)
         return
@@ -127,7 +159,7 @@ def main():
         client_secret=client_secret,
         api_base_url=api_base,
         token_url=token_url,
-        verify_ssl=True,
+        verify_ssl=verify_ssl,
         timeout=15,
         https_proxy=None,
         async_mode=True,

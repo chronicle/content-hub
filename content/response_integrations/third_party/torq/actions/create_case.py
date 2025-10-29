@@ -59,7 +59,17 @@ def _ci_instance_params(si) -> tuple:
     verify_ssl_raw = lower.get("verify ssl", "true")
     verify_ssl = _to_bool(verify_ssl_raw, default=True)
 
-    return url, secret, region, client_id, client_secret, api_base_url, token_url, bearer_override, verify_ssl
+    return (
+        url,
+        secret,
+        region,
+        client_id,
+        client_secret,
+        api_base_url,
+        token_url,
+        bearer_override,
+        verify_ssl,
+    )
 
 
 def _ci_action_params(si) -> tuple:
@@ -196,9 +206,17 @@ def main():
     si.LOGGER.info("Reading configuration from Server")
 
     # Integration config
-    url, secret, region, client_id, client_secret, api_base, token_url, bearer_override, verify_ssl = (
-        _ci_instance_params(si)
-    )
+    (
+        url,
+        secret,
+        region,
+        client_id,
+        client_secret,
+        api_base,
+        token_url,
+        bearer_override,
+        verify_ssl,
+    ) = _ci_instance_params(si)
     if not url:
         si.end("Missing required integration parameter: Torq URL", False)
         return
