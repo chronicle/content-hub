@@ -17,11 +17,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
+import pathlib
 
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
+
 
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
@@ -35,8 +37,6 @@ from .parameter import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
-
     from mp.core.custom_types import JsonString
 
 DEFAULT_SCRIPT_RESULT_NAME: str = "is_success"

@@ -134,11 +134,8 @@ class ActionParameter(
             An `ActionParameter` object
 
         """
-        descprition = built.get("description")
-        if descprition is None:
-            descprition = ""
         return cls(
-            description=descprition,
+            description=built.get("description") or "",
             is_mandatory=built["IsMandatory"],
             name=built["Name"],
             optional_values=built.get("OptionalValues"),
