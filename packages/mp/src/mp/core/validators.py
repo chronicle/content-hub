@@ -118,9 +118,12 @@ def validate_png_content(path: Path) -> bytes:
         raise ValueError(msg) from e
 
 
-def coerce_bool_from_str_or_none(v: Any) -> bool:
-    """
-    Coerces "true", "false", and null into a proper boolean or None.
+def coerce_bool_from_str_or_none(v: Any) -> bool:  # noqa:ANN401
+    """Coerce "true", "false", and null into a proper boolean or None.
+
+    Returns:
+        True or False based on the input
+
     """
     if isinstance(v, str):
         if v.lower() == "true":

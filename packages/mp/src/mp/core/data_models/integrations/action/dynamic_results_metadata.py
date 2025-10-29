@@ -56,7 +56,7 @@ class DynamicResultsMetadata(
 
         """
         result_example = built.get("ResultExample")
-        if result_example == "" or result_example is None:
+        if not result_example:
             result_example = "{}"
         return cls(
             result_example=result_example,
