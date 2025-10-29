@@ -65,7 +65,7 @@ class BuiltMappingRule(TypedDict):
     SecurityEventFieldName: str
     TransformationFunction: int
     TransformationFunctionParam: str | None
-    RawDataPrimaryFieldMatchTerm: str
+    RawDataPrimaryFieldMatchTerm: str | None
     RawDataPrimaryFieldComparisonType: int
     RawDataSecondaryFieldMatchTerm: str | None
     RawDataSecondaryFieldComparisonType: int
@@ -97,13 +97,15 @@ class NonBuiltMappingRule(TypedDict):
 class MappingRule(
     mp.core.data_models.abc.SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]
 ):
-    source: str
+    source: str | None
+    product: str | None
+    event_name: str | None
     product: str | None
     event_name: str | None
     security_event_file_name: str
     transformation_function: TransformationFunction
     transformation_function_param: str | None
-    raw_data_primary_field_match_term: str
+    raw_data_primary_field_match_term: str | None
     raw_data_primary_field_comparison_type: ComparisonType
     raw_data_secondary_field_match_term: str | None
     raw_data_secondary_field_comparison_type: ComparisonType
@@ -178,7 +180,7 @@ class MappingRule(
             raw_data_third_field_comparison_type=ComparisonType(
                 built["RawDataThirdFieldComparisonType"],
             ),
-            is_artifact=built["IsArtifact"],
+            is_artifact=built.get("IsArtifact", False),
             extract_function_param=built.get("ExtractionFunctionParam"),
             extract_function=ExtractionFunction(extract_function),
         )
@@ -248,7 +250,7 @@ class MappingRule(
             TransformationFunction=self.transformation_function.value,
             TransformationFunctionParam=self.transformation_function_param,
             RawDataPrimaryFieldMatchTerm=self.raw_data_primary_field_match_term,
-            RawDataPrimaryFieldComparisonType=(self.raw_data_primary_field_comparison_type.value),
+            RawDataPrimaryFieldComparisonType=self.raw_data_primary_field_comparison_type.value,
             RawDataSecondaryFieldMatchTerm=self.raw_data_secondary_field_match_term,
             RawDataSecondaryFieldComparisonType=(
                 self.raw_data_secondary_field_comparison_type.value
