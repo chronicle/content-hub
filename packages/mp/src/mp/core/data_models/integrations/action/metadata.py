@@ -173,6 +173,9 @@ class ActionMetadata(
             An `ActionMetadata` object
 
         """
+        version = built.get("Version")
+        if version is None or version < mp.core.constants.MINIMUM_SCRIPT_VERSION:
+            version = mp.core.constants.MINIMUM_SCRIPT_VERSION
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -186,15 +189,15 @@ class ActionMetadata(
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
             name=built["Name"],
-            parameters=[ActionParameter.from_built(p) for p in built["Parameters"]],
-            script_result_name=built.get("ScriptResultName", "is_success"),
-            simulation_data_json=built.get("SimulationDataJson", '{"Entities": []}'),
+            parameters=[ActionParameter.from_built(p) for p in built.get("Parameters", [])],
+            script_result_name=built.get("ScriptResultName") or "is_success",
+            simulation_data_json=built.get("SimulationDataJson") or '{"Entities": []}',
             default_result_value=built.get("DefaultResultValue"),
-            version=built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
+            version=version,
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltActionMetadata) -> Self:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltActionMetadata) -> ActionMetadata:
         """Create the obj from a non-built action metadata dict.
 
         Args:

@@ -144,7 +144,7 @@ class ConnectorMetadata(
             is_enabled=built["IsEnabled"],
             name=built["Name"],
             parameters=[ConnectorParameter.from_built(param) for param in built["Parameters"]],
-            rules=[ConnectorRule.from_built(rule) for rule in built["Rules"]],
+            rules=[ConnectorRule.from_built(rule) for rule in built.get("Rules", [])],
             version=built.get("Version", 1.0),
         )
 
