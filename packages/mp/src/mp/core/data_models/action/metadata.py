@@ -14,16 +14,15 @@
 
 from __future__ import annotations
 
+import pathlib
 from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
-import pathlib
 
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
-
 
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
