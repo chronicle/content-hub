@@ -11,9 +11,9 @@
 # title           :Get Alert Details.py
 # description     :This Module contains the Get Playbook Alert Details action
 # author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
+# date            :10-31-2025
 # python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
+# product_version :8.0
 # ============================================================================#
 
 from __future__ import annotations

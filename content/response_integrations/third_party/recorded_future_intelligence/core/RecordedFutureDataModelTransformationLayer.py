@@ -11,9 +11,9 @@
 # title           :RecordedFutureDataModelTransformationLayer.py    noqa: ERA001
 # description     :This Module transforms raw data based into the datamodel
 # author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
+# date            :10-31-2025
 # python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
+# product_version :8.0
 # ============================================================================#
 
 
