@@ -1,31 +1,24 @@
 # TorqManager.py
 
+import base64
 import json
 import time
 import uuid
-import base64
 from dataclasses import dataclass
+from datetime import date, datetime
 from typing import Any, Dict, Optional, Tuple
-from datetime import datetime, date
 
 import requests
-from requests import Timeout, ConnectionError, ReadTimeout
+from requests import ConnectionError, ReadTimeout, Timeout
 
-# Optional shared errors; safe fallbacks if not present
-try:
-    from TorqErrors import (
-        TorqError,
-        TorqAuthError,
-        TorqRateLimitError,
-        TorqServerError,
-        TorqClientError,
-    )
-except Exception:
-    class TorqError(Exception): ...
-    class TorqAuthError(TorqError): ...
-    class TorqRateLimitError(TorqError): ...
-    class TorqServerError(TorqError): ...
-    class TorqClientError(TorqError): ...
+from .torq_errors import (
+    TorqAuthError,
+    TorqClientError,
+    TorqError,
+    TorqRateLimitError,
+    TorqServerError,
+)
+
 
 # ---------- helpers ----------
 def _json_default(o):
@@ -36,6 +29,7 @@ def _json_default(o):
     if isinstance(o, (bytes, bytearray, memoryview)):
         return base64.b64encode(bytes(o)).decode("ascii")
     return str(o)
+
 
 _REGION = {
     "US": {
@@ -50,6 +44,7 @@ _REGION = {
     },
 }
 
+
 @dataclass
 class TorqConfig:
     # Required
@@ -62,8 +57,8 @@ class TorqConfig:
     client_secret: Optional[str] = None
 
     # Optional overrides
-    api_base_url: Optional[str] = None           # workspace API (not used by default)
-    public_api_base_url: Optional[str] = None    # defaults by region
+    api_base_url: Optional[str] = None  # workspace API (not used by default)
+    public_api_base_url: Optional[str] = None  # defaults by region
     token_url: Optional[str] = None
 
     # Networking/behavior
@@ -81,8 +76,8 @@ class TorqConfig:
     poll_interval_seconds: float = 3.0
 
     # Curl-parity flags
-    prefer_public_api: bool = True       # default to public API (your curl path)
-    ignore_env_proxy: bool = True        # bypass env proxies when polling
+    prefer_public_api: bool = True  # default to public API (your curl path)
+    ignore_env_proxy: bool = True  # bypass env proxies when polling
     bearer_override: Optional[str] = None  # paste a bearer to force polling with it
 
 
@@ -133,7 +128,13 @@ class TorqManager:
                 payload, correlation_id=correlation_id, idempotency_key=idempotency_key
             )
         except Exception as e:
-            return {"status_code": 0, "text": str(e), "json": None, "headers": {}, "content_type": ""}
+            return {
+                "status_code": 0,
+                "text": str(e),
+                "json": None,
+                "headers": {},
+                "content_type": "",
+            }
 
         result = {
             "status_code": status,
@@ -161,7 +162,11 @@ class TorqManager:
             token = self._get_token()
 
         poll_max = poll_max_seconds if poll_max_seconds is not None else self.cfg.poll_max_seconds
-        poll_ivl = poll_interval_seconds if poll_interval_seconds is not None else self.cfg.poll_interval_seconds
+        poll_ivl = (
+            poll_interval_seconds
+            if poll_interval_seconds is not None
+            else self.cfg.poll_interval_seconds
+        )
 
         final = self._poll_execution_public_exact(
             execution_id=exec_id,
@@ -195,11 +200,14 @@ class TorqManager:
         headers = self._headers(correlation_id, idempotency_key)
 
         attempt = 0
-        last_exc = None
+        last_exc: Optional[str] = None
         while attempt <= self.cfg.max_retries:
             try:
                 if self.logger:
-                    self.logger.info(f"[Torq] POST {url} attempt {attempt+1}/{self.cfg.max_retries+1} corr={correlation_id}")
+                    self.logger.info(
+                        f"[Torq] POST {url} attempt {attempt + 1}/{self.cfg.max_retries + 1} "
+                        f"corr={correlation_id}"
+                    )
 
                 timeouts = (
                     self.cfg.timeout,
@@ -214,7 +222,11 @@ class TorqManager:
                 )
                 status = resp.status_code
                 resp_headers = dict(resp.headers or {})
-                ctype = resp_headers.get("Content-Type", "") or resp_headers.get("content-type", "") or ""
+                ctype = (
+                    resp_headers.get("Content-Type", "")
+                    or resp_headers.get("content-type", "")
+                    or ""
+                )
                 text = resp.text or None
                 resp_json = self._maybe_parse_json(text, ctype)
 
@@ -222,11 +234,15 @@ class TorqManager:
                     raise TorqAuthError("Webhook auth error (check `Webhook Secret`).")
                 if status == 429:
                     if attempt < self.cfg.max_retries:
-                        self._sleep(attempt); attempt += 1; continue
+                        self._sleep(attempt)
+                        attempt += 1
+                        continue
                     raise TorqRateLimitError("Rate limited (429)")
                 if 500 <= status <= 599:
                     if attempt < self.cfg.max_retries:
-                        self._sleep(attempt); attempt += 1; continue
+                        self._sleep(attempt)
+                        attempt += 1
+                        continue
                     raise TorqServerError(f"Server error {status}")
                 if 400 <= status <= 499:
                     raise TorqClientError(f"Client error {status}: {text}")
@@ -235,25 +251,32 @@ class TorqManager:
 
             except ReadTimeout:
                 if self.cfg.async_mode:
-                    if self.logger: self.logger.info("[Torq] Async read-timeout; assuming 202/accepted.")
+                    if self.logger:
+                        self.logger.info("[Torq] Async read-timeout; assuming 202/accepted.")
                     return 202, "assumed async (read timeout)", None, {}, ""
                 last_exc = "read timeout"
             except (Timeout, ConnectionError) as e:
-                last_exc = e
+                last_exc = str(e)
                 if attempt < self.cfg.max_retries:
-                    self._sleep(attempt); attempt += 1; continue
+                    self._sleep(attempt)
+                    attempt += 1
+                    continue
                 raise TorqError(f"Network error after retries: {e}") from e
             except TorqError:
                 raise
             except Exception as e:
-                last_exc = e
+                last_exc = str(e)
                 if attempt < self.cfg.max_retries:
-                    self._sleep(attempt); attempt += 1; continue
+                    self._sleep(attempt)
+                    attempt += 1
+                    continue
                 raise TorqError(f"Unexpected error after retries: {e}") from e
 
         raise TorqError(f"Exited retry loop unexpectedly: {last_exc}")
 
-    def _headers(self, correlation_id: Optional[str], idempotency_key: Optional[str]) -> Dict[str, str]:
+    def _headers(
+        self, correlation_id: Optional[str], idempotency_key: Optional[str]
+    ) -> Dict[str, str]:
         h = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/plain, */*",
@@ -331,7 +354,13 @@ class TorqManager:
 
                 # Terminal by documented statuses; else stop on non-2xx
                 status = (payload.get("status") or "").upper()
-                if status in {"SUCCESS", "FAILED", "STOPPED", "DROPPED", "EXECUTION_STATUS_UNKNOWN"}:
+                if status in {
+                    "SUCCESS",
+                    "FAILED",
+                    "STOPPED",
+                    "DROPPED",
+                    "EXECUTION_STATUS_UNKNOWN",
+                }:
                     return payload
                 if r.status_code < 200 or r.status_code >= 300:
                     return payload
@@ -384,7 +413,9 @@ class TorqManager:
                 self._oauth_token = f"{token_type} {access_token}"
                 self._token_expiry_ts = time.time() + expires_in
                 if self.logger:
-                    self.logger.info(f"[Torq] Token acquired (type={token_type}, ttl≈{int(expires_in)}s).")
+                    self.logger.info(
+                        f"[Torq] Token acquired (type={token_type}, ttl≈{int(expires_in)}s)."
+                    )
                 return self._oauth_token
             if self.logger:
                 self.logger.warning(f"[Torq] Token JSON missing access_token: {j}")
@@ -409,9 +440,11 @@ class TorqManager:
             return None
 
     def _sleep(self, attempt: int) -> None:
-        time.sleep(self.cfg.backoff_base * (2 ** attempt))
+        time.sleep(self.cfg.backoff_base * (2**attempt))
 
-    def _extract_execution_id(self, resp_json: Optional[Dict[str, Any]], headers: Dict[str, str]) -> Optional[str]:
+    def _extract_execution_id(
+        self, resp_json: Optional[Dict[str, Any]], headers: Dict[str, str]
+    ) -> Optional[str]:
         """
         Support multiple possible webhook response shapes:
           { "execution_id": "..." }
@@ -439,8 +472,12 @@ class TorqManager:
             return None, None
         if "output" in js and js["output"] is not None:
             return js["output"], "output"
-        for a, b in (("result", "output"), ("data", "output"),
-                     ("execution", "output"), ("payload", "output")):
+        for a, b in (
+            ("result", "output"),
+            ("data", "output"),
+            ("execution", "output"),
+            ("payload", "output"),
+        ):
             try:
                 v = js.get(a)
                 if isinstance(v, dict) and v.get(b) is not None:

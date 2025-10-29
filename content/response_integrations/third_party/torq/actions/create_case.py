@@ -1,13 +1,14 @@
 # Actions/CreateCase.py
 
-import json
 import base64
-from datetime import datetime, date
-from typing import Any, Dict, Optional, List
+import json
+from datetime import date, datetime
+from typing import Any, Dict, List
 
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import output_handler
-from TorqManager import TorqManager, TorqConfig
+from soar_sdk.SiemplifyAction import SiemplifyAction  # type: ignore[import-not-found]
+from soar_sdk.SiemplifyUtils import output_handler  # type: ignore[import-not-found]
+
+from ..core.torq_manager import TorqConfig, TorqManager
 
 PROVIDER = "Torq"
 ACTION_UI = "Create Case in Torq"
@@ -48,12 +49,17 @@ def _ci_instance_params(si) -> tuple:
     client_id = lower.get("client id") or lower.get("client_id")
     client_secret = lower.get("client secret") or lower.get("client_secret")
 
-    api_base_url = lower.get("torq api base url") or lower.get("api base url") or lower.get("api_base_url")
+    api_base_url = (
+        lower.get("torq api base url") or lower.get("api base url") or lower.get("api_base_url")
+    )
     token_url = lower.get("token url") or lower.get("token_url")
 
     bearer_override = lower.get("bearer token (override)") or lower.get("bearer token") or None
 
-    return url, secret, region, client_id, client_secret, api_base_url, token_url, bearer_override
+    verify_ssl_raw = lower.get("verify ssl", "true")
+    verify_ssl = _to_bool(verify_ssl_raw, default=True)
+
+    return url, secret, region, client_id, client_secret, api_base_url, token_url, bearer_override, verify_ssl
 
 
 def _ci_action_params(si) -> tuple:
@@ -68,15 +74,28 @@ def _ci_action_params(si) -> tuple:
     corr_key = lower.get("correlation key")
 
     try:
-        poll_max = float(lower.get("poll max seconds")) if lower.get("poll max seconds") else None
-    except Exception:
+        poll_max_raw = lower.get("poll max seconds")
+        poll_max = float(poll_max_raw) if poll_max_raw is not None else None
+    except (ValueError, TypeError):
         poll_max = None
     try:
-        poll_ivl = float(lower.get("poll interval seconds")) if lower.get("poll interval seconds") else None
-    except Exception:
+        poll_ivl_raw = lower.get("poll interval seconds")
+        poll_ivl = float(poll_ivl_raw) if poll_ivl_raw is not None else None
+    except (ValueError, TypeError):
         poll_ivl = None
 
     return dedup_key, corr_key, poll_max, poll_ivl
+
+
+def _to_bool(val, default=False) -> bool:
+    if isinstance(val, bool):
+        return val
+    s = str(val).strip().lower()
+    if s in ("true", "1", "yes", "y", "on"):
+        return True
+    if s in ("false", "0", "no", "n", "off"):
+        return False
+    return bool(default)
 
 
 # ---------------- context & alert serialization ----------------
@@ -84,13 +103,17 @@ def _maybe_min_context(si) -> Dict[str, Any]:
     """Minimal case/environment context; never raises."""
     ctx: Dict[str, Any] = {}
     try:
-        cid = getattr(getattr(si, "current_case", None), "identifier", None) or getattr(getattr(si, "case", None), "case_id", None)
+        cid = getattr(getattr(si, "current_case", None), "identifier", None) or getattr(
+            getattr(si, "case", None), "case_id", None
+        )
         if cid:
             ctx["case_id"] = cid
     except Exception:
         pass
     try:
-        cname = getattr(getattr(si, "current_case", None), "name", None) or getattr(getattr(si, "case", None), "case_name", None)
+        cname = getattr(getattr(si, "current_case", None), "name", None) or getattr(
+            getattr(si, "case", None), "case_name", None
+        )
         if cname:
             ctx["case_name"] = cname
     except Exception:
@@ -126,7 +149,11 @@ def _collect_alert(si) -> Dict[str, Any]:
 
     blob: Dict[str, Any] = {}
     try:
-        blob["identifier"] = getattr(alert, "identifier", None) or getattr(alert, "alert_identifier", None) or getattr(alert, "id", None)
+        blob["identifier"] = (
+            getattr(alert, "identifier", None)
+            or getattr(alert, "alert_identifier", None)
+            or getattr(alert, "id", None)
+        )
         blob["name"] = getattr(alert, "name", None) or getattr(alert, "rule_generator", None)
         blob["vendor"] = getattr(alert, "vendor", None)
         blob["product"] = getattr(alert, "product", None)
@@ -134,7 +161,9 @@ def _collect_alert(si) -> Dict[str, Any]:
         blob["start_time"] = getattr(alert, "start_time", None)
         blob["end_time"] = getattr(alert, "end_time", None)
         blob["description"] = getattr(alert, "description", None)
-        blob["additional_properties"] = getattr(alert, "additional_properties", None) or getattr(alert, "raw_data", None)
+        blob["additional_properties"] = getattr(alert, "additional_properties", None) or getattr(
+            alert, "raw_data", None
+        )
 
         # Entities (subset)
         ents: List[Dict[str, Any]] = []
@@ -143,7 +172,8 @@ def _collect_alert(si) -> Dict[str, Any]:
                 ents.append({
                     "identifier": getattr(e, "identifier", None),
                     "entity_type": getattr(e, "entity_type", None) or getattr(e, "type", None),
-                    "is_suspected": getattr(e, "is_suspected", None) or getattr(e, "is_suspect", None),
+                    "is_suspected": getattr(e, "is_suspected", None)
+                    or getattr(e, "is_suspect", None),
                     "additional_properties": getattr(e, "additional_properties", None),
                 })
         except Exception:
@@ -166,7 +196,9 @@ def main():
     si.LOGGER.info("Reading configuration from Server")
 
     # Integration config
-    url, secret, region, client_id, client_secret, api_base, token_url, bearer_override = _ci_instance_params(si)
+    url, secret, region, client_id, client_secret, api_base, token_url, bearer_override, verify_ssl = (
+        _ci_instance_params(si)
+    )
     if not url:
         si.end("Missing required integration parameter: Torq URL", False)
         return
@@ -186,15 +218,15 @@ def main():
         client_secret=client_secret,
         api_base_url=api_base,
         token_url=token_url,
-        verify_ssl=True,
+        verify_ssl=verify_ssl,
         timeout=20,
         https_proxy=None,
         async_mode=True,
         read_timeout_s=0.25,
         poll_max_seconds=60.0,
         poll_interval_seconds=3.0,
-        prefer_public_api=True,   # Public API polling (curl parity)
-        ignore_env_proxy=True,    # avoid proxy header stripping
+        prefer_public_api=True,  # Public API polling (curl parity)
+        ignore_env_proxy=True,  # avoid proxy header stripping
         bearer_override=bearer_override,
     )
     mgr = TorqManager(cfg, logger=logger)
@@ -250,7 +282,9 @@ def main():
 
         # Human-readable end message
         status_code = resp.get("status_code")
-        final_status = (final_json.get("status") or "").upper() if isinstance(final_json, dict) else ""
+        final_status = (
+            (final_json.get("status") or "").upper() if isinstance(final_json, dict) else ""
+        )
         exec_id = exec_info.get("id")
 
         msg_bits = [f"status={status_code}", "async=True"]
@@ -260,7 +294,7 @@ def main():
             msg_bits.append(f"final_status={final_status}")
 
         ok = bool(status_code and 200 <= int(status_code) < 300)
-        si.end(f'Torq create_case requested ({", ".join(msg_bits)}).', ok)
+        si.end(f"Torq create_case requested ({', '.join(msg_bits)}).", ok)
 
     except Exception as e:
         if logger:

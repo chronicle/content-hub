@@ -1,11 +1,13 @@
 # Actions/Ping.py
 
-import json
 import base64
-from datetime import datetime, date
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import output_handler
-from TorqManager import TorqManager, TorqConfig
+import json
+from datetime import date, datetime
+
+from SiemplifyAction import SiemplifyAction  # type: ignore[import-not-found]
+from SiemplifyUtils import output_handler  # type: ignore[import-not-found]
+
+from ..core.TorqManager import TorqConfig, TorqManager
 
 PROVIDER = "Torq"
 ACTION_UI = "Ping"
@@ -38,7 +40,9 @@ def _ci_instance_params(si):
     client_id = lower.get("client id") or lower.get("client_id")
     client_secret = lower.get("client secret") or lower.get("client_secret")
 
-    api_base_url = lower.get("torq api base url") or lower.get("api base url") or lower.get("api_base_url")
+    api_base_url = (
+        lower.get("torq api base url") or lower.get("api base url") or lower.get("api_base_url")
+    )
     token_url = lower.get("token url") or lower.get("token_url")
 
     bearer_override = lower.get("bearer token (override)") or lower.get("bearer token") or None
@@ -56,7 +60,11 @@ def _ci_action_params(si):
         poll_max = None
 
     try:
-        poll_ivl = float(lower.get("poll interval seconds")) if lower.get("poll interval seconds") else None
+        poll_ivl = (
+            float(lower.get("poll interval seconds"))
+            if lower.get("poll interval seconds")
+            else None
+        )
     except Exception:
         poll_ivl = None
 
@@ -66,13 +74,17 @@ def _ci_action_params(si):
 def _maybe_min_context(si):
     ctx = {}
     try:
-        cid = getattr(getattr(si, "current_case", None), "identifier", None) or getattr(getattr(si, "case", None), "case_id", None)
+        cid = getattr(getattr(si, "current_case", None), "identifier", None) or getattr(
+            getattr(si, "case", None), "case_id", None
+        )
         if cid:
             ctx["case_id"] = cid
     except Exception:
         pass
     try:
-        cname = getattr(getattr(si, "current_case", None), "name", None) or getattr(getattr(si, "case", None), "case_name", None)
+        cname = getattr(getattr(si, "current_case", None), "name", None) or getattr(
+            getattr(si, "case", None), "case_name", None
+        )
         if cname:
             ctx["case_name"] = cname
     except Exception:
@@ -95,7 +107,9 @@ def main():
     si.script_name = f"{PROVIDER} - {ACTION_UI}"
     si.LOGGER.info("Reading configuration from Server")
 
-    url, secret, region, client_id, client_secret, api_base, token_url, bearer_override = _ci_instance_params(si)
+    url, secret, region, client_id, client_secret, api_base, token_url, bearer_override = (
+        _ci_instance_params(si)
+    )
     if not url:
         si.end("Missing required integration parameter: Torq URL", False)
         return
@@ -120,8 +134,8 @@ def main():
         read_timeout_s=0.25,
         poll_max_seconds=60.0,
         poll_interval_seconds=3.0,
-        prefer_public_api=True,   # curl-parity polling
-        ignore_env_proxy=True,    # avoid env proxy interference
+        prefer_public_api=True,  # curl-parity polling
+        ignore_env_proxy=True,  # avoid env proxy interference
         bearer_override=bearer_override,
     )
     mgr = TorqManager(cfg, logger=logger)
@@ -167,7 +181,9 @@ def main():
         si.result.add_result_json(result_blob)
 
         status_code = resp.get("status_code")
-        final_status = (final_json.get("status") or "").upper() if isinstance(final_json, dict) else ""
+        final_status = (
+            (final_json.get("status") or "").upper() if isinstance(final_json, dict) else ""
+        )
         exec_id = exec_info.get("id")
         msg_bits = [f"status={status_code}", "async=True"]
         if exec_id:
@@ -176,7 +192,7 @@ def main():
             msg_bits.append(f"final_status={final_status}")
 
         ok = bool(status_code and 200 <= int(status_code) < 300)
-        si.end(f'Torq ping requested ({", ".join(msg_bits)}).', ok)
+        si.end(f"Torq ping requested ({', '.join(msg_bits)}).", ok)
 
     except Exception as e:
         if logger:
