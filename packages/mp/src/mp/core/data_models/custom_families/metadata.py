@@ -96,10 +96,13 @@ class CustomFamily(
 
     @classmethod
     def _from_built(cls, built: BuiltCustomFamily) -> CustomFamily:
+        image: str | bytes | None = built.get("ImageBase64", "")
+        if isinstance(image, str):
+            image = image.encode()
         return cls(
             family=built["Family"],
             description=built["Description"],
-            image_base64=built["ImageBase64"],
+            image_base64=image,
             is_custom=built.get("IsCustom", False),
             rules=[CustomFamilyRule.from_built(rule) for rule in built["Rules"]],
         )
