@@ -28,7 +28,7 @@ from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
 class BuiltJobParameter(TypedDict):
     Name: str
-    Description: str
+    Description: NotRequired[str]
     IsMandatory: bool
     Type: int
     DefaultValue: str | float | bool | int | None
@@ -36,7 +36,7 @@ class BuiltJobParameter(TypedDict):
 
 class NonBuiltJobParameter(TypedDict):
     name: str
-    description: str
+    description: str | None
     is_mandatory: bool
     type: str
     default_value: NotRequired[str | float | bool | int | None]
@@ -52,7 +52,7 @@ class JobParameter(mp.core.data_models.abc.Buildable[BuiltJobParameter, NonBuilt
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
     description: Annotated[
-        str, pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH)
+        str | None, pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH)
     ]
     is_mandatory: bool
     type_: ScriptParamType
@@ -62,17 +62,17 @@ class JobParameter(mp.core.data_models.abc.Buildable[BuiltJobParameter, NonBuilt
     def _from_built(cls, built: BuiltJobParameter) -> Self:
         return cls(
             name=built["Name"],
-            description=built["Description"],
+            description=built.get("Description"),
             is_mandatory=built["IsMandatory"],
             type_=ScriptParamType(int(built["Type"])),
-            default_value=built["DefaultValue"],
+            default_value=built.get("DefaultValue"),
         )
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltJobParameter) -> Self:
         return cls(
             name=non_built["name"],
-            description=non_built["description"],
+            description=non_built.get("description"),
             is_mandatory=non_built["is_mandatory"],
             type_=ScriptParamType.from_string(non_built["type"]),
             default_value=non_built.get("default_value"),
