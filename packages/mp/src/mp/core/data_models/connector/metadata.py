@@ -143,7 +143,7 @@ class ConnectorMetadata(
         built: BuiltConnectorMetadata,
     ) -> ConnectorMetadata:
         documentation_link = built.get("DocumentationLink")
-        if documentation_link == "":
+        if not documentation_link:
             documentation_link = None
         return cls(
             file_name=file_name,
