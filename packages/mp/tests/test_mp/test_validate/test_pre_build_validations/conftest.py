@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
-import pathlib
 import shutil
 import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def temp_integration(built_integration: pathlib.Path) -> Iterator[pathlib.Path]:
+def temp_integration(built_integration: Path) -> Iterator[Path]:
     """Create a temporary integration directory with mock files."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = pathlib.Path(temp_dir)
+        temp_path: Path = Path(temp_dir)
         shutil.copytree(built_integration.resolve(), temp_path / built_integration.name)
         yield temp_path / built_integration.name

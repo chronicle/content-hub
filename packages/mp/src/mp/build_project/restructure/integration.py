@@ -31,15 +31,15 @@ import mp.core.file_utils
 from . import code, dependencies, metadata, scripts
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.data_models.integration import BuiltIntegration
 
 
 def restructure_integration(
     integration_metadata: BuiltIntegration,
-    integration_path: pathlib.Path,
-    integration_out_path: pathlib.Path,
+    integration_path: Path,
+    integration_out_path: Path,
 ) -> None:
     """Restructure an integration to its "out" path.
 

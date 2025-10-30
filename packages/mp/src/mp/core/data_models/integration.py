@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import tomllib
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Self, TypedDict
 
 import mp.core.constants
 import mp.core.file_utils
@@ -33,18 +33,15 @@ from .release_notes.metadata import ReleaseNote
 from .widget.metadata import WidgetMetadata
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Mapping, Sequence
+    from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, ManagerName, WidgetName
 
     from .action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
     from .connector.metadata import BuiltConnectorMetadata, NonBuiltConnectorMetadata
     from .custom_families.metadata import BuiltCustomFamily, NonBuiltCustomFamily
-    from .integration_meta.metadata import (
-        BuiltIntegrationMetadata,
-        NonBuiltIntegrationMetadata,
-    )
+    from .integration_meta.metadata import BuiltIntegrationMetadata, NonBuiltIntegrationMetadata
     from .integration_meta.parameter import BuiltIntegrationParameter
     from .job.metadata import BuiltJobMetadata, NonBuiltJobMetadata
     from .mapping_rules.metadata import BuiltMappingRule, NonBuiltMappingRule
@@ -131,7 +128,7 @@ class Integration:
         self._validate_default_mapping_exists_if_connectors_exists()
 
     @classmethod
-    def from_built_path(cls, path: pathlib.Path) -> Integration:
+    def from_built_path(cls, path: Path) -> Self:
         """Create the integration from a built integration's path.
 
         Args:
@@ -145,10 +142,8 @@ class Integration:
 
         """
         try:
-            integration_meta: IntegrationMetadata = IntegrationMetadata.from_built_integration_path(
-                path
-            )
-            python_version_file: pathlib.Path = path / mp.core.constants.PYTHON_VERSION_FILE
+            integration_meta: IntegrationMetadata = IntegrationMetadata.from_built_path(path)
+            python_version_file: Path = path / mp.core.constants.PYTHON_VERSION_FILE
             python_version: str = ""
             if python_version_file.exists():
                 python_version = python_version_file.read_text(encoding="utf-8")
@@ -157,29 +152,23 @@ class Integration:
                 python_version=python_version,
                 identifier=integration_meta.identifier,
                 metadata=integration_meta,
-                release_notes=ReleaseNote.from_built_integration_path(path),
-                custom_families=CustomFamily.from_built_integration_path(path),
-                mapping_rules=MappingRule.from_built_integration_path(path),
+                release_notes=ReleaseNote.from_built_path(path),
+                custom_families=CustomFamily.from_built_path(path),
+                mapping_rules=MappingRule.from_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
-                actions_metadata={
-                    a.file_name: a for a in ActionMetadata.from_built_integration_path(path)
-                },
+                actions_metadata={a.file_name: a for a in ActionMetadata.from_built_path(path)},
                 connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_built_integration_path(path)
+                    c.file_name: c for c in ConnectorMetadata.from_built_path(path)
                 },
-                jobs_metadata={
-                    j.file_name: j for j in JobMetadata.from_built_integration_path(path)
-                },
-                widgets_metadata={
-                    w.file_name: w for w in WidgetMetadata.from_built_integration_path(path)
-                },
+                jobs_metadata={j.file_name: j for j in JobMetadata.from_built_path(path)},
+                widgets_metadata={w.file_name: w for w in WidgetMetadata.from_built_path(path)},
             )
         except ValueError as e:
             msg: str = f"Failed to load integration {path.name}"
             raise ValueError(msg) from e
 
     @classmethod
-    def from_non_built_path(cls, path: pathlib.Path) -> Integration:
+    def from_non_built_path(cls, path: Path) -> Self:
         """Create the integration from a non-built integration's path.
 
         Args:
@@ -192,18 +181,16 @@ class Integration:
             ValueError: when the non-built integration failed to load
 
         """
-        project_file_path: pathlib.Path = path / mp.core.constants.PROJECT_FILE
+        project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
         pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # type: ignore[assignment]
         try:
-            integration_meta: IntegrationMetadata = (
-                IntegrationMetadata.from_non_built_integration_path(path)
-            )
+            integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
                 pyproject_toml_file=pyproject_toml,
                 integration_meta=integration_meta,
             )
-            python_version_file: pathlib.Path = path / mp.core.constants.PYTHON_VERSION_FILE
+            python_version_file: Path = path / mp.core.constants.PYTHON_VERSION_FILE
             python_version: str = ""
             if python_version_file.exists():
                 python_version = python_version_file.read_text(encoding="utf-8")
@@ -212,22 +199,16 @@ class Integration:
                 python_version=python_version,
                 identifier=integration_meta.identifier,
                 metadata=integration_meta,
-                release_notes=ReleaseNote.from_non_built_integration_path(path),
-                custom_families=CustomFamily.from_non_built_integration_path(path),
-                mapping_rules=MappingRule.from_non_built_integration_path(path),
+                release_notes=ReleaseNote.from_non_built_path(path),
+                custom_families=CustomFamily.from_non_built_path(path),
+                mapping_rules=MappingRule.from_non_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
-                actions_metadata={
-                    a.file_name: a for a in ActionMetadata.from_non_built_integration_path(path)
-                },
+                actions_metadata={a.file_name: a for a in ActionMetadata.from_non_built_path(path)},
                 connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_non_built_integration_path(path)
+                    c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)
                 },
-                jobs_metadata={
-                    j.file_name: j for j in JobMetadata.from_non_built_integration_path(path)
-                },
-                widgets_metadata={
-                    w.file_name: w for w in WidgetMetadata.from_non_built_integration_path(path)
-                },
+                jobs_metadata={j.file_name: j for j in JobMetadata.from_non_built_path(path)},
+                widgets_metadata={w.file_name: w for w in WidgetMetadata.from_non_built_path(path)},
             )
 
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:

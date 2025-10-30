@@ -21,17 +21,17 @@ import mp.core.unix
 from mp.core.unix import NonFatalCommandError
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class UvLockValidation:
     name: str = "Uv Lock"
 
-    def run(self, integration_path: pathlib.Path) -> None:  # noqa: PLR6301
-        """Check if the 'uv.lock' file is consistent with 'pyproject.toml' file.
+    def run(self, integration_path: Path) -> None:  # noqa: PLR6301
+        """Check if the 'uv.lock' file is consistent with the 'pyproject.toml' file.
 
         Args:
-            integration_path (pathlib.Path): Path to the integration directory.
+            integration_path (Path): Path to the integration directory.
 
         Raises:
         NonFatalCommandError: If the 'uv lock --check' command indicates that the

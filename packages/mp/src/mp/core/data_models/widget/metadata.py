@@ -21,8 +21,12 @@ import pydantic
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
+from mp.core.data_models.condition import (
+    BuiltConditionGroup,
+    ConditionGroup,
+    NonBuiltConditionGroup,
+)
 
-from .condition_group import BuiltConditionGroup, ConditionGroup, NonBuiltConditionGroup
 from .data_definition import (
     BuiltWidgetDataDefinition,
     NonBuiltWidgetDataDefinition,
@@ -31,7 +35,7 @@ from .data_definition import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class WidgetScope(mp.core.data_models.abc.RepresentableEnum):
@@ -69,7 +73,7 @@ class NonBuiltWidgetMetadata(TypedDict):
 
 
 class WidgetMetadata(
-    mp.core.data_models.abc.ScriptMetadata[BuiltWidgetMetadata, NonBuiltWidgetMetadata]
+    mp.core.data_models.abc.ComponentMetadata[BuiltWidgetMetadata, NonBuiltWidgetMetadata]
 ):
     file_name: str
     title: Annotated[
@@ -97,7 +101,7 @@ class WidgetMetadata(
     default_size: WidgetSize
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the 'built' integration path.
 
         Args:
@@ -107,17 +111,17 @@ class WidgetMetadata(
             A sequence of `WidgetMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.OUT_WIDGETS_META_DIR
+        meta_path: Path = path / mp.core.constants.OUT_WIDGETS_META_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_built_integration_path(p)
+            cls._from_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.WIDGETS_META_SUFFIX}")
         ]
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -127,17 +131,17 @@ class WidgetMetadata(
             A list of `WidgetMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.WIDGETS_DIR
+        meta_path: Path = path / mp.core.constants.WIDGETS_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_non_built_integration_path(p)
+            cls._from_non_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
         ]
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltWidgetMetadata) -> WidgetMetadata:
+    def _from_built(cls, file_name: str, built: BuiltWidgetMetadata) -> Self:
         return cls(
             file_name=file_name,
             title=built["title"],
@@ -151,11 +155,7 @@ class WidgetMetadata(
         )
 
     @classmethod
-    def _from_non_built(
-        cls,
-        file_name: str,
-        non_built: NonBuiltWidgetMetadata,
-    ) -> WidgetMetadata:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltWidgetMetadata) -> Self:
         return cls(
             file_name=file_name,
             title=non_built["title"],

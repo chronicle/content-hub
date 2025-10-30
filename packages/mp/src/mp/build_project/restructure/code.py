@@ -32,12 +32,12 @@ import mp.core.file_utils
 from .restructurable import Restructurable
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Code(Restructurable):
-    out_path: pathlib.Path
+    out_path: Path
 
     def restructure(self) -> None:
         """Restructure an integration's code to its "out" path."""
@@ -63,11 +63,11 @@ class Code(Restructurable):
         self._restructure_code(mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR)
 
     def _restructure_code(self, dir_name: str) -> None:
-        out_dir: pathlib.Path = self.out_path / dir_name
+        out_dir: Path = self.out_path / dir_name
         if not out_dir.exists():
             return
 
-        files: set[pathlib.Path] = {
+        files: set[Path] = {
             file for file in out_dir.iterdir() if mp.core.file_utils.is_python_file(file)
         }
         mp.core.code_manipulation.restructure_scripts_imports(files)

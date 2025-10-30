@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, NotRequired, TypedDict
+from typing import Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -70,7 +70,7 @@ class IntegrationParameter(
     default_value: str | bool | float | int | None
 
     @classmethod
-    def _from_built(cls, built: BuiltIntegrationParameter) -> IntegrationParameter:
+    def _from_built(cls, built: BuiltIntegrationParameter) -> Self:
         return cls(
             name=built["PropertyName"],
             default_value=built["Value"],
@@ -81,10 +81,7 @@ class IntegrationParameter(
         )
 
     @classmethod
-    def _from_non_built(
-        cls,
-        non_built: NonBuiltIntegrationParameter,
-    ) -> IntegrationParameter:
+    def _from_non_built(cls, non_built: NonBuiltIntegrationParameter) -> Self:
         return cls(
             name=non_built["name"],
             default_value=non_built.get("default_value"),

@@ -28,7 +28,7 @@ from . import api, utils
 from .minor_version_bump import minor_version_bump
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 __all__: list[str] = ["app", "deploy", "login"]
 app: typer.Typer = typer.Typer(
@@ -176,14 +176,14 @@ def deploy(
 
     """
     config: dict[str, str] = utils.load_dev_env_config()
-    source_path: pathlib.Path = _get_integration_path(integration)
+    source_path: Path = _get_integration_path(integration)
     identifier: str = utils.get_integration_identifier(source_path)
 
     utils.build_integration(integration)
-    built_dir: pathlib.Path = utils.find_built_integration_dir(identifier)
+    built_dir: Path = utils.find_built_integration_dir(identifier)
     minor_version_bump(built_dir, source_path, identifier)
 
-    zip_path: pathlib.Path = utils.zip_integration_dir(built_dir)
+    zip_path: Path = utils.zip_integration_dir(built_dir)
     rich.print(f"Zipped built integration at {zip_path}")
 
     try:
@@ -207,11 +207,11 @@ def deploy(
         raise typer.Exit(1) from e
 
 
-def _get_integration_path(integration: str) -> pathlib.Path:
-    source_path: pathlib.Path | None = None
-    integrations_root: pathlib.Path = mp.core.file_utils.create_or_get_integrations_dir()
+def _get_integration_path(integration: str) -> Path:
+    source_path: Path | None = None
+    integrations_root: Path = mp.core.file_utils.create_or_get_integrations_dir()
     for repo in mp.core.constants.INTEGRATIONS_TYPES:
-        candidate: pathlib.Path = integrations_root / repo / integration
+        candidate: Path = integrations_root / repo / integration
         if candidate.exists():
             source_path = candidate
             break

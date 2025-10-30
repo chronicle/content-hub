@@ -24,7 +24,7 @@ import typer
 
 import mp.core.config
 import mp.core.file_utils
-from mp.build_project.marketplace import Marketplace
+from mp.build_project.integrations import Integrations
 from mp.core.custom_types import RepositoryType
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
@@ -36,6 +36,7 @@ from .utils import Configurations, get_marketplace_paths_from_names
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+    from pathlib import Path
 
     from mp.core.config import RuntimeParams
     from mp.core.custom_types import Products
@@ -163,14 +164,10 @@ def validate(  # noqa: PLR0913
     params: ValidateParams = ValidateParams(repository, integration, group)
     params.validate()
 
-    commercial_path: pathlib.Path = mp.core.file_utils.get_integrations_path(
-        RepositoryType.COMMERCIAL
-    )
-    community_path: pathlib.Path = mp.core.file_utils.get_integrations_path(
-        RepositoryType.COMMUNITY
-    )
-    commercial_mp: Marketplace = Marketplace(commercial_path)
-    community_mp: Marketplace = Marketplace(community_path)
+    commercial_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMERCIAL)
+    community_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMUNITY)
+    commercial_mp: Integrations = Integrations(commercial_path)
+    community_mp: Integrations = Integrations(community_path)
 
     run_configurations: Configurations = Configurations(only_pre_build=only_pre_build)
 
@@ -224,9 +221,9 @@ def validate(  # noqa: PLR0913
         raise typer.Exit(code=1)
 
 
-def _validate_repo(marketplace: Marketplace, configurations: Configurations) -> FullReport:
-    products: Products[set[pathlib.Path]] = (
-        mp.core.file_utils.get_integrations_and_groups_from_paths(*marketplace.paths)
+def _validate_repo(marketplace: Integrations, configurations: Configurations) -> FullReport:
+    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
+        *marketplace.paths
     )
 
     validation_outputs: FullReport
@@ -242,8 +239,8 @@ def _validate_repo(marketplace: Marketplace, configurations: Configurations) -> 
 
 
 def _validate_groups(
-    groups: Iterable[pathlib.Path],
-    marketplace: Marketplace,
+    groups: Iterable[Path],
+    marketplace: Integrations,
     configurations: Configurations,
 ) -> FullReport:
     """Validate a list of integration group names within a specific marketplace scope.
@@ -266,7 +263,7 @@ def _validate_groups(
 
 
 def _process_groups_for_validation(
-    groups: Iterable[pathlib.Path],
+    groups: Iterable[Path],
     validation_function: ValidationFn,
 ) -> list[ValidationResults]:
     """Iterate through groups and perform pre-build validation on their integrations.
@@ -287,8 +284,8 @@ def _process_groups_for_validation(
 
 
 def _validate_integrations(
-    integrations: Iterable[pathlib.Path],
-    marketplace: Marketplace,
+    integrations: Iterable[Path],
+    marketplace: Integrations,
     configurations: Configurations,
 ) -> FullReport:
     """Validate a list of integration names within a specific marketplace scope.
@@ -313,7 +310,7 @@ def _validate_integrations(
 
 
 def _run_validations(
-    integration: Iterable[pathlib.Path], validation_function: ValidationFn
+    integration: Iterable[Path], validation_function: ValidationFn
 ) -> list[ValidationResults]:
     """Execute pre-build validation checks on a list of integration paths.
 
@@ -321,7 +318,7 @@ def _run_validations(
         list[ValidationResults]: List contains the Validation results object
 
     """
-    paths: Iterator[pathlib.Path] = (
+    paths: Iterator[Path] = (
         i for i in integration if i.exists() and mp.core.file_utils.is_integration(i)
     )
 
@@ -333,7 +330,7 @@ def _run_validations(
     return validation_outputs
 
 
-def _run_pre_build_validations(integration_path: pathlib.Path) -> ValidationResults:
+def _run_pre_build_validations(integration_path: Path) -> ValidationResults:
     validation_object: PreBuildValidations = PreBuildValidations(integration_path)
     validation_object.run_pre_build_validation()
     return validation_object.results

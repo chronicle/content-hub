@@ -20,53 +20,53 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import mp.build_project.marketplace
+import mp.build_project.integrations
 import mp.core.constants
 import test_mp.common
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Callable
+    from pathlib import Path
 
-    from mp.build_project.marketplace import Marketplace
+    from mp.build_project.integrations import Integrations
 
 
 def test_build_half_built_integration(
-    tmp_path: pathlib.Path,
-    half_built_integration: pathlib.Path,
+    tmp_path: Path,
+    half_built_integration: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[pathlib.Path], None],
+    assert_build_integration: Callable[[Path], None],
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
         assert_build_integration(half_built_integration)
 
 
 def test_build_non_built_integration(
-    tmp_path: pathlib.Path,
-    non_built_integration: pathlib.Path,
+    tmp_path: Path,
+    non_built_integration: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[pathlib.Path], None],
+    assert_build_integration: Callable[[Path], None],
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
         assert_build_integration(non_built_integration)
 
 
 def test_build_built_integration(
-    tmp_path: pathlib.Path,
-    built_integration: pathlib.Path,
+    tmp_path: Path,
+    built_integration: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[pathlib.Path], None],
+    assert_build_integration: Callable[[Path], None],
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
         assert_build_integration(built_integration)
 
 
 def test_non_existing_integration_raises_file_not_found_error(
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[pathlib.Path], None],
+    assert_build_integration: Callable[[Path], None],
 ) -> None:
-    p: pathlib.Path = tmp_path / "fake_integration"
+    p: Path = tmp_path / "fake_integration"
     p.mkdir()
     with (
         unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path),
@@ -77,22 +77,22 @@ def test_non_existing_integration_raises_file_not_found_error(
 
 @pytest.fixture
 def assert_build_integration(
-    tmp_path: pathlib.Path,
-    built_integration: pathlib.Path,
-) -> Callable[[pathlib.Path], None]:
-    def wrapper(integration_path: pathlib.Path) -> None:
-        community: pathlib.Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    tmp_path: Path,
+    built_integration: Path,
+) -> Callable[[Path], None]:
+    def wrapper(integration_path: Path) -> None:
+        community: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
         shutil.copytree(integration_path.parent, community)
-        integration: pathlib.Path = community / built_integration.name
-        py_version: pathlib.Path = integration / mp.core.constants.PYTHON_VERSION_FILE
+        integration: Path = community / built_integration.name
+        py_version: Path = integration / mp.core.constants.PYTHON_VERSION_FILE
         if integration.exists():
             py_version.write_text("3.11", encoding="utf-8")
 
-        marketplace: Marketplace = mp.build_project.marketplace.Marketplace(community)
+        marketplace: Integrations = mp.build_project.integrations.Integrations(community)
         marketplace.build_integration(integration)
 
-        out_integration: pathlib.Path = marketplace.out_dir / integration.name
-        out_py_version: pathlib.Path = out_integration / mp.core.constants.PYTHON_VERSION_FILE
+        out_integration: Path = marketplace.out_dir / integration.name
+        out_py_version: Path = out_integration / mp.core.constants.PYTHON_VERSION_FILE
         out_py_version.unlink(missing_ok=True)
 
         expected_file_names: set[str]

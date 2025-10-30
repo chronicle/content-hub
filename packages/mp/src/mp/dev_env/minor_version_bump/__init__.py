@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from __future__ import annotations
 
 import math
 import pathlib
-from typing import Any
+import tomllib
+from typing import TYPE_CHECKING, Any
 
 import rich
-import toml
 import typer
 
 import mp.core.constants
@@ -35,14 +34,17 @@ from .utils import (
     update_version_cache,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 CONFIG_PATH = pathlib.Path.home() / ".mp_dev_env.json"
 INTEGRATIONS_CACHE_DIR_NAME: str = ".integrations_cache"
 VERSIONS_CACHE_FILE_NAME: str = "version_cache.yaml"
 
 
 def minor_version_bump(
-    integration_dir_built: pathlib.Path,
-    integration_dir_non_built: pathlib.Path,
+    integration_dir_built: Path,
+    integration_dir_non_built: Path,
     integration_id: str,
 ) -> None:
     """Bump the minor version of an integration to enable new venv creation.
@@ -57,11 +59,11 @@ def minor_version_bump(
 
     """
     try:
-        pyproject_path: pathlib.Path = integration_dir_non_built / mp.core.constants.PROJECT_FILE
-        pyproject_data: dict[str, Any] = toml.load(pyproject_path)
+        pyproject_path: Path = integration_dir_non_built / mp.core.constants.PROJECT_FILE
+        pyproject_data: dict[str, Any] = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
 
         version: float = float(pyproject_data["project"]["version"])
-        cache_dir: pathlib.Path = get_marketplace_path() / INTEGRATIONS_CACHE_DIR_NAME
+        cache_dir: Path = get_marketplace_path() / INTEGRATIONS_CACHE_DIR_NAME
         cache: VersionCache | None = load_and_validate_cache(
             cache_dir, integration_id, math.floor(version)
         )

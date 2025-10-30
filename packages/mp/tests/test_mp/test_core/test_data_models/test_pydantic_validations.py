@@ -20,10 +20,10 @@ import pydantic
 import pytest
 
 import mp.core.constants
+from mp.core.data_models.condition import ConditionGroup
 from mp.core.data_models.connector.metadata import ConnectorMetadata
 from mp.core.data_models.job.metadata import JobMetadata
 from mp.core.data_models.job.parameter import JobParameter
-from mp.core.data_models.widget.condition_group import ConditionGroup
 from mp.core.data_models.widget.data_definition import WidgetDataDefinition, WidgetType
 from mp.core.data_models.widget.metadata import WidgetMetadata, WidgetScope, WidgetSize
 

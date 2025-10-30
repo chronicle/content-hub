@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import base64
-from typing import TYPE_CHECKING, Annotated, TypedDict
+from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 
 import pydantic
 
@@ -25,7 +25,7 @@ import mp.core.data_models.abc
 from .rule import BuiltCustomFamilyRule, CustomFamilyRule, NonBuiltCustomFamilyRule
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class BuiltCustomFamily(TypedDict):
@@ -57,7 +57,7 @@ class CustomFamily(
     rules: list[CustomFamilyRule]
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[CustomFamily]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the 'built' integration path.
 
         Args:
@@ -67,7 +67,7 @@ class CustomFamily(
             A list of `CustomFamily` objects
 
         """
-        meta_path: pathlib.Path = (
+        meta_path: Path = (
             path
             / mp.core.constants.OUT_CUSTOM_FAMILIES_DIR
             / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
@@ -75,10 +75,10 @@ class CustomFamily(
         if not meta_path.exists():
             return []
 
-        return cls._from_built_integration_path(meta_path)
+        return cls._from_built_path(meta_path)
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[CustomFamily]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -88,14 +88,14 @@ class CustomFamily(
             A list of `CustomFamily` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.CUSTOM_FAMILIES_FILE
+        meta_path: Path = path / mp.core.constants.CUSTOM_FAMILIES_FILE
         if not meta_path.exists():
             return []
 
-        return cls._from_non_built_integration_path(meta_path)
+        return cls._from_non_built_path(meta_path)
 
     @classmethod
-    def _from_built(cls, built: BuiltCustomFamily) -> CustomFamily:
+    def _from_built(cls, built: BuiltCustomFamily) -> Self:
         return cls(
             family=built["Family"],
             description=built["Description"],
@@ -105,7 +105,7 @@ class CustomFamily(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltCustomFamily) -> CustomFamily:
+    def _from_non_built(cls, non_built: NonBuiltCustomFamily) -> Self:
         return cls(
             family=non_built["family"],
             description=non_built["description"],

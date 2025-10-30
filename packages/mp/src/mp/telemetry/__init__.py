@@ -64,7 +64,7 @@ def track_command(mp_command_function: Callable) -> Callable:
         if is_ci_cd() or not _is_telemetry_enabled():
             return mp_command_function(*args, **kwargs)
 
-        start_time = time.monotonic()
+        start_time: float = time.monotonic()
         error: Exception | None = None
         exit_code: int = 0
         unexpected_exit: bool = False
@@ -80,7 +80,7 @@ def track_command(mp_command_function: Callable) -> Callable:
             error = e
             exit_code = 1
         finally:
-            end_time = time.monotonic()
+            end_time: float = time.monotonic()
             duration_ms: int = int((end_time - start_time) * 1000)
 
             tool_version: str = importlib.metadata.version("mp")
@@ -90,7 +90,7 @@ def track_command(mp_command_function: Callable) -> Callable:
             safe_args: dict[str, Any] = _filter_command_arguments(kwargs)
             command_args_str: str = json.dumps(safe_args) if safe_args else None
 
-            payload = TelemetryPayload(
+            payload: TelemetryPayload = TelemetryPayload(
                 install_id=_get_install_id(),
                 tool="mp",
                 tool_version=tool_version,
@@ -120,10 +120,10 @@ def track_command(mp_command_function: Callable) -> Callable:
 def send_telemetry_report(event_payload: TelemetryPayload) -> None:
     """Send a telemetry event to the cloud run endpoint."""
     try:
-        headers = {
+        headers: dict[str, str] = {
             "Content-Type": "application/json",
         }
-        _ = requests.post(
+        requests.post(
             ENDPOINT,
             data=json.dumps(event_payload.to_dict()),
             headers=headers,
@@ -147,15 +147,16 @@ def _get_install_id() -> str:
 def _load_config_yaml() -> ConfigYaml:
     config: ConfigYaml
     if not CONFIG_FILE_PATH.exists():
-        config = {"install_id": str(uuid.uuid4()), "is_enabled": True}
+        config: dict[str, str | bool] = {"install_id": str(uuid.uuid4()), "is_enabled": True}
         _save_config_yaml(config)
         return config
 
     try:
         with pathlib.Path.open(CONFIG_FILE_PATH) as f:
-            config = yaml.safe_load(f) or {}
+            config: dict[str, Any] = yaml.safe_load(f) or {}
+
     except (yaml.YAMLError, OSError):
-        config = {"install_id": str(uuid.uuid4()), "is_enabled": True}
+        config: dict[str, str | bool] = {"install_id": str(uuid.uuid4()), "is_enabled": True}
         _save_config_yaml(config)
         return config
 
@@ -179,6 +180,7 @@ def _save_config_yaml(config_yaml: ConfigYaml) -> None:
         MP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         with pathlib.Path.open(CONFIG_FILE_PATH, "w") as f:
             yaml.safe_dump(config_yaml, f)
+
     except OSError:
         pass
 
@@ -188,12 +190,13 @@ def _command_name_mapper(command_name: str) -> str:
 
 
 def _filter_command_arguments(kwargs: dict[Any, Any]) -> dict[str, Any]:
-    sanitized_args = {}
+    sanitized_args: dict[Any, Any] = {}
     for key, value in kwargs.items():
         if key in ALLOWED_COMMAND_ARGUMENTS:
             sanitized_value = _sanitize_argument_value(value)
             if sanitized_value is not None:
                 sanitized_args[key] = sanitized_value
+
     return sanitized_args
 
 
@@ -204,8 +207,10 @@ def _sanitize_argument_value(value: Enum | list[Any] | tuple[Any] | Any) -> Any:
     if isinstance(value, (list, tuple)):
         if not value:
             return None
+
         if len(value) == 1:
             return _sanitize_argument_value(value[0])
+
         return [_sanitize_argument_value(item) for item in value]
 
     return value
