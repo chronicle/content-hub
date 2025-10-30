@@ -41,7 +41,7 @@ import paramiko.ed25519key
 
 
 from .definitions import File, Metadata
-from constants import BITBUCKET_HOST,SUB_BITBUCKET_HOST
+from .constants import BITBUCKET_HOST, SUB_BITBUCKET_HOST
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
