@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def temp_integration(built_integration: pathlib.Path) -> Iterator[pathlib.Path]:
+def temp_integration(non_built_integration: pathlib.Path) -> Iterator[pathlib.Path]:
     """Create a temporary integration directory with mock files."""
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = pathlib.Path(temp_dir)
-        shutil.copytree(built_integration.resolve(), temp_path / built_integration.name)
-        yield temp_path / built_integration.name
+        shutil.copytree(non_built_integration.resolve(), temp_path / non_built_integration.name)
+        yield temp_path / non_built_integration.name
