@@ -131,7 +131,6 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
     "ChronicleSupportTools",
     "Connectors",
     "Lacework",
-    "PagerDuty",
 }
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",

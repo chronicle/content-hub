@@ -1,17 +1,35 @@
 from __future__ import annotations
 
+from urllib.parse import quote_plus
+
 import requests
-from pdpyras import APISession
 
 
 class PagerDutyManager:
     BASE_URL = "https://api.pagerduty.com"
     INCIDENTS_URI = "/incidents"
 
-    def __init__(self, api_key):
+    def __init__(self, api_key: str, verify_ssl: bool = False):
         """Initializes PagerDutyManager with params as set in connector config"""
         self.api_key = api_key
-        self.session = APISession(self.api_key)
+        self.verify_ssl = verify_ssl
+
+        self.requests_session = requests.Session()
+        self.requests_session.verify = self.verify_ssl
+
+    def test_connectivity(self):
+        """Tests connectivity and authentication to the PagerDuty API."""
+        url = self.BASE_URL + "/abilities"
+        headers = {
+            "Accept": "application/vnd.pagerduty+json;version=2",
+            "Authorization": f"Token token={self.api_key}",
+        }
+        response = self.requests_session.get(
+            url,
+            headers=headers,
+            timeout=10,
+        )
+        response.raise_for_status()
 
     def acknowledge_incident(self, incident_id):
         """Acknowledges an incident in PagerDuty
@@ -34,36 +52,44 @@ class PagerDutyManager:
         return response
 
     def list_oncalls(self):
-        users = self.session.list_all("oncalls")
-        return users
+        url = f"{self.BASE_URL}/oncalls"
+        response = self.requests_session.get(
+            url=url, headers=self._get_auth_headers(), timeout=10
+        )
+        response.raise_for_status()
+        return response.json().get("oncalls", [])
 
     def get_all_incidents(self):
-        session = requests.Session()
-        session.headers.update(
-            {"Authorization": f"Token token={self.api_key}", "From": "none"},
+        self.requests_session.headers.update(
+            {"Authorization": f"Token token={self.api_key}"},
         )
-        parameters = {"user_ids[]": 0}
         url = self.BASE_URL + "/incidents"
-        response = session.get(url=url, json=parameters, timeout=10)
-        incident_data = response.json().get("incidents")
-        return incident_data
+        response = self.requests_session.get(url=url, timeout=10)
+        response.raise_for_status()
+        incident_data = response.json()
+        return incident_data.get("incidents")
 
     def list_incidents(self):
-        incidents = self.session.list_all("incidents")
+        url = f"{self.BASE_URL}/incidents"
+        response = self.requests_session.get(
+            url=url, headers=self._get_auth_headers(), timeout=10
+        )
+        response.raise_for_status()
+        incidents = response.json().get("incidents")
         if incidents:
             return incidents
         return "No Incidents Found"
 
     def list_users(self):
-        users = self.session.list_all("users")
-        users.raise_for_status()
-        if users:
-            return users
-        return "No Users Found"
+        url = f"{self.BASE_URL}/users"
+        response = self.requests_session.get(
+            url=url, headers=self._get_auth_headers(), timeout=10
+        )
+        response.raise_for_status()
+        return response.json().get("users", [])
 
     def create_incident(self, email_from, title, service, urgency, body):
-        session = requests.Session()
-        session.headers.update(
+        self.requests_session.headers.update(
             {"Authorization": f"Token token={self.api_key}", "From": f"{email_from}"},
         )
         payload = {
@@ -77,34 +103,41 @@ class PagerDutyManager:
         }
         url = self.BASE_URL + "/incidents"
 
-        response = session.post(url=url, json=payload, timeout=10)
+        response = self.requests_session.post(url=url, json=payload, timeout=10)
         response.raise_for_status()
         if response.json().get("incident_number") != 0:
             return response.json()
         return {"message": "No Incident Found"}
 
     def get_incident_ID(self, incidentID, email_from):
-        session = requests.Session()
-        session.headers.update(
+        self.requests_session.headers.update(
             {"Authorization": f"Token token={self.api_key}", "From": f"{email_from}"},
         )
         parameters = {"user_ids[]": incidentID}
         url = self.BASE_URL + self.INCIDENTS_URI
-        response = session.get(url=url, json=parameters, timeout=10)
+        response = self.requests_session.get(url=url, json=parameters, timeout=10)
         response.raise_for_status()
         incident_data = {}
         info_got = response.json().get("incidents")
 
         for incident in info_got:
             if incident.get("incident_key") == incidentID:
-                incident_data = info_got[incident]
+                incident_data = incident
 
         return incident_data
 
     def get_user_by_email(self, email):
-        user = self.session.find("users", email, attribute="email")
-        if user is not None:
-            return user
+        url = f"{self.BASE_URL}/users"
+        params = {"query": email}
+        response = self.requests_session.get(
+            url=url, headers=self._get_auth_headers(), params=params, timeout=10
+        )
+        response.raise_for_status()
+        users = response.json().get("users", [])
+        # The API returns a list, find the exact email match
+        for user in users:
+            if user.get("email") == email:
+                return user
         return "No User Found"
 
     def get_user_by_ID(self, userID):
@@ -114,41 +147,57 @@ class PagerDutyManager:
             "Authorization": f"Token token={self.api_key}",
         }
         url = self.BASE_URL + "/users/" + userID
-        response = requests.request("GET", url, headers=headers, timeout=10)
+        response = self.requests_session.request(
+            "GET", url, headers=headers, timeout=10
+        )
         response.raise_for_status()
         if response.json()["user"]:
             return response.json()["user"]
         return "No User Found"
 
-    def list_filtered_incidents(self, filter_params_dic: dict):
-        url = self.BASE_URL + "/incidents"
+    def list_filtered_incidents(self, params: dict):
+        base_url = self.BASE_URL + self.INCIDENTS_URI
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/vnd.pagerduty+json;version=2",
             "Authorization": f"Token token={self.api_key}",
         }
-        response = requests.request(
-            "GET",
-            url,
+
+        query_parts = []
+        for key, value in params.items():
+            encoded_key = quote_plus(key)
+            if isinstance(value, list):
+                for item in value:
+                    if item is not None:
+                        query_parts.append(f"{encoded_key}={quote_plus(str(item))}")
+            else:
+                if value is not None:
+                    query_parts.append(f"{encoded_key}={quote_plus(str(value))}")
+
+        query_string = "&".join(query_parts)
+
+        full_url = base_url
+        if query_string:
+            full_url += f"?{query_string}"
+
+        response = self.requests_session.get(
+            full_url,
             headers=headers,
-            params=filter_params_dic,
             timeout=10,
         )
-        if response.json().get("incidents"):
-            return response.json()
-        return {"message": "No incident found with the filters entered"}
+
+        response.raise_for_status()
+        return response.json().get("incidents")
 
     def snooze_incident(self, email_from, incident_id):
-        session = requests.Session()
-        session.headers.update(
+        self.requests_session.headers.update(
             {"Authorization": f"Token token={self.api_key}", "From": f"{email_from}"},
         )
         payload = {"duration": 3600}
         url = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}" + "/snooze"
-        response = session.post(url=url, json=payload, timeout=10)
-        if response.ok:
-            return response.json()
-        return {"message": "No Incident found"}
+        response = self.requests_session.post(url=url, json=payload, timeout=10)
+        response.raise_for_status()
+        return response.json()
 
     def run_response_play(self, email, response_plays_id, user_id):
         payload = {"incident": {"id": f"{user_id}", "type": "incident_reference"}}
@@ -161,7 +210,7 @@ class PagerDutyManager:
         }
 
         full_url = self.BASE_URL + "/response_plays/" + response_plays_id + "/run"
-        response = requests.request(
+        response = self.requests_session.request(
             "POST",
             full_url,
             json=payload,
@@ -170,3 +219,10 @@ class PagerDutyManager:
         )
         response.raise_for_status()
         return {"message": response}
+
+    def _get_auth_headers(self):
+        """Returns a dictionary with standard authentication headers."""
+        return {
+            "Accept": "application/vnd.pagerduty+json;version=2",
+            "Authorization": f"Token token={self.api_key}",
+        }
