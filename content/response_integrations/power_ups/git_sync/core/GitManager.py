@@ -41,7 +41,7 @@ import paramiko.ed25519key
 
 
 from .definitions import File, Metadata
-
+from constants import BITBUCKET_HOST,SUB_BITBUCKET_HOST
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
@@ -99,6 +99,11 @@ class Git:
         self.git_server_fingerprint = git_server_fingerprint
 
         self.modify_dulwich_client(logger, git_server_fingerprint)
+        parsed_url = urlparse(self.repo_url)
+        hostname = parsed_url.hostname or ""
+
+        is_bitbucket_host = (hostname == BITBUCKET_HOST or
+                             hostname.endswith(SUB_BITBUCKET_HOST))
 
         if self.repo_url.startswith("ssh://") or self.repo_url.startswith("git@"):
             # When using ssh - the username is ignored
@@ -107,10 +112,10 @@ class Git:
                 "git_server_fingerprint": git_server_fingerprint,
                 "siemplify_logger": self.logger,
             }
-        elif "bitbucket.org" in self.repo_url and "x-token-auth" not in self.repo_url:
-            parsed = urlparse(self.repo_url)
-            netloc = f"x-token-auth:{self.password}@{parsed.hostname}"
-            self.repo_url = urlunparse(parsed._replace(netloc=netloc))
+        elif is_bitbucket_host and "x-token-auth" not in self.repo_url:
+            # This is now secure AND flexible
+            netloc = f"x-token-auth:{self.password}@{hostname}"
+            self.repo_url = urlunparse(parsed_url._replace(netloc=netloc))
             self.connection_args = {
                 "siemplify_logger": self.logger,
                 "git_server_fingerprint": git_server_fingerprint,
