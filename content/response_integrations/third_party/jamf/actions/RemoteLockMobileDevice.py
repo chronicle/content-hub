@@ -7,7 +7,7 @@ from SiemplifyAction import SiemplifyAction
 from SiemplifyUtils import output_handler, unix_now
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.constants import INTEGRATION_NAME, WIPE_MANAGED_DEVICE_SCRIPT_NAME
+from ..core.constants import INTEGRATION_NAME, REMOTE_LOCK_MOBILE_DEVICE_SCRIPT_NAME
 from ..core.exceptions import JamfError
 from ..core.JamfManager import JamfManager
 
@@ -18,14 +18,13 @@ if TYPE_CHECKING:
 @output_handler
 def main() -> NoReturn:
     """
-    Wipe/erase a managed computer remotely using Jamf Pro ERASE_DEVICE MDM command.
+    Remotely lock a managed mobile device using Jamf Pro MDM command.
 
-    This action sends an ERASE_DEVICE MDM command to completely wipe a managed device.
-    The action supports various options including obliteration behavior, return to service
-    settings, and device setup preferences.
+    This action sends a device_lock MDM command to remotely lock a managed mobile device
+    with optional custom message and phone number display.
     """
     siemplify = SiemplifyAction()
-    siemplify.script_name = WIPE_MANAGED_DEVICE_SCRIPT_NAME
+    siemplify.script_name = REMOTE_LOCK_MOBILE_DEVICE_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     status = EXECUTION_STATE_COMPLETED
@@ -66,44 +65,23 @@ def main() -> NoReturn:
         )
 
         # EXTRACT ACTION PARAMETERS:
-        computer_id = extract_action_param(
+        mobile_device_id = extract_action_param(
             siemplify,
-            param_name="Computer ID",
+            param_name="Mobile Device ID",
             is_mandatory=True,
             print_value=True,
         )
-        pin = extract_action_param(
+        message = extract_action_param(
             siemplify,
-            param_name="PIN",
-            is_mandatory=True,
-            print_value=False,
-        )
-        obliteration_behavior = extract_action_param(
-            siemplify,
-            param_name="Obliteration Behavior",
-            is_mandatory=True,
-            print_value=True,
-            default_value="Default",
-        )
-        return_to_service = extract_action_param(
-            siemplify,
-            param_name="Return to Service",
-            is_mandatory=True,
-            input_type=bool,
-            print_value=True,
-            default_value=True,
-        )
-        mdm_profile_data = extract_action_param(
-            siemplify,
-            param_name="MDM Profile Data",
+            param_name="Message",
             is_mandatory=False,
-            print_value=False,
+            print_value=True,
         )
-        wifi_profile_data = extract_action_param(
+        phone_number = extract_action_param(
             siemplify,
-            param_name="WiFi Profile Data",
+            param_name="Phone Number",
             is_mandatory=False,
-            print_value=False,
+            print_value=True,
         )
 
         siemplify.LOGGER.info("----------------- Main - Started -----------------")
@@ -117,48 +95,41 @@ def main() -> NoReturn:
             logger=siemplify.LOGGER,
         )
 
-        siemplify.LOGGER.info(f"Attempting to erase computer with ID: {computer_id}")
+        siemplify.LOGGER.info(
+            f"Attempting to remotely lock mobile device with ID: {mobile_device_id}"
+        )
 
-        # Execute the erase command
-        result = jamf_manager.erase_computer(
-            computer_id=computer_id,
-            pin=pin,
-            obliteration_behavior=obliteration_behavior,
-            return_to_service=return_to_service,
-            mdm_profile_data=mdm_profile_data,
-            wifi_profile_data=wifi_profile_data,
+        # Execute the remote lock command
+        result = jamf_manager.remote_lock_mobile_device(
+            device_id=mobile_device_id,
+            message=message,
+            phone_number=phone_number,
         )
 
         # Prepare result
         command_details = {
-            "computer_id": computer_id,
-            "command_type": "ERASE_DEVICE",
-            "obliteration_behavior": obliteration_behavior,
-            "return_to_service": return_to_service,
-            "pin_used": bool(pin),
-            "mdm_profile_provided": bool(mdm_profile_data),
-            "wifi_profile_provided": bool(wifi_profile_data),
+            "mobile_device_id": mobile_device_id,
+            "command_type": "device_lock",
+            "message_used": bool(message),
+            "phone_number_used": bool(phone_number),
             "timestamp": unix_now(),
             "status": "initiated",
         }
 
-        json_result = {"erase_command_result": result, "command_details": command_details}
+        json_result = {"lock_command_result": result, "command_details": command_details}
 
         siemplify.result.add_result_json(json_result)
 
         # Create output message
         output_message = (
-            f"Successfully initiated ERASE_DEVICE command for computer ID: {computer_id}"
+            f"Successfully initiated remote lock command for mobile device ID: {mobile_device_id}"
         )
 
-        # Add parameter details to output message
         details = []
-        if pin:
-            details.append("with PIN protection")
-        if obliteration_behavior != "Default":
-            details.append(f"obliteration: {obliteration_behavior}")
-        if return_to_service:
-            details.append("return to service")
+        if message:
+            details.append("with custom message")
+        if phone_number:
+            details.append("with phone number display")
 
         if details:
             output_message += f" ({', '.join(details)})"
@@ -166,7 +137,7 @@ def main() -> NoReturn:
         result_value = True
 
     except JamfError as e:
-        siemplify.LOGGER.error(f"Jamf API error while erasing computer: {e}")
+        siemplify.LOGGER.error(f"Jamf API error while locking mobile device: {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         output_message = f"Jamf API error: {e}"

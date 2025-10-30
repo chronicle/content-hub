@@ -38,21 +38,21 @@ def main() -> NoReturn:
         api_root = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="API Root",
+            param_name="Jamf Pro API Root",
             is_mandatory=True,
             print_value=True,
         )
         client_api_id = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="Client API ID",
+            param_name="Jamf Pro Client API ID",
             is_mandatory=True,
             print_value=True,
         )
         client_api_secret = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="Client API Secret",
+            param_name="Jamf Pro Client API Secret",
             is_mandatory=True,
             print_value=False,
         )
@@ -87,9 +87,9 @@ def main() -> NoReturn:
             print_value=True,
             default_value="",
         )
-        serial_numbers = extract_action_param(
+        computer_serial_numbers = extract_action_param(
             siemplify,
-            param_name="Serial Numbers",
+            param_name="Computer Serial Numbers",
             is_mandatory=False,
             print_value=True,
             default_value="",
@@ -98,16 +98,16 @@ def main() -> NoReturn:
         siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
         # Validate input parameters
-        if not computer_ids and not computer_names and not serial_numbers:
+        if not computer_ids and not computer_names and not computer_serial_numbers:
             raise Exception(
                 "At least one computer identifier (Computer IDs, Computer Names, "
-                "or Serial Numbers) must be provided"
+                "or Computer Serial Numbers) must be provided"
             )
 
         # Parse comma-separated lists
         computer_ids_list = []
         computer_names_list = []
-        serial_numbers_list = []
+        computer_serial_numbers_list = []
 
         if computer_ids and computer_ids.strip():
             computer_ids_list = [id.strip() for id in computer_ids.split(",") if id.strip()]
@@ -117,14 +117,14 @@ def main() -> NoReturn:
                 name.strip() for name in computer_names.split(",") if name.strip()
             ]
 
-        if serial_numbers and serial_numbers.strip():
-            serial_numbers_list = [
-                serial.strip() for serial in serial_numbers.split(",") if serial.strip()
+        if computer_serial_numbers and computer_serial_numbers.strip():
+            computer_serial_numbers_list = [
+                serial.strip() for serial in computer_serial_numbers.split(",") if serial.strip()
             ]
 
         # Validate that at least one list has items
         total_computers = (
-            len(computer_ids_list) + len(computer_names_list) + len(serial_numbers_list)
+            len(computer_ids_list) + len(computer_names_list) + len(computer_serial_numbers_list)
         )
         if total_computers == 0:
             raise Exception("No valid computer identifiers provided")
@@ -132,7 +132,7 @@ def main() -> NoReturn:
         siemplify.LOGGER.info(f"Starting Assign to Group action - Group ID: {group_id}")
         siemplify.LOGGER.info(
             f"Computer IDs: {len(computer_ids_list)}, Names: {len(computer_names_list)}, "
-            f"Serials: {len(serial_numbers_list)}"
+            f"Serials: {len(computer_serial_numbers_list)}"
         )
 
         # Initialize Jamf Manager
@@ -149,7 +149,9 @@ def main() -> NoReturn:
             group_id=group_id,
             computer_ids=computer_ids_list if computer_ids_list else None,
             computer_names=computer_names_list if computer_names_list else None,
-            serial_numbers=serial_numbers_list if serial_numbers_list else None,
+            computer_serial_numbers=computer_serial_numbers_list
+            if computer_serial_numbers_list
+            else None,
         )
 
         siemplify.LOGGER.info(f"Result in Assign to Group action - Group ID: {result}")
@@ -166,8 +168,8 @@ def main() -> NoReturn:
             details.append(f"{len(computer_ids_list)} computer ID(s)")
         if computer_names_list:
             details.append(f"{len(computer_names_list)} computer name(s)")
-        if serial_numbers_list:
-            details.append(f"{len(serial_numbers_list)} serial number(s)")
+        if computer_serial_numbers_list:
+            details.append(f"{len(computer_serial_numbers_list)} serial number(s)")
 
         if details:
             output_message += f"\n\nProcessed: {', '.join(details)}"
@@ -178,8 +180,10 @@ def main() -> NoReturn:
             computer_details.extend([f"ID: {id}" for id in computer_ids_list[:3]])
         if computer_names_list:
             computer_details.extend([f"Name: {name}" for name in computer_names_list[:3]])
-        if serial_numbers_list:
-            computer_details.extend([f"Serial: {serial}" for serial in serial_numbers_list[:3]])
+        if computer_serial_numbers_list:
+            computer_details.extend([
+                f"Serial: {serial}" for serial in computer_serial_numbers_list[:3]
+            ])
 
         if computer_details:
             output_message += "\n\nComputer Details:\n• " + "\n• ".join(computer_details)
