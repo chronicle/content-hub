@@ -9,9 +9,9 @@ from SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.constants import (
-    COMPUTER_ALL_SECTIONS,
-    GET_COMPUTER_INVENTORY_SCRIPT_NAME,
+    GET_MOBILE_DEVICE_INVENTORY_SCRIPT_NAME,
     INTEGRATION_NAME,
+    MOBILE_DEVICE_ALL_SECTIONS,
 )
 from ..core.exceptions import JamfError
 from ..core.JamfManager import JamfManager
@@ -23,13 +23,13 @@ if TYPE_CHECKING:
 @output_handler
 def main() -> NoReturn:
     """
-    Retrieve computer inventory from Jamf Pro with pagination and filtering support.
+    Retrieve mobile device inventory from Jamf Pro with pagination and filtering support.
 
-    This action retrieves computer inventory data from Jamf Pro with support for
-    pagination, sorting, filtering, and section selection to optimize data retrieval.
+    This action retrieves mobile device inventory data from Jamf Pro using the v2 API
+    with support for pagination, sorting, and filtering to optimize data retrieval.
     """
     siemplify = SiemplifyAction()
-    siemplify.script_name = GET_COMPUTER_INVENTORY_SCRIPT_NAME
+    siemplify.script_name = GET_MOBILE_DEVICE_INVENTORY_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     status = EXECUTION_STATE_COMPLETED
@@ -123,7 +123,7 @@ def main() -> NoReturn:
         if page < 0:
             raise JamfError("Page number must be 0 or greater")
         if page_size < 1:
-            raise Exception("Page size must be greater than 0")
+            raise JamfError("Page size must be greater than 0")
 
         # Convert list parameters to API-compatible strings
         sort_string = None
@@ -131,12 +131,10 @@ def main() -> NoReturn:
             sort_string = ",".join([str(item) for item in sort_criteria if item])
             siemplify.LOGGER.info(f"Sort criteria converted: {sort_string}")
         elif sort_criteria and isinstance(sort_criteria, str) and sort_criteria.strip():
-            # Check for JSON representations of empty arrays or null values
             stripped_sort = sort_criteria.strip()
             if stripped_sort in ["[]", "[null]", "null", ""]:
                 sort_string = None
             else:
-                # Try to parse as JSON array first
                 try:
                     parsed_sort = json.loads(stripped_sort)
                     if isinstance(parsed_sort, list) and len(parsed_sort) > 0:
@@ -144,22 +142,15 @@ def main() -> NoReturn:
                     else:
                         sort_string = None
                 except (json.JSONDecodeError, ValueError):
-                    # Treat as single value
                     sort_string = stripped_sort
             siemplify.LOGGER.info(f"Sort criteria processed: {sort_string}")
 
         # Build filter string from field and value
         filter_string = None
         if filter_field and filter_field.strip() and filter_value and filter_value.strip():
-            # Build the filter string in Jamf API format: field=="value"
             filter_string = f'{filter_field.strip()}=="{filter_value.strip()}"'
-            siemplify.LOGGER.info(f"Filter criteria built: {filter_string}")
-        elif filter_field and filter_field.strip() and not filter_value.strip():
-            siemplify.LOGGER.info("Filter field provided but no filter value - skipping filter")
-        elif filter_value and filter_value.strip() and not filter_field.strip():
-            siemplify.LOGGER.info("Filter value provided but no filter field - skipping filter")
+            siemplify.LOGGER.info(f"Filter applied: {filter_string}")
 
-        # Determine appropriate section based on filter field (if no section explicitly provided)
         def get_section_for_filter_field(field):
             """
             Determine the appropriate section based on the filter field.
@@ -175,23 +166,14 @@ def main() -> NoReturn:
 
             field = field.strip().lower()
 
-            # Handle special cases first
-            if field == "udid":
+            # Handle special cases for mobile devices
+            if field == "udid" or field == "serialnumber":
                 return "HARDWARE"
-
-            # Handle prefix-based mapping
-            if field.startswith("general."):
-                return "GENERAL"
-            elif field.startswith("hardware."):
-                return "HARDWARE"
-            elif field.startswith("userandlocation.") or field.startswith("user_and_location."):
+            elif field == "username" or field == "emailaddress":
                 return "USER_AND_LOCATION"
             else:
-                # Default to GENERAL for unknown fields
+                # Default to GENERAL for mobile device fields
                 return "GENERAL"
-
-        # Define all available sections
-        ALL_SECTIONS = COMPUTER_ALL_SECTIONS
 
         # Process sections parameter (handle both string and list formats)
         sections_list = []
@@ -201,7 +183,7 @@ def main() -> NoReturn:
                 # Check if ALL is in the list and filter out "ALL" from final list
                 if any(section.strip().upper() == "ALL" for section in sections if section):
                     all_sections_requested = True
-                    sections_list = ALL_SECTIONS.copy()
+                    sections_list = MOBILE_DEVICE_ALL_SECTIONS.copy()
                 else:
                     sections_list = [
                         section.strip().upper()
@@ -215,7 +197,7 @@ def main() -> NoReturn:
                     # Handle "ALL" option - include all available sections
                     if sections_str.upper() == "ALL" or "ALL" in sections_str.upper():
                         all_sections_requested = True
-                        sections_list = ALL_SECTIONS.copy()
+                        sections_list = MOBILE_DEVICE_ALL_SECTIONS.copy()
                     else:
                         # Try to parse as JSON array first
                         try:
@@ -259,21 +241,16 @@ def main() -> NoReturn:
             )
 
         # Convert sections list to comma-separated string for API
-        section_string = ",".join(sections_list) if sections_list else "GENERAL"
+        sections_string = ",".join(sections_list) if sections_list else "GENERAL"
 
-        siemplify.LOGGER.info(f"Final sections to request: {section_string}")
+        siemplify.LOGGER.info(f"Final sections to request: {sections_string}")
         if filter_field and filter_field.strip():
             siemplify.LOGGER.info(
                 f"Filter field '{filter_field}' requires section: "
                 f"{get_section_for_filter_field(filter_field)}"
             )
 
-        siemplify.LOGGER.info(
-            f"Starting Get Computer Inventory action - Page: {page}, Page Size: {page_size}"
-        )
-        siemplify.LOGGER.info(
-            f"Sort: {sort_string}, Filter: {filter_string}, Section: {section_string}"
-        )
+        siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
         # Initialize Jamf Manager
         jamf_manager = JamfManager(
@@ -284,84 +261,57 @@ def main() -> NoReturn:
             logger=siemplify.LOGGER,
         )
 
-        siemplify.LOGGER.info(f"Retrieving computer inventory - Page: {page}, Size: {page_size}")
-
-        # Retrieve computer inventory
-        inventory_data = jamf_manager.get_computer_inventory(
+        # Get mobile device inventory
+        siemplify.LOGGER.info("Retrieving mobile device inventory from Jamf Pro")
+        mobile_devices = jamf_manager.get_mobile_device_inventory(
             page=page,
             page_size=page_size,
             sort=sort_string,
-            filter=filter_string,
-            section=section_string,
+            filter_query=filter_string,
+            section=sections_string,
         )
 
-        if inventory_data:
-            # Extract inventory information
-            results = inventory_data.get("results", [])
-            total_count = inventory_data.get("totalCount", 0)
-            results_count = len(results)
-            filter_string = filter_string.replace('"', '\\"')
+        if mobile_devices and mobile_devices.get("results"):
+            device_count = len(mobile_devices["results"])
+            total_count = mobile_devices.get("totalCount", device_count)
 
-            # Calculate pagination info
-            has_more_pages = (page + 1) * page_size < total_count
+            siemplify.LOGGER.info(
+                f"Successfully retrieved {device_count} mobile devices (Total: {total_count})"
+            )
 
-            # Prepare comprehensive result
             json_result = {
                 "page": page,
                 "page_size": page_size,
                 "sort_criteria": sort_string,
                 "filter_criteria": filter_string,
-                "sections_requested": section_string,
-                "inventory_data": inventory_data,
+                "sections_requested": sections_string,
+                "inventory_data": mobile_devices,
             }
 
             siemplify.result.add_result_json(json_result)
-
-            # Create detailed output message
-            output_parts = [
-                f"Successfully retrieved {results_count} computers from inventory "
-                f"(total: {total_count})"
-            ]
-
-            if sort_string:
-                output_parts.append(f"Sorted by: {sort_string}")
-            if filter_string:
-                output_parts.append(f"Filtered by: {filter_string}")
-            if section_string:
-                output_parts.append(f"Sections: {section_string}")
-            if has_more_pages:
-                output_parts.append(f"More pages available (current page: {page})")
-
-            output_message = ". ".join(output_parts)
+            output_message = f"Successfully retrieved {device_count} mobile devices from Jamf Pro"
             result_value = True
-            status = EXECUTION_STATE_COMPLETED
-
         else:
-            siemplify.LOGGER.info("No computer inventory data found")
-            json_result = {"inventory_data": None, "summary": {"results_count": 0}}
-            siemplify.result.add_result_json(json_result)
-            output_message = "No computer inventory data found"
-            result_value = True  # Still successful, just empty results
+            siemplify.LOGGER.info("No mobile devices found matching the criteria")
+            output_message = "No mobile devices found matching the specified criteria"
+            result_value = False
 
     except JamfError as e:
-        siemplify.LOGGER.error(f"Jamf API error while retrieving computer inventory: {e}")
-        siemplify.LOGGER.exception(e)
+        siemplify.LOGGER.error(f"Jamf API error occurred: {e}")
+        output_message = f"Failed to retrieve mobile device inventory: {e}"
         status = EXECUTION_STATE_FAILED
-        output_message = f"Jamf API error: {e}"
         result_value = False
-
     except Exception as e:
-        siemplify.LOGGER.error(f"Unexpected error while retrieving computer inventory: {e}")
+        siemplify.LOGGER.error(f"General error occurred: {e}")
         siemplify.LOGGER.exception(e)
+        output_message = f"Failed to retrieve mobile device inventory: {e}"
         status = EXECUTION_STATE_FAILED
-        output_message = f"Unexpected error: {str(e)}"
         result_value = False
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}")
-    siemplify.LOGGER.info(f"Result: {result_value}")
-    siemplify.LOGGER.info(f"Output: {output_message}")
-
+    siemplify.LOGGER.info(f"Result Value: {result_value}")
+    siemplify.LOGGER.info(f"Output Message: {output_message}")
     siemplify.end(output_message, result_value, status)
 
 
