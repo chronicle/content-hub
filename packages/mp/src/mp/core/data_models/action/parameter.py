@@ -72,7 +72,9 @@ class ActionParameter(
         str,
         pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH),
     ]
-    is_mandatory: bool
+    is_mandatory: Annotated[
+        bool, pydantic.BeforeValidator(mp.core.validators.coerce_bool_from_str_or_none)
+    ]
     name: Annotated[
         str,
         pydantic.Field(
@@ -133,7 +135,7 @@ class ActionParameter(
 
         """
         return cls(
-            description=built["Description"],
+            description=built.get("description") or "",
             is_mandatory=built["IsMandatory"],
             name=built["Name"],
             optional_values=built.get("OptionalValues"),

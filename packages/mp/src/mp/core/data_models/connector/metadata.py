@@ -142,18 +142,21 @@ class ConnectorMetadata(
         file_name: str,
         built: BuiltConnectorMetadata,
     ) -> ConnectorMetadata:
+        documentation_link = built.get("DocumentationLink")
+        if not documentation_link:
+            documentation_link = None
         return cls(
             file_name=file_name,
-            creator=built["Creator"],
+            creator=built.get("Creator", ""),
             description=built["Description"],
-            documentation_link=built["DocumentationLink"],
+            documentation_link=documentation_link,
             integration=built["Integration"],
             is_connector_rules_supported=built["IsConnectorRulesSupported"],
             is_custom=built["IsCustom"],
             is_enabled=built["IsEnabled"],
             name=built["Name"],
             parameters=[ConnectorParameter.from_built(param) for param in built["Parameters"]],
-            rules=[ConnectorRule.from_built(rule) for rule in built["Rules"]],
+            rules=[ConnectorRule.from_built(rule) for rule in built.get("Rules", [])],
             version=built.get("Version", 1.0),
         )
 
