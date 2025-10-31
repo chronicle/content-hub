@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jamf Computer Inventory</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a clean look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Use the Inter font family */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+        
+        /* Default light theme variables */
+        :root {
+            --widget-bg-color: #ffffff;
+            --widget-foreground-color: #020817;
+            --widget-card-color: #ffffff;
+            --widget-card-foreground-color: #020817;
+            --widget-primary-color: #020817;
+            --widget-primary-foreground-color: #f8fafc;
+            --widget-secondary-color: #f1f5f9;
+            --widget-secondary-foreground-color: #0f172a;
+            --widget-muted-color: #f1f5f9;
+            --widget-muted-foreground-color: #64748b;
+            --widget-accent-color: #3b82f6;
+            --widget-accent-foreground-color: #ffffff;
+            --widget-border-color: #e2e8f0;
+            --widget-input-color: #e2e8f0;
+            --widget-success-color: #059669;
+            --widget-success-foreground-color: #ecfdf5;
+            --widget-error-color: #dc2626;
+            --widget-error-foreground-color: #fee2e2;
+            --widget-warning-color: #7c3aed;
+            --widget-warning-foreground-color: #ede9fe;
+        }
+        
+        /* Apply theme */
+        body {
+            background-color: var(--widget-bg-color);
+            color: var(--widget-foreground-color);
+        }
+        
+        .text-themed-primary {
+            color: var(--widget-foreground-color);
+        }
+
+        .text-themed-tertiary {
+            color: var(--widget-muted-foreground-color);
+        }
+
+        /* Tab styling */
+        .tab-button {
+            padding: 12px 16px;
+            border-bottom: 2px solid transparent;
+            color: var(--widget-muted-foreground-color);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: transparent;
+        }
+        
+        .tab-button:hover {
+            color: var(--widget-secondary-foreground-color);
+            background-color: var(--widget-secondary-color);
+        }
+        
+        .tab-button.active {
+            color: var(--widget-accent-color);
+            border-bottom-color: var(--widget-accent-color);
+            background-color: var(--widget-card-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Style for table headers */
+        th {
+            text-align: left;
+            padding: 10px 14px;
+            background-color: var(--widget-muted-color);
+            color: var(--widget-foreground-color);
+            font-weight: 600;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* Style for table cells */
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--widget-border-color);
+            color: var(--widget-muted-foreground-color);
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            word-break: break-word;
+        }
+        
+        /* Alternating row colors */
+        tr:nth-child(even) {
+            background-color: var(--widget-muted-color);
+        }
+        
+        /* Key-value pair styling */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        
+        /* Alternating background for info-grid items - accounting for h3 header */
+        .info-grid:nth-child(even) {
+            background-color: var(--widget-secondary-color);
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: var(--widget-foreground-color);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        
+        .info-value {
+            color: var(--widget-muted-foreground-color);
+            font-size: 0.875rem;
+            word-break: break-word;
+        }
+        
+        /* Status indicators */
+        .status-managed {
+            background-color: var(--widget-success-color);
+            color: var(--widget-success-foreground-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-unmanaged {
+            background-color: var(--widget-error-color);
+            color: var(--widget-error-foreground-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-supervised {
+            background-color: var(--widget-warning-color);
+            color: var(--widget-warning-foreground-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        /* Card and section styling */
+        .card-primary {
+            background-color: var(--widget-card-color);
+            border: 1px solid var(--widget-border-color);
+        }
+        
+        .card-secondary {
+            background-color: var(--widget-secondary-color);
+        }
+        
+        .section-header {
+            color: var(--widget-foreground-color);
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <div id="inventory-container" class="max-w-7xl mx-auto">
+        <!-- Data will be dynamically inserted here -->
+    </div>
+
+    <script>
+        // Define the complete theme palettes - single source of truth
+        const themes = {
+            light: {
+                '--widget-bg-color': '#ffffff',
+                '--widget-foreground-color': '#020817',
+                '--widget-card-color': '#ffffff',
+                '--widget-card-foreground-color': '#020817',
+                '--widget-primary-color': '#020817',
+                '--widget-primary-foreground-color': '#f8fafc',
+                '--widget-secondary-color': '#f1f5f9',
+                '--widget-secondary-foreground-color': '#0f172a',
+                '--widget-muted-color': '#f1f5f9',
+                '--widget-muted-foreground-color': '#64748b',
+                '--widget-accent-color': '#3b82f6',
+                '--widget-accent-foreground-color': '#ffffff',
+                '--widget-border-color': '#e2e8f0',
+                '--widget-input-color': '#e2e8f0',
+                '--widget-success-color': '#059669',
+                '--widget-success-foreground-color': '#ecfdf5',
+                '--widget-error-color': '#dc2626',
+                '--widget-error-foreground-color': '#fee2e2',
+                '--widget-warning-color': '#7c3aed',
+                '--widget-warning-foreground-color': '#ede9fe'
+            },
+            dark: {
+                '--widget-bg-color': '#111827',
+                '--widget-foreground-color': '#f3f4f6',
+                '--widget-card-color': '#1f2937',
+                '--widget-card-foreground-color': '#f3f4f6',
+                '--widget-primary-color': '#f3f4f6',
+                '--widget-primary-foreground-color': '#111827',
+                '--widget-secondary-color': '#374151',
+                '--widget-secondary-foreground-color': '#f3f4f6',
+                '--widget-muted-color': '#374151',
+                '--widget-muted-foreground-color': '#d1d5db',
+                '--widget-accent-color': '#3b82f6',
+                '--widget-accent-foreground-color': '#ffffff',
+                '--widget-border-color': '#374151',
+                '--widget-input-color': '#374151',
+                '--widget-success-color': '#059669',
+                '--widget-success-foreground-color': '#ecfdf5',
+                '--widget-error-color': '#dc2626',
+                '--widget-error-foreground-color': '#fee2e2',
+                '--widget-warning-color': '#7c3aed',
+                '--widget-warning-foreground-color': '#ede9fe'
+            }
+        };
+
+        /**
+         * Applies a full theme palette to the document root
+         * @param {object} themeObject The theme object (e.g., themes.light)
+         */
+        function applyTheme(themeObject) {
+            const root = document.documentElement;
+            for (const [key, value] of Object.entries(themeObject)) {
+                root.style.setProperty(key, value);
+            }
+        }
+
+        // Function to detect SecOps dark mode based on body background
+        function isSecOpsDarkMode() {
+            const bodyBg = document.body.style.backgroundColor || getComputedStyle(document.body).backgroundColor;
+            
+            // Parse RGB values to determine if it's a dark background
+            if (bodyBg.includes('rgb')) {
+                const rgbMatch = bodyBg.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (rgbMatch) {
+                    const [, r, g, b] = rgbMatch.map(Number);
+                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                    return brightness < 128; // Dark if brightness is low
+                }
+            }
+            
+            return false;
+        }
+
+        // Google SecOps theme integration
+        onmessage = evt => {
+            for (const [key, value] of Object.entries(evt.data)) {
+                document.body.style[key] = value;
+            }
+            
+            // Detect if SecOps is using dark mode based on background color
+            const isDarkMode = isSecOpsDarkMode();
+            applyTheme(isDarkMode ? themes.dark : themes.light);
+        };
+        
+        // Declare variables before they are used
+        let jsonData = null;
+        const container = document.getElementById('inventory-container');
+        
+        // Debug action data
+        const actionSuccess = '[Jamf_Get Computer Inventory_1.is_success]';
+        const rawJsonResult = `[Jamf_Get Computer Inventory_1.JsonResult]`;
+        
+        // Parse JSON data if action was successful
+        if (actionSuccess == 'true') {
+            try {
+                jsonData = JSON.parse(rawJsonResult);
+            } catch (parseError) {
+                console.error('JSON parsing error:', parseError);
+                if (container) {
+                    container.innerHTML = `
+                        <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            <h3>JSON Parse Error</h3>
+                            <p><strong>Error:</strong> ${parseError.message}</p>
+                            <p><strong>Raw data:</strong> <code>${rawJsonResult.substring(0, 200)}...</code></p>
+                            <p><strong>Position 102:</strong> <code>${rawJsonResult.substring(95, 110)}</code></p>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            if (container) {
+                container.innerHTML = `
+                    <div class="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+                        <h3>Action Status Debug</h3>
+                        <p><strong>Action Success:</strong> ${actionSuccess}</p>
+                        <p><strong>Expected:</strong> 'true'</p>
+                        <p><strong>Condition Met:</strong> ${actionSuccess == 'true'}</p>
+                        <p><strong>Raw JSON Result:</strong> <code>${rawJsonResult.substring(0, 200)}...</code></p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set initial theme based on current body styles
+            const isDarkMode = isSecOpsDarkMode();
+            applyTheme(isDarkMode ? themes.dark : themes.light);
+            
+            if (!container) {
+                console.error('Container element not found');
+                return;
+            }
+            
+            if (!jsonData) {
+                container.innerHTML = '<p class="text-center text-themed-tertiary">No computer inventory to display.</p>';
+                return;
+            }
+
+            try {
+                // Extract the first computer from the results array
+                const computerInfo = jsonData.results && jsonData.results.length > 0 ? jsonData.results[0] : jsonData;
+                
+                // Check if renderInventoryWidget function exists
+                if (typeof renderInventoryWidget !== 'function') {
+                    console.error('renderInventoryWidget function not found');
+                    container.innerHTML = `
+                        <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            <h3>Debug Info</h3>
+                            <p>renderInventoryWidget function not found</p>
+                            <p>Available functions: ${Object.getOwnPropertyNames(window).filter(name => typeof window[name] === 'function').join(', ')}</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const inventoryHtml = renderInventoryWidget(jsonData);
+                
+                if (!inventoryHtml) {
+                    console.error('Empty inventory HTML');
+                    container.innerHTML = `
+                        <div class="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+                            <h3>Debug Info</h3>
+                            <p>Empty rendering result</p>
+                            <p>inventoryHtml: ${inventoryHtml ? 'exists' : 'empty'}</p>
+                            <pre>${JSON.stringify(computerInfo, null, 2)}</pre>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = inventoryHtml;
+            } catch (error) {
+                console.error('Error rendering widget:', error);
+                container.innerHTML = `
+                    <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                        <h3>Error rendering widget</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Stack:</strong> ${error.stack}</p>
+                        <h4>Debug Data:</h4>
+                        <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        });
+
+        /**
+         * Formats a value for display
+         */
+        function formatValue(value) {
+            if (value === null || value === undefined || value === '') {
+                return 'N/A';
+            }
+            if (typeof value === 'boolean') {
+                return value ? 'Yes' : 'No';
+            }
+            if (typeof value === 'string' && Date.parse(value) && value.includes('T')) {
+                return new Date(value).toLocaleString();
+            }
+            return value;
+        }
+
+        /**
+         * Creates a status badge based on value
+         */
+        function createStatusBadge(key, value) {
+            const lowerKey = key.toLowerCase();
+            const lowerValue = String(value).toLowerCase();
+            
+            if (lowerKey.includes('managed') && lowerValue === 'true') {
+                return `<span class="status-managed">Managed</span>`;
+            } else if (lowerKey.includes('managed') && lowerValue === 'false') {
+                return `<span class="status-unmanaged">Unmanaged</span>`;
+            } else if (lowerKey.includes('supervised') && lowerValue === 'true') {
+                return `<span class="status-supervised">Supervised</span>`;
+            }
+            return formatValue(value);
+        }
+
+        /**
+         * Creates a table for applications
+         */
+        function createApplicationsTable(data) {
+            if (!Array.isArray(data) || data.length === 0) {
+                return `<p class="text-themed-tertiary italic">No applications data available.</p>`;
+            }
+
+            let html = `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full rounded-lg overflow-hidden">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Version</th>
+                                <th>Path</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.forEach(app => {
+                html += `
+                    <tr>
+                        <td>${formatValue(app.name)}</td>
+                        <td>${formatValue(app.version)}</td>
+                        <td>${formatValue(app.path)}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        /**
+        * Renders the General tab content
+        */
+        function renderGeneralTab(computerInfo) {
+            const general = computerInfo.general || {};
+            const remoteManagement = general.remoteManagement || {};
+            const extensionAttributes = general.extensionAttributes || [];
+            
+            return `
+                <div class="space-y-6">
+                    <!-- Basic Computer Information -->
+                    <div class="card-primary rounded-lg p-6 info-section">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Computer Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Computer Name</div>
+                            <div class="info-value">${formatValue(general.name)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Jamf Pro Computer ID</div>
+                            <div class="info-value">${formatValue(computerInfo.id)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Jamf Pro Management ID</div>
+                            <div class="info-value">${formatValue(general.managementId)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">UDID</div>
+                            <div class="info-value">${formatValue(computerInfo.udid)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Platform</div>
+                            <div class="info-value">${formatValue(general.platform)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Asset Tag</div>
+                            <div class="info-value">${formatValue(general.assetTag)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Bar Code 1</div>
+                            <div class="info-value">${formatValue(general.barcode1)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Bar Code 2</div>
+                            <div class="info-value">${formatValue(general.barcode2)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Network Information -->
+                    <div class="card-primary rounded-lg p-6 info-section">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Network Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">IP Address</div>
+                            <div class="info-value">${formatValue(general.lastIpAddress)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Reported IPv4 Address</div>
+                            <div class="info-value">${formatValue(general.lastReportedIp || general.lastReportedIpV4)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Reported IPv6 Address</div>
+                            <div class="info-value">${formatValue(general.lastReportedIpV6)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Timestamps and Updates -->
+                    <div class="card-primary rounded-lg p-6 info-section">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Last Activity</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Last Inventory Update</div>
+                            <div class="info-value">${formatValue(general.reportDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last Check-in</div>
+                            <div class="info-value">${formatValue(general.lastContactTime)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last iCloud Backup</div>
+                            <div class="info-value">${formatValue(general.lastCloudBackupDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last Enrollment</div>
+                            <div class="info-value">${formatValue(general.lastEnrolledDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">MDM Profile Expiration Date</div>
+                            <div class="info-value">${formatValue(general.mdmProfileExpiration)}</div>
+                        </div>
+                    </div>
+
+                    <!-- User Information -->
+                    <div class="card-primary rounded-lg p-6 info-section">
+                        <h3 class="text-lg font-semibold mb-4 section-header">User Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Last User Logged in to Computer</div>
+                            <div class="info-value">${formatValue(general.lastLoggedInUsernameBinary)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last User Logged in to Computer Timestamp</div>
+                            <div class="info-value">${formatValue(general.lastLoggedInUsernameBinaryTimestamp)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last User Logged in to Self Service</div>
+                            <div class="info-value">${formatValue(general.lastLoggedInUsernameSelfService)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last User Logged in to Self Service Timestamp</div>
+                            <div class="info-value">${formatValue(general.lastLoggedInUsernameSelfServiceTimestamp)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Management Status -->
+                    <div class="card-primary rounded-lg p-6 info-section">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Management Status</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Managed</div>
+                            <div class="info-value">${createStatusBadge('managed', remoteManagement.managed)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Managed Local Administrator Accounts</div>
+                            <div class="info-value">${formatValue(remoteManagement.managementUsername)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Supervised</div>
+                            <div class="info-value">${createStatusBadge('supervised', general.supervised)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">MDM Capability</div>
+                            <div class="info-value">${formatValue(general.mdmCapable?.capable)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Enrolled via Automated Device Enrollment</div>
+                            <div class="info-value">${formatValue(general.enrolledViaAutomatedDeviceEnrollment)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">User Approved MDM</div>
+                            <div class="info-value">${formatValue(general.userApprovedMdm)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Declarative Device Management</div>
+                            <div class="info-value">${formatValue(general.declarativeDeviceManagementEnabled)}</div>
+                        </div>
+                    </div>
+
+                    <!-- System Information -->
+                    <div class="card-primary rounded-lg p-6 info-section">
+                        <h3 class="text-lg font-semibold mb-4 section-header">System Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Jamf Binary Version</div>
+                            <div class="info-value">${formatValue(general.jamfBinaryVersion)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Initial Entry Date</div>
+                            <div class="info-value">${formatValue(general.initialEntryDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Distribution Point</div>
+                            <div class="info-value">${formatValue(general.distributionPoint)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Site</div>
+                            <div class="info-value">${formatValue(general.site?.name)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">iTunes Store Account Active</div>
+                            <div class="info-value">${formatValue(general.itunesStoreAccountActive)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Extension Attributes -->
+                    ${extensionAttributes && extensionAttributes.length > 0 ? `
+                    <div class="card-primary rounded-lg p-6 info-section">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Extension Attributes</h3>
+                        ${extensionAttributes.map(attr => `
+                            <div class="info-grid">
+                                <div class="info-label">${formatValue(attr.name)}</div>
+                                <div class="info-value">${Array.isArray(attr.values) ? attr.values.join(', ') : formatValue(attr.values)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        /**
+        * Renders the Hardware tab content
+        */
+        function renderHardwareTab(computerInfo) {
+            const hardware = computerInfo.hardware || {};
+            
+            return `
+                <div class="space-y-6">
+                    <!-- Basic Hardware Information -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Basic Hardware Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Make</div>
+                            <div class="info-value">${formatValue(hardware.make)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Model</div>
+                            <div class="info-value">${formatValue(hardware.model)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Model Identifier</div>
+                            <div class="info-value">${formatValue(hardware.modelIdentifier)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">UDID</div>
+                            <div class="info-value">${formatValue(computerInfo.udid)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Serial Number</div>
+                            <div class="info-value">${formatValue(hardware.serialNumber)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Apple Silicon</div>
+                            <div class="info-value">${formatValue(hardware.appleSilicon)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Processor Information -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Processor Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Processor Type</div>
+                            <div class="info-value">${formatValue(hardware.processorType)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Processor Speed</div>
+                            <div class="info-value">${hardware.processorSpeedMhz ? `${hardware.processorSpeedMhz} MHz` : formatValue(hardware.processorSpeed)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Number of Processors</div>
+                            <div class="info-value">${formatValue(hardware.processorCount || hardware.numberOfProcessors)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Total Number of Cores</div>
+                            <div class="info-value">${formatValue(hardware.coreCount || hardware.numberOfCores)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Architecture Type</div>
+                            <div class="info-value">${formatValue(hardware.processorArchitecture)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Bus Speed</div>
+                            <div class="info-value">${hardware.busSpeedMhz ? `${hardware.busSpeedMhz} MHz` : formatValue(hardware.busSpeed)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Cache Size</div>
+                            <div class="info-value">${hardware.cacheSizeKilobytes ? `${hardware.cacheSizeKilobytes} KB` : formatValue(hardware.cacheSize)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Network Information -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Network Adapters</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Primary Network Adapter Type</div>
+                            <div class="info-value">${formatValue(hardware.networkAdapterType)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Primary MAC Address</div>
+                            <div class="info-value">${formatValue(hardware.macAddress)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Secondary Network Adapter Type</div>
+                            <div class="info-value">${formatValue(hardware.altNetworkAdapterType)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Secondary MAC Address</div>
+                            <div class="info-value">${formatValue(hardware.altMacAddress)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">NIC Speed</div>
+                            <div class="info-value">${formatValue(hardware.nicSpeed)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Memory Information -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Memory Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Total RAM</div>
+                            <div class="info-value">${hardware.totalRamMegabytes ? `${hardware.totalRamMegabytes} MB` : formatValue(hardware.totalRam)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Available RAM Slots</div>
+                            <div class="info-value">${formatValue(hardware.availableRamSlots)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Power and Battery -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Power and Battery</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Battery Capacity</div>
+                            <div class="info-value">${hardware.batteryCapacityPercent ? `${hardware.batteryCapacityPercent}%` : formatValue(hardware.batteryCapacity)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Battery Health</div>
+                            <div class="info-value">${formatValue(hardware.batteryHealth)}</div>
+                        </div>
+                    </div>
+
+                    <!-- System Components -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">System Components</h3>
+                        <div class="info-grid">
+                            <div class="info-label">SMC Version</div>
+                            <div class="info-value">${formatValue(hardware.smcVersion)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Optical Drive</div>
+                            <div class="info-value">${formatValue(hardware.opticalDrive)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Boot ROM</div>
+                            <div class="info-value">${formatValue(hardware.bootRom)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the User & Location tab content
+         */
+        function renderUserLocationTab(computerInfo) {
+            const userLocation = computerInfo.userAndLocation || {};
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">User Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Username</div>
+                            <div class="info-value">${formatValue(userLocation.username)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Full Name</div>
+                            <div class="info-value">${formatValue(userLocation.realname)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Email Address</div>
+                            <div class="info-value">${formatValue(userLocation.email)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Phone Number</div>
+                            <div class="info-value">${formatValue(userLocation.phone)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Position</div>
+                            <div class="info-value">${formatValue(userLocation.position)}</div>
+                        </div>
+                    </div>
+
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Location Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Department</div>
+                            <div class="info-value">${formatValue(userLocation.departmentId)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Building</div>
+                            <div class="info-value">${formatValue(userLocation.buildingId)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Room</div>
+                            <div class="info-value">${formatValue(userLocation.room)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Applications tab content
+         */
+        function renderApplicationsTab(computerInfo) {
+            const applications = computerInfo.applications || [];
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Installed Applications</h3>
+                        ${createApplicationsTable(applications)}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Disk Encryption tab content
+         */
+        function renderDiskEncryptionTab(computerInfo) {
+            const diskEncryption = computerInfo.diskEncryption || {};
+            const general = computerInfo.general || {};
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Disk Encryption Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Name</div>
+                            <div class="info-value">${formatValue(diskEncryption.bootPartitionEncryptionDetails?.partitionName)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last Inventory Update</div>
+                            <div class="info-value">${formatValue(general.reportDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">FileVault 2 Enabled</div>
+                            <div class="info-value">${formatValue(diskEncryption.bootPartitionEncryptionDetails?.partitionFileVault2State === 'ENCRYPTED' ? 'Yes' : 'No')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">FileVault 2 Partition Encryption State</div>
+                            <div class="info-value">${createStatusBadge('filevault', diskEncryption.bootPartitionEncryptionDetails?.partitionFileVault2State)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Personal Recovery Key Validation</div>
+                            <div class="info-value">${formatValue(diskEncryption.individualRecoveryKeyValidityStatus)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Institutional Recovery Key Status</div>
+                            <div class="info-value">${formatValue(diskEncryption.institutionalRecoveryKey)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Disk Encryption Configuration</div>
+                            <div class="info-value">${formatValue(diskEncryption.diskEncryptionConfiguration)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">FileVault 2 Enabled Users</div>
+                            <div class="info-value">${diskEncryption.fileVault2Users ? diskEncryption.fileVault2Users.map(user => user.username || user).join(', ') : formatValue(null)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Purchasing tab content
+         */
+        function renderPurchasingTab(computerInfo) {
+            const purchasing = computerInfo.purchasing || {};
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Purchase Information</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Purchased or Leased</div>
+                            <div class="info-value">${purchasing.purchased ? 'Purchased' : (purchasing.leased ? 'Leased' : 'Unknown')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">PO Number</div>
+                            <div class="info-value">${formatValue(purchasing.poNumber)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">PO Date</div>
+                            <div class="info-value">${formatValue(purchasing.poDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Vendor</div>
+                            <div class="info-value">${formatValue(purchasing.vendor)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Warranty Expiration</div>
+                            <div class="info-value">${formatValue(purchasing.warrantyDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">AppleCare ID</div>
+                            <div class="info-value">${formatValue(purchasing.appleCareId)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Lease Expiration</div>
+                            <div class="info-value">${formatValue(purchasing.leaseDate)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Purchase Price</div>
+                            <div class="info-value">${formatValue(purchasing.purchasePrice)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Life Expectancy</div>
+                            <div class="info-value">${purchasing.lifeExpectancy ? purchasing.lifeExpectancy + ' years' : 'N/A'}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Purchasing Account</div>
+                            <div class="info-value">${formatValue(purchasing.purchasingAccount)}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Purchasing Contact</div>
+                            <div class="info-value">${formatValue(purchasing.purchasingContact)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Storage tab content
+         */
+        function renderStorageTab(computerInfo) {
+            const storage = computerInfo.storage || {};
+            const disks = storage.disks || [];
+            
+            return `
+                <div class="space-y-6">
+                    <!-- Drive Information Card -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Drive Information</h3>
+                        ${disks.length > 0 ? `
+                            <div class="info-grid">
+                                <div class="info-label">Model</div>
+                                <div class="info-value">${formatValue(disks[0]?.model || 'N/A')}</div>
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-label">Revision</div>
+                                <div class="info-value">${formatValue(disks[0]?.revision || 'N/A')}</div>
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-label">Serial Number</div>
+                                <div class="info-value">${formatValue(disks[0]?.serialNumber || 'N/A')}</div>
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-label">Drive Capacity</div>
+                                <div class="info-value">${formatValue(disks[0]?.sizeMegabytes ? `${disks[0].sizeMegabytes} MB` : 'N/A')}</div>
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-label">S.M.A.R.T. Status</div>
+                                <div class="info-value">${formatValue(disks[0]?.smartStatus || 'N/A')}</div>
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-label">Number of Partitions</div>
+                                <div class="info-value">${formatValue((disks[0]?.partitions || []).length || 'N/A')}</div>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No drive information available.</p>'}
+                    </div>
+
+                    <!-- Partitions Table -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Partitions</h3>
+                        ${disks.length > 0 && disks[0]?.partitions?.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full rounded-lg overflow-hidden">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Size</th>
+                                            <th>% Used</th>
+                                            <th>Available</th>
+                                            <th>FileVault 2 State</th>
+                                            <th>Core Storage Partition Scheme</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${disks[0].partitions.map(partition => `
+                                            <tr>
+                                                <td>${formatValue(partition.name)}</td>
+                                                <td>${formatValue(partition.sizeMegabytes ? `${partition.sizeMegabytes} MB` : 'N/A')}</td>
+                                                <td>${formatValue(partition.percentUsed ? `${partition.percentUsed}%` : 'N/A')}</td>
+                                                <td>${formatValue(partition.availableMegabytes ? `${partition.availableMegabytes} MB` : 'N/A')}</td>
+                                                <td>${formatValue(partition.filevault2State || 'N/A')}</td>
+                                                <td>${formatValue(partition.partitionType || 'N/A')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No partition information available.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+                /**
+         * Renders the Configuration Profiles tab content
+         */
+         function renderConfigurationProfilesTab(computerInfo) {
+            const configProfiles = computerInfo.configurationProfiles || [];
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Configuration Profiles</h3>
+                        ${configProfiles.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full rounded-lg overflow-hidden">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Profile Identifier</th>
+                                            <th>Is Removable</th>
+                                            <th>Last Installed Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${configProfiles.map(profile => `
+                                            <tr>
+                                                <td>${formatValue(profile.displayName)}</td>
+                                                <td>${formatValue(profile.profileIdentifier)}</td>
+                                                <td>${formatValue(profile.removable)}</td>
+                                                <td>${formatValue(profile.lastInstalled)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No configuration profiles available.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Operating System tab content
+         */
+        function renderOperatingSystemTab(computerInfo) {
+            const os = computerInfo.operatingSystem || {};
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Operating System</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Operating System</div>
+                            <div class="info-value">${formatValue(os.name || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Operating System Version</div>
+                            <div class="info-value">${formatValue(os.version || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Operating System Build:</div>
+                            <div class="info-value">${formatValue(os.build || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Operating System Supplemental Build Version</div>
+                            <div class="info-value">${formatValue(os.supplementalBuildVersion || os.supplementalBuild || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Operating System Rapid Security Response</div>
+                            <div class="info-value">${formatValue(os.rapidSecurityResponse || os.rapidSecurityResponseVersion || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Software Update Device ID</div>
+                            <div class="info-value">${formatValue(os.softwareUpdateDeviceId || os.softwareUpdateDeviceID || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Active Directory Status</div>
+                            <div class="info-value">${formatValue(os.activeDirectoryStatus || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">FileVault Users</div>
+                            <div class="info-value">${formatValue(os.fileVault2Status || 'N/A')}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Security tab content
+         */
+        function renderSecurityTab(computerInfo) {
+            const security = computerInfo.security || {};
+            
+            return `
+                <div class="space-y-6">
+                    <!-- Security Settings Card -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Security</h3>
+                        <div class="info-grid">
+                            <div class="info-label">System Integrity Protection</div>
+                            <div class="info-value">${formatValue(security.sipStatus || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Gatekeeper</div>
+                            <div class="info-value">${formatValue(security.gatekeeperStatus || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">XProtect Definitions Version</div>
+                            <div class="info-value">${formatValue(security.xprotectVersion || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Disable Automatic Login</div>
+                            <div class="info-value">${formatValue(security.autoLoginDisabled || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Remote Desktop Enabled</div>
+                            <div class="info-value">${formatValue(security.remoteDesktopEnabled || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Activation Lock</div>
+                            <div class="info-value">${formatValue(security.activationLockEnabled || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Recovery Lock</div>
+                            <div class="info-value">${formatValue(security.recoveryLockEnabled || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Secure Boot Level</div>
+                            <div class="info-value">${formatValue(security.secureBootLevel || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">External Boot Level</div>
+                            <div class="info-value">${formatValue(security.externalBootLevel || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Bootstrap Token Allowed</div>
+                            <div class="info-value">${formatValue(security.bootstrapTokenAllowed || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Bootstrap Token Escrowed</div>
+                            <div class="info-value">${formatValue(security.bootstrapTokenEscrowedStatus || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Firewall</div>
+                            <div class="info-value">${formatValue(security.firewallEnabled || 'N/A')}</div>
+                        </div>
+                    </div>
+
+                    <!-- Managed Device Attestation Card -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Managed Device Attestation</h3>
+                        <div class="info-grid">
+                            <div class="info-label">Current Status</div>
+                            <div class="info-value">${formatValue(security.attestationStatus || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last Command Sent</div>
+                            <div class="info-value">${formatValue(security.lastAttestationAttempt || 'N/A')}</div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-label">Last Successful Attestation</div>
+                            <div class="info-value">${formatValue(security.lastSuccessfulAttestation || 'N/A')}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Local User Accounts tab content
+         */
+        function renderLocalUserAccountsTab(computerInfo) {
+            const localUserAccounts = computerInfo.localUserAccounts || [];
+            
+            // Separate managed admin accounts from regular user accounts
+            const managedAdminAccounts = localUserAccounts.filter(account => 
+                account.userAccountType === 'MANAGED' && account.admin === true
+            );
+            const regularUserAccounts = localUserAccounts.filter(account => 
+                account.admin !== true
+            );
+            
+            return `
+                <div class="space-y-6">
+                    <!-- Managed Local Administrator Accounts -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Managed Local Administrator Accounts</h3>
+                        ${managedAdminAccounts.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full rounded-lg overflow-hidden">
+                                    <thead>
+                                        <tr>
+                                            <th>UID</th>
+                                            <th>Username</th>
+                                            <th>Source</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${managedAdminAccounts.map(account => `
+                                            <tr>
+                                                <td>${formatValue(account.uid)}</td>
+                                                <td>${formatValue(account.username)}</td>
+                                                <td>${formatValue(account.userAccountType)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No managed local administrator accounts available.</p>'}
+                    </div>
+
+                    <!-- Local User Accounts -->
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Local User Accounts</h3>
+                        ${localUserAccounts.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full rounded-lg overflow-hidden">
+                                    <thead>
+                                        <tr>
+                                            <th>UID</th>
+                                            <th>Username</th>
+                                            <th>FullName</th>
+                                            <th>Admin</th>
+                                            <th>HomeDirectory</th>
+                                            <th>FileVault2Enabled</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${localUserAccounts.map(account => `
+                                            <tr>
+                                                <td>${formatValue(account.uid)}</td>
+                                                <td>${formatValue(account.username)}</td>
+                                                <td>${formatValue(account.fullName)}</td>
+                                                <td>${account.admin ? 'Yes' : 'No'}</td>
+                                                <td>${formatValue(account.homeDirectory)}</td>
+                                                <td>${account.fileVault2Enabled ? 'Yes' : 'No'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No local user accounts available.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+                /**
+         * Renders the Certificates tab content
+         */
+         function renderCertificatesTab(computerInfo) {
+            const certificates = computerInfo.certificates || [];
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Certificates</h3>
+                        ${certificates.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full rounded-lg overflow-hidden">
+                                    <thead>
+                                        <tr>
+                                            <th>Common Name</th>
+                                            <th>Identity</th>
+                                            <th>Expires</th>
+                                            <th>Username</th>
+                                            <th>Status</th>
+                                            <th>State</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${certificates.map(cert => `
+                                            <tr>
+                                                <td>${formatValue(cert.commonName)}</td>
+                                                <td>${formatValue(cert.identity)}</td>
+                                                <td>${formatValue(cert.expirationDate)}</td>
+                                                <td>${formatValue(cert.username)}</td>
+                                                <td>${formatValue(cert.certificateStatus)}</td>
+                                                <td>${formatValue(cert.lifecycleStatus)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No certificates available.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Group Memberships tab content
+         */
+        function renderGroupMembershipsTab(computerInfo) {
+            const groupMemberships = computerInfo.groupMemberships || [];
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Group Memberships</h3>
+                        ${groupMemberships.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full rounded-lg overflow-hidden">
+                                    <thead>
+                                        <tr>
+                                            <th>Group ID</th>
+                                            <th>Group Name</th>
+                                            <th>Smart Group</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${groupMemberships.map(group => `
+                                            <tr>
+                                                <td>${formatValue(group.groupId)}</td>
+                                                <td>${formatValue(group.groupName)}</td>
+                                                <td>${formatValue(group.smartGroup)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No group memberships available.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the Extension Attributes tab content
+         */
+        function renderExtensionAttributesTab(computerInfo) {
+            const extensionAttributes = computerInfo.extensionAttributes || [];
+            
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Extension Attributes</h3>
+                        ${extensionAttributes.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full rounded-lg overflow-hidden">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Description</th>
+                                            <th>Enabled</th>
+                                            <th>Multi Value</th>
+                                            <th>Values</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${extensionAttributes.map(attr => `
+                                            <tr>
+                                                <td>${formatValue(attr.name)}</td>
+                                                <td>${formatValue(attr.description)}</td>
+                                                <td>${formatValue(attr.enabled)}</td>
+                                                <td>${formatValue(attr.multiValue)}</td>
+                                                <td>${formatValue(attr.values ? attr.values.join(', ') : '')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No extension attributes available.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Creates a table for attachments
+         */
+        function createAttachmentsTable(data) {
+            if (!Array.isArray(data) || data.length === 0) {
+                return `<p class="text-themed-tertiary italic">No attachments data available.</p>`;
+            }
+
+            // Optional helper: pretty-print bytes
+            function formatBytes(bytes) {
+                if (typeof bytes !== 'number') return formatValue(bytes);
+                const units = ['B','KB','MB','GB','TB'];
+                let i = 0, v = bytes;
+                while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+                return `${v.toFixed(1)} ${units[i]}`;
+            }
+
+            let html = `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full rounded-lg overflow-hidden">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>File Type</th>
+                                <th>Size</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            data.forEach(att => {
+                html += `
+                    <tr>
+                        <td>${formatValue(att.name)}</td>
+                        <td>${formatValue(att.fileType)}</td>
+                        <td>${att.size != null ? formatBytes(Number(att.size)) : formatValue(att.size)}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            return html;
+        }
+
+        /**
+         * Renders the Attachments tab content
+         */
+        function renderAttachmentsTab(computerInfo) {
+            const attachments = computerInfo.attachments || [];
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">Attachments</h3>
+                        ${createAttachmentsTable(attachments)}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Generic renderer for sections with minimal or unknown data structures
+         */
+        function renderGenericTab(computerInfo, sectionName, displayName) {
+            const sectionData = computerInfo[sectionName] || {};
+            
+            // If it's an array, render as a simple list
+            if (Array.isArray(sectionData)) {
+                return `
+                    <div class="space-y-6">
+                        <div class="card-primary rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4 section-header">${displayName}</h3>
+                            ${sectionData.length > 0 ? `
+                                <ul class="space-y-2">
+                                    ${sectionData.map(item => `
+                                        <li class="p-2 bg-themed-secondary rounded">
+                                            ${typeof item === 'object' ? JSON.stringify(item, null, 2) : formatValue(item)}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            ` : '<p class="text-themed-tertiary italic">No data available.</p>'}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // If it's an object, render key-value pairs
+            const entries = Object.entries(sectionData);
+            return `
+                <div class="space-y-6">
+                    <div class="card-primary rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 section-header">${displayName}</h3>
+                        ${entries.length > 0 ? `
+                            <div class="space-y-2">
+                                ${entries.map(([key, value]) => `
+                                    <div class="info-grid">
+                                        <div class="info-label">${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</div>
+                                        <div class="info-value">${formatValue(typeof value === 'object' ? JSON.stringify(value) : value)}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<p class="text-themed-tertiary italic">No data available.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+        * Maps section names to their corresponding rendering functions and display names
+        */
+        const sectionMapping = {
+            'GENERAL': { renderer: renderGeneralTab, displayName: 'General' },
+            'HARDWARE': { renderer: renderHardwareTab, displayName: 'Hardware' },
+            'USER_AND_LOCATION': { renderer: renderUserLocationTab, displayName: 'User & Location' },
+            'APPLICATIONS': { renderer: renderApplicationsTab, displayName: 'Applications' },
+            'DISK_ENCRYPTION': { renderer: renderDiskEncryptionTab, displayName: 'Disk Encryption' },
+            'PURCHASING': { renderer: renderPurchasingTab, displayName: 'Purchasing' },
+            'STORAGE': { renderer: renderStorageTab, displayName: 'Storage' },
+            'CONFIGURATION_PROFILES': { renderer: renderConfigurationProfilesTab, displayName: 'Configuration Profiles' },
+            'OPERATING_SYSTEM': { renderer: renderOperatingSystemTab, displayName: 'Operating System' },
+            'SECURITY': { renderer: renderSecurityTab, displayName: 'Security' },
+            'LOCAL_USER_ACCOUNTS': { renderer: renderLocalUserAccountsTab, displayName: 'Local User Accounts' },
+            'CERTIFICATES': { renderer: renderCertificatesTab, displayName: 'Certificates' },
+            'GROUP_MEMBERSHIPS': { renderer: renderGroupMembershipsTab, displayName: 'Group Memberships' },
+            'EXTENSION_ATTRIBUTES': { renderer: renderExtensionAttributesTab, displayName: 'Extension Attributes' },
+            'ATTACHMENTS': { renderer: renderAttachmentsTab, displayName: 'Attachments' },
+            // Generic sections that use the generic renderer
+            'PRINTERS': { renderer: (info) => renderGenericTab(info, 'printers', 'Printers'), displayName: 'Printers' },
+            'SERVICES': { renderer: (info) => renderGenericTab(info, 'services', 'Services'), displayName: 'Services' },
+            'PLUGINS': { renderer: (info) => renderGenericTab(info, 'plugins', 'Plugins'), displayName: 'Plugins' },
+            'PACKAGE_RECEIPTS': { renderer: (info) => renderGenericTab(info, 'packageReceipts', 'Package Receipts'), displayName: 'Package Receipts' },
+            'FONTS': { renderer: (info) => renderGenericTab(info, 'fonts', 'Fonts'), displayName: 'Fonts' },
+            'LICENSED_SOFTWARE': { renderer: (info) => renderGenericTab(info, 'licensedSoftware', 'Licensed Software'), displayName: 'Licensed Software' },
+            'IBEACONS': { renderer: (info) => renderGenericTab(info, 'ibeacons', 'iBeacons'), displayName: 'iBeacons' },
+            'SOFTWARE_UPDATES': { renderer: (info) => renderGenericTab(info, 'softwareUpdates', 'Software Updates'), displayName: 'Software Updates' },
+            'CONTENT_CACHING': { renderer: (info) => renderGenericTab(info, 'contentCaching', 'Content Caching'), displayName: 'Content Caching' }
+        };
+
+                /**
+         * Gets the sections that should be displayed based on the action parameters
+         */
+         function getDisplaySections() {
+            // Try multiple sources for the sections parameter
+            let sectionsParam = 'ALL';
+            
+            // Check window.actionParams first
+            const actionParams = window.actionParams || {};
+            if (actionParams.Section) {
+                sectionsParam = actionParams.Section;
+            }
+            // Check if sections are in the JSON data
+            else if (jsonData && jsonData.sections_requested) {
+                sectionsParam = jsonData.sections_requested;
+            }
+            // Check if sections are in URL parameters
+            else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlSection = urlParams.get('Section') || urlParams.get('section');
+                if (urlSection) {
+                    sectionsParam = urlSection;
+                }
+            }
+            
+            // If ALL is selected, show the default tabs
+            if (sectionsParam === 'ALL' || !sectionsParam) {
+                return ['GENERAL', 'HARDWARE', 'USER_AND_LOCATION', 'APPLICATIONS'];
+            }
+            
+            // Parse the sections parameter (could be comma-separated)
+            const selectedSections = typeof sectionsParam === 'string' 
+                ? sectionsParam.split(',').map(s => s.trim().toUpperCase())
+                : [sectionsParam.toUpperCase()];
+            
+            return selectedSections;
+        }
+
+        /**
+         * Safe renderer wrapper that handles errors gracefully
+         */
+        function safeRender(renderer, computerInfo, sectionName, displayName) {
+            try {
+                return renderer(computerInfo);
+            } catch (error) {
+                console.error(`Error rendering ${sectionName} section:`, error);
+                return `
+                    <div class="space-y-6">
+                        <div class="card-primary rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4 section-header">${displayName}</h3>
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span class="text-red-700 font-medium">Error Loading Section</span>
+                                </div>
+                                <p class="text-red-600 mt-2">Unable to render ${displayName} section. Please check the data format or contact support.</p>
+                                <details class="mt-2">
+                                    <summary class="text-red-600 cursor-pointer">Show Error Details</summary>
+                                    <pre class="text-xs text-red-500 mt-1 bg-red-100 p-2 rounded overflow-auto">${error.message || error}</pre>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Renders tabs dynamically based on selected sections
+         */
+        function renderTabs(computerInfo) {
+            const displaySections = getDisplaySections();
+            let tabsHtml = '';
+            let contentHtml = '';
+            
+            displaySections.forEach((section, index) => {
+                const mapping = sectionMapping[section];
+                if (!mapping) return;
+                
+                const isActive = index === 0;
+                const tabId = section.toLowerCase().replace(/_/g, '-');
+                
+                // Create tab button
+                tabsHtml += `
+                    <button class="tab-button ${isActive ? 'active' : ''}" 
+                            onclick="switchTab(event, '${tabId}')" 
+                            data-tab="${tabId}">
+                        ${mapping.displayName}
+                    </button>
+                `;
+                
+                // Create tab content with safe rendering
+                contentHtml += `
+                    <div id="${tabId}" class="tab-content ${isActive ? 'active' : ''}">
+                        ${safeRender(mapping.renderer, computerInfo, section, mapping.displayName)}
+                    </div>
+                `;
+            });
+            
+            return { tabsHtml, contentHtml };
+        }
+
+        /**
+         * Renders the complete computer inventory widget with GetDeviceInformation layout
+         */
+        function renderInventoryWidget(data) {
+            // Extract computer info from the inventory data structure
+            const inventoryData = data.inventory_data || {};
+            const computerInfo = inventoryData.results && inventoryData.results.length > 0 ? inventoryData.results[0] : {};
+            const computerId = computerInfo.id || 'Unknown';
+            const computerName = computerInfo.general?.name || `Computer ${computerId}`;
+            const managementId = computerInfo.general?.managementId || 'Unknown';
+            
+            const { tabsHtml, contentHtml } = renderTabs(computerInfo);
+            
+            return `
+                <div class="card-primary rounded-xl shadow-2xl overflow-hidden">
+                    <!-- Card Header -->
+                    <div class="p-4 sm:p-6 card-secondary border-b border-themed flex justify-between items-center">
+                        <div>
+                            <h1 class="text-xl font-bold text-themed-primary">${computerName}</h1>
+                            <p class="text-themed-tertiary text-sm">Management ID: ${managementId}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-themed-tertiary">Platform</div>
+                            <div class="text-lg font-semibold" style="color: var(--widget-accent-color);">${computerInfo.general?.platform || 'Unknown'}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab Navigation -->
+                    <div class="card-secondary border-b border-themed">
+                        <div class="flex flex-wrap gap-0">
+                            ${tabsHtml}
+                        </div>
+                    </div>
+                    
+                    <!-- Tab Content -->
+                    <div class="p-4 sm:p-6">
+                        ${contentHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Switches between tabs
+         */
+        function switchTab(event, tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+
+        // Make switchTab function globally available
+        window.switchTab = switchTab;
+
+    </script>
+</body>
+</html>

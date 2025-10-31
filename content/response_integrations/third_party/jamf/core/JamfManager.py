@@ -94,7 +94,6 @@ class JamfManager:
             self._log("info", f"Getting access token from Jamf Pro at: {auth_url}")
             self._log("info", f"Authenticating with Jamf Pro at: {auth_url}")
             self._log("info", f"Client API ID: {self.client_api_id}")
-            self._log("info", f"Client API Secret: {self.client_api_secret}")
 
             response = self.session.post(auth_url, headers=headers, data=data, timeout=30)
 
@@ -245,8 +244,6 @@ class JamfManager:
 
             if response.status_code == 200:
                 groups_data = response.json()
-                self._log("info", f"Raw API response type: {type(groups_data)}")
-                self._log("info", f"Raw API response: {groups_data}")
 
                 # Handle both possible response formats
                 if isinstance(groups_data, list):
@@ -306,6 +303,10 @@ class JamfManager:
 
             if response.status_code == 200:
                 device_data = response.json()
+
+                # Clean the data to prevent JSON parsing issues in widgets
+                device_data = self._clean_string_for_json(device_data)
+
                 self._log("info", f"Successfully retrieved device information for ID: {device_id}")
                 return device_data
             elif response.status_code == 404:
@@ -392,7 +393,7 @@ class JamfManager:
             JamfError: If the API request fails
         """
         try:
-            self.logger.info(f"Retrieving computer inventory - Page: {page}, Size: {page_size}")
+            self._log("info", f"Retrieving computer inventory - Page: {page}, Size: {page_size}")
 
             # Validate parameters
             if page < 0:
@@ -424,6 +425,10 @@ class JamfManager:
 
             if response.status_code == 200:
                 inventory_data = response.json()
+
+                # Clean the data to prevent JSON parsing issues in widgets
+                inventory_data = self._clean_string_for_json(inventory_data)
+
                 results = inventory_data.get("results", [])
                 total_count = inventory_data.get("totalCount", 0)
                 self._log(
@@ -580,10 +585,7 @@ class JamfManager:
                 self._log("error", f"Bad request: {error_msg}")
                 raise JamfInvalidParameterError(f"Bad request: {error_msg}")
             else:
-                error_msg = (
-                    f"Failed to erase computer. Status: {response.status_code}, "
-                    f"Response: {response.text}"
-                )
+                error_msg = f"Status: {response.status_code}, Response: {response.text}"
                 self._log("error", error_msg)
                 raise JamfError(error_msg)
 
@@ -621,13 +623,13 @@ class JamfManager:
             if not pin or not str(pin).isdigit() or len(str(pin)) != 6:
                 raise JamfInvalidParameterError("PIN is required and must be exactly 6 digits")
 
-            self.logger.info(f"Sending remote lock command to computer ID: {computer_id}")
+            self._log("info", f"Sending remote lock command to computer ID: {computer_id}")
 
             # Ensure token is valid
             self.check_token_expiration()
 
             # Step 1: Get device information to retrieve managementId
-            self.logger.info(f"Retrieving device information for computer ID: {computer_id}")
+            self._log("info", f"Retrieving device information for computer ID: {computer_id}")
             device_info = self.get_device_info(computer_id)
 
             # Extract managementId from device info
@@ -635,14 +637,16 @@ class JamfManager:
             if not management_id:
                 raise JamfError(f"Could not retrieve managementId for computer {computer_id}")
 
-            self.logger.info(
-                f"Retrieved managementId: {management_id} for computer ID: {computer_id}"
+            self._log(
+                "info",
+                f"Retrieved managementId: {management_id} for computer ID: {computer_id}",
             )
 
             # Use the admin-provided PIN for the lock command
             device_lock_pin = str(pin)
-            self.logger.info(
-                f"Using admin-provided PIN for remote lock of computer ID: {computer_id}"
+            self._log(
+                "info",
+                f"Using admin-provided PIN for remote lock of computer ID: {computer_id}",
             )
 
             # Prepare request body for device_lock MDM command
@@ -653,15 +657,15 @@ class JamfManager:
 
             # Add PIN to commandData (required for unlock)
             request_body["commandData"]["pin"] = device_lock_pin
-            self.logger.info("Lock command includes admin-provided PIN for unlocking")
+            self._log("info", "Lock command includes admin-provided PIN for unlocking")
 
             if message:
                 request_body["commandData"]["message"] = str(message).strip()
-                self.logger.info("Lock command will include custom message")
+                self._log("info", "Lock command will include custom message")
 
             if phone_number:
                 request_body["commandData"]["phoneNumber"] = str(phone_number).strip()
-                self.logger.info("Lock command will include phone number")
+                self._log("info", "Lock command will include phone number")
 
             # Make API request
             url = self._get_full_url(API_ENDPOINTS["mdm_commands"])
@@ -671,12 +675,10 @@ class JamfManager:
                 "Content-Type": "application/json",
             }
 
-            self.logger.info(f"Making remote lock request to: {url}")
-            self.logger.info(f"Request body: {request_body}")
+            self._log("info", f"Making remote lock request to: {url}")
+            self._log("info", f"Request body: {request_body}")
 
             response = self.session.post(url, headers=headers, json=request_body, timeout=30)
-            self.logger.info(f"Response status code: {response.status_code}")
-            self.logger.info(f"Response body: {response.text}")
 
             if response.status_code == 201:
                 try:
@@ -684,8 +686,9 @@ class JamfManager:
                 except Exception:
                     # Some endpoints may return empty body on success
                     result = {"status": "success", "message": "Remote lock command initiated"}
-                self.logger.info(
-                    f"Successfully initiated remote lock command for computer {computer_id}"
+                self._log(
+                    "info",
+                    f"Successfully initiated remote lock command for computer {computer_id}",
                 )
                 return result
             elif response.status_code == 200:
@@ -693,17 +696,18 @@ class JamfManager:
                     result = response.json()
                 except Exception:
                     result = {"status": "success", "message": "Remote lock command initiated"}
-                self.logger.info(
-                    f"Successfully initiated remote lock command for computer {computer_id}"
+                self._log(
+                    "info",
+                    f"Successfully initiated remote lock command for computer {computer_id}",
                 )
                 return result
             elif response.status_code == 404:
                 error_msg = f"Computer with ID {computer_id} not found"
-                self.logger.error(error_msg)
+                self._log("error", error_msg)
                 raise Exception(error_msg)
             elif response.status_code == 403:
                 error_msg = "Insufficient permissions to send remote lock command"
-                self.logger.error(error_msg)
+                self._log("error", error_msg)
                 raise Exception(error_msg)
             elif response.status_code == 400:
                 error_msg = "Invalid request parameters"
@@ -715,20 +719,20 @@ class JamfManager:
                         ])
                 except Exception:
                     pass
-                self.logger.error(f"Bad request: {error_msg}")
+                self._log("error", f"Bad request: {error_msg}")
                 raise Exception(f"Bad request: {error_msg}")
             else:
-                self.logger.error(f"Unexpected response status: {response.status_code}")
-                self.logger.error(f"Response content: {response.text}")
+                self._log("error", f"Unexpected response status: {response.status_code}")
+                self._log("error", f"Response content: {response.text}")
                 error_msg = f"Failed to send remote lock command. Status: {response.status_code}"
                 raise Exception(error_msg)
 
         except Exception as e:
-            self.logger.error(f"Error sending remote lock command to computer {computer_id}: {e}")
+            self._log("error", f"Error sending remote lock command to computer {computer_id}: {e}")
             raise Exception(f"Failed to send remote lock command: {e}")
 
     def assign_to_group(
-        self, group_id, computer_ids=None, computer_names=None, serial_numbers=None
+        self, group_id, computer_ids=None, computer_names=None, computer_serial_numbers=None
     ):
         """
         Add computers to a computer group
@@ -737,7 +741,7 @@ class JamfManager:
             group_id (str): The ID of the computer group
             computer_ids (list, optional): List of computer IDs to add
             computer_names (list, optional): List of computer names to add
-            serial_numbers (list, optional): List of serial numbers to add
+            computer_serial_numbers (list, optional): List of serial numbers to add
 
         Returns:
             dict: API response containing the updated group information
@@ -746,13 +750,13 @@ class JamfManager:
             JamfError: If the API request fails
         """
         try:
-            self.logger.info(f"Assigning computers to group {group_id}")
+            self._log("info", f"Assigning computers to group {group_id}")
 
             # Validate input parameters
             if not group_id:
                 raise JamfInvalidParameterError("Group ID is required")
 
-            if not computer_ids and not computer_names and not serial_numbers:
+            if not computer_ids and not computer_names and not computer_serial_numbers:
                 raise JamfInvalidParameterError(
                     "At least one computer identifier (ID, name, or serial number) must be provided"
                 )
@@ -774,8 +778,8 @@ class JamfManager:
                     computers_xml.append(f"<computer><name>{comp_name}</name></computer>")
 
             # Process serial numbers
-            if serial_numbers:
-                for serial in serial_numbers:
+            if computer_serial_numbers:
+                for serial in computer_serial_numbers:
                     computers_xml.append(
                         f"<computer><serial_number>{serial}</serial_number></computer>"
                     )
@@ -796,8 +800,8 @@ class JamfManager:
                 "Content-Type": "application/xml",
             }
 
-            self.logger.info(f"Making request to: {url}")
-            self.logger.info(f"Computer count: {len(computers_xml)}")
+            self._log("info", f"Making request to: {url}")
+            self._log("info", f"Computer count: {len(computers_xml)}")
 
             response = self.session.put(url, headers=headers, data=xml_body, timeout=30)
 
@@ -824,10 +828,10 @@ class JamfManager:
                     if name_elem is not None:
                         result["group_name"] = name_elem.text
 
-                    self.logger.info(f"Successfully added computers to group {group_id}")
+                    self._log("info", f"Successfully added computers to group {group_id}")
                     return result
                 except Exception as parse_error:
-                    self.logger.info(f"Could not parse XML response: {parse_error}")
+                    self._log("info", f"Could not parse XML response: {parse_error}")
                     # Return basic success response
                     return {
                         "status": "success",
@@ -850,20 +854,20 @@ class JamfManager:
                         error_msg = error_elem.text
                 except Exception:
                     pass
-                self.logger.error(f"Bad request: {error_msg}")
+                self._log("error", f"Bad request: {error_msg}")
                 raise JamfInvalidParameterError(f"Bad request: {error_msg}")
             elif response.status_code == 404:
-                self.logger.error(f"Computer group with ID {group_id} not found")
+                self._log("error", f"Computer group with ID {group_id} not found")
                 raise JamfError(f"Computer group with ID {group_id} not found")
             elif response.status_code == 401:
-                self.logger.error("Authentication failed")
+                self._log("error", "Authentication failed")
                 raise JamfError("Authentication failed - check API credentials")
             elif response.status_code == 403:
-                self.logger.error("Insufficient permissions")
+                self._log("error", "Insufficient permissions")
                 raise JamfError("Insufficient permissions to modify computer groups")
             else:
-                self.logger.error(f"Unexpected response status: {response.status_code}")
-                self.logger.error(f"Response content: {response.text}")
+                self._log("error", f"Unexpected response status: {response.status_code}")
+                self._log("error", f"Response content: {response.text}")
                 raise JamfError(
                     f"Failed to assign computers to group. Status: {response.status_code}"
                 )
@@ -873,77 +877,8 @@ class JamfManager:
         except JamfInvalidParameterError:
             raise
         except Exception as e:
-            self.logger.error(f"Error assigning computers to group: {e}")
+            self._log("error", f"Error assigning computers to group: {e}")
             raise JamfError(f"Failed to assign computers to group: {e}")
-
-    def get_device_lock_pin(self, computer_id: str) -> dict:
-        """
-        Get the device lock PIN for a computer
-
-        Args:
-            computer_id (str): The ID of the computer to retrieve the device lock PIN for
-
-        Returns:
-            dict: API response containing the device lock PIN information
-
-        Raises:
-            JamfInvalidParameterError: If computer_id is invalid
-            JamfError: If the API request fails
-        """
-        try:
-            # Validate computer_id
-            if not computer_id or not str(computer_id).strip():
-                raise JamfInvalidParameterError("Computer ID is required and cannot be empty")
-
-            # Ensure we have a valid token
-            if not self.check_token_expiration():
-                raise JamfError("Failed to obtain valid access token")
-
-            # Construct the API URL
-            url = self._get_full_url(API_ENDPOINTS["device_lock_pin"].format(id=computer_id))
-
-            headers = {"Authorization": f"Bearer {self.access_token}", "Accept": "application/json"}
-
-            self._log("info", f"Getting device lock PIN for computer ID: {computer_id}")
-            self._log("info", f"Making request to: {url}")
-
-            response = self.session.get(url, headers=headers, timeout=30)
-
-            if response.status_code == 200:
-                result = response.json()
-                self._log(
-                    "info", f"Successfully retrieved device lock PIN for computer {computer_id}"
-                )
-                return result
-            elif response.status_code == 404:
-                error_msg = (
-                    f"Computer with ID {computer_id} not found or does not have a device lock PIN"
-                )
-                self._log("error", error_msg)
-                raise JamfError(error_msg)
-            elif response.status_code == 401:
-                error_msg = "Authentication failed - check API credentials"
-                self._log("error", error_msg)
-                raise JamfError(error_msg)
-            elif response.status_code == 403:
-                error_msg = "Insufficient permissions to view device lock PIN"
-                self._log("error", error_msg)
-                raise JamfError(error_msg)
-            else:
-                error_msg = (
-                    f"Failed to get device lock PIN. Status: {response.status_code}, "
-                    f"Response: {response.text}"
-                )
-                self._log("error", error_msg)
-                raise JamfError(error_msg)
-
-        except JamfError:
-            raise
-        except JamfInvalidParameterError:
-            raise
-        except Exception as e:
-            self._log("error", f"Error getting device lock PIN: {e}")
-            raise JamfError(f"Failed to get device lock PIN: {e}")
 
     def update_computer_extension_attribute(
         self, computer_id: str, extension_attribute: dict
@@ -1138,3 +1073,523 @@ class JamfManager:
         except Exception as e:
             self._log("error", f"Error retrieving extension attributes: {e}")
             raise JamfError(f"Failed to retrieve extension attributes: {e}")
+
+    def _clean_string_for_json(self, obj):
+        """
+        Recursively clean string values in data structures to prevent JSON parsing issues.
+
+        This method handles complex JSON cleaning including:
+        - Extension attributes with unescaped quotes and special characters
+        - Certificate data with embedded quotes and newlines
+        - Group membership data with structural issues
+        - Trailing commas and malformed JSON structures
+
+        Args:
+            obj: The object to clean (dict, list, str, or other)
+
+        Returns:
+            Cleaned object with properly escaped string values
+        """
+        if isinstance(obj, dict):
+            return {key: self._clean_string_for_json(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._clean_string_for_json(item) for item in obj]
+        elif isinstance(obj, str):
+            return self._clean_json_string(obj)
+        else:
+            # Return non-string values as-is
+            return obj
+
+    def _clean_json_string(self, json_string: str) -> str:
+        """
+        Clean a JSON string by fixing common issues that cause parsing errors.
+
+        This is a direct port of the cleanJsonData function from GetDeviceInformation.html widget.
+
+        Handles:
+        - Unescaped quotes within string values
+        - Newlines, tabs, and control characters
+        - Trailing commas before } or ]
+        - Certificate data with embedded quotes
+        - Extension attributes with special characters
+        - Filter criteria with embedded quotes
+        - Group descriptions with complex formatting
+
+        Args:
+            json_string: The JSON string to clean
+
+        Returns:
+            Cleaned JSON string
+        """
+        if not isinstance(json_string, str):
+            return json_string
+
+        result = ""
+        escape_next = False
+        in_string = True
+
+        def find_next_non_whitespace(start_index: int) -> str:
+            """Find next non-whitespace character from given index."""
+            for k in range(start_index, len(json_string)):
+                if json_string[k] not in " \t\n\r":
+                    return json_string[k]
+            return None
+
+        for i, char in enumerate(json_string):
+            if escape_next:
+                # If we're escaping the next character, just add it as-is
+                result += char
+                escape_next = False
+                continue
+
+            if char == "\\":
+                # Check specifically for \, sequences
+                if i + 1 < len(json_string) and json_string[i + 1] == ",":
+                    # Convert \, to \\, for valid JSON
+                    result += "\\\\"
+                    i += 1  # Skip the comma since we've processed it
+                    continue
+
+                # Mark that we should escape the next character
+                result += char
+                escape_next = True
+                continue
+
+            if char == '"':
+                # For unescaped quotes, determine if this ends/starts a string or is content within
+                if in_string:
+                    # We're currently in a string - check if this quote actually ends it
+                    next_non_whitespace = find_next_non_whitespace(i + 1)
+
+                    # If followed by valid JSON terminators, this ends the string
+                    if next_non_whitespace in [",", "}", "]", ":", None]:
+                        in_string = False
+                        result += char
+                    else:
+                        # This quote is content within the string - escape it
+                        result += '\\"'
+                else:
+                    # We're not in a string - this quote starts a new string
+                    in_string = True
+                    result += char
+                continue
+
+            if in_string:
+                # Inside a string value - escape special characters
+                if char == "\n":
+                    result += "\\n"
+                elif char == "\r":
+                    result += "\\r"
+                elif char == "\t":
+                    result += "\\t"
+                elif char == "\b":
+                    result += "\\b"
+                elif char == "\f":
+                    result += "\\f"
+                else:
+                    result += char
+            else:
+                # Outside string values - handle structural issues
+                if char == ",":
+                    # Skip trailing commas before } or ]
+                    next_non_whitespace = find_next_non_whitespace(i + 1)
+                    if next_non_whitespace in ["}", "]"]:
+                        continue
+                result += char
+
+        return result
+
+    def get_mobile_device_detail(self, device_id: str) -> dict:
+        """
+        Get detailed mobile device information from Jamf Pro using v2 API.
+
+        Args:
+            device_id (str): The ID of the mobile device to retrieve information for
+
+        Returns:
+            dict: Mobile device information including management ID
+
+        Raises:
+            JamfInvalidParameterError: If device_id is invalid
+            JamfError: If the API request fails
+        """
+        try:
+            # Validate device_id
+            if not device_id or not str(device_id).strip():
+                raise JamfInvalidParameterError("Device ID is required and cannot be empty")
+
+            # Ensure we have a valid token
+            if not self.check_token_expiration():
+                raise JamfError("Failed to obtain valid access token")
+
+            # Construct the API URL
+            url = self._get_full_url(
+                API_ENDPOINTS["mobile_device_inventory_detail"].format(id=device_id)
+            )
+
+            self._log("info", f"Retrieving mobile device details for ID: {device_id}")
+
+            response = self.session.get(url, timeout=30)
+
+            if response.status_code == 200:
+                device_data = response.json()
+                self._log(
+                    "info",
+                    f"Successfully retrieved mobile device details for ID: {device_id}",
+                )
+                return device_data
+            elif response.status_code == 404:
+                error_msg = f"Mobile device with ID {device_id} not found"
+                self._log("error", error_msg)
+                raise JamfError(error_msg)
+            else:
+                error_msg = (
+                    f"Failed to retrieve mobile device details. Status: {response.status_code}, "
+                    f"Response: {response.text}"
+                )
+                self._log("error", error_msg)
+                raise JamfError(error_msg)
+
+        except JamfError:
+            raise
+        except JamfInvalidParameterError:
+            raise
+        except Exception as e:
+            self._log("error", f"Error retrieving mobile device details: {e}")
+            raise JamfError(f"Failed to retrieve mobile device details: {e}")
+
+    def remote_lock_mobile_device(
+        self, device_id: str, message: str = None, phone_number: str = None
+    ) -> dict:
+        """
+        Send a remote lock command to a managed mobile device.
+
+        Args:
+            device_id (str): The ID of the mobile device to lock
+            message (str, optional): Custom message to display on the locked device
+            phone_number (str, optional): Phone number to display on the locked device
+
+        Returns:
+            dict: API response containing lock command status
+
+        Raises:
+            JamfInvalidParameterError: If device_id is invalid
+            JamfError: If the API request fails
+        """
+        try:
+            # Validate device_id
+            if not device_id or not str(device_id).strip():
+                raise JamfInvalidParameterError("Device ID is required and cannot be empty")
+
+            # Ensure we have a valid token
+            if not self.check_token_expiration():
+                raise JamfError("Failed to obtain valid access token")
+
+            # First, get the mobile device details to obtain the management ID
+            self._log("info", f"Retrieving mobile device details for ID: {device_id}")
+            device_details = self.get_mobile_device_detail(device_id)
+
+            # Extract management ID from device details
+            management_id = None
+
+            if "managementId" in device_details:
+                management_id = device_details.get("managementId")
+
+            if not management_id:
+                raise JamfError(f"Could not find management ID for mobile device {device_id}. ")
+
+            self._log("info", f"Retrieved management ID: {management_id}")
+
+            # Prepare request body for device_lock MDM command
+            request_body = {
+                "clientData": [{"managementId": str(management_id)}],
+                "commandData": {"commandType": "DEVICE_LOCK"},
+            }
+
+            if message:
+                request_body["commandData"]["message"] = str(message).strip()
+                self._log("info", "Lock command will include custom message")
+
+            if phone_number:
+                request_body["commandData"]["phoneNumber"] = str(phone_number).strip()
+                self._log("info", "Lock command will include phone number")
+
+            # Make API request
+            url = self._get_full_url(API_ENDPOINTS["mdm_commands"])
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            }
+
+            self._log("info", f"Making remote lock request to: {url}")
+            self._log("info", f"Request body: {request_body}")
+
+            response = self.session.post(url, headers=headers, json=request_body, timeout=30)
+
+            if response.status_code == 201:
+                try:
+                    result = response.json()
+                except Exception:
+                    # Some endpoints may return empty body on success
+                    result = {"status": "success", "message": "Remote lock command initiated"}
+                self._log(
+                    "info",
+                    f"Successfully initiated remote lock command for mobile device {device_id}",
+                )
+                return result
+            elif response.status_code == 200:
+                try:
+                    result = response.json()
+                except Exception:
+                    result = {"status": "success", "message": "Remote lock command initiated"}
+                self._log(
+                    "info",
+                    f"Successfully initiated remote lock command for mobile device {device_id}",
+                )
+                return result
+            elif response.status_code == 404:
+                error_msg = f"Mobile device with ID {device_id} not found"
+                self._log("error", error_msg)
+                raise Exception(error_msg)
+            elif response.status_code == 403:
+                error_msg = "Insufficient permissions to send remote lock command"
+                self._log("error", error_msg)
+                raise Exception(error_msg)
+            elif response.status_code == 400:
+                error_msg = "Invalid request parameters"
+                try:
+                    error_data = response.json()
+                    if "errors" in error_data:
+                        error_msg = "; ".join([
+                            err.get("description", str(err)) for err in error_data["errors"]
+                        ])
+                except Exception:
+                    pass
+                self._log("error", f"Bad request: {error_msg}")
+                raise Exception(f"Bad request: {error_msg}")
+            else:
+                self._log("error", f"Unexpected response status: {response.status_code}")
+                self._log("error", f"Response content: {response.text}")
+                error_msg = f"Status: {response.status_code}"
+                raise Exception(error_msg)
+        except Exception as e:
+            self._log("error", f"Error sending remote lock command to mobile device: {e}")
+            raise JamfError(f"Failed to send remote lock command to mobile device: {e}")
+
+    def erase_mobile_device(
+        self,
+        device_id: str,
+        preserve_data_plan: bool = False,
+        disallow_proximity_setup: bool = False,
+        return_to_service: bool = False,
+        mdm_profile_data: str = None,
+        wifi_profile_data: str = None,
+        bootstrap_token: str = None,
+    ) -> dict:
+        """
+        Erase/wipe a mobile device remotely using ERASE_DEVICE MDM command
+
+        Args:
+            device_id (str): The ID of the mobile device to erase
+            preserve_data_plan (bool): Whether to preserve the data plan during erase
+            disallow_proximity_setup (bool): Whether to disallow proximity setup during erase
+            return_to_service (bool): Whether to enable return to service after erase
+            mdm_profile_data (str, optional): Base64-encoded MDM profile data for return to service
+            wifi_profile_data (str, optional): Base64-encoded WiFi profile data
+                for return to service
+            bootstrap_token (str, optional): Bootstrap token for return to service
+
+        Returns:
+            dict: API response containing erase command status
+
+        Raises:
+            JamfInvalidParameterError: If device_id is invalid or parameters are wrong
+            JamfError: If the API request fails
+        """
+        try:
+            # Validate device_id
+            if not device_id or not str(device_id).strip():
+                raise JamfInvalidParameterError("Device ID is required and cannot be empty")
+
+            self._log("info", f"Erasing mobile device with ID: {device_id}")
+
+            # Ensure token is valid
+            if not self.check_token_expiration():
+                raise JamfError("Failed to obtain valid access token")
+
+            # First, get device information to obtain managementId
+            device_info = self.get_mobile_device_detail(device_id)
+            management_id = device_info.get("managementId")
+
+            if not management_id:
+                raise JamfError(f"Could not retrieve management ID for mobile device {device_id}")
+
+            self._log("info", f"Retrieved management ID: {management_id}")
+
+            # Prepare command data
+            command_data = {
+                "commandType": "ERASE_DEVICE",
+            }
+
+            # Add preserve data plan if provided
+            if preserve_data_plan:
+                command_data["preserveDataPlan"] = preserve_data_plan
+                self._log("info", "Erase command will preserve data plan")
+
+            # Add disallow proximity setup if provided
+            if disallow_proximity_setup:
+                command_data["disallowProximitySetup"] = disallow_proximity_setup
+                self._log("info", "Erase command will disallow proximity setup")
+
+            # Add return to service settings if enabled
+            if return_to_service:
+                return_to_service = {"enabled": True}
+
+                if mdm_profile_data:
+                    return_to_service["mdmProfileData"] = mdm_profile_data
+
+                if wifi_profile_data:
+                    return_to_service["wifiProfileData"] = wifi_profile_data
+
+                if bootstrap_token:
+                    return_to_service["bootstrapToken"] = bootstrap_token
+
+                command_data["returnToService"] = return_to_service
+                self._log("info", "Return to service enabled for erase command")
+
+            # Prepare request body
+            request_body = {
+                "commandData": command_data,
+                "clientData": [{"managementId": management_id}],
+            }
+
+            # Make API request
+            url = self._get_full_url(API_ENDPOINTS["mdm_commands"])
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "User-Agent": USER_AGENT,
+            }
+
+            self._log("info", f"Making ERASE_DEVICE MDM command request to: {url}")
+            self._log("info", f"Command data: {command_data}")
+
+            response = self.session.post(url, headers=headers, json=request_body, timeout=30)
+
+            if response.status_code == 201:
+                result = response.json()
+                self._log(
+                    "info",
+                    f"Successfully initiated ERASE_DEVICE command for mobile device {device_id}",
+                )
+                return result
+            elif response.status_code == 404:
+                error_msg = f"Mobile device with ID {device_id} not found or not managed"
+                self._log("error", error_msg)
+                raise JamfError(error_msg)
+            elif response.status_code == 403:
+                error_msg = "Insufficient permissions to erase computer"
+                self._log("error", error_msg)
+                raise JamfError(error_msg)
+            elif response.status_code == 400:
+                error_msg = "Invalid request parameters for erase command"
+                try:
+                    error_data = response.json()
+                    if "errors" in error_data:
+                        error_msg = "; ".join([
+                            err.get("description", str(err)) for err in error_data["errors"]
+                        ])
+                except Exception:
+                    pass
+                self._log("error", f"Bad request: {error_msg}")
+                raise JamfInvalidParameterError(f"Bad request: {error_msg}")
+            else:
+                error_msg = (
+                    f"Failed to erase mobile device. Status: {response.status_code}, "
+                    f"Response: {response.text}"
+                )
+                self._log("error", error_msg)
+                raise JamfError(error_msg)
+
+        except JamfError:
+            raise
+        except JamfInvalidParameterError:
+            raise
+        except Exception as e:
+            self._log("error", f"Error erasing mobile device {device_id}: {e}")
+            raise JamfError(f"Failed to erase mobile device: {e}")
+
+    def get_mobile_device_inventory(
+        self, page=0, page_size=100, sort=None, filter_query=None, section=None
+    ):
+        """
+        Retrieve paginated Mobile Device Inventory records from Jamf Pro using v2 API.
+
+        Args:
+            page (int): Page number to retrieve (default: 0)
+            page_size (int): Number of records per page (default: 100, max: 2000)
+            sort (str): Sort criteria (comma-separated list of field:direction pairs)
+            filter_query (str): Filter criteria using Jamf Pro API filter syntax
+            section (str): Comma-separated list of sections to include in response
+
+        Returns:
+            dict: Mobile device inventory data with results and pagination info
+
+        Raises:
+            JamfError: If the API request fails
+        """
+        try:
+            # Ensure we have a valid token
+            if not self.check_token_expiration():
+                raise JamfError("Failed to obtain valid access token")
+
+            # Construct the API URL
+            url = self._get_full_url(API_ENDPOINTS["mobile_device_inventory"])
+
+            # Build query parameters
+            params = {
+                "page": page,
+                "page-size": page_size,
+            }
+
+            if sort:
+                params["sort"] = sort
+            if filter_query:
+                params["filter"] = filter_query
+            if section:
+                params["section"] = section
+
+            self._log("info", f"Retrieving mobile device inventory from: {url}")
+            self._log("info", f"Parameters: {params}")
+
+            response = self.session.get(url, params=params, timeout=60)
+
+            if response.status_code == 200:
+                inventory_data = response.json()
+
+                # Clean the data to prevent JSON parsing issues in widgets
+                inventory_data = self._clean_string_for_json(inventory_data)
+
+                total_count = inventory_data.get("totalCount", 0)
+                returned_count = len(inventory_data.get("results", []))
+
+                self._log(
+                    "info",
+                    f"Successfully retrieved {returned_count} mobile devices from page {page} "
+                    f"(total: {total_count})",
+                )
+                return inventory_data
+            else:
+                error_msg = (
+                    f"Failed to retrieve mobile device inventory. Status: {response.status_code}, "
+                    f"Response: {response.text}"
+                )
+                self._log("error", error_msg)
+                raise JamfError(error_msg)
+
+        except Exception as e:
+            error_msg = f"Unexpected error retrieving mobile device inventory: {str(e)}"
+            self._log("error", error_msg)
+            raise JamfError(error_msg)
