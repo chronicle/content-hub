@@ -1969,26 +1969,34 @@ class EmailManager:
                     # defence, and decode safelinks
                     if fang_entities:
                         entity = ioc_fanger.fang(entity)
-                        if (
-                            ("urldefense" in entity.lower())
-                            or ("proofpoint" in entity.lower())
-                        ) and entity_type == "DestinationURL":
-                            # decode any URLDefense URLs
-                            urldefense_decoder = URLDefenseDecoder()
+                        if entity_type == "DestinationURL":
                             try:
-                                entity = urldefense_decoder.decode(entity)
-                            except Exception:
-                                pass
-                        if (
-                            "safelinks.protection.outlook.com" in entity.lower()
-                            and entity_type == "DestinationURL"
-                        ):
-                            # if the URL contains safelinks, use urlparse and parse_qs to
-                            # extract to the correct URL
-                            try:
-                                entity = parse_qs(urlparse(entity.lower()).query)[
-                                    "url"
-                                ][0]
+                                parsed_url = urlparse(entity)
+                                if parsed_url.hostname:
+                                    hostname = parsed_url.hostname.lower()
+                                    if (
+                                        hostname == "urldefense.com"
+                                        or hostname.endswith(".urldefense.com")
+                                        or hostname == "urldefense.proofpoint.com"
+                                        or hostname.endswith(".urldefense.proofpoint.com")
+                                    ):
+                                        # decode any URLDefense URLs
+                                        urldefense_decoder = URLDefenseDecoder()
+                                        try:
+                                            entity = urldefense_decoder.decode(entity)
+                                        except Exception:
+                                            pass
+                                    elif (
+                                        hostname == "safelinks.protection.outlook.com"
+                                        or hostname.endswith(".safelinks.protection.outlook.com")
+                                    ):
+                                        # if the URL contains safelinks, use urlparse
+                                        # and parse_qs to
+                                        # extract to the correct URL
+                                        try:
+                                            entity = parse_qs(parsed_url.query)["url"][0]
+                                        except Exception:
+                                            pass
                             except Exception:
                                 pass
 
