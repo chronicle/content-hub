@@ -42,6 +42,7 @@ import paramiko.ed25519key
 
 from .definitions import File, Metadata
 from .constants import BITBUCKET_HOST, SUB_BITBUCKET_HOST
+
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
@@ -113,7 +114,6 @@ class Git:
                 "siemplify_logger": self.logger,
             }
         elif is_bitbucket_host and "x-token-auth" not in self.repo_url:
-            # This is now secure AND flexible
             netloc = f"x-token-auth:{self.password}@{hostname}"
             self.repo_url = urlunparse(parsed_url._replace(netloc=netloc))
             self.connection_args = {
