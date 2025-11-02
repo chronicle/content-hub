@@ -25,6 +25,8 @@ import uuid
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeAlias
+import os
+import hashlib
 
 import requests
 import typer
@@ -76,7 +78,8 @@ def track_command(mp_command_function: Callable) -> Callable:
             exit_code = e.exit_code
         except Exception as e:  # noqa: BLE001
             unexpected_exit = True
-            stack = traceback.format_exc()
+            raw_stack = traceback.format_exc()
+            stack: str = _sanitize_traceback(raw_stack)
             error = e
             exit_code = 1
         finally:
@@ -209,3 +212,14 @@ def _sanitize_argument_value(value: Enum | list[Any] | tuple[Any] | Any) -> Any:
         return [_sanitize_argument_value(item) for item in value]
 
     return value
+
+
+def _sanitize_traceback(raw_stack: str) -> str:
+    home = os.path.expanduser("~")
+    sanitized = raw_stack.replace(home, "<HOME>")
+    return sanitized
+
+
+def _create_install_id() -> str:
+    base_dir: str = os.path.expanduser("~")
+    platform_name = get_current_platform()[0]
