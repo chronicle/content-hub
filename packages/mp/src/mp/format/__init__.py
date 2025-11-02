@@ -38,6 +38,7 @@ from mp.telemetry import track_command
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from mp.core.config import RuntimeParams
 
@@ -98,7 +99,7 @@ def format_files(
         rich.print("No files found to check")
         return
 
-    paths: set[pathlib.Path] = _get_relevant_source_paths(sources)
+    paths: set[Path] = _get_relevant_source_paths(sources)
     if not paths:
         rich.print("No relevant python files to format")
         return
@@ -110,7 +111,7 @@ def _get_source_files(file_paths: list[str], *, changed_file: bool) -> list[str]
     return mp.core.unix.get_changed_files() if changed_file else file_paths
 
 
-def _get_relevant_source_paths(sources: list[str]) -> set[pathlib.Path]:
+def _get_relevant_source_paths(sources: list[str]) -> set[Path]:
     return {
         path
         for source in sources
@@ -121,6 +122,6 @@ def _get_relevant_source_paths(sources: list[str]) -> set[pathlib.Path]:
     }
 
 
-def _format_python_files(paths: Iterable[pathlib.Path]) -> None:
+def _format_python_files(paths: Iterable[Path]) -> None:
     rich.print(f"Formatting Python files: {', '.join(p.name for p in paths)}")
     mp.core.code_manipulation.format_python_files(paths)

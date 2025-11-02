@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from pathlib import Path
+from typing import NotRequired, Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -55,7 +56,14 @@ class BuiltWidgetDataDefinition(TypedDict):
     safeRendering: bool
     type: int
     widgetDefinitionScope: int
+    htmlContent: NotRequired[str]
 
+
+class WidgetSize(mp.core.data_models.abc.RepresentableEnum):
+    HALF_WIDTH = 1
+    FULL_WIDTH = 2
+    THIRD_WIDTH = 3
+    TWO_THIRDS_WIDTH = 4
 
 class NonBuiltWidgetDataDefinition(TypedDict):
     html_height: int
@@ -64,27 +72,36 @@ class NonBuiltWidgetDataDefinition(TypedDict):
     widget_definition_scope: str
 
 
-class WidgetDataDefinition(
-    mp.core.data_models.abc.Buildable[BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition]
+class HtmlWidgetDataDefinition(
+    mp.core.data_models.abc.ComponentMetadata[
+        BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition
+    ]
 ):
     html_height: int
     safe_rendering: bool
     type: WidgetType
     widget_definition_scope: WidgetDefinitionScope
+    html_content: str | None = None
 
     @classmethod
-    def _from_built(cls, built: BuiltWidgetDataDefinition) -> WidgetDataDefinition:
+    def from_built_path(cls, path: Path) -> list[Self]:
+        pass
+
+    @classmethod
+    def from_non_built_path(cls, path: Path) -> list[Self]:
+        pass
+
+    @classmethod
+    def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
-            widget_definition_scope=WidgetDefinitionScope(
-                built["widgetDefinitionScope"],
-            ),
+            widget_definition_scope=WidgetDefinitionScope(built["widgetDefinitionScope"]),
             type=WidgetType(built["type"]),
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltWidgetDataDefinition) -> WidgetDataDefinition:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],

@@ -17,7 +17,7 @@ from __future__ import annotations
 import base64
 import json
 import pathlib
-from typing import Annotated, Any, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
 import yaml
@@ -30,6 +30,9 @@ import mp.core.validators
 
 from .feature_tags import BuiltFeatureTags, FeatureTags, NonBuiltFeatureTags
 from .parameter import BuiltIntegrationParameter, IntegrationParameter, NonBuiltIntegrationParameter
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 MINIMUM_SYSTEM_VERSION: float = 5.3
 
@@ -126,7 +129,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
 
 
 class IntegrationMetadata(
-    mp.core.data_models.abc.Buildable[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
+    mp.core.data_models.abc.ComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
 ):
     categories: list[str]
     feature_tags: FeatureTags | None
@@ -170,12 +173,12 @@ class IntegrationMetadata(
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
 
-    def model_post_init(self, context: Any) -> None:  # noqa: D102, ANN401, ARG002
+    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002
         if self.parameters:
             mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> Self:
+    def from_built_path(cls, path: Path) -> Self:
         """Create IntegrationMetadata from a path of a "built" integration.
 
         Args:
@@ -189,11 +192,11 @@ class IntegrationMetadata(
 
         """
         metadata_file: str = mp.core.constants.INTEGRATION_DEF_FILE.format(path.name)
-        metadata_path: pathlib.Path = path / metadata_file
+        metadata_path: Path = path / metadata_file
         built: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_content: BuiltIntegrationMetadata = json.loads(built)
-            metadata: Self = cls.from_built(metadata_content)
+            metadata: Self = cls.from_built(metadata_path.name, metadata_content)
             metadata.is_certified = mp.core.file_utils.is_commercial_integration(path)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built}"
@@ -202,7 +205,7 @@ class IntegrationMetadata(
             return metadata
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> Self:
+    def from_non_built_path(cls, path: Path) -> Self:
         """Create IntegrationMetadata from a path of a "non-built" integration.
 
         Args:
@@ -215,12 +218,12 @@ class IntegrationMetadata(
             ValueError: when the "non-built" is failed to be loaded
 
         """
-        metadata_path: pathlib.Path = path / mp.core.constants.DEFINITION_FILE
+        metadata_path: Path = path / mp.core.constants.DEFINITION_FILE
         built: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_content: NonBuiltIntegrationMetadata = yaml.safe_load(built)
             _read_image_files(metadata_content, path)
-            metadata: Self = cls.from_non_built(metadata_content)
+            metadata: Self = cls.from_non_built(metadata_path.name, metadata_content)
             metadata.is_certified = mp.core.file_utils.is_commercial_integration(path)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built}"
@@ -229,7 +232,7 @@ class IntegrationMetadata(
             return metadata
 
     @classmethod
-    def _from_built(cls, built: BuiltIntegrationMetadata) -> Self:
+    def _from_built(cls, _: str, built: BuiltIntegrationMetadata) -> Self:
         feature_tags: FeatureTags | None = None
         raw_feature_tags: BuiltFeatureTags | None = built.get("FeatureTags")
         if raw_feature_tags is not None:
@@ -262,7 +265,7 @@ class IntegrationMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltIntegrationMetadata) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltIntegrationMetadata) -> Self:
         feature_tags: FeatureTags | None = None
         raw_feature_tags: NonBuiltFeatureTags | None = non_built.get("feature_tags")
         if raw_feature_tags is not None:
@@ -334,10 +337,10 @@ class IntegrationMetadata(
             The "non-built" TypedDict version of the integration's metadata.
 
         """
-        svg_path: pathlib.Path = pathlib.Path(
+        svg_path: Path = pathlib.Path(
             ".", mp.core.constants.RESOURCES_DIR, mp.core.constants.LOGO_FILE
         )
-        image: pathlib.Path = pathlib.Path(
+        image: Path = pathlib.Path(
             ".", mp.core.constants.RESOURCES_DIR, mp.core.constants.IMAGE_FILE
         )
 
@@ -369,7 +372,7 @@ class IntegrationMetadata(
         return non_built
 
 
-def _read_image_files(metadata_content: NonBuiltIntegrationMetadata, path: pathlib.Path) -> None:
+def _read_image_files(metadata_content: NonBuiltIntegrationMetadata, path: Path) -> None:
     """Read image files and update the metadata dictionary in place."""
     if image_str := metadata_content.get("image_path"):
         full_path = path / image_str

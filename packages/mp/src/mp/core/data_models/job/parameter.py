@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, NotRequired, TypedDict
+from typing import Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -59,7 +59,7 @@ class JobParameter(mp.core.data_models.abc.Buildable[BuiltJobParameter, NonBuilt
     default_value: str | bool | float | int | None
 
     @classmethod
-    def _from_built(cls, built: BuiltJobParameter) -> JobParameter:
+    def _from_built(cls, built: BuiltJobParameter) -> Self:
         return cls(
             name=built["Name"],
             description=built["Description"],
@@ -69,7 +69,7 @@ class JobParameter(mp.core.data_models.abc.Buildable[BuiltJobParameter, NonBuilt
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltJobParameter) -> JobParameter:
+    def _from_non_built(cls, non_built: NonBuiltJobParameter) -> Self:
         return cls(
             name=non_built["name"],
             description=non_built["description"],
