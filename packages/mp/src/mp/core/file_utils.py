@@ -22,7 +22,6 @@ from __future__ import annotations
 import base64
 import dataclasses
 import json
-import pathlib
 import shutil
 from typing import TYPE_CHECKING, Any
 
@@ -35,15 +34,15 @@ from .custom_types import JsonString, ManagerName, Products
 from .validators import validate_png_content, validate_svg_content
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Callable, Mapping, Sequence
+    from pathlib import Path
 
 VALID_REPEATED_FILES: set[str] = {"__init__.py"}
 
 
 def get_integrations_path(
     integrations_classification: mp.core.custom_types.RepositoryType,
-) -> pathlib.Path:
+) -> Path:
     """Get a marketplace integrations' path.
 
     Args:
@@ -56,7 +55,7 @@ def get_integrations_path(
     return create_or_get_integrations_path() / integrations_classification.value
 
 
-def create_or_get_integrations_path() -> pathlib.Path:
+def create_or_get_integrations_path() -> Path:
     """Get the content/integrations path.
 
     Returns:
@@ -66,7 +65,7 @@ def create_or_get_integrations_path() -> pathlib.Path:
     return create_dir_if_not_exists(create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME)
 
 
-def get_all_integrations_paths(integrations_classification: str) -> list[pathlib.Path]:
+def get_all_integrations_paths(integrations_classification: str) -> list[Path]:
     """Get all marketplace integrations sub-dirs paths.
 
     Args:
@@ -82,7 +81,7 @@ def get_all_integrations_paths(integrations_classification: str) -> list[pathlib
     return [create_or_get_integrations_path() / dir_name for dir_name in marketplace_dir_names]
 
 
-def create_or_get_integrations_dir() -> pathlib.Path:
+def create_or_get_integrations_dir() -> Path:
     """Get the content path.
 
     If the directory doesn't exist, it creates it
@@ -94,7 +93,7 @@ def create_or_get_integrations_dir() -> pathlib.Path:
     return create_dir_if_not_exists(create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME)
 
 
-def create_or_get_content_dir() -> pathlib.Path:
+def create_or_get_content_dir() -> Path:
     """Get the content path.
 
     If the directory doesn't exist, it creates it
@@ -106,7 +105,7 @@ def create_or_get_content_dir() -> pathlib.Path:
     return create_dir_if_not_exists(config.get_marketplace_path() / constants.CONTENT_DIR_NAME)
 
 
-def create_or_get_out_integrations_dir() -> pathlib.Path:
+def create_or_get_out_integrations_dir() -> Path:
     """Get the out/content/integrations/ path.
 
     If the directory doesn't exist, it creates it
@@ -120,7 +119,7 @@ def create_or_get_out_integrations_dir() -> pathlib.Path:
     )
 
 
-def create_or_get_out_contents_dir() -> pathlib.Path:
+def create_or_get_out_contents_dir() -> Path:
     """Get the out/content/ path.
 
     If the directory doesn't exist, it creates it
@@ -132,7 +131,7 @@ def create_or_get_out_contents_dir() -> pathlib.Path:
     return create_dir_if_not_exists(create_or_get_out_dir() / constants.CONTENT_DIR_NAME)
 
 
-def create_or_get_out_dir() -> pathlib.Path:
+def create_or_get_out_dir() -> Path:
     """Get the out/ path.
 
     If the directory doesn't exist, it creates it
@@ -144,7 +143,7 @@ def create_or_get_out_dir() -> pathlib.Path:
     return create_dir_if_not_exists(config.get_marketplace_path() / constants.OUT_DIR_NAME)
 
 
-def discover_core_modules(path: pathlib.Path) -> list[ManagerName]:
+def discover_core_modules(path: Path) -> list[ManagerName]:
     """Discover core/manager modules in an integration.
 
     Args:
@@ -172,7 +171,7 @@ def discover_core_modules(path: pathlib.Path) -> list[ManagerName]:
     )
 
 
-def get_integrations_and_groups_from_paths(*paths: pathlib.Path) -> Products[set[pathlib.Path]]:
+def get_integrations_and_groups_from_paths(*paths: Path) -> Products[set[Path]]:
     """Get all integrations and integration groups paths from the provided paths.
 
     Args:
@@ -183,8 +182,8 @@ def get_integrations_and_groups_from_paths(*paths: pathlib.Path) -> Products[set
         that were found
 
     """
-    integrations: set[pathlib.Path] = set()
-    groups: set[pathlib.Path] = set()
+    integrations: set[Path] = set()
+    groups: set[Path] = set()
     for path in paths:
         if not path.exists():
             continue
@@ -199,7 +198,7 @@ def get_integrations_and_groups_from_paths(*paths: pathlib.Path) -> Products[set
     return Products(integrations=integrations, groups=groups)
 
 
-def is_python_file(path: pathlib.Path) -> bool:
+def is_python_file(path: Path) -> bool:
     """Check whether a path is a python file.
 
     Returns:
@@ -209,7 +208,7 @@ def is_python_file(path: pathlib.Path) -> bool:
     return path.exists() and path.is_file() and path.suffix == ".py"
 
 
-def is_integration(path: pathlib.Path, *, group: str = "") -> bool:
+def is_integration(path: Path, *, group: str = "") -> bool:
     """Check whether a path is an integration.
 
     Returns:
@@ -225,19 +224,19 @@ def is_integration(path: pathlib.Path, *, group: str = "") -> bool:
     return bool(parents.intersection(valid_base_dirs) and _is_integration(path))
 
 
-def _is_integration(path: pathlib.Path) -> bool:
+def _is_integration(path: Path) -> bool:
     if not path.exists() or not path.is_dir():
         return False
 
     validator: IntegrationParityValidator = IntegrationParityValidator(path)
     validator.validate_integration_components_parity()
 
-    pyproject_toml: pathlib.Path = path / constants.PROJECT_FILE
-    def_: pathlib.Path = path / constants.INTEGRATION_DEF_FILE.format(path.name)
+    pyproject_toml: Path = path / constants.PROJECT_FILE
+    def_: Path = path / constants.INTEGRATION_DEF_FILE.format(path.name)
     return pyproject_toml.exists() or def_.exists()
 
 
-def is_group(path: pathlib.Path) -> bool:
+def is_group(path: Path) -> bool:
     """Check whether a path is an integration group.
 
     Returns:
@@ -248,7 +247,7 @@ def is_group(path: pathlib.Path) -> bool:
     return bool(parents.intersection(constants.INTEGRATIONS_TYPES) and _is_group(path))
 
 
-def _is_group(path: pathlib.Path) -> bool:
+def _is_group(path: Path) -> bool:
     if not path.exists() or not path.is_dir():
         return False
 
@@ -257,7 +256,7 @@ def _is_group(path: pathlib.Path) -> bool:
     )
 
 
-def replace_file_content(file: pathlib.Path, replace_fn: Callable[[str], str]) -> None:
+def replace_file_content(file: Path, replace_fn: Callable[[str], str]) -> None:
     """Replace a file's entire content.
 
     Args:
@@ -271,13 +270,13 @@ def replace_file_content(file: pathlib.Path, replace_fn: Callable[[str], str]) -
     file.write_text(file_content, encoding="utf-8")
 
 
-def remove_paths_if_exists(*paths: pathlib.Path) -> None:
+def remove_paths_if_exists(*paths: Path) -> None:
     """Remove all the provided paths."""
     for path in paths:
         _remove_path_if_exists(path)
 
 
-def remove_rglobs_if_exists(*patterns: str, root: pathlib.Path) -> None:
+def remove_rglobs_if_exists(*patterns: str, root: Path) -> None:
     """Remove all files and directories matching the given glob patterns.
 
     Args:
@@ -290,7 +289,7 @@ def remove_rglobs_if_exists(*patterns: str, root: pathlib.Path) -> None:
             _remove_path_if_exists(path)
 
 
-def _remove_path_if_exists(path: pathlib.Path) -> None:
+def _remove_path_if_exists(path: Path) -> None:
     if path.is_file() and is_path_in_marketplace(path):
         path.unlink(missing_ok=True)
 
@@ -298,14 +297,14 @@ def _remove_path_if_exists(path: pathlib.Path) -> None:
         shutil.rmtree(path)
 
 
-def recreate_dir(path: pathlib.Path) -> None:
+def recreate_dir(path: Path) -> None:
     """Remove the provided directory and create a new one."""
     if path.exists() and is_path_in_marketplace(path):
         shutil.rmtree(path)
         path.mkdir()
 
 
-def is_path_in_marketplace(path: pathlib.Path) -> bool:
+def is_path_in_marketplace(path: Path) -> bool:
     """Check whether a path is in the marketplace.
 
     This is mostly used to ensure any file deletion will not occur outside the
@@ -318,45 +317,45 @@ def is_path_in_marketplace(path: pathlib.Path) -> bool:
     return config.get_marketplace_path() in path.parents
 
 
-def is_built(integration: pathlib.Path) -> bool:
+def is_built(integration: Path) -> bool:
     """Check whether an integration is built.
 
     Returns:
         Whether the integration is in a built format
 
     """
-    pyproject: pathlib.Path = integration / constants.PROJECT_FILE
-    def_file: pathlib.Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
-    definition_file: pathlib.Path = integration / constants.DEFINITION_FILE
+    pyproject: Path = integration / constants.PROJECT_FILE
+    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
+    definition_file: Path = integration / constants.DEFINITION_FILE
     return not pyproject.exists() and def_file.exists() and not definition_file.exists()
 
 
-def is_half_built(integration: pathlib.Path) -> bool:
+def is_half_built(integration: Path) -> bool:
     """Check whether an integration is half-built.
 
     Returns:
         Whether the integration is in a half-built format
 
     """
-    pyproject: pathlib.Path = integration / constants.PROJECT_FILE
-    def_file: pathlib.Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
+    pyproject: Path = integration / constants.PROJECT_FILE
+    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
     return pyproject.exists() and def_file.exists()
 
 
-def is_non_built(integration: pathlib.Path) -> bool:
+def is_non_built(integration: Path) -> bool:
     """Check whether an integration is non-built.
 
     Returns:
         Whether the integration is in a non-built format
 
     """
-    pyproject: pathlib.Path = integration / constants.PROJECT_FILE
-    def_file: pathlib.Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
-    definition_file: pathlib.Path = integration / constants.DEFINITION_FILE
+    pyproject: Path = integration / constants.PROJECT_FILE
+    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
+    definition_file: Path = integration / constants.DEFINITION_FILE
     return pyproject.exists() and definition_file.exists() and not def_file.exists()
 
 
-def flatten_dir(path: pathlib.Path, dest: pathlib.Path) -> None:
+def flatten_dir(path: Path, dest: Path) -> None:
     """Flatten a nested directory.
 
     Args:
@@ -368,7 +367,7 @@ def flatten_dir(path: pathlib.Path, dest: pathlib.Path) -> None:
 
     """
     if path.is_file() and is_path_in_marketplace(path):
-        new_path: pathlib.Path = dest / path.name
+        new_path: Path = dest / path.name
         if new_path.exists():
             if new_path.name in VALID_REPEATED_FILES:
                 return
@@ -383,7 +382,7 @@ def flatten_dir(path: pathlib.Path, dest: pathlib.Path) -> None:
             flatten_dir(child, dest)
 
 
-def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: pathlib.Path) -> None:
+def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: Path) -> None:
     """Write content into a YAML file.
 
     Args:
@@ -401,7 +400,7 @@ def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: pathlib
     path.write_text(dumped, encoding="utf-8")
 
 
-def remove_files_by_suffix_from_dir(dir_: pathlib.Path, suffix: str) -> None:
+def remove_files_by_suffix_from_dir(dir_: Path, suffix: str) -> None:
     """Remove all files with a specific suffix from a directory."""
     for file in dir_.rglob(f"*{suffix}"):
         if file.is_file() and is_path_in_marketplace(file):
@@ -410,7 +409,7 @@ def remove_files_by_suffix_from_dir(dir_: pathlib.Path, suffix: str) -> None:
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class IntegrationParityValidator:
-    path: pathlib.Path
+    path: Path
 
     def validate_integration_components_parity(self) -> None:
         """Validate the components of the integration.
@@ -427,12 +426,12 @@ class IntegrationParityValidator:
         self._validate_widgets()
 
     def _validate_actions(self) -> None:
-        actions: pathlib.Path = self.path / constants.ACTIONS_DIR
+        actions: Path = self.path / constants.ACTIONS_DIR
         if actions.exists():
             _validate_script_metadata_parity(actions, ".py", constants.DEF_FILE_SUFFIX)
 
     def _validate_connectors(self) -> None:
-        connectors: pathlib.Path = self.path / constants.CONNECTORS_DIR
+        connectors: Path = self.path / constants.CONNECTORS_DIR
         if connectors.exists():
             _validate_script_metadata_parity(
                 directory=connectors,
@@ -441,12 +440,12 @@ class IntegrationParityValidator:
             )
 
     def _validate_jobs(self) -> None:
-        jobs: pathlib.Path = self.path / constants.JOBS_DIR
+        jobs: Path = self.path / constants.JOBS_DIR
         if jobs.exists():
             _validate_script_metadata_parity(jobs, ".py", constants.DEF_FILE_SUFFIX)
 
     def _validate_widgets(self) -> None:
-        widgets: pathlib.Path = self.path / constants.WIDGETS_DIR
+        widgets: Path = self.path / constants.WIDGETS_DIR
         if widgets.exists():
             _validate_script_metadata_parity(
                 directory=widgets,
@@ -456,7 +455,7 @@ class IntegrationParityValidator:
 
 
 def _validate_script_metadata_parity(
-    directory: pathlib.Path,
+    directory: Path,
     script_suffix: str,
     metadata_suffix: str,
 ) -> None:
@@ -464,16 +463,12 @@ def _validate_script_metadata_parity(
     _validate_matching_files(directory, metadata_suffix, script_suffix)
 
 
-def _validate_matching_files(
-    directory: pathlib.Path,
-    primary_suffix: str,
-    secondary_suffix: str,
-) -> None:
+def _validate_matching_files(directory: Path, primary_suffix: str, secondary_suffix: str) -> None:
     for file in directory.rglob(f"*{primary_suffix}"):
         if file.name == constants.PACKAGE_FILE:
             continue
 
-        expected_file: pathlib.Path = file.with_suffix(secondary_suffix)
+        expected_file: Path = file.with_suffix(secondary_suffix)
         if not expected_file.exists():
             msg: str = (
                 f"The {directory.name} directory has a file '{file.name}' without a"
@@ -482,7 +477,7 @@ def _validate_matching_files(
             raise RuntimeError(msg)
 
 
-def is_commercial_integration(path: pathlib.Path) -> bool:
+def is_commercial_integration(path: Path) -> bool:
     """Check if the given integration path corresponds to a commercial integration.
 
     This function evaluates whether the provided integration path belongs to the
@@ -503,7 +498,7 @@ def is_commercial_integration(path: pathlib.Path) -> bool:
     )
 
 
-def base64_to_png_file(image_data: bytes, output_path: pathlib.Path) -> None:
+def base64_to_png_file(image_data: bytes, output_path: Path) -> None:
     """Save image bytes to a PNG file.
 
     Args:
@@ -514,7 +509,7 @@ def base64_to_png_file(image_data: bytes, output_path: pathlib.Path) -> None:
     output_path.write_bytes(image_data)
 
 
-def text_to_svg_file(svg_text: str, output_path: pathlib.Path) -> None:
+def text_to_svg_file(svg_text: str, output_path: Path) -> None:
     """Save a string of SVG content to a .svg file.
 
     Args:
@@ -532,7 +527,7 @@ def text_to_svg_file(svg_text: str, output_path: pathlib.Path) -> None:
         raise OSError(msg) from e
 
 
-def svg_path_to_text(file_path: pathlib.Path) -> str | None:
+def svg_path_to_text(file_path: Path) -> str | None:
     """Read and validate an SVG file from a path.
 
     Args:
@@ -547,7 +542,7 @@ def svg_path_to_text(file_path: pathlib.Path) -> str | None:
     return None
 
 
-def png_path_to_bytes(file_path: pathlib.Path) -> str | None:
+def png_path_to_bytes(file_path: Path) -> str | None:
     """Read and validate a PNG file from a path.
 
     Args:
@@ -562,7 +557,7 @@ def png_path_to_bytes(file_path: pathlib.Path) -> str | None:
     return None
 
 
-def read_and_validate_json_file(json_path: pathlib.Path) -> JsonString:
+def read_and_validate_json_file(json_path: Path) -> JsonString:
     """Read the text content of a file and validates that it's valid JSON.
 
     Raises:
@@ -585,13 +580,13 @@ def read_and_validate_json_file(json_path: pathlib.Path) -> JsonString:
         return content
 
 
-def write_str_to_json_file(json_path: pathlib.Path, json_content: JsonString) -> None:
+def write_str_to_json_file(json_path: Path, json_content: JsonString) -> None:
     """Write a JSON string to a file."""
     with json_path.open("w", encoding="utf-8") as f_json:
         json.dump(json_content, f_json, indent=4)
 
 
-def load_yaml_file(path: pathlib.Path) -> dict[str, Any]:
+def load_yaml_file(path: Path) -> dict[str, Any]:
     """Read a file and loads its content as YAML.
 
     Raises:
@@ -612,7 +607,7 @@ def load_yaml_file(path: pathlib.Path) -> dict[str, Any]:
         raise ValueError(msg) from e
 
 
-def create_dir_if_not_exists(p: pathlib.Path, /) -> pathlib.Path:
+def create_dir_if_not_exists(p: Path, /) -> Path:
     """Create the provided path as a directory if it doesn't exist.
 
     Doesn't raise any error if the dir already exists

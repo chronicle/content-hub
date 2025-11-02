@@ -38,6 +38,8 @@ import mp.core.file_utils
 import mp.core.unix
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from mp.core.config import RuntimeParams
     from mp.core.custom_types import RuffParams
 
@@ -194,7 +196,7 @@ def _check_paths(check_params: CheckParams) -> None:
         rich.print("No files found to check")
         return
 
-    paths: set[pathlib.Path] = _get_relevant_source_paths(sources)
+    paths: set[Path] = _get_relevant_source_paths(sources)
     if not paths:
         rich.print("No relevant python files to check")
         return
@@ -217,7 +219,7 @@ def _get_source_files(file_paths: list[str], *, changed_files: bool) -> list[str
     return mp.core.unix.get_changed_files() if changed_files else file_paths
 
 
-def _get_relevant_source_paths(sources: list[str]) -> set[pathlib.Path]:
+def _get_relevant_source_paths(sources: list[str]) -> set[Path]:
     return {
         path
         for source in sources

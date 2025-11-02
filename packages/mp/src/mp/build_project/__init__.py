@@ -28,23 +28,23 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.config
-import mp.core.file_utils
-from mp.core.custom_types import RepositoryType
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
-from .marketplace import Marketplace
-from .post_build.duplicate_integrations import raise_errors_for_duplicate_integrations
+from .integration_utils import (
+    build_integrations,
+    should_build_integrations,
+)
+from .playbook_utils import should_build_playbooks
 
 if TYPE_CHECKING:
-    import pathlib
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
 
     from mp.core.config import RuntimeParams
+    from mp.core.custom_types import RepositoryType
 
 
 __all__: list[str] = ["app", "build"]
@@ -55,6 +55,7 @@ app: typer.Typer = typer.Typer()
 class BuildParams:
     repository: Iterable[RepositoryType]
     integrations: Iterable[str]
+    playbooks: Iterable[str]
     groups: Iterable[str]
     deconstruct: bool
 
@@ -93,7 +94,7 @@ class BuildParams:
             raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
-        return [self.repository, self.integrations, self.groups]
+        return [self.repository, self.integrations, self.groups, self.playbooks]
 
 
 @app.command(name="build", help="Build the marketplace")
@@ -113,7 +114,14 @@ def build(  # noqa: PLR0913
             default_factory=list,
         ),
     ],
-    group: Annotated[
+    playbook: Annotated[
+        list[str],
+        typer.Option(
+            help="Build a specified playbook",
+            default_factory=list,
+        ),
+    ],
+    integration_group: Annotated[
         list[str],
         typer.Option(
             help="Build all integrations of a specified integration group",
@@ -148,7 +156,8 @@ def build(  # noqa: PLR0913
     Args:
         repository: the repository to build
         integration: the integrations to build
-        group: the groups to build
+        playbook: the playbooks to build
+        integration_group: the integration groups to build
         deconstruct: whether to deconstruct instead of build
         quiet: quiet log options
         verbose: Verbose log options
@@ -156,128 +165,23 @@ def build(  # noqa: PLR0913
     """
     repository = ensure_valid_list(repository)
     integration = ensure_valid_list(integration)
-    group = ensure_valid_list(group)
+    playbook = ensure_valid_list(playbook)
+    integration_group = ensure_valid_list(integration_group)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    params: BuildParams = BuildParams(repository, integration, group, deconstruct)
+    params: BuildParams = BuildParams(
+        repository,
+        integration,
+        playbook,
+        integration_group,
+        deconstruct,
+    )
     params.validate()
 
-    commercial_path: pathlib.Path = mp.core.file_utils.get_integrations_path(
-        RepositoryType.COMMERCIAL
-    )
-    community_path: pathlib.Path = mp.core.file_utils.get_integrations_path(
-        RepositoryType.COMMUNITY
-    )
+    if should_build_playbooks(playbook, repository):
+        build_playbooks(playbook)
 
-    commercial_mp: Marketplace = Marketplace(commercial_path)
-    community_mp: Marketplace = Marketplace(community_path)
-
-    if integration:
-        rich.print("Building integrations...")
-        commercial_not_found: set[str] = _build_integrations(
-            set(integration), commercial_mp, deconstruct=deconstruct
-        )
-        community_not_found: set[str] = _build_integrations(
-            set(integration), community_mp, deconstruct=deconstruct
-        )
-        if commercial_not_found.intersection(community_not_found):
-            rich.print(
-                "Please ensure the content-hub path is properly configured.\n"
-                "You can verify your configuration by running [bold]mp config "
-                "--display-config[/bold].\n"
-                "If the path is incorrect, re-configure it by running [bold]mp config "
-                "--root-path <your_path>[/bold]."
-            )
-
-        rich.print("Done building integrations.")
-
-    elif group:
-        rich.print("Building groups...")
-        _build_groups(set(group), commercial_mp)
-        _build_groups(set(group), community_mp)
-        rich.print("Done building groups.")
-
-    elif repository:
-        repos: set[RepositoryType] = set(repository)
-        if RepositoryType.COMMERCIAL in repos:
-            rich.print("Building all integrations and groups in commercial repo...")
-            commercial_mp.build()
-            commercial_mp.write_marketplace_json()
-            rich.print("Done Commercial integrations build.")
-
-        if RepositoryType.COMMUNITY in repos:
-            rich.print("Building all integrations and groups in third party repo...")
-            community_mp.build()
-            community_mp.write_marketplace_json()
-            rich.print("Done third party integrations build.")
-
-        if is_full_build(repository):
-            rich.print("Checking for duplicate integrations...")
-            raise_errors_for_duplicate_integrations(
-                commercial_path=commercial_mp.out_dir,
-                community_path=commercial_mp.out_dir,
-            )
-            rich.print("Done checking for duplicate integrations.")
-
-
-def _build_integrations(
-    integrations: Iterable[str],
-    marketplace_: Marketplace,
-    *,
-    deconstruct: bool,
-) -> set[str]:
-    valid_integrations_: set[pathlib.Path] = _get_marketplace_paths_from_names(
-        integrations,
-        marketplace_.paths,
-    )
-    valid_integration_names: set[str] = {i.name for i in valid_integrations_}
-    not_found: set[str] = set(integrations).difference(valid_integration_names)
-    if not_found:
-        rich.print(
-            "The following integrations could not be found in"
-            f" the {marketplace_.name} marketplace: {', '.join(not_found)}\n"
-        )
-    if valid_integrations_:
-        rich.print(
-            "Building the following integrations in the"
-            f" the {marketplace_.name} marketplace:"
-            f" {', '.join(valid_integration_names)}"
-        )
-        if deconstruct:
-            marketplace_.deconstruct_integrations(valid_integrations_)
-
-        else:
-            marketplace_.build_integrations(valid_integrations_)
-    return not_found
-
-
-def _build_groups(groups: Iterable[str], marketplace_: Marketplace) -> None:
-    valid_groups: set[pathlib.Path] = _get_marketplace_paths_from_names(
-        names=groups,
-        marketplace_paths=marketplace_.paths,
-    )
-    valid_group_names: set[str] = {g.name for g in valid_groups}
-    not_found: set[str] = set(groups).difference(valid_group_names)
-    if not_found:
-        rich.print(f"The following groups could not be found: {', '.join(not_found)}")
-
-    if valid_groups:
-        rich.print(f"Building the following groups: {', '.join(valid_group_names)}")
-        marketplace_.build_groups(valid_groups)
-
-
-def _get_marketplace_paths_from_names(
-    names: Iterable[str],
-    marketplace_paths: Iterable[pathlib.Path],
-) -> set[pathlib.Path]:
-    results: set[pathlib.Path] = set()
-    for path in marketplace_paths:
-        results.update({p for n in names if (p := path / n).exists()})
-
-    return results
-
-
-def is_full_build(repositories: Sequence[RepositoryType]) -> bool:
-    return len(repositories) == len(RepositoryType)
+    if should_build_integrations(integration, repository):
+        build_integrations(integration, integration_group, repository, deconstruct=deconstruct)

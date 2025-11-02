@@ -22,17 +22,17 @@ import mp.core.constants
 import mp.core.file_utils
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.custom_types import Products
 
 
-def test_discover_managers_built(tmp_path: pathlib.Path) -> None:
+def test_discover_managers_built(tmp_path: Path) -> None:
     (tmp_path / mp.core.constants.INTEGRATION_DEF_FILE.format(tmp_path.name)).touch()
     (tmp_path / "manager0.py").touch()
     (tmp_path / "manager1.json").touch()
 
-    out_managers_dir: pathlib.Path = tmp_path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
+    out_managers_dir: Path = tmp_path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
     out_managers_dir.mkdir(parents=True)
     (out_managers_dir / "manager1.py").touch()
     (out_managers_dir / "manager2.py").touch()
@@ -42,10 +42,10 @@ def test_discover_managers_built(tmp_path: pathlib.Path) -> None:
     assert set(managers) == {"manager1", "manager2"}
 
 
-def test_discover_managers_not_built(tmp_path: pathlib.Path) -> None:
+def test_discover_managers_not_built(tmp_path: Path) -> None:
     (tmp_path / mp.core.constants.PROJECT_FILE).touch()
 
-    common_scripts_dir: pathlib.Path = tmp_path / mp.core.constants.CORE_SCRIPTS_DIR
+    common_scripts_dir: Path = tmp_path / mp.core.constants.CORE_SCRIPTS_DIR
     common_scripts_dir.mkdir(parents=True)
     (common_scripts_dir / "manager1.py").touch()
     (common_scripts_dir / "manager2.py").touch()
@@ -55,8 +55,8 @@ def test_discover_managers_not_built(tmp_path: pathlib.Path) -> None:
     assert set(managers) == {"manager1", "manager2"}
 
 
-def test_get_integrations_and_groups_from_paths(tmp_path: pathlib.Path) -> None:
-    commercial_dir: pathlib.Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+def test_get_integrations_and_groups_from_paths(tmp_path: Path) -> None:
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
     commercial_dir.mkdir()
     (commercial_dir / "integration1").mkdir()
     (commercial_dir / "integration1" / mp.core.constants.PROJECT_FILE).touch()
@@ -64,7 +64,7 @@ def test_get_integrations_and_groups_from_paths(tmp_path: pathlib.Path) -> None:
     (commercial_dir / "group1" / "integration2").mkdir()
     (commercial_dir / "group1" / "integration2" / mp.core.constants.PROJECT_FILE).touch()
 
-    community_dir: pathlib.Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    community_dir: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
     community_dir.mkdir()
     (community_dir / "integration3").mkdir()
     (community_dir / "integration3" / mp.core.constants.PROJECT_FILE).touch()
@@ -72,7 +72,7 @@ def test_get_integrations_and_groups_from_paths(tmp_path: pathlib.Path) -> None:
     (community_dir / "group2" / "integration4").mkdir()
     (community_dir / "group2" / "integration4" / mp.core.constants.PROJECT_FILE).touch()
 
-    powerups_dir: pathlib.Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
+    powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
     powerups_dir.mkdir()
     (powerups_dir / "integration5").mkdir()
     (powerups_dir / "integration5" / mp.core.constants.PROJECT_FILE).touch()
@@ -80,10 +80,8 @@ def test_get_integrations_and_groups_from_paths(tmp_path: pathlib.Path) -> None:
     (powerups_dir / "group3" / "integration6").mkdir()
     (powerups_dir / "group3" / "integration6" / mp.core.constants.PROJECT_FILE).touch()
 
-    products: Products[set[pathlib.Path]] = (
-        mp.core.file_utils.get_integrations_and_groups_from_paths(
-            commercial_dir, community_dir, powerups_dir
-        )
+    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
+        commercial_dir, community_dir, powerups_dir
     )
 
     assert products.integrations == {
@@ -98,7 +96,7 @@ def test_get_integrations_and_groups_from_paths(tmp_path: pathlib.Path) -> None:
     }
 
 
-def test_is_python_file(tmp_path: pathlib.Path) -> None:
+def test_is_python_file(tmp_path: Path) -> None:
     (tmp_path / "test.py").touch()
     (tmp_path / "test.txt").touch()
 
@@ -107,14 +105,14 @@ def test_is_python_file(tmp_path: pathlib.Path) -> None:
     assert not mp.core.file_utils.is_python_file(tmp_path / "not_exists")
 
 
-def test_is_integration(tmp_path: pathlib.Path) -> None:
-    commercial_dir: pathlib.Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
-    community_dir: pathlib.Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
-    powerups_dir: pathlib.Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
+def test_is_integration(tmp_path: Path) -> None:
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+    community_dir: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
 
-    integration_dir_comm: pathlib.Path = community_dir / "integration"
-    integration_dir_com: pathlib.Path = commercial_dir / "integration"
-    integration_dir_power: pathlib.Path = powerups_dir / "integration"
+    integration_dir_comm: Path = community_dir / "integration"
+    integration_dir_com: Path = commercial_dir / "integration"
+    integration_dir_power: Path = powerups_dir / "integration"
 
     commercial_dir.mkdir()
     community_dir.mkdir()
@@ -134,18 +132,18 @@ def test_is_integration(tmp_path: pathlib.Path) -> None:
     assert not mp.core.file_utils.is_integration(tmp_path)
 
 
-def test_is_group(tmp_path: pathlib.Path) -> None:
-    commercial_dir: pathlib.Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
-    community_dir: pathlib.Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
-    powerups_dir: pathlib.Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
+def test_is_group(tmp_path: Path) -> None:
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+    community_dir: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
 
     commercial_dir.mkdir()
     community_dir.mkdir()
     powerups_dir.mkdir()
 
-    group_dir_commercial: pathlib.Path = commercial_dir / "group"
-    group_dir_community: pathlib.Path = community_dir / "group"
-    group_dir_power: pathlib.Path = powerups_dir / "group"
+    group_dir_commercial: Path = commercial_dir / "group"
+    group_dir_community: Path = community_dir / "group"
+    group_dir_power: Path = powerups_dir / "group"
     group_dir_commercial.mkdir()
     group_dir_community.mkdir()
     group_dir_power.mkdir()
@@ -163,7 +161,7 @@ def test_is_group(tmp_path: pathlib.Path) -> None:
     assert not mp.core.file_utils.is_group(tmp_path)
 
 
-def test_get_all_integrations_paths(tmp_path: pathlib.Path) -> None:
+def test_get_all_integrations_paths(tmp_path: Path) -> None:
     with unittest.mock.patch(
         "mp.core.file_utils.create_or_get_integrations_path", return_value=tmp_path
     ):
@@ -190,8 +188,8 @@ def test_get_all_integrations_paths(tmp_path: pathlib.Path) -> None:
         assert commercial_paths == expected_commercial_paths
 
 
-def test_replace_file_content(tmp_path: pathlib.Path) -> None:
-    test_file: pathlib.Path = tmp_path / "test.txt"
+def test_replace_file_content(tmp_path: Path) -> None:
+    test_file: Path = tmp_path / "test.txt"
     test_file.write_text("original content", encoding="utf-8")
 
     def replace_fn(content: str) -> str:
@@ -208,11 +206,11 @@ def test_replace_file_content(tmp_path: pathlib.Path) -> None:
 
 
 def test_remove_paths_if_exists_can_remove_files(
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
     mock_get_marketplace_path: str,
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
-        test_file: pathlib.Path = tmp_path / "test.txt"
+        test_file: Path = tmp_path / "test.txt"
         test_file.touch()
         assert test_file.exists()
 
@@ -225,11 +223,11 @@ def test_remove_paths_if_exists_can_remove_files(
 
 
 def test_remove_paths_if_exists_can_remove_dirs(
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
     mock_get_marketplace_path: str,
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
-        test_subdir: pathlib.Path = tmp_path / "subdir"
+        test_subdir: Path = tmp_path / "subdir"
         test_subdir.mkdir()
         assert test_subdir.exists()
 
@@ -241,8 +239,8 @@ def test_remove_paths_if_exists_can_remove_dirs(
         assert not test_subdir.exists()
 
 
-def test_is_built(tmp_path: pathlib.Path) -> None:
-    integration_dir: pathlib.Path = tmp_path / "integration"
+def test_is_built(tmp_path: Path) -> None:
+    integration_dir: Path = tmp_path / "integration"
     integration_dir.mkdir()
 
     def_file_name: str = mp.core.constants.INTEGRATION_DEF_FILE.format(
@@ -257,8 +255,8 @@ def test_is_built(tmp_path: pathlib.Path) -> None:
     assert not mp.core.file_utils.is_built(tmp_path)
 
 
-def test_is_half_built(tmp_path: pathlib.Path) -> None:
-    integration_dir: pathlib.Path = tmp_path / "integration"
+def test_is_half_built(tmp_path: Path) -> None:
+    integration_dir: Path = tmp_path / "integration"
     integration_dir.mkdir()
 
     def_file_name: str = mp.core.constants.INTEGRATION_DEF_FILE.format(
@@ -277,13 +275,13 @@ def test_is_half_built(tmp_path: pathlib.Path) -> None:
     assert not mp.core.file_utils.is_half_built(tmp_path)
 
 
-def test_remove_and_create_dir(tmp_path: pathlib.Path, mock_get_marketplace_path: str) -> None:
+def test_remove_and_create_dir(tmp_path: Path, mock_get_marketplace_path: str) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
-        test_dir: pathlib.Path = tmp_path / "test"
+        test_dir: Path = tmp_path / "test"
         test_dir.mkdir()
         assert test_dir.exists()
 
-        new_file: pathlib.Path = test_dir / "file.txt"
+        new_file: Path = test_dir / "file.txt"
         new_file.touch()
         assert new_file.exists()
 
@@ -293,9 +291,9 @@ def test_remove_and_create_dir(tmp_path: pathlib.Path, mock_get_marketplace_path
         assert not new_file.exists()
 
 
-def test_base64_to_png_file_writes_correct_content(tmp_path: pathlib.Path) -> None:
+def test_base64_to_png_file_writes_correct_content(tmp_path: Path) -> None:
     sample_bytes: bytes = b"test png data"
-    output_file: pathlib.Path = tmp_path / "test.png"
+    output_file: Path = tmp_path / "test.png"
 
     mp.core.file_utils.base64_to_png_file(sample_bytes, output_file)
 
@@ -303,9 +301,9 @@ def test_base64_to_png_file_writes_correct_content(tmp_path: pathlib.Path) -> No
     assert output_file.read_bytes() == sample_bytes
 
 
-def test_text_to_svg_file_writes_correct_content(tmp_path: pathlib.Path) -> None:
+def test_text_to_svg_file_writes_correct_content(tmp_path: Path) -> None:
     sample_svg: str = "<svg>test</svg>"
-    output_file: pathlib.Path = tmp_path / "test.svg"
+    output_file: Path = tmp_path / "test.svg"
 
     mp.core.file_utils.text_to_svg_file(sample_svg, output_file)
 
@@ -313,9 +311,9 @@ def test_text_to_svg_file_writes_correct_content(tmp_path: pathlib.Path) -> None
     assert output_file.read_text(encoding="utf-8") == sample_svg
 
 
-def test_svg_path_to_text(tmp_path: pathlib.Path) -> None:
+def test_svg_path_to_text(tmp_path: Path) -> None:
     sample_svg: str = "<svg>test</svg>"
-    input_file: pathlib.Path = tmp_path / "test.svg"
+    input_file: Path = tmp_path / "test.svg"
     input_file.write_text(sample_svg, encoding="utf-8")
     non_existent_file = tmp_path / "not_real.svg"
 
@@ -323,7 +321,7 @@ def test_svg_path_to_text(tmp_path: pathlib.Path) -> None:
     assert mp.core.file_utils.svg_path_to_text(non_existent_file) is None
 
 
-def test_png_path_to_bytes(tmp_path: pathlib.Path) -> None:
+def test_png_path_to_bytes(tmp_path: Path) -> None:
     sample_bytes = b"valid png bytes"
     with unittest.mock.patch("mp.core.file_utils.validate_png_content", return_value=sample_bytes):
         input_file = tmp_path / "test.png"

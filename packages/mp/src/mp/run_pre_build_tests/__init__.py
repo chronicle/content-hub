@@ -36,6 +36,7 @@ from .process_test_output import IntegrationTestResults, TestIssue, process_pyte
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from mp.core.config import RuntimeParams
 
@@ -153,36 +154,36 @@ def run_pre_build_tests(  # noqa: PLR0913
     params: TestParams = TestParams(repository, integration, group)
     params.validate()
 
-    commercial_paths: Iterable[pathlib.Path] = mp.core.file_utils.get_all_integrations_paths(
+    commercial_paths: Iterable[Path] = mp.core.file_utils.get_all_integrations_paths(
         mp.core.constants.COMMERCIAL_DIR_NAME
     )
-    community_paths: Iterable[pathlib.Path] = mp.core.file_utils.get_all_integrations_paths(
+    community_paths: Iterable[Path] = mp.core.file_utils.get_all_integrations_paths(
         mp.core.constants.COMMUNITY_DIR_NAME
     )
 
     all_integration_results: list[IntegrationTestResults] = []
 
     if integration:
-        commercial_integrations: set[pathlib.Path] = _get_mp_paths_from_names(
+        commercial_integrations: set[Path] = _get_mp_paths_from_names(
             names=integration,
             marketplace_paths=commercial_paths,
         )
         all_integration_results.extend(_test_integrations(commercial_integrations))
 
-        community_integrations: set[pathlib.Path] = _get_mp_paths_from_names(
+        community_integrations: set[Path] = _get_mp_paths_from_names(
             names=integration,
             marketplace_paths=community_paths,
         )
         all_integration_results.extend(_test_integrations(community_integrations))
 
     elif group:
-        commercial_groups: set[pathlib.Path] = _get_mp_paths_from_names(
+        commercial_groups: set[Path] = _get_mp_paths_from_names(
             names=group,
             marketplace_paths=commercial_paths,
         )
         all_integration_results.extend(_test_groups(commercial_groups))
 
-        community_groups: set[pathlib.Path] = _get_mp_paths_from_names(
+        community_groups: set[Path] = _get_mp_paths_from_names(
             names=group,
             marketplace_paths=community_paths,
         )
@@ -201,9 +202,9 @@ def run_pre_build_tests(  # noqa: PLR0913
         raise typer.Exit(code=1)
 
 
-def _test_repository(repo_paths: Iterable[pathlib.Path]) -> list[IntegrationTestResults]:
-    products: Products[set[pathlib.Path]] = (
-        mp.core.file_utils.get_integrations_and_groups_from_paths(*repo_paths)
+def _test_repository(repo_paths: Iterable[Path]) -> list[IntegrationTestResults]:
+    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
+        *repo_paths
     )
     all_integration_results: list[IntegrationTestResults] = []
     if products.integrations:
@@ -215,14 +216,14 @@ def _test_repository(repo_paths: Iterable[pathlib.Path]) -> list[IntegrationTest
     return all_integration_results
 
 
-def _test_groups(groups: Iterable[pathlib.Path]) -> list[IntegrationTestResults]:
+def _test_groups(groups: Iterable[Path]) -> list[IntegrationTestResults]:
     all_integration_results: list[IntegrationTestResults] = []
     for group in groups:
         all_integration_results.extend(_test_integrations(group.iterdir()))
     return all_integration_results
 
 
-def _test_integrations(integrations: Iterable[pathlib.Path]) -> list[IntegrationTestResults]:
+def _test_integrations(integrations: Iterable[Path]) -> list[IntegrationTestResults]:
     if integrations:
         return _run_script_on_paths(
             script_path=_get_tests_script_paths(),
@@ -231,14 +232,12 @@ def _test_integrations(integrations: Iterable[pathlib.Path]) -> list[Integration
     return []
 
 
-def _get_tests_script_paths() -> pathlib.Path:
+def _get_tests_script_paths() -> Path:
     file_name: str = WINDOWS_SCRIPT_NAME if is_windows() else UNIX_SCRIPT_NAME
     return pathlib.Path(__file__).parent / file_name
 
 
-def _run_script_on_paths(
-    script_path: pathlib.Path, paths: Iterable[pathlib.Path]
-) -> list[IntegrationTestResults]:
+def _run_script_on_paths(script_path: Path, paths: Iterable[Path]) -> list[IntegrationTestResults]:
     paths = [p for p in paths if p.is_dir()]
     all_integration_results: list[IntegrationTestResults] = []
 
@@ -255,7 +254,8 @@ def _run_script_on_paths(
 
 
 def _run_tests_for_single_integration(
-    script_path: pathlib.Path, integration_path: pathlib.Path
+    script_path: Path,
+    integration_path: Path,
 ) -> IntegrationTestResults | None:
     status_code: int = mp.core.unix.run_script_on_paths(script_path, integration_path)
 
@@ -268,10 +268,10 @@ def _run_tests_for_single_integration(
 
 
 def _get_mp_paths_from_names(
-    names: Iterable[str | pathlib.Path],
-    marketplace_paths: Iterable[pathlib.Path],
-) -> set[pathlib.Path]:
-    results: set[pathlib.Path] = set()
+    names: Iterable[str | Path],
+    marketplace_paths: Iterable[Path],
+) -> set[Path]:
+    results: set[Path] = set()
 
     for path in marketplace_paths:
         for name in names:

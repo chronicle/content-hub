@@ -22,15 +22,15 @@ import mp.core.constants
 import test_mp.common
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 def test_write_marketplace_json(
-    tmp_path: pathlib.Path,
-    built_integration: pathlib.Path,
-    marketplace_json: pathlib.Path,
+    tmp_path: Path,
+    built_integration: Path,
+    marketplace_json: Path,
 ) -> None:
-    commercial: pathlib.Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+    commercial: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
     shutil.copytree(built_integration.parent, commercial, dirs_exist_ok=True)
 
     mp.build_project.post_build.marketplace_json.write_marketplace_json(commercial)

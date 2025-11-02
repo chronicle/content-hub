@@ -25,12 +25,15 @@ through the `core.config` module.
 from __future__ import annotations
 
 import pathlib
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import rich
 import typer
 
 import mp.core.config
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 __all__: list[str] = ["app", "config"]
 app: typer.Typer = typer.Typer()
@@ -75,13 +78,13 @@ def config(
         _set_processes_number(processes)
 
     if display_config:
-        p: pathlib.Path = mp.core.config.get_marketplace_path()
+        p: Path = mp.core.config.get_marketplace_path()
         n: int = mp.core.config.get_processes_number()
         rich.print(f"Marketplace path: {p}\nNumber of processes: {n}")
 
 
 def _set_marketplace_path(marketplace_path: str) -> None:
-    mp_path: pathlib.Path = pathlib.Path(marketplace_path).expanduser()
+    mp_path: Path = pathlib.Path(marketplace_path).expanduser()
     if not mp_path.exists():
         msg: str = f"Path {mp_path} cannot be found!"
         raise FileNotFoundError(msg)

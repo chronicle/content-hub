@@ -33,8 +33,8 @@ import mp.core.constants
 from .restructurable import Restructurable
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Mapping, Sequence
+    from pathlib import Path
 
     from mp.core.data_models.action.metadata import BuiltActionMetadata
     from mp.core.data_models.connector.metadata import BuiltConnectorMetadata
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Metadata(Restructurable):
-    out_path: pathlib.Path
+    out_path: Path
     metadata: BuiltIntegration
 
     def restructure(self) -> None:
@@ -68,7 +68,7 @@ class Metadata(Restructurable):
         file_content: str = json.dumps(metadata, indent=4, sort_keys=True)
         integration_name: str = metadata["Identifier"]
         file_name: str = mp.core.constants.INTEGRATION_DEF_FILE.format(integration_name)
-        metadata_file: pathlib.Path = self.out_path / file_name
+        metadata_file: Path = self.out_path / file_name
         metadata_file.write_text(file_content, encoding="utf-8")
 
     def _restructure_release_notes(self) -> None:
@@ -77,7 +77,7 @@ class Metadata(Restructurable):
             key=operator.itemgetter("IntroducedInIntegrationVersion"),
         )
         file_content: str = json.dumps(rns, indent=4, sort_keys=True)
-        rn_file: pathlib.Path = self.out_path / mp.core.constants.RN_JSON_FILE
+        rn_file: Path = self.out_path / mp.core.constants.RN_JSON_FILE
         rn_file.write_text(file_content, encoding="utf-8")
 
     def _restructure_custom_families(self) -> None:
@@ -143,9 +143,9 @@ class Metadata(Restructurable):
         if not metadata_json:
             return
 
-        metadata_path: pathlib.Path = self.out_path / dir_name
+        metadata_path: Path = self.out_path / dir_name
         metadata_path.mkdir(exist_ok=True)
         for name, metadata in metadata_json.items():
-            metadata_file: pathlib.Path = metadata_path / f"{name}{file_suffix}"
+            metadata_file: Path = metadata_path / f"{name}{file_suffix}"
             file_content: str = json.dumps(metadata, indent=4, sort_keys=True)
             metadata_file.write_text(file_content, encoding="utf-8")

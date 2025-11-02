@@ -25,8 +25,8 @@ from . import constants
 from .data_models.script.parameter import ScriptParamType
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Collection
+    from pathlib import Path
 
     from .data_models.connector.parameter import ConnectorParameter
     from .data_models.integration_meta.parameter import IntegrationParameter
@@ -104,7 +104,7 @@ def validate_param_name(name: str) -> str:
     return name
 
 
-def validate_svg_content(path: pathlib.Path) -> str:
+def validate_svg_content(path: Path) -> str:
     """Read and validate an SVG file.
 
     Args:
@@ -143,7 +143,7 @@ def validate_svg_content(path: pathlib.Path) -> str:
     return content
 
 
-def validate_png_content(path: pathlib.Path) -> bytes:
+def validate_png_content(path: Path) -> bytes:
     """Read and validate a PNG file.
 
     Args:
