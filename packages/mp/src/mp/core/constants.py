@@ -37,7 +37,7 @@ INTEGRATIONS_TYPES: tuple[str, ...] = (
     COMMERCIAL_DIR_NAME,
     POWERUPS_DIR_NAME,
 )
-OUT_INTEGRATIONS_DIR_NAME: str = "integrations"
+OUT_INTEGRATIONS_DIR_NAME: str = "response_integrations"
 OUT_DIR_NAME: str = "out"
 REQUIREMENTS_FILE: str = "requirements.txt"
 INTEGRATION_DEF_FILE: str = "Integration-{0}.def"

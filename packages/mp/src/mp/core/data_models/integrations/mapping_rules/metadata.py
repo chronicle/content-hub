@@ -65,7 +65,7 @@ class BuiltMappingRule(TypedDict):
     SecurityEventFieldName: str
     TransformationFunction: int
     TransformationFunctionParam: str | None
-    RawDataPrimaryFieldMatchTerm: str | None
+    RawDataPrimaryFieldMatchTerm: str
     RawDataPrimaryFieldComparisonType: int
     RawDataSecondaryFieldMatchTerm: str | None
     RawDataSecondaryFieldComparisonType: int
@@ -105,7 +105,7 @@ class MappingRule(
     security_event_file_name: str
     transformation_function: TransformationFunction
     transformation_function_param: str | None
-    raw_data_primary_field_match_term: str | None
+    raw_data_primary_field_match_term: str
     raw_data_primary_field_comparison_type: ComparisonType
     raw_data_secondary_field_match_term: str | None
     raw_data_secondary_field_comparison_type: ComparisonType
@@ -168,7 +168,7 @@ class MappingRule(
                 built["TransformationFunction"],
             ),
             transformation_function_param=built["TransformationFunctionParam"],
-            raw_data_primary_field_match_term=built["RawDataPrimaryFieldMatchTerm"],
+            raw_data_primary_field_match_term=(built.get("RawDataPrimaryFieldMatchTerm") or ""),
             raw_data_primary_field_comparison_type=ComparisonType(
                 built["RawDataPrimaryFieldComparisonType"],
             ),

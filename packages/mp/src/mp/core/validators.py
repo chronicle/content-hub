@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree as SafeElementTree
 from PIL import Image, UnidentifiedImageError
@@ -118,7 +118,7 @@ def validate_png_content(path: Path) -> bytes:
         raise ValueError(msg) from e
 
 
-def coerce_bool_from_str_or_none(v: Any) -> bool:  # noqa:ANN401
+def coerce_bool_from_str_or_none(v: str | bool | None) -> bool:  # noqa: FBT001
     """Coerce "true", "false", and null into a proper boolean or None.
 
     Returns:

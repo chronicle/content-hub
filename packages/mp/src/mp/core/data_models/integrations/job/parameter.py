@@ -36,7 +36,7 @@ class BuiltJobParameter(TypedDict):
 
 class NonBuiltJobParameter(TypedDict):
     name: str
-    description: str | None
+    description: str
     is_mandatory: bool
     type: str
     default_value: NotRequired[str | float | bool | int | None]
@@ -62,7 +62,7 @@ class JobParameter(mp.core.data_models.abc.Buildable[BuiltJobParameter, NonBuilt
     def _from_built(cls, built: BuiltJobParameter) -> Self:
         return cls(
             name=built["Name"],
-            description=built.get("Description"),
+            description=built.get("Description", ""),
             is_mandatory=built["IsMandatory"],
             type_=ScriptParamType(int(built["Type"])),
             default_value=built.get("DefaultValue"),
