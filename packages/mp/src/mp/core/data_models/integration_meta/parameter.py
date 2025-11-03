@@ -23,13 +23,14 @@ import mp.core.data_models.abc
 import mp.core.utils
 import mp.core.validators
 from mp.core.data_models.script.parameter import ScriptParamType
+from mp.core.validators import coerce_bool_from_str_or_none
 
 
 class BuiltIntegrationParameter(TypedDict):
     PropertyName: str
     PropertyDisplayName: str
     Value: str | bool | float | int | None
-    PropertyDescription: NotRequired[str]
+    PropertyDescription: str
     IsMandatory: bool
     PropertyType: int
     IntegrationIdentifier: str
@@ -75,7 +76,7 @@ class IntegrationParameter(
             name=built["PropertyName"],
             default_value=built["Value"],
             description=built.get("PropertyDescription", ""),
-            is_mandatory=built.get("IsMandatory", False),
+            is_mandatory=coerce_bool_from_str_or_none(built.get("IsMandatory")),
             type_=ScriptParamType(int(built["PropertyType"])),
             integration_identifier=built["IntegrationIdentifier"],
         )

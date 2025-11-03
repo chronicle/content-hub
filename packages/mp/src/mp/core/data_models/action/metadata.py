@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import pathlib
 from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
@@ -23,6 +22,7 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
+from mp.core.validators import coerce_bool_from_str_or_none
 
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
@@ -36,6 +36,8 @@ from .parameter import (
 )
 
 if TYPE_CHECKING:
+    import pathlib
+
     from mp.core.custom_types import JsonString
 
 DEFAULT_SCRIPT_RESULT_NAME: str = "is_success"
@@ -90,15 +92,9 @@ class ActionMetadata(
             pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
         ),
     ]
-    is_async: Annotated[
-        bool, pydantic.BeforeValidator(mp.core.validators.coerce_bool_from_str_or_none)
-    ]
-    is_custom: Annotated[
-        bool, pydantic.BeforeValidator(mp.core.validators.coerce_bool_from_str_or_none)
-    ]
-    is_enabled: Annotated[
-        bool, pydantic.BeforeValidator(mp.core.validators.coerce_bool_from_str_or_none)
-    ]
+    is_async: bool
+    is_custom: bool
+    is_enabled: bool
     name: Annotated[
         str,
         pydantic.Field(
@@ -178,9 +174,16 @@ class ActionMetadata(
             An `ActionMetadata` object
 
         """
-        version = built.get("Version")
-        if version is None or version < mp.core.constants.MINIMUM_SCRIPT_VERSION:
-            version = mp.core.constants.MINIMUM_SCRIPT_VERSION
+        version: float = built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION)
+        version = max(version, mp.core.constants.MINIMUM_SCRIPT_VERSION)
+        script_result_name: str = built.get("ScriptResultName")
+        if script_result_name is None or script_result_name == "":  # noqa:PLC1901
+            script_result_name = "is_success"
+
+        simulation_data_json: str = built.get("SimulationDataJSON")
+        if simulation_data_json is None or simulation_data_json == "":  # noqa:PLC1901
+            simulation_data_json = '{"Entities": []}'
+
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -190,13 +193,13 @@ class ActionMetadata(
                 for drm in built.get("DynamicResultsMetadata", []) or []
             ],
             integration_identifier=built["IntegrationIdentifier"],
-            is_async=built.get("IsAsync", False),
-            is_custom=built.get("IsCustom", False),
-            is_enabled=built.get("IsEnabled", True),
+            is_async=coerce_bool_from_str_or_none(built.get("IsAsync")),
+            is_custom=coerce_bool_from_str_or_none(built.get("IsCustom")),
+            is_enabled=coerce_bool_from_str_or_none(built.get("IsEnabled", True)),
             name=built["Name"],
             parameters=[ActionParameter.from_built(p) for p in built.get("Parameters", [])],
-            script_result_name=built.get("ScriptResultName") or "is_success",
-            simulation_data_json=built.get("SimulationDataJson") or '{"Entities": []}',
+            script_result_name=script_result_name,
+            simulation_data_json=simulation_data_json,
             default_result_value=built.get("DefaultResultValue"),
             version=version,
         )
@@ -321,7 +324,7 @@ def _load_json_examples(
             drm["result_example_path"] = "{}"
             continue
 
-        json_filepath: pathlib.Path = actions_dir_path.parent / pathlib.Path(example_path)
+        json_filepath: pathlib.Path = actions_dir_path.parent / example_path
         json_content: JsonString = mp.core.file_utils.read_and_validate_json_file(json_filepath)
         drm["result_example_path"] = json_content
 

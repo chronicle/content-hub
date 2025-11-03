@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 class BuiltCustomFamily(TypedDict):
     Family: str
     Description: str
-    ImageBase64: str
+    ImageBase64: str | None
     IsCustom: bool
     Rules: list[BuiltCustomFamilyRule]
 
@@ -39,7 +39,7 @@ class BuiltCustomFamily(TypedDict):
 class NonBuiltCustomFamily(TypedDict):
     family: str
     description: str
-    image_base64: str
+    image_base64: str | None
     is_custom: bool
     rules: list[NonBuiltCustomFamilyRule]
 
@@ -52,7 +52,7 @@ class CustomFamily(
         str,
         pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
     ]
-    image_base64: pydantic.Base64Bytes
+    image_base64: pydantic.Base64Bytes | None
     is_custom: bool
     rules: list[CustomFamilyRule]
 
@@ -96,7 +96,7 @@ class CustomFamily(
 
     @classmethod
     def _from_built(cls, built: BuiltCustomFamily) -> CustomFamily:
-        image: str | bytes | None = built.get("ImageBase64", "")
+        image: str | bytes | None = built.get("ImageBase64")
         if isinstance(image, str):
             image = image.encode()
         return cls(
@@ -142,7 +142,11 @@ class CustomFamily(
         return NonBuiltCustomFamily(
             family=self.family,
             description=self.description,
-            image_base64=base64.b64encode(self.image_base64).decode(),
+            image_base64=(
+                base64.b64encode(self.image_base64).decode()
+                if self.image_base64 is not None
+                else None
+            ),
             is_custom=self.is_custom,
             rules=[rule.to_non_built() for rule in self.rules],
         )

@@ -29,10 +29,9 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 import mp.core.constants
-
-from . import config, constants
-from .custom_types import JsonString, ManagerName, Products
-from .validators import validate_png_content, validate_svg_content
+from mp.core import config, constants
+from mp.core.custom_types import JsonString, ManagerName, Products
+from mp.core.validators import validate_png_content, validate_svg_content
 
 if TYPE_CHECKING:
     import pathlib
