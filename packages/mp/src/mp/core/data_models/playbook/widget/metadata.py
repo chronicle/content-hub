@@ -72,7 +72,6 @@ class NonBuiltPlaybookWidgetMetadata(TypedDict):
     block_step_id: str | None
     block_step_instance_name: str | None
     present_if_empty: bool
-    present_if_empty: bool
     conditions_group: NonBuiltConditionGroup
     integration_name: str
 
@@ -149,7 +148,7 @@ class PlaybookWidgetMetadata(
             order=built["Order"],
             template_identifier=built["TemplateIdentifier"],
             type=WidgetType(built["Type"]),
-            data_definition=HtmlWidgetDataDefinition.from_built(data_def) if built["Type"] == 3 else data_def,
+            data_definition=HtmlWidgetDataDefinition.from_built(data_def) if built["Type"] == WidgetType.HTML.value else data_def,
             widget_size=WidgetSize(built["GridColumns"]),
             action_widget_template_id=built["ActionWidgetTemplateIdentifier"],
             step_id=built["StepIdentifier"],
