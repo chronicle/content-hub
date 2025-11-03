@@ -174,9 +174,9 @@ class ActionMetadata(
             An `ActionMetadata` object
 
         """
-        version = built.get("Version")
-        if version is None or version < mp.core.constants.MINIMUM_SCRIPT_VERSION:
-            version = mp.core.constants.MINIMUM_SCRIPT_VERSION
+        version: float = built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION)
+        version = max(version, mp.core.constants.MINIMUM_SCRIPT_VERSION)
+
         return cls(
             file_name=file_name,
             creator=built["Creator"],
