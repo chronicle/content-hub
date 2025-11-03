@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Self, TypedDict
 
 import pydantic
@@ -140,11 +141,48 @@ class PlaybookWidgetMetadata(
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
-        return cls()
+        data_def  = json.loads(built["DataDefinitionJson"])
+        return cls(
+            title=built["Title"],
+            description=built["Description"],
+            identifier=built["Identifier"],
+            order=built["Order"],
+            template_identifier=built["TemplateIdentifier"],
+            type=WidgetType(built["Type"]),
+            data_definition=HtmlWidgetDataDefinition.from_built(data_def) if built["Type"] == 3 else data_def,
+            widget_size=WidgetSize(built["GridColumns"]),
+            action_widget_template_id=built["ActionWidgetTemplateIdentifier"],
+            step_id=built["StepIdentifier"],
+            step_integration=built["StepIntegration"],
+            block_step_id=built["BlockStepIdentifier"],
+            block_step_instance_name=built["BlockStepInstanceName"],
+            present_if_empty=built["PresentIfEmpty"],
+            conditions_group=ConditionGroup.from_built(built["ConditionsGroup"]),
+            integration_name=built["IntegrationName"],
+        )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
-        return cls()
+    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
+        data_def  = json.loads(non_built["data_definition"])
+        return cls(
+            title=non_built["title"],
+            description=non_built["description"],
+            identifier=non_built["identifier"],
+            order=non_built["order"],
+            template_identifier=non_built["template_identifier"],
+            type=WidgetType.from_string(non_built["type"]),
+            data_definition=NonBuiltWidgetDataDefinition.from_non_built(data_def) if int(non_built["type"] == 3) else data_def,
+            widget_size=WidgetSize.from_string(non_built["widget_size"]),
+            action_widget_template_id=non_built["action_widget_template_id"],
+            step_id=non_built["step_id"],
+            step_integration=non_built["step_integration"],
+            block_step_id=non_built["block_step_id"],
+            block_step_instance_name=non_built["block_step_instance_name"],
+            present_if_empty=non_built["present_if_empty"],
+            conditions_group=ConditionGroup.from_non_built(non_built["conditions_group"]),
+            integration_name=non_built["integration_name"],
+
+        )
 
     def to_built(self) -> BuiltPlaybookWidgetMetadata:
         """Create a built widget metadata dict.
@@ -153,7 +191,22 @@ class PlaybookWidgetMetadata(
             A built version of the widget metadata dict
 
         """
-        return BuiltPlaybookWidgetMetadata()
+        return BuiltPlaybookWidgetMetadata(
+            Title=self.title,
+            Description=self.description,
+            Identifier=self.identifier,
+            Order=self.order,
+            TemplateIdentifier=self.template_identifier,
+            Type=self.type.value,
+            DataDefinitionJson=json.dumps(self.data_definition.to_built()),
+            GridColumns=self.widget_size.value,
+            ActionWidgetTemplateIdentifier=self.action_widget_template_id,
+            StepIdentifier=self.step_id,
+            BlockStepIdentifier=self.block_step_id,
+            PresentIfEmpty=self.present_if_empty,
+            ConditionsGroup=self.conditions_group.to_built(),
+            IntegrationName=self.integration_name,
+        )
 
     def to_non_built(self) -> NonBuiltPlaybookWidgetMetadata:
         """Create a non-built widget metadata dict.
@@ -162,6 +215,21 @@ class PlaybookWidgetMetadata(
             A non-built version of the widget metadata dict
 
         """
-        non_built: NonBuiltPlaybookWidgetMetadata = NonBuiltPlaybookWidgetMetadata()
+        non_built: NonBuiltPlaybookWidgetMetadata = NonBuiltPlaybookWidgetMetadata(
+            title=self.title,
+            description=self.description,
+            identifier=self.identifier,
+            order=self.order,
+            template_identifier=self.template_identifier,
+            type=self.type.to_string(),
+            data_definition=self.data_definition.to_non_built(),
+            widget_size=self.widget_size.to_string(),
+            action_widget_template_id=self.action_widget_template_id,
+            step_id=self.step_id,
+            block_step_id=self.block_step_id,
+            present_if_empty=self.present_if_empty,
+            conditions_group=self.conditions_group.to_non_built(),
+            integration_name=self.integration_name,
+        )
         mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
