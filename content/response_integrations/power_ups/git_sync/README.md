@@ -44,17 +44,18 @@ The Git Sync integration provides bidirectional synchronization between SecOps a
 
 ### 2. Configuration Parameters
 
-| Parameter | Description                                | Required | Default |
-|-----------|--------------------------------------------|----------|---------|
-| **Repo URL** | Git repository URL (HTTPS or SSH)          | ✅ | - |
-| **Branch** | Git branch to sync with                    | ✅ | `main` |
-| **Git Username** | Username for Git authentication            | ❌ | `None` |
-| **Git Password/Token/SSH Key** | Authentication credential                  | ✅ | - |
-| **Commit Author** | Author information for commits             | ❌ | `GitSync <gitsync@siemplify.co>` |
-| **SOAR Username** | SecOps username for API access             | ❌ | - |
-| **SOAR Password** | SecOps password for API access     | ❌ | - |
-| **Siemplify Verify SSL** | Verify SSL certificates for SOAR API       | ❌ | `true` |
-| **Git Verify SSL** | Verify SSL certificates for Git operations | ❌ | `true` |
+| Parameter                      | Description                                       | Required | Default |
+|--------------------------------|---------------------------------------------------|----------|---------|
+| **Repo URL**                   | Git repository URL (HTTPS or SSH)                 | ✅ | - |
+| **Branch**                     | Git branch to sync with                           | ✅ | `main` |
+| **Git Server Fingerprint**     | Git Server Fingerprint (`SHA256:...` or `MD:...`) | ❌ | `None` |
+| **Git Username**               | Username for Git authentication                   | ❌ | `None` |
+| **Git Password/Token/SSH Key** | Authentication credential                         | ✅ | - |
+| **Commit Author**              | Author information for commits                    | ❌ | `GitSync <gitsync@siemplify.co>` |
+| **SOAR Username**              | SecOps username for API access                    | ❌ | - |
+| **SOAR Password**              | SecOps password for API access                    | ❌ | - |
+| **Siemplify Verify SSL**       | Verify SSL certificates for SOAR API              | ❌ | `true` |
+| **Git Verify SSL**             | Verify SSL certificates for Git operations        | ❌ | `true` |
 
 ## Available Jobs
 

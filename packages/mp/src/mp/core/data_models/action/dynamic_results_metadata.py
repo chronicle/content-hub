@@ -105,12 +105,8 @@ class DynamicResultsMetadata(
             A non-built version of the dynamic results metadata dict
 
         """
-        example: str | None = None
-        if self.result_example is not None:
-            example = json.dumps(self.result_example)
-
         return NonBuiltDynamicResultsMetadata(
-            result_example_path=example,
+            result_example_path=self.result_example,
             result_name=self.result_name,
             show_result=self.show_result,
         )

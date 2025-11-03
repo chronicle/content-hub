@@ -278,6 +278,22 @@
             
             return false;
         }
+
+        let jsonData = null;
+        if ('[Jamf_Get Device Information_1.is_success]' == 'true') {
+            try {
+                // Get raw JSON data
+                let rawData = `[Jamf_Get Device Information_1.JsonResult]`;
+                
+                jsonData = JSON.parse(rawData);
+            } catch (error) {
+                console.error('Failed to parse device information JSON:', error);
+                
+                jsonData = null;
+            }
+        }
+
+        const container = document.getElementById('device-container');
         
         // Initialize theme on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -286,20 +302,17 @@
             applyTheme(isDarkMode ? themes.dark : themes.light);
             
             if (!jsonData) {
-                container.innerHTML = '<p class="text-center text-themed-tertiary">No device information to display.</p>';
+                container.innerHTML = '<div class="card-primary rounded-lg p-6 text-center"><p class="text-themed-tertiary">Unable to load device information. Please check the action output or try again.</p></div>';
                 return;
             }
 
-            container.innerHTML = renderDeviceWidget(jsonData);
+            try {
+                container.innerHTML = renderDeviceWidget(jsonData);
+            } catch (error) {
+                console.error('Failed to render device widget:', error);
+                container.innerHTML = '<div class="card-primary rounded-lg p-6 text-center"><p class="text-themed-tertiary">Error displaying device information. Please check the console for details.</p></div>';
+            }
         });
-
-        let jsonData = null;
-        if ('[Jamf_Get Device Information_1.is_success]' == 'true') {
-            jsonData = JSON.parse(`[Jamf_Get Device Information_1.JsonResult]`);
-        }
-
-        const container = document.getElementById('device-container');
-
         /**
          * Formats a camelCase string to a readable Title Case string.
          */

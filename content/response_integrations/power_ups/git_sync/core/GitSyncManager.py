@@ -76,6 +76,7 @@ class GitSyncManager:
         smp_credentials: dict = None,
         smp_verify: bool = True,
         git_verify: bool = True,
+        git_server_fingerprint: str = '',
     ):
         self.logger = siemplify.LOGGER
         self._siemplify = siemplify
@@ -88,6 +89,7 @@ class GitSyncManager:
             smp_credentials.get("password") if smp_credentials else None,
             smp_verify,
         )
+        self.git_server_fingerprint = git_server_fingerprint
         self.git_client = Git(
             repo_url,
             branch,
@@ -97,6 +99,7 @@ class GitSyncManager:
             git_author,
             git_verify,
             self.logger,
+            git_server_fingerprint=git_server_fingerprint,
         )
         self.content = GitContentManager(self.git_client, self.api)
 
@@ -149,6 +152,10 @@ class GitSyncManager:
         if not branch:
             branch = get_conf_param("Branch", print_value=True)
 
+        git_server_fingerprint = siemplify.extract_job_param("Git Server Fingerprint", print_value=True)
+        if not git_server_fingerprint:
+            git_server_fingerprint = get_conf_param("Git Server Fingerprint", print_value=True)
+
         git_author = siemplify.extract_job_param("Commit Author", print_value=True)
         if not git_author:
             git_author = get_conf_param(
@@ -186,6 +193,7 @@ class GitSyncManager:
             smp_credentials,
             smp_verify,
             git_verify,
+            git_server_fingerprint,
         )
 
     def install_integration(self, integration: Integration) -> None:
