@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for the IntegrationValidator class."""
+"""Tests for the NoCustomComponentsInIntegrationValidation class."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ import pytest
 import mp.core.constants
 from mp.core import constants, file_utils
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.pre_build_validation import CustomValidation
+from mp.validate.pre_build_validation import NoCustomComponentsInIntegrationValidation
 
 if TYPE_CHECKING:
     import pathlib
@@ -37,10 +37,10 @@ def _update_yaml_file(file_path: pathlib.Path, updates: dict[str, Any]) -> None:
 
 
 class TestCustomValidation:
-    """Test suite for the CustomValidation runner."""
+    """Test suite for the NoCustomComponentsInIntegrationValidation runner."""
 
     # Get an instance of the validator runner
-    validator_runner = CustomValidation()
+    validator_runner = NoCustomComponentsInIntegrationValidation()
 
     def test_success_on_valid_integration(self, temp_integration: pathlib.Path) -> None:
         """Test that a valid integration (no custom flags) passes."""

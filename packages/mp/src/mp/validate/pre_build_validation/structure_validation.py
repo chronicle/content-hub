@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     import pathlib
 
 
-class StructureValidation:
+class IntegrationFileStructureValidation:
     name: str = "Integration Structure Check"
 
     def run(self, integration_path: pathlib.Path) -> None:  # noqa: PLR6301

@@ -18,11 +18,10 @@ from typing import TYPE_CHECKING, Protocol
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ValidationResults, ValidationTypes
-from mp.validate.validators import IntegrationValidator as IntegrationValidator
 
-from .custom_validation import CustomValidation
+from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
-from .structure_validation import StructureValidation
+from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation as UvLockValidation
 from .version_bump_validation import VersionBumpValidation as VersionBumpValidation
 
@@ -52,7 +51,9 @@ class PreBuildValidations:
 
     def run_pre_build_validation(self) -> None:
         """Run all the pre-build validations."""
-        for validator in self._get_validation_list():
+        validations: list[Validator] = get_priority_validations() + get_validations()
+
+        for validator in validations:
             try:
                 validator.run(self.validation_path)
 
@@ -63,16 +64,6 @@ class PreBuildValidations:
                 self._handle_fatal_error(validator.name, str(e))
                 return
 
-    @classmethod
-    def _get_validation_list(cls) -> list[Validator]:
-        return [
-            StructureValidation(),
-            UvLockValidation(),
-            VersionBumpValidation(),
-            RequiredDevDependenciesValidation(),
-            CustomValidation(),
-        ]
-
     def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:
         self.results.validation_report.add_fatal_validation(validation_name, error_msg)
         self.results.is_success = False
@@ -80,3 +71,30 @@ class PreBuildValidations:
     def _handle_non_fatal_error(self, validation_name: str, error_msg: str) -> None:
         self.results.validation_report.add_non_fatal_validation(validation_name, error_msg)
         self.results.is_success = False
+
+
+def get_validations() -> list[Validator]:
+    """Get a list of all available pre-build validations, that are not priority.
+
+    Returns:
+        A list of all `Validator` instances.
+
+    """
+    return [
+        UvLockValidation(),
+        VersionBumpValidation(),
+        RequiredDevDependenciesValidation(),
+        NoCustomComponentsInIntegrationValidation(),
+    ]
+
+
+def get_priority_validations() -> list[Validator]:
+    """Get a list of the available pre-build validations, that should run first.
+
+    Returns:
+        A list of all priority `Validator` instances.
+
+    """
+    return [
+        IntegrationFileStructureValidation(),
+    ]

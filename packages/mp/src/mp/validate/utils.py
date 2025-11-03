@@ -22,13 +22,16 @@ from mp.core.exceptions import FatalValidationError
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from mp.core.custom_types import YamlFileContent
 
 
 class Configurations(NamedTuple):
     only_pre_build: bool
+
+
+DEF_FILE_NAME_KEY: str = "name"
 
 
 def get_marketplace_paths_from_names(
@@ -70,19 +73,6 @@ def get_project_dependency_name(dependency_name: str) -> str:
     return re.split(r"[<>=]", dependency_name)[0]
 
 
-def get_filtered_component_names(
-    component_def: list[YamlFileContent],
-    filter_fn: Callable[[YamlFileContent], bool],
-) -> list[str]:
-    """Get component names from a component directory that match a filter function.
-
-    Returns:
-        a list of the filtered component names.
-
-    """
-    return [d.get("name") for d in component_def if filter_fn(d)]
-
-
 def load_integration_def(integration_path: pathlib.Path) -> YamlFileContent:
     """Load the integration definition file content.
 
@@ -94,8 +84,8 @@ def load_integration_def(integration_path: pathlib.Path) -> YamlFileContent:
 
     """
     try:
-        integration_def_path = integration_path / constants.DEFINITION_FILE
-        return file_utils.load_yaml_file(integration_def_path)
+        integration_def = integration_path / constants.DEFINITION_FILE
+        return file_utils.load_yaml_file(integration_def)
     except Exception as e:
         msg: str = f"Failed to load integration def file: {e}"
         raise FatalValidationError(msg) from e
