@@ -61,7 +61,9 @@ def main():
                 and job.get("displayName", job.get("name")) not in IGNORED_JOBS
                 and job.get("integration") != INTEGRATION_NAME
             ):
-                siemplify.LOGGER.info(f"Pushing {job.get("displayName", job.get("name"))}")
+                siemplify.LOGGER.info(
+                    f"Pushing {job.get('displayName', job.get('name'))}"
+                )
                 job = Job(job)
                 if readme_addon:
                     siemplify.LOGGER.info(
