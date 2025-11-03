@@ -21,18 +21,18 @@ import pydantic
 
 import mp.core.constants
 
-from .playbook_meta.display_info import NonBuiltPlaybookDisplayInfo, PlaybookDisplayInfo
+from packages.mp.src.mp.core.data_models.playbook.meta.display_info import NonBuiltPlaybookDisplayInfo, PlaybookDisplayInfo
 
 if TYPE_CHECKING:
     from .overview.metadata import BuiltOverview, NonBuiltOverview
-    from .playbook_meta.access_permissions import BuiltAccessPermission
-    from .playbook_widget.metadata import (
+    from packages.mp.src.mp.core.data_models.playbook.meta.access_permissions import BuiltAccessPermission
+    from packages.mp.src.mp.core.data_models.playbook.widget.metadata import (
         BuiltPlaybookWidgetMetadata,
         NonBuiltPlaybookWidgetMetadata,
         PlaybookWidgetMetadata,
     )
     from .step.metadata import BuiltStep, NonBuiltStep
-    from .trigger.metadata import BuiltTrigger, NonBuiltTrigger
+    from packages.mp.src.mp.core.data_models.trigger.metadata import BuiltTrigger, NonBuiltTrigger
 
 
 class BuiltPlaybook(TypedDict):
@@ -92,5 +92,4 @@ class Playbook:
     widget_templates: list[PlaybookWidgetMetadata]
     definition: BuiltPlaybookDefinition
 
-    @property
-    def display_info(self) -> PlaybookDisplayInfo: ...
+    

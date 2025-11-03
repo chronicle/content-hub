@@ -13,3 +13,30 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+import multiprocessing
+from pathlib import Path
+
+from mp.core.file_utils import get_playbooks_dir_path, create_or_get_playbook_out_dir
+import mp.core.config
+
+
+class Playbooks:
+    def __init__(self, playbooks_dir: Path) -> None:
+        """Class constructor.
+
+        Args:
+            playbooks_dir: The path to a marketplace's playbooks folder.
+
+        """
+        self.name: str = playbooks_dir.name
+        self.paths: list[Path] = get_playbooks_dir_path()
+        self.out_dir: Path = create_or_get_playbook_out_dir()
+    
+    
+    def build_playbooks(self) -> None:
+        """Build all playbooks in the marketplace."""
+        
+        processes: int = mp.core.config.get_processes_number()
+        for playbook in self.paths:
+            pass
