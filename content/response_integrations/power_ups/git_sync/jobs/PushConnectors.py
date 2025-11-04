@@ -43,7 +43,7 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        for connector in gitsync.api.get_connectors():
+        for connector in gitsync.api.get_connectors(chronicle_soar=siemplify):
             if connector.get("displayName") in connector_names:
                 siemplify.LOGGER.info(f"Pushing {connector.get('displayName')}")
                 if readme_addon:
@@ -65,7 +65,7 @@ def main():
                     integration_name = connector.get("integration")
                     records = [
                         x
-                        for x in gitsync.api.get_ontology_records()
+                        for x in gitsync.api.get_ontology_records(chronicle_soar=siemplify)
                         if x.get("source") == integration_name
                     ]
                     visual_families = set([x.get("familyName") for x in records])
@@ -100,7 +100,7 @@ def main():
                             )
 
                     if include_vf:
-                        for visualFamily in gitsync.api.get_custom_families():
+                        for visualFamily in gitsync.api.get_custom_families(chronicle_soar=siemplify):
                             if visualFamily["family"] in visual_families:
                                 siemplify.LOGGER.info(
                                     f"Pushing Visual Family - {visualFamily['family']}",
@@ -108,7 +108,8 @@ def main():
                                 gitsync.content.push_visual_family(
                                     VisualFamily(
                                         gitsync.api.get_custom_family(
-                                            visualFamily["id"],
+                                            chronicle_soar=siemplify,
+                                            family_id=visualFamily["id"],
                                         ),
                                     ),
                                 )
