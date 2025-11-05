@@ -20,6 +20,7 @@ from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ValidationResults, ValidationTypes
 
 from .custom_validation import NoCustomComponentsInIntegrationValidation
+from .ping_validation import IntegrationHasPingActionValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
 from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation as UvLockValidation
@@ -85,6 +86,7 @@ def get_validations() -> list[Validator]:
         VersionBumpValidation(),
         RequiredDevDependenciesValidation(),
         NoCustomComponentsInIntegrationValidation(),
+        IntegrationHasPingActionValidation(),
     ]
 
 

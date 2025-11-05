@@ -62,9 +62,7 @@ class TestCustomValidation:
         )
         _update_yaml_file(ping_def_file, {"is_custom": True})
 
-        with pytest.raises(
-            NonFatalValidationError, match="Custom actions: Mock Integration Action"
-        ):
+        with pytest.raises(NonFatalValidationError, match="Custom actions: Ping"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_custom_connector_flag(self, temp_integration: pathlib.Path) -> None:
