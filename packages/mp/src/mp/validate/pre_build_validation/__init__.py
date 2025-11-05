@@ -23,6 +23,7 @@ from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
 from .ping_validation import IntegrationHasPingActionValidation
+from .python_version_validation import PythonVersionFileValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
 from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation as UvLockValidation
@@ -84,6 +85,7 @@ def get_validations() -> list[Validator]:
 
     """
     return [
+        PythonVersionFileValidation(),
         UvLockValidation(),
         VersionBumpValidation(),
         RequiredDevDependenciesValidation(),

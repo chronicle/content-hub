@@ -118,14 +118,6 @@ class Integration:
     jobs_metadata: Mapping[JobName, JobMetadata]
     widgets_metadata: Mapping[WidgetName, WidgetMetadata]
 
-    def __post_init__(self) -> None:
-        """Perform post-init logic."""
-        self._validate_integration()
-
-    def _validate_integration(self) -> None:
-        """Perform various validations over the integration."""
-        self._validate_python_version()
-
     @classmethod
     def from_built_path(cls, path: pathlib.Path) -> Integration:
         """Create the integration from a built integration's path.
@@ -238,43 +230,6 @@ class Integration:
 
         """
         return any(name.lower() == "ping" for name in self.actions_metadata)
-
-    def _validate_python_version(self) -> None:
-        """Validate the integration's python version in the '.python-version' file.
-
-        Raises:
-            ValueError: When the version inside ".python-version" doesn't match the
-                version in "pyproject.toml"
-
-        """
-        msg: str
-        if not self.python_version:
-            msg = f"Missing {mp.core.constants.PYTHON_VERSION_FILE} file or the file is empty"
-            raise ValueError(msg)
-
-        metadata_version: str = self.metadata.python_version.to_string()
-        if self.python_version != metadata_version:
-            msg = (
-                f"Make sure the version in the {mp.core.constants.PYTHON_VERSION_FILE} matches"
-                f" the lowest supported version configured in {mp.core.constants.PROJECT_FILE}"
-            )
-            raise ValueError(msg)
-
-    def _raise_error_if_disabled(self) -> None:
-        """Raise an error if the integration has disabled components.
-
-        Raises:
-            RuntimeError: If the integration has disabled components
-
-        """
-        if self.has_disabled_parts:
-            msg: str = (
-                f"{self.identifier} contains disabled scripts:"
-                f"\nDisabled actions: {', '.join(self._disabled_actions) or None}"
-                f"\nDisabled connectors: {', '.join(self._disabled_connectors) or None}"
-                f"\nDisabled jobs: {', '.join(self._disabled_jobs) or None}"
-            )
-            raise RuntimeError(msg)
 
     @property
     def has_disabled_parts(self) -> bool:
