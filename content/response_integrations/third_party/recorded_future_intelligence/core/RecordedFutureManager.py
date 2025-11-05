@@ -7,17 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :RecordedFutureManager.py                         noqa: ERA001
-# description     :This Module contains all Recorded Future operations functionality
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :10-31-2025
-# python_version  :3.11                                             noqa: ERA001
-# product_version :8.0
-# ============================================================================#
-
-# ============================= IMPORTS ===================================== #
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -540,7 +529,7 @@ class RecordedFutureManager:
             self.siemplify.LOGGER.info(f"Added entity {entity}")
         if compromised_ip:
             self.siemplify.add_entity_to_case(
-                entity_identifier=compromised_ip,
+                entity_identifier=str(compromised_ip),
                 entity_type=EntityTypes.ADDRESS,
                 is_suspicous=False,
                 is_internal=True,
