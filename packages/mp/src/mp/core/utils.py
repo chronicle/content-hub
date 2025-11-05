@@ -20,12 +20,14 @@ import os
 import platform
 import re
 import sys
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from mp.core.constants import WINDOWS_PLATFORM
 
 if TYPE_CHECKING:
-    from .custom_types import RepositoryType
+    from collections.abc import Callable
+
+    from .custom_types import RepositoryType, YamlFileContent
 
 SNAKE_PATTERN_1 = re.compile(r"(.)([A-Z][a-z]+)")
 SNAKE_PATTERN_2 = re.compile(r"([a-z0-9])([A-Z])")
@@ -198,3 +200,21 @@ def get_current_platform() -> tuple[str, str]:
         version = platform.release()
 
     return os_name, version
+
+
+def filter_yaml_files_and_extract_key(
+    yaml_files: list[YamlFileContent],
+    filter_fn: Callable[[YamlFileContent], bool],
+    key_to_extract: str,
+) -> list[Any]:
+    """Filter a list of parsed YAML files and extracts a specified key's value.
+
+    Returns:
+        a list of the filtered file's key values.
+        if the key doesn't exist in one of the filtered yaml files, the file is
+        excluded from the output.
+
+    """
+    return [
+        d[key_to_extract] for d in yaml_files if filter_fn(d) and d.get(key_to_extract) is not None
+    ]
