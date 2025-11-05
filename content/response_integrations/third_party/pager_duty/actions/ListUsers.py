@@ -23,9 +23,11 @@ def main():
 
         users = pager_duty.list_users()
         siemplify.result.add_result_json(users)
-        output_message = "Successfully retrieved users\n"
+        output_message = "no users found\n"
         result_value = True
         status = EXECUTION_STATE_COMPLETED
+        if users:
+            output_message = "Successfully retrieved users\n"
 
     except Exception as e:
         output_message = f"There was an error retrieve List of Users .{e!s}"
