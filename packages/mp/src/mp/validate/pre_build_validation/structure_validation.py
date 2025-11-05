@@ -38,7 +38,9 @@ class IntegrationFileStructureValidation:
         """
         try:
             if not mp.core.file_utils.is_integration(integration_path):
-                msg = "Missing essential files like pyproject.toml or integration def file."
+                msg = (
+                    "Integration is in an invalid dir or is missing essential pyproject.toml file."
+                )
                 raise FatalValidationError(msg)
         except RuntimeError as e:
-            raise FatalValidationError(str(e)) from e
+            raise FatalValidationError(e) from e

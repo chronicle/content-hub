@@ -29,6 +29,16 @@ if TYPE_CHECKING:
 def temp_integration(non_built_integration: pathlib.Path) -> Iterator[pathlib.Path]:
     """Create a temporary integration directory with mock files."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = pathlib.Path(temp_dir)
-        shutil.copytree(non_built_integration.resolve(), temp_path / non_built_integration.name)
-        yield temp_path / non_built_integration.name
+        temp_root = pathlib.Path(temp_dir)
+
+        # Get the name of the valid parent directory
+        parent_name = non_built_integration.parent.name
+
+        temp_integration_parent = temp_root / parent_name
+        temp_integration_parent.mkdir()
+
+        # Copy the integration inside the valid parent directory
+        temp_integration_path = temp_integration_parent / non_built_integration.name
+        shutil.copytree(non_built_integration.resolve(), temp_integration_path)
+
+        yield temp_integration_path

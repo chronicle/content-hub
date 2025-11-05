@@ -66,3 +66,29 @@ class TestCustomValidation:
             NonFatalValidationError, match="Custom actions: Mock Integration Action"
         ):
             self.validator_runner.run(temp_integration)
+
+    def test_failure_on_custom_connector_flag(self, temp_integration: pathlib.Path) -> None:
+        """Test failure when a connector's 'is_custom' flag is true."""
+        connector_def_file = (
+            temp_integration
+            / mp.core.constants.CONNECTORS_DIR
+            / f"connector{mp.core.constants.DEF_FILE_SUFFIX}"
+        )
+        _update_yaml_file(connector_def_file, {"is_custom": True})
+
+        with pytest.raises(
+            NonFatalValidationError, match="Custom connectors: Mock Integration Connector"
+        ):
+            self.validator_runner.run(temp_integration)
+
+    def test_failure_on_custom_job_flag(self, temp_integration: pathlib.Path) -> None:
+        """Test failure when a job's 'is_custom' flag is true."""
+        job_def_file = (
+            temp_integration
+            / mp.core.constants.JOBS_DIR
+            / f"job{mp.core.constants.DEF_FILE_SUFFIX}"
+        )
+        _update_yaml_file(job_def_file, {"is_custom": True})
+
+        with pytest.raises(NonFatalValidationError, match="Custom jobs: Mock Integration Job"):
+            self.validator_runner.run(temp_integration)
