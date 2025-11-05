@@ -128,9 +128,9 @@ EXCLUDED_INTEGRATIONS_WITH_CONNECTORS_AND_NO_MAPPING: set[str] = {
     "Workflow Tools",
 }
 EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
-    "ChronicleSupportTools",
-    "Connectors",
-    "Lacework",
+    "chronicle_support_tools",
+    "connectors",
+    "lacework",
 }
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",

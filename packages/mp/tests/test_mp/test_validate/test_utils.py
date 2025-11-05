@@ -24,6 +24,12 @@ from mp.validate.utils import (
     load_integration_def,
 )
 
+ALL_COMPONENTS: list[str] = [
+    constants.ACTIONS_DIR,
+    constants.JOBS_DIR,
+    constants.CONNECTORS_DIR,
+]
+
 
 def test_dep_name_simple_equality_specifier() -> None:
     assert get_project_dependency_name("requests==2.25.1") == "requests"
@@ -86,16 +92,24 @@ class TestLoadComponentsDefs:
 
     def test_load_success(self, temp_integration: pathlib.Path) -> None:
         """Test loading component definitions from existing directories."""
-        component_defs = load_components_defs(temp_integration)
+        component_defs = load_components_defs(temp_integration, *ALL_COMPONENTS)
         assert constants.ACTIONS_DIR in component_defs
         assert len(component_defs[constants.ACTIONS_DIR]) > 0
+
+    def test_load_invalid_component(self, temp_integration: pathlib.Path) -> None:
+        """Test invalid component doesn't try loading and fail."""
+        components: list[str] = ALL_COMPONENTS
+        components.append("invalid_component_name")
+
+        component_defs = load_components_defs(temp_integration, *components)
+        assert "invalid_component_name" not in component_defs
 
     def test_load_missing_dir(self, temp_integration: pathlib.Path) -> None:
         """Test loading when a component directory doesn't exist."""
         actions_dir = temp_integration / constants.ACTIONS_DIR
         shutil.rmtree(actions_dir, ignore_errors=True)
 
-        component_defs = load_components_defs(temp_integration)
+        component_defs = load_components_defs(temp_integration, *ALL_COMPONENTS)
         assert constants.ACTIONS_DIR not in component_defs
         assert constants.CONNECTORS_DIR in component_defs
 
@@ -104,6 +118,6 @@ class TestLoadComponentsDefs:
         actions_dir = temp_integration / constants.ACTIONS_DIR
         _remove_file(actions_dir / "ping.yaml")
 
-        component_defs = load_components_defs(temp_integration)
+        component_defs = load_components_defs(temp_integration, *ALL_COMPONENTS)
         assert constants.ACTIONS_DIR in component_defs
         assert len(component_defs[constants.ACTIONS_DIR]) == 0
