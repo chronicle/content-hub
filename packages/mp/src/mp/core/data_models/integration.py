@@ -124,7 +124,6 @@ class Integration:
 
     def _validate_integration(self) -> None:
         """Perform various validations over the integration."""
-        self._raise_error_if_disabled()
         self._validate_python_version()
         self._validate_default_mapping_exists_if_connectors_exists()
 
