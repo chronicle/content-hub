@@ -17,27 +17,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 
 import pydantic
-
+import json
 import mp.core.data_models.abc
+from mp.core import constants
 
 from .step_debug_data import BuiltStepDebugData, NonBuiltStepDebugData, StepDebugData
 from .step_parameter import BuiltStepParameter, NonBuiltStepParameter, StepParameter
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-class StepType(mp.core.data_models.abc.RepresentableEnum):
-    ACTION = 0
-    MULTI_CHOICE_QUESTION = 1
-    PREVIOUS_ACTION = 2
-    CASE_DATA_CONDITION = 3
-    CONDITION = 4
-    BLOCK = 5
-    OUTPUT = 6
-    PARALLEL_ACTIONS_CONTAINER = 7
-    FOR_EACH_START_LOOP = 8
-    FOR_EACH_END_LOOP = 9
 
 
 class BuiltStep(TypedDict):
@@ -90,6 +78,19 @@ class NonBuiltStep(TypedDict):
     parallel_actions: list[NonBuiltStep]
 
 
+class StepType(mp.core.data_models.abc.RepresentableEnum):
+    ACTION = 0
+    MULTI_CHOICE_QUESTION = 1
+    PREVIOUS_ACTION = 2
+    CASE_DATA_CONDITION = 3
+    CONDITION = 4
+    BLOCK = 5
+    OUTPUT = 6
+    PARALLEL_ACTIONS_CONTAINER = 7
+    FOR_EACH_START_LOOP = 8
+    FOR_EACH_END_LOOP = 9
+
+
 class Step(mp.core.data_models.abc.ComponentMetadata):
     name: str
     description: str
@@ -97,7 +98,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
     original_step_id: str
     playbook_id: str
     parent_step_ids: list[str]
-    previous_result_condition: str
+    previous_result_condition: str | None = None
     instance_name: str
     is_automatic: bool
     is_skippable: bool
@@ -116,11 +117,27 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
-        pass
+        if not path.exists():
+            return []
+        built_playbook: str = path.read_text(encoding="utf-8")
+        try:
+            full_playbook = json.loads(built_playbook)
+            built_steps: list[BuiltStep] = full_playbook["Definition"]["Steps"]
+            return [cls._from_built("", step) for step in built_steps]
+        except (ValueError, json.JSONDecodeError) as e:
+            msg: str = f"Failed to load json from {path}"
+            raise ValueError(mp.core.utils.trim_values(msg)) from e
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
-        pass
+        step_folder_path: Path = path / constants.STEPS_DIR
+        if not step_folder_path.exists():
+            return []
+
+        return [
+            cls._from_non_built_path(step_path)
+            for step_path in step_folder_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
+        ]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltStep) -> Self:
@@ -136,7 +153,9 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_skippable=built["IsSkippable"],
             action_provider=built["ActionProvider"],
             parameters=[StepParameter.from_built(p) for p in built["Parameters"]],
-            step_debug_data=StepDebugData.from_built(built["StepDebugData"]),
+            step_debug_data=StepDebugData.from_built(built["StepDebugData"])
+            if built.get("StepDebugData")
+            else None,
             is_debug_mock_data=built["IsDebugMockData"],
             auto_skip_on_failure=built["AutoSkipOnFailure"],
             start_loop_step_id=built.get("StartLoopStepIdentifier"),

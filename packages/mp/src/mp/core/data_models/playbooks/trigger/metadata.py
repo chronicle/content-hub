@@ -16,31 +16,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
+import json
+
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum
-from mp.core.data_models.condition import Condition, LogicalOperator
+from mp.core.data_models.playbooks.condition.condition_group import Condition, LogicalOperator
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.condition import BuiltCondition, NonBuiltCondition
-
-
-class TriggerType(RepresentableEnum):
-    VENDOR_NAME = 0
-    TAG_NAME = 1
-    RULE_NAME = 2
-    PRODUCT_NAME = 3
-    NETWORK_NAME = 4
-    ENTITY_DETAILS = 5
-    RELATION_DETAILS = 6
-    TRACKING_LIST = 7
-    ALL = 8
-    ALERT_TRIGGER_VALUE = 9
-    CASE_DATA = 10
-    GET_INPUTS = 11
+    from mp.core.data_models.playbooks.condition import BuiltCondition, NonBuiltCondition
 
 
 class BuiltTrigger(TypedDict):
@@ -65,6 +52,21 @@ class NonBuiltTrigger(TypedDict):
     playbook_name: NotRequired[str | None]
 
 
+class TriggerType(RepresentableEnum):
+    VENDOR_NAME = 0
+    TAG_NAME = 1
+    RULE_NAME = 2
+    PRODUCT_NAME = 3
+    NETWORK_NAME = 4
+    ENTITY_DETAILS = 5
+    RELATION_DETAILS = 6
+    TRACKING_LIST = 7
+    ALL = 8
+    ALERT_TRIGGER_VALUE = 9
+    CASE_DATA = 10
+    GET_INPUTS = 11
+
+
 class Trigger(mp.core.data_models.abc.SequentialMetadata):
     identifier: str
     is_enabled: bool
@@ -77,11 +79,16 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
-        rn_path: Path = path / mp.core.constants.TRIGGERS_FILE_NAME
-        if not rn_path.exists():
+        if not path.exists():
             return []
-
-        return cls._from_built_path(rn_path)
+        built_playbook: str = path.read_text(encoding="utf-8")
+        try:
+            full_playbook = json.loads(built_playbook)
+            built_triggers: list[BuiltTrigger] = full_playbook["Definition"]["Triggers"]
+            return [cls._from_built(trigger) for trigger in built_triggers]
+        except (ValueError, json.JSONDecodeError) as e:
+            msg: str = f"Failed to load json from {path}"
+            raise ValueError(mp.core.utils.trim_values(msg)) from e
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -95,7 +102,7 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
     def _from_built(cls, built: BuiltTrigger) -> Self:
         return cls(
             playbook_id=built["DefinitionIdentifier"],
-            conditions=Condition.from_built(built["Conditions"]),
+            conditions=[Condition.from_built(c) for c in built["Conditions"]],
             logical_operator=LogicalOperator(built["LogicalOperator"]),
             environments=built["Environments"],
             playbook_name=built.get("WorkflowName"),

@@ -19,6 +19,18 @@ from typing import Self, TypedDict
 import mp.core.data_models.abc
 
 
+class BuiltCondition(TypedDict):
+    FieldName: str
+    Value: str
+    MatchType: int
+
+
+class NonBuiltCondition(TypedDict):
+    field_name: str
+    value: str
+    match_type: str
+
+
 class MatchType(mp.core.data_models.abc.RepresentableEnum):
     EQUAL = 0
     CONTAINS = 1
@@ -31,18 +43,6 @@ class MatchType(mp.core.data_models.abc.RepresentableEnum):
     IS_NOT_EMPTY = 8
 
 
-class BuiltCondition(TypedDict):
-    fieldName: str
-    value: str
-    matchType: int
-
-
-class NonBuiltCondition(TypedDict):
-    field_name: str
-    value: str
-    match_type: str
-
-
 class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondition]):
     field_name: str
     value: str
@@ -51,9 +51,9 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
     @classmethod
     def _from_built(cls, built: BuiltCondition) -> Self:
         return cls(
-            field_name=built["fieldName"],
-            value=built["value"],
-            match_type=MatchType(built["matchType"]),
+            field_name=built["FieldName"],
+            value=built["Value"],
+            match_type=MatchType(built["MatchType"]),
         )
 
     @classmethod

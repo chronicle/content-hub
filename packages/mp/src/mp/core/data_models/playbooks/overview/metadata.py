@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
+import json
+
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
@@ -25,15 +27,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class OverviewType(RepresentableEnum):
-    PLAYBOOK_DEFAULT = 0
-    REGULAR = 1
-    SYSTEM_ALERT = 2
-    SYSTEM_CASE = 3
-    ALERT_TYPE = 4
-
-
-class BuiltOverview(TypedDict):
+class OverviewDetails(TypedDict):
     Identifier: str
     Name: str
     Creator: str | None
@@ -41,6 +35,10 @@ class BuiltOverview(TypedDict):
     Type: int
     AlertRuleType: str | None
     Roles: list[int]
+
+
+class BuiltOverview(TypedDict):
+    OverviewTemplate: OverviewDetails
     RoleNames: NotRequired[list[str]]
 
 
@@ -55,6 +53,14 @@ class NonBuiltOverview(TypedDict):
     role_names: list[str]
 
 
+class OverviewType(RepresentableEnum):
+    PLAYBOOK_DEFAULT = 0
+    REGULAR = 1
+    SYSTEM_ALERT = 2
+    SYSTEM_CASE = 3
+    ALERT_TYPE = 4
+
+
 class Overview(mp.core.data_models.abc.ComponentMetadata):
     identifier: str
     name: str
@@ -67,14 +73,16 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
-        meta_path: Path = path / mp.core.constants.OVERVIEWS_DIR
-        if not meta_path.exists():
+        if not path.exists():
             return []
-
-        return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
-        ]
+        built_playbook: str = path.read_text(encoding="utf-8")
+        try:
+            full_playbook = json.loads(built_playbook)
+            built_overview: list[BuiltOverview] = full_playbook["OverviewTemplatesDetails"]
+            return [cls._from_built("", overview) for overview in built_overview]
+        except (ValueError, json.JSONDecodeError) as e:
+            msg: str = f"Failed to load json from {path}"
+            raise ValueError(mp.core.utils.trim_values(msg)) from e
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -90,13 +98,13 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
     @classmethod
     def _from_built(cls, _: str, built: BuiltOverview) -> Self:
         return cls(
-            identifier=built["Identifier"],
-            name=built["Name"],
-            creator=built["Creator"],
-            playbook_id=built["PlaybookDefinitionIdentifier"],
-            type_=OverviewType(built["Type"]),
-            alert_rule_type=built["AlertRuleType"],
-            roles=built["Roles"],
+            identifier=built["OverviewTemplate"]["Identifier"],
+            name=built["OverviewTemplate"]["Name"],
+            creator=built["OverviewTemplate"]["Creator"],
+            playbook_id=built["OverviewTemplate"]["PlaybookDefinitionIdentifier"],
+            type_=OverviewType(built["OverviewTemplate"]["Type"]),
+            alert_rule_type=built["OverviewTemplate"]["AlertRuleType"],
+            roles=built["OverviewTemplate"]["Roles"],
             role_names=built.get("RoleNames", []),
         )
 

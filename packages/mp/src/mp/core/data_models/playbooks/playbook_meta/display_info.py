@@ -23,17 +23,6 @@ import mp.core.data_models.abc
 import mp.core.utils
 
 
-class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
-    PLAYBOOK = 0
-    BLOCK = 1
-
-
-class PlaybookContributionType(mp.core.data_models.abc.RepresentableEnum):
-    THIRD_PARTY = 0
-    PARTNER = 1
-    GOOGLE = 2
-
-
 class BuiltPlaybookDisplayInfo(TypedDict):
     Identifier: Annotated[str, pydantic.Field(pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX)]
     FileName: str
@@ -65,6 +54,17 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
     contribution_type: str
     is_google_verified: bool
     should_display_in_content_hub: bool
+
+
+class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
+    PLAYBOOK = 0
+    BLOCK = 1
+
+
+class PlaybookContributionType(mp.core.data_models.abc.RepresentableEnum):
+    THIRD_PARTY = 0
+    PARTNER = 1
+    GOOGLE = 2
 
 
 class PlaybookDisplayInfo(

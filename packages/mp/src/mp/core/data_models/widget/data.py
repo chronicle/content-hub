@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import rich
 from pathlib import Path
 from typing import NotRequired, Self, TypedDict
 
@@ -65,6 +66,7 @@ class WidgetSize(mp.core.data_models.abc.RepresentableEnum):
     THIRD_WIDTH = 3
     TWO_THIRDS_WIDTH = 4
 
+
 class NonBuiltWidgetDataDefinition(TypedDict):
     html_height: int
     safe_rendering: bool
@@ -93,6 +95,7 @@ class HtmlWidgetDataDefinition(
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:
+        rich.print(built)
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
