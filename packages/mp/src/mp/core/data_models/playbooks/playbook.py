@@ -28,6 +28,7 @@ from mp.core.data_models.playbooks.trigger.metadata import Trigger
 from mp.core.data_models.playbooks.playbook_meta.metadata import (
     PlaybookMetadata,
     NonBuiltPlaybookMetadata,
+    BuiltPlaybookMetadata,
 )
 from mp.core.data_models.release_notes.metadata import ReleaseNote, NonBuiltReleaseNote
 
@@ -120,7 +121,19 @@ class Playbook:
             overviews=Overview.from_built_path(path),
             widgets=PlaybookWidgetMetadata.from_built_path(path),
             triggers=Trigger.from_built_path(path),
-            release_notes=ReleaseNote.from_non_built_path(path),
+            release_notes=[
+                ReleaseNote(
+                    description="Release description",
+                    new=True,
+                    item_name="Playbook name",
+                    item_type="Playbook",
+                    publish_time="1762436207",
+                    regressive=False,
+                    removed=False,
+                    ticket=None,
+                    version=1.0,
+                )
+            ],
             meta_data=PlaybookMetadata.from_built_path(path),
         )
 
@@ -135,43 +148,43 @@ class Playbook:
             meta_data=PlaybookMetadata.from_non_built_path(path),
         )
 
-    @classmethod
     def to_built(self) -> BuiltPlaybook:
         steps: list[BuiltStep] = [step.to_built() for step in self.steps]
         triggers: list[BuiltTrigger] = [trigger.to_built() for trigger in self.triggers]
         overviews: list[BuiltOverview] = [overview.to_built() for overview in self.overviews]
+        built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
+
         built_playbook_definition: BuiltPlaybookDefinition = BuiltPlaybookDefinition(
-            Identifier=self.meta_data["identifier"],
-            Name=self.meta_data["name"],
-            IsEnable=self.meta_data["is_enable"],
-            Version=self.release_notes[-1]["version"],
-            Description=self.meta_data["description"],
-            CreationSource=self.meta_data["creation_source"].value,
-            DefaultAccessLevel=self.meta_data["default_access_level"],
-            SimulationClone=self.meta_data["simulation_clone"],
-            DebugAlertIdentifier=self.meta_data.get["debug_alert_identifier"],
-            DebugBaseAlertIdentifier=self.meta_data["debug_alert_identifier"],
-            IsDebugMode=self.meta_data["is_debug_mode"],
-            PlaybookType=self.meta_data["type_"].value,
-            TemplateName=self.meta_data["template_name"],
-            OriginalWorkflowIdentifier=self.meta_data["original_workflow_identifier"],
-            VersionComment=self.meta_data["version_comment"],
-            VersionCreator=self.meta_data["version_creator"],
-            LastEditor=self.meta_data["last_editor"],
-            Creator=self.meta_data["creator"],
-            Priority=self.meta_data["priority"],
-            Category=self.meta_data["category"],
-            IsAutomatic=self.meta_data["is_automatic"],
-            IsArchived=self.meta_data["is_archived"],
+            Identifier=built_playbook_meta["Identifier"],
+            Name=built_playbook_meta["Name"],
+            IsEnable=built_playbook_meta["IsEnable"],
+            Version=built_playbook_meta["Version"],
+            Description=built_playbook_meta["Description"],
+            CreationSource=built_playbook_meta["CreationSource"],
+            DefaultAccessLevel=built_playbook_meta["DefaultAccessLevel"],
+            SimulationClone=built_playbook_meta["SimulationClone"],
+            DebugAlertIdentifier=built_playbook_meta["DebugAlertIdentifier"],
+            DebugBaseAlertIdentifier=built_playbook_meta["DebugBaseAlertIdentifier"],
+            IsDebugMode=built_playbook_meta["IsDebugMode"],
+            PlaybookType=built_playbook_meta["PlaybookType"],
+            TemplateName=built_playbook_meta["TemplateName"],
+            OriginalWorkflowIdentifier=built_playbook_meta["OriginalWorkflowIdentifier"],
+            VersionComment=built_playbook_meta["VersionComment"],
+            VersionCreator=built_playbook_meta["VersionCreator"],
+            Creator=built_playbook_meta["Creator"],
+            Priority=built_playbook_meta["Priority"],
+            Category=built_playbook_meta["Category"],
+            IsAutomatic=built_playbook_meta["IsAutomatic"],
+            IsArchived=built_playbook_meta["IsArchived"],
             Steps=steps,
             Triggers=triggers,
             OverviewTemplates=overviews,
-            Permissions=self.meta_data["permissions"],
+            Permissions=built_playbook_meta["Permissions"],
         )
 
         built_playbook_overview_template_details: list[BuiltPlaybookOverviewTemplateDetails] = [
             BuiltPlaybookOverviewTemplateDetails(
-                OverviewTemplate=overview.to_built(), Rols=overview["RoleNames"]
+                OverviewTemplate=overview.to_built(), Rols=overview.role_names
             )
             for overview in self.overviews
         ]
@@ -183,7 +196,6 @@ class Playbook:
             Definition=built_playbook_definition,
         )
 
-    @classmethod
     def to_non_built(self) -> NonBuiltPlaybook:
         return NonBuiltPlaybook(
             steps=[step.to_non_built() for step in self.steps],
@@ -193,3 +205,13 @@ class Playbook:
             release_notes=[rn.to_non_built() for rn in self.release_notes],
             meta_data=self.meta_data.to_non_built(),
         )
+
+
+if __name__ == "__main__":
+    abstract_playbook = Playbook.from_built_path(
+        Path(
+            "/Users/amitjoseph/Desktop/Google-Sec-Ops/content-hub/packages/mp/src/mp/core/data_models/playbooks/built_playbook_example.json"
+        )
+    )
+    built_playbook = abstract_playbook.to_built()
+    non_built_playbook = abstract_playbook.to_non_built()

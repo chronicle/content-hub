@@ -18,7 +18,6 @@ import json
 from typing import TYPE_CHECKING, Self, TypedDict
 
 import pydantic
-import rich
 
 import mp.core.constants
 import mp.core.data_models.abc
@@ -203,7 +202,7 @@ class PlaybookWidgetMetadata(
             Order=self.order,
             TemplateIdentifier=self.template_identifier,
             Type=self.type.value,
-            DataDefinitionJson=json.dumps(self.data_definition.to_built()),
+            DataDefinitionJson=self.data_definition,
             GridColumns=self.widget_size.value,
             ActionWidgetTemplateIdentifier=self.action_widget_template_id,
             StepIdentifier=self.step_id,
@@ -227,7 +226,7 @@ class PlaybookWidgetMetadata(
             order=self.order,
             template_identifier=self.template_identifier,
             type=self.type.to_string(),
-            data_definition=self.data_definition.to_non_built(),
+            data_definition=self.data_definition,
             widget_size=self.widget_size.to_string(),
             action_widget_template_id=self.action_widget_template_id,
             step_id=self.step_id,

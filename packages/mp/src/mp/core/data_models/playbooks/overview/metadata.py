@@ -39,7 +39,7 @@ class OverviewDetails(TypedDict):
 
 class BuiltOverview(TypedDict):
     OverviewTemplate: OverviewDetails
-    RoleNames: NotRequired[list[str]]
+    Roles: NotRequired[list[str]]
 
 
 class NonBuiltOverview(TypedDict):
@@ -105,7 +105,7 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
             type_=OverviewType(built["OverviewTemplate"]["Type"]),
             alert_rule_type=built["OverviewTemplate"]["AlertRuleType"],
             roles=built["OverviewTemplate"]["Roles"],
-            role_names=built.get("RoleNames", []),
+            role_names=built.get("Roles", []),
         )
 
     @classmethod
@@ -123,13 +123,15 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
 
     def to_built(self) -> BuiltOverview:
         return BuiltOverview(
-            Identifier=self.identifier,
-            Name=self.name,
-            Creator=self.creator,
-            PlaybookDefinitionIdentifier=self.playbook_id,
-            Type=self.type_.value,
-            AlertRuleType=self.alert_rule_type,
-            Roles=self.roles,
+            OverviewTemplate=OverviewDetails(
+                Identifier=self.identifier,
+                Name=self.name,
+                Creator=self.creator,
+                PlaybookDefinitionIdentifier=self.playbook_id,
+                Type=self.type_.value,
+                AlertRuleType=self.alert_rule_type,
+            ),
+            Roles=self.role_names,
         )
 
     def to_non_built(self) -> NonBuiltOverview:
