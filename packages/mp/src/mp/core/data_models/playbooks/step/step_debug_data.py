@@ -37,7 +37,7 @@ class BuiltStepDebugData(TypedDict):
     ResultJson: JsonString
     ScopeEntitiesEnrichmentDataJson: str
     ScopeEntitiesEnrichmentData: list[BuiltStepDebugEnrichmentData]
-    TenantId: NotRequired[str | None]
+    TenantId: NotRequired[str | None] #TODO WHAT IS IT?
 
 
 class NonBuiltStepDebugData(TypedDict):
@@ -48,7 +48,7 @@ class NonBuiltStepDebugData(TypedDict):
     result_value: str
     result_json: str
     scope_entities_enrichment_data: list[NonBuiltStepDebugEnrichmentData]
-    tenant_id: str | None
+    tenant_id: NotRequired[str | None]
 
 
 class StepDebugData(
@@ -106,9 +106,7 @@ class StepDebugData(
             modification_time=non_built["modification_time"],
             result_value=non_built["result_value"],
             result_json=non_built["result_json"],
-            scope_entities_enrichment_data=DebugStepEnrichmentData.model_validate(
-                non_built["scope_entities_enrichment_data"]
-            ),
+            scope_entities_enrichment_data=[DebugStepEnrichmentData.from_non_built(en) for en in non_built["scope_entities_enrichment_data"]],
             tenant_id=non_built.get("tenant_id"),
         )
 

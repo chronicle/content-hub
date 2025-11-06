@@ -22,12 +22,12 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum
-from mp.core.data_models.playbooks.condition.condition_group import Condition, LogicalOperator
+from mp.core.data_models.condition.condition_group import Condition, LogicalOperator
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.playbooks.condition import BuiltCondition, NonBuiltCondition
+    from mp.core.data_models.condition import BuiltCondition, NonBuiltCondition
 
 
 class BuiltTrigger(TypedDict):
