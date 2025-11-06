@@ -11,24 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import annotations
-
-from condition import BuiltCondition, Condition, MatchType, NonBuiltCondition
-from condition_group import (
-    BuiltConditionGroup,
-    ConditionGroup,
-    LogicalOperator,
-    NonBuiltConditionGroup,
-)
-
-__all__: list[str] = [
-    "BuiltCondition",
-    "BuiltConditionGroup",
-    "Condition",
-    "ConditionGroup",
-    "LogicalOperator",
-    "MatchType",
-    "NonBuiltCondition",
-    "NonBuiltConditionGroup",
-]
+#
+# from __future__ import annotations
+#
+# from condition import BuiltCondition, Condition, MatchType, NonBuiltCondition
+# from condition_group import (
+#     BuiltConditionGroup,
+#     ConditionGroup,
+#     LogicalOperator,
+#     NonBuiltConditionGroup,
+# )
+#
+# __all__: list[str] = [
+#     "BuiltCondition",
+#     "BuiltConditionGroup",
+#     "Condition",
+#     "ConditionGroup",
+#     "LogicalOperator",
+#     "MatchType",
+#     "NonBuiltCondition",
+#     "NonBuiltConditionGroup",
+# ]

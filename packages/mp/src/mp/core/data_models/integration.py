@@ -30,7 +30,7 @@ from .job.metadata import JobMetadata
 from .mapping_rules.metadata import MappingRule
 from .pyproject_toml import PyProjectToml
 from .release_notes.metadata import ReleaseNote
-from .widget.metadata import WidgetMetadata
+from .action_widget.metadata import ActionWidgetMetadata
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from .mapping_rules.metadata import BuiltMappingRule, NonBuiltMappingRule
     from .pyproject_toml import PyProjectTomlFile
     from .release_notes.metadata import BuiltReleaseNote, NonBuiltReleaseNote
-    from .widget.metadata import BuiltWidgetMetadata, NonBuiltWidgetMetadata
+    from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
 
 
 class BuiltIntegration(TypedDict):
@@ -59,7 +59,7 @@ class BuiltIntegration(TypedDict):
     actions: Mapping[ActionName, BuiltActionMetadata]
     connectors: Mapping[ConnectorName, BuiltConnectorMetadata]
     jobs: Mapping[JobName, BuiltJobMetadata]
-    widgets: Mapping[WidgetName, BuiltWidgetMetadata]
+    widgets: Mapping[WidgetName, BuiltActionWidgetMetadata]
 
 
 class NonBuiltIntegration(TypedDict):
@@ -71,7 +71,7 @@ class NonBuiltIntegration(TypedDict):
     actions: Mapping[ActionName, NonBuiltActionMetadata]
     connectors: Mapping[ConnectorName, NonBuiltConnectorMetadata]
     jobs: Mapping[JobName, NonBuiltJobMetadata]
-    widgets: Mapping[WidgetName, NonBuiltWidgetMetadata]
+    widgets: Mapping[WidgetName, NonBuiltActionWidgetMetadata]
 
 
 class FullDetailsReleaseNoteJson(TypedDict):
@@ -113,7 +113,7 @@ class Integration:
     actions_metadata: Mapping[ActionName, ActionMetadata]
     connectors_metadata: Mapping[ConnectorName, ConnectorMetadata]
     jobs_metadata: Mapping[JobName, JobMetadata]
-    widgets_metadata: Mapping[WidgetName, WidgetMetadata]
+    widgets_metadata: Mapping[WidgetName, ActionWidgetMetadata]
 
     def __post_init__(self) -> None:
         """Perform post-init logic."""
@@ -153,7 +153,9 @@ class Integration:
                     c.file_name: c for c in ConnectorMetadata.from_built_path(path)
                 },
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_built_path(path)},
-                widgets_metadata={w.file_name: w for w in WidgetMetadata.from_built_path(path)},
+                widgets_metadata={
+                    w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)
+                },
             )
         except ValueError as e:
             msg: str = f"Failed to load integration {path.name}"
@@ -200,7 +202,9 @@ class Integration:
                     c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)
                 },
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_non_built_path(path)},
-                widgets_metadata={w.file_name: w for w in WidgetMetadata.from_non_built_path(path)},
+                widgets_metadata={
+                    w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)
+                },
             )
 
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:

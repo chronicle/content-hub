@@ -18,11 +18,12 @@ import json
 from typing import TYPE_CHECKING, Self, TypedDict
 
 import pydantic
+import rich
 
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
-from mp.core.data_models.condition import (
+from mp.core.data_models.playbooks.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
     NonBuiltConditionGroup,
@@ -54,7 +55,7 @@ class BuiltPlaybookWidgetMetadata(TypedDict):
     BlockStepInstanceName: str | None
     PresentIfEmpty: bool
     ConditionsGroup: BuiltConditionGroup
-    IntegrationName: str
+    IntegrationName: str | None
 
 
 class NonBuiltPlaybookWidgetMetadata(TypedDict):
@@ -73,7 +74,7 @@ class NonBuiltPlaybookWidgetMetadata(TypedDict):
     block_step_instance_name: str | None
     present_if_empty: bool
     conditions_group: NonBuiltConditionGroup
-    integration_name: str
+    integration_name: str | None
 
 
 class PlaybookWidgetMetadata(
@@ -96,7 +97,7 @@ class PlaybookWidgetMetadata(
     block_step_instance_name: str | None
     present_if_empty: bool
     conditions_group: ConditionGroup
-    integration_name: str
+    integration_name: str | None
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -109,14 +110,16 @@ class PlaybookWidgetMetadata(
             A sequence of `WidgetMetadata` objects
 
         """
-        meta_path: Path = path / mp.core.constants.WIDGETS_DIR
-        if not meta_path.exists():
+        if not path.exists():
             return []
-
-        return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.WIDGETS_META_SUFFIX}")
-        ]
+        built_playbook: str = path.read_text(encoding="utf-8")
+        try:
+            full_playbook = json.loads(built_playbook)
+            built_widget: list[BuiltPlaybookWidgetMetadata] = full_playbook["WidgetTemplates"]
+            return [cls._from_built("", widget) for widget in built_widget]
+        except (ValueError, json.JSONDecodeError) as e:
+            msg: str = f"Failed to load json from {path}"
+            raise ValueError(mp.core.utils.trim_values(msg)) from e
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -140,7 +143,7 @@ class PlaybookWidgetMetadata(
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
-        data_def  = json.loads(built["DataDefinitionJson"])
+        data_def = json.loads(built["DataDefinitionJson"])
         return cls(
             title=built["Title"],
             description=built["Description"],
@@ -148,7 +151,9 @@ class PlaybookWidgetMetadata(
             order=built["Order"],
             template_identifier=built["TemplateIdentifier"],
             type=WidgetType(built["Type"]),
-            data_definition=HtmlWidgetDataDefinition.from_built(data_def) if built["Type"] == WidgetType.HTML.value else data_def,
+            data_definition=built[
+                "DataDefinitionJson"
+            ],  # TODO REMEMBER TO ASK TAL HtmlWidgetDataDefinition.from_built("",data_def) if built["Type"] == WidgetType.HTML.value else data_def
             widget_size=WidgetSize(built["GridColumns"]),
             action_widget_template_id=built["ActionWidgetTemplateIdentifier"],
             step_id=built["StepIdentifier"],
@@ -162,7 +167,7 @@ class PlaybookWidgetMetadata(
 
     @classmethod
     def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
-        data_def  = json.loads(non_built["data_definition"])
+        data_def = json.loads(non_built["data_definition"])
         return cls(
             title=non_built["title"],
             description=non_built["description"],
@@ -170,7 +175,9 @@ class PlaybookWidgetMetadata(
             order=non_built["order"],
             template_identifier=non_built["template_identifier"],
             type=WidgetType.from_string(non_built["type"]),
-            data_definition=NonBuiltWidgetDataDefinition.from_non_built(data_def) if int(non_built["type"] == 3) else data_def,
+            data_definition=NonBuiltWidgetDataDefinition.from_non_built(data_def)
+            if int(non_built["type"] == 3)
+            else data_def,
             widget_size=WidgetSize.from_string(non_built["widget_size"]),
             action_widget_template_id=non_built["action_widget_template_id"],
             step_id=non_built["step_id"],
@@ -180,7 +187,6 @@ class PlaybookWidgetMetadata(
             present_if_empty=non_built["present_if_empty"],
             conditions_group=ConditionGroup.from_non_built(non_built["conditions_group"]),
             integration_name=non_built["integration_name"],
-
         )
 
     def to_built(self) -> BuiltPlaybookWidgetMetadata:

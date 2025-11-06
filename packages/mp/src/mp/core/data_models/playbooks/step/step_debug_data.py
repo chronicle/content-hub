@@ -19,9 +19,7 @@ from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.data_models.abc
 import mp.core.utils
-
-if TYPE_CHECKING:
-    from mp.core.custom_types import JsonString
+from mp.core.custom_types import JsonString
 
 from .step_debug_enrichment_data import (
     BuiltStepDebugEnrichmentData,
@@ -83,9 +81,11 @@ class StepDebugData(
             modification_time=built["ModificationTimeUnixTimeInMs"],
             result_value=built["ResultValue"],
             result_json=built["ResultJson"],
-            scope_entities_enrichment_data=DebugStepEnrichmentData.from_built(
-                built["ScopeEntitiesEnrichmentData"]
-            ),
+            scope_entities_enrichment_data=[
+                DebugStepEnrichmentData._from_built(d) for d in built["ScopeEntitiesEnrichmentData"]
+            ]
+            if built.get("ScopeEntitiesEnrichmentData")
+            else [],
         )
 
     @classmethod

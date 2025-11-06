@@ -27,8 +27,8 @@ class LogicalOperator(mp.core.data_models.abc.RepresentableEnum):
 
 
 class BuiltConditionGroup(TypedDict):
-    conditions: list[BuiltCondition]
-    logicalOperator: int
+    Conditions: list[BuiltCondition]
+    LogicalOperator: int
 
 
 class NonBuiltConditionGroup(TypedDict):
@@ -45,8 +45,8 @@ class ConditionGroup(
     @classmethod
     def _from_built(cls, built: BuiltConditionGroup) -> Self:
         return cls(
-            conditions=[Condition.from_built(condition) for condition in built["conditions"]],
-            logical_operator=LogicalOperator(built["logicalOperator"]),
+            conditions=[Condition.from_built(condition) for condition in built["Conditions"]],
+            logical_operator=LogicalOperator(built["LogicalOperator"]),
         )
 
     @classmethod

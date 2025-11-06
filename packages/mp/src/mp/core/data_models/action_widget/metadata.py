@@ -21,7 +21,7 @@ import pydantic
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
-from mp.core.data_models.condition import (
+from mp.core.data_models.playbooks.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
     NonBuiltConditionGroup,

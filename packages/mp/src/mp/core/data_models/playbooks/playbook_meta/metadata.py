@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
+import json
 
 import mp.core.constants
 import mp.core.data_models.abc
@@ -32,12 +33,6 @@ from .display_info import PlaybookType
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-class PlaybookCreationSource(mp.core.data_models.abc.RepresentableEnum):
-    USER_OR_API_INITIATED = 0
-    AI_GENERATED_FROM_ALERT = 1
-    AI_GENERATED_FROM_PROMPT = 2
 
 
 class BuiltPlaybookMetadata(TypedDict):
@@ -92,6 +87,12 @@ class NonBuiltPlaybookMetadata(TypedDict):
     permissions: list[NonBuiltAccessPermission]
 
 
+class PlaybookCreationSource(mp.core.data_models.abc.RepresentableEnum):
+    USER_OR_API_INITIATED = 0
+    AI_GENERATED_FROM_ALERT = 1
+    AI_GENERATED_FROM_PROMPT = 2
+
+
 class PlaybookMetadata(
     mp.core.data_models.abc.ComponentMetadata[BuiltPlaybookMetadata, NonBuiltPlaybookMetadata]
 ):
@@ -120,12 +121,22 @@ class PlaybookMetadata(
     simulation_clone: bool | None = None
 
     @classmethod
-    def from_built_path(cls, path: Path) -> list[Self]:
-        pass
+    def from_built_path(cls, path: Path) -> Self:
+        if not path.exists():
+            return []
+        built_playbook: str = path.read_text(encoding="utf-8")
+        try:
+            full_playbook = json.loads(built_playbook)
+            return cls._from_built(full_playbook["Definition"])
+        except (ValueError, json.JSONDecodeError) as e:
+            msg: str = f"Failed to load json from {path}"
+            raise ValueError(mp.core.utils.trim_values(msg)) from e
 
     @classmethod
-    def from_non_built_path(cls, path: Path) -> list[Self]:
-        pass
+    def from_non_built_path(cls, path: Path) -> Self:
+        definition_path: Path = path / mp.core.constants.DEFINITION_FILE
+        if definition_path.exists():
+            return cls._from_non_built_path(definition_path)
 
     @classmethod
     def _from_built(cls, built: BuiltPlaybookMetadata) -> Self:
