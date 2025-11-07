@@ -124,11 +124,7 @@ class Integration:
 
     def _validate_integration(self) -> None:
         """Perform various validations over the integration."""
-        self._raise_error_if_custom()
-        self._raise_error_if_disabled()
-        self._raise_error_if_no_ping_action()
         self._validate_python_version()
-        self._validate_default_mapping_exists_if_connectors_exists()
 
     @classmethod
     def from_built_path(cls, path: pathlib.Path) -> Integration:
@@ -234,25 +230,6 @@ class Integration:
             msg: str = f"Failed to load integration {path.name}"
             raise ValueError(msg) from e
 
-    def _raise_error_if_no_ping_action(self) -> None:
-        is_excluded_integration: bool = (
-            self.identifier in mp.core.constants.EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING
-        )
-        if not is_excluded_integration and not self.has_ping_action():
-            msg: str = f"{self.identifier} doesn't implement a 'ping' action"
-            raise RuntimeError(msg)
-
-    def _validate_default_mapping_exists_if_connectors_exists(self) -> None:
-        if (
-            self.identifier
-            in mp.core.constants.EXCLUDED_INTEGRATIONS_WITH_CONNECTORS_AND_NO_MAPPING
-        ):
-            return
-
-        if self.connectors_metadata and not self.mapping_rules:
-            msg: str = f"{self.identifier} has connectors but doesn't have default mapping rules"
-            raise RuntimeError(msg)
-
     def has_ping_action(self) -> bool:
         """Check whether the integration has a ping action.
 
@@ -283,23 +260,6 @@ class Integration:
             )
             raise ValueError(msg)
 
-    def _raise_error_if_custom(self) -> None:
-        """Raise an error if the integration is custom.
-
-        Raises:
-            RuntimeError: If the integration is custom.
-
-        """
-        if self.is_custom:
-            msg: str = (
-                f"{self.identifier} contains custom scripts:"
-                f"\nIs the integration custom: {self.metadata.is_custom}"
-                f"\nCustom actions: {', '.join(self._custom_actions) or None}"
-                f"\nCustom connectors: {', '.join(self._custom_connectors) or None}"
-                f"\nCustom jobs: {', '.join(self._custom_jobs) or None}"
-            )
-            raise RuntimeError(msg)
-
     def _raise_error_if_disabled(self) -> None:
         """Raise an error if the integration has disabled components.
 
@@ -317,21 +277,6 @@ class Integration:
             raise RuntimeError(msg)
 
     @property
-    def is_custom(self) -> bool:
-        """Check whether the integration is custom.
-
-        Returns:
-            whether the integration has any custom components in it
-
-        """
-        return (
-            self.metadata.is_custom
-            or self._has_custom_actions
-            or self._has_custom_connectors
-            or self._has_custom_jobs
-        )
-
-    @property
     def has_disabled_parts(self) -> bool:
         """Check whether the integration is custom.
 
@@ -342,36 +287,6 @@ class Integration:
         return (
             self._has_disabled_actions or self._has_disabled_connectors or self._has_disabled_jobs
         )
-
-    @property
-    def _has_custom_actions(self) -> bool:
-        """Check whether any of the actions are custom.
-
-        Returns:
-            Whether the integration has any custom actions in it.
-
-        """
-        return any(a.is_custom for a in self.actions_metadata.values())
-
-    @property
-    def _has_custom_connectors(self) -> bool:
-        """Check whether any of the connectors are custom.
-
-        Returns:
-            Whether the integration has any custom connectors in it.
-
-        """
-        return any(c.is_custom for c in self.connectors_metadata.values())
-
-    @property
-    def _has_custom_jobs(self) -> bool:
-        """Check whether any of the jobs are custom.
-
-        Returns:
-            Whether the integration has any custom jobs in it.
-
-        """
-        return any(j.is_custom for j in self.jobs_metadata.values())
 
     @property
     def _has_disabled_actions(self) -> bool:
@@ -402,36 +317,6 @@ class Integration:
 
         """
         return any(not j.is_enabled for j in self.jobs_metadata.values())
-
-    @property
-    def _custom_actions(self) -> list[str]:
-        """Get a list of custom actions.
-
-        Returns:
-            Custom action names
-
-        """
-        return [a.name for a in self.actions_metadata.values() if a.is_custom]
-
-    @property
-    def _custom_connectors(self) -> list[str]:
-        """Get a list of custom connectors.
-
-        Returns:
-            Custom connector names
-
-        """
-        return [c.name for c in self.connectors_metadata.values() if c.is_custom]
-
-    @property
-    def _custom_jobs(self) -> list[str]:
-        """Get a list of custom jobs.
-
-        Returns:
-            Custom job names
-
-        """
-        return [j.name for j in self.jobs_metadata.values() if j.is_custom]
 
     @property
     def _disabled_actions(self) -> list[str]:

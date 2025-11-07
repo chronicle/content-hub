@@ -321,9 +321,7 @@ def _run_validations(
         list[ValidationResults]: List contains the Validation results object
 
     """
-    paths: Iterator[pathlib.Path] = (
-        i for i in integration if i.exists() and mp.core.file_utils.is_integration(i)
-    )
+    paths: Iterator[pathlib.Path] = (i for i in integration if i.exists())
 
     processes: int = mp.core.config.get_processes_number()
     with multiprocessing.Pool(processes=processes) as pool:

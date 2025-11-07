@@ -27,11 +27,13 @@ def main():
         )
 
         incident = pager_duty.get_incident_ID(incident_key, email_from)
-        siemplify.LOGGER.info(incident)
+        output_message = "No Incident Found\n"
         siemplify.result.add_result_json(incident)
-        output_message = "Successfully retrieved Incident\n"
         result_value = True
         status = EXECUTION_STATE_COMPLETED
+        
+        if incident:
+            output_message = "Successfully retrieved Incident\n"
 
     except PagerDutyException as e:
         output_message = f"No Incident Found {e!s}\n"

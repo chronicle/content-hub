@@ -17,7 +17,6 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.rest.soar_api import get_traking_list_records_filtered
 
 
@@ -49,7 +48,7 @@ def main():
 
     try:
         siemplify.LOGGER.info("Getting custom list records")
-        records = get_traking_list_records_filtered(siemplify)
+        records = get_traking_list_records_filtered(siemplify, categories, string)
         records = records = (
             records.get("custom_lists", [])
             if isinstance(records, dict) else records
