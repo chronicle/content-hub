@@ -37,7 +37,7 @@ class BuiltStepDebugData(TypedDict):
     ResultJson: JsonString
     ScopeEntitiesEnrichmentDataJson: str
     ScopeEntitiesEnrichmentData: list[BuiltStepDebugEnrichmentData]
-    TenantId: NotRequired[str | None] #TODO WHAT IS IT?
+    TenantId: NotRequired[str | None]
 
 
 class NonBuiltStepDebugData(TypedDict):
@@ -86,6 +86,7 @@ class StepDebugData(
             ]
             if built.get("ScopeEntitiesEnrichmentData")
             else [],
+            tenant_id=built.get("TenantId"),
         )
 
     @classmethod
@@ -151,5 +152,4 @@ class StepDebugData(
             ],
             tenant_id=self.tenant_id,
         )
-        mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built

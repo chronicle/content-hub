@@ -183,7 +183,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             action_name=non_built["action_name"],
             parent_container_id=non_built.get("parent_container_id"),
             start_loop_step_id=non_built.get("start_loop_step_id"),
-            step_debug_data=StepDebugData.from_non_built(non_built["step_debug_data"]),
+            step_debug_data=StepDebugData.from_non_built(non_built["step_debug_data"]) if non_built.get("step_debug_data") else None,
             parallel_actions=[
                 cls.from_non_built(file_name, pa) for pa in non_built["parallel_actions"]
             ],

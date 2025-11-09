@@ -130,6 +130,7 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
                 PlaybookDefinitionIdentifier=self.playbook_id,
                 Type=self.type_.value,
                 AlertRuleType=self.alert_rule_type,
+                Roles=self.roles,
             ),
             Roles=self.role_names,
         )
@@ -140,10 +141,9 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
             name=self.name,
             creator=self.creator,
             playbook_id=self.playbook_id,
-            type=self.type_.to_string(),
+            type=self.type_.to_string().upper(),
             alert_rule_type=self.alert_rule_type,
             roles=self.roles,
             role_names=self.role_names,
         )
-        mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built

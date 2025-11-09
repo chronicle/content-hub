@@ -53,7 +53,6 @@ DEBUG_STEP_ENRICHMENT_DATA = DebugStepEnrichmentData(
     is_custom=False,
 )
 
-
 class TestDebugStepEnrichmentDataModel:
     def test_from_built_with_valid_data(self):
         assert DebugStepEnrichmentData.from_built(BUILT_STEP_DEBUG_ENRICHMENT_DATA) == DEBUG_STEP_ENRICHMENT_DATA
@@ -75,6 +74,12 @@ class TestDebugStepEnrichmentDataModel:
         with pytest.raises(ValueError):
             DebugStepEnrichmentData.from_non_built({})
 
+    def test_from_built_to_built_is_idempotent(self):
+        assert DebugStepEnrichmentData.from_built(BUILT_STEP_DEBUG_ENRICHMENT_DATA).to_built() == BUILT_STEP_DEBUG_ENRICHMENT_DATA
+
+    def test_from_non_built_to_non_built_is_idempotent(self):
+        assert DebugStepEnrichmentData.from_non_built(NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA).to_non_built() == NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA
+
 
 BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
     "OriginalStepIdentifier": "step_id",
@@ -82,10 +87,10 @@ BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
     "ModificationTimeUnixTimeInMs": 1234567890,
     "CreationTimeUnixTimeInMs": 1234567890,
     "ResultValue": "result_value",
-    "ResultJson": '''{"key": "value"}''',
+    "ResultJson": '{"key": "value"}',
     "ScopeEntitiesEnrichmentData": [BUILT_STEP_DEBUG_ENRICHMENT_DATA, BUILT_STEP_DEBUG_ENRICHMENT_DATA],
     "ScopeEntitiesEnrichmentDataJson": json.dumps([BUILT_STEP_DEBUG_ENRICHMENT_DATA, BUILT_STEP_DEBUG_ENRICHMENT_DATA]),
-    "TenantId": None
+    "TenantId": "some_id"
 }
 
 NON_BUILT_STEP_DEBUG_DATA: NonBuiltStepDebugData = {
@@ -94,8 +99,9 @@ NON_BUILT_STEP_DEBUG_DATA: NonBuiltStepDebugData = {
     "creation_time": 1234567890,
     "modification_time": 1234567890,
     "result_value": "result_value",
-    "result_json": '''{"key": "value"}''',
+    "result_json": '{"key": "value"}',
     "scope_entities_enrichment_data": [NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA, NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA],
+    "tenant_id": "some_id"
 }
 
 STEP_DEBUG_DATA = StepDebugData(
@@ -104,8 +110,43 @@ STEP_DEBUG_DATA = StepDebugData(
     creation_time=1234567890,
     modification_time=1234567890,
     result_value="result_value",
-    result_json='''{"key": "value"}''',
+    result_json='{"key": "value"}',
     scope_entities_enrichment_data=[DEBUG_STEP_ENRICHMENT_DATA, DEBUG_STEP_ENRICHMENT_DATA],
+    tenant_id="some_id"
+)
+
+BUILT_STEP_DEBUG_DATA_WITH_NONE: BuiltStepDebugData = {
+    "OriginalStepIdentifier": "step_id",
+    "OriginalWorkflowIdentifier": "playbook_id",
+    "ModificationTimeUnixTimeInMs": 1234567890,
+    "CreationTimeUnixTimeInMs": 1234567890,
+    "ResultValue": "result_value",
+    "ResultJson": '{"key": "value"}',
+    "ScopeEntitiesEnrichmentData": [],
+    "ScopeEntitiesEnrichmentDataJson": "[]",
+    "TenantId": None
+}
+
+NON_BUILT_STEP_DEBUG_DATA_WITH_NONE: NonBuiltStepDebugData = {
+    "step_id": "step_id",
+    "playbook_id": "playbook_id",
+    "creation_time": 1234567890,
+    "modification_time": 1234567890,
+    "result_value": "result_value",
+    "result_json": '{"key": "value"}',
+    "scope_entities_enrichment_data": [],
+    "tenant_id": None
+}
+
+STEP_DEBUG_DATA_WITH_NONE = StepDebugData(
+    step_id="step_id",
+    playbook_id="playbook_id",
+    creation_time=1234567890,
+    modification_time=1234567890,
+    result_value="result_value",
+    result_json='{"key": "value"}',
+    scope_entities_enrichment_data=[],
+    tenant_id=None
 )
 
 
@@ -117,10 +158,10 @@ class TestStepDebugDataModel:
         assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA) == STEP_DEBUG_DATA
 
     def test_to_built(self):
-        assert STEP_DEBUG_DATA.to_built() == BUILT_STEP_DEBUG_DATA
+        assert StepDebugData.from_built(BUILT_STEP_DEBUG_DATA).to_built() == BUILT_STEP_DEBUG_DATA
 
     def test_to_non_built(self):
-        assert STEP_DEBUG_DATA.to_non_built() == NON_BUILT_STEP_DEBUG_DATA
+        assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA).to_non_built() == NON_BUILT_STEP_DEBUG_DATA
 
     def test_from_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):
@@ -129,6 +170,24 @@ class TestStepDebugDataModel:
     def test_from_non_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):
             StepDebugData.from_non_built({})
+
+    def test_from_built_to_built_is_idempotent(self):
+        assert StepDebugData.from_built(BUILT_STEP_DEBUG_DATA).to_built() == BUILT_STEP_DEBUG_DATA
+
+    def test_from_non_built_to_non_built_is_idempotent(self):
+        assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA).to_non_built() == NON_BUILT_STEP_DEBUG_DATA
+
+    def test_from_built_with_none_values(self):
+        assert StepDebugData.from_built(BUILT_STEP_DEBUG_DATA_WITH_NONE) == STEP_DEBUG_DATA_WITH_NONE
+
+    def test_from_non_built_with_none_values(self):
+        assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA_WITH_NONE) == STEP_DEBUG_DATA_WITH_NONE
+
+    def test_to_built_with_none_values(self):
+        assert STEP_DEBUG_DATA_WITH_NONE.to_built() == BUILT_STEP_DEBUG_DATA_WITH_NONE
+
+    def test_to_non_built_with_none_values(self):
+        assert STEP_DEBUG_DATA_WITH_NONE.to_non_built() == NON_BUILT_STEP_DEBUG_DATA_WITH_NONE
 
 
 BUILT_STEP_PARAMETER: BuiltStepParameter = {
@@ -152,6 +211,27 @@ STEP_PARAMETER = StepParameter(
     value="value",
 )
 
+BUILT_STEP_PARAMETER_WITH_NONE: BuiltStepParameter = {
+    "ParentStepIdentifier": "step_id",
+    "ParentWorkflowIdentifier": "playbook_id",
+    "Name": "name",
+    "Value": None,
+}
+
+NON_BUILT_STEP_PARAMETER_WITH_NONE: NonBuiltStepParameter = {
+    "step_id": "step_id",
+    "playbook_id": "playbook_id",
+    "name": "name",
+    "value": None,
+}
+
+STEP_PARAMETER_WITH_NONE = StepParameter(
+    step_id="step_id",
+    playbook_id="playbook_id",
+    name="name",
+    value=None,
+)
+
 
 class TestStepParameterDataModel:
     def test_from_built_with_valid_data(self):
@@ -173,6 +253,24 @@ class TestStepParameterDataModel:
     def test_from_non_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):
             StepParameter.from_non_built({})
+
+    def test_from_built_to_built_is_idempotent(self):
+        assert StepParameter.from_built(BUILT_STEP_PARAMETER).to_built() == BUILT_STEP_PARAMETER
+
+    def test_from_non_built_to_non_built_is_idempotent(self):
+        assert StepParameter.from_non_built(NON_BUILT_STEP_PARAMETER).to_non_built() == NON_BUILT_STEP_PARAMETER
+
+    def test_from_built_with_none_values(self):
+        assert StepParameter.from_built(BUILT_STEP_PARAMETER_WITH_NONE) == STEP_PARAMETER_WITH_NONE
+
+    def test_from_non_built_with_none_values(self):
+        assert StepParameter.from_non_built(NON_BUILT_STEP_PARAMETER_WITH_NONE) == STEP_PARAMETER_WITH_NONE
+
+    def test_to_built_with_none_values(self):
+        assert STEP_PARAMETER_WITH_NONE.to_built() == BUILT_STEP_PARAMETER_WITH_NONE
+
+    def test_to_non_built_with_none_values(self):
+        assert STEP_PARAMETER_WITH_NONE.to_non_built() == NON_BUILT_STEP_PARAMETER_WITH_NONE
 
 
 BUILT_STEP: BuiltStep = {
@@ -250,6 +348,81 @@ STEP = Step(
     parallel_actions=[],
 )
 
+BUILT_STEP_WITH_NONE: BuiltStep = {
+    "Name": "name",
+    "Description": "description",
+    "Identifier": "identifier",
+    "OriginalStepIdentifier": "original_step_id",
+    "ParentWorkflowIdentifier": "playbook_id",
+    "ParentStepIdentifiers": [],
+    "PreviousResultCondition": None,
+    "InstanceName": "instance_name",
+    "IsAutomatic": True,
+    "IsSkippable": True,
+    "ActionProvider": "action_provider",
+    "ActionName": "action_name",
+    "Type": 0,
+    "Integration": "integration",
+    "Parameters": [],
+    "AutoSkipOnFailure": True,
+    "IsDebugMockData": True,
+    "StepDebugData": None,
+    "StartLoopStepIdentifier": None,
+    "ParallelActions": [],
+    "ParentContainerIdentifier": None,
+    "IsTouchedByAi": True,
+}
+
+NON_BUILT_STEP_WITH_NONE: NonBuiltStep = {
+    "name": "name",
+    "description": "description",
+    "identifier": "identifier",
+    "original_step_id": "original_step_id",
+    "playbook_id": "playbook_id",
+    "parent_step_ids": [],
+    "previous_result_condition": None,
+    "instance_name": "instance_name",
+    "is_automatic": True,
+    "is_skippable": True,
+    "action_provider": "action_provider",
+    "action_name": "action_name",
+    "integration": "integration",
+    "type": "ACTION",
+    "parameters": [],
+    "auto_skip_on_failure": True,
+    "is_debug_mock_data": True,
+    "step_debug_data": None,
+    "start_loop_step_id": None,
+    "parent_container_id": None,
+    "is_touched_by_ai": True,
+    "parallel_actions": [],
+}
+
+STEP_WITH_NONE = Step(
+    name="name",
+    description="description",
+    identifier="identifier",
+    original_step_id="original_step_id",
+    playbook_id="playbook_id",
+    parent_step_ids=[],
+    previous_result_condition=None,
+    instance_name="instance_name",
+    is_automatic=True,
+    is_skippable=True,
+    action_provider="action_provider",
+    action_name="action_name",
+    integration="integration",
+    type_=StepType.ACTION,
+    parameters=[],
+    auto_skip_on_failure=True,
+    is_debug_mock_data=True,
+    is_touched_by_ai=True,
+    step_debug_data=None,
+    start_loop_step_id=None,
+    parent_container_id=None,
+    parallel_actions=[],
+)
+
 
 class TestStepDataModel:
     def test_from_built_with_valid_data(self):
@@ -271,3 +444,21 @@ class TestStepDataModel:
     def test_from_non_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):
             Step.from_non_built("", {})
+
+    def test_from_built_to_built_is_idempotent(self):
+        assert Step._from_built("", BUILT_STEP).to_built() == BUILT_STEP
+
+    def test_from_non_built_to_non_built_is_idempotent(self):
+        assert Step._from_non_built("", NON_BUILT_STEP).to_non_built() == NON_BUILT_STEP
+
+    def test_from_built_with_none_values(self):
+        assert Step._from_built("", BUILT_STEP_WITH_NONE) == STEP_WITH_NONE
+
+    def test_from_non_built_with_none_values(self):
+        assert Step._from_non_built("", NON_BUILT_STEP_WITH_NONE) == STEP_WITH_NONE
+
+    def test_to_built_with_none_values(self):
+        assert STEP_WITH_NONE.to_built() == BUILT_STEP_WITH_NONE
+
+    def test_to_non_built_with_none_values(self):
+        assert STEP_WITH_NONE.to_non_built() == NON_BUILT_STEP_WITH_NONE
