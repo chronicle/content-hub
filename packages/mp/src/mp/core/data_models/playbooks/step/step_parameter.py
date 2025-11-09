@@ -114,5 +114,4 @@ class StepParameter(
             name=self.name,
             value=self.value,
         )
-        mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
