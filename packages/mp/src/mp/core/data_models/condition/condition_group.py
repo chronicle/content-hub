@@ -66,8 +66,8 @@ class ConditionGroup(
 
         """
         return BuiltConditionGroup(
-            conditions=[condition.to_built() for condition in self.conditions],
-            logicalOperator=self.logical_operator.value,
+            Conditions=[condition.to_built() for condition in self.conditions],
+            LogicalOperator=self.logical_operator.value,
         )
 
     def to_non_built(self) -> NonBuiltConditionGroup:
@@ -79,5 +79,5 @@ class ConditionGroup(
         """
         return NonBuiltConditionGroup(
             conditions=[condition.to_non_built() for condition in self.conditions],
-            logical_operator=self.logical_operator.to_string(),
+            logical_operator=self.logical_operator.to_string().upper(),
         )
