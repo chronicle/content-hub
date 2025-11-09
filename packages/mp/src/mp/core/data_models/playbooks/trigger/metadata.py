@@ -114,9 +114,9 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltTrigger) -> Self:
         return cls(
-            is_enabled=non_built["is_enabled"],
             identifier=non_built["identifier"],
-            conditions=Condition.from_non_built(non_built["conditions"]),
+            is_enabled=non_built["is_enabled"],
+            conditions=[Condition.from_non_built(non_built_cond) for non_built_cond in non_built["conditions"] if non_built_cond is not None],
             logical_operator=LogicalOperator.from_string(non_built["logical_operator"]),
             environments=non_built["environments"],
             playbook_id=non_built["playbook_id"],
@@ -131,7 +131,7 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
             DefinitionIdentifier=self.playbook_id,
             Type=self.type_.value,
             LogicalOperator=self.logical_operator.value,
-            Conditions=[Condition.to_built(c) for c in self.conditions],
+            Conditions=[Condition.to_built(c) for c in self.conditions if c is not None],
             Environments=self.environments,
             WorkflowName=self.playbook_name,
         )
@@ -141,11 +141,10 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
             identifier=self.identifier,
             is_enabled=self.is_enabled,
             playbook_id=self.playbook_id,
-            type_=self.type_.to_string(),
-            conditions=[Condition.to_non_built(c) for c in self.conditions],
-            logical_operator=self.logical_operator.to_string(),
+            type_=self.type_.to_string().upper(),
+            conditions=[Condition.to_non_built(c) for c in self.conditions if c is not None],
+            logical_operator=self.logical_operator.to_string().upper(),
             environments=self.environments,
             playbook_name=self.playbook_name,
         )
-        mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built

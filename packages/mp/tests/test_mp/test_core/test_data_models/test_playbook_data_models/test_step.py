@@ -426,10 +426,10 @@ STEP_WITH_NONE = Step(
 
 class TestStepDataModel:
     def test_from_built_with_valid_data(self):
-        assert Step._from_built("", BUILT_STEP) == STEP
+        assert Step.from_built("", BUILT_STEP) == STEP
 
     def test_from_non_built_with_valid_data(self):
-        assert Step._from_non_built("", NON_BUILT_STEP) == STEP
+        assert Step.from_non_built("", NON_BUILT_STEP) == STEP
 
     def test_to_built(self):
         assert STEP.to_built() == BUILT_STEP
@@ -446,16 +446,16 @@ class TestStepDataModel:
             Step.from_non_built("", {})
 
     def test_from_built_to_built_is_idempotent(self):
-        assert Step._from_built("", BUILT_STEP).to_built() == BUILT_STEP
+        assert Step.from_built("", BUILT_STEP).to_built() == BUILT_STEP
 
     def test_from_non_built_to_non_built_is_idempotent(self):
-        assert Step._from_non_built("", NON_BUILT_STEP).to_non_built() == NON_BUILT_STEP
+        assert Step.from_non_built("", NON_BUILT_STEP).to_non_built() == NON_BUILT_STEP
 
     def test_from_built_with_none_values(self):
-        assert Step._from_built("", BUILT_STEP_WITH_NONE) == STEP_WITH_NONE
+        assert Step.from_built("", BUILT_STEP_WITH_NONE) == STEP_WITH_NONE
 
     def test_from_non_built_with_none_values(self):
-        assert Step._from_non_built("", NON_BUILT_STEP_WITH_NONE) == STEP_WITH_NONE
+        assert Step.from_non_built("", NON_BUILT_STEP_WITH_NONE) == STEP_WITH_NONE
 
     def test_to_built_with_none_values(self):
         assert STEP_WITH_NONE.to_built() == BUILT_STEP_WITH_NONE
