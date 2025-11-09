@@ -139,7 +139,7 @@ class PlaybookMetadata(
             return cls._from_non_built_path(definition_path)
 
     @classmethod
-    def _from_built(cls, built: BuiltPlaybookMetadata) -> Self:
+    def _from_built(cls, _: str, built: BuiltPlaybookMetadata) -> Self:
         access_level: int | None = built.get("DefaultAccessLevel")
         creation_source: int | None = built.get("CreationSource")
         return cls(
@@ -175,7 +175,7 @@ class PlaybookMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltPlaybookMetadata) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookMetadata) -> Self:
         access_level: str | None = non_built.get("default_access_level")
         creation_source: str | None = non_built.get("creation_source")
         return cls(
@@ -231,8 +231,8 @@ class PlaybookMetadata(
             IsAutomatic=self.is_automatic,
             IsArchived=self.is_archived,
             LastEditor=self.last_editor,
-            DefaultAccessLevel=self.default_access_level.value,
-            CreationSource=self.creation_source.value,
+            DefaultAccessLevel=self.default_access_level.value if self.default_access_level is not None else None,
+            CreationSource=self.creation_source.value if self.creation_source is not None else None,
             SimulationClone=self.simulation_clone,
             Permissions=[p.to_built() for p in self.permissions],
         )
@@ -247,7 +247,7 @@ class PlaybookMetadata(
             debug_alert_identifier=self.debug_alert_identifier,
             debug_base_alert_identifier=self.debug_base_alert_identifier,
             is_debug_mode=self.is_debug_mode,
-            type=self.type_.to_string(),
+            type=self.type_.to_string().upper(),
             template_name=self.template_name,
             original_workflow_identifier=self.original_workflow_identifier,
             version_comment=self.version_comment,
@@ -258,10 +258,9 @@ class PlaybookMetadata(
             is_automatic=self.is_automatic,
             is_archived=self.is_archived,
             last_editor=self.last_editor,
-            default_access_level=self.default_access_level.to_string(),
-            creation_source=self.creation_source.to_string(),
+            default_access_level=self.default_access_level.to_string().upper() if self.default_access_level is not None else None,
+            creation_source=self.creation_source.to_string().upper() if self.creation_source is not None else None,
             simulation_clone=self.simulation_clone,
             permissions=[p.to_non_built() for p in self.permissions],
         )
-        mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
