@@ -15,79 +15,14 @@
 import pytest
 from mp.core.data_models.playbooks.overview.metadata import (
     Overview,
-    BuiltOverview,
-    NonBuiltOverview,
-    OverviewType,
 )
-
-BUILT_OVERVIEW: BuiltOverview = {
-    "OverviewTemplate": {
-        "Identifier": "identifier",
-        "Name": "name",
-        "Creator": "creator",
-        "PlaybookDefinitionIdentifier": "playbook_id",
-        "Type": 0,
-        "AlertRuleType": "alert_rule_type",
-        "Roles": [1, 2],
-    },
-    "Roles": ["role1", "role2"],
-}
-
-NON_BUILT_OVERVIEW: NonBuiltOverview = {
-    "identifier": "identifier",
-    "name": "name",
-    "creator": "creator",
-    "playbook_id": "playbook_id",
-    "type": "PLAYBOOK_DEFAULT",
-    "alert_rule_type": "alert_rule_type",
-    "roles": [1, 2],
-    "role_names": ["role1", "role2"],
-}
-
-OVERVIEW = Overview(
-    identifier="identifier",
-    name="name",
-    creator="creator",
-    playbook_id="playbook_id",
-    type_=OverviewType.PLAYBOOK_DEFAULT,
-    alert_rule_type="alert_rule_type",
-    roles=[1, 2],
-    role_names=["role1", "role2"],
-)
-
-BUILT_OVERVIEW_WITH_NONE: BuiltOverview = {
-    "OverviewTemplate": {
-        "Identifier": "identifier",
-        "Name": "name",
-        "Creator": None,
-        "PlaybookDefinitionIdentifier": "playbook_id",
-        "Type": 0,
-        "AlertRuleType": None,
-        "Roles": [1, 2],
-    },
-    "Roles": ["role1", "role2"],
-}
-
-NON_BUILT_OVERVIEW_WITH_NONE: NonBuiltOverview = {
-    "identifier": "identifier",
-    "name": "name",
-    "creator": None,
-    "playbook_id": "playbook_id",
-    "type": "PLAYBOOK_DEFAULT",
-    "alert_rule_type": None,
-    "roles": [1, 2],
-    "role_names": ["role1", "role2"],
-}
-
-OVERVIEW_WITH_NONE = Overview(
-    identifier="identifier",
-    name="name",
-    creator=None,
-    playbook_id="playbook_id",
-    type_=OverviewType.PLAYBOOK_DEFAULT,
-    alert_rule_type=None,
-    roles=[1, 2],
-    role_names=["role1", "role2"],
+from .constants import (
+    BUILT_OVERVIEW,
+    OVERVIEW,
+    NON_BUILT_OVERVIEW,
+    BUILT_OVERVIEW_WITH_NONE,
+    OVERVIEW_WITH_NONE,
+    NON_BUILT_OVERVIEW_WITH_NONE,
 )
 
 

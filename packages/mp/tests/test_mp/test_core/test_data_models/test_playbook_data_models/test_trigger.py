@@ -15,100 +15,14 @@
 import pytest
 from mp.core.data_models.playbooks.trigger.metadata import (
     Trigger,
-    BuiltTrigger,
-    NonBuiltTrigger,
-    TriggerType,
 )
-from mp.core.data_models.condition.condition_group import LogicalOperator
-from mp.core.data_models.condition.condition import (
-    Condition,
-    BuiltCondition,
-    NonBuiltCondition,
-    MatchType,
-)
-
-BUILT_CONDITION: BuiltCondition = {
-    "FieldName": "field_name",
-    "Value": "value",
-    "MatchType": 0,
-}
-
-NON_BUILT_CONDITION: NonBuiltCondition = {
-    "field_name": "field_name",
-    "value": "value",
-    "match_type": "EQUAL",
-}
-
-CONDITION = Condition(
-    field_name="field_name",
-    value="value",
-    match_type=MatchType.EQUAL,
-)
-
-BUILT_TRIGGER: BuiltTrigger = {
-    "Identifier": "identifier",
-    "IsEnabled": True,
-    "DefinitionIdentifier": "playbook_id",
-    "Type": 0,
-    "LogicalOperator": 0,
-    "Conditions": [BUILT_CONDITION, BUILT_CONDITION],
-    "Environments": ["env1", "env2"],
-    "WorkflowName": "playbook_name",
-}
-
-NON_BUILT_TRIGGER: NonBuiltTrigger = {
-    "identifier": "identifier",
-    "is_enabled": True,
-    "playbook_id": "playbook_id",
-    "type_": "VENDOR_NAME",
-    "conditions": [NON_BUILT_CONDITION, NON_BUILT_CONDITION],
-    "logical_operator": "AND",
-    "environments": ["env1", "env2"],
-    "playbook_name": "playbook_name",
-}
-
-TRIGGER = Trigger(
-    identifier="identifier",
-    is_enabled=True,
-    playbook_id="playbook_id",
-    type_=TriggerType.VENDOR_NAME,
-    conditions=[CONDITION, CONDITION],
-    logical_operator=LogicalOperator.AND,
-    environments=["env1", "env2"],
-    playbook_name="playbook_name",
-)
-
-BUILT_TRIGGER_WITH_NONE: BuiltTrigger = {
-    "Identifier": "identifier",
-    "IsEnabled": True,
-    "DefinitionIdentifier": "playbook_id",
-    "Type": 0,
-    "LogicalOperator": 0,
-    "Conditions": [],
-    "Environments": [],
-    "WorkflowName": None,
-}
-
-NON_BUILT_TRIGGER_WITH_NONE: NonBuiltTrigger = {
-    "identifier": "identifier",
-    "is_enabled": True,
-    "playbook_id": "playbook_id",
-    "type_": "VENDOR_NAME",
-    "conditions": [],
-    "logical_operator": "AND",
-    "environments": [],
-    "playbook_name": None,
-}
-
-TRIGGER_WITH_NONE = Trigger(
-    identifier="identifier",
-    is_enabled=True,
-    playbook_id="playbook_id",
-    type_=TriggerType.VENDOR_NAME,
-    conditions=[],
-    logical_operator=LogicalOperator.AND,
-    environments=[],
-    playbook_name=None,
+from .constants import (
+    BUILT_TRIGGER,
+    TRIGGER,
+    NON_BUILT_TRIGGER,
+    BUILT_TRIGGER_WITH_NONE,
+    TRIGGER_WITH_NONE,
+    NON_BUILT_TRIGGER_WITH_NONE,
 )
 
 

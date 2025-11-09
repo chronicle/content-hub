@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import rich
 from pathlib import Path
 from typing import NotRequired, Self, TypedDict
 
@@ -72,6 +71,7 @@ class NonBuiltWidgetDataDefinition(TypedDict):
     safe_rendering: bool
     type: str
     widget_definition_scope: str
+    html_content: NotRequired[str]
 
 
 class HtmlWidgetDataDefinition(
@@ -95,12 +95,12 @@ class HtmlWidgetDataDefinition(
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:
-        rich.print(built)
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
             widget_definition_scope=WidgetDefinitionScope(built["widgetDefinitionScope"]),
             type=WidgetType(built["type"]),
+            html_content=built["htmlContent"] if built.get("htmlContent") else None,
         )
 
     @classmethod
@@ -112,6 +112,7 @@ class HtmlWidgetDataDefinition(
                 non_built["widget_definition_scope"],
             ),
             type=WidgetType.from_string(non_built["type"]),
+            html_content=non_built["html_content"] if non_built.get("html_content") else None,
         )
 
     def to_built(self) -> BuiltWidgetDataDefinition:
@@ -126,6 +127,7 @@ class HtmlWidgetDataDefinition(
             safeRendering=self.safe_rendering,
             widgetDefinitionScope=self.widget_definition_scope.value,
             type=self.type.value,
+            htmlContent=self.html_content,
         )
 
     def to_non_built(self) -> NonBuiltWidgetDataDefinition:
@@ -138,6 +140,7 @@ class HtmlWidgetDataDefinition(
         return NonBuiltWidgetDataDefinition(
             html_height=self.html_height,
             safe_rendering=self.safe_rendering,
-            widget_definition_scope=self.widget_definition_scope.to_string(),
-            type=self.type.to_string(),
+            widget_definition_scope=self.widget_definition_scope.to_string().upper(),
+            type=self.type.to_string().upper(),
+            html_content=self.html_content,
         )
