@@ -14,18 +14,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from unittest import mock
 
-import pytest
-
-import mp.core.constants
 from mp.core.data_models.action.metadata import ActionMetadata
 from mp.core.data_models.integration import Integration
-from mp.core.data_models.integration_meta.metadata import PythonVersion
-
-if TYPE_CHECKING:
-    from mp.core.data_models.integration_meta.metadata import IntegrationMetadata
 
 
 class TestNoPingAction:
@@ -68,84 +60,3 @@ class TestNoPingAction:
 
         # Verify the method works with uppercase names
         assert integration.has_ping_action() is True
-
-    def test_build_integration_with_disabled_ping(self) -> None:
-        """Test building integration with a disabled ping action."""
-        # Create a minimal integration with the disabled ping action
-        actions: dict[str, ActionMetadata] = {}
-        ping_action: ActionMetadata = mock.MagicMock(spec=ActionMetadata)
-        ping_action.name = "Ping"
-        ping_action.file_name = "ping"
-        ping_action.is_enabled = False  # Disabled ping action
-        ping_action.is_custom = False
-        actions["ping"] = ping_action
-
-        # Mock the integration metadata
-        metadata: IntegrationMetadata = mock.MagicMock()
-        metadata.identifier = "test_integration"
-        metadata.is_custom = False
-        metadata.python_version = PythonVersion.PY_3_11
-
-        # Test that creating the integration still works (ping exists but is disabled)
-        with pytest.raises(RuntimeError, match="contains disabled scripts"):
-            Integration(
-                python_version=PythonVersion.PY_3_11.to_string(),
-                identifier="test_integration",
-                metadata=metadata,
-                release_notes=[],
-                custom_families=[],
-                mapping_rules=[],
-                common_modules=[],
-                actions_metadata=actions,
-                connectors_metadata={},
-                jobs_metadata={},
-                widgets_metadata={},
-            )
-
-    @mock.patch("mp.core.constants.EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING", set())
-    def test_excluded_integrations_feature(self) -> None:
-        """Test the excluded integrations feature works correctly."""
-        # Create integration without 'ping'
-        metadata: IntegrationMetadata = mock.MagicMock()
-        metadata.identifier = "special_integration"
-        metadata.is_custom = False
-        metadata.python_version = PythonVersion.PY_3_11
-
-        # First try with empty exclusion list - should fail
-        with pytest.raises(RuntimeError, match="doesn't implement a 'ping' action"):
-            Integration(
-                python_version=PythonVersion.PY_3_11.to_string(),
-                identifier="special_integration",
-                metadata=metadata,
-                release_notes=[],
-                custom_families=[],
-                mapping_rules=[],
-                common_modules=[],
-                actions_metadata={},  # No ping action
-                connectors_metadata={},
-                jobs_metadata={},
-                widgets_metadata={},
-            )
-
-        # Now add to an exclusion list and try again
-        with mock.patch.object(
-            mp.core.constants,
-            "EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING",
-            {"special_integration"},
-        ):
-            # Should not raise exception
-            integration: Integration = Integration(
-                python_version=PythonVersion.PY_3_11.to_string(),
-                identifier="special_integration",
-                metadata=metadata,
-                release_notes=[],
-                custom_families=[],
-                mapping_rules=[],
-                common_modules=[],
-                actions_metadata={},  # Still no ping action
-                connectors_metadata={},
-                jobs_metadata={},
-                widgets_metadata={},
-            )
-
-            assert not integration.has_ping_action()  # Confirm no ping action

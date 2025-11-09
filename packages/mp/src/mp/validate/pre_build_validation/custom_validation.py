@@ -45,7 +45,14 @@ class NoCustomComponentsInIntegrationValidation:
 
         """
         integration_def: YamlFileContent = load_integration_def(validation_path)
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(validation_path)
+        components: list[str] = [
+            constants.ACTIONS_DIR,
+            constants.JOBS_DIR,
+            constants.CONNECTORS_DIR,
+        ]
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
+            validation_path, *components
+        )
 
         is_integration_custom: bool = _is_custom(integration_def)
 

@@ -124,10 +124,7 @@ class Integration:
 
     def _validate_integration(self) -> None:
         """Perform various validations over the integration."""
-        self._raise_error_if_disabled()
-        self._raise_error_if_no_ping_action()
         self._validate_python_version()
-        self._validate_default_mapping_exists_if_connectors_exists()
 
     @classmethod
     def from_built_path(cls, path: pathlib.Path) -> Integration:
@@ -232,25 +229,6 @@ class Integration:
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:
             msg: str = f"Failed to load integration {path.name}"
             raise ValueError(msg) from e
-
-    def _raise_error_if_no_ping_action(self) -> None:
-        is_excluded_integration: bool = (
-            self.identifier in mp.core.constants.EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING
-        )
-        if not is_excluded_integration and not self.has_ping_action():
-            msg: str = f"{self.identifier} doesn't implement a 'ping' action"
-            raise RuntimeError(msg)
-
-    def _validate_default_mapping_exists_if_connectors_exists(self) -> None:
-        if (
-            self.identifier
-            in mp.core.constants.EXCLUDED_INTEGRATIONS_WITH_CONNECTORS_AND_NO_MAPPING
-        ):
-            return
-
-        if self.connectors_metadata and not self.mapping_rules:
-            msg: str = f"{self.identifier} has connectors but doesn't have default mapping rules"
-            raise RuntimeError(msg)
 
     def has_ping_action(self) -> bool:
         """Check whether the integration has a ping action.

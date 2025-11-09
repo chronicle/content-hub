@@ -91,8 +91,10 @@ def load_integration_def(integration_path: pathlib.Path) -> YamlFileContent:
         raise FatalValidationError(msg) from e
 
 
-def load_components_defs(integration_path: pathlib.Path) -> dict[str, list[YamlFileContent]]:
-    """Load all component's definition files, organized by component type.
+def load_components_defs(
+    integration_path: pathlib.Path, *components: str
+) -> dict[str, list[YamlFileContent]]:
+    """Load component's definition files, organized by component type.
 
     Returns:
         a dict mapping component type to a list of each component's definition content.
@@ -101,13 +103,16 @@ def load_components_defs(integration_path: pathlib.Path) -> dict[str, list[YamlF
         FatalValidationError: if any component definition files cannot be loaded.
 
     """
+    valid_components: set[str] = {
+        constants.ACTIONS_DIR,
+        constants.CONNECTORS_DIR,
+        constants.JOBS_DIR,
+    }
+    filtered_components: set[str] = set(components).intersection(valid_components)
+
     try:
         component_defs: dict[str, list[YamlFileContent]] = {}
-        for component_dir_name in [
-            constants.ACTIONS_DIR,
-            constants.CONNECTORS_DIR,
-            constants.JOBS_DIR,
-        ]:
+        for component_dir_name in filtered_components:
             component_dir: pathlib.Path = integration_path / component_dir_name
             if component_dir.is_dir():
                 component_defs[component_dir_name] = [
