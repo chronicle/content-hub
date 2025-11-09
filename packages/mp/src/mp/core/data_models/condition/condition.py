@@ -72,9 +72,9 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
 
         """
         return BuiltCondition(
-            fieldName=self.field_name,
-            value=self.value,
-            matchType=self.match_type.value,
+            FieldName=self.field_name,
+            Value=self.value,
+            MatchType=self.match_type.value,
         )
 
     def to_non_built(self) -> NonBuiltCondition:
@@ -87,5 +87,5 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
         return NonBuiltCondition(
             field_name=self.field_name,
             value=self.value,
-            match_type=self.match_type.to_string(),
+            match_type=self.match_type.to_string().upper(),
         )
