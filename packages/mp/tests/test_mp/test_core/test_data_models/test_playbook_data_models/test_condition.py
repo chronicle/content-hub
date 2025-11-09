@@ -15,33 +15,20 @@
 import pytest
 from mp.core.data_models.condition.condition import (
     Condition,
-    BuiltCondition,
-    NonBuiltCondition,
-    MatchType,
 )
 from mp.core.data_models.condition.condition_group import (
     ConditionGroup,
-    BuiltConditionGroup,
-    NonBuiltConditionGroup,
-    LogicalOperator,
 )
-
-BUILT_CONDITION: BuiltCondition = {
-    "FieldName": "field_name",
-    "Value": "value",
-    "MatchType": 0,
-}
-
-NON_BUILT_CONDITION: NonBuiltCondition = {
-    "field_name": "field_name",
-    "value": "value",
-    "match_type": "EQUAL",
-}
-
-CONDITION = Condition(
-    field_name="field_name",
-    value="value",
-    match_type=MatchType.EQUAL,
+from .constants import (
+    BUILT_CONDITION,
+    NON_BUILT_CONDITION,
+    CONDITION,
+    BUILT_CONDITION_GROUP,
+    NON_BUILT_CONDITION_GROUP,
+    CONDITION_GROUP,
+    BUILT_CONDITION_GROUP_WITH_NONE,
+    NON_BUILT_CONDITION_GROUP_WITH_NONE,
+    CONDITION_GROUP_WITH_NONE,
 )
 
 
@@ -71,37 +58,6 @@ class TestConditionDataModel:
 
     def test_from_non_built_to_non_built_is_idempotent(self):
         assert Condition.from_non_built(NON_BUILT_CONDITION).to_non_built() == NON_BUILT_CONDITION
-
-
-BUILT_CONDITION_GROUP: BuiltConditionGroup = {
-    "Conditions": [BUILT_CONDITION, BUILT_CONDITION],
-    "LogicalOperator": 0,
-}
-
-NON_BUILT_CONDITION_GROUP: NonBuiltConditionGroup = {
-    "conditions": [NON_BUILT_CONDITION, NON_BUILT_CONDITION],
-    "logical_operator": "AND",
-}
-
-CONDITION_GROUP = ConditionGroup(
-    conditions=[CONDITION, CONDITION],
-    logical_operator=LogicalOperator.AND,
-)
-
-BUILT_CONDITION_GROUP_WITH_NONE: BuiltConditionGroup = {
-    "Conditions": [],
-    "LogicalOperator": 0,
-}
-
-NON_BUILT_CONDITION_GROUP_WITH_NONE: NonBuiltConditionGroup = {
-    "conditions": [],
-    "logical_operator": "AND",
-}
-
-CONDITION_GROUP_WITH_NONE = ConditionGroup(
-    conditions=[],
-    logical_operator=LogicalOperator.AND,
-)
 
 
 class TestConditionGroupDataModel:
