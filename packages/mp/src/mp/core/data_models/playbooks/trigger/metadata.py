@@ -116,7 +116,11 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
         return cls(
             identifier=non_built["identifier"],
             is_enabled=non_built["is_enabled"],
-            conditions=[Condition.from_non_built(non_built_cond) for non_built_cond in non_built["conditions"] if non_built_cond is not None],
+            conditions=[
+                Condition.from_non_built(non_built_cond)
+                for non_built_cond in non_built["conditions"]
+                if non_built_cond is not None
+            ],
             logical_operator=LogicalOperator.from_string(non_built["logical_operator"]),
             environments=non_built["environments"],
             playbook_id=non_built["playbook_id"],

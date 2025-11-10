@@ -39,12 +39,12 @@ from .integration_utils import (
     should_build_integrations,
 )
 from .playbook_utils import should_build_playbooks
+from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from mp.core.config import RuntimeParams
-    from mp.core.custom_types import RepositoryType
 
 
 __all__: list[str] = ["app", "build"]
@@ -180,8 +180,8 @@ def build(  # noqa: PLR0913
     )
     params.validate()
 
-    if should_build_playbooks(playbook, repository):
-        build_playbooks(playbook)
+    # if should_build_playbooks(playbook, repository):
+    #     build_playbooks(playbook)
 
     if should_build_integrations(integration, repository):
         build_integrations(integration, integration_group, repository, deconstruct=deconstruct)

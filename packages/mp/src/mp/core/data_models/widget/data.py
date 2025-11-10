@@ -51,19 +51,19 @@ class WidgetDefinitionScope(mp.core.data_models.abc.RepresentableEnum):
     BOTH = 2
 
 
+class WidgetSize(mp.core.data_models.abc.RepresentableEnum):
+    HALF_WIDTH = 1
+    FULL_WIDTH = 2
+    THIRD_WIDTH = 3
+    TWO_THIRDS_WIDTH = 4
+
+
 class BuiltWidgetDataDefinition(TypedDict):
     htmlHeight: int
     safeRendering: bool
     type: int
     widgetDefinitionScope: int
     htmlContent: NotRequired[str]
-
-
-class WidgetSize(mp.core.data_models.abc.RepresentableEnum):
-    HALF_WIDTH = 1
-    FULL_WIDTH = 2
-    THIRD_WIDTH = 3
-    TWO_THIRDS_WIDTH = 4
 
 
 class NonBuiltWidgetDataDefinition(TypedDict):

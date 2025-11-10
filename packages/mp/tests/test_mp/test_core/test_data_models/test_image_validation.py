@@ -14,8 +14,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+
 from unittest import mock
+from pathlib import Path
 
 import pytest
 from PIL import UnidentifiedImageError
@@ -32,21 +33,21 @@ class TestValidateSvgContent:
         )
         assert validate_svg_content(svg_path)
 
-    @mock.patch("Path.read_text")
+    @mock.patch("pathlib.Path.read_text")
     def test_empty_svg_raises_error(self, mock_read_text: mock.MagicMock) -> None:
         """Test that an empty SVG file raises a ValueError."""
         mock_read_text.return_value = ""
         with pytest.raises(ValueError, match="SVG file is empty"):
             validate_svg_content(Path("fake.svg"))
 
-    @mock.patch("Path.read_text")
+    @mock.patch("pathlib.Path.read_text")
     def test_invalid_xml_svg_raises_error(self, mock_read_text: mock.MagicMock) -> None:
         """Test that a non-XML file raises a ValueError."""
         mock_read_text.return_value = "this is not xml"
         with pytest.raises(ValueError, match="Invalid XML syntax"):
             validate_svg_content(Path("fake.svg"))
 
-    @mock.patch("Path.read_text")
+    @mock.patch("pathlib.Path.read_text")
     def test_invalid_root_tag(self, mock_read_text: mock.MagicMock) -> None:
         """Test that an XML file without an <svg> root tag fails."""
         mock_read_text.return_value = "<doc><item/></doc>"

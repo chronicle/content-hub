@@ -82,10 +82,16 @@ HTML_WIDGET_DATA_DEFINITION_WITH_NONE = HtmlWidgetDataDefinition(
 
 class TestHtmlWidgetDataDefinitionModel:
     def test_from_built_with_valid_data(self):
-        assert HtmlWidgetDataDefinition.from_built("", BUILT_WIDGET_DATA_DEFINITION) == HTML_WIDGET_DATA_DEFINITION
+        assert (
+            HtmlWidgetDataDefinition.from_built("", BUILT_WIDGET_DATA_DEFINITION)
+            == HTML_WIDGET_DATA_DEFINITION
+        )
 
     def test_from_non_built_with_valid_data(self):
-        assert HtmlWidgetDataDefinition.from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION) == HTML_WIDGET_DATA_DEFINITION
+        assert (
+            HtmlWidgetDataDefinition.from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION)
+            == HTML_WIDGET_DATA_DEFINITION
+        )
 
     def test_to_built(self):
         assert HTML_WIDGET_DATA_DEFINITION.to_built() == BUILT_WIDGET_DATA_DEFINITION
@@ -94,19 +100,39 @@ class TestHtmlWidgetDataDefinitionModel:
         assert HTML_WIDGET_DATA_DEFINITION.to_non_built() == NON_BUILT_WIDGET_DATA_DEFINITION
 
     def test_from_built_with_none_values(self):
-        assert HtmlWidgetDataDefinition._from_built("", BUILT_WIDGET_DATA_DEFINITION_WITH_NONE) == HTML_WIDGET_DATA_DEFINITION_WITH_NONE
+        assert (
+            HtmlWidgetDataDefinition._from_built("", BUILT_WIDGET_DATA_DEFINITION_WITH_NONE)
+            == HTML_WIDGET_DATA_DEFINITION_WITH_NONE
+        )
 
     def test_from_non_built_with_none_values(self):
-        assert HtmlWidgetDataDefinition._from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE) == HTML_WIDGET_DATA_DEFINITION_WITH_NONE
+        assert (
+            HtmlWidgetDataDefinition._from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE)
+            == HTML_WIDGET_DATA_DEFINITION_WITH_NONE
+        )
 
     def test_to_built_with_none_values(self):
-        assert HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_built() == BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
+        assert (
+            HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_built()
+            == BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
+        )
 
     def test_to_non_built_with_none_values(self):
-        assert HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_non_built() == NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
+        assert (
+            HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_non_built()
+            == NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
+        )
 
     def test_from_built_to_built_is_idempotent(self):
-        assert HtmlWidgetDataDefinition._from_built("", BUILT_WIDGET_DATA_DEFINITION).to_built() == BUILT_WIDGET_DATA_DEFINITION
+        assert (
+            HtmlWidgetDataDefinition._from_built("", BUILT_WIDGET_DATA_DEFINITION).to_built()
+            == BUILT_WIDGET_DATA_DEFINITION
+        )
 
     def test_from_non_built_to_non_built_is_idempotent(self):
-        assert HtmlWidgetDataDefinition._from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION).to_non_built() == NON_BUILT_WIDGET_DATA_DEFINITION
+        assert (
+            HtmlWidgetDataDefinition._from_non_built(
+                "", NON_BUILT_WIDGET_DATA_DEFINITION
+            ).to_non_built()
+            == NON_BUILT_WIDGET_DATA_DEFINITION
+        )
