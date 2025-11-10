@@ -87,7 +87,7 @@ class PlaybookWidgetMetadata(
     order: int
     template_identifier: str
     type: WidgetType
-    data_definition: HtmlWidgetDataDefinition | pydantic.Json[Any] 
+    data_definition: HtmlWidgetDataDefinition | pydantic.Json[Any]
     widget_size: WidgetSize
     action_widget_template_id: str | None
     step_id: str | None
@@ -150,7 +150,9 @@ class PlaybookWidgetMetadata(
             order=built["Order"],
             template_identifier=built["TemplateIdentifier"],
             type=WidgetType(built["Type"]),
-            data_definition=HtmlWidgetDataDefinition.from_built(file_name, data_json) if built["Type"] == WidgetType.HTML.value else built["DataDefinitionJson"],
+            data_definition=HtmlWidgetDataDefinition.from_built(file_name, data_json)
+            if built["Type"] == WidgetType.HTML.value
+            else built["DataDefinitionJson"],
             widget_size=WidgetSize(built["GridColumns"]),
             action_widget_template_id=built["ActionWidgetTemplateIdentifier"],
             step_id=built["StepIdentifier"],
@@ -171,7 +173,9 @@ class PlaybookWidgetMetadata(
             order=non_built["order"],
             template_identifier=non_built["template_identifier"],
             type=WidgetType.from_string(non_built["type"]),
-            data_definition=HtmlWidgetDataDefinition.from_non_built("", non_built["data_definition"])
+            data_definition=HtmlWidgetDataDefinition.from_non_built(
+                "", non_built["data_definition"]
+            )
             if non_built["type"] == WidgetType.HTML.name
             else non_built["data_definition"],
             widget_size=WidgetSize.from_string(non_built["widget_size"]),
