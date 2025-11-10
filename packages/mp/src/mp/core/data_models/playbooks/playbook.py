@@ -171,6 +171,7 @@ class Playbook:
             OriginalWorkflowIdentifier=built_playbook_meta["OriginalWorkflowIdentifier"],
             VersionComment=built_playbook_meta["VersionComment"],
             VersionCreator=built_playbook_meta["VersionCreator"],
+            LastEditor=built_playbook_meta["LastEditor"],
             Creator=built_playbook_meta["Creator"],
             Priority=built_playbook_meta["Priority"],
             Category=built_playbook_meta["Category"],
@@ -184,7 +185,7 @@ class Playbook:
 
         built_playbook_overview_template_details: list[BuiltPlaybookOverviewTemplateDetails] = [
             BuiltPlaybookOverviewTemplateDetails(
-                OverviewTemplate=overview.to_built(), Rols=overview.role_names
+                OverviewTemplate=overview.to_built(), Roles=overview.role_names
             )
             for overview in self.overviews
         ]
@@ -205,13 +206,3 @@ class Playbook:
             release_notes=[rn.to_non_built() for rn in self.release_notes],
             meta_data=self.meta_data.to_non_built(),
         )
-
-
-if __name__ == "__main__":
-    abstract_playbook = Playbook.from_built_path(
-        Path(
-            "/Users/amitjoseph/Desktop/Google-Sec-Ops/content-hub/packages/mp/src/mp/core/data_models/playbooks/built_playbook_example.json"
-        )
-    )
-    built_playbook = abstract_playbook.to_built()
-    non_built_playbook = abstract_playbook.to_non_built()
