@@ -123,11 +123,11 @@ class HtmlWidgetDataDefinition(
 
         """
         return BuiltWidgetDataDefinition(
+            htmlContent=self.html_content,
             htmlHeight=self.html_height,
             safeRendering=self.safe_rendering,
-            widgetDefinitionScope=self.widget_definition_scope.value,
             type=self.type.value,
-            htmlContent=self.html_content,
+            widgetDefinitionScope=self.widget_definition_scope.value,
         )
 
     def to_non_built(self) -> NonBuiltWidgetDataDefinition:

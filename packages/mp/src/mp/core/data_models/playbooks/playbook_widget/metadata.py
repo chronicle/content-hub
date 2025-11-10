@@ -142,7 +142,7 @@ class PlaybookWidgetMetadata(
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
-        data_def = json.loads(built["DataDefinitionJson"])
+        data_json: str = json.loads(built["DataDefinitionJson"])
         return cls(
             title=built["Title"],
             description=built["Description"],
@@ -150,9 +150,7 @@ class PlaybookWidgetMetadata(
             order=built["Order"],
             template_identifier=built["TemplateIdentifier"],
             type=WidgetType(built["Type"]),
-            data_definition=built[
-                "DataDefinitionJson"
-            ],  # TODO REMEMBER TO ASK TAL HtmlWidgetDataDefinition.from_built("",data_def) if built["Type"] == WidgetType.HTML.value else data_def
+            data_definition=HtmlWidgetDataDefinition.from_built("", data_json) if built["Type"] == WidgetType.HTML.value else data_json,
             widget_size=WidgetSize(built["GridColumns"]),
             action_widget_template_id=built["ActionWidgetTemplateIdentifier"],
             step_id=built["StepIdentifier"],
@@ -165,8 +163,7 @@ class PlaybookWidgetMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
-        data_def = json.loads(non_built["data_definition"])
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
         return cls(
             title=non_built["title"],
             description=non_built["description"],
@@ -174,9 +171,9 @@ class PlaybookWidgetMetadata(
             order=non_built["order"],
             template_identifier=non_built["template_identifier"],
             type=WidgetType.from_string(non_built["type"]),
-            data_definition=NonBuiltWidgetDataDefinition.from_non_built(data_def)
-            if int(non_built["type"] == 3)
-            else data_def,
+            data_definition=HtmlWidgetDataDefinition.from_non_built("", non_built["data_definition"])
+            if non_built["type"] == WidgetType.HTML.name
+            else non_built["data_definition"],
             widget_size=WidgetSize.from_string(non_built["widget_size"]),
             action_widget_template_id=non_built["action_widget_template_id"],
             step_id=non_built["step_id"],
@@ -202,12 +199,14 @@ class PlaybookWidgetMetadata(
             Order=self.order,
             TemplateIdentifier=self.template_identifier,
             Type=self.type.value,
-            DataDefinitionJson=self.data_definition,
+            BlockStepInstanceName=self.block_step_instance_name,
+            DataDefinitionJson=json.dumps(self.data_definition.to_built()),
             GridColumns=self.widget_size.value,
             ActionWidgetTemplateIdentifier=self.action_widget_template_id,
             StepIdentifier=self.step_id,
             BlockStepIdentifier=self.block_step_id,
             PresentIfEmpty=self.present_if_empty,
+            StepIntegration=self.step_integration,
             ConditionsGroup=self.conditions_group.to_built(),
             IntegrationName=self.integration_name,
         )
@@ -225,9 +224,11 @@ class PlaybookWidgetMetadata(
             identifier=self.identifier,
             order=self.order,
             template_identifier=self.template_identifier,
-            type=self.type.to_string(),
-            data_definition=self.data_definition,
-            widget_size=self.widget_size.to_string(),
+            type=self.type.to_string().upper(),
+            block_step_instance_name=self.block_step_instance_name,
+            data_definition=self.data_definition.to_non_built(),
+            widget_size=self.widget_size.to_string().upper(),
+            step_integration=self.step_integration,
             action_widget_template_id=self.action_widget_template_id,
             step_id=self.step_id,
             block_step_id=self.block_step_id,
@@ -235,5 +236,4 @@ class PlaybookWidgetMetadata(
             conditions_group=self.conditions_group.to_non_built(),
             integration_name=self.integration_name,
         )
-        mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
