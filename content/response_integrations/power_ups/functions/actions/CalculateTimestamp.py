@@ -18,6 +18,10 @@ import datetime
 from typing import TYPE_CHECKING
 
 import arrow
+from TIPCommon.base.action import Action
+from TIPCommon.extraction import extract_action_param
+from TIPCommon.validation import ParameterValidator
+
 from ..core.constants import (
     CALCULATE_TIMESTAMP_SCRIPT_NAME,
     DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR,
@@ -25,9 +29,6 @@ from ..core.constants import (
     TIMESTAMP_DELTA_REGEX,
     InputType,
 )
-from TIPCommon.base.action import Action
-from TIPCommon.extraction import extract_action_param
-from TIPCommon.validation import ParameterValidator
 
 if TYPE_CHECKING:
     from typing import Any, NoReturn
