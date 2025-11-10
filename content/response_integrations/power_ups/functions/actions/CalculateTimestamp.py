@@ -15,56 +15,47 @@
 from __future__ import annotations
 
 import datetime
-import re
 from typing import TYPE_CHECKING
 
 import arrow
+from ..core.constants import (
+    CALCULATE_TIMESTAMP_SCRIPT_NAME,
+    DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR,
+    DEFAULT_TIMESTAMP_DELTA,
+    TIMESTAMP_DELTA_REGEX,
+    InputType,
+)
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
 
 if TYPE_CHECKING:
-    from typing import NoReturn
-    
+    from typing import Any, NoReturn
+
     from TIPCommon.types import SingleJson
-
-SCRIPT_NAME = "Calculate Timestamp"
-INPUT_TYPE_CURRENT_TIME = "Current Time"
-INPUT_TYPE_ALERT_CREATION_TIME = "Alert Creation Time"
-INPUT_TYPE_CASE_CREATION_TIME = "Case Creation Time"
-INPUT_TYPE_CUSTOM_TIMESTAMP = "Custom Timestamp"
-INPUT_TYPE_OPTIONS = [
-    INPUT_TYPE_CURRENT_TIME,
-    INPUT_TYPE_ALERT_CREATION_TIME,
-    INPUT_TYPE_CASE_CREATION_TIME,
-    INPUT_TYPE_CUSTOM_TIMESTAMP,
-]
-DEFAULT_TIMESTAMP_DELTA = "+30M,-30M"
-
-TIMESTAMP_DELTA_REGEX = re.compile(r"^([+-])(\d+)([mdHMS])$")
-
-DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR = "epoch"
 
 
 class CalculateTimestampAction(Action):
-    """
-    Action to calculate timestamps based on various inputs and deltas.
-    """
+    """Action to calculate timestamps based on various inputs and deltas."""
 
     def __init__(self) -> None:
-        super().__init__(SCRIPT_NAME)
+        super().__init__(CALCULATE_TIMESTAMP_SCRIPT_NAME)
+        self.output_message: str = (
+            "Successfully calculated timestamps based on the provided parameters."
+        )
+
+    def _init_api_clients(self) -> None:
+        """Initialize API clients if required (placeholder)."""
 
     def _extract_action_parameters(self) -> None:
-        """
-        Extracts and validates action parameters.
-        """
+        """Extracts all action parameters."""
         self.params.input_type = extract_action_param(
             self.soar_action,
             "Input Type",
-            default_value=INPUT_TYPE_CURRENT_TIME,
+            default_value=InputType.CURRENT_TIME.value,
             print_value=True,
         )
-        self.params.custom_timestamp_str = extract_action_param(
+        self.params.custom_timestamp = extract_action_param(
             self.soar_action,
             "Custom Timestamp",
             print_value=True,
@@ -74,183 +65,182 @@ class CalculateTimestampAction(Action):
             "Custom Timestamp Format",
             print_value=True,
         )
-        self.params.timestamp_delta_csv = extract_action_param(
-            self.soar_action, "Timestamp Delta",
+        self.params.timestamp_delta = extract_action_param(
+            self.soar_action,
+            "Timestamp Delta",
             default_value=DEFAULT_TIMESTAMP_DELTA,
             print_value=True,
         )
         self.params.output_timestamp_format = extract_action_param(
-            self.soar_action, "Output Timestamp Format",
+            self.soar_action,
+            "Output Timestamp Format",
             default_value=DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR,
             print_value=True,
         )
 
     def _validate_params(self) -> None:
-        """
-        Validates the extracted parameters.
-        """
+        """Validates extracted parameters."""
         validator = ParameterValidator(self.soar_action)
         self.params.input_type = validator.validate_ddl(
-            "Input Type", self.params.input_type, INPUT_TYPE_OPTIONS
+            "Input Type",
+            self.params.input_type,
+            [it.value for it in InputType],
         )
         self.params.delta_strings = validator.validate_csv(
             "Timestamp Delta",
-            self.params.timestamp_delta_csv)
-
-        if (self.params.input_type == INPUT_TYPE_CUSTOM_TIMESTAMP 
-           and not self.params.custom_timestamp_str):
-            raise ValueError(
-                "\"Custom Timestamp\" parameter should have a value, "
-                "if \"Input Type\" is set to \"Custom Timestamp\". "
-                "Please check the spelling"
-            )
-
-        if (self.params.input_type == INPUT_TYPE_CUSTOM_TIMESTAMP and
-            self.params.custom_timestamp_format
-            and self.params.custom_timestamp_str
-            ):
-            try:
-                datetime.datetime.strptime(
-                    self.params.custom_timestamp_str,
-                    self.params.custom_timestamp_format)
-            except ValueError:
-                raise ValueError(
-                    "input provided in \"Custom Timestamp\" and "
-                    "\"Custom Timestamp format\" is not aligned. "
-                    "Please check the spelling."
-                )
-
-        if (
-            self.params.output_timestamp_format
-            and 
-            self.params.output_timestamp_format != DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR
-        ):
-            if self.params.output_timestamp_format[0] != "%":
-                raise ValueError("Invalid 'Output Timestamp Format' provided")
-    
-    def _init_api_clients(self) -> None:
-        """Initialize API clients if required (placeholder)."""
-
-    def _perform_action(self, _=None) -> None:
-        """
-        Main execution logic for the action.
-        """
-        calculated_timestamps_dict: SingleJson = {}
-        json_result: SingleJson = {
-            "original_timestamp": "",
-            "calculated_timestamps": calculated_timestamps_dict,
-        }
-
-        original_timestamp_obj = self._get_original_timestamp(
-            self.params.input_type,
-            self.params.custom_timestamp_str,
-            self.params.custom_timestamp_format,
+            self.params.timestamp_delta,
         )
 
-        if self.params.input_type == INPUT_TYPE_CUSTOM_TIMESTAMP:
-            json_result["original_timestamp"] = self.params.custom_timestamp_str
-        elif (
-            self.params.output_timestamp_format
-            == DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR
-        ):
-            json_result["original_timestamp"] = int(original_timestamp_obj.timestamp)
-        else:
-            json_result["original_timestamp"] = original_timestamp_obj.strftime(
-                self.params.output_timestamp_format
+        self._validate_custom_timestamp()
+        self._validate_output_format(self.params.output_timestamp_format)
+
+    def _validate_custom_timestamp(self) -> None:
+        """Validates the custom timestamp when required."""
+        if self.params.input_type != InputType.CUSTOM_TIMESTAMP.value:
+            return
+
+        if not self.params.custom_timestamp:
+            raise ValueError(
+                '"Custom Timestamp" must have a value when "Input Type" is set to'
+                ' "Custom Timestamp".'
             )
+
+        if self.params.custom_timestamp_format:
+            try:
+                datetime.datetime.strptime(
+                    self.params.custom_timestamp,
+                    self.params.custom_timestamp_format,
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    'Input provided in "Custom Timestamp" and "Custom Timestamp Format" '
+                    "is not aligned. Please check the spelling."
+                ) from exc
+
+    def _validate_output_format(self, fmt: str) -> None:
+        """Ensures valid output timestamp format."""
+        if (
+            fmt
+            and fmt != DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR
+            and not fmt.startswith("%")
+        ):
+            raise ValueError("Invalid 'Output Timestamp Format' provided")
+
+    def _perform_action(self, _: Any = None) -> None:
+        original_timestamp = self._get_original_timestamp()
+        json_result = self._build_json_result(original_timestamp)
 
         invalid_deltas: list[str] = []
-
-        for delta_str in self.params.delta_strings:
-            match = TIMESTAMP_DELTA_REGEX.match(delta_str)
-            if not match:
-                invalid_deltas.append(delta_str)
+        for delta in self.params.delta_strings:
+            result = self._calculate_shifted_timestamp(original_timestamp, delta)
+            if result is None:
+                invalid_deltas.append(delta)
                 continue
-
-            operator, value_str, unit_char = match.groups()
-            value: int = int(value_str)
-
-            if operator == "-":
-                value = -value
-
-            shift_kwargs = self._get_shift_kwargs(unit_char, value)
-            if not shift_kwargs:
-                invalid_deltas.append(delta_str)
-                continue
-
-            shifted_timestamp_obj = original_timestamp_obj.shift(**shift_kwargs)
-
-            if (
-                self.params.output_timestamp_format
-                == DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR
-            ):
-                formatted_shifted_timestamp = int(shifted_timestamp_obj.timestamp)
-            else:
-                formatted_shifted_timestamp = shifted_timestamp_obj.strftime(
-                    self.params.output_timestamp_format
-                )
-
-            calculated_timestamps_dict[f"timestamp{delta_str}"] = (
-                formatted_shifted_timestamp
-            )
+            delta_key, shifted_value = result
+            json_result["calculated_timestamps"][delta_key] = shifted_value
 
         if invalid_deltas:
             raise ValueError(
-                "Invalid values provided in the \"Timestamp Delta\". "
-                "Please check the spelling."
+                'Invalid values provided in "Timestamp Delta". Please check the spelling.'
             )
-        message = "Successfully calculated timestamps based on the provided parameters."
-        self.output_message = message
-        self.result_value = True
-        self.json_results = json_result
+        self.json_results: SingleJson = json_result
 
-    def _get_original_timestamp(
-        self, input_type: str,
-        custom_timestamp_str: str,
-        custom_timestamp_format: str) -> arrow.Arrow:
-        if input_type == INPUT_TYPE_CURRENT_TIME:
-            return arrow.get()
-        if input_type == INPUT_TYPE_ALERT_CREATION_TIME:
-            alert_creation_ms = getattr(
-                self.soar_action.current_alert,
-                "creation_time",
-                None)
-            if alert_creation_ms:
-                return arrow.get(alert_creation_ms / 1000)
-            raise ValueError("Alert creation time not found in the current context.")
-        if input_type == INPUT_TYPE_CASE_CREATION_TIME:
-            case_creation_ms = getattr(self.soar_action.case, "creation_time", None)
-            if case_creation_ms:
-                return arrow.get(case_creation_ms / 1000)
-            raise ValueError("Case creation time not found in the current context.")
-        if input_type == INPUT_TYPE_CUSTOM_TIMESTAMP:
-            try:
-                try:
-                    return arrow.get(custom_timestamp_str)
-                except arrow.parser.ParserError:
-                    if custom_timestamp_format:
-                        return arrow.get(custom_timestamp_str, custom_timestamp_format)
-                    num_timestamp = int(custom_timestamp_str)
-                    return arrow.get(
-                        num_timestamp / 1000 if 
-                        len(custom_timestamp_str) == 13 else num_timestamp)
-            except Exception as e:
-                raise ValueError(
-                    "input provided in \"Custom Timestamp\" and "
-                    "\"Custom Timestamp format\" is not aligned. "
-                    f"Please check the spelling. {e}"
+    def _get_original_timestamp(self) -> arrow.Arrow:
+        """Returns the original timestamp based on input type."""
+        match self.params.input_type:
+            case InputType.CURRENT_TIME.value:
+                return arrow.get()
+            case InputType.ALERT_CREATION_TIME.value:
+                alert_creation_ms = getattr(
+                    self.soar_action.current_alert, "creation_time", None
                 )
-        raise ValueError(f"Unsupported Input Type: {input_type}")
+                if alert_creation_ms:
+                    return arrow.get(alert_creation_ms / 1000)
+                raise ValueError(
+                    "Alert creation time not found in the current context."
+                )
+            case InputType.CASE_CREATION_TIME.value:
+                case_creation_ms = getattr(self.soar_action.case, "creation_time", None)
+                if case_creation_ms:
+                    return arrow.get(case_creation_ms / 1000)
+                raise ValueError("Case creation time not found in the current context.")
+            case InputType.CUSTOM_TIMESTAMP.value:
+                return self._parse_custom_timestamp(
+                    self.params.custom_timestamp,
+                    self.params.custom_timestamp_format,
+                )
+            case _:
+                raise ValueError(f"Unsupported Input Type: {self.params.input_type}")
 
-    def _get_shift_kwargs(self, unit_char: str, value: int) -> SingleJson:
-        shift_map = {
+    def _parse_custom_timestamp(self, value: str, fmt: str | None) -> arrow.Arrow:
+        """Parses custom timestamp string with or without format."""
+        try:
+            try:
+                return arrow.get(value)
+
+            except arrow.parser.ParserError:
+                if fmt:
+                    return arrow.get(value, fmt)
+                num_value = int(value)
+                return arrow.get(num_value / 1000 if len(value) == 13 else num_value)
+
+        except Exception as exc:
+            raise ValueError(
+                'Input provided in "Custom Timestamp" and "Custom Timestamp Format" '
+                f"is not aligned. Please check the spelling. {exc}"
+            ) from exc
+
+    def _build_json_result(self, original: arrow.Arrow) -> SingleJson:
+        """Builds initial JSON result skeleton."""
+        original_str = self._format_timestamp(
+            original, self.params.output_timestamp_format
+        )
+        return {
+            "original_timestamp": original_str,
+            "calculated_timestamps": {},
+        }
+
+    def _calculate_shifted_timestamp(
+        self,
+        base_timestamp: arrow.Arrow,
+        delta_str: str,
+    ) -> tuple[str, Any] | None:
+        """Calculates a shifted timestamp for a given delta string."""
+        match = TIMESTAMP_DELTA_REGEX.match(delta_str)
+        if not match:
+            return None
+
+        operator, value_str, unit_char = match.groups()
+        value = int(value_str)
+        if operator == "-":
+            value = -value
+
+        shift_kwargs = self._get_shift_kwargs(unit_char, value)
+        if not shift_kwargs:
+            return None
+
+        shifted = base_timestamp.shift(**shift_kwargs)
+        formatted_shifted = self._format_timestamp(
+            shifted, self.params.output_timestamp_format
+        )
+        return f"timestamp{delta_str}", formatted_shifted
+
+    def _format_timestamp(self, ts: arrow.Arrow, fmt: str) -> Any:
+        """Formats timestamp based on output format."""
+        if fmt == DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR:
+            return int(ts.timestamp)
+        return ts.strftime(fmt)
+
+    def _get_shift_kwargs(self, unit_char: str, value: int) -> dict[str, int]:
+        """Maps a delta unit to arrow shift keyword."""
+        unit_map = {
             "m": "months",
             "d": "days",
             "H": "hours",
             "M": "minutes",
             "S": "seconds",
         }
-        key = shift_map.get(unit_char)
+        key = unit_map.get(unit_char)
         return {key: value} if key else {}
 
 
