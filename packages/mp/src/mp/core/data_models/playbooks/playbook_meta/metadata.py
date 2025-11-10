@@ -231,7 +231,9 @@ class PlaybookMetadata(
             IsAutomatic=self.is_automatic,
             IsArchived=self.is_archived,
             LastEditor=self.last_editor,
-            DefaultAccessLevel=self.default_access_level.value if self.default_access_level is not None else None,
+            DefaultAccessLevel=self.default_access_level.value
+            if self.default_access_level is not None
+            else None,
             CreationSource=self.creation_source.value if self.creation_source is not None else None,
             SimulationClone=self.simulation_clone,
             Permissions=[p.to_built() for p in self.permissions],
@@ -258,8 +260,12 @@ class PlaybookMetadata(
             is_automatic=self.is_automatic,
             is_archived=self.is_archived,
             last_editor=self.last_editor,
-            default_access_level=self.default_access_level.to_string().upper() if self.default_access_level is not None else None,
-            creation_source=self.creation_source.to_string().upper() if self.creation_source is not None else None,
+            default_access_level=self.default_access_level.to_string().upper()
+            if self.default_access_level is not None
+            else None,
+            creation_source=self.creation_source.to_string().upper()
+            if self.creation_source is not None
+            else None,
             simulation_clone=self.simulation_clone,
             permissions=[p.to_non_built() for p in self.permissions],
         )

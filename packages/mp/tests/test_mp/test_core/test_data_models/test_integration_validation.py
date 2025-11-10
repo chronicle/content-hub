@@ -23,7 +23,7 @@ import pytest
 import mp.core.constants
 from mp.core.data_models.connector.metadata import ConnectorMetadata
 from mp.core.data_models.job.metadata import JobMetadata
-from mp.core.data_models.widget.metadata import WidgetMetadata
+from mp.core.data_models.action_widget.metadata import ActionWidgetMetadata
 
 if TYPE_CHECKING:
     from mp.core.data_models.job.parameter import JobParameter
@@ -53,7 +53,7 @@ class TestPydanticValidations:
     def test_widget_name_invalid_pattern(self) -> None:
         """Test that an invalid widget title fails validation."""
         with pytest.raises(pydantic.ValidationError):
-            WidgetMetadata(
+            ActionWidgetMetadata(
                 file_name="test_widget",
                 title="Invalid@Title",  # @ is likely not allowed in the pattern
                 type_=mock.MagicMock(),

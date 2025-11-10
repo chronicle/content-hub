@@ -183,7 +183,9 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             action_name=non_built["action_name"],
             parent_container_id=non_built.get("parent_container_id"),
             start_loop_step_id=non_built.get("start_loop_step_id"),
-            step_debug_data=StepDebugData.from_non_built(non_built["step_debug_data"]) if non_built.get("step_debug_data") else None,
+            step_debug_data=StepDebugData.from_non_built(non_built["step_debug_data"])
+            if non_built.get("step_debug_data")
+            else None,
             parallel_actions=[
                 cls.from_non_built(file_name, pa) for pa in non_built["parallel_actions"]
             ],
@@ -237,7 +239,9 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_automatic=self.is_automatic,
             is_skippable=self.is_skippable,
             action_provider=self.action_provider,
-            step_debug_data=self.step_debug_data.to_non_built() if self.step_debug_data is not None else None,
+            step_debug_data=self.step_debug_data.to_non_built()
+            if self.step_debug_data is not None
+            else None,
             start_loop_step_id=self.start_loop_step_id,
             parameters=[p.to_non_built() for p in self.parameters],
             action_name=self.action_name,

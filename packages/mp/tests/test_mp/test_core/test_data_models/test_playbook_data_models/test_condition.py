@@ -82,10 +82,15 @@ class TestConditionGroupDataModel:
             ConditionGroup.from_non_built({})
 
     def test_from_built_with_none_values(self):
-        assert ConditionGroup.from_built(BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE
+        assert (
+            ConditionGroup.from_built(BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE
+        )
 
     def test_from_non_built_with_none_values(self):
-        assert ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE
+        assert (
+            ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP_WITH_NONE)
+            == CONDITION_GROUP_WITH_NONE
+        )
 
     def test_to_built_with_none_values(self):
         assert CONDITION_GROUP_WITH_NONE.to_built() == BUILT_CONDITION_GROUP_WITH_NONE
@@ -97,4 +102,7 @@ class TestConditionGroupDataModel:
         assert ConditionGroup.from_built(BUILT_CONDITION_GROUP).to_built() == BUILT_CONDITION_GROUP
 
     def test_from_non_built_to_non_built_is_idempotent(self):
-        assert ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP).to_non_built() == NON_BUILT_CONDITION_GROUP
+        assert (
+            ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP).to_non_built()
+            == NON_BUILT_CONDITION_GROUP
+        )

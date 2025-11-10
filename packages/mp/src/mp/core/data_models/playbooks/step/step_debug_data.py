@@ -107,7 +107,10 @@ class StepDebugData(
             modification_time=non_built["modification_time"],
             result_value=non_built["result_value"],
             result_json=non_built["result_json"],
-            scope_entities_enrichment_data=[DebugStepEnrichmentData.from_non_built(en) for en in non_built["scope_entities_enrichment_data"]],
+            scope_entities_enrichment_data=[
+                DebugStepEnrichmentData.from_non_built(en)
+                for en in non_built["scope_entities_enrichment_data"]
+            ],
             tenant_id=non_built.get("tenant_id"),
         )
 

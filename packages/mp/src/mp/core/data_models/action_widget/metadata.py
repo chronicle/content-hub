@@ -17,7 +17,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
-
+import json
+from pathlib import Path
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
@@ -44,14 +45,14 @@ class WidgetScope(mp.core.data_models.abc.RepresentableEnum):
 
 
 class BuiltActionWidgetMetadata(TypedDict):
-    title: str
-    type: int
-    scope: int
-    actionIdentifier: str | None
-    description: str
-    dataDefinition: BuiltWidgetDataDefinition
-    conditionsGroup: BuiltConditionGroup
-    defaultSize: int
+    Title: str
+    Type: int
+    Scope: int
+    ActionIdentifier: str | None
+    Description: str
+    DataDefinition: BuiltWidgetDataDefinition
+    ConditionsGroup: BuiltConditionGroup
+    DefaultSize: int
 
 
 class NonBuiltActionWidgetMetadata(TypedDict):
@@ -140,14 +141,14 @@ class ActionWidgetMetadata(
     def _from_built(cls, file_name: str, built: BuiltActionWidgetMetadata) -> Self:
         return cls(
             file_name=file_name,
-            title=built["title"],
-            type_=WidgetType(built["type"]),
-            scope=WidgetScope(built.get("scope", WidgetScope.ALERT.value)),
-            action_identifier=built["actionIdentifier"],
-            description=built["description"],
-            data_definition=HtmlWidgetDataDefinition.from_built(built["dataDefinition"]),
-            condition_group=ConditionGroup.from_built(built["conditionsGroup"]),
-            default_size=WidgetSize(built["defaultSize"]),
+            title=built["Title"],
+            type_=WidgetType(built["Type"]),
+            scope=WidgetScope(built.get("Scope", WidgetScope.ALERT.value)),
+            action_identifier=built["ActionIdentifier"],
+            description=built["Description"],
+            data_definition=HtmlWidgetDataDefinition.from_built("", built["DataDefinition"]),
+            condition_group=ConditionGroup.from_built(built["ConditionsGroup"]),
+            default_size=WidgetSize(built["DefaultSize"]),
         )
 
     @classmethod
@@ -162,6 +163,7 @@ class ActionWidgetMetadata(
             action_identifier=non_built["action_identifier"],
             description=non_built["description"],
             data_definition=HtmlWidgetDataDefinition.from_non_built(
+                "",
                 non_built["data_definition"],
             ),
             condition_group=ConditionGroup.from_non_built(non_built["condition_group"]),
@@ -176,14 +178,14 @@ class ActionWidgetMetadata(
 
         """
         return BuiltActionWidgetMetadata(
-            title=self.title,
-            type=self.type_.value,
-            scope=self.scope.value,
-            actionIdentifier=self.action_identifier,
-            description=self.description,
-            dataDefinition=self.data_definition.to_built(),
-            conditionsGroup=self.condition_group.to_built(),
-            defaultSize=self.default_size.value,
+            Title=self.title,
+            Type=self.type_.value,
+            Scope=self.scope.value,
+            ActionIdentifier=self.action_identifier,
+            Description=self.description,
+            DataDefinition=self.data_definition.to_built(),
+            ConditionsGroup=self.condition_group.to_built(),
+            DefaultSize=self.default_size.value,
         )
 
     def to_non_built(self) -> NonBuiltActionWidgetMetadata:

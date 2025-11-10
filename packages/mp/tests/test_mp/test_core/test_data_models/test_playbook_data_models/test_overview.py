@@ -25,6 +25,8 @@ from .constants import (
     NON_BUILT_OVERVIEW_WITH_NONE,
 )
 
+FILE_NAME = ""
+
 
 class TestOverviewDataModel:
     def test_from_built_with_valid_data(self):
@@ -41,7 +43,7 @@ class TestOverviewDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):
-            Overview.from_built("", {})
+            Overview.from_built(FILE_NAME, {})
 
     def test_from_non_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):

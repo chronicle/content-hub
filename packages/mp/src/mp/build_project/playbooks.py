@@ -32,11 +32,10 @@ class Playbooks:
         self.name: str = playbooks_dir.name
         self.paths: list[Path] = get_playbooks_dir_path()
         self.out_dir: Path = create_or_get_playbook_out_dir()
-    
-    
+
     def build_playbooks(self) -> None:
         """Build all playbooks in the marketplace."""
-        
+
         processes: int = mp.core.config.get_processes_number()
         for playbook in self.paths:
             pass
