@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from mp.core.data_models.playbooks.step.step_parameter import (
     StepParameter,
     BuiltStepParameter,
@@ -65,6 +66,19 @@ from mp.core.data_models.playbooks.playbook_meta.metadata import (
     PlaybookCreationSource,
 )
 from mp.core.data_models.playbooks.playbook_meta.display_info import PlaybookType
+from mp.core.data_models.widget.data import (
+    HtmlWidgetDataDefinition,
+    BuiltWidgetDataDefinition,
+    NonBuiltWidgetDataDefinition,
+    WidgetType,
+    WidgetSize,
+    WidgetDefinitionScope,
+)
+from mp.core.data_models.playbooks.playbook_widget.metadata import (
+    PlaybookWidgetMetadata,
+    BuiltPlaybookWidgetMetadata,
+    NonBuiltPlaybookWidgetMetadata,
+)
 
 
 BUILT_STEP_DEBUG_ENRICHMENT_DATA: BuiltStepDebugEnrichmentData = {
@@ -704,4 +718,153 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     is_automatic=False,
     is_archived=False,
     permissions=[],
+)
+
+HTML_CONTENT = """<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+<h1>This is a Heading</h1>
+<p>This is a paragraph.</p>
+</body>
+</html>"""
+
+BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
+    "htmlContent": HTML_CONTENT,
+    "htmlHeight": 400,
+    "safeRendering": False,
+    "type": 3,
+    "widgetDefinitionScope": 2,
+}
+
+NON_BUILT_WIDGET_DATA_DEFINITION: NonBuiltWidgetDataDefinition = {
+    "html_content": HTML_CONTENT,
+    "html_height": 400,
+    "safe_rendering": False,
+    "type": "HTML",
+    "widget_definition_scope": "BOTH",
+}
+
+HTML_WIDGET_DATA_DEFINITION = HtmlWidgetDataDefinition(
+    html_content=HTML_CONTENT,
+    html_height=400,
+    safe_rendering=False,
+    type=WidgetType.HTML,
+    widget_definition_scope=WidgetDefinitionScope.BOTH,
+)
+
+BUILT_PLAYBOOK_WIDGET_METADATA: BuiltPlaybookWidgetMetadata = {
+    "Title": "title",
+    "Description": "description",
+    "Identifier": "identifier",
+    "Order": 1,
+    "TemplateIdentifier": "template_identifier",
+    "Type": 3,
+    "DataDefinitionJson": json.dumps(BUILT_WIDGET_DATA_DEFINITION),
+    "GridColumns": 1,
+    "ActionWidgetTemplateIdentifier": "action_widget_template_id",
+    "StepIdentifier": "step_id",
+    "StepIntegration": "step_integration",
+    "BlockStepIdentifier": "block_step_id",
+    "BlockStepInstanceName": "block_step_instance_name",
+    "PresentIfEmpty": True,
+    "ConditionsGroup": BUILT_CONDITION_GROUP,
+    "IntegrationName": "integration_name",
+}
+
+NON_BUILT_PLAYBOOK_WIDGET_METADATA: NonBuiltPlaybookWidgetMetadata = {
+    "title": "title",
+    "description": "description",
+    "identifier": "identifier",
+    "order": 1,
+    "template_identifier": "template_identifier",
+    "type": "HTML",
+    "data_definition": NON_BUILT_WIDGET_DATA_DEFINITION,
+    "widget_size": "HALF_WIDTH",
+    "action_widget_template_id": "action_widget_template_id",
+    "step_id": "step_id",
+    "step_integration": "step_integration",
+    "block_step_id": "block_step_id",
+    "block_step_instance_name": "block_step_instance_name",
+    "present_if_empty": True,
+    "conditions_group": NON_BUILT_CONDITION_GROUP,
+    "integration_name": "integration_name",
+}
+
+PLAYBOOK_WIDGET_METADATA = PlaybookWidgetMetadata(
+    title="title",
+    description="description",
+    identifier="identifier",
+    order=1,
+    template_identifier="template_identifier",
+    type=WidgetType.HTML,
+    data_definition=HTML_WIDGET_DATA_DEFINITION,
+    widget_size=WidgetSize.HALF_WIDTH,
+    action_widget_template_id="action_widget_template_id",
+    step_id="step_id",
+    step_integration="step_integration",
+    block_step_id="block_step_id",
+    block_step_instance_name="block_step_instance_name",
+    present_if_empty=True,
+    conditions_group=CONDITION_GROUP,
+    integration_name="integration_name",
+)
+
+BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE: BuiltPlaybookWidgetMetadata = {
+    "Title": "title",
+    "Description": "description",
+    "Identifier": "identifier",
+    "Order": 1,
+    "TemplateIdentifier": "template_identifier",
+    "Type": 3,
+    "DataDefinitionJson": json.dumps(BUILT_WIDGET_DATA_DEFINITION),
+    "GridColumns": 1,
+    "ActionWidgetTemplateIdentifier": None,
+    "StepIdentifier": None,
+    "StepIntegration": None,
+    "BlockStepIdentifier": None,
+    "BlockStepInstanceName": None,
+    "PresentIfEmpty": True,
+    "ConditionsGroup": BUILT_CONDITION_GROUP_WITH_NONE,
+    "IntegrationName": None,
+}
+
+NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE: NonBuiltPlaybookWidgetMetadata = {
+    "title": "title",
+    "description": "description",
+    "identifier": "identifier",
+    "order": 1,
+    "template_identifier": "template_identifier",
+    "type": "HTML",
+    "data_definition": NON_BUILT_WIDGET_DATA_DEFINITION,
+    "widget_size": "HALF_WIDTH",
+    "action_widget_template_id": None,
+    "step_id": None,
+    "step_integration": None,
+    "block_step_id": None,
+    "block_step_instance_name": None,
+    "present_if_empty": True,
+    "conditions_group": NON_BUILT_CONDITION_GROUP_WITH_NONE,
+    "integration_name": None,
+}
+
+PLAYBOOK_WIDGET_METADATA_WITH_NONE = PlaybookWidgetMetadata(
+    title="title",
+    description="description",
+    identifier="identifier",
+    order=1,
+    template_identifier="template_identifier",
+    type=WidgetType.HTML,
+    data_definition=HTML_WIDGET_DATA_DEFINITION,
+    widget_size=WidgetSize.HALF_WIDTH,
+    action_widget_template_id=None,
+    step_id=None,
+    step_integration=None,
+    block_step_id=None,
+    block_step_instance_name=None,
+    present_if_empty=True,
+    conditions_group=CONDITION_GROUP_WITH_NONE,
+    integration_name=None,
 )
