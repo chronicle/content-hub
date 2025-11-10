@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Self, TypedDict
+from typing import TYPE_CHECKING, Self, TypedDict, Any
 
 import pydantic
 
@@ -87,7 +87,7 @@ class PlaybookWidgetMetadata(
     order: int
     template_identifier: str
     type: WidgetType
-    data_definition: HtmlWidgetDataDefinition | pydantic.Json
+    data_definition: HtmlWidgetDataDefinition | pydantic.Json[Any] 
     widget_size: WidgetSize
     action_widget_template_id: str | None
     step_id: str | None
@@ -142,7 +142,7 @@ class PlaybookWidgetMetadata(
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
-        data_json: str = json.loads(built["DataDefinitionJson"])
+        data_json: pydantic.Json = json.loads(built["DataDefinitionJson"])
         return cls(
             title=built["Title"],
             description=built["Description"],
@@ -150,7 +150,7 @@ class PlaybookWidgetMetadata(
             order=built["Order"],
             template_identifier=built["TemplateIdentifier"],
             type=WidgetType(built["Type"]),
-            data_definition=HtmlWidgetDataDefinition.from_built("", data_json) if built["Type"] == WidgetType.HTML.value else data_json,
+            data_definition=HtmlWidgetDataDefinition.from_built(file_name, data_json) if built["Type"] == WidgetType.HTML.value else built["DataDefinitionJson"],
             widget_size=WidgetSize(built["GridColumns"]),
             action_widget_template_id=built["ActionWidgetTemplateIdentifier"],
             step_id=built["StepIdentifier"],

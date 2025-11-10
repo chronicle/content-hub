@@ -127,7 +127,7 @@ class PlaybookMetadata(
         built_playbook: str = path.read_text(encoding="utf-8")
         try:
             full_playbook = json.loads(built_playbook)
-            return cls._from_built(full_playbook["Definition"])
+            return cls._from_built("", full_playbook["Definition"])
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {path}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
