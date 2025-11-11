@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Protocol
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ValidationResults, ValidationTypes
 
+from .action_parameter_validation import ActionParametersValuesValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
@@ -87,6 +88,7 @@ def get_validations() -> list[Validator]:
         UvLockValidation(),
         VersionBumpValidation(),
         RequiredDevDependenciesValidation(),
+        ActionParametersValuesValidation(),
         NoCustomComponentsInIntegrationValidation(),
         NoDisabledComponentsInIntegrationValidation(),
         IntegrationHasPingActionValidation(),
