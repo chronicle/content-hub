@@ -1,23 +1,25 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
-from ..core.datamodels import DNSRecord
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    DNS_RECORD_LOOKUP_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
-    DEFAULT_OFFSET,
     DEFAULT_LIMIT,
+    DEFAULT_OFFSET,
+    DNS_RECORD_LOOKUP_SCRIPT_NAME,
     MAX_TABLE_RECORDS,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
-from ..core.utils import validate_integer_param, get_integration_params
+from ..core.datamodels import DNSRecord
+from ..core.InfobloxExceptions import InfobloxException
+from ..core.utils import get_integration_params, validate_integer_param
 
 
 @output_handler

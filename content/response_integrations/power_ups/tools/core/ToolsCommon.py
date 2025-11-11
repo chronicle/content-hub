@@ -22,7 +22,6 @@ from tldextract.tldextract import ExtractResult
 
 from .constants import LABEL_REGEX
 
-
 # CONSTS
 OPEN_PH_PARENTHASIS = "{"
 CLOSE_PH_PARENTHASIS = "}"

@@ -53,7 +53,6 @@ def main():
         cell = worksheet.find(search_value)
         row_values = worksheet.row_values(cell.row)
         siemplify.result.add_result_json(row_values)
-        ret_val = cell.row
     except gspread.exceptions.CellNotFound:
         output_msg = f"Couldn't find row with value {search_value} in column {column_number_int}."
         status = EXECUTION_STATE_FAILED

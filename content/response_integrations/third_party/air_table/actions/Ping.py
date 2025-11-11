@@ -23,7 +23,7 @@ def main():
     )
 
     airtable = Airtable(base_id, table_name, api_key)
-    res = airtable.get_all(maxRecords=1)
+    airtable.get_all(maxRecords=1)
     siemplify.end("AirTable is connected", True)
 
 

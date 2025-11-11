@@ -64,7 +64,6 @@ def main():
             base_url=arcanna_url,
             verify=False,
         )
-        severity = 0
         if send_individual_alerts == "true":
             response_json = {}
             json_response = []
@@ -95,7 +94,6 @@ def main():
                     raw_body=raw_payload,
                     event_id=event_id,
                 )
-                rresult_value = True
                 output_message = (
                     output_message + f"response={json.dumps(response_json, indent=2)}"
                 )

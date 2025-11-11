@@ -28,7 +28,6 @@ def main():
     hibob_manager = HibobManager(api_root, api_token)
 
     # declaring an empty array  for the new data
-    enriched_entities = []
 
     # declaring an empty dictionary of the json_result
     json_result = {}

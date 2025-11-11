@@ -102,7 +102,6 @@ def evaluate_function(val, func_name, func_values):
 def parse_placeholder(curr_json, placeholder, pipe):
     pipes = [x.strip() for x in placeholder.split(pipe)]
 
-    val = None
     for i, function_str in enumerate(pipes):
         # print_debug("function_str: {}, curr_json: {}".format(function_str, curr_json), "iteration {}".format(i))
         first_split = function_str.strip().split("(")

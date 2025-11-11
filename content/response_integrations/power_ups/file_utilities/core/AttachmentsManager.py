@@ -221,7 +221,7 @@ class AttachmentsManager:
             "entityToConnectRegEx": f"{re.escape(linked_entity.upper())}$",
             "entityIdentifier": new_entity.upper(),
         }
-        payload = json_payload.copy()
+        json_payload.copy()
         created_entity = self.siemplify.session.post(
             EXTEND_GRAPH_URL.format(self.siemplify.API_ROOT),
             json=json_payload,
@@ -256,7 +256,7 @@ class AttachmentsManager:
                     except:
                         pass
 
-            if pwds and pwd == None:
+            if pwds and pwd is None:
                 try:
                     found = 0
                     for passwd in pwds:

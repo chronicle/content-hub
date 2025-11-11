@@ -264,7 +264,7 @@ class BitdefenderGravityZoneManager:
                 "hashList": hashes_sha256,
                 "sourceInfo": source_info,
             }
-            res = self.control_center_put(
+            self.control_center_put(
                 INCIDENTS_URL.format(access_url),
                 method,
                 params,
@@ -272,7 +272,7 @@ class BitdefenderGravityZoneManager:
 
         if hashes_md5:
             params = {"hashType": 2, "hashList": hashes_md5, "sourceInfo": source_info}
-            res = self.control_center_put(
+            self.control_center_put(
                 INCIDENTS_URL.format(access_url),
                 method,
                 params,
@@ -467,7 +467,7 @@ class BitdefenderGravityZoneManager:
             )
 
         page_count = json_data["result"]["pagesCount"]
-        per_page = json_data["result"]["perPage"]
+        json_data["result"]["perPage"]
         items = json_data["result"]["items"]
 
         for item in items:

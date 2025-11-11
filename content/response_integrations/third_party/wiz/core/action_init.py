@@ -23,7 +23,6 @@ from .utils import get_integration_parameters
 
 if TYPE_CHECKING:
     import requests
-
     from TIPCommon.types import ChronicleSOAR
 
 

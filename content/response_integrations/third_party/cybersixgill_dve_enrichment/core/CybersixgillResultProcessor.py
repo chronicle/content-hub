@@ -186,7 +186,7 @@ class SixgillActionResultProcessor:
                         f"Invalid Entity Type - {entity.entity_type} ",
                     )
                 if enrich_result:
-                    entity_dict = self.entity_data(enrich_result)
+                    self.entity_data(enrich_result)
                     enriched_entities["entityIdentifier"] = entity.identifier
                     enriched_entities["entityResult"] = enrich_result
                     json_result.append(enriched_entities)

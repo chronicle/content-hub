@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import (
@@ -6,25 +7,25 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
 
-from ..core.datamodels import CustomList
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
     COMMON_ACTION_ERROR_MESSAGE,
     CREATE_CUSTOM_LIST_SCRIPT_NAME,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
+from ..core.datamodels import CustomList
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import (
-    validate_required_string,
-    validate_indicators,
-    string_to_list,
-    parse_tags,
-    get_integration_params,
     clean_params,
+    get_integration_params,
+    parse_tags,
+    string_to_list,
+    validate_indicators,
+    validate_required_string,
 )
 
 

@@ -30,7 +30,7 @@ def main():
     return_value = False
 
     try:
-        response = vanilla_manager.test_connectivity()
+        vanilla_manager.test_connectivity()
         return_value = True
         output_message = f"Connected successfully to <{baseUrl}>"
 

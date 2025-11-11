@@ -20,7 +20,6 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_investigator_data
 from TIPCommon.types import SingleJson
 
-
 ACTION_NAME = "Enrich Source and Destinations"
 
 

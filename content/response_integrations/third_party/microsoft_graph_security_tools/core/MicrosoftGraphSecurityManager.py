@@ -361,8 +361,8 @@ class MicrosoftGraphSecurityManager:
         query_params_list = []
 
         # Messy but it works
-        ## Need to format the query string correctly
-        ## regardless of combination of filters given
+        # Need to format the query string correctly
+        # regardless of combination of filters given
         if filter_select:
             filter_select = "$select=" + filter_select
             query_params_list.append(filter_select)

@@ -18,13 +18,13 @@ def main():
         "Verify SSL",
         input_type=bool,
     )
-    use_json_filter = siemplify.extract_action_param(
+    siemplify.extract_action_param(
         "Use JSON Filter",
         print_value=True,
     )
-    query_filter = siemplify.extract_action_param("Filter", print_value=True)
-    parent_id = siemplify.extract_action_param("Parent ID", print_value=True)
-    endpoints = siemplify.extract_action_param("Endpoints", print_value=True)
+    siemplify.extract_action_param("Filter", print_value=True)
+    siemplify.extract_action_param("Parent ID", print_value=True)
+    siemplify.extract_action_param("Endpoints", print_value=True)
 
     try:
         siemplify.LOGGER.info("Connecting to Bitdefender GravityZone Control Center.")

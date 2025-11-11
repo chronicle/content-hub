@@ -30,7 +30,7 @@ def main():
     return_value = False
 
     try:
-        response = webhookManager.test_connectivity()
+        webhookManager.test_connectivity()
         return_value = True
         output_message = f"Connected successfully to <{baseUrl}>"
 

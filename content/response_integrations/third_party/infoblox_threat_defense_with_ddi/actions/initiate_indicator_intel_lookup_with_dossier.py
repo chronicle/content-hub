@@ -1,23 +1,25 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
-from ..core.datamodels import DossierWaitResult, DossierJobResult
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
     COMMON_ACTION_ERROR_MESSAGE,
     INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_SCRIPT_NAME,
     MAX_TABLE_RECORDS,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
+from ..core.datamodels import DossierJobResult, DossierWaitResult
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import (
-    validate_required_string,
     get_integration_params,
+    validate_required_string,
 )
 
 

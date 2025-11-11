@@ -28,7 +28,7 @@ def main():
     # The api_token generated from hibob site
     api_token = conf.get("API Token")
 
-    boolean_get_user_image = siemplify.extract_action_param("Get User Image")
+    siemplify.extract_action_param("Get User Image")
 
     # creating an instance of hibobmanager object
     hibob_manager = HibobManager(api_root, api_token)

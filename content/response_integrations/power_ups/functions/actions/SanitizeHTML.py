@@ -54,7 +54,7 @@ def main():
     )
     css_sanitizer = CSSSanitizer(allowed_css_properties=styles)
     input = siemplify.parameters.get("Input HTML")
-    allow_all_tags = (
+    (
         str(
             siemplify.extract_action_param(
                 param_name="Allow All Tags",
@@ -76,7 +76,7 @@ def main():
         ).lower()
         == "true"
     )
-    allow_all_styles = (
+    (
         str(
             siemplify.extract_action_param(
                 param_name="Allow All Styles",
@@ -87,8 +87,6 @@ def main():
         ).lower()
         == "true"
     )
-
-    sanitized = ""
 
     if tags and styles and attributes:
         sanatized = bleach.clean(

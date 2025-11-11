@@ -47,7 +47,7 @@ def create_entity_with_relation(siemplify, new_entity, linked_entity):
         "entityToConnectRegEx": f"{re.escape(linked_entity.upper())}$",
         "entityIdentifier": new_entity.upper(),
     }
-    payload = json_payload.copy()
+    json_payload.copy()
     created_entity = siemplify.session.post(
         EXTEND_GRAPH_URL.format(siemplify.API_ROOT),
         json=json_payload,

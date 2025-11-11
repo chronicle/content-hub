@@ -186,13 +186,13 @@ class CollectAgentLogs:
                     self._integration_name,
                 )
 
-                if integrationFileName != None and len(integrationFileName) > 1:
+                if integrationFileName is not None and len(integrationFileName) > 1:
                     result.append(
                         "Found following Integration Folders "
                         + str(integrationFileName),
                     )
 
-                if integrationFileName != None and len(integrationFileName) > 0:
+                if integrationFileName is not None and len(integrationFileName) > 0:
                     # only if the Integration folder is present
                     # now find the Correct connector folder
                     files = self.find_connector_log(

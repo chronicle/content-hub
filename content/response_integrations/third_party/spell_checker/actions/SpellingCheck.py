@@ -22,8 +22,6 @@ def main():
         status = EXECUTION_STATE_COMPLETED
         output_message = "output message :"
         result_value = 0
-        failed_entities = []
-        successfull_entities = []
 
         result_json = {}
         spm = SpellCheckerManager()

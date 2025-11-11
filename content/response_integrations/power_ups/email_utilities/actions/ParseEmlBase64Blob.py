@@ -85,7 +85,6 @@ def extract_content(msg):
     """
     html_body = ""
     text_body = ""
-    files = {}
     count = 0
 
     if not msg.is_multipart():

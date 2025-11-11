@@ -92,7 +92,7 @@ def main():
                     properties["is_new_entity"] = True
                     if entity_type == "ADDRESS":
                         try:
-                            test_ip = ipaddress.ip_address(entity_identifier)
+                            ipaddress.ip_address(entity_identifier)
                             siemplify.add_entity_to_case(
                                 entity_identifier,
                                 entity_type,

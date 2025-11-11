@@ -114,9 +114,9 @@ def main():
                 )
                 x_file["attachment_id"] = attachment_res
 
-    if include_data == False:
+    if not include_data:
         for file_name in extracted_files:
-            x_files = extracted_files[file_name]
+            extracted_files[file_name]
             for x_file in extracted_files[file_name]:
                 del x_file["raw"]
 

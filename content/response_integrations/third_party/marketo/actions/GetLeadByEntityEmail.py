@@ -40,8 +40,6 @@ def main():
     result_value = (
         False  # Set a simple result value, used for playbook if\else and placeholders.
     )
-    failed_entities = []  # In case this actions contains entity based logic, collect failed entity.identifiers
-    successfull_entities = []  # In case this reactions contains entity based logic, collect successfull entity.identifiers
 
     mc = MarketoClient(munchkin_id, client_id, client_secret, None, None)
     enriched_entities = []

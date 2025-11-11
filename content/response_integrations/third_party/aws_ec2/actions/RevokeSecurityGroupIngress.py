@@ -57,7 +57,6 @@ def main():
 
     else:
         output_message = "An error occured, checks the logs"
-        result = False
 
     siemplify.end(output_message, result_value)
 

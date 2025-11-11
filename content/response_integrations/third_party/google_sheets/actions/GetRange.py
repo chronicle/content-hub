@@ -26,9 +26,9 @@ def main():
         sheet = GoogleSheetFactory(credentials_json).create_spreadsheet(sheet_id)
 
         if worksheet_name:
-            worksheet = sheet.worksheet(worksheet_name)
+            sheet.worksheet(worksheet_name)
         else:
-            worksheet = sheet.sheet1
+            pass
         data = sheet.values_batch_get(query_range)
         siemplify.result.add_result_json(data)
 

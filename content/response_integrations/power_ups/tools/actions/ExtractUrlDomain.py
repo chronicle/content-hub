@@ -17,7 +17,6 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
-
 from TIPCommon.types import SingleJson
 
 from ..core.ToolsCommon import get_domain_from_string

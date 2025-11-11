@@ -139,11 +139,7 @@ def main():
                     entity.is_suspicious = True
 
                 if create_insight:
-                    severity = 0
-                    entity_identifier = entity.identifier
-                    insight_type = 1
-                    triggered_by = "AbuseIPDB"
-                    title = str(entity.identifier)
+                    str(entity.identifier)
                     content = f""" 
                         <b>Confidence Score:</b> {address_report.abuseConfidenceScore}
                         <b>Last Reported:</b> No Reports Found.

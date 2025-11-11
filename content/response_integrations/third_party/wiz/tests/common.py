@@ -14,10 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import dataclasses
 import pathlib
+from typing import TYPE_CHECKING
 
 from integration_testing.common import get_def_file_content
 

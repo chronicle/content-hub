@@ -55,14 +55,12 @@ def main(is_test_run):
         param_name="Threshold",
         print_value=False,
     )
-    priority = siemplify.extract_connector_param(
+    siemplify.extract_connector_param(
         param_name="Default Priority",
         print_value=False,
     )
 
     siemplify.LOGGER.info("------------------- Main - Started -------------------")
-
-    json_results = {}
 
     try:
         siemplify.LOGGER.info("Connecting to Microsoft Graph Security.")
@@ -98,9 +96,8 @@ def main(is_test_run):
                     )
                     siemplify.LOGGER.exception(e)
 
-                json_results = json.dumps(secure_score)
-                output_message = "SecureScore information was found."
-                result_value = json.dumps(secure_score)
+                json.dumps(secure_score)
+                json.dumps(secure_score)
             else:
                 siemplify.LOGGER.info(
                     f"Currect score {secure_score[0]['currentScore']!s} is greater than threshold {threshold!s}. No alerts created. ",
@@ -108,14 +105,12 @@ def main(is_test_run):
 
         else:
             siemplify.LOGGER.info("No SecureScore information was found.")
-            output_message = "No SecureScore information was found."
-            result_value = json.dumps({})
+            json.dumps({})
 
     except Exception as e:
         siemplify.LOGGER.error(f"Some errors occurred. Error: {e}")
         siemplify.LOGGER.exception(e)
-        result_value = json.dumps({})
-        output_message = f"Some errors occurred. Error: {e}"
+        json.dumps({})
         raise
 
     siemplify.LOGGER.info("------------------- Main - Finished -------------------")

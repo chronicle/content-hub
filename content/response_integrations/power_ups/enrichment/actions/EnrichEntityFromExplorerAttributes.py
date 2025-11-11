@@ -22,7 +22,6 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
 from TIPCommon.rest.soar_api import get_entity_data
 
-
 SCRIPT_NAME = "Enrich Entity from Explorer"
 SYSTEM_FIELDS = [
     "Type",

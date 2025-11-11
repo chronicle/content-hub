@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -45,7 +45,6 @@ def set_global_context(smp, key, value):
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
     output_message = (
         "output message :"  # human readable message, showed in UI as the action result
     )
@@ -111,7 +110,6 @@ def main():
             )
     except Exception as e:
         output_message = f"Error: {e}"
-        status = EXECUTION_STATE_FAILED
         result_value = False
 
     siemplify.end(output_message, result_value, EXECUTION_STATE_COMPLETED)

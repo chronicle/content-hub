@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import (
@@ -8,19 +9,20 @@ from soar_sdk.ScriptResult import (
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
+    COMMON_ACTION_ERROR_MESSAGE,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
-    COMMON_ACTION_ERROR_MESSAGE,
     UPDATE_CUSTOM_LIST_ITEMS_SCRIPT_NAME,
 )
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import (
-    validate_integer_param,
-    validate_indicators,
-    string_to_list,
     get_integration_params,
+    string_to_list,
+    validate_indicators,
+    validate_integer_param,
 )
 
 

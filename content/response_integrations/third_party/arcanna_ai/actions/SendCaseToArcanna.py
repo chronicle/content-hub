@@ -72,7 +72,7 @@ def main():
             event_id = fetch_field_value(full_case, event_id_field)
 
         raw_payload = full_case
-        title = full_case.get("title")
+        full_case.get("title")
         target_entities = siemplify.context_data.get("target_entities")
         raw_payload["target_entities"] = target_entities
         response_json = client.send_raw_event(

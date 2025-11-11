@@ -86,7 +86,7 @@ def main():
         else:
             siemplify.LOGGER.info(f"The free storage of {db_identifier} wasn't fetched")
 
-        if bool(rds_metric) == True:
+        if bool(rds_metric):
             found_db_identifier[f"db_instance_identifier: {db_identifier}"] = rds_metric
             output_message = (
                 f"The metric of {db_instance_identifier_list} was found successfully"

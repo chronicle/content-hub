@@ -30,7 +30,7 @@ class GoogleDriveManager:
         self._service = build("drive", "v3", credentials=credentials)
 
     def test_connectivity(self):
-        response = (
+        (
             self._service.files()
             .list(
                 q="mimeType='image/jpeg'",

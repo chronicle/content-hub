@@ -1,28 +1,30 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    UPDATE_SECURITY_POLICY_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
+    UPDATE_SECURITY_POLICY_SCRIPT_NAME,
 )
 from ..core.datamodels import SecurityPolicy
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import (
+    add_additional_params_to_payload,
     get_integration_params,
-    parse_tags,
-    parse_and_validate_int_list,
-    validate_integer_param,
     get_nullable_field,
     is_empty_string,
-    add_additional_params_to_payload,
+    parse_and_validate_int_list,
     parse_rules_param,
+    parse_tags,
+    validate_integer_param,
 )
 
 

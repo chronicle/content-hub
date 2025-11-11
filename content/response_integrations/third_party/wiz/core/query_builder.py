@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import dataclasses
+from typing import TYPE_CHECKING
 
 from graphql_query import Argument, Field, Operation, Query, Variable
 

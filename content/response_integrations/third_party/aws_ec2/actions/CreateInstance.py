@@ -17,7 +17,6 @@ SCRIPT_NAME = "AWS EC2 - Create Instance"
 def main(is_first_run):
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
-    mode = "Main" if is_first_run else "InstanceState"
 
     output_message = [""]
     status = EXECUTION_STATE_COMPLETED

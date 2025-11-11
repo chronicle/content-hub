@@ -19,7 +19,7 @@ def main():
 
     connection_response = datadog_manager.test_connectivity()
 
-    if connection_response.get("valid") == True:
+    if connection_response.get("valid"):
         return_value = True
         output_message = "Connected successfully"
 

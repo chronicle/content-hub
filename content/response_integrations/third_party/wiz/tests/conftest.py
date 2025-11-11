@@ -15,18 +15,17 @@
 from __future__ import annotations
 
 import pytest
-
-from TIPCommon.base.utils import CreateSession
 from integration_testing.common import use_live_api
+from integration_testing.logger import Logger
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
-from integration_testing.logger import Logger
+from TIPCommon.base.utils import CreateSession
 
-from wiz.core.api_client import WizApiClient, ApiParameters
+from wiz.core.api_client import ApiParameters, WizApiClient
+
 from .common import CONFIG
 from .core.product import Wiz
 from .core.session import WizSession
-
 
 pytest_plugins = ("integration_testing.conftest",)
 

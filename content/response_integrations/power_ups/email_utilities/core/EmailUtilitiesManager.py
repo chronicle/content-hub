@@ -36,8 +36,6 @@ try:
     import nacl.signing
 except ImportError:
     pass
-from netaddr import valid_ipv4, valid_ipv6
-
 import eml_parser
 from dkim.crypto import (
     DigestTooLargeError,
@@ -47,6 +45,7 @@ from dkim.crypto import (
     parse_pem_private_key,
     parse_public_key,
 )
+from netaddr import valid_ipv4, valid_ipv6
 
 __all__ = [
     "ARC",

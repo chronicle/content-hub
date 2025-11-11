@@ -14,7 +14,6 @@ def main():
     result_value = False
     output_message = [""]
     json_result = {}
-    namespace_logs = {}
 
     api_key = siemplify.extract_configuration_param(IDENTIFIER, "API Key")
     app_key = siemplify.extract_configuration_param(IDENTIFIER, "APP Key")

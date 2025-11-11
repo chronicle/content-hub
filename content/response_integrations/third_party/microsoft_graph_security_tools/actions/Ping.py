@@ -32,7 +32,7 @@ def main():
 
     try:
         siemplify.LOGGER.info("Connecting to Microsoft Graph Security.")
-        mtm = MicrosoftGraphSecurityManager(
+        MicrosoftGraphSecurityManager(
             client_id,
             secret_id,
             certificate_path,

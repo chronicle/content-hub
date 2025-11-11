@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import dns.resolver
-import dns.reversename
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler

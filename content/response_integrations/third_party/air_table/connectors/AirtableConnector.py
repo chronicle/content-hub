@@ -58,7 +58,6 @@ def generate_event(case_info):
 @output_handler
 def main():
     siemplify = SiemplifyConnectorExecution()  # Siemplify main SDK wrapper
-    env_list = []
     api_key = siemplify.extract_connector_param("Api key")
     base_id = siemplify.extract_connector_param("Base id")
     table_name = siemplify.extract_connector_param("Table name")

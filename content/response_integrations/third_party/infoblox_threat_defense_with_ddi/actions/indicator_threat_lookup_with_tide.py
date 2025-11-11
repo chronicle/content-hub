@@ -1,21 +1,23 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
     COMMON_ACTION_ERROR_MESSAGE,
     INDICATOR_THREAT_LOOKUP_WITH_TIDE_SCRIPT_NAME,
     MAX_TABLE_RECORDS,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
     TIDE_RLIMIT,
 )
 from ..core.datamodels import IndicatorThreatLookupTideResult
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import get_integration_params, validate_integer_param
 
 

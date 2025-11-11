@@ -36,9 +36,9 @@ def main():
                 airtable.update(record_id, json_fields_item)
         else:
             inserted_count = inserted_count + 1
-            res = airtable.insert(json_fields_item)
+            airtable.insert(json_fields_item)
 
-    records_count = len(results)
+    len(results)
 
     output_message = (
         f"{inserted_count} records were inserted, {updated_count} records were updated."

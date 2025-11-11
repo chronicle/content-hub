@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import (
@@ -13,15 +14,15 @@ from soar_sdk.SiemplifyUtils import (
 )
 
 from ..core.ApiManager import ApiManager
-from ..core.XMCyberException import XMCyberException
 from ..core.constants import (
-    INTEGRATION_NAME,
     ENRICHMENT_PREFIX,
-    SUPPORTED_ENTITY_TYPES,
     ENTITY_ID_FIELD,
+    INTEGRATION_NAME,
     PREFIX_PARAMETER_FOR_LABELS,
+    SUPPORTED_ENTITY_TYPES,
 )
 from ..core.utils import get_integration_params
+from ..core.XMCyberException import XMCyberException
 
 
 def get_entities_from_the_event(events):
