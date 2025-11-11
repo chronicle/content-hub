@@ -1,4 +1,4 @@
-# Actions/CreateCase.py
+# Actions/create_case.py
 
 import base64
 import json

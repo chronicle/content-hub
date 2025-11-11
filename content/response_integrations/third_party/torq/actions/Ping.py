@@ -1,4 +1,4 @@
-# Actions/Ping.py
+# Actions/ping.py
 
 import base64
 import json

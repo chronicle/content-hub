@@ -1,4 +1,4 @@
-# Actions/RunWorkflow.py
+# Actions/run_workflow.py
 
 import base64
 import json
