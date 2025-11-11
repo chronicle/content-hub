@@ -102,8 +102,8 @@ class CalculateTimestampAction(Action):
 
         if not self.params.custom_timestamp:
             raise ValueError(
-                '"Custom Timestamp" must have a value when "Input Type" is set to'
-                ' "Custom Timestamp".'
+                '“Custom Timestamp” parameter should have a value, '
+                'if “Input Type” is set to “Custom Timestamp”. Please check the spelling.'
             )
 
         if self.params.custom_timestamp_format:
@@ -114,8 +114,8 @@ class CalculateTimestampAction(Action):
                 )
             except ValueError as exc:
                 raise ValueError(
-                    'Input provided in "Custom Timestamp" and "Custom Timestamp Format" '
-                    "is not aligned. Please check the spelling."
+                    'input provided in “Custom Timestamp” and “Custom Timestamp Format” '
+                    'is not aligned. Please check the spelling.'
                 ) from exc
 
     def _validate_output_format(self, fmt: str) -> None:
@@ -142,7 +142,9 @@ class CalculateTimestampAction(Action):
 
         if invalid_deltas:
             raise ValueError(
-                'Invalid values provided in "Timestamp Delta". Please check the spelling.'
+                "invalid values provided "
+                f'in the “Timestamp Delta” parameter: {", ".join(invalid_deltas)}. '
+                "Please check the spelling."
             )
         self.json_results: SingleJson = json_result
 
@@ -187,8 +189,8 @@ class CalculateTimestampAction(Action):
 
         except Exception as exc:
             raise ValueError(
-                'Input provided in "Custom Timestamp" and "Custom Timestamp Format" '
-                f"is not aligned. Please check the spelling. {exc}"
+                'input provided in “Custom Timestamp” and “Custom Timestamp Format” '
+                'is not aligned. Please check the spelling.'
             ) from exc
 
     def _build_json_result(self, original: arrow.Arrow) -> SingleJson:

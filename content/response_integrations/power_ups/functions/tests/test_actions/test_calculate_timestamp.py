@@ -21,9 +21,9 @@ from TIPCommon.base.action import ExecutionState
 from ...actions import CalculateTimestamp
 
 Failed_message = ('Error executing action "Calculate Timestamp"\n'
-                  'Reason: Input provided in "Custom Timestamp" and '
-                  '"Custom Timestamp Format" '
-                  'is not aligned. Please check the spelling.')
+                  'Reason: input provided in “Custom Timestamp” and '
+                  '“Custom Timestamp Format” is not aligned. Please check '
+                  'the spelling.')
 
 
 @set_metadata(
