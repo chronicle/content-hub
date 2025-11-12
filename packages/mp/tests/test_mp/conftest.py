@@ -96,4 +96,4 @@ def marketplace_json(mock_marketplace: Path) -> Path:
 @pytest.fixture
 def mock_playbook_path() -> Path:
     """Path to the mocked playbook folder."""
-    return Path(__file__).parent / "mock_content_hub/playbooks" 
+    return Path(__file__).parent / "mock_content_hub/playbooks"

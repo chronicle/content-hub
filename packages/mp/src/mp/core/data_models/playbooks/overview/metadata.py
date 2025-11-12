@@ -95,8 +95,7 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
             return []
 
         return [
-            cls._from_non_built(o)
-            for o in yaml.safe_load(meta_path.read_text(encoding="utf-8"))
+            cls._from_non_built(o) for o in yaml.safe_load(meta_path.read_text(encoding="utf-8"))
         ]
 
     @classmethod
@@ -135,7 +134,7 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
                 Type=self.type_.value,
                 AlertRuleType=self.alert_rule_type,
                 Roles=self.roles,
-                Widgets=[]
+                Widgets=[],
             ),
             Roles=self.role_names,
         )
@@ -152,10 +151,8 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
             role_names=self.role_names,
         )
         return non_built
-    
-    
+
     def to_built_with_widget(self, widgets: list[BuiltPlaybookWidgetMetadata]):
         half_built: BuiltOverview = self.to_built()
         half_built["OverviewTemplate"]["Widgets"] = widgets
         return half_built
-    

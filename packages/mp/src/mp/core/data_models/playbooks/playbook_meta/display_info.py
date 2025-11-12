@@ -96,7 +96,7 @@ class PlaybookDisplayInfo(
             tags=non_built["tags"],
             contribution_type=PlaybookContributionType.from_string(non_built["contribution_type"]),
             is_google_verified=non_built["is_google_verified"],
-            should_display_in_content_hub=non_built["should_display_in_content_hub"]
+            should_display_in_content_hub=non_built["should_display_in_content_hub"],
         )
 
     def to_built(self) -> BuiltPlaybookDisplayInfo:

@@ -46,7 +46,10 @@ if TYPE_CHECKING:
     )
     from .step.metadata import BuiltStep, NonBuiltStep
     from .playbook_meta.display_info import NonBuiltPlaybookDisplayInfo
-    from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import ( BuiltTrigger, NonBuiltTrigger)
+    from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import (
+        BuiltTrigger,
+        NonBuiltTrigger,
+    )
 
 
 EMPTY_RN: ReleaseNote = ReleaseNote(
@@ -60,6 +63,7 @@ EMPTY_RN: ReleaseNote = ReleaseNote(
     ticket=None,
     version=1.0,
 )
+
 
 class BuiltPlaybookOverviewTemplateDetails(TypedDict):
     OverviewTemplate: BuiltOverview
@@ -111,6 +115,7 @@ class NonBuiltPlaybook(TypedDict):
     meta_data: NonBuiltPlaybookMetadata
     display_info: NonBuiltPlaybookDisplayInfo
 
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class Playbook:
     steps: list[Step]
@@ -153,14 +158,20 @@ class Playbook:
             release_notes=ReleaseNote.from_non_built_path(path),
             meta_data=PlaybookMetadata.from_non_built_path(path),
             display_info=(
-                PlaybookDisplayInfo.from_non_built(yaml.safe_load(display_info_path.read_text(encoding="utf-8")))
+                PlaybookDisplayInfo.from_non_built(
+                    yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
+                )
             ),
         )
 
     def to_built(self) -> BuiltPlaybook:
-        built_widgets: list[BuiltPlaybookWidgetMetadata] = [widget.to_built() for widget in self.widgets]
-        built_overviews: list[BuiltOverview] = [overview.to_built_with_widget(built_widgets) for overview in self.overviews]
-    
+        built_widgets: list[BuiltPlaybookWidgetMetadata] = [
+            widget.to_built() for widget in self.widgets
+        ]
+        built_overviews: list[BuiltOverview] = [
+            overview.to_built_with_widget(built_widgets) for overview in self.overviews
+        ]
+
         built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
         steps: list[BuiltStep] = [step.to_built() for step in self.steps]
         triggers: list[BuiltTrigger] = [trigger.to_built() for trigger in self.triggers]
@@ -195,8 +206,7 @@ class Playbook:
         )
 
         built_playbook_overview_template_details: list[BuiltPlaybookOverviewTemplateDetails] = [
-            overview.to_built_with_widget(built_widgets)
-            for overview in self.overviews
+            overview.to_built_with_widget(built_widgets) for overview in self.overviews
         ]
 
         return BuiltPlaybook(

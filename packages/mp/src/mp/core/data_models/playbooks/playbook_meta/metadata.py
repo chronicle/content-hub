@@ -124,13 +124,13 @@ class PlaybookMetadata(
     def from_built_path(cls, path: Path) -> Self:
         if not path.exists():
             return []
-        
+
         built_playbook: str = path.read_text(encoding="utf-8")
-        
+
         try:
             full_playbook = json.loads(built_playbook)
             return cls._from_built("", full_playbook["Definition"])
-        
+
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {path}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
@@ -235,9 +235,7 @@ class PlaybookMetadata(
             IsArchived=self.is_archived,
             LastEditor=self.last_editor,
             DefaultAccessLevel=(
-                self.default_access_level.value
-                if self.default_access_level is not None
-                else None
+                self.default_access_level.value if self.default_access_level is not None else None
             ),
             CreationSource=self.creation_source.value if self.creation_source is not None else None,
             SimulationClone=self.simulation_clone,
