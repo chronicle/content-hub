@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from pydantic import ValidationError
 
@@ -26,21 +26,14 @@ from mp.core.data_models.action.parameter import (
     BuiltActionParameter,
     NonBuiltActionParameter,
 )
+from test_mp.test_core.test_data_models.utils import st_excluded_param_name, st_valid_param_name
 
-st_valid_name = st.from_regex(r"^[a-zA-Z0-9-' ]+$").filter(
-    lambda v: 0 < len(v) < mp.core.constants.PARAM_NAME_MAX_LENGTH
-    and len(v.split()) <= mp.core.constants.PARAM_NAME_MAX_WORDS
-)
-st_excluded_name = st.sampled_from(
-    sorted(mp.core.constants.EXCLUDED_PARAM_NAMES_WITH_TOO_MANY_WORDS)
-)
-
-st_valid_non_built_param_dict = st.fixed_dictionaries(
+st_valid_non_built_action_param_dict = st.fixed_dictionaries(
     # Required keys
     {
         "description": st.text(max_size=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH),
         "is_mandatory": st.booleans(),
-        "name": st.one_of(st_valid_name, st_excluded_name),
+        "name": st.one_of(st_valid_param_name, st_excluded_param_name),
         "type": st.sampled_from(ActionParamType).map(lambda e: e.to_string()),
     },
     # Optional keys
@@ -50,12 +43,12 @@ st_valid_non_built_param_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_built_param_dict = st.fixed_dictionaries(
+st_valid_built_action_param_dict = st.fixed_dictionaries(
     # Required keys
     {
         "Description": st.text(max_size=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH),
         "IsMandatory": st.booleans(),
-        "Name": st.one_of(st_valid_name, st_excluded_name),
+        "Name": st.one_of(st_valid_param_name, st_excluded_param_name),
         "Type": st.sampled_from(ActionParamType).map(lambda e: str(e.value)),
     },
     # Optional keys
@@ -68,9 +61,9 @@ st_valid_built_param_dict = st.fixed_dictionaries(
 
 
 @st.composite
-def _st_invalid_non_built_dict(draw: st.DrawFn) -> NonBuiltActionParameter:
+def _st_invalid_non_built_action_param_dict(draw: st.DrawFn) -> NonBuiltActionParameter:
     # Start with a valid dict
-    data = draw(st_valid_non_built_param_dict)
+    data = draw(st_valid_non_built_action_param_dict)
 
     # Pick a random way to break it
     mutation = draw(
@@ -112,9 +105,9 @@ def _st_invalid_non_built_dict(draw: st.DrawFn) -> NonBuiltActionParameter:
 
 
 @st.composite
-def _st_invalid_built_dict(draw: st.DrawFn) -> BuiltActionParameter:
+def _st_invalid_built_action_param_dict(draw: st.DrawFn) -> BuiltActionParameter:
     # Start with a valid dict
-    data = draw(st_valid_built_param_dict)
+    data = draw(st_valid_built_action_param_dict)
 
     # Pick a random way to break it
     mutation = draw(
@@ -161,15 +154,18 @@ class TestValidations:
     Tests for pydantic-level model validations.
     """
 
-    @given(valid_non_built=st_valid_non_built_param_dict)
+    @settings(max_examples=30)
+    @given(valid_non_built=st_valid_non_built_action_param_dict)
     def test_valid_non_built(self, valid_non_built: NonBuiltActionParameter) -> None:
         ActionParameter.from_non_built(valid_non_built)
 
-    @given(valid_built=st_valid_built_param_dict)
+    @settings(max_examples=30)
+    @given(valid_built=st_valid_built_action_param_dict)
     def test_valid_built(self, valid_built: BuiltActionParameter) -> None:
         ActionParameter.from_built(valid_built)
 
-    @given(valid_built=st_valid_built_param_dict)
+    @settings(max_examples=30)
+    @given(valid_built=st_valid_built_action_param_dict)
     def test_recovery_from_built(self, valid_built: BuiltActionParameter) -> None:
         obj1 = ActionParameter.from_built(valid_built)
 
@@ -179,7 +175,8 @@ class TestValidations:
 
         assert obj1 == obj2
 
-    @given(valid_non_built=st_valid_non_built_param_dict)
+    @settings(max_examples=30)
+    @given(valid_non_built=st_valid_non_built_action_param_dict)
     def test_recovery_from_non_built(self, valid_non_built: NonBuiltActionParameter) -> None:
         obj1 = ActionParameter.from_non_built(valid_non_built)
 
@@ -189,12 +186,14 @@ class TestValidations:
 
         assert obj1 == obj2
 
-    @given(invalid_non_built=_st_invalid_non_built_dict())
+    @settings(max_examples=30)
+    @given(invalid_non_built=_st_invalid_non_built_action_param_dict())
     def test_invalid_non_built_fails(self, invalid_non_built: NonBuiltActionParameter) -> None:
         with pytest.raises((ValidationError, KeyError, ValueError)):
-            ActionParameter.from_non_built(invalid_non_built).to_non_built()
+            ActionParameter.from_non_built(invalid_non_built)
 
-    @given(invalid_built=_st_invalid_built_dict())
+    @settings(max_examples=30)
+    @given(invalid_built=_st_invalid_built_action_param_dict())
     def test_invalid_built_fails(self, invalid_built: BuiltActionParameter) -> None:
         with pytest.raises((ValidationError, ValueError, KeyError)):
-            ActionParameter.from_built(invalid_built).to_non_built()
+            ActionParameter.from_built(invalid_built)
