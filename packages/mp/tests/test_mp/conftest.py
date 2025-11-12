@@ -91,3 +91,9 @@ def full_details(built_integration: Path) -> Path:
 def marketplace_json(mock_marketplace: Path) -> Path:
     """Path to a mock `marketplace.json` file."""
     return mock_marketplace / BUILT_INTEGRATION_DIR_NAME / mp.core.constants.MARKETPLACE_JSON_NAME
+
+
+@pytest.fixture
+def mock_playbook_path() -> Path:
+    """Path to the mocked playbook folder."""
+    return Path(__file__).parent / "mock_content_hub/playbooks" 

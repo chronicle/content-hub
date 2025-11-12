@@ -12,138 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-from mp.core.data_models.playbooks.playbook import (
-    Playbook,
-    BuiltPlaybook,
-    NonBuiltPlaybook,
-)
-from mp.core.data_models.release_notes.metadata import (
-    ReleaseNote,
-    BuiltReleaseNote,
-    NonBuiltReleaseNote,
-)
-from mp.core.data_models.playbooks.playbook_meta.display_info import (
-    PlaybookDisplayInfo,
-    NonBuiltPlaybookDisplayInfo,
-)
-from .constants import (
-    STEP,
-    BUILT_STEP,
-    NON_BUILT_STEP,
-    OVERVIEW,
-    BUILT_OVERVIEW,
-    NON_BUILT_OVERVIEW,
-    PLAYBOOK_WIDGET_METADATA,
-    BUILT_PLAYBOOK_WIDGET_METADATA,
-    NON_BUILT_PLAYBOOK_WIDGET_METADATA,
-    TRIGGER,
-    BUILT_TRIGGER,
-    NON_BUILT_TRIGGER,
-    PLAYBOOK_METADATA,
-    BUILT_PLAYBOOK_METADATA,
-    NON_BUILT_PLAYBOOK_METADATA,
-)
+from __future__ import annotations
 
-BUILT_RELEASE_NOTE: BuiltReleaseNote = {
-    "ChangeDescription": "description",
-    "Deprecated": False,
-    "New": True,
-    "ItemName": "item_name",
-    "ItemType": "item_type",
-    "PublishTime": 1672531200,
-    "Regressive": False,
-    "Removed": False,
-    "TicketNumber": "ticket",
-    "IntroducedInIntegrationVersion": 1.0,
-}
+from mp.core.data_models.playbooks.playbook import Playbook
+from pathlib import Path
 
-NON_BUILT_RELEASE_NOTE: NonBuiltReleaseNote = {
-    "description": "description",
-    "deprecated": False,
-    "integration_version": 1.0,
-    "item_name": "item_name",
-    "item_type": "item_type",
-    "publish_time": "2023-01-01",
-    "regressive": False,
-    "removed": False,
-    "ticket_number": "ticket",
-    "new": True,
-}
-
-RELEASE_NOTE = ReleaseNote(
-    description="description",
-    deprecated=False,
-    new=True,
-    item_name="item_name",
-    item_type="item_type",
-    publish_time=1672531200,
-    regressive=False,
-    removed=False,
-    ticket="ticket",
-    version=1.0,
-)
-
-NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
-    "image_path": "image.png",
-    "display_name": "display_name",
-}
-
-DISPLAY_INFO = PlaybookDisplayInfo(
-    image_path="image.png",
-    display_name="display_name",
-)
-
-
-BUILT_PLAYBOOK: BuiltPlaybook = {
-    "CategoryName": "Content Hub",
-    "OverviewTemplatesDetails": [
-        {
-            "OverviewTemplate": {
-                **BUILT_OVERVIEW["OverviewTemplate"],
-                "Widgets": [BUILT_PLAYBOOK_WIDGET_METADATA],
-            },
-            "Roles": ["role1", "role2"],
-        }
-    ],
-    "WidgetTemplates": [BUILT_PLAYBOOK_WIDGET_METADATA],
-    "Definition": {
-        **BUILT_PLAYBOOK_METADATA,
-        "Steps": [BUILT_STEP],
-        "Triggers": [BUILT_TRIGGER],
-        "OverviewTemplates": [
-            {
-                **BUILT_OVERVIEW["OverviewTemplate"],
-                "Widgets": [BUILT_PLAYBOOK_WIDGET_METADATA],
-            }
-        ],
-    },
-}
-
-NON_BUILT_PLAYBOOK: NonBuiltPlaybook = {
-    "steps": [NON_BUILT_STEP],
-    "triggers": [NON_BUILT_TRIGGER],
-    "overviews": [NON_BUILT_OVERVIEW],
-    "widgets": [NON_BUILT_PLAYBOOK_WIDGET_METADATA],
-    "release_notes": [NON_BUILT_RELEASE_NOTE],
-    "meta_data": NON_BUILT_PLAYBOOK_METADATA,
-    "display_info": NON_BUILT_DISPLAY_INFO,
-}
-
-PLAYBOOK = Playbook(
-    steps=[STEP],
-    overviews=[OVERVIEW],
-    widgets=[PLAYBOOK_WIDGET_METADATA],
-    triggers=[TRIGGER],
-    release_notes=[RELEASE_NOTE],
-    meta_data=PLAYBOOK_METADATA,
-    display_info=DISPLAY_INFO,
-)
+MOCK_BUILT_PLAYBOOK_PATH: Path = Path("mock_built_playbook/mock_built_playbook.json")
+MOCK_NON_BUILT_PLAYBOOK_PATH: Path = Path("mock_non_built_playbook")
 
 
 class TestPlaybookDataModel:
-    def test_to_built(self):
-        assert PLAYBOOK.to_built() == BUILT_PLAYBOOK
+    def test_load_non_built_from_path(self, mock_playbook_path: Path):
+        pa: Path = mock_playbook_path / MOCK_NON_BUILT_PLAYBOOK_PATH
+        Playbook.from_non_built_path(pa)
 
-    def test_to_non_built(self):
-        assert PLAYBOOK.to_non_built() == NON_BUILT_PLAYBOOK
+
+    def test_convert_non_built_to_built(self, mock_playbook_path: Path):
+        pa: Path = mock_playbook_path / MOCK_NON_BUILT_PLAYBOOK_PATH
+        Playbook.from_non_built_path(pa).to_built()
+
+    
+    def test_convert_non_built_to_non_built(self, mock_playbook_path: Path):
+        pa: Path = mock_playbook_path / MOCK_NON_BUILT_PLAYBOOK_PATH
+        Playbook.from_non_built_path(pa).to_non_built()
+        
+            
+    def test_load_built_from_path(self, mock_playbook_path: Path):
+        pa: Path = mock_playbook_path / MOCK_BUILT_PLAYBOOK_PATH
+        Playbook.from_built_path(pa)
+
+
+    def test_convert_built_to_built(self, mock_playbook_path: Path):
+        pa: Path = mock_playbook_path / MOCK_BUILT_PLAYBOOK_PATH
+        Playbook.from_built_path(pa).to_built()
+
+
+    def test_convert_built_to_non_built(self, mock_playbook_path: Path):
+        pa: Path = mock_playbook_path / MOCK_BUILT_PLAYBOOK_PATH
+        Playbook.from_built_path(pa).to_non_built()
+    
+    

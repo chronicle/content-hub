@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import yaml
 from typing import TYPE_CHECKING, Annotated, NotRequired, TypedDict, Self
 
 import pydantic
@@ -31,6 +32,7 @@ from mp.core.data_models.playbooks.playbook_meta.metadata import (
     NonBuiltPlaybookMetadata,
     BuiltPlaybookMetadata,
 )
+from mp.core.data_models.playbooks.playbook_meta.display_info import PlaybookDisplayInfo
 from mp.core.data_models.release_notes.metadata import ReleaseNote, NonBuiltReleaseNote
 
 if TYPE_CHECKING:
@@ -43,7 +45,7 @@ if TYPE_CHECKING:
         NonBuiltPlaybookWidgetMetadata,
     )
     from .step.metadata import BuiltStep, NonBuiltStep
-    from .playbook_meta.display_info import PlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo
+    from .playbook_meta.display_info import NonBuiltPlaybookDisplayInfo
     from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import ( BuiltTrigger, NonBuiltTrigger)
 
 
@@ -59,12 +61,9 @@ EMPTY_RN: ReleaseNote = ReleaseNote(
     version=1.0,
 )
 
-
-class BuiltPlaybook(TypedDict):
-    CategoryName: str
-    OverviewTemplatesDetails: list[BuiltPlaybookOverviewTemplateDetails]
-    WidgetTemplates: list[BuiltPlaybookWidgetMetadata]
-    Definition: BuiltPlaybookDefinition
+class BuiltPlaybookOverviewTemplateDetails(TypedDict):
+    OverviewTemplate: BuiltOverview
+    Roles: list[str]
 
 
 class BuiltPlaybookDefinition(TypedDict):
@@ -96,9 +95,11 @@ class BuiltPlaybookDefinition(TypedDict):
     Permissions: list[BuiltAccessPermission]
 
 
-class BuiltPlaybookOverviewTemplateDetails(TypedDict):
-    OverviewTemplate: BuiltOverview
-    Roles: list[str]
+class BuiltPlaybook(TypedDict):
+    CategoryName: str
+    OverviewTemplatesDetails: list[BuiltPlaybookOverviewTemplateDetails]
+    WidgetTemplates: list[BuiltPlaybookWidgetMetadata]
+    Definition: BuiltPlaybookDefinition
 
 
 class NonBuiltPlaybook(TypedDict):
@@ -138,7 +139,7 @@ class Playbook:
             triggers=Trigger.from_built_path(path),
             release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
-            display_info=PlaybookDisplayInfo.from_built(),
+            display_info=PlaybookDisplayInfo.from_built({}),
         )
 
     @classmethod
@@ -151,13 +152,15 @@ class Playbook:
             triggers=Trigger.from_non_built_path(path),
             release_notes=ReleaseNote.from_non_built_path(path),
             meta_data=PlaybookMetadata.from_non_built_path(path),
-            display_info=(PlaybookDisplayInfo.from_non_built(json.loads(display_info_path.read_text()))),
+            display_info=(
+                PlaybookDisplayInfo.from_non_built(yaml.safe_load(display_info_path.read_text(encoding="utf-8")))
+            ),
         )
 
     def to_built(self) -> BuiltPlaybook:
         built_widgets: list[BuiltPlaybookWidgetMetadata] = [widget.to_built() for widget in self.widgets]
         built_overviews: list[BuiltOverview] = [overview.to_built_with_widget(built_widgets) for overview in self.overviews]
-        
+    
         built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
         steps: list[BuiltStep] = [step.to_built() for step in self.steps]
         triggers: list[BuiltTrigger] = [trigger.to_built() for trigger in self.triggers]
@@ -192,10 +195,7 @@ class Playbook:
         )
 
         built_playbook_overview_template_details: list[BuiltPlaybookOverviewTemplateDetails] = [
-            BuiltPlaybookOverviewTemplateDetails(
-                OverviewTemplate=overview.to_built_with_widget(built_widgets),
-                Roles=overview.role_names
-            )
+            overview.to_built_with_widget(built_widgets)
             for overview in self.overviews
         ]
 

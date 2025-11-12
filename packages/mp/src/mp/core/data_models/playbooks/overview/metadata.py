@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import json
 
+import yaml
+
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
@@ -93,8 +95,8 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
             return []
 
         return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
+            cls._from_non_built(o)
+            for o in yaml.safe_load(meta_path.read_text(encoding="utf-8"))
         ]
 
     @classmethod

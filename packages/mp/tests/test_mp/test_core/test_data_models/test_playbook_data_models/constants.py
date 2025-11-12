@@ -65,7 +65,12 @@ from mp.core.data_models.playbooks.playbook_meta.metadata import (
     NonBuiltPlaybookMetadata,
     PlaybookCreationSource,
 )
-from mp.core.data_models.playbooks.playbook_meta.display_info import PlaybookType
+from mp.core.data_models.playbooks.playbook_meta.display_info import (
+    PlaybookDisplayInfo,
+    NonBuiltPlaybookDisplayInfo,
+    PlaybookType,
+    PlaybookContributionType,
+)
 from mp.core.data_models.widget.data import (
     HtmlWidgetDataDefinition,
     BuiltWidgetDataDefinition,
@@ -78,6 +83,11 @@ from mp.core.data_models.playbooks.playbook_widget.metadata import (
     PlaybookWidgetMetadata,
     BuiltPlaybookWidgetMetadata,
     NonBuiltPlaybookWidgetMetadata,
+)
+from mp.core.data_models.release_notes.metadata import (
+    ReleaseNote,
+    BuiltReleaseNote,
+    NonBuiltReleaseNote,
 )
 
 
@@ -234,7 +244,7 @@ BUILT_STEP: BuiltStep = {
     "StartLoopStepIdentifier": "start_loop_step_id",
     "ParallelActions": [],
     "ParentContainerIdentifier": "parent_container_id",
-    "IsTouchedByAi": True,
+    "IsTouchedByAi": True
 }
 
 NON_BUILT_STEP: NonBuiltStep = {
@@ -869,4 +879,69 @@ PLAYBOOK_WIDGET_METADATA_WITH_NONE = PlaybookWidgetMetadata(
     present_if_empty=True,
     conditions_group=CONDITION_GROUP_WITH_NONE,
     integration_name=None,
+)
+
+BUILT_RELEASE_NOTE: BuiltReleaseNote = {
+    "ChangeDescription": "description",
+    "Deprecated": False,
+    "New": True,
+    "ItemName": "item_name",
+    "ItemType": "item_type",
+    "PublishTime": 1672531200,
+    "Regressive": False,
+    "Removed": False,
+    "TicketNumber": "ticket",
+    "IntroducedInIntegrationVersion": 1.0,
+}
+
+NON_BUILT_RELEASE_NOTE: NonBuiltReleaseNote = {
+    "description": "description",
+    "deprecated": False,
+    "integration_version": 1.0,
+    "item_name": "item_name",
+    "item_type": "item_type",
+    "publish_time": "2023-01-01",
+    "regressive": False,
+    "removed": False,
+    "ticket_number": "ticket",
+    "new": True,
+}
+
+RELEASE_NOTE = ReleaseNote(
+    description="description",
+    deprecated=False,
+    new=True,
+    item_name="item_name",
+    item_type="item_type",
+    publish_time=1672531200,
+    regressive=False,
+    removed=False,
+    ticket="ticket",
+    version=1.0,
+)
+
+NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
+    "type": "PLAYBOOK",
+    "content_hub_display_name": "display_name",
+    "description": "description",
+    "author": "author",
+    "contact_email": "email",
+    "dependent_playbook_ids": [],
+    "tags": [],
+    "contribution_type": "THIRD_PARTY",
+    "is_google_verified": False,
+    "should_display_in_content_hub": False,
+}
+
+DISPLAY_INFO = PlaybookDisplayInfo(
+    type=PlaybookType.PLAYBOOK,
+    content_hub_display_name="display_name",
+    description="description",
+    author="author",
+    contact_email="email",
+    dependent_playbook_ids=[],
+    tags=[],
+    contribution_type=PlaybookContributionType.THIRD_PARTY,
+    is_google_verified=False,
+    should_display_in_content_hub=False,
 )

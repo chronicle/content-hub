@@ -179,7 +179,7 @@ class PlaybookWidgetMetadata(
             data_definition=(
                 HtmlWidgetDataDefinition.from_non_built("", non_built["data_definition"])
                 if non_built["type"] == WidgetType.HTML.name
-                else non_built["data_definition"]
+                else json.dumps(non_built["data_definition"])
             ),
             widget_size=WidgetSize.from_string(non_built["widget_size"]),
             action_widget_template_id=non_built["action_widget_template_id"],
@@ -207,7 +207,7 @@ class PlaybookWidgetMetadata(
             TemplateIdentifier=self.template_identifier,
             Type=self.type.value,
             BlockStepInstanceName=self.block_step_instance_name,
-            DataDefinitionJson=json.dumps(self.data_definition.to_built()),
+            DataDefinitionJson=json.dumps(self.data_definition.to_built() if self.type == WidgetType.HTML else self.data_definition),
             GridColumns=self.widget_size.value,
             ActionWidgetTemplateIdentifier=self.action_widget_template_id,
             StepIdentifier=self.step_id,
@@ -233,7 +233,7 @@ class PlaybookWidgetMetadata(
             template_identifier=self.template_identifier,
             type=self.type.to_string().upper(),
             block_step_instance_name=self.block_step_instance_name,
-            data_definition=self.data_definition.to_non_built(),
+            data_definition=self.data_definition.to_non_built() if self.type == WidgetType.HTML else self.data_definition,
             widget_size=self.widget_size.to_string().upper(),
             step_integration=self.step_integration,
             action_widget_template_id=self.action_widget_template_id,

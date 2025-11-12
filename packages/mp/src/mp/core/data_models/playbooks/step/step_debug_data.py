@@ -74,6 +74,7 @@ class StepDebugData(
             An `ActionParameter` object
 
         """
+        print(built)
         return cls(
             step_id=built["OriginalStepIdentifier"],
             playbook_id=built["OriginalWorkflowIdentifier"],
