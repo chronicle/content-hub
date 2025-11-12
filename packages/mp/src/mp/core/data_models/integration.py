@@ -120,10 +120,6 @@ class Integration:
 
     def __post_init__(self) -> None:
         """Perform post-init logic."""
-        self._validate_integration()
-
-    def _validate_integration(self) -> None:
-        """Perform various validations over the integration."""
         self._validate_python_version()
 
     @classmethod
@@ -230,15 +226,6 @@ class Integration:
             msg: str = f"Failed to load integration {path.name}"
             raise ValueError(msg) from e
 
-    def has_ping_action(self) -> bool:
-        """Check whether the integration has a ping action.
-
-        Returns:
-            Whether the integration has a ping action
-
-        """
-        return any(name.lower() == "ping" for name in self.actions_metadata)
-
     def _validate_python_version(self) -> None:
         """Validate the integration's python version in the '.python-version' file.
 
@@ -259,94 +246,6 @@ class Integration:
                 f" the lowest supported version configured in {mp.core.constants.PROJECT_FILE}"
             )
             raise ValueError(msg)
-
-    def _raise_error_if_disabled(self) -> None:
-        """Raise an error if the integration has disabled components.
-
-        Raises:
-            RuntimeError: If the integration has disabled components
-
-        """
-        if self.has_disabled_parts:
-            msg: str = (
-                f"{self.identifier} contains disabled scripts:"
-                f"\nDisabled actions: {', '.join(self._disabled_actions) or None}"
-                f"\nDisabled connectors: {', '.join(self._disabled_connectors) or None}"
-                f"\nDisabled jobs: {', '.join(self._disabled_jobs) or None}"
-            )
-            raise RuntimeError(msg)
-
-    @property
-    def has_disabled_parts(self) -> bool:
-        """Check whether the integration is custom.
-
-        Returns:
-            whether the integration has any disabled components in it
-
-        """
-        return (
-            self._has_disabled_actions or self._has_disabled_connectors or self._has_disabled_jobs
-        )
-
-    @property
-    def _has_disabled_actions(self) -> bool:
-        """Check whether any of the actions are disabled.
-
-        Returns:
-            Whether the integration has any disabled actions in it.
-
-        """
-        return any(not a.is_enabled for a in self.actions_metadata.values())
-
-    @property
-    def _has_disabled_connectors(self) -> bool:
-        """Check whether any of the connectors are disabled.
-
-        Returns:
-            Whether the integration has any disabled connectors in it.
-
-        """
-        return any(not c.is_enabled for c in self.connectors_metadata.values())
-
-    @property
-    def _has_disabled_jobs(self) -> bool:
-        """Check whether any of the jobs are disabled.
-
-        Returns:
-            Whether the integration has any disabled jobs in it.
-
-        """
-        return any(not j.is_enabled for j in self.jobs_metadata.values())
-
-    @property
-    def _disabled_actions(self) -> list[str]:
-        """Get a list of disabled actions.
-
-        Returns:
-            Disabled action names
-
-        """
-        return [a.name for a in self.actions_metadata.values() if not a.is_enabled]
-
-    @property
-    def _disabled_connectors(self) -> list[str]:
-        """Get a list of disabled connectors.
-
-        Returns:
-            Disabled connector names
-
-        """
-        return [c.name for c in self.connectors_metadata.values() if not c.is_enabled]
-
-    @property
-    def _disabled_jobs(self) -> list[str]:
-        """Get a list of disabled jobs.
-
-        Returns:
-            Disabled job names
-
-        """
-        return [j.name for j in self.jobs_metadata.values() if not j.is_enabled]
 
     def to_built(self) -> BuiltIntegration:
         """Turn the buildable object into a "built" typed dict.
