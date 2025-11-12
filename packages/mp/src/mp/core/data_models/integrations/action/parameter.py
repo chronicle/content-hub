@@ -46,6 +46,13 @@ class ActionParamType(mp.core.data_models.abc.RepresentableEnum):
     NULL = -1
 
 
+OPT_TYPES: set[ActionParamType] = {
+    ActionParamType.DDL,
+    ActionParamType.MULTI_CHOICE_PARAMETER,
+    ActionParamType.MULTI_VALUES,
+}
+
+
 class BuiltActionParameter(TypedDict):
     Description: str
     IsMandatory: bool
@@ -142,8 +149,8 @@ class ActionParameter(
 
         """
         return cls(
-            description=built.get("Description") or "",
-            is_mandatory=mp.core.validators.coerce_bool_from_str_or_none(built["IsMandatory"]),
+            description=built["Description"],
+            is_mandatory=built["IsMandatory"],
             name=built["Name"],
             optional_values=built.get("OptionalValues"),
             type_=ActionParamType(int(built["Type"])),
