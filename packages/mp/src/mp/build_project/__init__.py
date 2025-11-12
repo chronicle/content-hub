@@ -34,7 +34,7 @@ import mp.core.config
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
-from .integration_utils import (build_integrations, should_build_integrations)
+from .integration_utils import build_integrations, should_build_integrations
 from .playbook_utils import should_build_playbooks
 from mp.core.custom_types import RepositoryType
 
@@ -52,7 +52,6 @@ app: typer.Typer = typer.Typer()
 class BuildParams:
     repository: Iterable[RepositoryType]
     integrations: Iterable[str]
-    playbooks: Iterable[str]
     groups: Iterable[str]
     deconstruct: bool
 
@@ -91,7 +90,7 @@ class BuildParams:
             raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
-        return [self.repository, self.integrations, self.groups, self.playbooks]
+        return [self.repository, self.integrations, self.groups]
 
 
 @app.command(name="build", help="Build the marketplace")
@@ -146,7 +145,6 @@ def build(  # noqa: PLR0913
     Args:
         repository: the repository to build
         integration: the integrations to build
-        playbook: the playbooks to build
         integration_group: the integration groups to build
         deconstruct: whether to deconstruct instead of build
         quiet: quiet log options
@@ -155,7 +153,6 @@ def build(  # noqa: PLR0913
     """
     repository = ensure_valid_list(repository)
     integration = ensure_valid_list(integration)
-    playbook = ensure_valid_list(playbook)
     integration_group = ensure_valid_list(integration_group)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
@@ -164,7 +161,6 @@ def build(  # noqa: PLR0913
     params: BuildParams = BuildParams(
         repository,
         integration,
-        playbook,
         integration_group,
         deconstruct,
     )

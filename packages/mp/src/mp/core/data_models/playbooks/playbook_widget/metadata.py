@@ -111,14 +111,14 @@ class PlaybookWidgetMetadata(
         """
         if not path.exists():
             return []
-        
+
         built_playbook: str = path.read_text(encoding="utf-8")
-        
+
         try:
             full_playbook = json.loads(built_playbook)
             built_widget: list[BuiltPlaybookWidgetMetadata] = full_playbook["WidgetTemplates"]
             return [cls._from_built("", widget) for widget in built_widget]
-        
+
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {path}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
@@ -207,7 +207,11 @@ class PlaybookWidgetMetadata(
             TemplateIdentifier=self.template_identifier,
             Type=self.type.value,
             BlockStepInstanceName=self.block_step_instance_name,
-            DataDefinitionJson=json.dumps(self.data_definition.to_built() if self.type == WidgetType.HTML else self.data_definition),
+            DataDefinitionJson=json.dumps(
+                self.data_definition.to_built()
+                if self.type == WidgetType.HTML
+                else self.data_definition
+            ),
             GridColumns=self.widget_size.value,
             ActionWidgetTemplateIdentifier=self.action_widget_template_id,
             StepIdentifier=self.step_id,
@@ -233,7 +237,9 @@ class PlaybookWidgetMetadata(
             template_identifier=self.template_identifier,
             type=self.type.to_string().upper(),
             block_step_instance_name=self.block_step_instance_name,
-            data_definition=self.data_definition.to_non_built() if self.type == WidgetType.HTML else self.data_definition,
+            data_definition=self.data_definition.to_non_built()
+            if self.type == WidgetType.HTML
+            else self.data_definition,
             widget_size=self.widget_size.to_string().upper(),
             step_integration=self.step_integration,
             action_widget_template_id=self.action_widget_template_id,

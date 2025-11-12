@@ -244,7 +244,7 @@ BUILT_STEP: BuiltStep = {
     "StartLoopStepIdentifier": "start_loop_step_id",
     "ParallelActions": [],
     "ParentContainerIdentifier": "parent_container_id",
-    "IsTouchedByAi": True
+    "IsTouchedByAi": True,
 }
 
 NON_BUILT_STEP: NonBuiltStep = {
