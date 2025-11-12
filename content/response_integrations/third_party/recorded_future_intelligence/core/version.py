@@ -7,15 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :version.py                                       noqa: ERA001
-# description     :This Module contains the package version
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :10-31-2025
-# python_version  :3.11                                             noqa: ERA001
-# product_version :8.0
-# ============================================================================#
-
 from __future__ import annotations
 
 __version__ = "8.0"
