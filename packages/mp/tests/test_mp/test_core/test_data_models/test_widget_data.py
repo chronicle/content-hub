@@ -21,7 +21,7 @@ from mp.core.data_models.widget.data import (
     WidgetDefinitionScope,
 )
 
-HTML_CONTENT = """<!DOCTYPE html>
+HTML_CONTENT: str = """<!DOCTYPE html>
 <html>
 <head>
 <title>Test Widget</title>

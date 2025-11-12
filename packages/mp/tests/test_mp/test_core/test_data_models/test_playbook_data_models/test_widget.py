@@ -29,13 +29,13 @@ from .constants import (
 class TestPlaybookWidgetMetadataDataModel:
     def test_from_built_with_valid_data(self):
         assert (
-            PlaybookWidgetMetadata._from_built("", BUILT_PLAYBOOK_WIDGET_METADATA)
+            PlaybookWidgetMetadata.from_built("", BUILT_PLAYBOOK_WIDGET_METADATA)
             == PLAYBOOK_WIDGET_METADATA
         )
 
     def test_from_non_built_with_valid_data(self):
         assert (
-            PlaybookWidgetMetadata._from_non_built("", NON_BUILT_PLAYBOOK_WIDGET_METADATA)
+            PlaybookWidgetMetadata.from_non_built("", NON_BUILT_PLAYBOOK_WIDGET_METADATA)
             == PLAYBOOK_WIDGET_METADATA
         )
 
@@ -55,13 +55,13 @@ class TestPlaybookWidgetMetadataDataModel:
 
     def test_from_built_with_none_values(self):
         assert (
-            PlaybookWidgetMetadata._from_built("", BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE)
+            PlaybookWidgetMetadata.from_built("", BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE)
             == PLAYBOOK_WIDGET_METADATA_WITH_NONE
         )
 
     def test_from_non_built_with_none_values(self):
         assert (
-            PlaybookWidgetMetadata._from_non_built("", NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE)
+            PlaybookWidgetMetadata.from_non_built("", NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE)
             == PLAYBOOK_WIDGET_METADATA_WITH_NONE
         )
 

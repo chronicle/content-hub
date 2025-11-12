@@ -25,15 +25,13 @@ from .constants import (
     NON_BUILT_OVERVIEW_WITH_NONE,
 )
 
-FILE_NAME = ""
-
 
 class TestOverviewDataModel:
     def test_from_built_with_valid_data(self):
-        assert Overview.from_built("", BUILT_OVERVIEW) == OVERVIEW
+        assert Overview.from_built(BUILT_OVERVIEW) == OVERVIEW
 
     def test_from_non_built_with_valid_data(self):
-        assert Overview.from_non_built("", NON_BUILT_OVERVIEW) == OVERVIEW
+        assert Overview.from_non_built(NON_BUILT_OVERVIEW) == OVERVIEW
 
     def test_to_built(self):
         assert OVERVIEW.to_built() == BUILT_OVERVIEW
@@ -43,17 +41,17 @@ class TestOverviewDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):
-            Overview.from_built(FILE_NAME, {})
+            Overview.from_built({})
 
     def test_from_non_built_with_invalid_data_raises_error(self):
         with pytest.raises(ValueError):
-            Overview.from_non_built("", {})
+            Overview.from_non_built({})
 
     def test_from_built_with_none_values(self):
-        assert Overview.from_built("", BUILT_OVERVIEW_WITH_NONE) == OVERVIEW_WITH_NONE
+        assert Overview.from_built(BUILT_OVERVIEW_WITH_NONE) == OVERVIEW_WITH_NONE
 
     def test_from_non_built_with_none_values(self):
-        assert Overview.from_non_built("", NON_BUILT_OVERVIEW_WITH_NONE) == OVERVIEW_WITH_NONE
+        assert Overview.from_non_built(NON_BUILT_OVERVIEW_WITH_NONE) == OVERVIEW_WITH_NONE
 
     def test_to_built_with_none_values(self):
         assert OVERVIEW_WITH_NONE.to_built() == BUILT_OVERVIEW_WITH_NONE
@@ -62,7 +60,7 @@ class TestOverviewDataModel:
         assert OVERVIEW_WITH_NONE.to_non_built() == NON_BUILT_OVERVIEW_WITH_NONE
 
     def test_from_built_to_built_is_idempotent(self):
-        assert Overview.from_built("", BUILT_OVERVIEW).to_built() == BUILT_OVERVIEW
+        assert Overview.from_built(BUILT_OVERVIEW).to_built() == BUILT_OVERVIEW
 
     def test_from_non_built_to_non_built_is_idempotent(self):
-        assert Overview.from_non_built("", NON_BUILT_OVERVIEW).to_non_built() == NON_BUILT_OVERVIEW
+        assert Overview.from_non_built(NON_BUILT_OVERVIEW).to_non_built() == NON_BUILT_OVERVIEW

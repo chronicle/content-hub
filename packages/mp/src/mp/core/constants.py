@@ -89,7 +89,7 @@ LOGO_FILE: str = f"logo{SVG_FILE_SUFFIX}"
 SDK_PACKAGE_NAME: str = "soar_sdk"
 TRIGGERS_FILE_NAME: str = f"triggers{DEF_FILE_SUFFIX}"
 DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
-OVERVIEWS_DIR: str = "overviews"
+OVERVIEWS_FILE_NAME: str = "overviews"
 STEPS_DIR: str = "steps"
 
 SAFE_TO_IGNORE_PACKAGES: tuple[str, ...] = ("win-unicode-console",)

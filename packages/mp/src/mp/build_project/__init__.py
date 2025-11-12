@@ -34,10 +34,7 @@ import mp.core.config
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
-from .integration_utils import (
-    build_integrations,
-    should_build_integrations,
-)
+from .integration_utils import (build_integrations, should_build_integrations)
 from .playbook_utils import should_build_playbooks
 from mp.core.custom_types import RepositoryType
 
@@ -114,13 +111,6 @@ def build(  # noqa: PLR0913
             default_factory=list,
         ),
     ],
-    playbook: Annotated[
-        list[str],
-        typer.Option(
-            help="Build a specified playbook",
-            default_factory=list,
-        ),
-    ],
     integration_group: Annotated[
         list[str],
         typer.Option(
@@ -179,9 +169,6 @@ def build(  # noqa: PLR0913
         deconstruct,
     )
     params.validate()
-
-    # if should_build_playbooks(playbook, repository):
-    #     build_playbooks(playbook)
 
     if should_build_integrations(integration, repository):
         build_integrations(integration, integration_group, repository, deconstruct=deconstruct)

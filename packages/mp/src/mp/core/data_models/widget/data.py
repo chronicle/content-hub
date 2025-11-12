@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import NotRequired, Self, TypedDict
+from typing import NotRequired, Self, TypedDict, TYPE_CHECKING
 
 import mp.core.data_models.abc
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class WidgetType(mp.core.data_models.abc.RepresentableEnum):

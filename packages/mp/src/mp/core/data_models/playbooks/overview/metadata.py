@@ -22,12 +22,21 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum
+from mp.core.data_models.playbooks.playbook_widget.metadata import BuiltPlaybookWidgetMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class OverviewDetails(TypedDict):
+class OverviewType(RepresentableEnum):
+    PLAYBOOK_DEFAULT = 0
+    REGULAR = 1
+    SYSTEM_ALERT = 2
+    SYSTEM_CASE = 3
+    ALERT_TYPE = 4
+
+
+class BuiltOverviewDetails(TypedDict):
     Identifier: str
     Name: str
     Creator: str | None
@@ -35,10 +44,11 @@ class OverviewDetails(TypedDict):
     Type: int
     AlertRuleType: str | None
     Roles: list[int]
+    Widgets: list[BuiltPlaybookWidgetMetadata]
 
 
 class BuiltOverview(TypedDict):
-    OverviewTemplate: OverviewDetails
+    OverviewTemplate: BuiltOverviewDetails
     Roles: NotRequired[list[str]]
 
 
@@ -53,15 +63,7 @@ class NonBuiltOverview(TypedDict):
     role_names: list[str]
 
 
-class OverviewType(RepresentableEnum):
-    PLAYBOOK_DEFAULT = 0
-    REGULAR = 1
-    SYSTEM_ALERT = 2
-    SYSTEM_CASE = 3
-    ALERT_TYPE = 4
-
-
-class Overview(mp.core.data_models.abc.ComponentMetadata):
+class Overview(mp.core.data_models.abc.SequentialMetadata):
     identifier: str
     name: str
     creator: str | None
@@ -79,14 +81,14 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
         try:
             full_playbook = json.loads(built_playbook)
             built_overview: list[BuiltOverview] = full_playbook["OverviewTemplatesDetails"]
-            return [cls._from_built("", overview) for overview in built_overview]
+            return [cls._from_built(overview) for overview in built_overview]
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {path}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
-        meta_path: Path = path / mp.core.constants.OVERVIEWS_DIR
+        meta_path: Path = path / mp.core.constants.OVERVIEWS_FILE_NAME
         if not meta_path.exists():
             return []
 
@@ -96,7 +98,7 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
         ]
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltOverview) -> Self:
+    def _from_built(cls, built: BuiltOverview) -> Self:
         return cls(
             identifier=built["OverviewTemplate"]["Identifier"],
             name=built["OverviewTemplate"]["Name"],
@@ -109,7 +111,7 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltOverview) -> Self:
+    def _from_non_built(cls, non_built: NonBuiltOverview) -> Self:
         return cls(
             identifier=non_built["identifier"],
             name=non_built["name"],
@@ -123,7 +125,7 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
 
     def to_built(self) -> BuiltOverview:
         return BuiltOverview(
-            OverviewTemplate=OverviewDetails(
+            OverviewTemplate=BuiltOverviewDetails(
                 Identifier=self.identifier,
                 Name=self.name,
                 Creator=self.creator,
@@ -131,6 +133,7 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
                 Type=self.type_.value,
                 AlertRuleType=self.alert_rule_type,
                 Roles=self.roles,
+                Widgets=[]
             ),
             Roles=self.role_names,
         )
@@ -147,3 +150,10 @@ class Overview(mp.core.data_models.abc.ComponentMetadata):
             role_names=self.role_names,
         )
         return non_built
+    
+    
+    def to_built_with_widget(self, widgets: list[BuiltPlaybookWidgetMetadata]):
+        half_built: BuiltOverview = self.to_built()
+        half_built["OverviewTemplate"]["Widgets"] = widgets
+        return half_built
+    
