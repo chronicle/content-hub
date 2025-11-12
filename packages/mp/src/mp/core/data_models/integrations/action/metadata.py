@@ -176,6 +176,13 @@ class ActionMetadata(
         """
         version: float = built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION)
         version = max(version, mp.core.constants.MINIMUM_SCRIPT_VERSION)
+        script_result_name: str = built.get("ScriptResultName")
+        if script_result_name is None or script_result_name == "":  # noqa:PLC1901
+            script_result_name = "is_success"
+
+        simulation_data_json: str = built.get("SimulationDataJSON")
+        if simulation_data_json is None or simulation_data_json == "":  # noqa:PLC1901
+            simulation_data_json = '{"Entities": []}'
 
         return cls(
             file_name=file_name,
@@ -191,8 +198,8 @@ class ActionMetadata(
             is_enabled=built.get("IsEnabled", True),
             name=built["Name"],
             parameters=[ActionParameter.from_built(p) for p in built.get("Parameters", [])],
-            script_result_name=built.get("ScriptResultName") or "is_success",
-            simulation_data_json=built.get("SimulationDataJson") or '{"Entities": []}',
+            script_result_name=(built.get("ScriptResultName") or DEFAULT_SCRIPT_RESULT_NAME),
+            simulation_data_json=(built.get("SimulationDataJSON") or DEFAULT_SIMULATION_DATA),
             default_result_value=built.get("DefaultResultValue"),
             version=version,
         )
