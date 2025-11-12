@@ -35,6 +35,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+class PlaybookCreationSource(mp.core.data_models.abc.RepresentableEnum):
+    USER_OR_API_INITIATED = 0
+    AI_GENERATED_FROM_ALERT = 1
+    AI_GENERATED_FROM_PROMPT = 2
+
+
 class BuiltPlaybookMetadata(TypedDict):
     Identifier: Annotated[str, pydantic.Field(pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX)]
     Name: Annotated[str, pydantic.Field(max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH)]
@@ -87,12 +93,6 @@ class NonBuiltPlaybookMetadata(TypedDict):
     permissions: list[NonBuiltAccessPermission]
 
 
-class PlaybookCreationSource(mp.core.data_models.abc.RepresentableEnum):
-    USER_OR_API_INITIATED = 0
-    AI_GENERATED_FROM_ALERT = 1
-    AI_GENERATED_FROM_PROMPT = 2
-
-
 class PlaybookMetadata(
     mp.core.data_models.abc.ComponentMetadata[BuiltPlaybookMetadata, NonBuiltPlaybookMetadata]
 ):
@@ -124,10 +124,13 @@ class PlaybookMetadata(
     def from_built_path(cls, path: Path) -> Self:
         if not path.exists():
             return []
+        
         built_playbook: str = path.read_text(encoding="utf-8")
+        
         try:
             full_playbook = json.loads(built_playbook)
             return cls._from_built("", full_playbook["Definition"])
+        
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {path}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
@@ -231,9 +234,11 @@ class PlaybookMetadata(
             IsAutomatic=self.is_automatic,
             IsArchived=self.is_archived,
             LastEditor=self.last_editor,
-            DefaultAccessLevel=self.default_access_level.value
-            if self.default_access_level is not None
-            else None,
+            DefaultAccessLevel=(
+                self.default_access_level.value
+                if self.default_access_level is not None
+                else None
+            ),
             CreationSource=self.creation_source.value if self.creation_source is not None else None,
             SimulationClone=self.simulation_clone,
             Permissions=[p.to_built() for p in self.permissions],

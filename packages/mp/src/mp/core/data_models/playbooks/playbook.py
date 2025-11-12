@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 from typing import TYPE_CHECKING, Annotated, NotRequired, TypedDict, Self
 
 import pydantic
@@ -32,7 +33,6 @@ from mp.core.data_models.playbooks.playbook_meta.metadata import (
 )
 from mp.core.data_models.release_notes.metadata import ReleaseNote, NonBuiltReleaseNote
 
-
 if TYPE_CHECKING:
     from .overview.metadata import BuiltOverview, NonBuiltOverview
     from packages.mp.src.mp.core.data_models.playbooks.playbook_meta.access_permissions import (
@@ -43,7 +43,21 @@ if TYPE_CHECKING:
         NonBuiltPlaybookWidgetMetadata,
     )
     from .step.metadata import BuiltStep, NonBuiltStep
-    from packages.mp.src.mp.core.data_models.playbooks.trigger import BuiltTrigger, NonBuiltTrigger
+    from .playbook_meta.display_info import PlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo
+    from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import ( BuiltTrigger, NonBuiltTrigger)
+
+
+EMPTY_RN: ReleaseNote = ReleaseNote(
+    description="Release description",
+    new=True,
+    item_name="Playbook name",
+    item_type="Playbook",
+    publish_time="1762436207",
+    regressive=False,
+    removed=False,
+    ticket=None,
+    version=1.0,
+)
 
 
 class BuiltPlaybook(TypedDict):
@@ -94,7 +108,7 @@ class NonBuiltPlaybook(TypedDict):
     widgets: list[NonBuiltPlaybookWidgetMetadata]
     release_notes: list[NonBuiltReleaseNote]
     meta_data: NonBuiltPlaybookMetadata
-
+    display_info: NonBuiltPlaybookDisplayInfo
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Playbook:
@@ -104,6 +118,7 @@ class Playbook:
     triggers: list[Trigger]
     release_notes: list[ReleaseNote]
     meta_data: PlaybookMetadata
+    display_info: PlaybookDisplayInfo
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -121,24 +136,14 @@ class Playbook:
             overviews=Overview.from_built_path(path),
             widgets=PlaybookWidgetMetadata.from_built_path(path),
             triggers=Trigger.from_built_path(path),
-            release_notes=[
-                ReleaseNote(
-                    description="Release description",
-                    new=True,
-                    item_name="Playbook name",
-                    item_type="Playbook",
-                    publish_time="1762436207",
-                    regressive=False,
-                    removed=False,
-                    ticket=None,
-                    version=1.0,
-                )
-            ],
+            release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
+            display_info=PlaybookDisplayInfo.from_built(),
         )
 
     @classmethod
     def from_non_built_path(cls, path: Path):
+        display_info_path: Path = path / mp.core.constants.DISPLAY_INFO_FILE_MAME
         return cls(
             steps=Step.from_non_built_path(path),
             overviews=Overview.from_non_built_path(path),
@@ -146,13 +151,16 @@ class Playbook:
             triggers=Trigger.from_non_built_path(path),
             release_notes=ReleaseNote.from_non_built_path(path),
             meta_data=PlaybookMetadata.from_non_built_path(path),
+            display_info=(PlaybookDisplayInfo.from_non_built(json.loads(display_info_path.read_text()))),
         )
 
     def to_built(self) -> BuiltPlaybook:
+        built_widgets: list[BuiltPlaybookWidgetMetadata] = [widget.to_built() for widget in self.widgets]
+        built_overviews: list[BuiltOverview] = [overview.to_built_with_widget(built_widgets) for overview in self.overviews]
+        
+        built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
         steps: list[BuiltStep] = [step.to_built() for step in self.steps]
         triggers: list[BuiltTrigger] = [trigger.to_built() for trigger in self.triggers]
-        overviews: list[BuiltOverview] = [overview.to_built() for overview in self.overviews]
-        built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
 
         built_playbook_definition: BuiltPlaybookDefinition = BuiltPlaybookDefinition(
             Identifier=built_playbook_meta["Identifier"],
@@ -179,13 +187,14 @@ class Playbook:
             IsArchived=built_playbook_meta["IsArchived"],
             Steps=steps,
             Triggers=triggers,
-            OverviewTemplates=overviews,
+            OverviewTemplates=built_overviews,
             Permissions=built_playbook_meta["Permissions"],
         )
 
         built_playbook_overview_template_details: list[BuiltPlaybookOverviewTemplateDetails] = [
             BuiltPlaybookOverviewTemplateDetails(
-                OverviewTemplate=overview.to_built(), Roles=overview.role_names
+                OverviewTemplate=overview.to_built_with_widget(built_widgets),
+                Roles=overview.role_names
             )
             for overview in self.overviews
         ]
@@ -193,7 +202,7 @@ class Playbook:
         return BuiltPlaybook(
             CategoryName="Content Hub",
             OverviewTemplatesDetails=built_playbook_overview_template_details,
-            WidgetTemplates=[widget.to_built() for widget in self.widgets],
+            WidgetTemplates=built_widgets,
             Definition=built_playbook_definition,
         )
 
@@ -205,4 +214,5 @@ class Playbook:
             triggers=[trigger.to_non_built() for trigger in self.triggers],
             release_notes=[rn.to_non_built() for rn in self.release_notes],
             meta_data=self.meta_data.to_non_built(),
+            display_info=self.display_info.to_non_built(),
         )

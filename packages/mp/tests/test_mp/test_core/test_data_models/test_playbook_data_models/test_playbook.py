@@ -23,6 +23,10 @@ from mp.core.data_models.release_notes.metadata import (
     BuiltReleaseNote,
     NonBuiltReleaseNote,
 )
+from mp.core.data_models.playbooks.playbook_meta.display_info import (
+    PlaybookDisplayInfo,
+    NonBuiltPlaybookDisplayInfo,
+)
 from .constants import (
     STEP,
     BUILT_STEP,
@@ -80,11 +84,25 @@ RELEASE_NOTE = ReleaseNote(
     version=1.0,
 )
 
+NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
+    "image_path": "image.png",
+    "display_name": "display_name",
+}
+
+DISPLAY_INFO = PlaybookDisplayInfo(
+    image_path="image.png",
+    display_name="display_name",
+)
+
+
 BUILT_PLAYBOOK: BuiltPlaybook = {
     "CategoryName": "Content Hub",
     "OverviewTemplatesDetails": [
         {
-            "OverviewTemplate": BUILT_OVERVIEW,
+            "OverviewTemplate": {
+                **BUILT_OVERVIEW["OverviewTemplate"],
+                "Widgets": [BUILT_PLAYBOOK_WIDGET_METADATA],
+            },
             "Roles": ["role1", "role2"],
         }
     ],
@@ -93,7 +111,12 @@ BUILT_PLAYBOOK: BuiltPlaybook = {
         **BUILT_PLAYBOOK_METADATA,
         "Steps": [BUILT_STEP],
         "Triggers": [BUILT_TRIGGER],
-        "OverviewTemplates": [BUILT_OVERVIEW],
+        "OverviewTemplates": [
+            {
+                **BUILT_OVERVIEW["OverviewTemplate"],
+                "Widgets": [BUILT_PLAYBOOK_WIDGET_METADATA],
+            }
+        ],
     },
 }
 
@@ -104,6 +127,7 @@ NON_BUILT_PLAYBOOK: NonBuiltPlaybook = {
     "widgets": [NON_BUILT_PLAYBOOK_WIDGET_METADATA],
     "release_notes": [NON_BUILT_RELEASE_NOTE],
     "meta_data": NON_BUILT_PLAYBOOK_METADATA,
+    "display_info": NON_BUILT_DISPLAY_INFO,
 }
 
 PLAYBOOK = Playbook(
@@ -113,6 +137,7 @@ PLAYBOOK = Playbook(
     triggers=[TRIGGER],
     release_notes=[RELEASE_NOTE],
     meta_data=PLAYBOOK_METADATA,
+    display_info=DISPLAY_INFO,
 )
 
 
