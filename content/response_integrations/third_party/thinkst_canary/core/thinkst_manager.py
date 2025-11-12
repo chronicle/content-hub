@@ -684,7 +684,7 @@ class ThinkstConnectorManager(ThinkstManager):
 
         return alert_info
 
-    def fetch_alerts(self) -> list[dict]:
+    def fetch_alerts(self) -> list[AlertInfo]:
         """
         Fetches and converts Canary Console incidents into SOAR AlertInfo objects
 
