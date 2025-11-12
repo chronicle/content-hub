@@ -103,7 +103,7 @@ class CalculateTimestampAction(Action):
         if not self.params.custom_timestamp:
             raise ValueError(
                 '“Custom Timestamp” parameter should have a value, '
-                'if “Input Type” is set to “Custom Timestamp”. Please check the spelling.'
+                'if “Input Type” is set to “Custom Timestamp”.'
             )
 
         if self.params.custom_timestamp_format:
