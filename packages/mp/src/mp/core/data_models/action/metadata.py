@@ -22,7 +22,6 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
-from mp.core.validators import coerce_bool_from_str_or_none
 
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
@@ -176,13 +175,6 @@ class ActionMetadata(
         """
         version: float = built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION)
         version = max(version, mp.core.constants.MINIMUM_SCRIPT_VERSION)
-        script_result_name: str = built.get("ScriptResultName")
-        if script_result_name is None or script_result_name == "":  # noqa:PLC1901
-            script_result_name = "is_success"
-
-        simulation_data_json: str = built.get("SimulationDataJSON")
-        if simulation_data_json is None or simulation_data_json == "":  # noqa:PLC1901
-            simulation_data_json = '{"Entities": []}'
 
         return cls(
             file_name=file_name,
@@ -193,13 +185,13 @@ class ActionMetadata(
                 for drm in built.get("DynamicResultsMetadata", []) or []
             ],
             integration_identifier=built["IntegrationIdentifier"],
-            is_async=coerce_bool_from_str_or_none(built.get("IsAsync")),
-            is_custom=coerce_bool_from_str_or_none(built.get("IsCustom")),
-            is_enabled=coerce_bool_from_str_or_none(built.get("IsEnabled", True)),
+            is_async=built.get("IsAsync", False),
+            is_custom=built.get("IsCustom", False),
+            is_enabled=built.get("IsEnabled", True),
             name=built["Name"],
             parameters=[ActionParameter.from_built(p) for p in built.get("Parameters", [])],
-            script_result_name=script_result_name,
-            simulation_data_json=simulation_data_json,
+            script_result_name=(built.get("ScriptResultName") or DEFAULT_SCRIPT_RESULT_NAME),
+            simulation_data_json=(built.get("SimulationDataJSON") or DEFAULT_SIMULATION_DATA),
             default_result_value=built.get("DefaultResultValue"),
             version=version,
         )
@@ -230,10 +222,10 @@ class ActionMetadata(
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
             parameters=[ActionParameter.from_non_built(p) for p in non_built["parameters"]],
-            script_result_name=non_built.get("script_result_name", "is_success"),
+            script_result_name=non_built.get("script_result_name", DEFAULT_SCRIPT_RESULT_NAME),
             simulation_data_json=non_built.get(
                 "simulation_data_json",
-                '{"Entities": []}',
+                DEFAULT_SIMULATION_DATA,
             ),
             default_result_value=non_built.get("default_result_value"),
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
