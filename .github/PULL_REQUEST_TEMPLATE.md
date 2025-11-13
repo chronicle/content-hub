@@ -53,6 +53,7 @@ This helps us review your contribution faster and more efficiently.
 
 - [ ] I have included the Buganizer ID in the PR title or description (e.g., "Internal Buganizer ID: 123456789" or "Related Buganizer: go/buganizer/123456789").
 - [ ] I have ensured that all internal discussions and PII related to this work remain in Buganizer.
+- [ ] I have tagged the PR with one or more labels that reflect the pull request purpose.
 
 ---
 
