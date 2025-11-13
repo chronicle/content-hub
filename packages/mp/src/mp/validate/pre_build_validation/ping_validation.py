@@ -18,9 +18,9 @@ from typing import TYPE_CHECKING
 
 from mp.core import constants
 from mp.core.exceptions import NonFatalValidationError
-from mp.core.utils import filter_yaml_files_and_extract_key
+from mp.core.utils import filter_and_map_yaml_files
 from mp.validate.utils import (
-    DEF_FILE_NAME_KEY,
+    extract_name,
     load_components_defs,
 )
 
@@ -50,8 +50,8 @@ class IntegrationHasPingActionValidation:
             validation_path, constants.ACTIONS_DIR
         )
 
-        ping_action: list[ActionName] = filter_yaml_files_and_extract_key(
-            component_defs.get(constants.ACTIONS_DIR, []), _is_ping, DEF_FILE_NAME_KEY
+        ping_action: list[ActionName] = filter_and_map_yaml_files(
+            component_defs.get(constants.ACTIONS_DIR, []), _is_ping, extract_name
         )
 
         if not ping_action:
