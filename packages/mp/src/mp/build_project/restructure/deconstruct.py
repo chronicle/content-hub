@@ -35,10 +35,10 @@ import mp.core.file_utils
 import mp.core.unix
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.action.metadata import ActionMetadata
+from mp.core.data_models.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.connector.metadata import ConnectorMetadata
 from mp.core.data_models.integration_meta.metadata import IntegrationMetadata, PythonVersion
 from mp.core.data_models.job.metadata import JobMetadata
-from mp.core.data_models.action_widget.metadata import ActionWidgetMetadata
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping
