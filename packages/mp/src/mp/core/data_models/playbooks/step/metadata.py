@@ -14,10 +14,11 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 
 import pydantic
-import json
+
 import mp.core.data_models.abc
 from mp.core import constants
 
@@ -79,6 +80,8 @@ class NonBuiltStep(TypedDict):
 
 
 class StepType(mp.core.data_models.abc.RepresentableEnum):
+    """Represents the type of a step."""
+
     ACTION = 0
     MULTI_CHOICE_QUESTION = 1
     PREVIOUS_ACTION = 2
@@ -92,6 +95,8 @@ class StepType(mp.core.data_models.abc.RepresentableEnum):
 
 
 class Step(mp.core.data_models.abc.ComponentMetadata):
+    """Represents a step in a playbook."""
+
     name: str
     description: str
     identifier: str
@@ -117,6 +122,18 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
+        """Create a list of Step objects from a built playbook path.
+
+        Args:
+            path: The path to the built playbook.
+
+        Returns:
+            A list of Step objects.
+
+        Raises:
+            ValueError: If the file at `path` fails to load or parse as JSON.
+
+        """
         if not path.exists():
             return []
         built_playbook: str = path.read_text(encoding="utf-8")
@@ -130,6 +147,15 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
+        """Create a list of Step objects from a non-built playbook path.
+
+        Args:
+            path: The path to the non-built playbook directory.
+
+        Returns:
+            A list of Step objects.
+
+        """
         step_folder_path: Path = path / constants.STEPS_DIR
         if not step_folder_path.exists():
             return []
@@ -200,6 +226,12 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
         )
 
     def to_built(self) -> BuiltStep:
+        """Convert the Step to its "built" representation.
+
+        Returns:
+            A BuiltStep dictionary.
+
+        """
         return BuiltStep(
             Name=self.name,
             Description=self.description,
@@ -228,6 +260,12 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
         )
 
     def to_non_built(self) -> NonBuiltStep:
+        """Convert the Step to its "non-built" representation.
+
+        Returns:
+            A NonBuiltStep dictionary.
+
+        """
         return NonBuiltStep(
             name=self.name,
             description=self.description,

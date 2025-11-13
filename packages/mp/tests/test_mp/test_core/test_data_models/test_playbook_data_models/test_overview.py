@@ -13,54 +13,56 @@
 # limitations under the License.
 
 import pytest
+
 from mp.core.data_models.playbooks.overview.metadata import (
     Overview,
 )
+
 from .constants import (
     BUILT_OVERVIEW,
-    OVERVIEW,
-    NON_BUILT_OVERVIEW,
     BUILT_OVERVIEW_WITH_NONE,
-    OVERVIEW_WITH_NONE,
+    NON_BUILT_OVERVIEW,
     NON_BUILT_OVERVIEW_WITH_NONE,
+    OVERVIEW,
+    OVERVIEW_WITH_NONE,
 )
 
 
 class TestOverviewDataModel:
-    def test_from_built_with_valid_data(self):
+    def test_from_built_with_valid_data(self) -> None:
         assert Overview.from_built(BUILT_OVERVIEW) == OVERVIEW
 
-    def test_from_non_built_with_valid_data(self):
+    def test_from_non_built_with_valid_data(self) -> None:
         assert Overview.from_non_built(NON_BUILT_OVERVIEW) == OVERVIEW
 
-    def test_to_built(self):
+    def test_to_built(self) -> None:
         assert OVERVIEW.to_built() == BUILT_OVERVIEW
 
-    def test_to_non_built(self):
+    def test_to_non_built(self) -> None:
         assert OVERVIEW.to_non_built() == NON_BUILT_OVERVIEW
 
-    def test_from_built_with_invalid_data_raises_error(self):
-        with pytest.raises(ValueError):
+    def test_from_built_with_invalid_data_raises_error(self) -> None:
+        with pytest.raises(ValueError):  # noqa: PT011
             Overview.from_built({})
 
-    def test_from_non_built_with_invalid_data_raises_error(self):
-        with pytest.raises(ValueError):
+    def test_from_non_built_with_invalid_data_raises_error(self) -> None:
+        with pytest.raises(ValueError):  # noqa: PT011
             Overview.from_non_built({})
 
-    def test_from_built_with_none_values(self):
+    def test_from_built_with_none_values(self) -> None:
         assert Overview.from_built(BUILT_OVERVIEW_WITH_NONE) == OVERVIEW_WITH_NONE
 
-    def test_from_non_built_with_none_values(self):
+    def test_from_non_built_with_none_values(self) -> None:
         assert Overview.from_non_built(NON_BUILT_OVERVIEW_WITH_NONE) == OVERVIEW_WITH_NONE
 
-    def test_to_built_with_none_values(self):
+    def test_to_built_with_none_values(self) -> None:
         assert OVERVIEW_WITH_NONE.to_built() == BUILT_OVERVIEW_WITH_NONE
 
-    def test_to_non_built_with_none_values(self):
+    def test_to_non_built_with_none_values(self) -> None:
         assert OVERVIEW_WITH_NONE.to_non_built() == NON_BUILT_OVERVIEW_WITH_NONE
 
-    def test_from_built_to_built_is_idempotent(self):
+    def test_from_built_to_built_is_idempotent(self) -> None:
         assert Overview.from_built(BUILT_OVERVIEW).to_built() == BUILT_OVERVIEW
 
-    def test_from_non_built_to_non_built_is_idempotent(self):
+    def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert Overview.from_non_built(NON_BUILT_OVERVIEW).to_non_built() == NON_BUILT_OVERVIEW

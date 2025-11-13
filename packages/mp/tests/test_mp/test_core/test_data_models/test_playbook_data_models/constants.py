@@ -13,45 +13,24 @@
 # limitations under the License.
 
 import json
-from mp.core.data_models.playbooks.step.step_parameter import (
-    StepParameter,
-    BuiltStepParameter,
-    NonBuiltStepParameter,
-)
-from mp.core.data_models.playbooks.step.step_debug_enrichment_data import (
-    DebugStepEnrichmentData,
-    BuiltStepDebugEnrichmentData,
-    NonBuiltStepDebugEnrichmentData,
-)
-from mp.core.data_models.playbooks.step.step_debug_data import (
-    StepDebugData,
-    BuiltStepDebugData,
-    NonBuiltStepDebugData,
-)
-from mp.core.data_models.playbooks.step.metadata import Step, BuiltStep, NonBuiltStep, StepType
-from mp.core.data_models.playbooks.overview.metadata import (
-    Overview,
-    BuiltOverview,
-    NonBuiltOverview,
-    OverviewType,
-)
-from mp.core.data_models.playbooks.trigger.metadata import (
-    Trigger,
-    BuiltTrigger,
-    NonBuiltTrigger,
-    TriggerType,
+
+from mp.core.data_models.condition.condition import (
+    BuiltCondition,
+    Condition,
+    MatchType,
+    NonBuiltCondition,
 )
 from mp.core.data_models.condition.condition_group import (
-    ConditionGroup,
     BuiltConditionGroup,
-    NonBuiltConditionGroup,
+    ConditionGroup,
     LogicalOperator,
+    NonBuiltConditionGroup,
 )
-from mp.core.data_models.condition.condition import (
-    Condition,
-    BuiltCondition,
-    NonBuiltCondition,
-    MatchType,
+from mp.core.data_models.playbooks.overview.metadata import (
+    BuiltOverview,
+    NonBuiltOverview,
+    Overview,
+    OverviewType,
 )
 from mp.core.data_models.playbooks.playbook_meta.access_permissions import (
     AccessPermission,
@@ -59,37 +38,58 @@ from mp.core.data_models.playbooks.playbook_meta.access_permissions import (
     NonBuiltAccessPermission,
     PlaybookAccessLevel,
 )
+from mp.core.data_models.playbooks.playbook_meta.display_info import (
+    NonBuiltPlaybookDisplayInfo,
+    PlaybookContributionType,
+    PlaybookDisplayInfo,
+    PlaybookType,
+)
 from mp.core.data_models.playbooks.playbook_meta.metadata import (
-    PlaybookMetadata,
     BuiltPlaybookMetadata,
     NonBuiltPlaybookMetadata,
     PlaybookCreationSource,
-)
-from mp.core.data_models.playbooks.playbook_meta.display_info import (
-    PlaybookDisplayInfo,
-    NonBuiltPlaybookDisplayInfo,
-    PlaybookType,
-    PlaybookContributionType,
-)
-from mp.core.data_models.widget.data import (
-    HtmlWidgetDataDefinition,
-    BuiltWidgetDataDefinition,
-    NonBuiltWidgetDataDefinition,
-    WidgetType,
-    WidgetSize,
-    WidgetDefinitionScope,
+    PlaybookMetadata,
 )
 from mp.core.data_models.playbooks.playbook_widget.metadata import (
-    PlaybookWidgetMetadata,
     BuiltPlaybookWidgetMetadata,
     NonBuiltPlaybookWidgetMetadata,
+    PlaybookWidgetMetadata,
+)
+from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
+from mp.core.data_models.playbooks.step.step_debug_data import (
+    BuiltStepDebugData,
+    NonBuiltStepDebugData,
+    StepDebugData,
+)
+from mp.core.data_models.playbooks.step.step_debug_enrichment_data import (
+    BuiltStepDebugEnrichmentData,
+    DebugStepEnrichmentData,
+    NonBuiltStepDebugEnrichmentData,
+)
+from mp.core.data_models.playbooks.step.step_parameter import (
+    BuiltStepParameter,
+    NonBuiltStepParameter,
+    StepParameter,
+)
+from mp.core.data_models.playbooks.trigger.metadata import (
+    BuiltTrigger,
+    NonBuiltTrigger,
+    Trigger,
+    TriggerType,
 )
 from mp.core.data_models.release_notes.metadata import (
-    ReleaseNote,
     BuiltReleaseNote,
     NonBuiltReleaseNote,
+    ReleaseNote,
 )
-
+from mp.core.data_models.widget.data import (
+    BuiltWidgetDataDefinition,
+    HtmlWidgetDataDefinition,
+    NonBuiltWidgetDataDefinition,
+    WidgetDefinitionScope,
+    WidgetSize,
+    WidgetType,
+)
 
 BUILT_STEP_DEBUG_ENRICHMENT_DATA: BuiltStepDebugEnrichmentData = {
     "Field": "field",
@@ -120,7 +120,8 @@ BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
     "ResultValue": "result_value",
     "ResultJson": '{"key": "value"}',
     "ScopeEntitiesEnrichmentData": [BUILT_STEP_DEBUG_ENRICHMENT_DATA],
-    "ScopeEntitiesEnrichmentDataJson": '[{"Field": "field", "Value": "value", "UseInPlaybook": true, "IsCustom": false}]',
+    "ScopeEntitiesEnrichmentDataJson": '[{"Field": "field", "Value": "value", '
+    '"UseInPlaybook": true, "IsCustom": false}]',
     "TenantId": "tenant_id",
 }
 
