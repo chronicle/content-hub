@@ -16,15 +16,28 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mp.core.config import get_marketplace_path
+from pathlib import Path
+from platformdirs import user_cache_dir
+from typing import TypedDict
+
+from platformdirs import user_config_dir
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 ENDPOINT: str = "https://34-36-216-242.sslip.io/v1/ingest"
 REQUEST_TIMEOUT: int = 3
-MP_CACHE_DIR: Path = get_marketplace_path() / ".mp_cache"
-CONFIG_FILE_PATH: Path = MP_CACHE_DIR / "config.yaml"
+
+APP_AUTHOR: str = "Google"
+APP_NAME: str = "mp-cli-tool"
+MP_CACHE_DIR: str = user_config_dir(APP_NAME, APP_AUTHOR)
+CONFIG_FILE_PATH: Path = MP_CACHE_DIR / Path("config.yaml")
+
+
+class ConfigYaml(TypedDict):
+    install_id: str
+    uuid4: str
+    report: bool
 
 
 NAME_MAPPER: dict[str, str] = {

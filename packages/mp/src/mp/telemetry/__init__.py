@@ -17,37 +17,33 @@ from __future__ import annotations
 import functools
 import importlib.metadata
 import json
-import pathlib
 import sys
 import time
 import traceback
-import uuid
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any
 import os
-import hashlib
-
 import requests
 import typer
-import yaml
 
 from mp.core.utils import get_current_platform, is_ci_cd
 
-from .constants import (
+from mp.telemetry.constants import (
     ALLOWED_COMMAND_ARGUMENTS,
     CONFIG_FILE_PATH,
     ENDPOINT,
     MP_CACHE_DIR,
     NAME_MAPPER,
     REQUEST_TIMEOUT,
+    ConfigYaml,
 )
-from .data_models import TelemetryPayload
+from mp.telemetry.data_models import TelemetryPayload
+from mp.telemetry.utils import load_config_yaml, is_report_enabled, get_install_id
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-ConfigYaml: TypeAlias = dict[str, str | bool]
 
 
 def track_command(mp_command_function: Callable) -> Callable:
@@ -63,7 +59,8 @@ def track_command(mp_command_function: Callable) -> Callable:
 
     @functools.wraps(mp_command_function)
     def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401
-        if is_ci_cd() or not _is_telemetry_enabled():
+        config_yaml: ConfigYaml = load_config_yaml()
+        if is_ci_cd() or not is_report_enabled(config_yaml):
             return mp_command_function(*args, **kwargs)
 
         start_time: float = time.monotonic()
@@ -93,8 +90,8 @@ def track_command(mp_command_function: Callable) -> Callable:
             safe_args: dict[str, Any] = _filter_command_arguments(kwargs)
             command_args_str: str = json.dumps(safe_args) if safe_args else None
 
-            payload: TelemetryPayload = TelemetryPayload(
-                install_id=_get_install_id(),
+            payload = TelemetryPayload(
+                install_id=get_install_id(config_yaml),
                 tool="mp",
                 tool_version=tool_version,
                 python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
@@ -137,69 +134,17 @@ def send_telemetry_report(event_payload: TelemetryPayload) -> None:
         pass
 
 
-def _is_telemetry_enabled() -> bool:
-    config_file: ConfigYaml = _load_config_yaml()
-    return config_file["is_enabled"]
-
-
-def _get_install_id() -> str:
-    config_file: ConfigYaml = _load_config_yaml()
-    return config_file["install_id"]
-
-
-def _load_config_yaml() -> ConfigYaml:
-    config: ConfigYaml
-    if not CONFIG_FILE_PATH.exists():
-        config: dict[str, str | bool] = {"install_id": str(uuid.uuid4()), "is_enabled": True}
-        _save_config_yaml(config)
-        return config
-
-    try:
-        with pathlib.Path.open(CONFIG_FILE_PATH) as f:
-            config: dict[str, Any] = yaml.safe_load(f) or {}
-
-    except (yaml.YAMLError, OSError):
-        config: dict[str, str | bool] = {"install_id": str(uuid.uuid4()), "is_enabled": True}
-        _save_config_yaml(config)
-        return config
-
-    made_changes: bool = False
-    if "install_id" not in config:
-        config["install_id"] = str(uuid.uuid4())
-        made_changes = True
-
-    if "is_enabled" not in config:
-        config["is_enabled"] = True
-        made_changes = True
-
-    if made_changes:
-        _save_config_yaml(config)
-
-    return config
-
-
-def _save_config_yaml(config_yaml: ConfigYaml) -> None:
-    try:
-        MP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        with pathlib.Path.open(CONFIG_FILE_PATH, "w") as f:
-            yaml.safe_dump(config_yaml, f)
-
-    except OSError:
-        pass
-
-
 def _command_name_mapper(command_name: str) -> str:
     return NAME_MAPPER[command_name]
 
 
 def _filter_command_arguments(kwargs: dict[Any, Any]) -> dict[str, Any]:
-    sanitized_args: dict[Any, Any] = {}
+    sanitized_args = {}
     for key, value in kwargs.items():
         if key in ALLOWED_COMMAND_ARGUMENTS:
             sanitized_value = _sanitize_argument_value(value)
             if sanitized_value is not None:
                 sanitized_args[key] = sanitized_value
-
     return sanitized_args
 
 
@@ -210,10 +155,8 @@ def _sanitize_argument_value(value: Enum | list[Any] | tuple[Any] | Any) -> Any:
     if isinstance(value, (list, tuple)):
         if not value:
             return None
-
         if len(value) == 1:
             return _sanitize_argument_value(value[0])
-
         return [_sanitize_argument_value(item) for item in value]
 
     return value
@@ -223,8 +166,3 @@ def _sanitize_traceback(raw_stack: str) -> str:
     home = os.path.expanduser("~")
     sanitized = raw_stack.replace(home, "<HOME>")
     return sanitized
-
-
-def _create_install_id() -> str:
-    base_dir: str = os.path.expanduser("~")
-    platform_name = get_current_platform()[0]
