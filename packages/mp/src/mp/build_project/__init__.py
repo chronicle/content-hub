@@ -31,12 +31,11 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
+from mp.core.custom_types import RepositoryType  # noqa: TC001
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
 from .integration_utils import build_integrations, should_build_integrations
-from .playbook_utils import should_build_playbooks
-from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

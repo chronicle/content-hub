@@ -41,6 +41,12 @@ def should_build_integrations(
     integrations: Iterable[str],
     repos: Iterable[RepositoryType],
 ) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
     return integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
 
 
@@ -51,6 +57,7 @@ def build_integrations(
     *,
     deconstruct: bool = False,
 ) -> None:
+    """Entry point of the build or deconstruct integration operation."""
     commercial_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMERCIAL)
     community_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMUNITY)
     commercial_mp: Integrations = Integrations(commercial_path)
@@ -80,6 +87,7 @@ def build_integration_groups(
     commercial_mp: Integrations,
     community_mp: Integrations,
 ) -> None:
+    """Build integration according to their groups."""
     rich.print("Building integration groups...")
     _build_integration_groups(set(groups), commercial_mp)
     _build_integration_groups(set(groups), community_mp)
