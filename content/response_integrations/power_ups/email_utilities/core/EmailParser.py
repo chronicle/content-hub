@@ -723,7 +723,6 @@ class EmlParser:
         extractor = URLExtract()
 
         for found_url in extractor.find_urls(body):
-            # for found_url in EmailParserRegex.url_regex_simple.findall(body):
             if "." not in found_url:
                 # if we found a URL like e.g. http://afafasasfasfas; that makes no
                 # sense, thus skip it
