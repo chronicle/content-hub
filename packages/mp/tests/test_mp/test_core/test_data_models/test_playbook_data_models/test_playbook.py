@@ -14,34 +14,35 @@
 
 from __future__ import annotations
 
-from mp.core.data_models.playbooks.playbook import Playbook
 from pathlib import Path
+
+from mp.core.data_models.playbooks.playbook import Playbook
 
 MOCK_BUILT_PLAYBOOK_PATH: Path = Path("mock_built_playbook/mock_built_playbook.json")
 MOCK_NON_BUILT_PLAYBOOK_PATH: Path = Path("mock_non_built_playbook")
 
 
 class TestPlaybookDataModel:
-    def test_load_non_built_from_path(self, mock_playbook_path: Path):
+    def test_load_non_built_from_path(self, mock_playbook_path: Path) -> None:
         pa: Path = mock_playbook_path / MOCK_NON_BUILT_PLAYBOOK_PATH
         Playbook.from_non_built_path(pa)
 
-    def test_convert_non_built_to_built(self, mock_playbook_path: Path):
+    def test_convert_non_built_to_built(self, mock_playbook_path: Path) -> None:
         pa: Path = mock_playbook_path / MOCK_NON_BUILT_PLAYBOOK_PATH
         Playbook.from_non_built_path(pa).to_built()
 
-    def test_convert_non_built_to_non_built(self, mock_playbook_path: Path):
+    def test_convert_non_built_to_non_built(self, mock_playbook_path: Path) -> None:
         pa: Path = mock_playbook_path / MOCK_NON_BUILT_PLAYBOOK_PATH
         Playbook.from_non_built_path(pa).to_non_built()
 
-    def test_load_built_from_path(self, mock_playbook_path: Path):
+    def test_load_built_from_path(self, mock_playbook_path: Path) -> None:
         pa: Path = mock_playbook_path / MOCK_BUILT_PLAYBOOK_PATH
         Playbook.from_built_path(pa)
 
-    def test_convert_built_to_built(self, mock_playbook_path: Path):
+    def test_convert_built_to_built(self, mock_playbook_path: Path) -> None:
         pa: Path = mock_playbook_path / MOCK_BUILT_PLAYBOOK_PATH
         Playbook.from_built_path(pa).to_built()
 
-    def test_convert_built_to_non_built(self, mock_playbook_path: Path):
+    def test_convert_built_to_non_built(self, mock_playbook_path: Path) -> None:
         pa: Path = mock_playbook_path / MOCK_BUILT_PLAYBOOK_PATH
         Playbook.from_built_path(pa).to_non_built()

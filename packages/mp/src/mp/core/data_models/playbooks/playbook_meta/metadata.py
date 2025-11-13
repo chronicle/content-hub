@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
-import json
 
 import mp.core.constants
 import mp.core.data_models.abc
@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 
 
 class PlaybookCreationSource(mp.core.data_models.abc.RepresentableEnum):
+    """Represents the source of a playbook's creation."""
+
     USER_OR_API_INITIATED = 0
     AI_GENERATED_FROM_ALERT = 1
     AI_GENERATED_FROM_PROMPT = 2
@@ -96,6 +98,8 @@ class NonBuiltPlaybookMetadata(TypedDict):
 class PlaybookMetadata(
     mp.core.data_models.abc.ComponentMetadata[BuiltPlaybookMetadata, NonBuiltPlaybookMetadata]
 ):
+    """Represents the metadata of a playbook."""
+
     identifier: str
     is_enable: bool
     version: float
@@ -122,6 +126,18 @@ class PlaybookMetadata(
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
+        """Create a PlaybookMetadata object from a built playbook path.
+
+        Args:
+            path: The path to the built playbook.
+
+        Returns:
+            A PlaybookMetadata object.
+
+        Raises:
+            ValueError: If the file at `path` fails to load or parse as JSON.
+
+        """
         if not path.exists():
             return []
 
@@ -137,9 +153,19 @@ class PlaybookMetadata(
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> Self:
+        """Create a PlaybookMetadata object from a non-built playbook path.
+
+        Args:
+            path: The path to the non-built playbook directory.
+
+        Returns:
+            A PlaybookMetadata object.
+
+        """
         definition_path: Path = path / mp.core.constants.DEFINITION_FILE
         if definition_path.exists():
             return cls._from_non_built_path(definition_path)
+        return None
 
     @classmethod
     def _from_built(cls, _: str, built: BuiltPlaybookMetadata) -> Self:
@@ -214,6 +240,12 @@ class PlaybookMetadata(
         )
 
     def to_built(self) -> BuiltPlaybookMetadata:
+        """Convert the PlaybookMetadata to its "built" representation.
+
+        Returns:
+            A BuiltPlaybookMetadata dictionary.
+
+        """
         return BuiltPlaybookMetadata(
             Identifier=self.identifier,
             IsEnable=self.is_enable,
@@ -243,6 +275,12 @@ class PlaybookMetadata(
         )
 
     def to_non_built(self) -> NonBuiltPlaybookMetadata:
+        """Convert the PlaybookMetadata to its "non-built" representation.
+
+        Returns:
+            A NonBuiltPlaybookMetadata dictionary.
+
+        """
         non_built: NonBuiltPlaybookMetadata = NonBuiltPlaybookMetadata(
             identifier=self.identifier,
             is_enable=self.is_enable,

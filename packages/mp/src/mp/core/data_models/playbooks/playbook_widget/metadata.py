@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Self, TypedDict, Any
+from typing import TYPE_CHECKING, Any, Self, TypedDict
 
-import pydantic
+import pydantic  # noqa: TC002
 
 import mp.core.constants
 import mp.core.data_models.abc
@@ -28,8 +28,8 @@ from mp.core.data_models.condition.condition_group import (
     NonBuiltConditionGroup,
 )
 from mp.core.data_models.widget.data import (
-    NonBuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
+    NonBuiltWidgetDataDefinition,
     WidgetSize,
     WidgetType,
 )
@@ -108,6 +108,9 @@ class PlaybookWidgetMetadata(
         Returns:
             A sequence of `WidgetMetadata` objects
 
+        Raises:
+            ValueError: If the file at `path` fails to load or parse as JSON.
+
         """
         if not path.exists():
             return []
@@ -168,7 +171,7 @@ class PlaybookWidgetMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
         return cls(
             title=non_built["title"],
             description=non_built["description"],

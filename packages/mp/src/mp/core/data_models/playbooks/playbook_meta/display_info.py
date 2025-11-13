@@ -20,7 +20,6 @@ import pydantic
 
 import mp.core.constants
 import mp.core.data_models.abc
-import mp.core.utils
 
 
 class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
@@ -75,14 +74,14 @@ class PlaybookDisplayInfo(
     description: str = "The description that will appear in the Content Hub"
     author: str = "Please Fill"
     contact_email: str = "Please Fill"
-    dependent_playbook_ids: list[str] = []
-    tags: list[str] = []
+    dependent_playbook_ids: list[str] = []  # noqa: RUF012
+    tags: list[str] = []  # noqa: RUF012
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
     should_display_in_content_hub: bool = False
 
     @classmethod
-    def _from_built(cls, built: BuiltPlaybookDisplayInfo) -> Self:
+    def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:
         return cls()
 
     @classmethod
@@ -100,9 +99,21 @@ class PlaybookDisplayInfo(
         )
 
     def to_built(self) -> BuiltPlaybookDisplayInfo:
-        raise NotImplementedError()
+        """Convert the PlaybookDisplayInfo to its "built" representation.
+
+        Raises:
+            NotImplementedError: This method is not implemented.
+
+        """
+        raise NotImplementedError
 
     def to_non_built(self) -> NonBuiltPlaybookDisplayInfo:
+        """Convert the PlaybookDisplayInfo to its "non-built" representation.
+
+        Returns:
+            A NonBuiltPlaybookDisplayInfo dictionary.
+
+        """
         non_built: NonBuiltPlaybookDisplayInfo = NonBuiltPlaybookDisplayInfo(
             type=self.type.to_string(),
             content_hub_display_name=self.content_hub_display_name,

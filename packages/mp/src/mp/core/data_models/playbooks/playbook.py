@@ -15,28 +15,27 @@
 from __future__ import annotations
 
 import dataclasses
-import json
-import yaml
-from typing import TYPE_CHECKING, Annotated, NotRequired, TypedDict, Self
+from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
-from pathlib import Path
+import yaml
 
 import mp.core.constants
-from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.overview.metadata import Overview
-from mp.core.data_models.playbooks.playbook_widget.metadata import PlaybookWidgetMetadata
-from mp.core.data_models.playbooks.trigger.metadata import Trigger
-from mp.core.data_models.playbooks.playbook_meta.metadata import (
-    PlaybookMetadata,
-    NonBuiltPlaybookMetadata,
-    BuiltPlaybookMetadata,
-)
 from mp.core.data_models.playbooks.playbook_meta.display_info import PlaybookDisplayInfo
-from mp.core.data_models.release_notes.metadata import ReleaseNote, NonBuiltReleaseNote
+from mp.core.data_models.playbooks.playbook_meta.metadata import (
+    BuiltPlaybookMetadata,
+    NonBuiltPlaybookMetadata,
+    PlaybookMetadata,
+)
+from mp.core.data_models.playbooks.playbook_widget.metadata import PlaybookWidgetMetadata
+from mp.core.data_models.playbooks.step.metadata import Step
+from mp.core.data_models.playbooks.trigger.metadata import Trigger
+from mp.core.data_models.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 
 if TYPE_CHECKING:
-    from .overview.metadata import BuiltOverview, NonBuiltOverview
+    from pathlib import Path
+
     from packages.mp.src.mp.core.data_models.playbooks.playbook_meta.access_permissions import (
         BuiltAccessPermission,
     )
@@ -44,12 +43,14 @@ if TYPE_CHECKING:
         BuiltPlaybookWidgetMetadata,
         NonBuiltPlaybookWidgetMetadata,
     )
-    from .step.metadata import BuiltStep, NonBuiltStep
-    from .playbook_meta.display_info import NonBuiltPlaybookDisplayInfo
     from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import (
         BuiltTrigger,
         NonBuiltTrigger,
     )
+
+    from .overview.metadata import BuiltOverview, NonBuiltOverview
+    from .playbook_meta.display_info import NonBuiltPlaybookDisplayInfo
+    from .step.metadata import BuiltStep, NonBuiltStep
 
 
 EMPTY_RN: ReleaseNote = ReleaseNote(
@@ -101,7 +102,7 @@ class BuiltPlaybookDefinition(TypedDict):
 
 class BuiltPlaybook(TypedDict):
     CategoryName: str
-    OverviewTemplatesDetails: list[BuiltPlaybookOverviewTemplateDetails]
+    OverviewTemplatesDetails: list[BuiltOverview]
     WidgetTemplates: list[BuiltPlaybookWidgetMetadata]
     Definition: BuiltPlaybookDefinition
 
@@ -128,13 +129,13 @@ class Playbook:
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
-        """Create the Playbook from a built playbook path.
+        """Create a Playbook from a built playbook path.
 
         Args:
-             path: the path to the "built" playbook.
+            path: The path to the "built" playbook.
 
         Returns:
-            The Playbook object.
+            A Playbook object.
 
         """
         return cls(
@@ -148,7 +149,16 @@ class Playbook:
         )
 
     @classmethod
-    def from_non_built_path(cls, path: Path):
+    def from_non_built_path(cls, path: Path) -> Self:
+        """Create a Playbook from a non-built playbook path.
+
+        Args:
+            path: The path to the "non-built" playbook directory.
+
+        Returns:
+            A Playbook object.
+
+        """
         display_info_path: Path = path / mp.core.constants.DISPLAY_INFO_FILE_MAME
         return cls(
             steps=Step.from_non_built_path(path),
@@ -165,6 +175,12 @@ class Playbook:
         )
 
     def to_built(self) -> BuiltPlaybook:
+        """Convert the Playbook to its "built" representation.
+
+        Returns:
+            A BuiltPlaybook dictionary.
+
+        """
         built_widgets: list[BuiltPlaybookWidgetMetadata] = [
             widget.to_built() for widget in self.widgets
         ]
@@ -205,7 +221,7 @@ class Playbook:
             Permissions=built_playbook_meta["Permissions"],
         )
 
-        built_playbook_overview_template_details: list[BuiltPlaybookOverviewTemplateDetails] = [
+        built_playbook_overview_template_details: list[BuiltOverview] = [
             overview.to_built_with_widget(built_widgets) for overview in self.overviews
         ]
 
@@ -217,6 +233,12 @@ class Playbook:
         )
 
     def to_non_built(self) -> NonBuiltPlaybook:
+        """Convert the Playbook to its "non-built" representation.
+
+        Returns:
+            A NonBuiltPlaybook dictionary.
+
+        """
         return NonBuiltPlaybook(
             steps=[step.to_non_built() for step in self.steps],
             overviews=[overview.to_non_built() for overview in self.overviews],

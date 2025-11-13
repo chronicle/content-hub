@@ -13,54 +13,56 @@
 # limitations under the License.
 
 import pytest
+
 from mp.core.data_models.playbooks.trigger.metadata import (
     Trigger,
 )
+
 from .constants import (
     BUILT_TRIGGER,
-    TRIGGER,
-    NON_BUILT_TRIGGER,
     BUILT_TRIGGER_WITH_NONE,
-    TRIGGER_WITH_NONE,
+    NON_BUILT_TRIGGER,
     NON_BUILT_TRIGGER_WITH_NONE,
+    TRIGGER,
+    TRIGGER_WITH_NONE,
 )
 
 
 class TestTriggerDataModel:
-    def test_from_built_with_valid_data(self):
+    def test_from_built_with_valid_data(self) -> None:
         assert Trigger.from_built(BUILT_TRIGGER) == TRIGGER
 
-    def test_from_non_built_with_valid_data(self):
+    def test_from_non_built_with_valid_data(self) -> None:
         assert Trigger.from_non_built(NON_BUILT_TRIGGER) == TRIGGER
 
-    def test_to_built(self):
+    def test_to_built(self) -> None:
         assert TRIGGER.to_built() == BUILT_TRIGGER
 
-    def test_to_non_built(self):
+    def test_to_non_built(self) -> None:
         assert TRIGGER.to_non_built() == NON_BUILT_TRIGGER
 
-    def test_from_built_with_invalid_data_raises_error(self):
-        with pytest.raises(ValueError):
+    def test_from_built_with_invalid_data_raises_error(self) -> None:
+        with pytest.raises(ValueError):  # noqa: PT011
             Trigger.from_built({})
 
-    def test_from_non_built_with_invalid_data_raises_error(self):
-        with pytest.raises(ValueError):
+    def test_from_non_built_with_invalid_data_raises_error(self) -> None:
+        with pytest.raises(ValueError):  # noqa: PT011
             Trigger.from_non_built({})
 
-    def test_from_built_with_none_values(self):
+    def test_from_built_with_none_values(self) -> None:
         assert Trigger.from_built(BUILT_TRIGGER_WITH_NONE) == TRIGGER_WITH_NONE
 
-    def test_from_non_built_with_none_values(self):
+    def test_from_non_built_with_none_values(self) -> None:
         assert Trigger.from_non_built(NON_BUILT_TRIGGER_WITH_NONE) == TRIGGER_WITH_NONE
 
-    def test_to_built_with_none_values(self):
+    def test_to_built_with_none_values(self) -> None:
         assert TRIGGER_WITH_NONE.to_built() == BUILT_TRIGGER_WITH_NONE
 
-    def test_to_non_built_with_none_values(self):
+    def test_to_non_built_with_none_values(self) -> None:
         assert TRIGGER_WITH_NONE.to_non_built() == NON_BUILT_TRIGGER_WITH_NONE
 
-    def test_from_built_to_built_is_idempotent(self):
+    def test_from_built_to_built_is_idempotent(self) -> None:
         assert Trigger.from_built(BUILT_TRIGGER).to_built() == BUILT_TRIGGER
 
-    def test_from_non_built_to_non_built_is_idempotent(self):
+    def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert Trigger.from_non_built(NON_BUILT_TRIGGER).to_non_built() == NON_BUILT_TRIGGER

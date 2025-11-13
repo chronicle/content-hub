@@ -20,7 +20,6 @@ import pydantic
 
 import mp.core.constants
 import mp.core.data_models.abc
-import mp.core.utils
 
 
 class BuiltStepParameter(TypedDict):
@@ -88,10 +87,10 @@ class StepParameter(
         )
 
     def to_built(self) -> BuiltStepParameter:
-        """Create a built action param dict.
+        """Convert the StepParameter to its "built" representation.
 
         Returns:
-            A built version of the action parameter dict
+            A BuiltStepParameter dictionary.
 
         """
         return BuiltStepParameter(
@@ -102,10 +101,10 @@ class StepParameter(
         )
 
     def to_non_built(self) -> NonBuiltStepParameter:
-        """Create a non-built action param dict.
+        """Convert the StepParameter to its "non-built" representation.
 
         Returns:
-            A non-built version of the action parameter dict
+            A NonBuiltStepParameter dictionary.
 
         """
         non_built: NonBuiltStepParameter = NonBuiltStepParameter(

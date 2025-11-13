@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
-
 import json
+from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import yaml
 
@@ -24,10 +23,11 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum
-from mp.core.data_models.playbooks.playbook_widget.metadata import BuiltPlaybookWidgetMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from mp.core.data_models.playbooks.playbook_widget.metadata import BuiltPlaybookWidgetMetadata
 
 
 class OverviewType(RepresentableEnum):
@@ -77,6 +77,18 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
+        """Create a list of Overview objects from a built playbook path.
+
+        Args:
+            path: The path to the built playbook.
+
+        Returns:
+            A list of Overview objects.
+
+        Raises:
+            ValueError: If the file at `path` fails to load or parse as JSON.
+
+        """
         if not path.exists():
             return []
         built_playbook: str = path.read_text(encoding="utf-8")
@@ -90,6 +102,15 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
+        """Create a list of Overview objects from a non-built playbook path.
+
+        Args:
+            path: The path to the non-built playbook directory.
+
+        Returns:
+            A list of Overview objects.
+
+        """
         meta_path: Path = path / mp.core.constants.OVERVIEWS_FILE_NAME
         if not meta_path.exists():
             return []
@@ -125,6 +146,12 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
         )
 
     def to_built(self) -> BuiltOverview:
+        """Convert the Overview to its "built" representation.
+
+        Returns:
+            A BuiltOverview dictionary.
+
+        """
         return BuiltOverview(
             OverviewTemplate=BuiltOverviewDetails(
                 Identifier=self.identifier,
@@ -140,6 +167,12 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
         )
 
     def to_non_built(self) -> NonBuiltOverview:
+        """Convert the Overview to its "non-built" representation.
+
+        Returns:
+            A NonBuiltOverview dictionary.
+
+        """
         non_built: NonBuiltOverview = NonBuiltOverview(
             identifier=self.identifier,
             name=self.name,
@@ -152,7 +185,16 @@ class Overview(mp.core.data_models.abc.SequentialMetadata):
         )
         return non_built
 
-    def to_built_with_widget(self, widgets: list[BuiltPlaybookWidgetMetadata]):
+    def to_built_with_widget(self, widgets: list[BuiltPlaybookWidgetMetadata]) -> BuiltOverview:
+        """Convert the Overview to its "built" representation with widgets.
+
+        Args:
+            widgets: A list of built playbook widgets.
+
+        Returns:
+            A BuiltOverview dictionary with widgets.
+
+        """
         half_built: BuiltOverview = self.to_built()
         half_built["OverviewTemplate"]["Widgets"] = widgets
         return half_built

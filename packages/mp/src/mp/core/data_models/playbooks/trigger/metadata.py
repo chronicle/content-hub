@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
-
 import json
+from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.constants
 import mp.core.data_models.abc
@@ -53,6 +52,8 @@ class NonBuiltTrigger(TypedDict):
 
 
 class TriggerType(RepresentableEnum):
+    """Represents the type of a trigger."""
+
     VENDOR_NAME = 0
     TAG_NAME = 1
     RULE_NAME = 2
@@ -68,6 +69,8 @@ class TriggerType(RepresentableEnum):
 
 
 class Trigger(mp.core.data_models.abc.SequentialMetadata):
+    """Represents a trigger for a playbook."""
+
     identifier: str
     is_enabled: bool
     playbook_id: str
@@ -79,6 +82,18 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
+        """Create a list of Trigger objects from a built playbook path.
+
+        Args:
+            path: The path to the built playbook.
+
+        Returns:
+            A list of Trigger objects.
+
+        Raises:
+            ValueError: If the file at `path` fails to load or parse as JSON.
+
+        """
         if not path.exists():
             return []
         built_playbook: str = path.read_text(encoding="utf-8")
@@ -92,6 +107,15 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
+        """Create a list of Trigger objects from a non-built playbook path.
+
+        Args:
+            path: The path to the non-built playbook directory.
+
+        Returns:
+            A list of Trigger objects.
+
+        """
         rn_path: Path = path / mp.core.constants.TRIGGERS_FILE_NAME
         if not rn_path.exists():
             return []
@@ -129,6 +153,12 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
         )
 
     def to_built(self) -> BuiltTrigger:
+        """Convert the Trigger to its "built" representation.
+
+        Returns:
+            A BuiltTrigger dictionary.
+
+        """
         return BuiltTrigger(
             Identifier=self.identifier,
             IsEnabled=self.is_enabled,
@@ -141,6 +171,12 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
         )
 
     def to_non_built(self) -> NonBuiltTrigger:
+        """Convert the Trigger to its "non-built" representation.
+
+        Returns:
+            A NonBuiltTrigger dictionary.
+
+        """
         non_built: NonBuiltTrigger = NonBuiltTrigger(
             identifier=self.identifier,
             is_enabled=self.is_enabled,

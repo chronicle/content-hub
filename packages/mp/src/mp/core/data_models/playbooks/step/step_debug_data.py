@@ -15,11 +15,10 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
+from typing import NotRequired, Self, TypedDict
 
 import mp.core.data_models.abc
-import mp.core.utils
-from mp.core.custom_types import JsonString
+from mp.core.custom_types import JsonString  # noqa: TC001
 
 from .step_debug_enrichment_data import (
     BuiltStepDebugEnrichmentData,
@@ -74,7 +73,6 @@ class StepDebugData(
             An `ActionParameter` object
 
         """
-        print(built)
         return cls(
             step_id=built["OriginalStepIdentifier"],
             playbook_id=built["OriginalWorkflowIdentifier"],
@@ -83,7 +81,7 @@ class StepDebugData(
             result_value=built["ResultValue"],
             result_json=built["ResultJson"],
             scope_entities_enrichment_data=[
-                DebugStepEnrichmentData._from_built(d) for d in built["ScopeEntitiesEnrichmentData"]
+                DebugStepEnrichmentData.from_built(d) for d in built["ScopeEntitiesEnrichmentData"]
             ]
             if built.get("ScopeEntitiesEnrichmentData")
             else [],
@@ -116,10 +114,10 @@ class StepDebugData(
         )
 
     def to_built(self) -> BuiltStepDebugData:
-        """Create a built action param dict.
+        """Convert the StepDebugData to its "built" representation.
 
         Returns:
-            A built version of the action parameter dict
+            A BuiltStepDebugData dictionary.
 
         """
         enrichment_data: list[BuiltStepDebugEnrichmentData] = [
@@ -138,10 +136,10 @@ class StepDebugData(
         )
 
     def to_non_built(self) -> NonBuiltStepDebugData:
-        """Create a non-built action param dict.
+        """Convert the StepDebugData to its "non-built" representation.
 
         Returns:
-            A non-built version of the action parameter dict
+            A NonBuiltStepDebugData dictionary.
 
         """
         non_built: NonBuiltStepDebugData = NonBuiltStepDebugData(

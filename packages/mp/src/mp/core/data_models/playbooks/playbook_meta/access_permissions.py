@@ -20,6 +20,8 @@ import mp.core.data_models.abc
 
 
 class PlaybookAccessLevel(mp.core.data_models.abc.RepresentableEnum):
+    """Represents the access level for a playbook."""
+
     NO_ACCESS = 0
     VIEW = 1
     EDIT = 2
@@ -61,10 +63,10 @@ class AccessPermission(
         )
 
     def to_built(self) -> BuiltAccessPermission:
-        """Turn the buildable object into a "built" typed dict.
+        """Convert the AccessPermission to its "built" representation.
 
         Returns:
-            The "built" representation of the object.
+            A BuiltAccessPermission dictionary.
 
         """
         return BuiltAccessPermission(
@@ -74,10 +76,10 @@ class AccessPermission(
         )
 
     def to_non_built(self) -> NonBuiltAccessPermission:
-        """Turn the buildable object into a "non-built" typed dict.
+        """Convert the AccessPermission to its "non-built" representation.
 
         Returns:
-            The "non-built" representation of the object
+            A NonBuiltAccessPermission dictionary.
 
         """
         return NonBuiltAccessPermission(

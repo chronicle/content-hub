@@ -13,79 +13,81 @@
 # limitations under the License.
 
 import pytest
+
 from mp.core.data_models.playbooks.playbook_widget.metadata import (
     PlaybookWidgetMetadata,
 )
+
 from .constants import (
     BUILT_PLAYBOOK_WIDGET_METADATA,
-    PLAYBOOK_WIDGET_METADATA,
-    NON_BUILT_PLAYBOOK_WIDGET_METADATA,
     BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE,
-    PLAYBOOK_WIDGET_METADATA_WITH_NONE,
+    NON_BUILT_PLAYBOOK_WIDGET_METADATA,
     NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE,
+    PLAYBOOK_WIDGET_METADATA,
+    PLAYBOOK_WIDGET_METADATA_WITH_NONE,
 )
 
 
 class TestPlaybookWidgetMetadataDataModel:
-    def test_from_built_with_valid_data(self):
+    def test_from_built_with_valid_data(self) -> None:
         assert (
             PlaybookWidgetMetadata.from_built("", BUILT_PLAYBOOK_WIDGET_METADATA)
             == PLAYBOOK_WIDGET_METADATA
         )
 
-    def test_from_non_built_with_valid_data(self):
+    def test_from_non_built_with_valid_data(self) -> None:
         assert (
             PlaybookWidgetMetadata.from_non_built("", NON_BUILT_PLAYBOOK_WIDGET_METADATA)
             == PLAYBOOK_WIDGET_METADATA
         )
 
-    def test_to_built(self):
+    def test_to_built(self) -> None:
         assert PLAYBOOK_WIDGET_METADATA.to_built() == BUILT_PLAYBOOK_WIDGET_METADATA
 
-    def test_to_non_built(self):
+    def test_to_non_built(self) -> None:
         assert PLAYBOOK_WIDGET_METADATA.to_non_built() == NON_BUILT_PLAYBOOK_WIDGET_METADATA
 
-    def test_from_built_with_invalid_data_raises_error(self):
-        with pytest.raises(ValueError):
+    def test_from_built_with_invalid_data_raises_error(self) -> None:
+        with pytest.raises(ValueError):  # noqa: PT011
             PlaybookWidgetMetadata.from_built("", {})
 
-    def test_from_non_built_with_invalid_data_raises_error(self):
-        with pytest.raises(ValueError):
+    def test_from_non_built_with_invalid_data_raises_error(self) -> None:
+        with pytest.raises(ValueError):  # noqa: PT011
             PlaybookWidgetMetadata.from_non_built("", {})
 
-    def test_from_built_with_none_values(self):
+    def test_from_built_with_none_values(self) -> None:
         assert (
             PlaybookWidgetMetadata.from_built("", BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE)
             == PLAYBOOK_WIDGET_METADATA_WITH_NONE
         )
 
-    def test_from_non_built_with_none_values(self):
+    def test_from_non_built_with_none_values(self) -> None:
         assert (
             PlaybookWidgetMetadata.from_non_built("", NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE)
             == PLAYBOOK_WIDGET_METADATA_WITH_NONE
         )
 
-    def test_to_built_with_none_values(self):
+    def test_to_built_with_none_values(self) -> None:
         assert (
             PLAYBOOK_WIDGET_METADATA_WITH_NONE.to_built()
             == BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE
         )
 
-    def test_to_non_built_with_none_values(self):
+    def test_to_non_built_with_none_values(self) -> None:
         assert (
             PLAYBOOK_WIDGET_METADATA_WITH_NONE.to_non_built()
             == NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE
         )
 
-    def test_from_built_to_built_is_idempotent(self):
+    def test_from_built_to_built_is_idempotent(self) -> None:
         assert (
-            PlaybookWidgetMetadata._from_built("", BUILT_PLAYBOOK_WIDGET_METADATA).to_built()
+            PlaybookWidgetMetadata.from_built("", BUILT_PLAYBOOK_WIDGET_METADATA).to_built()
             == BUILT_PLAYBOOK_WIDGET_METADATA
         )
 
-    def test_from_non_built_to_non_built_is_idempotent(self):
+    def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert (
-            PlaybookWidgetMetadata._from_non_built(
+            PlaybookWidgetMetadata.from_non_built(
                 "", NON_BUILT_PLAYBOOK_WIDGET_METADATA
             ).to_non_built()
             == NON_BUILT_PLAYBOOK_WIDGET_METADATA

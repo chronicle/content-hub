@@ -20,12 +20,12 @@ import pydantic
 import pytest
 
 import mp.core.constants
+from mp.core.data_models.action_widget.metadata import ActionWidgetMetadata, WidgetScope, WidgetSize
 from mp.core.data_models.condition.condition_group import ConditionGroup
 from mp.core.data_models.connector.metadata import ConnectorMetadata
 from mp.core.data_models.job.metadata import JobMetadata
 from mp.core.data_models.job.parameter import JobParameter
 from mp.core.data_models.widget.data import HtmlWidgetDataDefinition, WidgetType
-from mp.core.data_models.action_widget.metadata import ActionWidgetMetadata, WidgetScope, WidgetSize
 
 
 class TestDescriptionLengthValidations:
