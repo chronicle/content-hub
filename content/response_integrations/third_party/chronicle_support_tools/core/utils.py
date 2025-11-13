@@ -108,7 +108,7 @@ class CommonUtils:
         return output
 
     def decode_utf8(encoded_input):
-        if encoded_input != None and len(encoded_input) > 0:
+        if encoded_input is not None and len(encoded_input) > 0:
             return encoded_input.decode("utf-8")
 
         return ""

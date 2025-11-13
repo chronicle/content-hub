@@ -27,11 +27,7 @@ def main():
     status = EXECUTION_STATE_COMPLETED
     output_message = ""
     result_value = None
-    failed_entities = []
-    results = []
     missing_entities = []
-    json_results = {}
-    enriched_entities = []
 
     try:
         eiq_manager = EclecticIQManager(eiq_url, api_token, verify_ssl)

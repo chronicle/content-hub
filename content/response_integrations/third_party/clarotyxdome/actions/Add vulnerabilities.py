@@ -1,8 +1,9 @@
+import re
+
+import requests
 from SiemplifyAction import SiemplifyAction
 from SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param
-import requests
-import re
 
 ALL_ENRICH_FIELDS = [
     "uid",

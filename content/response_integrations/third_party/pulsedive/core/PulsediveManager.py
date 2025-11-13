@@ -101,10 +101,8 @@ class PulsediveManager:
 
         if indicator is not None:
             params["indicator"] = indicator
-            entity = indicator
         elif indicator_id is not None:
             params["iid"] = indicator_id
-            entity = indicator_id
         else:
             raise PulsediveException(
                 "Indicator ID or Indicator required and none were provided",
@@ -327,7 +325,7 @@ class PulsediveManager:
         # Not Implemented
         if get_linked_indicators:
             linked_data_params = copy.deepcopy(params)
-            linked_indicators = self.get_linked_indicators(linked_data_params)
+            self.get_linked_indicators(linked_data_params)
 
         if retrieve_comments:
             comments = self.get_comments(threat_data.json(), limit=comment_limit)

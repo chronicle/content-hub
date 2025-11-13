@@ -29,7 +29,7 @@ def main():
         end_time,
     )
 
-    if bool(snapshot_graph) == True:
+    if bool(snapshot_graph):
         siemplify.LOGGER.info(
             f"The graph snapshot of the query {query_to_search} was fetched successfully",
         )

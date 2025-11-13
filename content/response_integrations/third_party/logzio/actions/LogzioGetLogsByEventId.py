@@ -232,7 +232,7 @@ def add_insight(siemplify, log):
         log_json = json.dumps(log)
         triggered_by = "Logzio"  # Name of the integration
         title = "Logs that triggered the event"
-        msg = log["message"]
+        log["message"]
         is_created = siemplify.create_case_insight(
             triggered_by,
             title,

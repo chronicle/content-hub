@@ -56,7 +56,7 @@ class SixgillActionResultProcessor:
         try:
             client_obj = self.sixgill_manager.create_sixgill_client()
             if client_obj:
-                res = client_obj.enrich_ioc("ip", "8.8.8.8")
+                client_obj.enrich_ioc("ip", "8.8.8.8")
                 status = EXECUTION_STATE_COMPLETED
                 msg = "Successfully Connected to Sixgill"
                 result = True

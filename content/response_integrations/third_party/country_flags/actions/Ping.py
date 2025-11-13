@@ -28,7 +28,6 @@ def get_base64_flag_data(country_code, flags_data, siemplify):
         flag_res.raise_for_status()
         base64_flag = base64.b64encode(flag_res.content).decode("utf-8")
         flags_data[country_code] = base64_flag
-        SHOULD_UPDATE_FILE = True
 
     return flags_data[country_code]
 

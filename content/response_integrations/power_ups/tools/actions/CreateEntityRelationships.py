@@ -125,11 +125,9 @@ def main():
     if rel_direction == "Linked":
         is_relation_type = False
 
-    enrich_dict = {}
     updated_entities = []
 
     json_results = {}
-    entities_to_enrich = []
     case_id = siemplify.case_id
     alert_identifier = siemplify.current_alert.identifier
     output_message = ""
@@ -148,7 +146,6 @@ def main():
     for entity in entity_identifiers:
         json_results[entity] = {}
 
-    enrichment_entities = {}
     siemplify.LOGGER.info(f"Entities to create:{entity_identifiers}")
     alert_entities = get_alert_entities(siemplify)
 

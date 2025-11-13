@@ -7,11 +7,11 @@ import json
 import requests
 
 from .constants import (
+    ENRICH_ENTITIES_ENDPOINT,
     ERRORS,
     INTEGRATION_NAME,
     PING_ENDPOINT,
     PUSH_BREACH_POINT_ENDPOINT,
-    ENRICH_ENTITIES_ENDPOINT,
 )
 
 

@@ -34,7 +34,6 @@ def main():
     # Creating an instance of EC2Manager object
     ec2_manager = EC2Manager(access_key_id, secret_access_key, default_region)
 
-    deleted_instances_details = []
     deleted_instances_ids = []
     not_deleted_instances_ids = []
     shutting_down_instances_ids = []

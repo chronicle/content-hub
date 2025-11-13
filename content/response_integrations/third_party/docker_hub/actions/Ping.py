@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from requests import HTTPError
-from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -16,9 +15,6 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
-    output_message = ""
-    result_value = False
-    status = EXECUTION_STATE_FAILED
     conf = siemplify.get_configuration(INTEGRATION_NAME)
 
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")

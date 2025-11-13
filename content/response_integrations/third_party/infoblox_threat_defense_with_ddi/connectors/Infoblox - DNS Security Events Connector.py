@@ -1,26 +1,28 @@
 from __future__ import annotations
+
 import sys
 from datetime import datetime
 
-from ..core.APIManager import APIManager
 from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon import (
     extract_connector_param,
-    save_timestamp,
     get_last_success_time,
-    is_overflowed,
     is_approaching_timeout,
+    is_overflowed,
     read_ids,
+    save_timestamp,
     write_ids,
 )
+
+from ..core.APIManager import APIManager
 from ..core.constants import (
     ALLOWED_THREAT_LEVEL_VALUES,
     DEFAULT_DNS_EVENTS_LIMIT,
-    UNIX_FORMAT,
     DEFAULT_MAX_HOURS_BACKWARD,
+    UNIX_FORMAT,
 )
 from ..core.utils import validate_enum, validate_integer_param
 

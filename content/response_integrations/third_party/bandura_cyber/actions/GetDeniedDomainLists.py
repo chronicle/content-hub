@@ -17,8 +17,6 @@ ADDRESS = EntityTypes.ADDRESS
 
 @output_handler
 def main():
-    json_results = {}
-    entities_with_results = []
     result_value = False
 
     # Configuration.
@@ -27,7 +25,7 @@ def main():
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
     # INIT INTEGRATION CONFIGURATION:
-    api_root = extract_configuration_param(
+    extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
         param_name="API Root",

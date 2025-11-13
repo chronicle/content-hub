@@ -116,7 +116,7 @@ class PerimeterXManager:
     def get_slack_messages(self):
         channelId = self.get_slack_channel_id()
 
-        if channelId == False:
+        if not channelId:
             return False
 
         response = requests.get(
@@ -135,7 +135,7 @@ class PerimeterXManager:
 
         json_response = response.json()
 
-        if json_response["has_more"] == True:
+        if json_response["has_more"]:
             self.pagination = 1
             self.slack_cursor = json_response["response_metadata"]["next_cursor"]
         else:
@@ -146,7 +146,7 @@ class PerimeterXManager:
             return False
 
         # Check to make sure we got some messages returned
-        if json_response["messages"] == False:
+        if not json_response["messages"]:
             return False
 
         # Check to make sure there's messages in the list
@@ -184,10 +184,10 @@ class PerimeterXManager:
             return False
 
         json_response = response.json()
-        if "ok" in json_response and json_response["ok"] == True:
+        if "ok" in json_response and json_response["ok"]:
             return True
 
-        if "ok" in json_response and json_response["ok"] == False:
+        if "ok" in json_response and not json_response["ok"]:
             return False
 
         return False

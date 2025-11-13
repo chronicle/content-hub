@@ -4,15 +4,16 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    REMOVE_SECURITY_POLICY_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    REMOVE_SECURITY_POLICY_SCRIPT_NAME,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
-from ..core.utils import get_integration_params, validate_required_string, validate_integer_param
+from ..core.InfobloxExceptions import InfobloxException
+from ..core.utils import get_integration_params, validate_integer_param, validate_required_string
 
 
 @output_handler

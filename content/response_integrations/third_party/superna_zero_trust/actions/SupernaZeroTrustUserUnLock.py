@@ -44,9 +44,9 @@ def main():
     siemplify.LOGGER.info("debug api token " + apitoken)
     siemplify.LOGGER.info("debug eyeglass ip " + eyeglassip)
     user = siemplify.extract_action_param(param_name="UserName", print_value=True)
-    user = urllib.parse.quote_plus(user)  ### url encode the username
+    user = urllib.parse.quote_plus(user)  # url encode the username
 
-    ##### build api to lockout the user ############
+    # build api to lockout the user ############
     apicall = url + eyeglassip + apiroute + user
     siemplify.LOGGER.info("debug api route " + apicall)
 

@@ -160,7 +160,7 @@ def return_domain(email):
     else:
         domain = re.search("@(.*)", email)
 
-    if domain == None:
+    if domain is None:
         return None
     return domain.group(1)
 
@@ -210,7 +210,7 @@ def parseHops(received):
                 denylist = {}
                 hop_info["from"] = f
                 try:
-                    test_ip = ipaddress.ip_address(f)
+                    ipaddress.ip_address(f)
                     ip_check = ip_checker.check(f)
                     # hop_info['from'] = f
                     try:
@@ -265,14 +265,14 @@ def parseHops(received):
                     logger(message)
 
                 if "blacklisted" in denylist:
-                    if denylist["blacklisted"] == True:
+                    if denylist["blacklisted"]:
                         hop_info["blacklisted"] = True
         else:
             hop_info["from"] = ""
         if "by" in parsed_route:
             hop_info["by"] = parsed_route["by"][0]
             try:
-                test_ip = ipaddress.ip_address(hop_info["by"])
+                ipaddress.ip_address(hop_info["by"])
 
                 obj = IPWhois(hop_info["by"])
 
@@ -393,7 +393,7 @@ def buildResult(header, siemplify):
                 fromserver = EmailParserRouting.parserouting(fromserver_str)
                 try:
                     if "by" in fromserver:
-                        test_ip = ipaddress.ip_address(fromserver["by"][0])
+                        ipaddress.ip_address(fromserver["by"][0])
                         result["SourceServerIP"] = fromserver["by"][0]
                         result["SourceServer"] = fromserver["by"][0]
                 except Exception:

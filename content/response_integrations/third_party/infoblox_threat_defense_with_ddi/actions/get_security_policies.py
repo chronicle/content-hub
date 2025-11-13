@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import (
@@ -6,22 +7,22 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
 
-from ..core.datamodels import SecurityPolicy
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
+    COMMON_ACTION_ERROR_MESSAGE,
+    DEFAULT_LIMIT,
+    DEFAULT_OFFSET,
     GET_SECURITY_POLICIES_SCRIPT_NAME,
+    MAX_TABLE_RECORDS,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
-    COMMON_ACTION_ERROR_MESSAGE,
-    MAX_TABLE_RECORDS,
-    DEFAULT_OFFSET,
-    DEFAULT_LIMIT,
 )
-from ..core.utils import validate_integer_param, get_integration_params
+from ..core.datamodels import SecurityPolicy
+from ..core.InfobloxExceptions import InfobloxException
+from ..core.utils import get_integration_params, validate_integer_param
 
 
 @output_handler

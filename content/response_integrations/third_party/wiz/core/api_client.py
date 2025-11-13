@@ -14,17 +14,12 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple, TYPE_CHECKING
-import requests
+from typing import TYPE_CHECKING, NamedTuple
 
+import requests
 from TIPCommon.base.interfaces import Apiable
 
-from . import api_utils
-from . import auth_manager
-from . import constants
-from . import datamodels
-from . import data_parser
-from . import query_builder
+from . import api_utils, auth_manager, constants, data_parser, datamodels, query_builder
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

@@ -37,7 +37,6 @@ class SixgillEnrichManager:
         return status, msg, result
 
     def create_sixgill_client(self):
-        status = False
         sixgill_dve_client = None
         try:
             sixgill_dve_client = SixgillEnrichClient(

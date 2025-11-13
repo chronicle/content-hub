@@ -33,7 +33,7 @@ def main():
         current_score = 0
 
     new_score = str(int(current_score) + int(_input))
-    updated_score = siemplify.set_alert_context_property(ALERT_SCORE, new_score)
+    siemplify.set_alert_context_property(ALERT_SCORE, new_score)
 
     result_value = new_score
     output_message = f"The Alert Score has been updated to: {new_score}"

@@ -68,7 +68,7 @@ class WorkflowToolsManager:
         self.siemplify.LOGGER.info(
             f"Checking whether user {username} is a member of the role {role_name}",
         )
-        ## Checks if a given username belongs to a given role.
+        # Checks if a given username belongs to a given role.
 
         # First find the users ID
         result = False
@@ -106,7 +106,7 @@ class WorkflowToolsManager:
         return result
 
     def query_api(self, query_url, json_payload):
-        ## Modular function to query the Siemplify API and handle non 200 responses
+        # Modular function to query the Siemplify API and handle non 200 responses
 
         response = self.session.post(query_url, json=json_payload)
         if response.status_code != 200:

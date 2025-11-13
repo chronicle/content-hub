@@ -34,24 +34,24 @@ def getDuration(then, now=datetime.now(UTC), interval="default"):
 
     def days(seconds=None):
         return divmod(
-            seconds if seconds != None else duration_in_s,
+            seconds if seconds is not None else duration_in_s,
             86400,
         )  # Seconds in a day = 86400
 
     def hours(seconds=None):
         return divmod(
-            seconds if seconds != None else duration_in_s,
+            seconds if seconds is not None else duration_in_s,
             3600,
         )  # Seconds in an hour = 3600
 
     def minutes(seconds=None):
         return divmod(
-            seconds if seconds != None else duration_in_s,
+            seconds if seconds is not None else duration_in_s,
             60,
         )  # Seconds in a minute = 60
 
     def seconds(seconds=None):
-        if seconds != None:
+        if seconds is not None:
             return divmod(seconds, 1)
         return duration_in_s
 

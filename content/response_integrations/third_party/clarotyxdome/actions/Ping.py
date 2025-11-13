@@ -1,8 +1,8 @@
+import requests
 from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from SiemplifyAction import SiemplifyAction
 from SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param
-import requests
 
 SCRIPT_NAME = "Ping"
 

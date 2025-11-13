@@ -47,11 +47,9 @@ def main():
     }
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        failed_entities = []  # In case this actions contains entity based logic, collect failed entity.identifiers
-        successfull_entities = []  # In case this actions contains entity based logic, collect successfull entity.identifiers
 
         mc = MarketoClient(munchkin_id, client_id, client_secret, None, None)
-        response = mc.execute(
+        mc.execute(
             method="request_campaign",
             id=campaign_id,
             leads=[lead_id],

@@ -14,21 +14,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
+from tests.core.product import Wiz
 
 from wiz.core import constants
+
 from .. import common
-from tests.core.product import Wiz
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
+
     from wiz.core import datamodels
 
 

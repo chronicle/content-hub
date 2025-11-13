@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
+    COMMON_ACTION_ERROR_MESSAGE,
+    DEFAULT_LIMIT,
+    GET_SOC_INSIGHTS_ASSETS_SCRIPT_NAME,
+    MAX_TABLE_RECORDS,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
-    COMMON_ACTION_ERROR_MESSAGE,
-    GET_SOC_INSIGHTS_ASSETS_SCRIPT_NAME,
-    DEFAULT_LIMIT,
-    MAX_TABLE_RECORDS,
 )
 from ..core.datamodels import SOCInsightAsset
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import get_integration_params, validate_integer_param, validate_required_string
 
 

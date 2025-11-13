@@ -89,7 +89,7 @@ def main():
         f"Original Requesting User {siemplify.original_requesting_user}",
     )
 
-    ### STEP 1: Check if the current user is allowed to continue this action.
+    # STEP 1: Check if the current user is allowed to continue this action.
 
     if manager.check_user(
         current_user=requesting_user,
@@ -136,7 +136,7 @@ def main():
         json_result["reviewer"] = requesting_user
 
     else:
-        ## DISALLOW any further activity
+        # DISALLOW any further activity
         siemplify.LOGGER.info(
             f"Case {case_id} is NOT assigned to required reviewer {reviewer}. Cancelling.",
         )

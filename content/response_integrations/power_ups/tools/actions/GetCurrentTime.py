@@ -31,9 +31,6 @@ def main():
     output_message = (
         "output message :"  # human readable message, showed in UI as the action result
     )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
 
     now = datetime.now()
 

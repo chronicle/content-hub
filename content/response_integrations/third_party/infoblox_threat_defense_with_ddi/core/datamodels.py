@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon import dict_to_flat
 
 from .constants import (
-    DEFAULT_DEVICE_VENDOR,
     DEFAULT_DEVICE_PRODUCT,
+    DEFAULT_DEVICE_VENDOR,
     RULE_GENERATOR,
 )
 from .utils import truncate_json_for_display

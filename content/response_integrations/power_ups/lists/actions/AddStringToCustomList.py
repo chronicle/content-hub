@@ -47,7 +47,7 @@ def add_entities_to_custom_list(siemplify, custom_list_items):
     )
     response = siemplify.session.post(address, json=custom_list_items_data)
     siemplify.validate_siemplify_error(response)
-    custom_list_dicts = response.json()
+    response.json()
 
 
 @output_handler
@@ -57,18 +57,16 @@ def main():
     try:
         status = EXECUTION_STATE_COMPLETED
         output_message = "output message :"
-        result_value = 0
 
         category = siemplify.parameters.get("Category")
         list_item = siemplify.parameters.get("ListItem")
         custom_list_items = get_custom_list_items(siemplify, category, list_item)
-        json_result = add_entities_to_custom_list(siemplify, custom_list_items)
+        add_entities_to_custom_list(siemplify, custom_list_items)
         output_message = f"Added {list_item} to category {category}"
 
     except Exception:
         raise
         status = EXECUTION_STATE_FAILED
-        result_value = "Failed"
         output_message += "\n unknown failure"
 
     siemplify.end(output_message, True, status)

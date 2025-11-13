@@ -18,7 +18,7 @@ def main():
     api_key = conf.get("API Key")
     verify_ssl = conf.get("Verify SSL", "false").lower() == "true"
 
-    v = requests.verify = verify_ssl
+    requests.verify = verify_ssl
 
     url = f"https://api.imgbb.com/1/upload?expiration=600&key={api_key}"
 

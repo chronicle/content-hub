@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import (
@@ -6,19 +7,19 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 from TIPCommon import extract_action_param
 
-from ..core.datamodels import NetworkList
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    CREATE_NETWORK_LIST_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    CREATE_NETWORK_LIST_SCRIPT_NAME,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
-from ..core.utils import get_integration_params, validate_required_string, string_to_list
+from ..core.datamodels import NetworkList
+from ..core.InfobloxExceptions import InfobloxException
+from ..core.utils import get_integration_params, string_to_list, validate_required_string
 
 
 @output_handler

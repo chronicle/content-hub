@@ -169,7 +169,7 @@ class EclecticIQLookupParser:
         return results
 
     def missing_entities(self):
-        original_entity_map = [entity.identifier for entity in self.original_entities]
+        [entity.identifier for entity in self.original_entities]
         parsed_data = self.parse_as_enrichment()
         enriched_entities = set(parsed_data.keys())
         result = []

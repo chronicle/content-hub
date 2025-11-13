@@ -76,9 +76,9 @@ def create_request_body_obj(siemplify, page_number=1):
         page_size = DEFAULT_PAGE_SIZE
     request_body["filter"] = {}
     request_body["filter"]["timeRange"] = dict(fromDate=from_date, toDate=to_date)
-    if search_term != None:
+    if search_term is not None:
         request_body["filter"]["searchTerm"] = search_term
-    if severities != None:
+    if severities is not None:
         request_body["filter"]["severities"] = [
             s.strip() for s in severities.split(",")
         ]

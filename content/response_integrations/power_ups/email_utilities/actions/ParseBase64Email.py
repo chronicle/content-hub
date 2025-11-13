@@ -47,7 +47,6 @@ def json_serial(obj):
 
 
 def parse_headers(msg, denylist=[], is_allowlist=False, stop_transport=""):
-    header = []
     transport = []
     transport_stopped = False
     headers = {}
@@ -211,7 +210,7 @@ def parse_transport(name, header):
     headers_struc["ipv6"] = []
 
     try:
-        found_smtpin: collections.Counter = (
+        (
             collections.Counter()
         )  # Array for storing potential duplicate "HOP"
         if header:

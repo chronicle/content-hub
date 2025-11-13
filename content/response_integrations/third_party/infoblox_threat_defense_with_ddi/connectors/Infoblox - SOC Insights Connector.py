@@ -1,21 +1,23 @@
 from __future__ import annotations
+
 import sys
 
-from ..core.APIManager import APIManager
 from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon import (
     extract_connector_param,
+    is_approaching_timeout,
+    is_overflowed,
     read_ids,
     write_ids,
-    is_overflowed,
-    is_approaching_timeout,
 )
+
+from ..core.APIManager import APIManager
 from ..core.constants import (
-    ALLOWED_STATUS_VALUES,
     ALLOWED_PRIORITY_VALUES,
+    ALLOWED_STATUS_VALUES,
     SOC_INSIGHTS_CONNECTOR_NAME,
 )
 from ..core.utils import validate_enum

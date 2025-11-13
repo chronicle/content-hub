@@ -96,7 +96,7 @@ def main():
 
     json_result = {}
 
-    if input_json != None:
+    if input_json is not None:
         in_json = json.loads(input_json)
         for entity_json in in_json:
             base64_str = find_key_path_in_json(image_key_path, entity_json)

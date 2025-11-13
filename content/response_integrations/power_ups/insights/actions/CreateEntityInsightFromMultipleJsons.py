@@ -156,7 +156,6 @@ def main():
 
     for ent in siemplify.target_entities:
         insight_message_list = []
-        insight_message = ""
         for trio in processed_trios:
             trio_message_list = []
             not_for_tables = []
@@ -213,7 +212,7 @@ def main():
                 )
 
         if insight_message_list:
-            insight_message = "<br><br>".join(insight_message_list)
+            "<br><br>".join(insight_message_list)
 
         # if bad_trios:
         #     insight_message += u"<br><br>"

@@ -79,7 +79,6 @@ def generate_event(case_info):
 @output_handler
 def main():
     siemplify = SiemplifyConnectorExecution()  # Siemplify main SDK wrapper
-    env_list = []
 
     product_name = siemplify.extract_connector_param("Product name")
     alert_name = siemplify.extract_connector_param("Alert name")

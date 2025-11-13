@@ -215,7 +215,7 @@ class Indicator:
         self.value = value
         self.type = _type
         self.name = name
-        if name == None:
+        if name is None:
             self.name = _id
         self.description = description
         self.risk = risk

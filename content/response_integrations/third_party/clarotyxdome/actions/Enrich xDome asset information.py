@@ -1,9 +1,10 @@
+import re
+
+import requests
 from SiemplifyAction import SiemplifyAction
 from SiemplifyDataModel import EntityTypes
 from SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param
-import requests
-import re
 
 SAFE_DEVICE_FIELDS = [
     "uid",

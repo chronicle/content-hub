@@ -56,7 +56,7 @@ def main():
 
         else:
             # Calling the revoke_user_response function from the HibobManager
-            revoke_user_response = hibob_manager.revoke_access_to_hibob(
+            hibob_manager.revoke_access_to_hibob(
                 employee_identifier,
             )
             return_value = True

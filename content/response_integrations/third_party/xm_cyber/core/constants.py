@@ -1,6 +1,7 @@
 """Define the constants used in the integration."""
 
 from __future__ import annotations
+
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
 INTEGRATION_NAME = "XM Cyber"

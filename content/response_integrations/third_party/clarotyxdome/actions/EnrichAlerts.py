@@ -1,7 +1,8 @@
+import json
+
+import requests
 from SiemplifyAction import SiemplifyAction
 from TIPCommon.extraction import extract_configuration_param
-import requests
-import json
 
 CLAROTY_ALERT_FIELDS = [
     "id",

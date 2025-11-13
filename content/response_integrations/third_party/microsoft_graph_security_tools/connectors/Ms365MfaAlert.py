@@ -70,8 +70,6 @@ def main(is_test_run):
 
     siemplify.LOGGER.info("------------------- Main - Started -------------------")
 
-    json_results = {}
-
     try:
         siemplify.LOGGER.info("Connecting to Microsoft Graph Security.")
         mtm = MicrosoftGraphSecurityManager(
@@ -118,20 +116,17 @@ def main(is_test_run):
                         )
                         siemplify.LOGGER.exception(e)
 
-            json_results = json.dumps(mfa_stats)
-            output_message = "User MFA information was found."
-            result_value = json.dumps(mfa_stats)
+            json.dumps(mfa_stats)
+            json.dumps(mfa_stats)
 
         else:
             siemplify.LOGGER.info("No MFA information was found.")
-            output_message = "No MFA information was found."
-            result_value = json.dumps({})
+            json.dumps({})
 
     except Exception as e:
         siemplify.LOGGER.error(f"Some errors occurred. Error: {e}")
         siemplify.LOGGER.exception(e)
-        result_value = json.dumps({})
-        output_message = f"Some errors occurred. Error: {e}"
+        json.dumps({})
         raise
 
     siemplify.LOGGER.info("------------------- Main - Finished -------------------")

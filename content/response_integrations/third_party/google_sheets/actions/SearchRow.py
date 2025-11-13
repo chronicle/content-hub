@@ -37,7 +37,6 @@ def main():
     else:
         worksheet = sheet.sheet1
 
-    row_numbers_to_return = []
     ret_val = -1
     output_msg = "."
     try:

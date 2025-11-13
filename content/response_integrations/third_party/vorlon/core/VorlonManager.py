@@ -55,7 +55,7 @@ class VorlonManager:
 
     def test_connectivity(self):
         request_url = f"{self.url}/rest/v1/services"
-        response = self.session.get(request_url)
+        self.session.get(request_url)
 
     def get_all_services(self):
         request_url = f"{self.url}/rest/v1/services"

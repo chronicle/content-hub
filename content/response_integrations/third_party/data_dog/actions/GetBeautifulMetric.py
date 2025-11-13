@@ -28,7 +28,7 @@ def main():
     series = siemplify.extract_action_param("Series")
     series = json.loads(series)
 
-    datadog_manager = DataDogManager(api_key, app_key)
+    DataDogManager(api_key, app_key)
     print(series)
     if series.get("pointlist") is not None:
         siemplify.LOGGER.info("The series parameter is valid.")

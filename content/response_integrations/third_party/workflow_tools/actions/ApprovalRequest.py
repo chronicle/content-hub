@@ -76,26 +76,26 @@ def main():
     alert_id = siemplify.current_alert.identifier
 
     result_value = True
-    ### STEP 1: Check whether to move the alert to a new case, if grouped with others
-    if move_grouped_alert == False:
-        ### STEP 2a: The case is to be treated as one workflow, don't worry about moving the alert. Treat the case as a whole.
+    # STEP 1: Check whether to move the alert to a new case, if grouped with others
+    if not move_grouped_alert:
+        # STEP 2a: The case is to be treated as one workflow, don't worry about moving the alert. Treat the case as a whole.
         manager.assign_case(reviewer, case_id, alert_id)
         manager.log_slack_message(
             message=MSG_AWAITING_APPROVAL.format(manager.siemplify_hostname, case_id),
         )
         output_message = output_message + "Case was assigned to reviewer for approval."
-    ### STEP 2b: If we're to move the alert when grouped with others, check if there's more than one alert.
+    # STEP 2b: If we're to move the alert when grouped with others, check if there's more than one alert.
     elif int(siemplify.case.alert_count) > 1:
-        ### STEP 2b i:
-        ### Move the alert to its own case.
+        # STEP 2b i:
+        # Move the alert to its own case.
         new_case_id = manager.move_alert(case_id, alert_id)
-        if new_case_id == None:
+        if new_case_id is None:
             e = f"Failed to move alert {alert_id} from case {case_id}. Did not receive a new case ID from API."
             siemplify.LOGGER.error(e)
             siemplify.LOGGER.exception(e)
             raise ValueError(e)
         json_result["new_case_id"] = new_case_id
-        ### Assign the new case to approval manager, send slack message
+        # Assign the new case to approval manager, send slack message
         output_message = (
             output_message
             + f"Alert {alert_id} was moved to new case {new_case_id} for approval."
@@ -108,8 +108,8 @@ def main():
             ),
         )
     else:
-        ### STEP 2b ii:
-        ### Assign the case to the approval manager, send slack message
+        # STEP 2b ii:
+        # Assign the case to the approval manager, send slack message
         manager.assign_case(reviewer, case_id, alert_id)
         output_message = output_message + "Case was assigned to reviewer for approval."
         manager.log_slack_message(

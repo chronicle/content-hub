@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 INTEGRATION_NAME = "Infoblox Threat Defense with DDI"
 
 RESULT_VALUE_TRUE = True

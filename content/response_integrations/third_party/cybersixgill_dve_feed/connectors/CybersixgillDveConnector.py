@@ -188,7 +188,6 @@ def create_sixgill_client_obj(
         sixgill.sixgill_feed_client.SixgillFeedClient -- Sixgill Client object
 
     """
-    sixgill_darkfeed_client = None
     try:
         sixgill_dvefeed_client = SixgillFeedClient(
             client_id,
