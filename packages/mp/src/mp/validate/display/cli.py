@@ -34,18 +34,17 @@ class CliDisplay:
         if self._is_results_empty():
             self.console.print("[bold green]All Validations Passed\n[/bold green]")
 
-        display_categories = ["Pre-Build", "Build", "Post-Build"]
+        display_categories: list[str] = ["Pre-Build", "Build", "Post-Build"]
 
         for category in display_categories:
-            category_validation_result: list[ValidationResults] = self.validation_results.get(
-                category
-            )
-            if not category_validation_result:
+            validation_results: list[ValidationResults] = self.validation_results.get(category)
+            if not validation_results:
                 continue
+
             self.console.print(
                 f"[bold underline blue]\n{category} Validations\n[/bold underline blue]"
             )
-            for integration_result in category_validation_result:
+            for integration_result in validation_results:
                 self.console.print(_build_table(integration_result), "\n")
 
     def _is_results_empty(self) -> bool:

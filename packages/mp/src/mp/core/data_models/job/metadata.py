@@ -24,7 +24,7 @@ import mp.core.data_models.abc
 from .parameter import BuiltJobParameter, JobParameter, NonBuiltJobParameter
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 DEFAULT_RUNTIME_INTERVAL: int = 900
 
@@ -54,7 +54,7 @@ class NonBuiltJobMetadata(TypedDict):
 
 
 class JobMetadata(
-    mp.core.data_models.abc.ScriptMetadata[BuiltJobMetadata, NonBuiltJobMetadata],
+    mp.core.data_models.abc.ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata],
 ):
     file_name: str
     creator: str
@@ -89,7 +89,7 @@ class JobMetadata(
     ]
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the 'built' integration path.
 
         Args:
@@ -99,17 +99,17 @@ class JobMetadata(
             A list of `JobMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.OUT_JOBS_META_DIR
+        meta_path: Path = path / mp.core.constants.OUT_JOBS_META_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_built_integration_path(p)
+            cls._from_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.JOBS_META_SUFFIX}")
         ]
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -119,17 +119,17 @@ class JobMetadata(
             A list of `JobMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.JOBS_DIR
+        meta_path: Path = path / mp.core.constants.JOBS_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_non_built_integration_path(p)
+            cls._from_non_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
         ]
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltJobMetadata) -> JobMetadata:
+    def _from_built(cls, file_name: str, built: BuiltJobMetadata) -> Self:
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -144,7 +144,7 @@ class JobMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltJobMetadata) -> JobMetadata:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltJobMetadata) -> Self:
         return cls(
             file_name=file_name,
             creator=non_built["creator"],

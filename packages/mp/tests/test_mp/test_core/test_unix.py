@@ -25,8 +25,8 @@ import mp.core.constants
 import mp.core.unix
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Mapping
+    from pathlib import Path
 
 DEV_DEPENDENCY_NAME: str = "beautifulsoup4"
 REQUIREMENT_LINE: str = "black>=24.10.0"
@@ -120,10 +120,10 @@ def test_get_flags_to_command(flags: Mapping[str, str | bool], expected: list[st
     assert mp.core.unix.get_flags_to_command(**flags) == expected
 
 
-def test_compile_integration_dependencies(tmp_path: pathlib.Path) -> None:
-    pyproject_toml_path: pathlib.Path = tmp_path / mp.core.constants.PROJECT_FILE
+def test_compile_integration_dependencies(tmp_path: Path) -> None:
+    pyproject_toml_path: Path = tmp_path / mp.core.constants.PROJECT_FILE
     pyproject_toml_path.write_text(TOML_CONTENT_WITH_DEV_DEPENDENCIES, encoding="utf-8")
-    requirements_path: pathlib.Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements_path: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
     assert not requirements_path.exists()
 
     mp.core.unix.compile_core_integration_dependencies(
@@ -137,14 +137,14 @@ def test_compile_integration_dependencies(tmp_path: pathlib.Path) -> None:
 
 
 def test_compile_core_integration_dependencies_with_no_dev_does_not_fail(
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
 ) -> None:
-    pyproject_path: pathlib.Path = tmp_path / mp.core.constants.PROJECT_FILE
+    pyproject_path: Path = tmp_path / mp.core.constants.PROJECT_FILE
     pyproject_path.write_text(
         TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES,
         encoding="utf-8",
     )
-    requirements_path: pathlib.Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements_path: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
     assert not requirements_path.exists()
 
     mp.core.unix.compile_core_integration_dependencies(
@@ -157,17 +157,17 @@ def test_compile_core_integration_dependencies_with_no_dev_does_not_fail(
     assert DEV_DEPENDENCY_NAME not in requirements
 
 
-def test_download_wheels_from_requirements(tmp_path: pathlib.Path) -> None:
-    pyproject_toml: pathlib.Path = tmp_path / mp.core.constants.PROJECT_FILE
+def test_download_wheels_from_requirements(tmp_path: Path) -> None:
+    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
     pyproject_toml.write_text(TOML_CONTENT_WITH_DEV_DEPENDENCIES, encoding="utf-8")
 
-    requirements: pathlib.Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
     mp.core.unix.compile_core_integration_dependencies(
         pyproject_toml.parent,
         requirements,
     )
 
-    dependencies: pathlib.Path = tmp_path / "dependencies"
+    dependencies: Path = tmp_path / "dependencies"
     dependencies.mkdir()
     assert not list(dependencies.iterdir())
 
@@ -178,10 +178,10 @@ def test_download_wheels_from_requirements(tmp_path: pathlib.Path) -> None:
     assert DEV_DEPENDENCY_NAME not in wheels
 
 
-def test_add_dependencies_to_toml(tmp_path: pathlib.Path) -> None:
-    pyproject_toml: pathlib.Path = tmp_path / mp.core.constants.PROJECT_FILE
+def test_add_dependencies_to_toml(tmp_path: Path) -> None:
+    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
     pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
-    requirements: pathlib.Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
     requirements.write_text(REQUIREMENT_LINE, encoding="utf-8")
 
     mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
@@ -192,8 +192,8 @@ def test_add_dependencies_to_toml(tmp_path: pathlib.Path) -> None:
     )
 
 
-def test_init_python_project(tmp_path: pathlib.Path) -> None:
-    pyproject_toml: pathlib.Path = tmp_path / mp.core.constants.PROJECT_FILE
+def test_init_python_project(tmp_path: Path) -> None:
+    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
     assert not pyproject_toml.exists()
 
     mp.core.unix.init_python_project(tmp_path)
@@ -205,10 +205,10 @@ def test_init_python_project(tmp_path: pathlib.Path) -> None:
 
 def test_init_python_project_if_not_exists(
     mock_get_marketplace_path: str,
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
-        pyproject_toml: pathlib.Path = tmp_path / mp.core.constants.PROJECT_FILE
+        pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
         assert not pyproject_toml.exists()
 
         mp.core.unix.init_python_project_if_not_exists(tmp_path)

@@ -27,23 +27,23 @@ from mp.core.config import get_marketplace_path
 from mp.dev_env.minor_version_bump import minor_version_bump
 
 if TYPE_CHECKING:
-    import pathlib
-    from collections.abc import Generator
+    from collections.abc import Iterator
+    from pathlib import Path
 
-INTEGRATIONS_CACHE_FOLDER_PATH: pathlib.Path = get_marketplace_path() / ".integrations_cache"
+INTEGRATIONS_CACHE_FOLDER_PATH: Path = get_marketplace_path() / ".integrations_cache"
 
 
 @pytest.fixture
 def sandbox(
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
     request: pytest.FixtureRequest,
-    built_integration: pathlib.Path,
-    non_built_integration: pathlib.Path,
-) -> Generator[dict[str, pathlib.Path], None, None]:
+    built_integration: Path,
+    non_built_integration: Path,
+) -> Iterator[dict[str, Path]]:
     """Creates a per-test sandbox by cloning the built and non-built integration.
 
     Yields:
-        dict[str, pathlib.Path]: A dictionary with convenient resolved paths:
+        dict[str, Path]: A dictionary with convenient resolved paths:
             - "BUILT": path to the built integration sandbox
             - "NON_BUILT": path to the non-built integration sandbox
             - "DEF_FILE": path to the integration definition file
@@ -58,18 +58,18 @@ def sandbox(
     worker_id: str = getattr(request.config, "workerinput", {}).get("workerid", "gw0")
     integration_name: str = f"mock_integration_{worker_id}"
 
-    built_dst: pathlib.Path = tmp_path / "mock_built_integration" / integration_name
-    non_built_dst: pathlib.Path = tmp_path / "commercial" / integration_name
+    built_dst: Path = tmp_path / "mock_built_integration" / integration_name
+    non_built_dst: Path = tmp_path / "commercial" / integration_name
     built_dst.parent.mkdir(parents=True, exist_ok=True)
     non_built_dst.parent.mkdir(parents=True, exist_ok=True)
 
     shutil.copytree(built_integration, built_dst)
     shutil.copytree(non_built_integration, non_built_dst)
 
-    def_path: pathlib.Path = built_dst / f"Integration-{integration_name}.def"
+    def_path: Path = built_dst / f"Integration-{integration_name}.def"
     shutil.move(built_dst / "Integration-mock_integration.def", def_path)
 
-    version_cache_path: pathlib.Path = (
+    version_cache_path: Path = (
         INTEGRATIONS_CACHE_FOLDER_PATH / integration_name / "version_cache.yaml"
     )
 
@@ -86,7 +86,7 @@ def sandbox(
 
 
 class TestMinorVersionBump:
-    def test_run_first_time_success(self, sandbox: dict[str, pathlib.Path]) -> None:
+    def test_run_first_time_success(self, sandbox: dict[str, Path]) -> None:
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
         assert INTEGRATIONS_CACHE_FOLDER_PATH.exists()
@@ -94,7 +94,7 @@ class TestMinorVersionBump:
         assert _load_cached_version(sandbox["VERSION_CACHE"]) == 2.2
         assert _load_built_version(sandbox["DEF_FILE"]) == 2.2
 
-    def test_dependencies_not_changed_success(self, sandbox: dict[str, pathlib.Path]) -> None:
+    def test_dependencies_not_changed_success(self, sandbox: dict[str, Path]) -> None:
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
         old_version_cached = _load_cached_version(sandbox["VERSION_CACHE"])
@@ -105,7 +105,7 @@ class TestMinorVersionBump:
         assert _load_cached_version(sandbox["VERSION_CACHE"]) == old_version_cached
         assert _load_built_version(sandbox["DEF_FILE"]) == old_version_def_file
 
-    def test_dependencies_changed_success(self, sandbox: dict[str, pathlib.Path]) -> None:
+    def test_dependencies_changed_success(self, sandbox: dict[str, Path]) -> None:
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
         old_version_cached = _load_cached_version(sandbox["VERSION_CACHE"])
@@ -119,7 +119,7 @@ class TestMinorVersionBump:
 
         _remove_dependencies(sandbox["NON_BUILT"])
 
-    def test_major_version_changed_success(self, sandbox: dict[str, pathlib.Path]) -> None:
+    def test_major_version_changed_success(self, sandbox: dict[str, Path]) -> None:
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
         old_version_cached = _load_cached_version(sandbox["VERSION_CACHE"])
@@ -140,9 +140,7 @@ class TestMinorVersionBump:
         with pyproject_path.open("w") as f:
             toml.dump(pyproject_data, f)
 
-    def test_cache_file_invalid_schema_recovers_success(
-        self, sandbox: dict[str, pathlib.Path]
-    ) -> None:
+    def test_cache_file_invalid_schema_recovers_success(self, sandbox: dict[str, Path]) -> None:
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
         cache_file = sandbox["VERSION_CACHE"]
         cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -154,34 +152,32 @@ class TestMinorVersionBump:
         assert _load_cached_version(sandbox["VERSION_CACHE"]) == 2.2
         assert _load_built_version(sandbox["DEF_FILE"]) == 2.2
 
-    def test_pyproject_toml_missing_raises_error_fail(
-        self, sandbox: dict[str, pathlib.Path]
-    ) -> None:
+    def test_pyproject_toml_missing_raises_error_fail(self, sandbox: dict[str, Path]) -> None:
         (sandbox["NON_BUILT"] / "pyproject.toml").unlink()
 
         with pytest.raises(typer.Exit):
             minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
-    def test_def_file_missing_raises_error_fail(self, sandbox: dict[str, pathlib.Path]) -> None:
+    def test_def_file_missing_raises_error_fail(self, sandbox: dict[str, Path]) -> None:
         sandbox["DEF_FILE"].unlink()
 
         with pytest.raises(typer.Exit):
             minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
 
-def _load_cached_version(version_cache_path: pathlib.Path) -> float:
+def _load_cached_version(version_cache_path: Path) -> float:
     with version_cache_path.open("r", encoding="utf-8") as f:
         versions_cache = yaml.safe_load(f)
         return versions_cache["version"]
 
 
-def _load_built_version(def_file_path: pathlib.Path) -> float:
+def _load_built_version(def_file_path: Path) -> float:
     with def_file_path.open("r", encoding="utf-8") as f:
         def_file = json.load(f)
         return def_file["Version"]
 
 
-def _add_dependencies(non_built_integration_path: pathlib.Path) -> None:
+def _add_dependencies(non_built_integration_path: Path) -> None:
     pyproject_path = non_built_integration_path / "pyproject.toml"
     pyproject_data = toml.load(pyproject_path)
     deps = pyproject_data["project"].setdefault("dependencies", [])
@@ -190,7 +186,7 @@ def _add_dependencies(non_built_integration_path: pathlib.Path) -> None:
         toml.dump(pyproject_data, f)
 
 
-def _remove_dependencies(non_built_integration_path: pathlib.Path) -> None:
+def _remove_dependencies(non_built_integration_path: Path) -> None:
     pyproject_path = non_built_integration_path / "pyproject.toml"
     pyproject_data = toml.load(pyproject_path)
     pyproject_data["project"]["dependencies"].pop()

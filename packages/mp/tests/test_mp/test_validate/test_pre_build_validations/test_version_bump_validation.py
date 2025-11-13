@@ -27,7 +27,7 @@ from mp.validate.pre_build_validation.version_bump_validation import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 PYPROJECT_TOML_TEMPLATE = """[project]
 name = "mock_integration"
@@ -62,8 +62,10 @@ RN_ENTRY_TEMPLATE = """
 
 
 def _setup_test_files(
-    temp_integration: pathlib.Path, new_toml_content: str, new_rn_content: str
-) -> tuple[pathlib.Path, pathlib.Path]:
+    temp_integration: Path,
+    new_toml_content: str,
+    new_rn_content: str,
+) -> tuple[Path, Path]:
     """Write content to mock integration files and return their paths."""
     rn_path = temp_integration / "release_notes.yaml"
     toml_path = temp_integration / "pyproject.toml"
@@ -73,9 +75,7 @@ def _setup_test_files(
 
 
 class TestVersionBumpValidationFlow:
-    def test_valid_existing_integration_version_bump_success(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_valid_existing_integration_version_bump_success(self, temp_integration: Path) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="2.0")
         new_rn_entry = RN_ENTRY_TEMPLATE.format(version="2.0")
@@ -95,9 +95,7 @@ class TestVersionBumpValidationFlow:
 
             _version_bump_validation_run_checks(existing_files, new_files)
 
-    def test_invalid_existing_integration_version_bump_fail(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_invalid_existing_integration_version_bump_fail(self, temp_integration: Path) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="3.0")
         new_rn_entry = RN_ENTRY_TEMPLATE.format(version="3.0")
@@ -119,7 +117,8 @@ class TestVersionBumpValidationFlow:
                 _version_bump_validation_run_checks(existing_files, new_files)
 
     def test_invalid_existing_integration_version_bump_float_fail(
-        self, temp_integration: pathlib.Path
+        self,
+        temp_integration: Path,
     ) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.5")
@@ -143,9 +142,7 @@ class TestVersionBumpValidationFlow:
             ):
                 _version_bump_validation_run_checks(existing_files, new_files)
 
-    def test_mismatched_release_note_and_toml_version_fail(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_mismatched_release_note_and_toml_version_fail(self, temp_integration: Path) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="2.0")
         new_rn_entry = RN_ENTRY_TEMPLATE.format(version="4.0")
@@ -166,7 +163,7 @@ class TestVersionBumpValidationFlow:
             with pytest.raises(NonFatalValidationError, match="release note's version must match"):
                 _version_bump_validation_run_checks(existing_files, new_files)
 
-    def test_valid_new_integration_success(self, temp_integration: pathlib.Path) -> None:
+    def test_valid_new_integration_success(self, temp_integration: Path) -> None:
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_rn_content = RN_ENTRY_TEMPLATE.format(version="1.0")
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
@@ -184,9 +181,7 @@ class TestVersionBumpValidationFlow:
 
             _version_bump_validation_run_checks(existing_files, new_files)
 
-    def test_invalid_new_integration_wrong_version_fail(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_invalid_new_integration_wrong_version_fail(self, temp_integration: Path) -> None:
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="2.0")
         new_rn_content = RN_ENTRY_TEMPLATE.format(version="2.0")
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
@@ -204,7 +199,8 @@ class TestVersionBumpValidationFlow:
                 _version_bump_validation_run_checks(existing_files, new_files)
 
     def test_invalid_new_integration_mismatched_rn_version_fail(
-        self, temp_integration: pathlib.Path
+        self,
+        temp_integration: Path,
     ) -> None:
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_rn_content = RN_ENTRY_TEMPLATE.format(version="2.0")
@@ -223,7 +219,8 @@ class TestVersionBumpValidationFlow:
                 _version_bump_validation_run_checks(existing_files, new_files)
 
     def test_integration_with_multiple_new_release_notes_version_bump_success(
-        self, temp_integration: pathlib.Path
+        self,
+        temp_integration: Path,
     ) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="2.0")
@@ -248,7 +245,8 @@ class TestVersionBumpValidationFlow:
             _version_bump_validation_run_checks(existing_files, new_files)
 
     def test_integration_with_multiple_invalid_new_release_notes_versions_fail(
-        self, temp_integration: pathlib.Path
+        self,
+        temp_integration: Path,
     ) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="2.0")

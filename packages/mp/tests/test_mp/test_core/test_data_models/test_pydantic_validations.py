@@ -20,12 +20,12 @@ import pydantic
 import pytest
 
 import mp.core.constants
+from mp.core.data_models.action_widget.metadata import ActionWidgetMetadata, WidgetScope, WidgetSize
+from mp.core.data_models.condition.condition_group import ConditionGroup
 from mp.core.data_models.connector.metadata import ConnectorMetadata
 from mp.core.data_models.job.metadata import JobMetadata
 from mp.core.data_models.job.parameter import JobParameter
-from mp.core.data_models.widget.condition_group import ConditionGroup
-from mp.core.data_models.widget.data_definition import WidgetDataDefinition, WidgetType
-from mp.core.data_models.widget.metadata import WidgetMetadata, WidgetScope, WidgetSize
+from mp.core.data_models.widget.data import HtmlWidgetDataDefinition, WidgetType
 
 
 class TestDescriptionLengthValidations:
@@ -93,14 +93,14 @@ class TestNameValidations:
 
         for invalid_title in invalid_titles:
             with pytest.raises(pydantic.ValidationError) as exc_info:
-                WidgetMetadata(
+                ActionWidgetMetadata(
                     file_name="test_widget",
                     title=invalid_title,
                     type_=WidgetType.TEXT,
                     scope=WidgetScope.ALERT,
                     action_identifier=None,
                     description="Test description",
-                    data_definition=mock.MagicMock(spec=WidgetDataDefinition),
+                    data_definition=mock.MagicMock(spec=HtmlWidgetDataDefinition),
                     condition_group=mock.MagicMock(spec=ConditionGroup),
                     default_size=WidgetSize.FULL_WIDTH,
                 )
@@ -123,14 +123,14 @@ class TestNameValidations:
 
         for valid_title in valid_titles:
             # Should not raise an exception
-            widget: WidgetMetadata = WidgetMetadata(
+            widget: ActionWidgetMetadata = ActionWidgetMetadata(
                 file_name="test_widget",
                 title=valid_title,
                 type_=WidgetType.TEXT,
                 scope=WidgetScope.ALERT,
                 action_identifier=None,
                 description="Test description",
-                data_definition=mock.MagicMock(spec=WidgetDataDefinition),
+                data_definition=mock.MagicMock(spec=HtmlWidgetDataDefinition),
                 condition_group=mock.MagicMock(spec=ConditionGroup),
                 default_size=WidgetSize.FULL_WIDTH,
             )

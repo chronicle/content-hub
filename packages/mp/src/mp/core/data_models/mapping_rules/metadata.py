@@ -14,14 +14,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NotRequired, TypedDict
+from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class TransformationFunction(mp.core.data_models.abc.RepresentableEnum):
@@ -114,7 +114,7 @@ class MappingRule(
     extract_function: ExtractionFunction
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[MappingRule]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the built-integration path.
 
         Args:
@@ -124,7 +124,7 @@ class MappingRule(
             A sequence of `MappingRule` objects
 
         """
-        meta_path: pathlib.Path = (
+        meta_path: Path = (
             path
             / mp.core.constants.OUT_MAPPING_RULES_DIR
             / mp.core.constants.OUT_MAPPING_RULES_FILE
@@ -132,10 +132,10 @@ class MappingRule(
         if not meta_path.exists():
             return []
 
-        return cls._from_built_integration_path(meta_path)
+        return cls._from_built_path(meta_path)
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[MappingRule]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -145,14 +145,14 @@ class MappingRule(
             A sequence of `MappingRule` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.MAPPING_RULES_FILE
+        meta_path: Path = path / mp.core.constants.MAPPING_RULES_FILE
         if not meta_path.exists():
             return []
 
-        return cls._from_non_built_integration_path(meta_path)
+        return cls._from_non_built_path(meta_path)
 
     @classmethod
-    def _from_built(cls, built: BuiltMappingRule) -> MappingRule:
+    def _from_built(cls, built: BuiltMappingRule) -> Self:
         extract_function: int | None = built.get("ExtractionFunction")
         if extract_function is None:
             extract_function = ExtractionFunction.NONE.value
@@ -184,7 +184,7 @@ class MappingRule(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltMappingRule) -> MappingRule:
+    def _from_non_built(cls, non_built: NonBuiltMappingRule) -> Self:
         extract_function: str | None = non_built.get("extract_function")
         if extract_function is None:
             extract_function = ExtractionFunction.NONE.to_string()

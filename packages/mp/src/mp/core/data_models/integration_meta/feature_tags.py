@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -37,7 +37,7 @@ class FeatureTags(mp.core.data_models.abc.Buildable[BuiltFeatureTags, NonBuiltFe
     integration_visibility_properties: list[IntegrationVisibilityProperty]
 
     @classmethod
-    def _from_built(cls, built: BuiltFeatureTags) -> FeatureTags:
+    def _from_built(cls, built: BuiltFeatureTags) -> Self:
         return cls(
             integration_visibility_properties=[
                 IntegrationVisibilityProperty.from_built(p)
@@ -46,7 +46,7 @@ class FeatureTags(mp.core.data_models.abc.Buildable[BuiltFeatureTags, NonBuiltFe
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltFeatureTags) -> FeatureTags:
+    def _from_non_built(cls, non_built: NonBuiltFeatureTags) -> Self:
         return cls(
             integration_visibility_properties=[
                 IntegrationVisibilityProperty.from_non_built(p)

@@ -30,6 +30,7 @@ from . import config, constants, file_utils
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+    from pathlib import Path
 
 COMMAND_ERR_MSG: str = "Error happened while executing a command: {0}"
 
@@ -42,10 +43,7 @@ class NonFatalCommandError(NonFatalValidationError):
     """Non-fatal error that happens during shell commands."""
 
 
-def compile_core_integration_dependencies(
-    project_path: pathlib.Path,
-    requirements_path: pathlib.Path,
-) -> None:
+def compile_core_integration_dependencies(project_path: Path, requirements_path: Path) -> None:
     """Compile/Export all project dependencies into a requirements' file.
 
     Args:
@@ -96,7 +94,7 @@ def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
     return []
 
 
-def run_pip_command(command: list[str], cwd: pathlib.Path) -> None:
+def run_pip_command(command: list[str], cwd: Path) -> None:
     """Run a pip command and ignore safe-to-ignore errors.
 
     Raises:
@@ -118,9 +116,9 @@ def run_pip_command(command: list[str], cwd: pathlib.Path) -> None:
 
 
 def download_wheels_from_requirements(
-    project_path: pathlib.Path,
-    requirements_path: pathlib.Path,
-    dst_path: pathlib.Path,
+    project_path: Path,
+    requirements_path: Path,
+    dst_path: Path,
 ) -> None:
     """Download `.whl` files from a requirements' file.
 
@@ -162,10 +160,7 @@ def download_wheels_from_requirements(
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def add_dependencies_to_toml(
-    project_path: pathlib.Path,
-    requirements_path: pathlib.Path,
-) -> None:
+def add_dependencies_to_toml(project_path: Path, requirements_path: Path) -> None:
     """Add dependencies from requirements to a python project's TOML file.
 
     Args:
@@ -196,7 +191,7 @@ def add_dependencies_to_toml(
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def init_python_project_if_not_exists(project_path: pathlib.Path) -> None:
+def init_python_project_if_not_exists(project_path: Path) -> None:
     """Initialize a python project in a folder.
 
     If a project is already initialized in there, nothing will happen.
@@ -205,24 +200,24 @@ def init_python_project_if_not_exists(project_path: pathlib.Path) -> None:
         project_path: the path to initialize the project
 
     """
-    pyproject: pathlib.Path = project_path / constants.PROJECT_FILE
+    pyproject: Path = project_path / constants.PROJECT_FILE
     if pyproject.exists():
         return
 
-    initials: set[pathlib.Path] = set(project_path.iterdir())
-    keep: set[pathlib.Path] = {
+    initials: set[Path] = set(project_path.iterdir())
+    keep: set[Path] = {
         project_path / constants.PROJECT_FILE,
         project_path / constants.LOCK_FILE,
     }
 
     init_python_project(project_path)
 
-    paths: set[pathlib.Path] = set(project_path.iterdir())
-    paths_to_remove: set[pathlib.Path] = paths.difference(initials).difference(keep)
+    paths: set[Path] = set(project_path.iterdir())
+    paths_to_remove: set[Path] = paths.difference(initials).difference(keep)
     file_utils.remove_paths_if_exists(*paths_to_remove)
 
 
-def init_python_project(project_path: pathlib.Path) -> None:
+def init_python_project(project_path: Path) -> None:
     """Initialize a python project in a folder.
 
     Args:
@@ -253,7 +248,7 @@ def init_python_project(project_path: pathlib.Path) -> None:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def ruff_check(paths: Iterable[pathlib.Path], /, **flags: bool | str) -> int:
+def ruff_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
     """Run `ruff check` on the provided paths.
 
     Returns:
@@ -264,7 +259,7 @@ def ruff_check(paths: Iterable[pathlib.Path], /, **flags: bool | str) -> int:
     return execute_command_and_get_output(command, paths, **flags)
 
 
-def ruff_format(paths: Iterable[pathlib.Path], /, **flags: bool | str) -> int:
+def ruff_format(paths: Iterable[Path], /, **flags: bool | str) -> int:
     """Run `ruff format` on the provided paths.
 
     Returns:
@@ -275,7 +270,7 @@ def ruff_format(paths: Iterable[pathlib.Path], /, **flags: bool | str) -> int:
     return execute_command_and_get_output(command, paths, **flags)
 
 
-def mypy(paths: Iterable[pathlib.Path], /, **flags: bool | str) -> int:
+def mypy(paths: Iterable[Path], /, **flags: bool | str) -> int:
     """Run `mypy` on the provided paths.
 
     Returns:
@@ -286,10 +281,7 @@ def mypy(paths: Iterable[pathlib.Path], /, **flags: bool | str) -> int:
     return execute_command_and_get_output(command, paths, **flags)
 
 
-def run_script_on_paths(
-    script_path: pathlib.Path,
-    *test_paths: pathlib.Path,
-) -> int:
+def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
     """Run a custom script on the provided paths.
 
     Returns:
@@ -315,9 +307,7 @@ def run_script_on_paths(
 
 
 def execute_command_and_get_output(
-    command: list[str],
-    paths: Iterable[pathlib.Path],
-    **flags: bool | str,
+    command: list[str], paths: Iterable[Path], **flags: bool | str
 ) -> int:
     """Execute a command and capture its output and status code.
 
@@ -442,7 +432,7 @@ def get_flags_to_command(**flags: bool | str | list[str]) -> list[str]:
     return all_flags
 
 
-def check_lock_file(project_path: pathlib.Path) -> None:
+def check_lock_file(project_path: Path) -> None:
     """Check if the 'uv.lock' file is consistent with 'pyproject.toml' file.
 
     Args:
@@ -484,8 +474,10 @@ def check_lock_file(project_path: pathlib.Path) -> None:
 
 
 def get_files_unmerged_to_main_branch(
-    base: str, head_sha: str, integration_path: pathlib.Path
-) -> list[pathlib.Path]:
+    base: str,
+    head_sha: str,
+    integration_path: Path,
+) -> list[Path]:
     """Return a list of file names changed in a pull request compared to the main branch.
 
     Args:
@@ -523,7 +515,7 @@ def get_files_unmerged_to_main_branch(
         raise NonFatalCommandError(error_output) from error
 
 
-def get_file_content_from_main_branch(file_path: pathlib.Path) -> str:
+def get_file_content_from_main_branch(file_path: Path) -> str:
     """Return the content of a specific file from the 'main' branch.
 
     Args:

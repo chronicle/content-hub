@@ -27,14 +27,14 @@ from mp.build_project.post_build.duplicate_integrations import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Generator
+    from pathlib import Path
 
 
 @pytest.fixture
 def temp_marketplace_paths(
-    tmp_path: pathlib.Path,
-) -> Generator[tuple[pathlib.Path, pathlib.Path], None, None]:
+    tmp_path: Path,
+) -> Generator[tuple[Path, Path], None, None]:
     commercial = tmp_path / "commercial"
     community = tmp_path / "community"
     commercial.mkdir()
@@ -48,7 +48,7 @@ def temp_marketplace_paths(
     shutil.rmtree(tmp_path)
 
 
-def _create_marketplace_json(marketplace_path: pathlib.Path) -> None:
+def _create_marketplace_json(marketplace_path: Path) -> None:
     """Create an empty marketplace.json file in the given marketplace path.
 
     Args:
@@ -59,9 +59,7 @@ def _create_marketplace_json(marketplace_path: pathlib.Path) -> None:
     mp_json_path.write_text(json.dumps([]), encoding="utf-8")
 
 
-def test_duplicate_integration_same_marketplace(
-    temp_marketplace_paths: tuple[pathlib.Path, pathlib.Path],
-) -> None:
+def test_duplicate_integration_same_marketplace(temp_marketplace_paths: tuple[Path, Path]) -> None:
     commercial, _ = temp_marketplace_paths
     integration_path = commercial / "test_integration"
     integration_path.mkdir(parents=True)
@@ -91,7 +89,7 @@ def test_duplicate_integration_same_marketplace(
 
 
 def test_duplicate_integration_across_marketplaces(
-    temp_marketplace_paths: tuple[pathlib.Path, pathlib.Path],
+    temp_marketplace_paths: tuple[Path, Path],
 ) -> None:
     commercial, community = temp_marketplace_paths
 
@@ -121,7 +119,7 @@ def test_duplicate_integration_across_marketplaces(
         raise_errors_for_duplicate_integrations(commercial, community)
 
 
-def _create_integration_def(integration_path: pathlib.Path, identifier: str) -> None:
+def _create_integration_def(integration_path: Path, identifier: str) -> None:
     """Create an integration definition file with the given identifier.
 
     Args:
@@ -141,7 +139,7 @@ def _create_integration_def(integration_path: pathlib.Path, identifier: str) -> 
 
 
 def _create_marketplace_json_with_integrations(
-    marketplace_path: pathlib.Path,
+    marketplace_path: Path,
     integrations: list[dict],
 ) -> None:
     """Create a marketplace.json file with the given integrations.
