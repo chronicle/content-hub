@@ -623,14 +623,24 @@ def create_dir_if_not_exists(p: Path, /) -> Path:
     return p
 
 
-def get_playbooks_dir_path() -> list[Path]:
-    """Get all playbooks paths in the content directory."""
+def get_playbooks_dir_path() -> Path:
+    """Get the content/playbooks path, creating it if it doesn't exist.
 
+    Returns:
+        The content/playbooks directory path.
+
+    """
     content_dir: Path = create_or_get_content_dir()
     return create_dir_if_not_exists(content_dir / constants.PLAYBOOKS_DIR_NAME)
 
 
 def create_or_get_playbook_out_dir() -> Path:
+    """Get the out/content/playbooks path, creating it if it doesn't exist.
+
+    Returns:
+        The out/content/playbooks directory path.
+
+    """
     out_content_dir: Path = create_or_get_out_contents_dir()
     playbooks_out_dir: Path = create_dir_if_not_exists(
         out_content_dir / constants.PLAYBOOKS_DIR_NAME

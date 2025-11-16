@@ -85,7 +85,7 @@ class ActionParameter(
     type_: ActionParamType
     default_value: str | bool | float | int | None
 
-    def model_post_init(self, context: Any, /) -> None:  # noqa: ANN401, ARG002
+    def model_post_init(self, context: Any, /) -> None:  # noqa: ANN401, ARG002, D102
         self._validate_optional_values()
         self._validate_default_value_is_in_optional_values()
 

@@ -73,7 +73,7 @@ def get_project_dependency_name(dependency_name: str) -> str:
     return re.split(r"[<>=]", dependency_name)[0]
 
 
-def load_integration_def(integration_path: pathlib.Path) -> YamlFileContent:
+def load_integration_def(integration_path: Path) -> YamlFileContent:
     """Load the integration definition file content.
 
     Returns:
@@ -92,7 +92,7 @@ def load_integration_def(integration_path: pathlib.Path) -> YamlFileContent:
 
 
 def load_components_defs(
-    integration_path: pathlib.Path, *components: str
+    integration_path: Path, *components: str
 ) -> dict[str, list[YamlFileContent]]:
     """Load component's definition files, organized by component type.
 
@@ -113,7 +113,7 @@ def load_components_defs(
     try:
         component_defs: dict[str, list[YamlFileContent]] = {}
         for component_dir_name in filtered_components:
-            component_dir: pathlib.Path = integration_path / component_dir_name
+            component_dir: Path = integration_path / component_dir_name
             if component_dir.is_dir():
                 component_defs[component_dir_name] = [
                     file_utils.load_yaml_file(p)

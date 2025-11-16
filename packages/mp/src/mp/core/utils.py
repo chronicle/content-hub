@@ -20,15 +20,14 @@ import os
 import platform
 import re
 import sys
-from typing import TYPE_CHECKING, Any, TypedDict
-from typing import Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
 from mp.core.constants import WINDOWS_PLATFORM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from .custom_types import RepositoryType, YamlFileContent
+    from .custom_types import YamlFileContent
 
 SNAKE_PATTERN_1 = re.compile(r"(.)([A-Z][a-z]+)")
 SNAKE_PATTERN_2 = re.compile(r"([a-z0-9])([A-Z])")

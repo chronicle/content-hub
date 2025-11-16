@@ -65,7 +65,7 @@ class NonBuiltOverview(TypedDict):
     role_names: list[str]
 
 
-class Overview(mp.core.data_models.abc.SequentialMetadata):
+class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuiltOverview]):
     identifier: str
     name: str
     creator: str | None

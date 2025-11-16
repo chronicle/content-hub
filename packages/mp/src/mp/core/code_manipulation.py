@@ -111,7 +111,7 @@ def restructure_script_imports(code_string: str) -> str:
 
 
 class ImportTransformer(cst.CSTTransformer):
-    def leave_ImportFrom(  # noqa: N802, PLR6301
+    def leave_ImportFrom(  # noqa: N802, PLR6301, D102
         self,
         original_node: cst.ImportFrom,
         updated_node: cst.ImportFrom,

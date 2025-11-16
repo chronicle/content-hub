@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import NotRequired, Self, TypedDict, TYPE_CHECKING
+from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -88,15 +88,15 @@ class HtmlWidgetDataDefinition(
     html_content: str | None = None
 
     @classmethod
-    def from_built_path(cls, path: Path) -> list[Self]:
+    def from_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
         pass
 
     @classmethod
-    def from_non_built_path(cls, path: Path) -> list[Self]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
         pass
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:
+    def _from_built(cls, _: str, built: BuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
@@ -106,7 +106,7 @@ class HtmlWidgetDataDefinition(
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltWidgetDataDefinition) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],

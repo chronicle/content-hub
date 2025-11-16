@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
-import json
-from pathlib import Path
+
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
@@ -29,8 +29,8 @@ from mp.core.data_models.condition.condition_group import (
 )
 from mp.core.data_models.widget.data import (
     BuiltWidgetDataDefinition,
-    NonBuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
+    NonBuiltWidgetDataDefinition,
     WidgetSize,
     WidgetType,
 )

@@ -92,7 +92,7 @@ class ConnectorMetadata(
     rules: list[ConnectorRule]
     version: float
 
-    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002
+    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002, D102
         if self.parameters:
             mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
 

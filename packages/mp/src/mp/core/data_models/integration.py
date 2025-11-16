@@ -23,6 +23,7 @@ import mp.core.constants
 import mp.core.file_utils
 
 from .action.metadata import ActionMetadata
+from .action_widget.metadata import ActionWidgetMetadata
 from .connector.metadata import ConnectorMetadata
 from .custom_families.metadata import CustomFamily
 from .integration_meta.metadata import IntegrationMetadata
@@ -30,7 +31,6 @@ from .job.metadata import JobMetadata
 from .mapping_rules.metadata import MappingRule
 from .pyproject_toml import PyProjectToml
 from .release_notes.metadata import ReleaseNote
-from .action_widget.metadata import ActionWidgetMetadata
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from mp.core.custom_types import ActionName, ConnectorName, JobName, ManagerName, WidgetName
 
     from .action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
+    from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
     from .connector.metadata import BuiltConnectorMetadata, NonBuiltConnectorMetadata
     from .custom_families.metadata import BuiltCustomFamily, NonBuiltCustomFamily
     from .integration_meta.metadata import BuiltIntegrationMetadata, NonBuiltIntegrationMetadata
@@ -47,7 +48,6 @@ if TYPE_CHECKING:
     from .mapping_rules.metadata import BuiltMappingRule, NonBuiltMappingRule
     from .pyproject_toml import PyProjectTomlFile
     from .release_notes.metadata import BuiltReleaseNote, NonBuiltReleaseNote
-    from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
 
 
 class BuiltIntegration(TypedDict):
