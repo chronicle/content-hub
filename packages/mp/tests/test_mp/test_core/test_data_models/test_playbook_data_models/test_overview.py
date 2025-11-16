@@ -32,9 +32,6 @@ class TestOverviewDataModel:
     def test_from_built_with_valid_data(self) -> None:
         assert Overview.from_built(BUILT_OVERVIEW) == OVERVIEW
 
-    def test_from_non_built_with_valid_data(self) -> None:
-        assert Overview.from_non_built(NON_BUILT_OVERVIEW) == OVERVIEW
-
     def test_to_built(self) -> None:
         assert OVERVIEW.to_built() == BUILT_OVERVIEW
 
@@ -63,6 +60,3 @@ class TestOverviewDataModel:
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert Overview.from_built(BUILT_OVERVIEW).to_built() == BUILT_OVERVIEW
-
-    def test_from_non_built_to_non_built_is_idempotent(self) -> None:
-        assert Overview.from_non_built(NON_BUILT_OVERVIEW).to_non_built() == NON_BUILT_OVERVIEW

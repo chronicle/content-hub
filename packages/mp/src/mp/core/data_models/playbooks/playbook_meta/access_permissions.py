@@ -85,5 +85,5 @@ class AccessPermission(
         return NonBuiltAccessPermission(
             playbook_id=self.playbook_id,
             user=self.user,
-            access_level=self.access_level.to_string().upper(),
+            access_level=self.access_level.to_string(),
         )

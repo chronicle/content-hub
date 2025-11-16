@@ -184,9 +184,7 @@ class Playbook:
         built_widgets: list[BuiltPlaybookWidgetMetadata] = [
             widget.to_built() for widget in self.widgets
         ]
-        built_overviews: list[BuiltOverview] = [
-            overview.to_built_with_widget(built_widgets) for overview in self.overviews
-        ]
+        built_overviews: list[BuiltOverview] = [overview.to_built() for overview in self.overviews]
 
         built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
         steps: list[BuiltStep] = [step.to_built() for step in self.steps]
@@ -221,13 +219,9 @@ class Playbook:
             Permissions=built_playbook_meta["Permissions"],
         )
 
-        built_playbook_overview_template_details: list[BuiltOverview] = [
-            overview.to_built_with_widget(built_widgets) for overview in self.overviews
-        ]
-
         return BuiltPlaybook(
             CategoryName="Content Hub",
-            OverviewTemplatesDetails=built_playbook_overview_template_details,
+            OverviewTemplatesDetails=built_overviews,
             WidgetTemplates=built_widgets,
             Definition=built_playbook_definition,
         )

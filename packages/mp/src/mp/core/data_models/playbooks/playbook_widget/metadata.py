@@ -147,6 +147,30 @@ class PlaybookWidgetMetadata(
         ]
 
     @classmethod
+    def from_non_built_path_filtered_widgets(
+        cls, widget_names: list[str], path: Path
+    ) -> list[Self]:
+        """Create a list of widgets from a non-built path, filtered by name.
+
+        Args:
+            widget_names: The names of the widgets to include.
+            path: The path to the non-built integration.
+
+        Returns:
+            A list of `PlaybookWidgetMetadata` objects.
+
+        """
+        meta_path: Path = path / mp.core.constants.WIDGETS_DIR
+        if not meta_path.exists():
+            return []
+
+        return [
+            cls._from_non_built_path(p)
+            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
+            if p.name in widget_names
+        ]
+
+    @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
         data_json: pydantic.Json = json.loads(built["DataDefinitionJson"])
         return cls(
@@ -156,9 +180,11 @@ class PlaybookWidgetMetadata(
             order=built["Order"],
             template_identifier=built["TemplateIdentifier"],
             type=WidgetType(built["Type"]),
-            data_definition=HtmlWidgetDataDefinition.from_built(file_name, data_json)
-            if built["Type"] == WidgetType.HTML.value
-            else built["DataDefinitionJson"],
+            data_definition=(
+                HtmlWidgetDataDefinition.from_built(file_name, data_json)
+                if built["Type"] == WidgetType.HTML.value
+                else built["DataDefinitionJson"]
+            ),
             widget_size=WidgetSize(built["GridColumns"]),
             action_widget_template_id=built["ActionWidgetTemplateIdentifier"],
             step_id=built["StepIdentifier"],
@@ -171,7 +197,7 @@ class PlaybookWidgetMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookWidgetMetadata) -> Self:
         return cls(
             title=non_built["title"],
             description=non_built["description"],
@@ -180,8 +206,8 @@ class PlaybookWidgetMetadata(
             template_identifier=non_built["template_identifier"],
             type=WidgetType.from_string(non_built["type"]),
             data_definition=(
-                HtmlWidgetDataDefinition.from_non_built("", non_built["data_definition"])
-                if non_built["type"] == WidgetType.HTML.name
+                HtmlWidgetDataDefinition.from_non_built(file_name, non_built["data_definition"])
+                if non_built["type"] == WidgetType.HTML.to_string()
                 else json.dumps(non_built["data_definition"])
             ),
             widget_size=WidgetSize.from_string(non_built["widget_size"]),
@@ -238,12 +264,12 @@ class PlaybookWidgetMetadata(
             identifier=self.identifier,
             order=self.order,
             template_identifier=self.template_identifier,
-            type=self.type.to_string().upper(),
+            type=self.type.to_string(),
             block_step_instance_name=self.block_step_instance_name,
             data_definition=self.data_definition.to_non_built()
             if self.type == WidgetType.HTML
             else self.data_definition,
-            widget_size=self.widget_size.to_string().upper(),
+            widget_size=self.widget_size.to_string(),
             step_integration=self.step_integration,
             action_widget_template_id=self.action_widget_template_id,
             step_id=self.step_id,

@@ -142,7 +142,7 @@ class HtmlWidgetDataDefinition(
         return NonBuiltWidgetDataDefinition(
             html_height=self.html_height,
             safe_rendering=self.safe_rendering,
-            widget_definition_scope=self.widget_definition_scope.to_string().upper(),
-            type=self.type.to_string().upper(),
+            widget_definition_scope=self.widget_definition_scope.to_string(),
+            type=self.type.to_string(),
             html_content=self.html_content,
         )

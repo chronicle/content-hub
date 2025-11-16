@@ -290,7 +290,7 @@ class PlaybookMetadata(
             debug_alert_identifier=self.debug_alert_identifier,
             debug_base_alert_identifier=self.debug_base_alert_identifier,
             is_debug_mode=self.is_debug_mode,
-            type=self.type_.to_string().upper(),
+            type=self.type_.to_string(),
             template_name=self.template_name,
             original_workflow_identifier=self.original_workflow_identifier,
             version_comment=self.version_comment,
@@ -301,10 +301,10 @@ class PlaybookMetadata(
             is_automatic=self.is_automatic,
             is_archived=self.is_archived,
             last_editor=self.last_editor,
-            default_access_level=self.default_access_level.to_string().upper()
+            default_access_level=self.default_access_level.to_string()
             if self.default_access_level is not None
             else None,
-            creation_source=self.creation_source.to_string().upper()
+            creation_source=self.creation_source.to_string()
             if self.creation_source is not None
             else None,
             simulation_clone=self.simulation_clone,

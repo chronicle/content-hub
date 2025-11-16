@@ -277,9 +277,9 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_automatic=self.is_automatic,
             is_skippable=self.is_skippable,
             action_provider=self.action_provider,
-            step_debug_data=self.step_debug_data.to_non_built()
-            if self.step_debug_data is not None
-            else None,
+            step_debug_data=(
+                self.step_debug_data.to_non_built() if self.step_debug_data is not None else None
+            ),
             start_loop_step_id=self.start_loop_step_id,
             parameters=[p.to_non_built() for p in self.parameters],
             action_name=self.action_name,
@@ -290,5 +290,5 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_debug_mock_data=self.is_debug_mock_data,
             auto_skip_on_failure=self.auto_skip_on_failure,
             previous_result_condition=self.previous_result_condition,
-            type=self.type_.to_string().upper(),
+            type=self.type_.to_string(),
         )

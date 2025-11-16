@@ -79,5 +79,5 @@ class ConditionGroup(
         """
         return NonBuiltConditionGroup(
             conditions=[condition.to_non_built() for condition in self.conditions],
-            logical_operator=self.logical_operator.to_string().upper(),
+            logical_operator=self.logical_operator.to_string(),
         )

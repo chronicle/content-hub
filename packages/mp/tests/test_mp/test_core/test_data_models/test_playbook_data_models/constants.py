@@ -77,11 +77,6 @@ from mp.core.data_models.playbooks.trigger.metadata import (
     Trigger,
     TriggerType,
 )
-from mp.core.data_models.release_notes.metadata import (
-    BuiltReleaseNote,
-    NonBuiltReleaseNote,
-    ReleaseNote,
-)
 from mp.core.data_models.widget.data import (
     BuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
@@ -262,7 +257,7 @@ NON_BUILT_STEP: NonBuiltStep = {
     "action_provider": "action_provider",
     "action_name": "action_name",
     "integration": "integration",
-    "type": "ACTION",
+    "type": "action",
     "parameters": [NON_BUILT_STEP_PARAMETER],
     "auto_skip_on_failure": True,
     "is_debug_mock_data": True,
@@ -337,7 +332,7 @@ NON_BUILT_STEP_WITH_NONE: NonBuiltStep = {
     "action_provider": "action_provider",
     "action_name": "action_name",
     "integration": "integration",
-    "type": "ACTION",
+    "type": "action",
     "parameters": [],
     "auto_skip_on_failure": True,
     "is_debug_mock_data": True,
@@ -373,78 +368,6 @@ STEP_WITH_NONE = Step(
     parallel_actions=[],
 )
 
-BUILT_OVERVIEW: BuiltOverview = {
-    "OverviewTemplate": {
-        "Identifier": "identifier",
-        "Name": "name",
-        "Creator": "creator",
-        "PlaybookDefinitionIdentifier": "playbook_id",
-        "Type": 0,
-        "AlertRuleType": "alert_rule_type",
-        "Widgets": [],
-        "Roles": [1, 2],
-    },
-    "Roles": ["role1", "role2"],
-}
-
-NON_BUILT_OVERVIEW: NonBuiltOverview = {
-    "identifier": "identifier",
-    "name": "name",
-    "creator": "creator",
-    "playbook_id": "playbook_id",
-    "type": "PLAYBOOK_DEFAULT",
-    "alert_rule_type": "alert_rule_type",
-    "roles": [1, 2],
-    "role_names": ["role1", "role2"],
-}
-
-OVERVIEW = Overview(
-    identifier="identifier",
-    name="name",
-    creator="creator",
-    playbook_id="playbook_id",
-    type_=OverviewType.PLAYBOOK_DEFAULT,
-    alert_rule_type="alert_rule_type",
-    roles=[1, 2],
-    role_names=["role1", "role2"],
-)
-
-BUILT_OVERVIEW_WITH_NONE: BuiltOverview = {
-    "OverviewTemplate": {
-        "Identifier": "identifier",
-        "Name": "name",
-        "Creator": None,
-        "PlaybookDefinitionIdentifier": "playbook_id",
-        "Type": 0,
-        "AlertRuleType": None,
-        "Widgets": [],
-        "Roles": [],
-    },
-    "Roles": [],
-}
-
-NON_BUILT_OVERVIEW_WITH_NONE: NonBuiltOverview = {
-    "identifier": "identifier",
-    "name": "name",
-    "creator": None,
-    "playbook_id": "playbook_id",
-    "type": "PLAYBOOK_DEFAULT",
-    "alert_rule_type": None,
-    "roles": [],
-    "role_names": [],
-}
-
-OVERVIEW_WITH_NONE = Overview(
-    identifier="identifier",
-    name="name",
-    creator=None,
-    playbook_id="playbook_id",
-    type_=OverviewType.PLAYBOOK_DEFAULT,
-    alert_rule_type=None,
-    roles=[],
-    role_names=[],
-)
-
 BUILT_CONDITION: BuiltCondition = {
     "FieldName": "field_name",
     "Value": "value",
@@ -454,7 +377,7 @@ BUILT_CONDITION: BuiltCondition = {
 NON_BUILT_CONDITION: NonBuiltCondition = {
     "field_name": "field_name",
     "value": "value",
-    "match_type": "EQUAL",
+    "match_type": "equal",
 }
 
 CONDITION = Condition(
@@ -470,7 +393,7 @@ BUILT_CONDITION_GROUP: BuiltConditionGroup = {
 
 NON_BUILT_CONDITION_GROUP: NonBuiltConditionGroup = {
     "conditions": [NON_BUILT_CONDITION],
-    "logical_operator": "AND",
+    "logical_operator": "and",
 }
 
 CONDITION_GROUP = ConditionGroup(
@@ -485,7 +408,7 @@ BUILT_CONDITION_GROUP_WITH_NONE: BuiltConditionGroup = {
 
 NON_BUILT_CONDITION_GROUP_WITH_NONE: NonBuiltConditionGroup = {
     "conditions": [],
-    "logical_operator": "AND",
+    "logical_operator": "and",
 }
 
 CONDITION_GROUP_WITH_NONE = ConditionGroup(
@@ -508,9 +431,9 @@ NON_BUILT_TRIGGER: NonBuiltTrigger = {
     "identifier": "identifier",
     "is_enabled": True,
     "playbook_id": "playbook_id",
-    "type_": "VENDOR_NAME",
+    "type_": "vendor_name",
     "conditions": [NON_BUILT_CONDITION],
-    "logical_operator": "AND",
+    "logical_operator": "and",
     "environments": ["env1", "env2"],
     "playbook_name": "playbook_name",
 }
@@ -541,9 +464,9 @@ NON_BUILT_TRIGGER_WITH_NONE: NonBuiltTrigger = {
     "identifier": "identifier",
     "is_enabled": True,
     "playbook_id": "playbook_id",
-    "type_": "VENDOR_NAME",
+    "type_": "vendor_name",
     "conditions": [],
-    "logical_operator": "AND",
+    "logical_operator": "and",
     "environments": [],
     "playbook_name": None,
 }
@@ -568,7 +491,7 @@ BUILT_ACCESS_PERMISSION: BuiltAccessPermission = {
 NON_BUILT_ACCESS_PERMISSION: NonBuiltAccessPermission = {
     "playbook_id": "playbook_id",
     "user": "user",
-    "access_level": "VIEW",
+    "access_level": "view",
 }
 
 ACCESS_PERMISSION = AccessPermission(
@@ -609,13 +532,13 @@ NON_BUILT_PLAYBOOK_METADATA: NonBuiltPlaybookMetadata = {
     "version": 1.0,
     "name": "name",
     "description": "description",
-    "creation_source": "USER_OR_API_INITIATED",
-    "default_access_level": "VIEW",
+    "creation_source": "user_or_api_initiated",
+    "default_access_level": "view",
     "simulation_clone": False,
     "debug_alert_identifier": "debug_alert_id",
     "debug_base_alert_identifier": "debug_base_alert_id",
     "is_debug_mode": False,
-    "type": "PLAYBOOK",
+    "type": "playbook",
     "template_name": "template_name",
     "original_workflow_identifier": "original_workflow_id",
     "version_comment": "version_comment",
@@ -693,7 +616,7 @@ NON_BUILT_PLAYBOOK_METADATA_WITH_NONE: NonBuiltPlaybookMetadata = {
     "debug_alert_identifier": None,
     "debug_base_alert_identifier": None,
     "is_debug_mode": False,
-    "type": "PLAYBOOK",
+    "type": "playbook",
     "template_name": None,
     "original_workflow_identifier": "original_workflow_id",
     "version_comment": None,
@@ -756,8 +679,8 @@ NON_BUILT_WIDGET_DATA_DEFINITION: NonBuiltWidgetDataDefinition = {
     "html_content": HTML_CONTENT,
     "html_height": 400,
     "safe_rendering": False,
-    "type": "HTML",
-    "widget_definition_scope": "BOTH",
+    "type": "html",
+    "widget_definition_scope": "both",
 }
 
 HTML_WIDGET_DATA_DEFINITION = HtmlWidgetDataDefinition(
@@ -793,9 +716,9 @@ NON_BUILT_PLAYBOOK_WIDGET_METADATA: NonBuiltPlaybookWidgetMetadata = {
     "identifier": "identifier",
     "order": 1,
     "template_identifier": "template_identifier",
-    "type": "HTML",
+    "type": "html",
     "data_definition": NON_BUILT_WIDGET_DATA_DEFINITION,
-    "widget_size": "HALF_WIDTH",
+    "widget_size": "half_width",
     "action_widget_template_id": "action_widget_template_id",
     "step_id": "step_id",
     "step_integration": "step_integration",
@@ -850,9 +773,9 @@ NON_BUILT_PLAYBOOK_WIDGET_METADATA_WITH_NONE: NonBuiltPlaybookWidgetMetadata = {
     "identifier": "identifier",
     "order": 1,
     "template_identifier": "template_identifier",
-    "type": "HTML",
+    "type": "html",
     "data_definition": NON_BUILT_WIDGET_DATA_DEFINITION,
-    "widget_size": "HALF_WIDTH",
+    "widget_size": "half_width",
     "action_widget_template_id": None,
     "step_id": None,
     "step_integration": None,
@@ -882,45 +805,6 @@ PLAYBOOK_WIDGET_METADATA_WITH_NONE = PlaybookWidgetMetadata(
     integration_name=None,
 )
 
-BUILT_RELEASE_NOTE: BuiltReleaseNote = {
-    "ChangeDescription": "description",
-    "Deprecated": False,
-    "New": True,
-    "ItemName": "item_name",
-    "ItemType": "item_type",
-    "PublishTime": 1672531200,
-    "Regressive": False,
-    "Removed": False,
-    "TicketNumber": "ticket",
-    "IntroducedInIntegrationVersion": 1.0,
-}
-
-NON_BUILT_RELEASE_NOTE: NonBuiltReleaseNote = {
-    "description": "description",
-    "deprecated": False,
-    "integration_version": 1.0,
-    "item_name": "item_name",
-    "item_type": "item_type",
-    "publish_time": "2023-01-01",
-    "regressive": False,
-    "removed": False,
-    "ticket_number": "ticket",
-    "new": True,
-}
-
-RELEASE_NOTE = ReleaseNote(
-    description="description",
-    deprecated=False,
-    new=True,
-    item_name="item_name",
-    item_type="item_type",
-    publish_time=1672531200,
-    regressive=False,
-    removed=False,
-    ticket="ticket",
-    version=1.0,
-)
-
 NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
     "type": "PLAYBOOK",
     "content_hub_display_name": "display_name",
@@ -945,4 +829,81 @@ DISPLAY_INFO = PlaybookDisplayInfo(
     contribution_type=PlaybookContributionType.THIRD_PARTY,
     is_google_verified=False,
     should_display_in_content_hub=False,
+)
+
+
+BUILT_OVERVIEW: BuiltOverview = {
+    "OverviewTemplate": {
+        "Identifier": "identifier",
+        "Name": "name",
+        "Creator": "creator",
+        "PlaybookDefinitionIdentifier": "playbook_id",
+        "Type": 0,
+        "AlertRuleType": "alert_rule_type",
+        "Widgets": [BUILT_PLAYBOOK_WIDGET_METADATA],
+        "Roles": [1, 2],
+    },
+    "Roles": ["role1", "role2"],
+}
+
+NON_BUILT_OVERVIEW: NonBuiltOverview = {
+    "identifier": "identifier",
+    "name": "name",
+    "creator": "creator",
+    "playbook_id": "playbook_id",
+    "widgets": ["title"],
+    "type": "playbook_default",
+    "alert_rule_type": "alert_rule_type",
+    "roles": [1, 2],
+    "role_names": ["role1", "role2"],
+}
+
+OVERVIEW = Overview(
+    identifier="identifier",
+    name="name",
+    creator="creator",
+    playbook_id="playbook_id",
+    type_=OverviewType.PLAYBOOK_DEFAULT,
+    alert_rule_type="alert_rule_type",
+    roles=[1, 2],
+    role_names=["role1", "role2"],
+    widgets=[PLAYBOOK_WIDGET_METADATA],
+)
+
+BUILT_OVERVIEW_WITH_NONE: BuiltOverview = {
+    "OverviewTemplate": {
+        "Identifier": "identifier",
+        "Name": "name",
+        "Creator": None,
+        "PlaybookDefinitionIdentifier": "playbook_id",
+        "Type": 0,
+        "AlertRuleType": None,
+        "Widgets": [],
+        "Roles": [],
+    },
+    "Roles": [],
+}
+
+NON_BUILT_OVERVIEW_WITH_NONE: NonBuiltOverview = {
+    "identifier": "identifier",
+    "name": "name",
+    "creator": None,
+    "playbook_id": "playbook_id",
+    "widgets": [],
+    "type": "playbook_default",
+    "alert_rule_type": None,
+    "roles": [],
+    "role_names": [],
+}
+
+OVERVIEW_WITH_NONE = Overview(
+    identifier="identifier",
+    name="name",
+    creator=None,
+    playbook_id="playbook_id",
+    type_=OverviewType.PLAYBOOK_DEFAULT,
+    alert_rule_type=None,
+    roles=[],
+    role_names=[],
+    widgets=[],
 )

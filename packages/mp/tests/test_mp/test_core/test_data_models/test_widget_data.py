@@ -41,8 +41,8 @@ BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
 NON_BUILT_WIDGET_DATA_DEFINITION: NonBuiltWidgetDataDefinition = {
     "html_height": 100,
     "safe_rendering": True,
-    "type": "HTML",
-    "widget_definition_scope": "CASE",
+    "type": "html",
+    "widget_definition_scope": "case",
     "html_content": HTML_CONTENT,
 }
 
@@ -65,8 +65,8 @@ BUILT_WIDGET_DATA_DEFINITION_WITH_NONE: BuiltWidgetDataDefinition = {
 NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE: NonBuiltWidgetDataDefinition = {
     "html_height": 100,
     "safe_rendering": True,
-    "type": "HTML",
-    "widget_definition_scope": "CASE",
+    "type": "html",
+    "widget_definition_scope": "case",
     "html_content": None,
 }
 

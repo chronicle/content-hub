@@ -116,11 +116,11 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
             A list of Trigger objects.
 
         """
-        rn_path: Path = path / mp.core.constants.TRIGGERS_FILE_NAME
-        if not rn_path.exists():
+        trigger_path: Path = path / mp.core.constants.TRIGGERS_FILE_NAME
+        if not trigger_path.exists():
             return []
 
-        return cls._from_non_built_path(rn_path)
+        return cls._from_non_built_path(trigger_path)
 
     @classmethod
     def _from_built(cls, built: BuiltTrigger) -> Self:
@@ -140,11 +140,11 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
         return cls(
             identifier=non_built["identifier"],
             is_enabled=non_built["is_enabled"],
-            conditions=[
+            conditions=([
                 Condition.from_non_built(non_built_cond)
                 for non_built_cond in non_built["conditions"]
                 if non_built_cond is not None
-            ],
+            ]),
             logical_operator=LogicalOperator.from_string(non_built["logical_operator"]),
             environments=non_built["environments"],
             playbook_id=non_built["playbook_id"],
@@ -181,9 +181,9 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
             identifier=self.identifier,
             is_enabled=self.is_enabled,
             playbook_id=self.playbook_id,
-            type_=self.type_.to_string().upper(),
+            type_=self.type_.to_string(),
             conditions=[Condition.to_non_built(c) for c in self.conditions if c is not None],
-            logical_operator=self.logical_operator.to_string().upper(),
+            logical_operator=self.logical_operator.to_string(),
             environments=self.environments,
             playbook_name=self.playbook_name,
         )

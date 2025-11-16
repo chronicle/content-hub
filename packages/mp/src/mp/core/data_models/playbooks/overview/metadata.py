@@ -23,6 +23,7 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum
+from mp.core.data_models.playbooks.playbook_widget.metadata import PlaybookWidgetMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -59,6 +60,7 @@ class NonBuiltOverview(TypedDict):
     name: str
     creator: str | None
     playbook_id: str
+    widgets: list[str]
     type: str
     alert_rule_type: str | None
     roles: list[int]
@@ -74,6 +76,7 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
     alert_rule_type: str | None
     roles: list[int]
     role_names: list[str]
+    widgets: list[PlaybookWidgetMetadata]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -115,9 +118,18 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built(o) for o in yaml.safe_load(meta_path.read_text(encoding="utf-8"))
-        ]
+        res: list[Self] = []
+        for non_built_overview in yaml.safe_load(meta_path.read_text(encoding="utf-8")):
+            widgets: list[PlaybookWidgetMetadata] = (
+                PlaybookWidgetMetadata.from_non_built_path_filtered_widgets(
+                    non_built_overview.get("widgets", []), path
+                )
+            )
+            ov: Self = cls._from_non_built(non_built_overview)
+            ov.widgets = widgets
+            res.append(ov)
+
+        return res
 
     @classmethod
     def _from_built(cls, built: BuiltOverview) -> Self:
@@ -130,6 +142,10 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
             alert_rule_type=built["OverviewTemplate"]["AlertRuleType"],
             roles=built["OverviewTemplate"]["Roles"],
             role_names=built.get("Roles", []),
+            widgets=[
+                PlaybookWidgetMetadata.from_built("", built_widget)
+                for built_widget in built["OverviewTemplate"]["Widgets"]
+            ],
         )
 
     @classmethod
@@ -143,6 +159,7 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
             alert_rule_type=non_built["alert_rule_type"],
             roles=non_built["roles"],
             role_names=non_built.get("role_names", []),
+            widgets=[],
         )
 
     def to_built(self) -> BuiltOverview:
@@ -161,7 +178,7 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
                 Type=self.type_.value,
                 AlertRuleType=self.alert_rule_type,
                 Roles=self.roles,
-                Widgets=[],
+                Widgets=[PlaybookWidgetMetadata.to_built(w) for w in self.widgets],
             ),
             Roles=self.role_names,
         )
@@ -178,23 +195,10 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
             name=self.name,
             creator=self.creator,
             playbook_id=self.playbook_id,
-            type=self.type_.to_string().upper(),
+            type=self.type_.to_string(),
             alert_rule_type=self.alert_rule_type,
             roles=self.roles,
             role_names=self.role_names,
+            widgets=[w.title for w in self.widgets],
         )
         return non_built
-
-    def to_built_with_widget(self, widgets: list[BuiltPlaybookWidgetMetadata]) -> BuiltOverview:
-        """Convert the Overview to its "built" representation with widgets.
-
-        Args:
-            widgets: A list of built playbook widgets.
-
-        Returns:
-            A BuiltOverview dictionary with widgets.
-
-        """
-        half_built: BuiltOverview = self.to_built()
-        half_built["OverviewTemplate"]["Widgets"] = widgets
-        return half_built
