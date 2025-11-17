@@ -124,7 +124,7 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
         res: list[Self] = []
 
         for non_built_overview in yaml.safe_load(meta_path.read_text(encoding="utf-8")):
-            widget_names: set[WidgetName] = non_built_overview.get("widgets", [])
+            widget_names: frozenset[WidgetName] = frozenset(non_built_overview.get("widgets", []))
             widgets: list[PlaybookWidgetMetadata] = [
                 w for w in all_widget if w.title in widget_names
             ]
