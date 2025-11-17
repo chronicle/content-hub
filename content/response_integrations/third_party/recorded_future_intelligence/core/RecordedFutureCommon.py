@@ -7,18 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :RecordedFutureCommon.py                          noqa: ERA001
-# description     :This Module contains the logic of the integration
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
-# python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
-# ============================================================================#
-
-
-# ============================= IMPORTS ===================================== #
-
 from __future__ import annotations
 
 import typing

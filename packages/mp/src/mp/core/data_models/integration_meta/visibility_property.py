@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import Literal, Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -39,20 +39,14 @@ class IntegrationVisibilityProperty(
     value: Literal["Nexus", "featEnableFederationSecondary"]
 
     @classmethod
-    def _from_built(
-        cls,
-        built: BuiltIntegrationVisibilityProperty,
-    ) -> IntegrationVisibilityProperty:
+    def _from_built(cls, built: BuiltIntegrationVisibilityProperty) -> Self:
         return cls(
             kind=built["Kind"],
             value=built["Value"],
         )
 
     @classmethod
-    def _from_non_built(
-        cls,
-        non_built: NonBuiltIntegrationVisibilityProperty,
-    ) -> IntegrationVisibilityProperty:
+    def _from_non_built(cls, non_built: NonBuiltIntegrationVisibilityProperty) -> Self:
         return cls(
             kind=non_built["kind"],
             value=non_built["value"],

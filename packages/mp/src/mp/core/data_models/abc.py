@@ -26,7 +26,7 @@ import yaml
 import mp.core.utils
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class RepresentableEnum(enum.Enum):
@@ -148,7 +148,7 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             return metadata
 
 
-class BuildableScript(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
+class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
     @classmethod
     @abc.abstractmethod
     def _from_built(cls, file_name: str, built: _BT) -> Self:
@@ -242,11 +242,11 @@ class BuildableScript(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             return metadata
 
 
-class ScriptMetadata(BuildableScript[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
+class ComponentMetadata(BuildableComponent[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
     @classmethod
     @abc.abstractmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
-        """Create the script's metadata object from the built integration's path.
+    def from_built_path(cls, path: Path) -> list[Self]:
+        """Create the script's metadata object from the built path.
 
         Args:
             path: The path to the built metadata component
@@ -258,8 +258,8 @@ class ScriptMetadata(BuildableScript[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
-        """Create the script's metadata object from the non-built integration's path.
+    def from_non_built_path(cls, path: Path) -> list[Self]:
+        """Create the script's metadata object from the non-built path.
 
         Args:
             path: The path to the non-built metadata component
@@ -270,8 +270,8 @@ class ScriptMetadata(BuildableScript[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
         """
 
     @classmethod
-    def _from_built_integration_path(cls, metadata_path: pathlib.Path) -> Self:
-        """Create the script's metadata object from the built integration's path.
+    def _from_built_path(cls, metadata_path: Path) -> Self:
+        """Create the script's metadata object from the built path.
 
         Args:
             metadata_path: The path to the built metadata component
@@ -294,8 +294,8 @@ class ScriptMetadata(BuildableScript[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
             return built
 
     @classmethod
-    def _from_non_built_integration_path(cls, metadata_path: pathlib.Path) -> Self:
-        """Create the script's metadata object from the non-built integration's path.
+    def _from_non_built_path(cls, metadata_path: Path) -> Self:
+        """Create the script's metadata object from the non-built path.
 
         Args:
             metadata_path: The path to the non-built metadata component
@@ -321,8 +321,8 @@ class ScriptMetadata(BuildableScript[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
 class SequentialMetadata(Buildable[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
     @classmethod
     @abc.abstractmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
-        """Create the script's metadata object from the built integration's path.
+    def from_built_path(cls, path: Path) -> list[Self]:
+        """Create the script's metadata object from the built path.
 
         Args:
             path: The path to the built metadata component
@@ -334,8 +334,8 @@ class SequentialMetadata(Buildable[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
-        """Create the script's metadata object from the non-built integration's path.
+    def from_non_built_path(cls, path: Path) -> list[Self]:
+        """Create the script's metadata object from the non-built path.
 
         Args:
             path: The path to the non-built metadata component
@@ -346,8 +346,8 @@ class SequentialMetadata(Buildable[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
         """
 
     @classmethod
-    def _from_built_integration_path(cls, meta_path: pathlib.Path) -> list[Self]:
-        """Create the script's metadata object from the built integration's path.
+    def _from_built_path(cls, meta_path: Path) -> list[Self]:
+        """Create the script's metadata object from the built path.
 
         Args:
             meta_path: The path to the built metadata component
@@ -370,8 +370,8 @@ class SequentialMetadata(Buildable[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
             return results
 
     @classmethod
-    def _from_non_built_integration_path(cls, meta_path: pathlib.Path) -> list[Self]:
-        """Create the script's metadata object from the non-built integration's path.
+    def _from_non_built_path(cls, meta_path: Path) -> list[Self]:
+        """Create the script's metadata object from the non-built path.
 
         Args:
             meta_path: The path to the non-built metadata component
@@ -385,7 +385,7 @@ class SequentialMetadata(Buildable[_BT, _NBT], abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     def from_non_built_str(cls, raw_text: str) -> list[Self]:
-        """Create the script's metadata object from the non-built integration's raw text.
+        """Create the script's metadata object from the non-built raw text.
 
         Args:
             raw_text: The path to the built metadata component

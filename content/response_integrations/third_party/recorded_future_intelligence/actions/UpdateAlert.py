@@ -7,15 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :Update Alert.py
-# description     :This Module contains the Update Alert action
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
-# python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
-# ============================================================================#
-
 from __future__ import annotations
 
 import json

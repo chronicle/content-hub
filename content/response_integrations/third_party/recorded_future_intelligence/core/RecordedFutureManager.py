@@ -7,17 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :RecordedFutureManager.py                         noqa: ERA001
-# description     :This Module contains all Recorded Future operations functionality
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
-# python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
-# ============================================================================#
-
-# ============================= IMPORTS ===================================== #
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -32,7 +21,6 @@ from psengine.classic_alerts import (
 from psengine.collective_insights import (
     CollectiveInsights,
     CollectiveInsightsError,
-    Insight,
 )
 from psengine.config import Config
 from psengine.enrich import EnrichmentLookupError, LookupMgr
@@ -122,20 +110,22 @@ class RecordedFutureManager:
             raise RecordedFutureNotFoundError
 
         if collective_insights_enabled:
-            insight_data = {
-                "ioc": {"type": ioc_type, "value": entity},
-                "detection": {"type": "playbook", "name": self.siemplify.case.title},
-                "timestamp": datetime.fromtimestamp(
-                    self.siemplify.case.creation_time / 1000,
-                ),
-                "incident": {
-                    "id": str(self.siemplify.case.identifier),
-                    "name": self.siemplify.case.title,
-                    "type": "google-secops-threat-detection",
-                },
-            }
-            insight = Insight(**insight_data)
             try:
+                creation_time = self.siemplify.case.creation_time
+                case_timestamp = (
+                    datetime.fromtimestamp(creation_time / 1000).isoformat()[:-3]
+                    + 'Z'
+                )
+                insight = self.collective_insights.create(
+                    ioc_value=entity,
+                    ioc_type=ioc_type,
+                    detection_type='playbook',
+                    detection_name=self.siemplify.case.title,
+                    timestamp=case_timestamp,
+                    incident_id=str(self.siemplify.case.identifier),
+                    incident_name=self.siemplify.case.title,
+                    incident_type='google-secops-threat-detection',
+                )
                 self.collective_insights.submit(insight=insight, debug=False)
             except (ValidationError, CollectiveInsightsError) as err:
                 self.siemplify.LOGGER.error(err)
@@ -539,7 +529,7 @@ class RecordedFutureManager:
             self.siemplify.LOGGER.info(f"Added entity {entity}")
         if compromised_ip:
             self.siemplify.add_entity_to_case(
-                entity_identifier=compromised_ip,
+                entity_identifier=str(compromised_ip),
                 entity_type=EntityTypes.ADDRESS,
                 is_suspicous=False,
                 is_internal=True,

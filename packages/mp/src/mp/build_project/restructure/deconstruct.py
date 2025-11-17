@@ -35,21 +35,21 @@ import mp.core.file_utils
 import mp.core.unix
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.action.metadata import ActionMetadata
+from mp.core.data_models.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.connector.metadata import ConnectorMetadata
 from mp.core.data_models.integration_meta.metadata import IntegrationMetadata, PythonVersion
 from mp.core.data_models.job.metadata import JobMetadata
-from mp.core.data_models.widget.metadata import WidgetMetadata
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Mapping, MutableMapping
+    from pathlib import Path
 
     from mp.core.data_models.action.dynamic_results_metadata import DynamicResultsMetadata
     from mp.core.data_models.custom_families.metadata import NonBuiltCustomFamily
     from mp.core.data_models.integration import Integration
     from mp.core.data_models.mapping_rules.metadata import NonBuiltMappingRule
 
-_ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | WidgetMetadata
+_ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
 
 
 def _update_pyproject_from_integration_meta(
@@ -69,8 +69,8 @@ def _update_pyproject_from_integration_meta(
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class DeconstructIntegration:
-    path: pathlib.Path
-    out_path: pathlib.Path
+    path: Path
+    out_path: Path
     integration: Integration
 
     def initiate_project(self) -> None:
@@ -83,7 +83,7 @@ class DeconstructIntegration:
         """
         mp.core.unix.init_python_project_if_not_exists(self.out_path)
         self.update_pyproject()
-        requirements: pathlib.Path = self.path / mp.core.constants.REQUIREMENTS_FILE
+        requirements: Path = self.path / mp.core.constants.REQUIREMENTS_FILE
         if requirements.exists():
             try:
                 rich.print(f"Adding requirements to {mp.core.constants.PROJECT_FILE}")
@@ -96,7 +96,7 @@ class DeconstructIntegration:
 
     def update_pyproject(self) -> None:
         """Update an integration's pyproject.toml file from its definition file."""
-        pyproject_toml: pathlib.Path = self.out_path / mp.core.constants.PROJECT_FILE
+        pyproject_toml: Path = self.out_path / mp.core.constants.PROJECT_FILE
         toml_content: MutableMapping[str, Any] = tomllib.loads(
             pyproject_toml.read_text(encoding="utf-8"),
         )
@@ -105,8 +105,8 @@ class DeconstructIntegration:
         self._copy_lock_file()
 
     def _copy_lock_file(self) -> None:
-        lock_file: pathlib.Path = self.path / mp.core.constants.LOCK_FILE
-        out_lock_file: pathlib.Path = self.out_path / mp.core.constants.LOCK_FILE
+        lock_file: Path = self.path / mp.core.constants.LOCK_FILE
+        out_lock_file: Path = self.out_path / mp.core.constants.LOCK_FILE
         if lock_file.exists() and not out_lock_file.exists():
             shutil.copyfile(lock_file, out_lock_file)
 
@@ -122,26 +122,26 @@ class DeconstructIntegration:
 
     def _create_resource_files(self) -> None:
         """Create the image files in the resources directory."""
-        resources_dir: pathlib.Path = self.out_path / RESOURCES_DIR
+        resources_dir: Path = self.out_path / RESOURCES_DIR
         resources_dir.mkdir(exist_ok=True)
 
         self._create_png_image(resources_dir)
         self._create_svg_logo(resources_dir)
 
-    def _create_png_image(self, resources_dir: pathlib.Path) -> None:
+    def _create_png_image(self, resources_dir: Path) -> None:
         if self.integration.metadata.image_base64:
             mp.core.file_utils.base64_to_png_file(
                 self.integration.metadata.image_base64, resources_dir / IMAGE_FILE
             )
 
-    def _create_svg_logo(self, resources_dir: pathlib.Path) -> None:
+    def _create_svg_logo(self, resources_dir: Path) -> None:
         if self.integration.metadata.svg_logo:
             mp.core.file_utils.text_to_svg_file(
                 self.integration.metadata.svg_logo, resources_dir / LOGO_FILE
             )
 
     def _create_actions_json_example_files(self) -> None:
-        resources_dir: pathlib.Path = self.out_path / RESOURCES_DIR
+        resources_dir: Path = self.out_path / RESOURCES_DIR
         for action_name, action_metadata in self.integration.actions_metadata.items():
             drms: list[DynamicResultsMetadata] = action_metadata.dynamic_results_metadata
             for drm in drms:
@@ -149,25 +149,25 @@ class DeconstructIntegration:
                     continue
 
                 json_file_name: str = f"{action_name}_{drm.result_name}_example.json"
-                json_file_path: pathlib.Path = resources_dir / json_file_name
+                json_file_path: Path = resources_dir / json_file_name
                 mp.core.file_utils.write_str_to_json_file(json_file_path, drm.result_example)
 
     def _create_definition_file(self) -> None:
-        def_file: pathlib.Path = self.out_path / mp.core.constants.DEFINITION_FILE
+        def_file: Path = self.out_path / mp.core.constants.DEFINITION_FILE
         mp.core.file_utils.write_yaml_to_file(
             content=self.integration.metadata.to_non_built(),
             path=def_file,
         )
 
     def _create_release_notes(self) -> None:
-        rn: pathlib.Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
+        rn: Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
         mp.core.file_utils.write_yaml_to_file(
             content=[r.to_non_built() for r in self.integration.release_notes],
             path=rn,
         )
 
     def _create_custom_families(self) -> None:
-        cf: pathlib.Path = self.out_path / mp.core.constants.CUSTOM_FAMILIES_FILE
+        cf: Path = self.out_path / mp.core.constants.CUSTOM_FAMILIES_FILE
         families: list[NonBuiltCustomFamily] = [
             c.to_non_built() for c in self.integration.custom_families
         ]
@@ -175,7 +175,7 @@ class DeconstructIntegration:
             mp.core.file_utils.write_yaml_to_file(families, cf)
 
     def _create_mapping_rules(self) -> None:
-        mr: pathlib.Path = self.out_path / mp.core.constants.MAPPING_RULES_FILE
+        mr: Path = self.out_path / mp.core.constants.MAPPING_RULES_FILE
         mapping: list[NonBuiltMappingRule] = [
             m.to_non_built() for m in self.integration.mapping_rules
         ]
@@ -219,15 +219,15 @@ class DeconstructIntegration:
         *,
         is_python_dir: bool = True,
     ) -> None:
-        old_path: pathlib.Path = self.path / repo_dir
+        old_path: Path = self.path / repo_dir
         if not old_path.exists():
             return
 
-        new_path: pathlib.Path = self.out_path / out_dir
+        new_path: Path = self.out_path / out_dir
         new_path.mkdir(exist_ok=True)
         for file in old_path.iterdir():
             shutil.copy(file, new_path)
-            copied_file: pathlib.Path = new_path / file.name
+            copied_file: Path = new_path / file.name
             copied_file.rename(copied_file.parent / copied_file.name)
 
         if metadata is not None:
@@ -240,10 +240,7 @@ class DeconstructIntegration:
         (self.out_path / mp.core.constants.PACKAGE_FILE).touch()
 
 
-def _write_definitions(
-    path: pathlib.Path,
-    component: Mapping[str, _ValidMetadata],
-) -> None:
+def _write_definitions(path: Path, component: Mapping[str, _ValidMetadata]) -> None:
     for file_name, metadata in component.items():
         name: str = f"{file_name}{mp.core.constants.DEF_FILE_SUFFIX}"
         mp.core.file_utils.write_yaml_to_file(metadata.to_non_built(), path / name)

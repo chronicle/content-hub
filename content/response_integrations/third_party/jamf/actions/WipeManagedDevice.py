@@ -37,21 +37,21 @@ def main() -> NoReturn:
         api_root = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="API Root",
+            param_name="Jamf Pro API Root",
             is_mandatory=True,
             print_value=True,
         )
         client_api_id = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="Client API ID",
+            param_name="Jamf Pro Client API ID",
             is_mandatory=True,
             print_value=True,
         )
         client_api_secret = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="Client API Secret",
+            param_name="Jamf Pro Client API Secret",
             is_mandatory=True,
             print_value=False,
         )

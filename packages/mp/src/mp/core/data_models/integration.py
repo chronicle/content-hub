@@ -17,12 +17,13 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import tomllib
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Self, TypedDict
 
 import mp.core.constants
 import mp.core.file_utils
 
 from .action.metadata import ActionMetadata
+from .action_widget.metadata import ActionWidgetMetadata
 from .connector.metadata import ConnectorMetadata
 from .custom_families.metadata import CustomFamily
 from .integration_meta.metadata import IntegrationMetadata
@@ -30,27 +31,23 @@ from .job.metadata import JobMetadata
 from .mapping_rules.metadata import MappingRule
 from .pyproject_toml import PyProjectToml
 from .release_notes.metadata import ReleaseNote
-from .widget.metadata import WidgetMetadata
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Mapping, Sequence
+    from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, ManagerName, WidgetName
 
     from .action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
+    from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
     from .connector.metadata import BuiltConnectorMetadata, NonBuiltConnectorMetadata
     from .custom_families.metadata import BuiltCustomFamily, NonBuiltCustomFamily
-    from .integration_meta.metadata import (
-        BuiltIntegrationMetadata,
-        NonBuiltIntegrationMetadata,
-    )
+    from .integration_meta.metadata import BuiltIntegrationMetadata, NonBuiltIntegrationMetadata
     from .integration_meta.parameter import BuiltIntegrationParameter
     from .job.metadata import BuiltJobMetadata, NonBuiltJobMetadata
     from .mapping_rules.metadata import BuiltMappingRule, NonBuiltMappingRule
     from .pyproject_toml import PyProjectTomlFile
     from .release_notes.metadata import BuiltReleaseNote, NonBuiltReleaseNote
-    from .widget.metadata import BuiltWidgetMetadata, NonBuiltWidgetMetadata
 
 
 class BuiltIntegration(TypedDict):
@@ -62,7 +59,7 @@ class BuiltIntegration(TypedDict):
     actions: Mapping[ActionName, BuiltActionMetadata]
     connectors: Mapping[ConnectorName, BuiltConnectorMetadata]
     jobs: Mapping[JobName, BuiltJobMetadata]
-    widgets: Mapping[WidgetName, BuiltWidgetMetadata]
+    widgets: Mapping[WidgetName, BuiltActionWidgetMetadata]
 
 
 class NonBuiltIntegration(TypedDict):
@@ -74,7 +71,7 @@ class NonBuiltIntegration(TypedDict):
     actions: Mapping[ActionName, NonBuiltActionMetadata]
     connectors: Mapping[ConnectorName, NonBuiltConnectorMetadata]
     jobs: Mapping[JobName, NonBuiltJobMetadata]
-    widgets: Mapping[WidgetName, NonBuiltWidgetMetadata]
+    widgets: Mapping[WidgetName, NonBuiltActionWidgetMetadata]
 
 
 class FullDetailsReleaseNoteJson(TypedDict):
@@ -116,22 +113,14 @@ class Integration:
     actions_metadata: Mapping[ActionName, ActionMetadata]
     connectors_metadata: Mapping[ConnectorName, ConnectorMetadata]
     jobs_metadata: Mapping[JobName, JobMetadata]
-    widgets_metadata: Mapping[WidgetName, WidgetMetadata]
+    widgets_metadata: Mapping[WidgetName, ActionWidgetMetadata]
 
     def __post_init__(self) -> None:
         """Perform post-init logic."""
-        self._validate_integration()
-
-    def _validate_integration(self) -> None:
-        """Perform various validations over the integration."""
-        self._raise_error_if_custom()
-        self._raise_error_if_disabled()
-        self._raise_error_if_no_ping_action()
         self._validate_python_version()
-        self._validate_default_mapping_exists_if_connectors_exists()
 
     @classmethod
-    def from_built_path(cls, path: pathlib.Path) -> Integration:
+    def from_built_path(cls, path: Path) -> Self:
         """Create the integration from a built integration's path.
 
         Args:
@@ -145,10 +134,8 @@ class Integration:
 
         """
         try:
-            integration_meta: IntegrationMetadata = IntegrationMetadata.from_built_integration_path(
-                path
-            )
-            python_version_file: pathlib.Path = path / mp.core.constants.PYTHON_VERSION_FILE
+            integration_meta: IntegrationMetadata = IntegrationMetadata.from_built_path(path)
+            python_version_file: Path = path / mp.core.constants.PYTHON_VERSION_FILE
             python_version: str = ""
             if python_version_file.exists():
                 python_version = python_version_file.read_text(encoding="utf-8")
@@ -157,21 +144,17 @@ class Integration:
                 python_version=python_version,
                 identifier=integration_meta.identifier,
                 metadata=integration_meta,
-                release_notes=ReleaseNote.from_built_integration_path(path),
-                custom_families=CustomFamily.from_built_integration_path(path),
-                mapping_rules=MappingRule.from_built_integration_path(path),
+                release_notes=ReleaseNote.from_built_path(path),
+                custom_families=CustomFamily.from_built_path(path),
+                mapping_rules=MappingRule.from_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
-                actions_metadata={
-                    a.file_name: a for a in ActionMetadata.from_built_integration_path(path)
-                },
+                actions_metadata={a.file_name: a for a in ActionMetadata.from_built_path(path)},
                 connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_built_integration_path(path)
+                    c.file_name: c for c in ConnectorMetadata.from_built_path(path)
                 },
-                jobs_metadata={
-                    j.file_name: j for j in JobMetadata.from_built_integration_path(path)
-                },
+                jobs_metadata={j.file_name: j for j in JobMetadata.from_built_path(path)},
                 widgets_metadata={
-                    w.file_name: w for w in WidgetMetadata.from_built_integration_path(path)
+                    w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)
                 },
             )
         except ValueError as e:
@@ -179,7 +162,7 @@ class Integration:
             raise ValueError(msg) from e
 
     @classmethod
-    def from_non_built_path(cls, path: pathlib.Path) -> Integration:
+    def from_non_built_path(cls, path: Path) -> Self:
         """Create the integration from a non-built integration's path.
 
         Args:
@@ -192,18 +175,16 @@ class Integration:
             ValueError: when the non-built integration failed to load
 
         """
-        project_file_path: pathlib.Path = path / mp.core.constants.PROJECT_FILE
+        project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
         pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # type: ignore[assignment]
         try:
-            integration_meta: IntegrationMetadata = (
-                IntegrationMetadata.from_non_built_integration_path(path)
-            )
+            integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
                 pyproject_toml_file=pyproject_toml,
                 integration_meta=integration_meta,
             )
-            python_version_file: pathlib.Path = path / mp.core.constants.PYTHON_VERSION_FILE
+            python_version_file: Path = path / mp.core.constants.PYTHON_VERSION_FILE
             python_version: str = ""
             if python_version_file.exists():
                 python_version = python_version_file.read_text(encoding="utf-8")
@@ -212,55 +193,23 @@ class Integration:
                 python_version=python_version,
                 identifier=integration_meta.identifier,
                 metadata=integration_meta,
-                release_notes=ReleaseNote.from_non_built_integration_path(path),
-                custom_families=CustomFamily.from_non_built_integration_path(path),
-                mapping_rules=MappingRule.from_non_built_integration_path(path),
+                release_notes=ReleaseNote.from_non_built_path(path),
+                custom_families=CustomFamily.from_non_built_path(path),
+                mapping_rules=MappingRule.from_non_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
-                actions_metadata={
-                    a.file_name: a for a in ActionMetadata.from_non_built_integration_path(path)
-                },
+                actions_metadata={a.file_name: a for a in ActionMetadata.from_non_built_path(path)},
                 connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_non_built_integration_path(path)
+                    c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)
                 },
-                jobs_metadata={
-                    j.file_name: j for j in JobMetadata.from_non_built_integration_path(path)
-                },
+                jobs_metadata={j.file_name: j for j in JobMetadata.from_non_built_path(path)},
                 widgets_metadata={
-                    w.file_name: w for w in WidgetMetadata.from_non_built_integration_path(path)
+                    w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)
                 },
             )
 
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:
             msg: str = f"Failed to load integration {path.name}"
             raise ValueError(msg) from e
-
-    def _raise_error_if_no_ping_action(self) -> None:
-        is_excluded_integration: bool = (
-            self.identifier in mp.core.constants.EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING
-        )
-        if not is_excluded_integration and not self.has_ping_action():
-            msg: str = f"{self.identifier} doesn't implement a 'ping' action"
-            raise RuntimeError(msg)
-
-    def _validate_default_mapping_exists_if_connectors_exists(self) -> None:
-        if (
-            self.identifier
-            in mp.core.constants.EXCLUDED_INTEGRATIONS_WITH_CONNECTORS_AND_NO_MAPPING
-        ):
-            return
-
-        if self.connectors_metadata and not self.mapping_rules:
-            msg: str = f"{self.identifier} has connectors but doesn't have default mapping rules"
-            raise RuntimeError(msg)
-
-    def has_ping_action(self) -> bool:
-        """Check whether the integration has a ping action.
-
-        Returns:
-            Whether the integration has a ping action
-
-        """
-        return any(name.lower() == "ping" for name in self.actions_metadata)
 
     def _validate_python_version(self) -> None:
         """Validate the integration's python version in the '.python-version' file.
@@ -282,186 +231,6 @@ class Integration:
                 f" the lowest supported version configured in {mp.core.constants.PROJECT_FILE}"
             )
             raise ValueError(msg)
-
-    def _raise_error_if_custom(self) -> None:
-        """Raise an error if the integration is custom.
-
-        Raises:
-            RuntimeError: If the integration is custom.
-
-        """
-        if self.is_custom:
-            msg: str = (
-                f"{self.identifier} contains custom scripts:"
-                f"\nIs the integration custom: {self.metadata.is_custom}"
-                f"\nCustom actions: {', '.join(self._custom_actions) or None}"
-                f"\nCustom connectors: {', '.join(self._custom_connectors) or None}"
-                f"\nCustom jobs: {', '.join(self._custom_jobs) or None}"
-            )
-            raise RuntimeError(msg)
-
-    def _raise_error_if_disabled(self) -> None:
-        """Raise an error if the integration has disabled components.
-
-        Raises:
-            RuntimeError: If the integration has disabled components
-
-        """
-        if self.has_disabled_parts:
-            msg: str = (
-                f"{self.identifier} contains disabled scripts:"
-                f"\nDisabled actions: {', '.join(self._disabled_actions) or None}"
-                f"\nDisabled connectors: {', '.join(self._disabled_connectors) or None}"
-                f"\nDisabled jobs: {', '.join(self._disabled_jobs) or None}"
-            )
-            raise RuntimeError(msg)
-
-    @property
-    def is_custom(self) -> bool:
-        """Check whether the integration is custom.
-
-        Returns:
-            whether the integration has any custom components in it
-
-        """
-        return (
-            self.metadata.is_custom
-            or self._has_custom_actions
-            or self._has_custom_connectors
-            or self._has_custom_jobs
-        )
-
-    @property
-    def has_disabled_parts(self) -> bool:
-        """Check whether the integration is custom.
-
-        Returns:
-            whether the integration has any disabled components in it
-
-        """
-        return (
-            self._has_disabled_actions or self._has_disabled_connectors or self._has_disabled_jobs
-        )
-
-    @property
-    def _has_custom_actions(self) -> bool:
-        """Check whether any of the actions are custom.
-
-        Returns:
-            Whether the integration has any custom actions in it.
-
-        """
-        return any(a.is_custom for a in self.actions_metadata.values())
-
-    @property
-    def _has_custom_connectors(self) -> bool:
-        """Check whether any of the connectors are custom.
-
-        Returns:
-            Whether the integration has any custom connectors in it.
-
-        """
-        return any(c.is_custom for c in self.connectors_metadata.values())
-
-    @property
-    def _has_custom_jobs(self) -> bool:
-        """Check whether any of the jobs are custom.
-
-        Returns:
-            Whether the integration has any custom jobs in it.
-
-        """
-        return any(j.is_custom for j in self.jobs_metadata.values())
-
-    @property
-    def _has_disabled_actions(self) -> bool:
-        """Check whether any of the actions are disabled.
-
-        Returns:
-            Whether the integration has any disabled actions in it.
-
-        """
-        return any(not a.is_enabled for a in self.actions_metadata.values())
-
-    @property
-    def _has_disabled_connectors(self) -> bool:
-        """Check whether any of the connectors are disabled.
-
-        Returns:
-            Whether the integration has any disabled connectors in it.
-
-        """
-        return any(not c.is_enabled for c in self.connectors_metadata.values())
-
-    @property
-    def _has_disabled_jobs(self) -> bool:
-        """Check whether any of the jobs are disabled.
-
-        Returns:
-            Whether the integration has any disabled jobs in it.
-
-        """
-        return any(not j.is_enabled for j in self.jobs_metadata.values())
-
-    @property
-    def _custom_actions(self) -> list[str]:
-        """Get a list of custom actions.
-
-        Returns:
-            Custom action names
-
-        """
-        return [a.name for a in self.actions_metadata.values() if a.is_custom]
-
-    @property
-    def _custom_connectors(self) -> list[str]:
-        """Get a list of custom connectors.
-
-        Returns:
-            Custom connector names
-
-        """
-        return [c.name for c in self.connectors_metadata.values() if c.is_custom]
-
-    @property
-    def _custom_jobs(self) -> list[str]:
-        """Get a list of custom jobs.
-
-        Returns:
-            Custom job names
-
-        """
-        return [j.name for j in self.jobs_metadata.values() if j.is_custom]
-
-    @property
-    def _disabled_actions(self) -> list[str]:
-        """Get a list of disabled actions.
-
-        Returns:
-            Disabled action names
-
-        """
-        return [a.name for a in self.actions_metadata.values() if not a.is_enabled]
-
-    @property
-    def _disabled_connectors(self) -> list[str]:
-        """Get a list of disabled connectors.
-
-        Returns:
-            Disabled connector names
-
-        """
-        return [c.name for c in self.connectors_metadata.values() if not c.is_enabled]
-
-    @property
-    def _disabled_jobs(self) -> list[str]:
-        """Get a list of disabled jobs.
-
-        Returns:
-            Disabled job names
-
-        """
-        return [j.name for j in self.jobs_metadata.values() if not j.is_enabled]
 
     def to_built(self) -> BuiltIntegration:
         """Turn the buildable object into a "built" typed dict.

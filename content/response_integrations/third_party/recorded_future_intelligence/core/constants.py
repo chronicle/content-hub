@@ -7,15 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :constants.py                                     noqa: ERA001
-# description     :This Module contains package constants
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
-# python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
-# ============================================================================#
-
 from __future__ import annotations
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
@@ -80,7 +71,7 @@ ENTITY_URL = "entity_urls"
 ENTITY_VULN = "entity_vulns"
 
 TOPIC_MAP = {
-    "None": "",
+    "None": None,
     "Actor Profile": "TXSFt2",
     "Analyst On-Demand Report": "VlIhvH",
     "Cyber Threat Analysis": "TXSFt1",

@@ -7,15 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :UtilsManager.py                                  noqa: ERA001
-# description     :This Module contains Utility functions supporting main modules
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
-# python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
-# ============================================================================#
-
 from __future__ import annotations
 
 from datetime import datetime

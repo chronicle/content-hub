@@ -7,15 +7,6 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-# ============================================================================#
-# title           :Enrich IP.py
-# description     :This Module contains the Enrich IP action
-# author          :support@recordedfuture.com                       noqa: ERA001
-# date            :09-03-2024
-# python_version  :3.11                                             noqa: ERA001
-# product_version :1.3
-# ============================================================================#
-
 from __future__ import annotations
 
 from soar_sdk.SiemplifyAction import SiemplifyAction

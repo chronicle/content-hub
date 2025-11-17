@@ -25,8 +25,8 @@ import libcst as cst
 from . import constants, file_utils, unix
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Iterable
+    from pathlib import Path
 
     from .custom_types import RuffParams
 
@@ -47,7 +47,7 @@ class TestWarning(RuntimeWarning):
     """Failed tests."""
 
 
-def lint_python_files(paths: Iterable[pathlib.Path], params: RuffParams) -> None:
+def lint_python_files(paths: Iterable[Path], params: RuffParams) -> None:
     """Run a linter on python files and fix all unsafe issues."""
     paths = [p for p in paths if p.is_dir() or file_utils.is_python_file(p)]
     status_code: int = unix.ruff_check(
@@ -64,7 +64,7 @@ def lint_python_files(paths: Iterable[pathlib.Path], params: RuffParams) -> None
         warnings.warn(msg, LinterWarning, stacklevel=1)
 
 
-def static_type_check_python_files(paths: Iterable[pathlib.Path]) -> None:
+def static_type_check_python_files(paths: Iterable[Path]) -> None:
     """Run a type checker on python files."""
     paths = [p for p in paths if p.is_dir() or file_utils.is_python_file(p)]
     status_code: int = unix.mypy(paths)
@@ -73,7 +73,7 @@ def static_type_check_python_files(paths: Iterable[pathlib.Path]) -> None:
         warnings.warn(msg, TypeCheckerWarning, stacklevel=1)
 
 
-def format_python_files(paths: Iterable[pathlib.Path]) -> None:
+def format_python_files(paths: Iterable[Path]) -> None:
     """Format python files."""
     paths = [p for p in paths if p.is_dir() or file_utils.is_python_file(p)]
     status_code: int = unix.ruff_format(paths)
@@ -82,7 +82,7 @@ def format_python_files(paths: Iterable[pathlib.Path]) -> None:
         warnings.warn(msg, FormatterWarning, stacklevel=1)
 
 
-def restructure_scripts_imports(paths: Iterable[pathlib.Path]) -> None:
+def restructure_scripts_imports(paths: Iterable[Path]) -> None:
     """Restructure script imports in python files.
 
     Args:
@@ -111,7 +111,7 @@ def restructure_script_imports(code_string: str) -> str:
 
 
 class ImportTransformer(cst.CSTTransformer):
-    def leave_ImportFrom(  # noqa: D102, N802, PLR6301
+    def leave_ImportFrom(  # noqa: N802, PLR6301, D102
         self,
         original_node: cst.ImportFrom,
         updated_node: cst.ImportFrom,

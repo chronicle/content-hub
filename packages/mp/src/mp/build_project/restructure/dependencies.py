@@ -26,17 +26,21 @@ import dataclasses
 import pathlib
 import shutil
 import tempfile
+from typing import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.unix
 
 from .restructurable import Restructurable
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Dependencies(Restructurable):
-    path: pathlib.Path
-    out_path: pathlib.Path
+    path: Path
+    out_path: Path
 
     def restructure(self) -> None:
         """Restructure an integration's dependencies, downloading them to `out_path`."""
@@ -49,7 +53,7 @@ class Dependencies(Restructurable):
                 delete=False,
             ) as f,
         ):
-            requirements: pathlib.Path = pathlib.Path(f.name)
+            requirements: Path = pathlib.Path(f.name)
         try:
             mp.core.unix.compile_core_integration_dependencies(
                 project_path=self.path,
@@ -57,13 +61,13 @@ class Dependencies(Restructurable):
             )
 
             with tempfile.TemporaryDirectory(prefix="dependencies_") as d:
-                deps: pathlib.Path = pathlib.Path(d)
+                deps: Path = pathlib.Path(d)
                 mp.core.unix.download_wheels_from_requirements(
                     project_path=self.path,
                     requirements_path=requirements,
                     dst_path=deps,
                 )
-                out_deps: pathlib.Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+                out_deps: Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
                 shutil.copytree(deps, out_deps)
         finally:
             requirements.unlink()

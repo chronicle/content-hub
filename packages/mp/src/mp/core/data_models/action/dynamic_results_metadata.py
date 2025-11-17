@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, TypedDict
+from typing import Any, Self, TypedDict
 
 import pydantic  # noqa: TC002
 
@@ -45,7 +45,7 @@ class DynamicResultsMetadata(
     show_result: bool
 
     @classmethod
-    def _from_built(cls, built: BuiltDynamicResultsMetadata) -> DynamicResultsMetadata:
+    def _from_built(cls, built: BuiltDynamicResultsMetadata) -> Self:
         """Create the obj from a built dynamic results metadata dict.
 
         Args:
@@ -62,10 +62,7 @@ class DynamicResultsMetadata(
         )
 
     @classmethod
-    def _from_non_built(
-        cls,
-        non_built: NonBuiltDynamicResultsMetadata,
-    ) -> DynamicResultsMetadata:
+    def _from_non_built(cls, non_built: NonBuiltDynamicResultsMetadata) -> Self:
         """Create the obj from a non-built dynamic results metadata dict.
 
         Args:
@@ -105,12 +102,8 @@ class DynamicResultsMetadata(
             A non-built version of the dynamic results metadata dict
 
         """
-        example: str | None = None
-        if self.result_example is not None:
-            example = json.dumps(self.result_example)
-
         return NonBuiltDynamicResultsMetadata(
-            result_example_path=example,
+            result_example_path=self.result_example,
             result_name=self.result_name,
             show_result=self.show_result,
         )

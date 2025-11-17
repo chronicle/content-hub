@@ -8,7 +8,11 @@ from SiemplifyAction import SiemplifyAction
 from SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.constants import GET_COMPUTER_INVENTORY_SCRIPT_NAME, INTEGRATION_NAME
+from ..core.constants import (
+    COMPUTER_ALL_SECTIONS,
+    GET_COMPUTER_INVENTORY_SCRIPT_NAME,
+    INTEGRATION_NAME,
+)
 from ..core.exceptions import JamfError
 from ..core.JamfManager import JamfManager
 
@@ -37,21 +41,21 @@ def main() -> NoReturn:
         api_root = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="API Root",
+            param_name="Jamf Pro API Root",
             is_mandatory=True,
             print_value=True,
         )
         client_api_id = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="Client API ID",
+            param_name="Jamf Pro Client API ID",
             is_mandatory=True,
             print_value=True,
         )
         client_api_secret = extract_configuration_param(
             siemplify,
             provider_name=INTEGRATION_NAME,
-            param_name="Client API Secret",
+            param_name="Jamf Pro Client API Secret",
             is_mandatory=True,
             print_value=False,
         )
@@ -187,32 +191,7 @@ def main() -> NoReturn:
                 return "GENERAL"
 
         # Define all available sections
-        ALL_SECTIONS = [
-            "GENERAL",
-            "DISK_ENCRYPTION",
-            "PURCHASING",
-            "APPLICATIONS",
-            "STORAGE",
-            "USER_AND_LOCATION",
-            "CONFIGURATION_PROFILES",
-            "PRINTERS",
-            "SERVICES",
-            "HARDWARE",
-            "LOCAL_USER_ACCOUNTS",
-            "CERTIFICATES",
-            "ATTACHMENTS",
-            "PLUGINS",
-            "PACKAGE_RECEIPTS",
-            "FONTS",
-            "SECURITY",
-            "OPERATING_SYSTEM",
-            "LICENSED_SOFTWARE",
-            "IBEACONS",
-            "SOFTWARE_UPDATES",
-            "EXTENSION_ATTRIBUTES",
-            "CONTENT_CACHING",
-            "GROUP_MEMBERSHIPS",
-        ]
+        ALL_SECTIONS = COMPUTER_ALL_SECTIONS
 
         # Process sections parameter (handle both string and list formats)
         sections_list = []
@@ -321,6 +300,7 @@ def main() -> NoReturn:
             results = inventory_data.get("results", [])
             total_count = inventory_data.get("totalCount", 0)
             results_count = len(results)
+            filter_string = filter_string.replace('"', '\\"')
 
             # Calculate pagination info
             has_more_pages = (page + 1) * page_size < total_count

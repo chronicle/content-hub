@@ -17,8 +17,8 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import pathlib
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 import rich
@@ -26,7 +26,7 @@ import yaml
 
 import mp.core.constants
 
-CONFIG_PATH = pathlib.Path.home() / ".mp_dev_env.json"
+CONFIG_PATH: Path = Path.home() / ".mp_dev_env.json"
 INTEGRATIONS_CACHE_DIR_NAME: str = ".integrations_cache"
 VERSIONS_CACHE_FILE_NAME: str = "version_cache.yaml"
 
@@ -41,7 +41,7 @@ class VersionCache:
 
 
 def load_and_validate_cache(
-    cache_folder: pathlib.Path,
+    cache_folder: Path,
     integration_name: str,
     current_major_version: int,
 ) -> VersionCache | None:
@@ -69,7 +69,7 @@ def load_and_validate_cache(
     return cache
 
 
-def _load_cached_version(cache_folder: pathlib.Path, integration_name: str) -> VersionCache | None:
+def _load_cached_version(cache_folder: Path, integration_name: str) -> VersionCache | None:
     integration_cache_dir = cache_folder / integration_name
     integration_cache_dir.mkdir(parents=True, exist_ok=True)
     version_file_path = integration_cache_dir / VERSIONS_CACHE_FILE_NAME
@@ -151,8 +151,8 @@ def _update_existing_version_cache(previous_cache: VersionCache, updated_hash: s
 
 
 def update_cache_file(
-    cache_folder: pathlib.Path,
-    integration_dir_built: pathlib.Path,
+    cache_folder: Path,
+    integration_dir_built: Path,
     updated_cache: VersionCache,
 ) -> None:
     """Update the YAML cache file with the new version information.
@@ -169,7 +169,7 @@ def update_cache_file(
         yaml.safe_dump(asdict(updated_cache), f)
 
 
-def update_built_def_file(integration_dir_built: pathlib.Path, updated_cache: VersionCache) -> None:
+def update_built_def_file(integration_dir_built: Path, updated_cache: VersionCache) -> None:
     """Update the JSON definition file with the new version.
 
     Args:
