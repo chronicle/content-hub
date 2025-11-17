@@ -121,7 +121,7 @@ def _is_optional_values_type(param_type: ActionParamType) -> bool:
 
 def _is_valid_default_value(
     optional_values: list[str] | None,
-    default_value: str | bool | float | None,  # noqa:FBT001
+    default_value: str | bool | float | None,  # noqa: FBT001
 ) -> bool:
     return (
         default_value in {None, ""} or optional_values is None or default_value in optional_values
