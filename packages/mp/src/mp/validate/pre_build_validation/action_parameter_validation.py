@@ -28,11 +28,11 @@ if TYPE_CHECKING:
     from mp.core.custom_types import ActionName, YamlFileContent
 
 PARAMETERS_KEY: str = "parameters"
-OPT_PARAMS: set[ActionParamType] = {
+OPT_PARAMS: frozenset[ActionParamType] = frozenset({
     ActionParamType.from_string("DDL"),
     ActionParamType.from_string("MULTI_CHOICE_PARAMETER"),
     ActionParamType.from_string("MULTI_VALUES"),
-}
+})
 
 
 class ActionParametersValuesValidation:
@@ -72,7 +72,7 @@ class ActionParametersValuesValidation:
                     invalid_multiple_options.setdefault(action_name, []).append(param_name)
                 elif optional_values is not None and not _is_optional_values_type(param_type):
                     invalid_non_multiple_options.setdefault(action_name, []).append(param_name)
-                elif not _is_valid_default_value(optional_values, default_value):
+                if not _is_valid_default_value(optional_values, default_value):
                     invalid_default_value.setdefault(action_name, []).append(param_name)
         if invalid_multiple_options or invalid_non_multiple_options or invalid_default_value:
             msg = (
@@ -129,8 +129,7 @@ def _is_valid_default_value(
 def _format_error_dict(error_dict: dict[ActionName, list[str]]) -> str:
     if not error_dict:
         return "None"
-    parts: list[str] = []
-    for action_name, params in sorted(error_dict.items()):
-        param_str = ", ".join(sorted(params))
-        parts.append(f"{param_str} from {action_name}")
-    return ", ".join(parts)
+    return ", ".join(
+        f"{', '.join(sorted(params))} from {action_name}"
+        for action_name, params in sorted(error_dict.items())
+    )

@@ -161,6 +161,25 @@ class TestActionParameterValidation:
         ):
             self.validator_runner.run(temp_integration)
 
+    def test_failure_on_default_value_and_non_optional_values_validations_failures(
+        self, temp_integration: pathlib.Path
+    ) -> None:
+        """Test failure when both default_value check and the non-optional values check fail."""
+        action_file = temp_integration / constants.ACTIONS_DIR / "ping.yaml"
+        params = [
+            {
+                "name": "invalid_default",
+                "type": "string",
+                "optional_values": ["a", "b"],
+                "default_value": "c",
+            }
+        ]
+        _update_yaml_file(action_file, {PARAMETERS_KEY: params})
+
+        with pytest.raises(NonFatalValidationError) as excinfo:
+            self.validator_runner.run(temp_integration)
+        assert str(excinfo.value).count("invalid_default from Ping") == 2
+
     def test_failure_on_case_sensitive_default_value(self, temp_integration: pathlib.Path) -> None:
         action_file = temp_integration / constants.ACTIONS_DIR / "ping.yaml"
         params = [
