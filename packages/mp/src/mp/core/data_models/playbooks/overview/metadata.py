@@ -28,6 +28,7 @@ from mp.core.data_models.playbooks.playbook_widget.metadata import PlaybookWidge
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from mp.core.custom_types import WidgetName
     from mp.core.data_models.playbooks.playbook_widget.metadata import BuiltPlaybookWidgetMetadata
 
 
@@ -60,7 +61,7 @@ class NonBuiltOverview(TypedDict):
     name: str
     creator: str | None
     playbook_id: str
-    widgets: list[str]
+    widgets: list[WidgetName]
     type: str
     alert_rule_type: str | None
     roles: list[int]
@@ -120,10 +121,11 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
 
         res: list[Self] = []
         for non_built_overview in yaml.safe_load(meta_path.read_text(encoding="utf-8")):
+            widget_names: set[WidgetName] = non_built_overview.get("widgets", [])
+            name_filter_func = lambda p, widgets=widget_names: p.name in widgets  # noqa: E731
+
             widgets: list[PlaybookWidgetMetadata] = (
-                PlaybookWidgetMetadata.from_non_built_path_filtered_widgets(
-                    non_built_overview.get("widgets", []), path
-                )
+                PlaybookWidgetMetadata.from_non_built_path_with_filter(path, name_filter_func)
             )
             ov: Self = cls._from_non_built(non_built_overview)
             ov.widgets = widgets

@@ -35,6 +35,7 @@ from mp.core.data_models.widget.data import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -147,14 +148,14 @@ class PlaybookWidgetMetadata(
         ]
 
     @classmethod
-    def from_non_built_path_filtered_widgets(
-        cls, widget_names: list[str], path: Path
+    def from_non_built_path_with_filter(
+        cls, path: Path, filter_fn: Callable[[Path], bool] | None = None
     ) -> list[Self]:
-        """Create a list of widgets from a non-built path, filtered by name.
+        """Create a list of widgets from a non-built path, with an optional filter function.
 
         Args:
-            widget_names: The names of the widgets to include.
-            path: The path to the non-built integration.
+            path: The path to the non-built integration component (e.g., the integration directory).
+            filter_fn: A function that takes a Path object and returns True if it should be included
 
         Returns:
             A list of `PlaybookWidgetMetadata` objects.
@@ -164,11 +165,11 @@ class PlaybookWidgetMetadata(
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
-            if p.name in widget_names
-        ]
+        all_widget_paths = meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
+
+        filtered_paths = (p for p in all_widget_paths if filter_fn is None or filter_fn(p))
+
+        return [cls._from_non_built_path(p) for p in filtered_paths]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
@@ -266,9 +267,11 @@ class PlaybookWidgetMetadata(
             template_identifier=self.template_identifier,
             type=self.type.to_string(),
             block_step_instance_name=self.block_step_instance_name,
-            data_definition=self.data_definition.to_non_built()
-            if self.type == WidgetType.HTML
-            else self.data_definition,
+            data_definition=(
+                self.data_definition.to_non_built()
+                if self.type == WidgetType.HTML
+                else self.data_definition
+            ),
             widget_size=self.widget_size.to_string(),
             step_integration=self.step_integration,
             action_widget_template_id=self.action_widget_template_id,

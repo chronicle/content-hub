@@ -17,7 +17,7 @@ from __future__ import annotations
 import abc
 import enum
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
 
 import pydantic
@@ -263,6 +263,21 @@ class ComponentMetadata(BuildableComponent[_BT, _NBT], abc.ABC, Generic[_BT, _NB
 
         Args:
             path: The path to the non-built metadata component
+
+        Returns:
+            A metadata object
+
+        """
+
+    @classmethod
+    def from_non_built_path_with_filter(
+        cls, path: Path, filter_fn: Callable[[Path], bool] | None = None
+    ) -> list[Self]:
+        """Create the script's metadata object from the non-built path.
+
+        Args:
+            path: The path to the non-built metadata component.
+            filter_fn: filter function.
 
         Returns:
             A metadata object
