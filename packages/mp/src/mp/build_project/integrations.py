@@ -34,12 +34,16 @@ import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
-from mp.core.data_models.integration import BuiltFullDetails, BuiltIntegration, Integration
+from mp.core.data_models.integrations.integration import (
+    BuiltFullDetails,
+    BuiltIntegration,
+    Integration,
+)
 
-from .post_build.full_details_json import write_full_details
-from .post_build.marketplace_json import write_marketplace_json
-from .restructure.deconstruct import DeconstructIntegration
-from .restructure.integration import restructure_integration
+from .post_build.integrations.full_details_json import write_full_details
+from .post_build.integrations.marketplace_json import write_marketplace_json
+from .restructure.integrations.deconstruct import DeconstructIntegration
+from .restructure.integrations.integration import restructure_integration
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
