@@ -72,8 +72,10 @@ class ActionParametersValuesValidation:
                     invalid_multiple_options.setdefault(action_name, []).append(param_name)
                 elif optional_values is not None and not _is_optional_values_type(param_type):
                     invalid_non_multiple_options.setdefault(action_name, []).append(param_name)
+
                 if not _is_valid_default_value(optional_values, default_value):
                     invalid_default_value.setdefault(action_name, []).append(param_name)
+
         if invalid_multiple_options or invalid_non_multiple_options or invalid_default_value:
             msg = (
                 f"Integration '{validation_path.name}' contains actions with invalid parameters:"
