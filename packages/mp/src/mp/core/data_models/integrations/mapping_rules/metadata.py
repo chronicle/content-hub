@@ -97,9 +97,7 @@ class NonBuiltMappingRule(TypedDict):
 class MappingRule(
     mp.core.data_models.abc.SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]
 ):
-    source: str | None
-    product: str | None
-    event_name: str | None
+    source: str
     product: str | None
     event_name: str | None
     security_event_file_name: str
@@ -160,7 +158,7 @@ class MappingRule(
             extract_function = ExtractionFunction.NONE.value
 
         return cls(
-            source=built["Source"],
+            source=built["Source"] or "",
             product=built["Product"],
             event_name=built["EventName"],
             security_event_file_name=built["SecurityEventFieldName"],
@@ -180,7 +178,7 @@ class MappingRule(
             raw_data_third_field_comparison_type=ComparisonType(
                 built["RawDataThirdFieldComparisonType"],
             ),
-            is_artifact=built.get("IsArtifact", False),
+            is_artifact=built["IsArtifact"],
             extract_function_param=built.get("ExtractionFunctionParam"),
             extract_function=ExtractionFunction(extract_function),
         )

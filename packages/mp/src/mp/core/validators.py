@@ -116,22 +116,3 @@ def validate_png_content(path: Path) -> bytes:
     except UnidentifiedImageError as e:
         msg = f"File is not a valid image or is corrupted: {path}"
         raise ValueError(msg) from e
-
-
-def coerce_bool_from_str_or_none(v: str | bool | None) -> bool:  # noqa: FBT001
-    """Coerce "true", "false", and null into a proper boolean or None.
-
-    Returns:
-        True or False based on the input
-
-    """
-    if isinstance(v, str):
-        if v.lower() == "true":
-            return True
-        if v.lower() == "false":
-            return False
-
-    if v is None:
-        return False
-
-    return v
