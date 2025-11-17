@@ -129,6 +129,7 @@ def _is_valid_default_value(
 def _format_error_dict(error_dict: dict[ActionName, list[str]]) -> str:
     if not error_dict:
         return "None"
+
     return ", ".join(
         f"{', '.join(sorted(params))} from {action_name}"
         for action_name, params in sorted(error_dict.items())
