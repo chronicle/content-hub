@@ -70,7 +70,7 @@ st_valid_built_action_metadata_dict = st.fixed_dictionaries(
         "ScriptResultName": st.text() | st.none(),
         "SimulationDataJson": st.text() | st.none(),
         "DefaultResultValue": st.text() | st.none(),
-        "Version": st.floats(),
+        "Version": st.floats(allow_nan=False, allow_infinity=False),
         "IsAsync": st.booleans(),
         "IsCustom": st.booleans(),
         "IsEnabled": st.booleans(),
