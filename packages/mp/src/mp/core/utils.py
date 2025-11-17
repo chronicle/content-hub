@@ -202,19 +202,15 @@ def get_current_platform() -> tuple[str, str]:
     return os_name, version
 
 
-def filter_yaml_files_and_extract_key(
+def filter_and_map_yaml_files(
     yaml_files: list[YamlFileContent],
     filter_fn: Callable[[YamlFileContent], bool],
-    key_to_extract: str,
+    map_fn: Callable[[YamlFileContent], Any],
 ) -> list[Any]:
-    """Filter a list of parsed YAML files and extracts a specified key's value.
+    """Filter and map a list of parsed YAML files.
 
     Returns:
-        a list of the filtered file's key values.
-        if the key doesn't exist in one of the filtered yaml files, the file is
-        excluded from the output.
+        a list of the filtered file's mapped values.
 
     """
-    return [
-        d[key_to_extract] for d in yaml_files if filter_fn(d) and d.get(key_to_extract) is not None
-    ]
+    return [map_fn(d) for d in yaml_files if filter_fn(d)]

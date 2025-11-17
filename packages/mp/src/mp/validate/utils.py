@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
-    from mp.core.custom_types import YamlFileContent
+    from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
 
 
 class Configurations(NamedTuple):
@@ -124,3 +124,13 @@ def load_components_defs(
         raise FatalValidationError(msg) from e
     else:
         return component_defs
+
+
+def extract_name(yaml_content: YamlFileContent) -> ActionName | JobName | ConnectorName:
+    """Extract the component's name from it's YAML file.
+
+    Returns:
+        the component's name, or `None` if it cannot be extracted.
+
+    """
+    return yaml_content.get(DEF_FILE_NAME_KEY)
