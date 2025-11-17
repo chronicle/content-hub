@@ -26,7 +26,11 @@ from mp.core.data_models.action.dynamic_results_metadata import (
     DynamicResultsMetadata,
     NonBuiltDynamicResultsMetadata,
 )
-from test_mp.test_core.test_data_models.utils import st_json_serializable, st_non_json_string
+from test_mp.test_core.test_data_models.utils import (
+    st_json_serializable,
+    st_non_json_string,
+    st_with_invalid_field,
+)
 
 st_valid_built_dynamic_results_dict = st.fixed_dictionaries({
     "ResultExample": st.none() | st_json_serializable.map(json.dumps) | st.just(""),
@@ -40,18 +44,17 @@ st_valid_non_built_dynamic_results_dict = st.fixed_dictionaries({
     "show_result": st.booleans(),
 })
 
+st_invalid_built_dynamic_results_dict = st_with_invalid_field(
+    st_valid_built_dynamic_results_dict,
+    "ResultExample",
+    st_non_json_string,
+)
 
-st_invalid_built_dynamic_results_dict = st.fixed_dictionaries({
-    "ResultExample": st_non_json_string.filter(lambda s: s != ""),
-    "ResultName": st.text(),
-    "ShowResult": st.booleans(),
-})
-
-st_invalid_non_built_dynamic_results_dict = st.fixed_dictionaries({
-    "result_example_path": st_non_json_string.filter(lambda s: s != ""),
-    "result_name": st.text(),
-    "show_result": st.booleans(),
-})
+st_invalid_non_built_dynamic_results_dict = st_with_invalid_field(
+    st_valid_non_built_dynamic_results_dict,
+    "result_example_path",
+    st_non_json_string,
+)
 
 
 class TestValidations:

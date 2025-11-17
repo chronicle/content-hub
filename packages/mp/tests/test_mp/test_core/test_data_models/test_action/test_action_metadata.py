@@ -27,38 +27,33 @@ from mp.core.data_models.action.metadata import (
     BuiltActionMetadata,
     NonBuiltActionMetadata,
 )
-from test_mp.test_core.test_data_models.utils import st_json_serializable, st_valid_identifier_name
+from test_mp.test_core.test_data_models.utils import (
+    FILE_NAME,
+    st_invalid_long_description,
+    st_invalid_long_identifier,
+    st_invalid_regex,
+    st_json_serializable,
+    st_valid_identifier_name,
+    st_with_invalid_field,
+)
 
 from .test_action_parameter import (
-    _st_invalid_built_action_param_dict,
-    _st_invalid_non_built_action_param_dict,
+    st_invalid_built_action_param_dict,
+    st_invalid_non_built_action_param_dict,
     st_valid_built_action_param_dict,
     st_valid_non_built_action_param_dict,
 )
 from .test_dynamic_results_metadata import (
     st_invalid_built_dynamic_results_dict,
     st_invalid_non_built_dynamic_results_dict,
+    st_valid_built_dynamic_results_dict,
+    st_valid_non_built_dynamic_results_dict,
 )
-from .test_dynamic_results_metadata import (
-    st_valid_built_dynamic_results_dict as st_valid_built_dynamic_results_metadata_dict,
-)
-from .test_dynamic_results_metadata import (
-    st_valid_non_built_dynamic_results_dict as st_valid_non_built_dynamic_results_metadata_dict,
-)
-
-INVALID_MUTATIONS = [
-    "name_bad_pattern",
-    "name_too_long",
-    "desc_too_long",
-    "too_many_parameters",
-    "invalid_parameter",
-    "invalid_dynamic_result",
-]
 
 st_valid_built_action_metadata_dict = st.fixed_dictionaries(
     {
         "Description": st.text(max_size=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
-        "DynamicResultsMetadata": st.lists(st_valid_built_dynamic_results_metadata_dict),
+        "DynamicResultsMetadata": st.lists(st_valid_built_dynamic_results_dict),
         "IntegrationIdentifier": st_valid_identifier_name,
         "Name": st_valid_identifier_name,
         "Parameters": st.lists(
@@ -80,7 +75,7 @@ st_valid_built_action_metadata_dict = st.fixed_dictionaries(
 st_valid_non_built_action_metadata_dict = st.fixed_dictionaries(
     {
         "description": st.text(max_size=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
-        "dynamic_results_metadata": st.lists(st_valid_non_built_dynamic_results_metadata_dict),
+        "dynamic_results_metadata": st.lists(st_valid_non_built_dynamic_results_dict),
         "integration_identifier": st_valid_identifier_name,
         "name": st_valid_identifier_name,
         "parameters": st.lists(
@@ -99,88 +94,80 @@ st_valid_non_built_action_metadata_dict = st.fixed_dictionaries(
     },
 )
 
+st_invalid_non_built_dict = st.one_of(
+    st_with_invalid_field(st_valid_non_built_action_metadata_dict, "name", st_invalid_regex()),
+    st_with_invalid_field(
+        st_valid_non_built_action_metadata_dict, "name", st_invalid_long_identifier()
+    ),
+    st_with_invalid_field(
+        st_valid_non_built_action_metadata_dict, "integration_identifier", st_invalid_regex()
+    ),
+    st_with_invalid_field(
+        st_valid_non_built_action_metadata_dict,
+        "integration_identifier",
+        st_invalid_long_identifier(),
+    ),
+    st_with_invalid_field(
+        st_valid_non_built_action_metadata_dict, "description", st_invalid_long_description()
+    ),
+    st_with_invalid_field(
+        st_valid_non_built_action_metadata_dict,
+        "parameters",
+        st.lists(
+            st_valid_non_built_action_param_dict,
+            min_size=mp.core.constants.MAX_PARAMETERS_LENGTH + 1,
+        ),
+    ),
+    st_with_invalid_field(
+        st_valid_non_built_action_metadata_dict,
+        "parameters",
+        st.lists(st_invalid_non_built_action_param_dict, min_size=1),
+    ),
+    st_with_invalid_field(
+        st_valid_non_built_action_metadata_dict,
+        "dynamic_results_metadata",
+        st.lists(st_invalid_non_built_dynamic_results_dict, min_size=1),
+    ),
+)
 
-@st.composite
-def _st_invalid_non_built_dict(draw: st.DrawFn) -> NonBuiltActionMetadata:
-    # Start with a valid dict
-    data = draw(st_valid_non_built_action_metadata_dict)
-
-    # Pick a random way to break it
-    mutation = draw(st.sampled_from(INVALID_MUTATIONS))
-
-    # Apply the mutation
-    if mutation == "name_bad_pattern":
-        data["name"] = draw(st.just("!@#$%^"))
-    elif mutation == "name_too_long":
-        data["name"] = draw(st.text(min_size=mp.core.constants.DISPLAY_NAME_MAX_LENGTH + 1))
-
-    elif mutation == "desc_too_long":
-        data["description"] = draw(
-            st.text(min_size=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH + 1)
-        )
-    elif mutation == "too_many_parameters":
-        data["parameters"] = draw(
-            st.lists(
-                st_valid_non_built_action_param_dict,
-                min_size=mp.core.constants.MAX_PARAMETERS_LENGTH + 1,
-            )
-        )
-    elif mutation == "invalid_parameter":
-        data["parameters"] = draw(st.lists(_st_invalid_non_built_action_param_dict(), min_size=1))
-    elif mutation == "invalid_dynamic_result":
-        data["dynamic_results_metadata"] = draw(
-            st.lists(st_invalid_non_built_dynamic_results_dict, min_size=1)
-        )
-    elif mutation == "integration_identifier_too_long":
-        data["integration_identifier"] = draw(
-            st.text(min_size=mp.core.constants.DISPLAY_NAME_MAX_LENGTH + 1)
-        )
-
-    elif mutation == "integration_identifier_bad_pattern":
-        data["integration_identifier"] = draw(st.just("!@#$%^"))
-    return data
-
-
-@st.composite
-def _st_invalid_built_dict(draw: st.DrawFn) -> BuiltActionMetadata:
-    # Start with a valid dict
-    data = draw(st_valid_built_action_metadata_dict)
-
-    # Pick a random way to break it
-    mutation = draw(st.sampled_from(INVALID_MUTATIONS))
-
-    # Apply the mutation
-    if mutation == "name_bad_pattern":
-        data["Name"] = draw(st.just("!@#$%^"))
-    elif mutation == "name_too_long":
-        data["Name"] = draw(st.text(min_size=mp.core.constants.DISPLAY_NAME_MAX_LENGTH + 1))
-    elif mutation == "desc_too_long":
-        data["Description"] = draw(
-            st.text(min_size=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH + 1)
-        )
-    elif mutation == "too_many_parameters":
-        data["Parameters"] = draw(
-            st.lists(
-                st_valid_built_action_param_dict,
-                min_size=mp.core.constants.MAX_PARAMETERS_LENGTH + 1,
-            )
-        )
-    elif mutation == "invalid_parameter":
-        data["Parameters"] = draw(st.lists(_st_invalid_built_action_param_dict(), min_size=1))
-    elif mutation == "invalid_dynamic_result":
-        data["DynamicResultsMetadata"] = draw(
-            st.lists(st_invalid_built_dynamic_results_dict, min_size=1)
-        )
-
-    elif mutation == "integration_identifier_too_long":
-        data["integration_identifier_bad_pattern"] = draw(
-            st.text(min_size=mp.core.constants.DISPLAY_NAME_MAX_LENGTH + 1)
-        )
-
-    elif mutation == "integration_identifier_bad_pattern":
-        data["integration_identifier_bad_pattern"] = draw(st.just("!@#$%^"))
-
-    return data
+st_invalid_built_dict = st.one_of(
+    st_with_invalid_field(st_valid_built_action_metadata_dict, "Name", st_invalid_regex()),
+    st_with_invalid_field(
+        st_valid_built_action_metadata_dict,
+        "Name",
+        st_invalid_long_identifier(),
+    ),
+    st_with_invalid_field(
+        st_valid_built_action_metadata_dict, "IntegrationIdentifier", st_invalid_regex()
+    ),
+    st_with_invalid_field(
+        st_valid_built_action_metadata_dict,
+        "IntegrationIdentifier",
+        st_invalid_long_identifier(),
+    ),
+    st_with_invalid_field(
+        st_valid_built_action_metadata_dict,
+        "Description",
+        st_invalid_long_description(),
+    ),
+    st_with_invalid_field(
+        st_valid_built_action_metadata_dict,
+        "Parameters",
+        st.lists(
+            st_valid_built_action_param_dict, min_size=mp.core.constants.MAX_PARAMETERS_LENGTH + 1
+        ),
+    ),
+    st_with_invalid_field(
+        st_valid_built_action_metadata_dict,
+        "Parameters",
+        st.lists(st_invalid_built_action_param_dict, min_size=1),
+    ),
+    st_with_invalid_field(
+        st_valid_built_action_metadata_dict,
+        "DynamicResultsMetadata",
+        st.lists(st_invalid_built_dynamic_results_dict, min_size=1),
+    ),
+)
 
 
 class TestValidations:
@@ -191,21 +178,21 @@ class TestValidations:
     @settings(max_examples=30)
     @given(valid_non_built=st_valid_non_built_action_metadata_dict)
     def test_valid_non_built(self, valid_non_built: NonBuiltActionMetadata) -> None:
-        ActionMetadata.from_non_built("test_name", valid_non_built).to_built()
+        ActionMetadata.from_non_built(FILE_NAME, valid_non_built).to_built()
 
     @settings(max_examples=30)
     @given(valid_built=st_valid_built_action_metadata_dict)
     def test_valid_built(self, valid_built: BuiltActionMetadata) -> None:
-        ActionMetadata.from_built("test_name", valid_built).to_non_built()
+        ActionMetadata.from_built(FILE_NAME, valid_built).to_non_built()
 
     @settings(max_examples=30)
-    @given(invalid_built=_st_invalid_built_dict())
-    def test_invalid_built_fails(self, invalid_built: ActionMetadata) -> None:
+    @given(invalid_built=st_invalid_built_dict)
+    def test_invalid_built_fails(self, invalid_built: BuiltActionMetadata) -> None:
         with pytest.raises((ValidationError, ValueError, KeyError)):
-            ActionMetadata.from_built("test_name", invalid_built)
+            ActionMetadata.from_built(FILE_NAME, invalid_built)
 
     @settings(max_examples=30)
-    @given(invalid_non_built=_st_invalid_non_built_dict())
-    def test_invalid_non_built_fails(self, invalid_non_built: ActionMetadata) -> None:
+    @given(invalid_non_built=st_invalid_non_built_dict)
+    def test_invalid_non_built_fails(self, invalid_non_built: NonBuiltActionMetadata) -> None:
         with pytest.raises((ValidationError, ValueError, KeyError)):
-            ActionMetadata.from_non_built("test_name", invalid_non_built)
+            ActionMetadata.from_non_built(FILE_NAME, invalid_non_built)
