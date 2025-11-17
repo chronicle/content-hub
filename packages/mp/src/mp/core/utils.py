@@ -20,20 +20,22 @@ import os
 import platform
 import re
 import sys
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
 from mp.core.constants import WINDOWS_PLATFORM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from .custom_types import RepositoryType, YamlFileContent
+    from .custom_types import YamlFileContent
 
 SNAKE_PATTERN_1 = re.compile(r"(.)([A-Z][a-z]+)")
 SNAKE_PATTERN_2 = re.compile(r"([a-z0-9])([A-Z])")
 GIT_STATUS_REGEXP: re.Pattern[str] = re.compile(r"^[ A-Z?!]{2} ")
 ERR_MSG_STRING_LIMIT: int = 256
 TRIM_CHARS: str = " ... "
+
+_T = TypeVar("_T")
 
 
 def get_python_version_from_version_string(version: str) -> str:
@@ -124,11 +126,11 @@ def is_windows() -> bool:
     return sys.platform.startswith(WINDOWS_PLATFORM)
 
 
-def ensure_valid_list(value: list[str] | list[RepositoryType] | type) -> list:
+def ensure_valid_list(value: list[_T] | Any) -> list[_T]:  # noqa: ANN401
     """Ensure that the input is a valid list.
 
     This function checks whether the given value is a valid list. If the value is
-    the `type` object (e.g., `<class 'list'>`), which can happen in github actions.
+    the `type` object (e.g., `<class 'list'>`), which can happen in GitHub actions.
     it returns an empty list Otherwise, it returns the value as-is.
 
     Args:
@@ -138,9 +140,7 @@ def ensure_valid_list(value: list[str] | list[RepositoryType] | type) -> list:
         list: A valid list object. Returns an empty list if the input was of type `type`.
 
     """
-    if isinstance(value, type):
-        return []
-    return value
+    return value if isinstance(value, list) else []
 
 
 def is_github_actions() -> bool:

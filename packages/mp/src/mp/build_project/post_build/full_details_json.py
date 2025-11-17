@@ -29,15 +29,12 @@ import rich
 import mp.core.constants
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.data_models.integration import BuiltFullDetails
 
 
-def write_full_details(
-    full_details: BuiltFullDetails,
-    destination: pathlib.Path,
-) -> None:
+def write_full_details(full_details: BuiltFullDetails, destination: Path) -> None:
     """Write a full details file in `destination` containing `full_details` content.
 
     Args:
@@ -49,7 +46,7 @@ def write_full_details(
     details_json_name: str = mp.core.constants.INTEGRATION_FULL_DETAILS_FILE.format(
         full_details["Identifier"],
     )
-    details_json_path: pathlib.Path = destination / details_json_name
+    details_json_path: Path = destination / details_json_name
     details_json_path.write_text(
         json.dumps(full_details, indent=4, sort_keys=True),
         encoding="utf-8",

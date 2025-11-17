@@ -23,20 +23,20 @@ import mp.core.data_models.integration
 import test_mp.common
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.data_models.integration import BuiltFullDetails, Integration
 
 
 def test_create_full_details_json(
-    tmp_path: pathlib.Path,
-    built_integration: pathlib.Path,
-    full_details: pathlib.Path,
+    tmp_path: Path,
+    built_integration: Path,
+    full_details: Path,
 ) -> None:
-    base_dir: pathlib.Path = tmp_path / built_integration.parent.name
+    base_dir: Path = tmp_path / built_integration.parent.name
     shutil.copytree(built_integration.parent, base_dir)
-    integration_path: pathlib.Path = base_dir / built_integration.name
-    py_version: pathlib.Path = integration_path / mp.core.constants.PYTHON_VERSION_FILE
+    integration_path: Path = base_dir / built_integration.name
+    py_version: Path = integration_path / mp.core.constants.PYTHON_VERSION_FILE
     py_version.write_text("3.11", encoding="utf-8")
     integration: Integration = mp.core.data_models.integration.Integration.from_built_path(
         integration_path

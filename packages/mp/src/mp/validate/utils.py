@@ -21,8 +21,8 @@ from mp.core import constants, file_utils
 from mp.core.exceptions import FatalValidationError
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Iterable
+    from pathlib import Path
 
     from mp.core.custom_types import YamlFileContent
 
@@ -36,22 +36,22 @@ DEF_FILE_NAME_KEY: str = "name"
 
 def get_marketplace_paths_from_names(
     names: Iterable[str],
-    marketplace_paths: Iterable[pathlib.Path],
-) -> set[pathlib.Path]:
+    marketplace_paths: Iterable[Path],
+) -> set[Path]:
     """Retrieve existing marketplace paths from a list of names.
 
     Args:
         names: An iterable of names, where each name can be a string
             representing a file/directory name of integration or group.
-        marketplace_paths: The base `pathlib.Path` objects representing the
+        marketplace_paths: The base `Path` objects representing the
             integrations directories of the marketplace.
 
     Returns:
-        A `set` of `pathlib.Path` objects representing the paths that
+        A `set` of `Path` objects representing the paths that
         were found to exist within the `marketplace_path`.
 
     """
-    results: set[pathlib.Path] = set()
+    results: set[Path] = set()
     for path in marketplace_paths:
         for n in names:
             if (p := path / n).exists():
@@ -73,7 +73,7 @@ def get_project_dependency_name(dependency_name: str) -> str:
     return re.split(r"[<>=]", dependency_name)[0]
 
 
-def load_integration_def(integration_path: pathlib.Path) -> YamlFileContent:
+def load_integration_def(integration_path: Path) -> YamlFileContent:
     """Load the integration definition file content.
 
     Returns:
@@ -92,7 +92,7 @@ def load_integration_def(integration_path: pathlib.Path) -> YamlFileContent:
 
 
 def load_components_defs(
-    integration_path: pathlib.Path, *components: str
+    integration_path: Path, *components: str
 ) -> dict[str, list[YamlFileContent]]:
     """Load component's definition files, organized by component type.
 
@@ -113,7 +113,7 @@ def load_components_defs(
     try:
         component_defs: dict[str, list[YamlFileContent]] = {}
         for component_dir_name in filtered_components:
-            component_dir: pathlib.Path = integration_path / component_dir_name
+            component_dir: Path = integration_path / component_dir_name
             if component_dir.is_dir():
                 component_defs[component_dir_name] = [
                     file_utils.load_yaml_file(p)

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -27,8 +27,8 @@ class LogicalOperator(mp.core.data_models.abc.RepresentableEnum):
 
 
 class BuiltConditionGroup(TypedDict):
-    conditions: list[BuiltCondition]
-    logicalOperator: int
+    Conditions: list[BuiltCondition]
+    LogicalOperator: int
 
 
 class NonBuiltConditionGroup(TypedDict):
@@ -43,14 +43,14 @@ class ConditionGroup(
     logical_operator: LogicalOperator
 
     @classmethod
-    def _from_built(cls, built: BuiltConditionGroup) -> ConditionGroup:
+    def _from_built(cls, built: BuiltConditionGroup) -> Self:
         return cls(
-            conditions=[Condition.from_built(condition) for condition in built["conditions"]],
-            logical_operator=LogicalOperator(built["logicalOperator"]),
+            conditions=[Condition.from_built(condition) for condition in built["Conditions"]],
+            logical_operator=LogicalOperator(built["LogicalOperator"]),
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltConditionGroup) -> ConditionGroup:
+    def _from_non_built(cls, non_built: NonBuiltConditionGroup) -> Self:
         return cls(
             conditions=[
                 Condition.from_non_built(condition) for condition in non_built["conditions"]
@@ -66,8 +66,8 @@ class ConditionGroup(
 
         """
         return BuiltConditionGroup(
-            conditions=[condition.to_built() for condition in self.conditions],
-            logicalOperator=self.logical_operator.value,
+            Conditions=[condition.to_built() for condition in self.conditions],
+            LogicalOperator=self.logical_operator.value,
         )
 
     def to_non_built(self) -> NonBuiltConditionGroup:

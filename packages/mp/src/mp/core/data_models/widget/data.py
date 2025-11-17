@@ -14,9 +14,12 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.data_models.abc
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class WidgetType(mp.core.data_models.abc.RepresentableEnum):
@@ -50,11 +53,19 @@ class WidgetDefinitionScope(mp.core.data_models.abc.RepresentableEnum):
     BOTH = 2
 
 
+class WidgetSize(mp.core.data_models.abc.RepresentableEnum):
+    HALF_WIDTH = 1
+    FULL_WIDTH = 2
+    THIRD_WIDTH = 3
+    TWO_THIRDS_WIDTH = 4
+
+
 class BuiltWidgetDataDefinition(TypedDict):
     htmlHeight: int
     safeRendering: bool
     type: int
     widgetDefinitionScope: int
+    htmlContent: NotRequired[str]
 
 
 class NonBuiltWidgetDataDefinition(TypedDict):
@@ -62,29 +73,40 @@ class NonBuiltWidgetDataDefinition(TypedDict):
     safe_rendering: bool
     type: str
     widget_definition_scope: str
+    html_content: NotRequired[str]
 
 
-class WidgetDataDefinition(
-    mp.core.data_models.abc.Buildable[BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition]
+class HtmlWidgetDataDefinition(
+    mp.core.data_models.abc.ComponentMetadata[
+        BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition
+    ]
 ):
     html_height: int
     safe_rendering: bool
     type: WidgetType
     widget_definition_scope: WidgetDefinitionScope
+    html_content: str | None = None
 
     @classmethod
-    def _from_built(cls, built: BuiltWidgetDataDefinition) -> WidgetDataDefinition:
+    def from_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
+        pass
+
+    @classmethod
+    def from_non_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
+        pass
+
+    @classmethod
+    def _from_built(cls, _: str, built: BuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
-            widget_definition_scope=WidgetDefinitionScope(
-                built["widgetDefinitionScope"],
-            ),
+            widget_definition_scope=WidgetDefinitionScope(built["widgetDefinitionScope"]),
             type=WidgetType(built["type"]),
+            html_content=built["htmlContent"] if built.get("htmlContent") else None,
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltWidgetDataDefinition) -> WidgetDataDefinition:
+    def _from_non_built(cls, _: str, non_built: NonBuiltWidgetDataDefinition) -> Self:
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],
@@ -92,6 +114,7 @@ class WidgetDataDefinition(
                 non_built["widget_definition_scope"],
             ),
             type=WidgetType.from_string(non_built["type"]),
+            html_content=non_built["html_content"] if non_built.get("html_content") else None,
         )
 
     def to_built(self) -> BuiltWidgetDataDefinition:
@@ -102,10 +125,11 @@ class WidgetDataDefinition(
 
         """
         return BuiltWidgetDataDefinition(
+            htmlContent=self.html_content,
             htmlHeight=self.html_height,
             safeRendering=self.safe_rendering,
-            widgetDefinitionScope=self.widget_definition_scope.value,
             type=self.type.value,
+            widgetDefinitionScope=self.widget_definition_scope.value,
         )
 
     def to_non_built(self) -> NonBuiltWidgetDataDefinition:
@@ -120,4 +144,5 @@ class WidgetDataDefinition(
             safe_rendering=self.safe_rendering,
             widget_definition_scope=self.widget_definition_scope.to_string(),
             type=self.type.to_string(),
+            html_content=self.html_content,
         )

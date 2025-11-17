@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Self, TypedDict
 
 import mp.core.data_models.abc
 
@@ -32,9 +32,9 @@ class MatchType(mp.core.data_models.abc.RepresentableEnum):
 
 
 class BuiltCondition(TypedDict):
-    fieldName: str
-    value: str
-    matchType: int
+    FieldName: str
+    Value: str
+    MatchType: int
 
 
 class NonBuiltCondition(TypedDict):
@@ -49,15 +49,15 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
     match_type: MatchType
 
     @classmethod
-    def _from_built(cls, built: BuiltCondition) -> Condition:
+    def _from_built(cls, built: BuiltCondition) -> Self:
         return cls(
-            field_name=built["fieldName"],
-            value=built["value"],
-            match_type=MatchType(built["matchType"]),
+            field_name=built["FieldName"],
+            value=built["Value"],
+            match_type=MatchType(built["MatchType"]),
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltCondition) -> Condition:
+    def _from_non_built(cls, non_built: NonBuiltCondition) -> Self:
         return cls(
             field_name=non_built["field_name"],
             value=non_built["value"],
@@ -72,9 +72,9 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
 
         """
         return BuiltCondition(
-            fieldName=self.field_name,
-            value=self.value,
-            matchType=self.match_type.value,
+            FieldName=self.field_name,
+            Value=self.value,
+            MatchType=self.match_type.value,
         )
 
     def to_non_built(self) -> NonBuiltCondition:
