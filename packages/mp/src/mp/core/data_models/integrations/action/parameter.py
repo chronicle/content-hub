@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, NotRequired, Self, TypedDict, Any
+from typing import Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
 

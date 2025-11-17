@@ -22,8 +22,10 @@ import pytest
 
 from mp.core import constants, file_utils
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.pre_build_validation import ActionParametersValuesValidation
-from mp.validate.pre_build_validation.action_parameter_validation import PARAMETERS_KEY
+from mp.validate.pre_build_validation.integrations.action_parameter_validation import (
+    PARAMETERS_KEY,
+    ActionParametersValuesValidation,
+)
 
 if TYPE_CHECKING:
     import pathlib
