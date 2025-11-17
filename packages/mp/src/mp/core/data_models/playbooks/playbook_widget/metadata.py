@@ -35,7 +35,6 @@ from mp.core.data_models.widget.data import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
 
 
