@@ -270,21 +270,6 @@ class ComponentMetadata(BuildableComponent[_BT, _NBT], abc.ABC, Generic[_BT, _NB
         """
 
     @classmethod
-    def from_non_built_path_with_filter(
-        cls, path: Path, filter_fn: Callable[[Path], bool] | None = None
-    ) -> list[Self]:
-        """Create the script's metadata object from the non-built path.
-
-        Args:
-            path: The path to the non-built metadata component.
-            filter_fn: filter function.
-
-        Returns:
-            A metadata object
-
-        """
-
-    @classmethod
     def _from_built_path(cls, metadata_path: Path) -> Self:
         """Create the script's metadata object from the built path.
 

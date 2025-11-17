@@ -119,14 +119,15 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
         if not meta_path.exists():
             return []
 
-        res: list[Self] = []
+        all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
+
+        res: list[Self] = []        
+        
         for non_built_overview in yaml.safe_load(meta_path.read_text(encoding="utf-8")):
             widget_names: set[WidgetName] = non_built_overview.get("widgets", [])
-            name_filter_func = lambda p, widgets=widget_names: p.name in widgets  # noqa: E731
-
-            widgets: list[PlaybookWidgetMetadata] = (
-                PlaybookWidgetMetadata.from_non_built_path_with_filter(path, name_filter_func)
-            )
+            widgets: list[PlaybookWidgetMetadata] = [
+                w for w in all_widget if w.title in widget_names
+            ]
             ov: Self = cls._from_non_built(non_built_overview)
             ov.widgets = widgets
             res.append(ov)

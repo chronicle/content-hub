@@ -148,30 +148,6 @@ class PlaybookWidgetMetadata(
         ]
 
     @classmethod
-    def from_non_built_path_with_filter(
-        cls, path: Path, filter_fn: Callable[[Path], bool] | None = None
-    ) -> list[Self]:
-        """Create a list of widgets from a non-built path, with an optional filter function.
-
-        Args:
-            path: The path to the non-built integration component (e.g., the integration directory).
-            filter_fn: A function that takes a Path object and returns True if it should be included
-
-        Returns:
-            A list of `PlaybookWidgetMetadata` objects.
-
-        """
-        meta_path: Path = path / mp.core.constants.WIDGETS_DIR
-        if not meta_path.exists():
-            return []
-
-        all_widget_paths = meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
-
-        filtered_paths = (p for p in all_widget_paths if filter_fn is None or filter_fn(p))
-
-        return [cls._from_non_built_path(p) for p in filtered_paths]
-
-    @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
         data_json: pydantic.Json = json.loads(built["DataDefinitionJson"])
         return cls(
