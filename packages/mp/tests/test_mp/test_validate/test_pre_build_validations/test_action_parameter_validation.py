@@ -178,6 +178,7 @@ class TestActionParameterValidation:
 
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_integration)
+
         assert str(excinfo.value).count("invalid_default from Ping") == 2
 
     def test_failure_on_case_sensitive_default_value(self, temp_integration: pathlib.Path) -> None:
