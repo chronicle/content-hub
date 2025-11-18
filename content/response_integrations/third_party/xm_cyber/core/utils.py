@@ -219,10 +219,20 @@ def convert_to_numeric(value):
 
 
 def generate_encryption_key(api_key: str, base_url: str) -> str:
-    """Generate a deterministic encryption key from existing settings."""
-    unique_string = f"{api_key}:{base_url}"
-    # Create a SHA-256 hash to ensure consistent length and format
-    return hashlib.sha256(unique_string.encode()).hexdigest()
+    """Generate a deterministic encryption key from existing settings.
+
+    Uses PBKDF2-HMAC with SHA-256, a deterministic salt, and a high iteration
+    count to derive a fixed-length key suitable for symmetric operations.
+    """
+    salt = base_url.encode()
+    key_bytes = hashlib.pbkdf2_hmac(
+        "sha256",
+        api_key.encode(),
+        salt,
+        200_000,
+        dklen=32,
+    )
+    return key_bytes.hex()
 
 
 def compute_expiry(response):
