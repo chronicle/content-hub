@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from datetime import UTC, datetime
 
 from dateutil import parser
+from soar_sdk.SiemplifyUtils import unix_now
 
 from .constants import (
     DATE_PARAMETERS,
+    DEFAULT_EXPIRY_SECONDS,
     ERRORS,
+    EXPIRES_IN_KEY,
     INTEGRATION_NAME,
     POSSIBLE_LIST_PARAM_VALUES,
     POSSIBLE_OPERATORS,
@@ -212,3 +216,25 @@ def convert_to_numeric(value):
         return float(value)
     except (ValueError, TypeError):
         return 0
+
+
+def generate_encryption_key(api_key: str, base_url: str) -> str:
+    """Generate a deterministic encryption key from existing settings."""
+    unique_string = f"{api_key}:{base_url}"
+    # Create a SHA-256 hash to ensure consistent length and format
+    return hashlib.sha256(unique_string.encode()).hexdigest()
+
+
+def compute_expiry(response):
+    now_ms = unix_now()
+    expires_in = response.get(EXPIRES_IN_KEY)
+    if expires_in is not None:
+        try:
+            # Most OAuth providers send expires_in as seconds
+            expires_in_sec = int(expires_in)
+            # Convert seconds → milliseconds
+            return now_ms + (expires_in_sec * 1000)
+
+        except (TypeError, ValueError):
+            pass
+    return now_ms + (DEFAULT_EXPIRY_SECONDS * 1000)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import (
@@ -13,15 +14,15 @@ from soar_sdk.SiemplifyUtils import (
 )
 
 from ..core.ApiManager import ApiManager
-from ..core.XMCyberException import XMCyberException
 from ..core.constants import (
-    INTEGRATION_NAME,
     ENRICHMENT_PREFIX,
-    SUPPORTED_ENTITY_TYPES,
     ENTITY_ID_FIELD,
+    INTEGRATION_NAME,
     PREFIX_PARAMETER_FOR_LABELS,
+    SUPPORTED_ENTITY_TYPES,
 )
 from ..core.utils import get_integration_params
+from ..core.XMCyberException import XMCyberException
 
 
 def get_entities_from_the_event(events):
@@ -159,24 +160,25 @@ def is_entity_already_enriched(entity, logger):
         # Try multiple datetime formats to handle timezone offset with/without colon
         datetime_formats = [
             "%Y-%m-%d %H:%M:%S.%f%z",  # Format without colon in timezone (e.g., +0000)
-            "%Y-%m-%d %H:%M:%S%z",     # Format without microseconds
+            "%Y-%m-%d %H:%M:%S%z",  # Format without microseconds
         ]
-        
+
         parsed_time = None
         for fmt in datetime_formats:
             try:
                 # Handle timezone offset with colon by removing it before parsing
                 time_str = last_enrichment_time
-                if '+' in time_str or time_str.count('-') > 2:  # Has timezone
+                if "+" in time_str or time_str.count("-") > 2:  # Has timezone
                     # Remove colon from timezone offset (e.g., +05:30 -> +0530)
                     import re
-                    time_str = re.sub(r'([+-]\d{2}):(\d{2})$', r'\1\2', time_str)
-                
+
+                    time_str = re.sub(r"([+-]\d{2}):(\d{2})$", r"\1\2", time_str)
+
                 parsed_time = datetime.strptime(time_str, fmt)
                 break
             except ValueError:
                 continue
-        
+
         if parsed_time is None:
             logger.info(
                 f"The value of {ENRICHMENT_PREFIX}_last_enriched' field: {last_enrichment_time} "
@@ -189,7 +191,7 @@ def is_entity_already_enriched(entity, logger):
                 f"entity: {entity.identifier} again...\n"
             )
             return False, output_message
-        
+
         last_enrichment_time = parsed_time
 
         current_time = convert_unixtime_to_datetime(unix_now())
@@ -218,7 +220,7 @@ def main():
     status = EXECUTION_STATE_FAILED
 
     try:
-        api_manager = ApiManager(auth_type, base_url, api_key, siemplify.LOGGER)
+        api_manager = ApiManager(auth_type, base_url, api_key, siemplify)
         if api_manager.error:
             raise Exception(api_manager.error)
 
