@@ -24,7 +24,7 @@ from mp.core.data_models.release_notes.metadata import ReleaseNote
 from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class TomlFileVersions(TypedDict):
@@ -61,11 +61,11 @@ VersionBumpValidationData: TypeAlias = tuple[ExistingIntegrationFiles, NewIntegr
 class VersionBumpValidation:
     name: str = "Integration Version Bump"
 
-    def run(self, integration_path: pathlib.Path) -> None:  # noqa: PLR6301
+    def run(self, integration_path: Path) -> None:  # noqa: PLR6301
         """Validate that `project.toml` and `release_notes.yml` files are correctly versioned.
 
         Args:
-            integration_path (pathlib.Path): Path to the integration directory.
+            integration_path (Path): Path to the integration directory.
 
         Raises:
             NonFatalValidationError: If versioning rules are violated.
@@ -75,15 +75,15 @@ class VersionBumpValidation:
         if not head_sha:
             return
 
-        changed_files: list[pathlib.Path] = mp.core.unix.get_files_unmerged_to_main_branch(
+        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch(
             "main", head_sha, integration_path
         )
 
         if not changed_files:
             return
 
-        rn_path: pathlib.Path | None = None
-        toml_path: pathlib.Path | None = None
+        rn_path: Path | None = None
+        toml_path: Path | None = None
         for p in changed_files:
             if p.name == PROJECT_FILE:
                 toml_path = p
@@ -94,9 +94,11 @@ class VersionBumpValidation:
         if not rn_path and not toml_path:
             msg = "project.toml and release_notes.yml files must be updated before PR"
             raise NonFatalValidationError(msg)
+
         if not toml_path:
             msg = "project.toml file must be updated before PR"
             raise NonFatalValidationError(msg)
+
         if not rn_path:
             msg = "release_notes.yml file must be updated before PR"
             raise NonFatalValidationError(msg)
@@ -106,8 +108,8 @@ class VersionBumpValidation:
 
 
 def _create_data_for_version_bump_validation(
-    rn_path: pathlib.Path,
-    toml_path: pathlib.Path,
+    rn_path: Path,
+    toml_path: Path,
 ) -> VersionBumpValidationData:
     existing_files: ExistingIntegrationFiles = {
         "toml": TomlFileVersions(),
@@ -136,7 +138,7 @@ def _create_data_for_version_bump_validation(
 
 
 def _get_last_note(content: str) -> ReleaseNote | None:
-    notes = ReleaseNote.from_non_built_str(content)
+    notes: ReleaseNote = ReleaseNote.from_non_built_str(content)
     return notes[-1] if notes else None
 
 

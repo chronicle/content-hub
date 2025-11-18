@@ -31,13 +31,13 @@ import mp.core.file_utils
 from .restructurable import Restructurable
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Scripts(Restructurable):
-    path: pathlib.Path
-    out_path: pathlib.Path
+    path: Path
+    out_path: Path
 
     def restructure(self) -> None:
         """Restructure an integration's script files to its "out" path."""
@@ -79,18 +79,18 @@ class Scripts(Restructurable):
         )
 
     def _restructure_group_scripts(self) -> None:
-        script_dir: pathlib.Path = self.path.parent / mp.core.constants.COMMON_SCRIPTS_DIR
+        script_dir: Path = self.path.parent / mp.core.constants.COMMON_SCRIPTS_DIR
         if not script_dir.exists():
             return
-        out_dir: pathlib.Path = self.out_path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
+        out_dir: Path = self.out_path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
         mp.core.file_utils.flatten_dir(script_dir, out_dir)
 
     def _copy_script_from_dir(self, dir_name: str, out_dir_name: str) -> None:
-        script_dir: pathlib.Path = self.path / dir_name
+        script_dir: Path = self.path / dir_name
         if not script_dir.exists():
             return
 
-        out_dir: pathlib.Path = self.out_path / out_dir_name
+        out_dir: Path = self.out_path / out_dir_name
         out_dir.mkdir(exist_ok=True)
         mp.core.file_utils.flatten_dir(script_dir, out_dir)
         if out_dir.exists():

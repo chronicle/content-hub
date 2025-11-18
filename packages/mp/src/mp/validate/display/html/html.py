@@ -18,33 +18,37 @@ import datetime
 import pathlib
 import tempfile
 import webbrowser
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+import jinja2
 from rich.console import Console
 
 if TYPE_CHECKING:
-    from mp.validate.data_models import FullReport
+    from pathlib import Path
+
+    from jinja2 import Environment, Template
+
+    from mp.validate.data_models import FullReport, ValidationResults
 
 
 class HtmlFormat:
     def __init__(self, validation_results: FullReport) -> None:
-        self.validation_results = validation_results
+        self.validation_results: FullReport = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
         """Generate an HTML report for validation results."""
         try:
-            html_content = self._generate_validation_report_html()
+            html_content: str = self._generate_validation_report_html()
 
-            temp_report_path: pathlib.Path
+            temp_report_path: Path
             with tempfile.NamedTemporaryFile(
                 mode="w", delete=False, suffix=".html", encoding="utf-8"
             ) as temp_file:
                 temp_file.write(html_content)
-                temp_report_path = pathlib.Path(temp_file.name)
+                temp_report_path: Path = pathlib.Path(temp_file.name)
 
-            resolved_temp_path = temp_report_path.resolve()
+            resolved_temp_path: Path = temp_report_path.resolve()
             self.console.print(f"📂 Report available at 👉: {resolved_temp_path.as_uri()}")
             webbrowser.open(resolved_temp_path.as_uri())
 
@@ -54,28 +58,29 @@ class HtmlFormat:
     def _generate_validation_report_html(
         self, template_name: str = "html_report/report.html"
     ) -> str:
-        script_dir = pathlib.Path(__file__).parent.resolve()
-        template_dir = script_dir / "templates"
-        env = Environment(
-            loader=FileSystemLoader(template_dir), autoescape=select_autoescape(["html"])
+        script_dir: Path = pathlib.Path(__file__).parent.resolve()
+        template_dir: Path = script_dir / "templates"
+        env: Environment = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(template_dir),
+            autoescape=jinja2.select_autoescape(["html"]),
         )
-        template = env.get_template(template_name)
+        template: Template = env.get_template(template_name)
 
-        css_file_path = template_dir / "static" / "style.css"
-        js_file_path = template_dir / "static" / "script.js"
+        css_file_path: Path = template_dir / "static" / "style.css"
+        js_file_path: Path = template_dir / "static" / "script.js"
 
-        css_content = css_file_path.read_text(encoding="utf-8-sig")
-        js_content = js_file_path.read_text(encoding="utf-8-sig")
+        css_content: str = css_file_path.read_text(encoding="utf-8-sig")
+        js_content: str = js_file_path.read_text(encoding="utf-8-sig")
 
-        all_reports = [
+        all_reports: list[ValidationResults] = [
             report
             for reports_list in self.validation_results.values()
             if reports_list is not None
             for report in reports_list
         ]
 
-        current_time_aware = datetime.datetime.now(datetime.UTC).astimezone()
-        context = {
+        current_time_aware: datetime.datetime = datetime.datetime.now(datetime.UTC).astimezone()
+        context: dict[str, Any] = {
             "reports_by_category": self.validation_results,
             "total_integrations": len(all_reports),
             "total_fatal_issues": sum(

@@ -18,9 +18,9 @@ from typing import TYPE_CHECKING
 
 from mp.core import constants
 from mp.core.exceptions import NonFatalValidationError
-from mp.core.utils import filter_yaml_files_and_extract_key
+from mp.core.utils import filter_and_map_yaml_files
 from mp.validate.utils import (
-    DEF_FILE_NAME_KEY,
+    extract_name,
     load_components_defs,
     load_integration_def,
 )
@@ -56,14 +56,14 @@ class NoCustomComponentsInIntegrationValidation:
 
         is_integration_custom: bool = _is_custom(integration_def)
 
-        custom_actions: list[ActionName] = filter_yaml_files_and_extract_key(
-            component_defs.get(constants.ACTIONS_DIR, []), _is_custom, DEF_FILE_NAME_KEY
+        custom_actions: list[ActionName] = filter_and_map_yaml_files(
+            component_defs.get(constants.ACTIONS_DIR, []), _is_custom, extract_name
         )
-        custom_connectors: list[ConnectorName] = filter_yaml_files_and_extract_key(
-            component_defs.get(constants.CONNECTORS_DIR, []), _is_custom, DEF_FILE_NAME_KEY
+        custom_connectors: list[ConnectorName] = filter_and_map_yaml_files(
+            component_defs.get(constants.CONNECTORS_DIR, []), _is_custom, extract_name
         )
-        custom_jobs: list[JobName] = filter_yaml_files_and_extract_key(
-            component_defs.get(constants.JOBS_DIR, []), _is_custom, DEF_FILE_NAME_KEY
+        custom_jobs: list[JobName] = filter_and_map_yaml_files(
+            component_defs.get(constants.JOBS_DIR, []), _is_custom, extract_name
         )
 
         if is_integration_custom or custom_actions or custom_connectors or custom_jobs:

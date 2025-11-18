@@ -23,14 +23,11 @@ import yaml
 from mp.core.utils import is_windows
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Iterable
+    from pathlib import Path
 
 
-def get_toml_content(
-    expected: pathlib.Path,
-    actual: pathlib.Path,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+def get_toml_content(expected: Path, actual: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Compare two TOML files.
 
     Args:
@@ -46,10 +43,7 @@ def get_toml_content(
     return e, a
 
 
-def get_yaml_content(
-    expected: pathlib.Path,
-    actual: pathlib.Path,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+def get_yaml_content(expected: Path, actual: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Compare two YAML files.
 
     Args:
@@ -65,10 +59,7 @@ def get_yaml_content(
     return e, a
 
 
-def get_json_content(
-    expected: pathlib.Path,
-    actual: pathlib.Path,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+def get_json_content(expected: Path, actual: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Compare two JSON files.
 
     Args:
@@ -84,7 +75,7 @@ def get_json_content(
     return a, e
 
 
-def compare_files(expected: pathlib.Path, actual: pathlib.Path) -> tuple[set[str], set[str]]:
+def compare_files(expected: Path, actual: Path) -> tuple[set[str], set[str]]:
     """Compare two directories' files.
 
     Args:
@@ -114,7 +105,7 @@ def compare_files(expected: pathlib.Path, actual: pathlib.Path) -> tuple[set[str
     return actual_files, expected_files
 
 
-def compare_dependencies(expected: pathlib.Path, actual: pathlib.Path) -> tuple[set[str], set[str]]:
+def compare_dependencies(expected: Path, actual: Path) -> tuple[set[str], set[str]]:
     """Compare two dependencies directories.
 
     Args:

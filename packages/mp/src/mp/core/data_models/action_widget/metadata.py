@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
@@ -21,17 +22,21 @@ import pydantic
 import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
-
-from .condition_group import BuiltConditionGroup, ConditionGroup, NonBuiltConditionGroup
-from .data_definition import (
+from mp.core.data_models.condition.condition_group import (
+    BuiltConditionGroup,
+    ConditionGroup,
+    NonBuiltConditionGroup,
+)
+from mp.core.data_models.widget.data import (
     BuiltWidgetDataDefinition,
+    HtmlWidgetDataDefinition,
     NonBuiltWidgetDataDefinition,
-    WidgetDataDefinition,
+    WidgetSize,
     WidgetType,
 )
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 class WidgetScope(mp.core.data_models.abc.RepresentableEnum):
@@ -39,25 +44,18 @@ class WidgetScope(mp.core.data_models.abc.RepresentableEnum):
     CASE = 1
 
 
-class WidgetSize(mp.core.data_models.abc.RepresentableEnum):
-    HALF_WIDTH = 1
-    FULL_WIDTH = 2
-    THIRD_WIDTH = 3
-    TWO_THIRDS_WIDTH = 4
+class BuiltActionWidgetMetadata(TypedDict):
+    Title: str
+    Type: int
+    Scope: int
+    ActionIdentifier: str | None
+    Description: str
+    DataDefinition: BuiltWidgetDataDefinition
+    ConditionsGroup: BuiltConditionGroup
+    DefaultSize: int
 
 
-class BuiltWidgetMetadata(TypedDict):
-    title: str
-    type: int
-    scope: int
-    actionIdentifier: str | None
-    description: str
-    dataDefinition: BuiltWidgetDataDefinition
-    conditionsGroup: BuiltConditionGroup
-    defaultSize: int
-
-
-class NonBuiltWidgetMetadata(TypedDict):
+class NonBuiltActionWidgetMetadata(TypedDict):
     title: str
     type: str
     scope: str
@@ -68,8 +66,11 @@ class NonBuiltWidgetMetadata(TypedDict):
     default_size: str
 
 
-class WidgetMetadata(
-    mp.core.data_models.abc.ScriptMetadata[BuiltWidgetMetadata, NonBuiltWidgetMetadata]
+class ActionWidgetMetadata(
+    mp.core.data_models.abc.ComponentMetadata[
+        BuiltActionWidgetMetadata,
+        NonBuiltActionWidgetMetadata,
+    ]
 ):
     file_name: str
     title: Annotated[
@@ -92,12 +93,12 @@ class WidgetMetadata(
         str,
         pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
     ]
-    data_definition: WidgetDataDefinition
+    data_definition: HtmlWidgetDataDefinition
     condition_group: ConditionGroup
     default_size: WidgetSize
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the 'built' integration path.
 
         Args:
@@ -107,17 +108,17 @@ class WidgetMetadata(
             A sequence of `WidgetMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.OUT_WIDGETS_META_DIR
+        meta_path: Path = path / mp.core.constants.OUT_WIDGETS_META_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_built_integration_path(p)
+            cls._from_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.WIDGETS_META_SUFFIX}")
         ]
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[Self]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -127,35 +128,31 @@ class WidgetMetadata(
             A list of `WidgetMetadata` objects
 
         """
-        meta_path: pathlib.Path = path / mp.core.constants.WIDGETS_DIR
+        meta_path: Path = path / mp.core.constants.WIDGETS_DIR
         if not meta_path.exists():
             return []
 
         return [
-            cls._from_non_built_integration_path(p)
+            cls._from_non_built_path(p)
             for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
         ]
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltWidgetMetadata) -> WidgetMetadata:
+    def _from_built(cls, file_name: str, built: BuiltActionWidgetMetadata) -> Self:
         return cls(
             file_name=file_name,
-            title=built["title"],
-            type_=WidgetType(built["type"]),
-            scope=WidgetScope(built.get("scope", WidgetScope.ALERT.value)),
-            action_identifier=built["actionIdentifier"],
-            description=built["description"],
-            data_definition=WidgetDataDefinition.from_built(built["dataDefinition"]),
-            condition_group=ConditionGroup.from_built(built["conditionsGroup"]),
-            default_size=WidgetSize(built["defaultSize"]),
+            title=built["Title"],
+            type_=WidgetType(built["Type"]),
+            scope=WidgetScope(built.get("Scope", WidgetScope.ALERT.value)),
+            action_identifier=built["ActionIdentifier"],
+            description=built["Description"],
+            data_definition=HtmlWidgetDataDefinition.from_built("", built["DataDefinition"]),
+            condition_group=ConditionGroup.from_built(built["ConditionsGroup"]),
+            default_size=WidgetSize(built["DefaultSize"]),
         )
 
     @classmethod
-    def _from_non_built(
-        cls,
-        file_name: str,
-        non_built: NonBuiltWidgetMetadata,
-    ) -> WidgetMetadata:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltActionWidgetMetadata) -> Self:
         return cls(
             file_name=file_name,
             title=non_built["title"],
@@ -165,39 +162,40 @@ class WidgetMetadata(
             ),
             action_identifier=non_built["action_identifier"],
             description=non_built["description"],
-            data_definition=WidgetDataDefinition.from_non_built(
+            data_definition=HtmlWidgetDataDefinition.from_non_built(
+                "",
                 non_built["data_definition"],
             ),
             condition_group=ConditionGroup.from_non_built(non_built["condition_group"]),
             default_size=WidgetSize.from_string(non_built["default_size"]),
         )
 
-    def to_built(self) -> BuiltWidgetMetadata:
+    def to_built(self) -> BuiltActionWidgetMetadata:
         """Create a built widget metadata dict.
 
         Returns:
             A built version of the widget metadata dict
 
         """
-        return BuiltWidgetMetadata(
-            title=self.title,
-            type=self.type_.value,
-            scope=self.scope.value,
-            actionIdentifier=self.action_identifier,
-            description=self.description,
-            dataDefinition=self.data_definition.to_built(),
-            conditionsGroup=self.condition_group.to_built(),
-            defaultSize=self.default_size.value,
+        return BuiltActionWidgetMetadata(
+            Title=self.title,
+            Type=self.type_.value,
+            Scope=self.scope.value,
+            ActionIdentifier=self.action_identifier,
+            Description=self.description,
+            DataDefinition=self.data_definition.to_built(),
+            ConditionsGroup=self.condition_group.to_built(),
+            DefaultSize=self.default_size.value,
         )
 
-    def to_non_built(self) -> NonBuiltWidgetMetadata:
+    def to_non_built(self) -> NonBuiltActionWidgetMetadata:
         """Create a non-built widget metadata dict.
 
         Returns:
             A non-built version of the widget metadata dict
 
         """
-        non_built: NonBuiltWidgetMetadata = NonBuiltWidgetMetadata(
+        non_built: NonBuiltActionWidgetMetadata = NonBuiltActionWidgetMetadata(
             title=self.title,
             type=self.type_.to_string(),
             scope=self.scope.to_string(),

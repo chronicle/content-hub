@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 import mp.core.constants
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from .data_models import BuiltFullDetailsIntegrationMetadata
 
@@ -36,10 +36,7 @@ class IntegrationExistsError(Exception):
     """Integration already exists in the marketplace."""
 
 
-def raise_errors_for_duplicate_integrations(
-    commercial_path: pathlib.Path,
-    community_path: pathlib.Path,
-) -> None:
+def raise_errors_for_duplicate_integrations(commercial_path: Path, community_path: Path) -> None:
     """Check for duplicate integrations between commercial and third party repos.
 
     Args:
@@ -56,7 +53,7 @@ def raise_errors_for_duplicate_integrations(
     _raise_error_for_integration_duplicates(communities, commercials)
 
 
-def _get_marketplace_integrations(mp_json_path: pathlib.Path) -> set[str]:
+def _get_marketplace_integrations(mp_json_path: Path) -> set[str]:
     """Get a set of all marketplace integration identifiers.
 
     Args:
