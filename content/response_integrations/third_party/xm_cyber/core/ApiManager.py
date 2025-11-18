@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import requests
+from TIPCommon.oauth import AuthorizedOauthClient, CredStorage
 
 from .constants import (
     ENRICH_ENTITIES_ENDPOINT,
@@ -13,12 +14,14 @@ from .constants import (
     PING_ENDPOINT,
     PUSH_BREACH_POINT_ENDPOINT,
 )
+from .utils import generate_encryption_key
+from .xmcyber_oauth_adapter import XMCyberOAuthAdapter, XMCyberOAuthManager
 
 
 class ApiManager:
     """Handle API calls made to XMCyber."""
 
-    def __init__(self, auth_type, base_url, api_key, siemplify_logger):
+    def __init__(self, auth_type, base_url, api_key, siemplify):
         """
         Initialize ApiManager instance.
 
@@ -32,13 +35,58 @@ class ApiManager:
         self.auth_type = auth_type
         self.base_url = base_url
         self.api_key = api_key
-        self.logger = siemplify_logger
+        self.logger = siemplify.LOGGER
 
         self.session = requests.Session()
-        self.access_token = None
+        self.session.headers.update({"Content-Type": "application/json"})
         self.error = ""
 
-        self.authenticate()
+        # Initialize OAuth components if using token-based auth
+        if self.auth_type:
+            self.logger.info("Using the access token based authentication")
+            self._init_oauth(siemplify)
+        else:
+            self.logger.info("Using the API key based authentication")
+            self._init_api_key_auth()
+            success, response = self.call_api("POST", PING_ENDPOINT)
+
+            if not success:
+                self.error = str(response)
+
+    def _init_oauth(self, siemplify: str) -> None:
+        """Initialize OAuth components."""
+
+        self.logger.info("Initializing OAuth components")
+        # Create OAuth adapter
+        oauth_adapter = XMCyberOAuthAdapter(
+            base_url=self.base_url, api_key=self.api_key, tenant=self.api_key
+        )
+
+        # Create credential storage
+        cred_storage = CredStorage(
+            chronicle_soar=siemplify,
+            encryption_password=generate_encryption_key(self.api_key, self.base_url),
+        )
+
+        # Initialize OAuth manager
+        self.oauth_manager = XMCyberOAuthManager(
+            oauth_adapter=oauth_adapter, cred_storage=cred_storage
+        )
+
+        # Create authorized client
+        self.session = AuthorizedOauthClient(self.oauth_manager)
+        oauth_adapter.session = self.session
+        oauth_adapter._refresh_token = self.oauth_manager._token.refresh_token
+
+    def __del__(self):
+        # ensure cleanup when APIManager object is destroyed
+        if self.auth_type:
+            self.session.close()
+
+    def _init_api_key_auth(self) -> None:
+        """Initialize API key based authentication."""
+        self.logger.info("Initializing API key authentication")
+        self.session.headers.update({"x-api-key": self.api_key})
 
     def call_api(self, method, endpoint, **kwargs):
         """
@@ -53,13 +101,10 @@ class ApiManager:
             tuple: A tuple containing the status of the API call, response and flag
                 indicating if retry should be done.
         """
-        self.logger.info(
-            f"Calling {INTEGRATION_NAME} endpoint: {self.base_url + endpoint} with params: {kwargs}"
-        )
+        url = self.base_url + endpoint
+        self.logger.info(f"Calling {INTEGRATION_NAME} endpoint: {url} with params: {kwargs}")
         try:
-            response = self.session.request(
-                method=method.upper(), url=self.base_url + endpoint, **kwargs
-            )
+            response = self.session.request(method=method.upper(), url=url, **kwargs)
         except (
             requests.exceptions.ConnectionError,
             requests.exceptions.ConnectTimeout,
@@ -95,27 +140,6 @@ class ApiManager:
                 False,
                 f"{status_code}: {ERRORS['API']['UNKNOWN_ERROR'].format(response.text)}",
             )
-
-    def authenticate(self):
-        """Authenticate the connection with XMCyber instance and set the headers for
-        subsequent API calls."""
-        self.session.headers.update({"x-api-key": self.api_key})
-
-        if self.auth_type is False:
-            self.logger.info("Using API key based authentication")
-            success, response = self.call_api("POST", PING_ENDPOINT)
-
-            if not success:
-                self.error = str(response)
-        else:
-            self.logger.info("Using Access Token based authentication")
-            success, response = self.call_api("POST", PING_ENDPOINT)
-            if success:
-                del self.session.headers["x-api-key"]
-                self.access_token = response.get("accessToken")
-                self.session.headers.update({"Authorization": f"Bearer {self.access_token}"})
-            else:
-                self.error = str(response)
 
     def push_breach_point_data(self, entity_ids, attribute_name):
         """
