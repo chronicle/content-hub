@@ -55,8 +55,11 @@ class DynamicResultsMetadata(
             A `DynamicResultsMetadata` object
 
         """
+        result_example = built.get("ResultExample")
+        if result_example == "":  # noqa:PLC1901
+            result_example = None
         return cls(
-            result_example=built.get("ResultExample", ""),
+            result_example=result_example,
             result_name=built["ResultName"],
             show_result=built.get("ShowResult", True),
         )

@@ -62,10 +62,10 @@ class JobParameter(mp.core.data_models.abc.Buildable[BuiltJobParameter, NonBuilt
     def _from_built(cls, built: BuiltJobParameter) -> Self:
         return cls(
             name=built["Name"],
-            description=built["Description"],
+            description=built.get("Description", ""),
             is_mandatory=built["IsMandatory"],
             type_=ScriptParamType(int(built["Type"])),
-            default_value=built["DefaultValue"],
+            default_value=built.get("DefaultValue"),
         )
 
     @classmethod

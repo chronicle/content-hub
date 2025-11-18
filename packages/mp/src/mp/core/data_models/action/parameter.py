@@ -46,6 +46,13 @@ class ActionParamType(mp.core.data_models.abc.RepresentableEnum):
     NULL = -1
 
 
+OPT_TYPES: set[ActionParamType] = {
+    ActionParamType.DDL,
+    ActionParamType.MULTI_CHOICE_PARAMETER,
+    ActionParamType.MULTI_VALUES,
+}
+
+
 class BuiltActionParameter(TypedDict):
     Description: str
     IsMandatory: bool
