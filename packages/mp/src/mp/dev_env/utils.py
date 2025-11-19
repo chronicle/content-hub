@@ -24,7 +24,7 @@ import typer
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.core.data_models.integration import Integration
+from mp.core.data_models.integrations.integration import Integration
 
 CONFIG_PATH: Path = Path.home() / ".mp_dev_env.json"
 
