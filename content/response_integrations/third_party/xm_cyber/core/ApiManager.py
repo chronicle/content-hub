@@ -29,7 +29,7 @@ class ApiManager:
             auth_type (bool): True if using access token, False if using API key.
             base_url (str): the base URL of the API.
             api_key (str): the API key.
-            siemplify_logger (logging.Logger): the logger instance.
+            siemplify (Siemplify): the siemplify instance.
 
         """
         self.auth_type = auth_type
@@ -59,7 +59,7 @@ class ApiManager:
         self.logger.info("Initializing OAuth components")
         # Create OAuth adapter
         oauth_adapter = XMCyberOAuthAdapter(
-            base_url=self.base_url, api_key=self.api_key, tenant=self.api_key
+            base_url=self.base_url, api_key=self.api_key, tenant=siemplify.integration_instance
         )
 
         # Create credential storage
@@ -75,7 +75,6 @@ class ApiManager:
 
         # Create authorized client
         self.session = AuthorizedOauthClient(self.oauth_manager)
-        oauth_adapter.session = self.session
         oauth_adapter._refresh_token = self.oauth_manager._token.refresh_token
 
     def __del__(self):

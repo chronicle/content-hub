@@ -23,12 +23,12 @@ class XMCyberOAuthAdapter(OAuthAdapter):
         self.tenant = tenant
         self.auth_url = f"{self.base_url}{PING_ENDPOINT}"
         self.refresh_url = f"{self.base_url}{REFRESH_TOKEN_ENDPOINT}"
-        self.session = None  # Will be set by prepare_authorized_client
-        self._refresh_token = None  # Store refresh token for future use
+        self.session = Client()
+        self._refresh_token = None
 
     def check_signer(self, token: OauthToken) -> bool:
         """Verify if the token signer is valid."""
-        return token.signer == self.api_key
+        return token.signer == self.tenant
 
     def refresh_token(self) -> OauthToken:
         """
@@ -37,10 +37,6 @@ class XMCyberOAuthAdapter(OAuthAdapter):
         Returns:
             OauthToken: New access and refresh tokens
         """
-        if self.session is None:
-            print("Call the prepare_authorized_client method first")
-            self.session = Client()
-
         # Try to use refresh token first if available and not expired
         if self._refresh_token:
             try:
@@ -62,7 +58,7 @@ class XMCyberOAuthAdapter(OAuthAdapter):
                         access_token=data["accessToken"],
                         refresh_token=self._refresh_token,
                         expiration_time=compute_expiry(data),
-                        signer=self.api_key,
+                        signer=self.tenant,
                     )
                 else:
                     print(
@@ -93,7 +89,7 @@ class XMCyberOAuthAdapter(OAuthAdapter):
             access_token=data["accessToken"],
             refresh_token=self._refresh_token,
             expiration_time=compute_expiry(data),
-            signer=self.api_key,
+            signer=self.tenant,
         )
 
     @staticmethod
