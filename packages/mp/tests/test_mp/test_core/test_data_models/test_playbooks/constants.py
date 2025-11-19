@@ -552,16 +552,6 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     permissions=[],
 )
 
-HTML_CONTENT = """<!DOCTYPE html>
-<html>
-<head>
-<title>Page Title</title>
-</head>
-<body>
-<h1>This is a Heading</h1>
-<p>This is a paragraph.</p>
-</body>
-</html>"""
 
 BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
     "htmlHeight": 400,
