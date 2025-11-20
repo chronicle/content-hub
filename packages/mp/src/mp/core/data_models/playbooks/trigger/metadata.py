@@ -116,7 +116,7 @@ class Trigger(mp.core.data_models.abc.ComponentMetadata):
             A list of Trigger objects.
 
         """
-        trigger_path: Path = path / mp.core.constants.TRIGGERS_FILE_NAME
+        trigger_path: Path = path / mp.core.constants.TRIGGER_FILE_NAME
         if not trigger_path.exists():
             return []
 

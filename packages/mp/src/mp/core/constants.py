@@ -313,7 +313,7 @@ WINDOWS_PLATFORM: str = "win32"
 
 PLAYBOOKS_DIR_NAME: str = "playbooks"
 
-TRIGGERS_FILE_NAME: str = f"triggers{DEF_FILE_SUFFIX}"
+TRIGGER_FILE_NAME: str = f"trigger{DEF_FILE_SUFFIX}"
 DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
 OVERVIEWS_FILE_NAME: str = "overviews.yaml"
 STEPS_DIR: str = "steps"
