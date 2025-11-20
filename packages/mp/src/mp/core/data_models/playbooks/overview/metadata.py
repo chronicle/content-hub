@@ -23,13 +23,13 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum
-from mp.core.data_models.playbooks.playbook_widget.metadata import PlaybookWidgetMetadata
+from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import WidgetName
-    from mp.core.data_models.playbooks.playbook_widget.metadata import BuiltPlaybookWidgetMetadata
+    from mp.core.data_models.playbooks.widget.metadata import BuiltPlaybookWidgetMetadata
 
 
 class OverviewType(RepresentableEnum):

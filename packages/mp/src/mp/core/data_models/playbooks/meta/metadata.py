@@ -103,7 +103,12 @@ class PlaybookMetadata(
     identifier: str
     is_enable: bool
     version: float
-    name: str
+    name: Annotated[
+        str,
+        pydantic.Field(
+            pattern=mp.core.constants.NAME_VALIDATION_REGEX,
+        ),
+    ]
     description: str
     debug_alert_identifier: str | None
     debug_base_alert_identifier: str | None

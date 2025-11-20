@@ -30,10 +30,10 @@ from .constants import (
 
 class TestTriggerDataModel:
     def test_from_built_with_valid_data(self) -> None:
-        assert Trigger.from_built(BUILT_TRIGGER) == TRIGGER
+        assert Trigger.from_built("", BUILT_TRIGGER) == TRIGGER
 
     def test_from_non_built_with_valid_data(self) -> None:
-        assert Trigger.from_non_built(NON_BUILT_TRIGGER) == TRIGGER
+        assert Trigger.from_non_built("", NON_BUILT_TRIGGER) == TRIGGER
 
     def test_to_built(self) -> None:
         assert TRIGGER.to_built() == BUILT_TRIGGER
@@ -43,17 +43,17 @@ class TestTriggerDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Trigger.from_built({})
+            Trigger.from_built("", {})
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Trigger.from_non_built({})
+            Trigger.from_non_built("", {})
 
     def test_from_built_with_none_values(self) -> None:
-        assert Trigger.from_built(BUILT_TRIGGER_WITH_NONE) == TRIGGER_WITH_NONE
+        assert Trigger.from_built("", BUILT_TRIGGER_WITH_NONE) == TRIGGER_WITH_NONE
 
     def test_from_non_built_with_none_values(self) -> None:
-        assert Trigger.from_non_built(NON_BUILT_TRIGGER_WITH_NONE) == TRIGGER_WITH_NONE
+        assert Trigger.from_non_built("", NON_BUILT_TRIGGER_WITH_NONE) == TRIGGER_WITH_NONE
 
     def test_to_built_with_none_values(self) -> None:
         assert TRIGGER_WITH_NONE.to_built() == BUILT_TRIGGER_WITH_NONE
@@ -62,7 +62,7 @@ class TestTriggerDataModel:
         assert TRIGGER_WITH_NONE.to_non_built() == NON_BUILT_TRIGGER_WITH_NONE
 
     def test_from_built_to_built_is_idempotent(self) -> None:
-        assert Trigger.from_built(BUILT_TRIGGER).to_built() == BUILT_TRIGGER
+        assert Trigger.from_built("", BUILT_TRIGGER).to_built() == BUILT_TRIGGER
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
-        assert Trigger.from_non_built(NON_BUILT_TRIGGER).to_non_built() == NON_BUILT_TRIGGER
+        assert Trigger.from_non_built("", NON_BUILT_TRIGGER).to_non_built() == NON_BUILT_TRIGGER

@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 
 import pydantic
 
+import mp.core.constants
 import mp.core.data_models.abc
-from mp.core import constants
 
 from .step_parameter import BuiltStepParameter, NonBuiltStepParameter, StepParameter
 
@@ -114,7 +114,11 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
     is_touched_by_ai: bool
     start_loop_step_id: str | None = None
     parent_container_id: str | None = None
-    parallel_actions: Annotated[list[Step], pydantic.Field(default_factory=list)]
+    parallel_actions: Annotated[
+        list[Step],
+        pydantic.Field(max_length=mp.core.constants.MAX_STEP_PARALLEL_ACTIONS),
+        pydantic.Field(default_factory=list),
+    ]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -152,7 +156,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             A list of Step objects.
 
         """
-        step_folder_path: Path = path / constants.STEPS_DIR
+        step_folder_path: Path = path / mp.core.constants.STEPS_DIR
         if not step_folder_path.exists():
             return []
 

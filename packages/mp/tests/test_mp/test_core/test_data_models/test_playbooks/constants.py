@@ -26,35 +26,30 @@ from mp.core.data_models.condition.condition_group import (
     LogicalOperator,
     NonBuiltConditionGroup,
 )
+from mp.core.data_models.playbooks.meta.access_permissions import (
+    AccessPermission,
+    BuiltAccessPermission,
+    NonBuiltAccessPermission,
+    PlaybookAccessLevel,
+)
+from mp.core.data_models.playbooks.meta.display_info import (
+    NonBuiltPlaybookDisplayInfo,
+    PlaybookContributionType,
+    PlaybookDisplayInfo,
+    PlaybookType,
+)
+from mp.core.data_models.playbooks.meta.metadata import (
+    BuiltPlaybookMetadata,
+    NonBuiltPlaybookMetadata,
+    PlaybookCreationSource,
+    PlaybookMetadata,
+)
 from mp.core.data_models.playbooks.overview.metadata import (
     BuiltOverview,
     NonBuiltOverview,
     Overview,
     OverviewType,
     OverviewWidgetDetails,
-)
-from mp.core.data_models.playbooks.playbook_meta.access_permissions import (
-    AccessPermission,
-    BuiltAccessPermission,
-    NonBuiltAccessPermission,
-    PlaybookAccessLevel,
-)
-from mp.core.data_models.playbooks.playbook_meta.display_info import (
-    NonBuiltPlaybookDisplayInfo,
-    PlaybookContributionType,
-    PlaybookDisplayInfo,
-    PlaybookType,
-)
-from mp.core.data_models.playbooks.playbook_meta.metadata import (
-    BuiltPlaybookMetadata,
-    NonBuiltPlaybookMetadata,
-    PlaybookCreationSource,
-    PlaybookMetadata,
-)
-from mp.core.data_models.playbooks.playbook_widget.metadata import (
-    BuiltPlaybookWidgetMetadata,
-    NonBuiltPlaybookWidgetMetadata,
-    PlaybookWidgetMetadata,
 )
 from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
 from mp.core.data_models.playbooks.step.step_parameter import (
@@ -67,6 +62,11 @@ from mp.core.data_models.playbooks.trigger.metadata import (
     NonBuiltTrigger,
     Trigger,
     TriggerType,
+)
+from mp.core.data_models.playbooks.widget.metadata import (
+    BuiltPlaybookWidgetMetadata,
+    NonBuiltPlaybookWidgetMetadata,
+    PlaybookWidgetMetadata,
 )
 from mp.core.data_models.widget.data import (
     BuiltWidgetDataDefinition,
