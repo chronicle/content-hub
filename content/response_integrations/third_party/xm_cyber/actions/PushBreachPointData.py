@@ -12,14 +12,14 @@ from ..core.ApiManager import ApiManager
 from ..core.constants import (
     ATTRIBUTE_NAME,
     DATE_PARAMETERS,
+    ENRICHED_ENTITY_ID_FIELD,
+    ENRICHMENT_PREFIX,
     ENTITY_ID_FIELD,
     ERRORS,
     INTEGRATION_NAME,
     POSSIBLE_OPERATORS,
     PREFIX_PARAMETER_FOR_LABELS,
     STRINGIFIED_LIST_PARAMETERS,
-    ENRICHED_ENTITY_ID_FIELD,
-    ENRICHMENT_PREFIX,
     SUPPORTED_ENTITY_TYPES,
 )
 from ..core.utils import (
@@ -235,7 +235,7 @@ def main():
 
     try:
         # Authenticate the configurations
-        api_manager = ApiManager(auth_type, base_url, api_key, siemplify.LOGGER)
+        api_manager = ApiManager(auth_type, base_url, api_key, siemplify)
         if api_manager.error:
             raise XMCyberException(api_manager.error)
 
