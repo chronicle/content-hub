@@ -19,10 +19,9 @@ from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 
 import pydantic
 
+import mp.core.constants
 import mp.core.data_models.abc
-from mp.core import constants
 
-from .step_debug_data import BuiltStepDebugData, NonBuiltStepDebugData, StepDebugData
 from .step_parameter import BuiltStepParameter, NonBuiltStepParameter, StepParameter
 
 if TYPE_CHECKING:
@@ -47,7 +46,6 @@ class BuiltStep(TypedDict):
     Parameters: list[BuiltStepParameter]
     AutoSkipOnFailure: bool
     IsDebugMockData: bool
-    StepDebugData: BuiltStepDebugData | None
     StartLoopStepIdentifier: str | None
     ParallelActions: list[BuiltStep]
     ParentContainerIdentifier: str | None
@@ -72,7 +70,6 @@ class NonBuiltStep(TypedDict):
     parameters: list[NonBuiltStepParameter]
     auto_skip_on_failure: bool
     is_debug_mock_data: bool
-    step_debug_data: NonBuiltStepDebugData | None
     start_loop_step_id: str | None
     parent_container_id: str | None
     is_touched_by_ai: bool
@@ -115,10 +112,13 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
     auto_skip_on_failure: bool
     is_debug_mock_data: bool
     is_touched_by_ai: bool
-    step_debug_data: StepDebugData | None = None
     start_loop_step_id: str | None = None
     parent_container_id: str | None = None
-    parallel_actions: Annotated[list[Step], pydantic.Field(default_factory=list)]
+    parallel_actions: Annotated[
+        list[Step],
+        pydantic.Field(max_length=mp.core.constants.MAX_STEP_PARALLEL_ACTIONS),
+        pydantic.Field(default_factory=list),
+    ]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -156,7 +156,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             A list of Step objects.
 
         """
-        step_folder_path: Path = path / constants.STEPS_DIR
+        step_folder_path: Path = path / mp.core.constants.STEPS_DIR
         if not step_folder_path.exists():
             return []
 
@@ -179,9 +179,6 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_skippable=built["IsSkippable"],
             action_provider=built["ActionProvider"],
             parameters=[StepParameter.from_built(p) for p in built["Parameters"]],
-            step_debug_data=StepDebugData.from_built(built["StepDebugData"])
-            if built.get("StepDebugData")
-            else None,
             is_debug_mock_data=built["IsDebugMockData"],
             auto_skip_on_failure=built["AutoSkipOnFailure"],
             start_loop_step_id=built.get("StartLoopStepIdentifier"),
@@ -209,9 +206,6 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             action_name=non_built["action_name"],
             parent_container_id=non_built.get("parent_container_id"),
             start_loop_step_id=non_built.get("start_loop_step_id"),
-            step_debug_data=StepDebugData.from_non_built(non_built["step_debug_data"])
-            if non_built.get("step_debug_data")
-            else None,
             parallel_actions=[
                 cls.from_non_built(file_name, pa) for pa in non_built["parallel_actions"]
             ],
@@ -242,9 +236,6 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             InstanceName=self.instance_name,
             IsAutomatic=self.is_automatic,
             IsSkippable=self.is_skippable,
-            StepDebugData=(
-                self.step_debug_data.to_built() if self.step_debug_data is not None else None
-            ),
             StartLoopStepIdentifier=self.start_loop_step_id,
             ActionName=self.action_name,
             Parameters=[p.to_built() for p in self.parameters],
@@ -277,9 +268,6 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_automatic=self.is_automatic,
             is_skippable=self.is_skippable,
             action_provider=self.action_provider,
-            step_debug_data=(
-                self.step_debug_data.to_non_built() if self.step_debug_data is not None else None
-            ),
             start_loop_step_id=self.start_loop_step_id,
             parameters=[p.to_non_built() for p in self.parameters],
             action_name=self.action_name,
