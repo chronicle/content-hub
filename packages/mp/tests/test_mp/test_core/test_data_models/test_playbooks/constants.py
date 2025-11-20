@@ -51,6 +51,16 @@ from mp.core.data_models.playbooks.overview.metadata import (
     OverviewType,
     OverviewWidgetDetails,
 )
+from mp.core.data_models.playbooks.step.step_debug_data import (
+    BuiltStepDebugData,
+    NonBuiltStepDebugData,
+    StepDebugData,
+)
+from mp.core.data_models.playbooks.step.step_debug_enrichment_data import (
+    BuiltStepDebugEnrichmentData,
+    DebugStepEnrichmentData,
+    NonBuiltStepDebugEnrichmentData,
+)
 from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
 from mp.core.data_models.playbooks.step.step_parameter import (
     BuiltStepParameter,
@@ -75,6 +85,96 @@ from mp.core.data_models.widget.data import (
     WidgetDefinitionScope,
     WidgetSize,
     WidgetType,
+)
+
+BUILT_STEP_DEBUG_ENRICHMENT_DATA: BuiltStepDebugEnrichmentData = {
+    "Field": "field",
+    "Value": "value",
+    "UseInPlaybook": True,
+    "IsCustom": False,
+}
+
+NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA: NonBuiltStepDebugEnrichmentData = {
+    "field": "field",
+    "value": "value",
+    "use_in_playbook": True,
+    "is_custom": False,
+}
+
+DEBUG_STEP_ENRICHMENT_DATA = DebugStepEnrichmentData(
+    field="field",
+    value="value",
+    use_in_playbook=True,
+    is_custom=False,
+)
+
+BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
+    "OriginalStepIdentifier": "step_id",
+    "OriginalWorkflowIdentifier": "playbook_id",
+    "ModificationTimeUnixTimeInMs": 1234567890,
+    "CreationTimeUnixTimeInMs": 1234567890,
+    "ResultValue": "result_value",
+    "ResultJson": '{"key": "value"}',
+    "ScopeEntitiesEnrichmentData": [BUILT_STEP_DEBUG_ENRICHMENT_DATA],
+    "ScopeEntitiesEnrichmentDataJson": '[{"Field": "field", "Value": "value", '
+                                       '"UseInPlaybook": true, "IsCustom": false}]',
+    "TenantId": "tenant_id",
+}
+
+NON_BUILT_STEP_DEBUG_DATA: NonBuiltStepDebugData = {
+    "step_id": "step_id",
+    "playbook_id": "playbook_id",
+    "creation_time": 1234567890,
+    "modification_time": 1234567890,
+    "result_value": "result_value",
+    "result_json": '{"key": "value"}',
+    "scope_entities_enrichment_data": [NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA],
+    "tenant_id": "tenant_id",
+}
+
+STEP_DEBUG_DATA = StepDebugData(
+    step_id="step_id",
+    playbook_id="playbook_id",
+    creation_time=1234567890,
+    modification_time=1234567890,
+    result_value="result_value",
+    result_json='{"key": "value"}',
+    scope_entities_enrichment_data=[DEBUG_STEP_ENRICHMENT_DATA],
+    tenant_id="tenant_id",
+)
+
+BUILT_STEP_DEBUG_DATA_WITH_NONE: BuiltStepDebugData = {
+    "OriginalStepIdentifier": "step_id",
+    "OriginalWorkflowIdentifier": "playbook_id",
+    "ModificationTimeUnixTimeInMs": 1234567890,
+    "CreationTimeUnixTimeInMs": 1234567890,
+    "ResultValue": "result_value",
+    "ResultJson": '{"key": "value"}',
+    "ScopeEntitiesEnrichmentData": [],
+    "ScopeEntitiesEnrichmentDataJson": "[]",
+    "TenantId": None,
+}
+
+NON_BUILT_STEP_DEBUG_DATA_WITH_NONE: NonBuiltStepDebugData = {
+    "step_id": "step_id",
+    "playbook_id": "playbook_id",
+    "creation_time": 1234567890,
+    "modification_time": 1234567890,
+    "result_value": "result_value",
+    "result_json": '{"key": "value"}',
+    "scope_entities_enrichment_data": [],
+    "tenant_id": None,
+}
+
+STEP_DEBUG_DATA_WITH_NONE = StepDebugData(
+    step_id="step_id",
+    playbook_id="playbook_id",
+    creation_time=1234567890,
+    modification_time=1234567890,
+    result_value="result_value",
+    result_json='{"key": "value"}',
+    scope_entities_enrichment_data=[],
+    tenant_id=None,
 )
 
 BUILT_STEP_PARAMETER: BuiltStepParameter = {
@@ -137,6 +237,7 @@ BUILT_STEP: BuiltStep = {
     "Parameters": [BUILT_STEP_PARAMETER],
     "AutoSkipOnFailure": True,
     "IsDebugMockData": True,
+    "StepDebugData": BUILT_STEP_DEBUG_DATA,
     "StartLoopStepIdentifier": "start_loop_step_id",
     "ParallelActions": [],
     "ParentContainerIdentifier": "parent_container_id",
@@ -161,6 +262,7 @@ NON_BUILT_STEP: NonBuiltStep = {
     "parameters": [NON_BUILT_STEP_PARAMETER],
     "auto_skip_on_failure": True,
     "is_debug_mock_data": True,
+    "step_debug_data": NON_BUILT_STEP_DEBUG_DATA,
     "start_loop_step_id": "start_loop_step_id",
     "parent_container_id": "parent_container_id",
     "is_touched_by_ai": True,
@@ -185,6 +287,7 @@ STEP = Step(
     parameters=[STEP_PARAMETER],
     auto_skip_on_failure=True,
     is_debug_mock_data=True,
+    step_debug_data=STEP_DEBUG_DATA,
     is_touched_by_ai=True,
     start_loop_step_id="start_loop_step_id",
     parent_container_id="parent_container_id",
@@ -208,7 +311,8 @@ BUILT_STEP_WITH_NONE: BuiltStep = {
     "Integration": "integration",
     "Parameters": [],
     "AutoSkipOnFailure": True,
-    "IsDebugMockData": True,
+    "IsDebugMockData": False,
+    "StepDebugData": None,
     "StartLoopStepIdentifier": None,
     "ParallelActions": [],
     "ParentContainerIdentifier": None,
@@ -232,7 +336,8 @@ NON_BUILT_STEP_WITH_NONE: NonBuiltStep = {
     "type": "action",
     "parameters": [],
     "auto_skip_on_failure": True,
-    "is_debug_mock_data": True,
+    "is_debug_mock_data": False,
+    "step_debug_data": None,
     "start_loop_step_id": None,
     "parent_container_id": None,
     "is_touched_by_ai": True,
@@ -256,7 +361,7 @@ STEP_WITH_NONE = Step(
     type_=StepType.ACTION,
     parameters=[],
     auto_skip_on_failure=True,
-    is_debug_mock_data=True,
+    is_debug_mock_data=False,
     is_touched_by_ai=True,
     step_debug_data=None,
     start_loop_step_id=None,
