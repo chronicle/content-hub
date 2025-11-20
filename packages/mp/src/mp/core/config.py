@@ -19,9 +19,9 @@ from __future__ import annotations
 import configparser
 import dataclasses
 import functools
-import pathlib
 import typing
 import warnings
+from pathlib import Path
 from typing import TypeVar
 
 import typer
@@ -29,7 +29,7 @@ import typer
 import mp.core.constants
 
 CONFIG_FILE_NAME: str = ".mp_config"
-CONFIG_PATH: pathlib.Path = pathlib.Path.home() / CONFIG_FILE_NAME
+CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
 PROCESSES_NUMBER_KEY: str = "processes"
@@ -42,10 +42,10 @@ PROCESSES_MAX_VALUE: int = 10
 DEFAULT_PROCESSES_NUMBER: int = 5
 DEFAULT_QUIET_VALUE: str = "no"
 DEFAULT_VERBOSE_VALUE: str = "no"
-DEFAULT_MARKETPLACE_PATH: pathlib.Path = pathlib.Path.home() / mp.core.constants.REPO_NAME
+DEFAULT_MARKETPLACE_PATH: Path = Path.home() / mp.core.constants.REPO_NAME
 
 
-def get_marketplace_path() -> pathlib.Path:
+def get_marketplace_path() -> Path:
     """Get the marketplace path as a `pathlib.Path` object.
 
     Returns:
@@ -55,11 +55,7 @@ def get_marketplace_path() -> pathlib.Path:
         ValueError: when `None` is the configured value
 
     """
-    path: pathlib.Path | None = _get_config_key(
-        DEFAULT_SECTION_NAME,
-        MARKETPLACE_PATH_KEY,
-        pathlib.Path,
-    )
+    path: Path | None = _get_config_key(DEFAULT_SECTION_NAME, MARKETPLACE_PATH_KEY, Path)
     msg: str
     if path is None:
         msg = "Got 'None' for content-hub path"
@@ -76,7 +72,7 @@ def get_marketplace_path() -> pathlib.Path:
     return path.expanduser().resolve().absolute()
 
 
-def set_marketplace_path(p: pathlib.Path, /) -> None:
+def set_marketplace_path(p: Path, /) -> None:
     """Set the marketplace path."""
     _set_config_key(
         DEFAULT_SECTION_NAME,
@@ -162,16 +158,11 @@ def set_is_quiet(*, value: bool) -> None:
     _set_config_key(RUNTIME_SECTION_NAME, QUIET_LOG_KEY, value=b)
 
 
-_T = TypeVar("_T", int | bool | float, pathlib.Path)
+_T = TypeVar("_T", int | bool | float, Path)
 
 
 @functools.lru_cache
-def _get_config_key(
-    section: str,
-    key: str,
-    val_type: type[_T],
-    /,
-) -> _T | None:
+def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
     config: configparser.ConfigParser = _read_config_if_exists_or_create_defaults()
     if val_type is bool:
         return typing.cast("_T | None", config[section].getboolean(key))
@@ -182,19 +173,14 @@ def _get_config_key(
     if val_type is float:
         return typing.cast("_T | None", config[section].getfloat(key))
 
-    if val_type is pathlib.Path:
+    if val_type is Path:
         return val_type(config.get(section, key))
 
     msg: str = f"Unsupported type {val_type}"
     raise ValueError(msg)
 
 
-def _set_config_key(
-    section: str,
-    key: str,
-    *,
-    value: str | bool | int | pathlib.Path,
-) -> None:
+def _set_config_key(section: str, key: str, *, value: str | bool | int | Path) -> None:
     config: configparser.ConfigParser = _read_config_if_exists_or_create_defaults()
     config[section][key] = str(value)
     _write_config_to_file(config)
@@ -219,7 +205,7 @@ def _add_defaults_to_config(config: configparser.ConfigParser) -> None:
 
 
 def _create_default_config(config: configparser.ConfigParser) -> None:
-    mp_path: pathlib.Path = DEFAULT_MARKETPLACE_PATH.expanduser().resolve().absolute()
+    mp_path: Path = DEFAULT_MARKETPLACE_PATH.expanduser().resolve().absolute()
     config[DEFAULT_SECTION_NAME] = {
         MARKETPLACE_PATH_KEY: str(mp_path),
         PROCESSES_NUMBER_KEY: str(DEFAULT_PROCESSES_NUMBER),

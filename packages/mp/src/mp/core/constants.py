@@ -24,6 +24,7 @@ INTEGRATIONS_DIR_NAME: str = "response_integrations"
 COMMUNITY_DIR_NAME: str = "third_party"
 COMMERCIAL_DIR_NAME: str = "commercial"
 POWERUPS_DIR_NAME: str = "power_ups"
+PLAYBOOKS_DIR_NAME: str = "playbooks"
 INTEGRATIONS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
     COMMUNITY_DIR_NAME: (
         COMMUNITY_DIR_NAME,
@@ -86,12 +87,16 @@ RELEASE_NOTES_FILE: str = f"release_notes{DEF_FILE_SUFFIX}"
 IMAGE_FILE: str = f"image{IMAGE_FILE_SUFFIX}"
 LOGO_FILE: str = f"logo{SVG_FILE_SUFFIX}"
 SDK_PACKAGE_NAME: str = "soar_sdk"
+TRIGGERS_FILE_NAME: str = f"triggers{DEF_FILE_SUFFIX}"
+DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
+OVERVIEWS_FILE_NAME: str = "overviews.yaml"
+STEPS_DIR: str = "steps"
+
 SAFE_TO_IGNORE_PACKAGES: tuple[str, ...] = ("win-unicode-console",)
 SAFE_TO_IGNORE_ERROR_MESSAGES: tuple[str, ...] = (
     "Could not find a version that satisfies the requirement",
     "No matching distribution found",
 )
-
 
 README_FILE: str = "README.md"
 LOCK_FILE: str = "uv.lock"
@@ -104,34 +109,33 @@ EXCLUDED_GLOBS: set[str] = {
     "__pycache__",
 }
 EXCLUDED_INTEGRATIONS_WITH_CONNECTORS_AND_NO_MAPPING: set[str] = {
-    "VectraQUX",
-    "VectraRUX",
-    "AirTable",
-    "DUO",
-    "Cybersixgill Actionable Alerts",
-    "Cybersixgill DVE Feed",
-    "Cybersixgill Darkfeed",
-    "PerimeterX",
-    "Connectors",
-    "Vorlon",
-    "MicrosoftGraphSecurityTools",
-    "EclecticIQ",
-    "Flashpoint",
-    "beSECURE",
-    "DataDog",
-    "GreyNoise",
-    "Lacework",
-    "Logzio",
-    "Luminar IOCs and Leaked Credentials",
-    "PagerDuty",
-    "Telegram",
-    "Workflow Tools",
+    "air_table",
+    "be_secure",
+    "connectors",
+    "cybersixgill_actionable_alerts",
+    "cybersixgill_darkfeed",
+    "cybersixgill_dve_feed",
+    "data_dog",
+    "duo",
+    "eclectic_iq",
+    "flashpoint",
+    "grey_noise",
+    "lacework",
+    "logzio",
+    "luminar_iocs_and_leaked_credentials",
+    "microsoft_graph_security_tools",
+    "pager_duty",
+    "perimeter_x",
+    "telegram",
+    "vectra_qux",
+    "vectra_rux",
+    "vorlon",
+    "workflow_tools",
 }
 EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
-    "ChronicleSupportTools",
-    "Connectors",
-    "Lacework",
-    "PagerDuty",
+    "chronicle_support_tools",
+    "connectors",
+    "lacework",
 }
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",

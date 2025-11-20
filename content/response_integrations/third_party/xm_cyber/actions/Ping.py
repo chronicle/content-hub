@@ -23,7 +23,7 @@ def main():
     siemplify = SiemplifyAction()
     auth_type, base_url, api_key = get_integration_params(siemplify)
     try:
-        api_manager = ApiManager(auth_type, base_url, api_key, siemplify.LOGGER)
+        api_manager = ApiManager(auth_type, base_url, api_key, siemplify)
         if api_manager.error:
             raise XMCyberException(api_manager.error)
 

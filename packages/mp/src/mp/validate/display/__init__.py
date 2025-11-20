@@ -12,13 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from mp.core.display_utils import DisplayReport, display_reports
 from mp.core.utils import is_github_actions
-from mp.validate.data_models import FullReport
 
 from .cli import CliDisplay
 from .html.html import HtmlFormat
 from .markdown_format import MarkdownFormat
+
+if TYPE_CHECKING:
+    from mp.validate.data_models import FullReport
 
 
 def display_validation_reports(validation_results: FullReport) -> None:

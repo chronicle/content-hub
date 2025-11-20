@@ -15,21 +15,21 @@
 from __future__ import annotations
 
 import json
-import pathlib
 import shutil
 import subprocess  # noqa: S404
+from pathlib import Path
 
 import rich
 import typer
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.core.data_models.integration import Integration
+from mp.core.data_models.integrations.integration import Integration
 
-CONFIG_PATH = pathlib.Path.home() / ".mp_dev_env.json"
+CONFIG_PATH: Path = Path.home() / ".mp_dev_env.json"
 
 
-def zip_integration_dir(integration_dir: pathlib.Path) -> pathlib.Path:
+def zip_integration_dir(integration_dir: Path) -> Path:
     """Zip the contents of a built integration directory for upload.
 
     Args:
@@ -39,7 +39,7 @@ def zip_integration_dir(integration_dir: pathlib.Path) -> pathlib.Path:
         Path: The path to the created zip file.
 
     """
-    return pathlib.Path(shutil.make_archive(str(integration_dir), "zip", integration_dir))
+    return Path(shutil.make_archive(str(integration_dir), "zip", integration_dir))
 
 
 def load_dev_env_config() -> dict[str, str]:
@@ -82,7 +82,7 @@ def build_integration(integration: str) -> None:
     rich.print(f"Build output:\n{result.stdout}")
 
 
-def get_integration_identifier(source_path: pathlib.Path) -> str:
+def get_integration_identifier(source_path: Path) -> str:
     """Get the integration identifier from the non-built integration path.
 
     Args:
@@ -104,11 +104,10 @@ def get_integration_identifier(source_path: pathlib.Path) -> str:
         return integration_obj.identifier
 
 
-def find_built_integration_dir(identifier: str) -> pathlib.Path:
+def find_built_integration_dir(identifier: str) -> Path:
     """Find the built integration directory.
 
     Args:
-        _: Unused source path argument.
         identifier: The integration identifier.
 
     Returns:
@@ -118,7 +117,7 @@ def find_built_integration_dir(identifier: str) -> pathlib.Path:
         typer.Exit: If the built integration is not found.
 
     """
-    root: pathlib.Path = mp.core.file_utils.create_or_get_out_integrations_dir()
+    root: Path = mp.core.file_utils.create_or_get_out_integrations_dir()
     for repo in mp.core.constants.INTEGRATIONS_TYPES:
         candidate = root / repo / identifier
         if candidate.exists():
