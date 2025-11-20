@@ -35,7 +35,8 @@ from mp.core.custom_types import RepositoryType  # noqa: TC001
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
-from .utils.integrations.integration_utils import build_integrations, should_build_integrations
+from .utils.integrations.utils import build_integrations, should_build_integrations
+from .utils.playbooks.utils import should_build_playbooks, build_playbooks
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -52,6 +53,7 @@ class BuildParams:
     repository: Iterable[RepositoryType]
     integrations: Iterable[str]
     groups: Iterable[str]
+    playbooks: Iterable[str]
     deconstruct: bool
 
     def validate(self) -> None:
@@ -77,15 +79,15 @@ class BuildParams:
         params: list[Iterable[str] | Iterable[RepositoryType]] = self._as_list()
         msg: str
         if not any(params):
-            msg = "At least one of --repository, --groups, or --integration must be used."
+            msg = "At least one of --repository, --groups, --integration, --playbook must be used."
             raise typer.BadParameter(msg)
 
         if sum(map(bool, params)) != 1:
-            msg = "Only one of --repository, --groups, or --integration shall be used."
+            msg = "Only one of --repository, --groups, --integration, --playbook shall be used."
             raise typer.BadParameter(msg)
 
         if self.deconstruct and (self.groups or self.repository):
-            msg = "--deconstruct works only with --integration."
+            msg = "--deconstruct works only with --integration or --playbook."
             raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
@@ -113,6 +115,13 @@ def build(  # noqa: PLR0913
         list[str],
         typer.Option(
             help="Build all integrations of a specified integration group",
+            default_factory=list,
+        ),
+    ],
+    playbook: Annotated[
+        list[str],
+        typer.Option(
+            help="Build a specified playbook",
             default_factory=list,
         ),
     ],
@@ -145,6 +154,7 @@ def build(  # noqa: PLR0913
         repository: the repository to build
         integration: the integrations to build
         integration_group: the integration groups to build
+        playbook: the playbooks to build
         deconstruct: whether to deconstruct instead of build
         quiet: quiet log options
         verbose: Verbose log options
@@ -153,17 +163,22 @@ def build(  # noqa: PLR0913
     repository = ensure_valid_list(repository)
     integration = ensure_valid_list(integration)
     integration_group = ensure_valid_list(integration_group)
+    playbook = ensure_valid_list(playbook)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
     params: BuildParams = BuildParams(
-        repository,
-        integration,
-        integration_group,
-        deconstruct,
+        repository=repository,
+        integrations=integration,
+        groups=integration_group,
+        playbooks=playbook,
+        deconstruct=deconstruct,
     )
     params.validate()
 
     if should_build_integrations(integration, repository):
         build_integrations(integration, integration_group, repository, deconstruct=deconstruct)
+
+    if should_build_playbooks(playbook, repository):
+        build_playbooks(playbook, repository, deconstruct=deconstruct)
