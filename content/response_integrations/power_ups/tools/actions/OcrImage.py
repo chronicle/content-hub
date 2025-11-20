@@ -31,7 +31,7 @@ from ..core.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any, NoReturn
+    from typing import Never, NoReturn
 
 
 class OcrImage(Action):
@@ -40,13 +40,11 @@ class OcrImage(Action):
 
     def _extract_action_parameters(self) -> None:
         """Extract and normalize input parameters."""
-
         self.params.base64_image = extract_action_param(
             self.soar_action,
             param_name="Base64 Encoded Image",
             print_value=True,
         )
-
         self.params.file_path = extract_action_param(
             self.soar_action,
             param_name="File Path",
@@ -55,58 +53,52 @@ class OcrImage(Action):
 
     def _validate_params(self) -> None:
         """Validate logical correctness of supplied parameters."""
+        ra_error_msg: str = "OCR Image action can only be executed on a Remote Agent."
+        param_error_msg: str = 'either "Base64 Encoded Image" or "File Path" needs to have a value.'
 
         if not getattr(self.soar_action, "is_remote", False):
-            raise RemoteAgentRequiredException(
-                "OCR Image action can only be executed on a Remote Agent."
-            )
+            raise RemoteAgentRequiredException(ra_error_msg)
 
         if not self.params.base64_image and not self.params.file_path:
-            raise ParameterNotFoundError(
-                'either "Base64 Encoded Image" or "File Path" needs to have a value.'
-            )
+            raise ParameterNotFoundError(param_error_msg)
 
     def _init_api_clients(self) -> None:
         """Initialize API clients if needed."""
 
-    def _perform_action(self, _: Any) -> None:
+    def _perform_action(self, _: Never) -> None:
         """Main OCR execution entry."""
-        tmp_file_path: str = self._prepare_image_file()
-        text: str = self._extract_text(tmp_file_path)
-
-        self.json_results: dict[str, str] = {"extracted_text": text.strip()}
-        self.output_message: str = "Successfully performed OCR on the provided image."
-
-    def _prepare_image_file(self) -> str:
-        """Returns a file path to the image — either decoded Base64 or direct file path."""
-
+        text: str
         if self.params.base64_image:
             image_data: bytes = base64.b64decode(self.params.base64_image)
-
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
                 tmp.write(image_data)
-                return tmp.name
+                tmp.flush()
+                text = self._extract_text(tmp.name)
+        else:
+            text = self._extract_text(self.params.file_path)
 
-        return self.params.file_path
+        self.json_results = {"extracted_text": text.strip()}
+        self.output_message = "Successfully performed OCR on the provided image."
 
     def _extract_text(self, file_path: str) -> str:
         """Run OCR and handle missing-Tesseract errors."""
+        tesseract_error_msg: str = (
+            "Tesseract OCR engine is not installed in the Remote Agent container.\n\n"
+            "To fix this issue, follow these steps:\n"
+            "1. Identify and open the Docker/Podman container that runs your Remote Agent.\n"
+            "2. Install Tesseract inside that container (Debian-based image):\n"
+            "   apt-get update && apt-get install -y tesseract-ocr\n\n"
+            "3. Verify that Tesseract is installed by running:\n"
+            "   which tesseract\n\n"
+            "After installing Tesseract, rerun the 'OCR Image' action."
+        )
 
         try:
             with Image.open(file_path) as img:
                 return pytesseract.image_to_string(img)
 
         except pytesseract.TesseractNotFoundError as e:
-            raise OcrImageSetupError(
-                "Tesseract OCR engine is not installed in the Remote Agent container.\n\n"
-                "To fix this issue, follow these steps:\n"
-                "1. Identify and open the Docker/Podman container that runs your Remote Agent.\n"
-                "2. Install Tesseract inside that container (Debian-based image):\n"
-                "   apt-get update && apt-get install -y tesseract-ocr\n\n"
-                "3. Verify that Tesseract is installed by running:\n"
-                "   which tesseract\n\n"
-                "After installing Tesseract, rerun the 'OCR Image' action."
-            ) from e
+            raise OcrImageSetupError(tesseract_error_msg) from e
 
 
 def main() -> NoReturn:
