@@ -106,7 +106,7 @@ class PlaybookMetadata(
     name: Annotated[
         str,
         pydantic.Field(
-            pattern=mp.core.constants.NOT_ALLOWED_PLAYBOOK_NAME_REGEX,
+            pattern=mp.core.constants.NAME_VALIDATION_REGEX,
         ),
     ]
     description: str

@@ -321,4 +321,4 @@ STEPS_DIR: str = "steps"
 
 MAX_STEP_PARALLEL_ACTIONS: int = 5
 CONDITION_FIELD_NAME_MIN_LENGTH: int = 1
-NOT_ALLOWED_PLAYBOOK_NAME_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
+NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
