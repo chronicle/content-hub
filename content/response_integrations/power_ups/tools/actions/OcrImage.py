@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 
 import pytesseract
 from PIL import Image
-
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 
