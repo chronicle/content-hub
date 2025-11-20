@@ -238,8 +238,10 @@ def main():
             siemplify.LOGGER.info("Pushing environments")
             environments = gitsync.api.get_environments(siemplify)
             for environment in environments:
-                environment["id"] = 0
-            gitsync.content.push_environments(environments)
+                environment._id = 0
+            gitsync.content.push_environments(
+                [environment.to_json() for environment in environments ]
+            )
 
         if features["Dynamic Parameters"]:
             siemplify.LOGGER.info("Pushing dynamic parameters")
