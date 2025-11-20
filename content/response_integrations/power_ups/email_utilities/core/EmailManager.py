@@ -91,7 +91,7 @@ IOC_TYPES = {
     "hashes": "FILEHASH",
 }
 
-MAX_URL_LENGTH = 2100
+ENTITY_MAX_LENGTH = 2100
 
 
 def compile_re(string):
@@ -1678,6 +1678,11 @@ class EmailManager:
             )
             return
 
+        if len(new_entity) > ENTITY_MAX_LENGTH:
+            self.logger.info(
+                f"Trimming long entity: {new_entity[:ENTITY_MAX_LENGTH]}",
+            )
+            new_entity = new_entity[:ENTITY_MAX_LENGTH]
         new_entity = new_entity.strip()
         linked_entity = linked_entity.strip()
         self.siemplify.LOGGER.info(
@@ -1967,9 +1972,6 @@ class EmailManager:
                     f"Got these {entity_type} entities to create: {entities}.",
                 )
                 for entity in entities:
-                    if len(entity) > MAX_URL_LENGTH:
-                        self.logger.info(f"Trimming long entity: {entity[:MAX_URL_LENGTH]}")
-                        entity = entity[:MAX_URL_LENGTH]
                     # If the fang_entities option is set,  attempt to fang, decode url
                     # defence, and decode safelinks
                     if fang_entities:
