@@ -35,7 +35,7 @@ from mp.core.custom_types import RepositoryType  # noqa: TC001
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
-from .integration_utils import build_integrations, should_build_integrations
+from .utils.integrations.integration_utils import build_integrations, should_build_integrations
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

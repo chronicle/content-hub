@@ -6,18 +6,16 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-
 from ..core.constants import (
-    ENTITY_ID_FIELD,
-    PREFIX_PARAMETER_FOR_LABELS,
     CHOKE_POINT_SCORE_FIELD_NAME,
     COMPROMISE_RISK_SCORE_FIELD_NAME,
     ENRICHED_ENTITY_ID_FIELD,
+    ENTITY_ID_FIELD,
     PREFIX_PARAMETER_FOR_ENTITY_ID,
+    PREFIX_PARAMETER_FOR_LABELS,
     SUPPORTED_ENTITY_TYPES,
 )
 from ..core.utils import convert_string, convert_to_numeric, string_to_list
-
 
 SCORE_MAPPINGS = {
     "Is Critical Asset": {

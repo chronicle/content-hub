@@ -31,7 +31,7 @@ from mp.telemetry import track_command
 
 from .data_models import FullReport, ValidationResults
 from .display import display_validation_reports
-from .pre_build_validation import PreBuildValidations
+from .pre_build_validation.integrations import PreBuildValidations
 from .utils import Configurations, get_marketplace_paths_from_names
 
 if TYPE_CHECKING:
