@@ -72,8 +72,8 @@ class OcrImage(Action):
 
     def _perform_action(self, _: Any) -> None:
         """Main OCR execution entry."""
-        tmp_file_path = self._prepare_image_file()
-        text = self._extract_text(tmp_file_path)
+        tmp_file_path: str = self._prepare_image_file()
+        text: str = self._extract_text(tmp_file_path)
 
         self.json_results: dict[str, str] = {"extracted_text": text.strip()}
         self.output_message: str = "Successfully performed OCR on the provided image."
@@ -82,7 +82,7 @@ class OcrImage(Action):
         """Returns a file path to the image — either decoded Base64 or direct file path."""
 
         if self.params.base64_image:
-            image_data = base64.b64decode(self.params.base64_image)
+            image_data: bytes = base64.b64decode(self.params.base64_image)
 
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                 tmp.write(image_data)
