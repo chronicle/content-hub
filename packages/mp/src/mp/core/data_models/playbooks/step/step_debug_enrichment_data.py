@@ -61,8 +61,10 @@ class DebugStepEnrichmentData(
 
     def to_built(self) -> BuiltStepDebugEnrichmentData:
         """Convert the DebugStepEnrichmentData to its "built" representation.
+
         Returns:
             A BuiltStepDebugEnrichmentData dictionary.
+
         """
         return BuiltStepDebugEnrichmentData(
             Field=self.field,
@@ -73,8 +75,10 @@ class DebugStepEnrichmentData(
 
     def to_non_built(self) -> NonBuiltStepDebugEnrichmentData:
         """Convert the DebugStepEnrichmentData to its "non-built" representation.
+
         Returns:
             A NonBuiltStepDebugEnrichmentData dictionary.
+
         """
         return NonBuiltStepDebugEnrichmentData(
             field=self.field,

@@ -51,6 +51,7 @@ from mp.core.data_models.playbooks.overview.metadata import (
     OverviewType,
     OverviewWidgetDetails,
 )
+from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
 from mp.core.data_models.playbooks.step.step_debug_data import (
     BuiltStepDebugData,
     NonBuiltStepDebugData,
@@ -61,7 +62,6 @@ from mp.core.data_models.playbooks.step.step_debug_enrichment_data import (
     DebugStepEnrichmentData,
     NonBuiltStepDebugEnrichmentData,
 )
-from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
 from mp.core.data_models.playbooks.step.step_parameter import (
     BuiltStepParameter,
     NonBuiltStepParameter,
@@ -117,7 +117,7 @@ BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
     "ResultJson": '{"key": "value"}',
     "ScopeEntitiesEnrichmentData": [BUILT_STEP_DEBUG_ENRICHMENT_DATA],
     "ScopeEntitiesEnrichmentDataJson": '[{"Field": "field", "Value": "value", '
-                                       '"UseInPlaybook": true, "IsCustom": false}]',
+    '"UseInPlaybook": true, "IsCustom": false}]',
     "TenantId": "tenant_id",
 }
 

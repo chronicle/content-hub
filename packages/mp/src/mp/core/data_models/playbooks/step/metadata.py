@@ -184,9 +184,11 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             action_provider=built["ActionProvider"],
             parameters=[StepParameter.from_built(p) for p in built["Parameters"]],
             is_debug_mock_data=built["IsDebugMockData"],
-            step_debug_data=(StepDebugData.from_built(built["StepDebugData"])
-            if built.get("StepDebugData")
-            else None),
+            step_debug_data=(
+                StepDebugData.from_built(built["StepDebugData"])
+                if built.get("StepDebugData")
+                else None
+            ),
             auto_skip_on_failure=built["AutoSkipOnFailure"],
             start_loop_step_id=built.get("StartLoopStepIdentifier"),
             integration=built["Integration"],
@@ -219,9 +221,11 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             parameters=[StepParameter.from_non_built(p) for p in non_built["parameters"]],
             auto_skip_on_failure=non_built["auto_skip_on_failure"],
             is_debug_mock_data=non_built["is_debug_mock_data"],
-            step_debug_data=(StepDebugData.from_non_built(non_built["step_debug_data"])
-            if non_built.get("step_debug_data")
-            else None),
+            step_debug_data=(
+                StepDebugData.from_non_built(non_built["step_debug_data"])
+                if non_built.get("step_debug_data")
+                else None
+            ),
             integration=non_built["integration"],
             action_provider=non_built["action_provider"],
             previous_result_condition=non_built["previous_result_condition"],

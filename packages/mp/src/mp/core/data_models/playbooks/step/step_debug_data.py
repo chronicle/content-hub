@@ -65,10 +65,13 @@ class StepDebugData(
     @classmethod
     def _from_built(cls, built: BuiltStepDebugData) -> Self:
         """Create the obj from a built action param dict.
+
         Args:
             built: the built dict
+
         Returns:
             An `ActionParameter` object
+
         """
         return cls(
             step_id=built["OriginalStepIdentifier"],
@@ -91,10 +94,13 @@ class StepDebugData(
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltStepDebugData) -> Self:
         """Create the obj from a non-built action param dict.
+
         Args:
             non_built: the non-built dict
+
         Returns:
             An `ActionParameter` object
+
         """
         return cls(
             step_id=non_built["step_id"],
@@ -112,8 +118,10 @@ class StepDebugData(
 
     def to_built(self) -> BuiltStepDebugData:
         """Convert the StepDebugData to its "built" representation.
+
         Returns:
             A BuiltStepDebugData dictionary.
+
         """
         enrichment_data: list[BuiltStepDebugEnrichmentData] = [
             e.to_built() for e in self.scope_entities_enrichment_data
@@ -132,8 +140,10 @@ class StepDebugData(
 
     def to_non_built(self) -> NonBuiltStepDebugData:
         """Convert the StepDebugData to its "non-built" representation.
+
         Returns:
             A NonBuiltStepDebugData dictionary.
+
         """
         non_built: NonBuiltStepDebugData = NonBuiltStepDebugData(
             step_id=self.step_id,
