@@ -7,13 +7,13 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 from ..core.constants import (
+    ENRICHED_ENTITY_ID_FIELD,
     ENRICHED_PARAMETERS,
+    ENRICHMENT_PREFIX,
     ENTITY_ID_FIELD,
+    PREFIX_PARAMETER_FOR_ENTITY_ID,
     PREFIX_PARAMETER_FOR_LABELS,
     SUPPORTED_ENTITY_TYPES,
-    ENRICHMENT_PREFIX,
-    ENRICHED_ENTITY_ID_FIELD,
-    PREFIX_PARAMETER_FOR_ENTITY_ID,
 )
 from ..core.utils import convert_string, get_integration_params
 

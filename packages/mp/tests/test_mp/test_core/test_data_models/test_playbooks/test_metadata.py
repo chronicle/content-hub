@@ -14,10 +14,10 @@
 
 import pytest
 
-from mp.core.data_models.playbooks.playbook_meta.access_permissions import (
+from mp.core.data_models.playbooks.meta.access_permissions import (
     AccessPermission,
 )
-from mp.core.data_models.playbooks.playbook_meta.metadata import (
+from mp.core.data_models.playbooks.meta.metadata import (
     PlaybookMetadata,
 )
 

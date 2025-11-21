@@ -21,35 +21,35 @@ import pydantic
 import yaml
 
 import mp.core.constants
-from mp.core.data_models.playbooks.overview.metadata import Overview
-from mp.core.data_models.playbooks.playbook_meta.display_info import PlaybookDisplayInfo
-from mp.core.data_models.playbooks.playbook_meta.metadata import (
+from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
+from mp.core.data_models.playbooks.meta.metadata import (
     BuiltPlaybookMetadata,
     NonBuiltPlaybookMetadata,
     PlaybookMetadata,
 )
-from mp.core.data_models.playbooks.playbook_widget.metadata import PlaybookWidgetMetadata
+from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.trigger.metadata import Trigger
+from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 from mp.core.data_models.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from packages.mp.src.mp.core.data_models.playbooks.playbook_meta.access_permissions import (
+    from packages.mp.src.mp.core.data_models.playbooks.meta.access_permissions import (
         BuiltAccessPermission,
-    )
-    from packages.mp.src.mp.core.data_models.playbooks.playbook_widget import (
-        BuiltPlaybookWidgetMetadata,
-        NonBuiltPlaybookWidgetMetadata,
     )
     from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import (
         BuiltTrigger,
         NonBuiltTrigger,
     )
+    from packages.mp.src.mp.core.data_models.playbooks.widget import (
+        BuiltPlaybookWidgetMetadata,
+        NonBuiltPlaybookWidgetMetadata,
+    )
 
+    from .meta.display_info import NonBuiltPlaybookDisplayInfo
     from .overview.metadata import BuiltOverview, NonBuiltOverview
-    from .playbook_meta.display_info import NonBuiltPlaybookDisplayInfo
     from .step.metadata import BuiltStep, NonBuiltStep
 
 
@@ -109,7 +109,7 @@ class BuiltPlaybook(TypedDict):
 
 class NonBuiltPlaybook(TypedDict):
     steps: list[NonBuiltStep]
-    triggers: list[NonBuiltTrigger]
+    triggers: NonBuiltTrigger
     overviews: list[NonBuiltOverview]
     widgets: list[NonBuiltPlaybookWidgetMetadata]
     release_notes: list[NonBuiltReleaseNote]
@@ -122,7 +122,7 @@ class Playbook:
     steps: list[Step]
     overviews: list[Overview]
     widgets: list[PlaybookWidgetMetadata]
-    triggers: list[Trigger]
+    trigger: Trigger
     release_notes: list[ReleaseNote]
     meta_data: PlaybookMetadata
     display_info: PlaybookDisplayInfo
@@ -142,7 +142,7 @@ class Playbook:
             steps=Step.from_built_path(path),
             overviews=Overview.from_built_path(path),
             widgets=PlaybookWidgetMetadata.from_built_path(path),
-            triggers=Trigger.from_built_path(path),
+            trigger=Trigger.from_built_path(path),
             release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
             display_info=PlaybookDisplayInfo.from_built({}),
@@ -164,7 +164,7 @@ class Playbook:
             steps=Step.from_non_built_path(path),
             overviews=Overview.from_non_built_path(path),
             widgets=PlaybookWidgetMetadata.from_non_built_path(path),
-            triggers=Trigger.from_non_built_path(path),
+            trigger=Trigger.from_non_built_path(path),
             release_notes=ReleaseNote.from_non_built_path(path),
             meta_data=PlaybookMetadata.from_non_built_path(path),
             display_info=(
@@ -188,7 +188,7 @@ class Playbook:
 
         built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
         steps: list[BuiltStep] = [step.to_built() for step in self.steps]
-        triggers: list[BuiltTrigger] = [trigger.to_built() for trigger in self.triggers]
+        triggers: list[BuiltTrigger] = [self.trigger.to_built()]
 
         built_playbook_definition: BuiltPlaybookDefinition = BuiltPlaybookDefinition(
             Identifier=built_playbook_meta["Identifier"],
@@ -237,7 +237,7 @@ class Playbook:
             steps=[step.to_non_built() for step in self.steps],
             overviews=[overview.to_non_built() for overview in self.overviews],
             widgets=[widget.to_non_built() for widget in self.widgets],
-            triggers=[trigger.to_non_built() for trigger in self.triggers],
+            triggers=self.trigger.to_non_built(),
             release_notes=[rn.to_non_built() for rn in self.release_notes],
             meta_data=self.meta_data.to_non_built(),
             display_info=self.display_info.to_non_built(),

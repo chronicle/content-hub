@@ -26,34 +26,30 @@ from mp.core.data_models.condition.condition_group import (
     LogicalOperator,
     NonBuiltConditionGroup,
 )
-from mp.core.data_models.playbooks.overview.metadata import (
-    BuiltOverview,
-    NonBuiltOverview,
-    Overview,
-    OverviewType,
-)
-from mp.core.data_models.playbooks.playbook_meta.access_permissions import (
+from mp.core.data_models.playbooks.meta.access_permissions import (
     AccessPermission,
     BuiltAccessPermission,
     NonBuiltAccessPermission,
     PlaybookAccessLevel,
 )
-from mp.core.data_models.playbooks.playbook_meta.display_info import (
+from mp.core.data_models.playbooks.meta.display_info import (
     NonBuiltPlaybookDisplayInfo,
     PlaybookContributionType,
     PlaybookDisplayInfo,
     PlaybookType,
 )
-from mp.core.data_models.playbooks.playbook_meta.metadata import (
+from mp.core.data_models.playbooks.meta.metadata import (
     BuiltPlaybookMetadata,
     NonBuiltPlaybookMetadata,
     PlaybookCreationSource,
     PlaybookMetadata,
 )
-from mp.core.data_models.playbooks.playbook_widget.metadata import (
-    BuiltPlaybookWidgetMetadata,
-    NonBuiltPlaybookWidgetMetadata,
-    PlaybookWidgetMetadata,
+from mp.core.data_models.playbooks.overview.metadata import (
+    BuiltOverview,
+    NonBuiltOverview,
+    Overview,
+    OverviewType,
+    OverviewWidgetDetails,
 )
 from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
 from mp.core.data_models.playbooks.step.step_debug_data import (
@@ -76,6 +72,11 @@ from mp.core.data_models.playbooks.trigger.metadata import (
     NonBuiltTrigger,
     Trigger,
     TriggerType,
+)
+from mp.core.data_models.playbooks.widget.metadata import (
+    BuiltPlaybookWidgetMetadata,
+    NonBuiltPlaybookWidgetMetadata,
+    PlaybookWidgetMetadata,
 )
 from mp.core.data_models.widget.data import (
     BuiltWidgetDataDefinition,
@@ -286,8 +287,8 @@ STEP = Step(
     parameters=[STEP_PARAMETER],
     auto_skip_on_failure=True,
     is_debug_mock_data=True,
-    is_touched_by_ai=True,
     step_debug_data=STEP_DEBUG_DATA,
+    is_touched_by_ai=True,
     start_loop_step_id="start_loop_step_id",
     parent_container_id="parent_container_id",
     parallel_actions=[],
@@ -310,7 +311,7 @@ BUILT_STEP_WITH_NONE: BuiltStep = {
     "Integration": "integration",
     "Parameters": [],
     "AutoSkipOnFailure": True,
-    "IsDebugMockData": True,
+    "IsDebugMockData": False,
     "StepDebugData": None,
     "StartLoopStepIdentifier": None,
     "ParallelActions": [],
@@ -335,7 +336,7 @@ NON_BUILT_STEP_WITH_NONE: NonBuiltStep = {
     "type": "action",
     "parameters": [],
     "auto_skip_on_failure": True,
-    "is_debug_mock_data": True,
+    "is_debug_mock_data": False,
     "step_debug_data": None,
     "start_loop_step_id": None,
     "parent_container_id": None,
@@ -360,7 +361,7 @@ STEP_WITH_NONE = Step(
     type_=StepType.ACTION,
     parameters=[],
     auto_skip_on_failure=True,
-    is_debug_mock_data=True,
+    is_debug_mock_data=False,
     is_touched_by_ai=True,
     step_debug_data=None,
     start_loop_step_id=None,
@@ -656,27 +657,16 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     permissions=[],
 )
 
-HTML_CONTENT = """<!DOCTYPE html>
-<html>
-<head>
-<title>Page Title</title>
-</head>
-<body>
-<h1>This is a Heading</h1>
-<p>This is a paragraph.</p>
-</body>
-</html>"""
 
 BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
-    "htmlContent": HTML_CONTENT,
     "htmlHeight": 400,
     "safeRendering": False,
     "type": 3,
     "widgetDefinitionScope": 2,
+    "htmlContent": "",
 }
 
 NON_BUILT_WIDGET_DATA_DEFINITION: NonBuiltWidgetDataDefinition = {
-    "html_content": HTML_CONTENT,
     "html_height": 400,
     "safe_rendering": False,
     "type": "html",
@@ -684,12 +674,17 @@ NON_BUILT_WIDGET_DATA_DEFINITION: NonBuiltWidgetDataDefinition = {
 }
 
 HTML_WIDGET_DATA_DEFINITION = HtmlWidgetDataDefinition(
-    html_content=HTML_CONTENT,
     html_height=400,
     safe_rendering=False,
     type=WidgetType.HTML,
     widget_definition_scope=WidgetDefinitionScope.BOTH,
 )
+
+OVER_VIEW_WIDGET_DETAILS: OverviewWidgetDetails = {
+    "title": "title",
+    "size": "half_width",
+    "order": 1,
+}
 
 BUILT_PLAYBOOK_WIDGET_METADATA: BuiltPlaybookWidgetMetadata = {
     "Title": "title",
@@ -851,7 +846,7 @@ NON_BUILT_OVERVIEW: NonBuiltOverview = {
     "name": "name",
     "creator": "creator",
     "playbook_id": "playbook_id",
-    "widgets": ["title"],
+    "widgets_details": [OVER_VIEW_WIDGET_DETAILS],
     "type": "playbook_default",
     "alert_rule_type": "alert_rule_type",
     "roles": [1, 2],
@@ -889,7 +884,7 @@ NON_BUILT_OVERVIEW_WITH_NONE: NonBuiltOverview = {
     "name": "name",
     "creator": None,
     "playbook_id": "playbook_id",
-    "widgets": [],
+    "widgets_details": [],
     "type": "playbook_default",
     "alert_rule_type": None,
     "roles": [],
