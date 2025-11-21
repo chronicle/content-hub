@@ -948,14 +948,18 @@ class WorkflowInstaller:
             self._cache[cache_key] = self.api.get_integrations_instances(environment)
 
         instances = self._cache.get(cache_key)
-        instances.sort(key=lambda x: x.get("instanceName"))
 
-        return [
+        filtered_instances = [
             x
             for x in instances
             if x.get("integrationIdentifier") == integration_name
-            and x.get("isConfigured")
         ]
+
+        filtered_instances.sort(
+            key=lambda x: (not x.get("isConfigured", False), x.get("instanceName"))
+        )
+
+        return filtered_instances
 
     @staticmethod
     def _flatten_playbook_steps(steps: list) -> list[dict]:
