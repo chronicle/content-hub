@@ -1,6 +1,7 @@
 """Define the constants used in the integration."""
 
 from __future__ import annotations
+
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
 INTEGRATION_NAME = "XM Cyber"
@@ -10,6 +11,7 @@ PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
 
 # Endpoints
 PING_ENDPOINT = "/api/auth/"
+REFRESH_TOKEN_ENDPOINT = "/api/refresh-token/"
 PUSH_BREACH_POINT_ENDPOINT = "/api/entityInventory/applyImportedLabelsOnEntities"
 ENRICH_ENTITIES_ENDPOINT = "/api/secopsPublisher/entities"
 
@@ -111,3 +113,8 @@ PREFIX_PARAMETER_FOR_LABELS = "event_principal_{}_attribute_labels_XM Cyber - {}
 ENRICHMENT_PREFIX = "XMC"
 ENRICHED_ENTITY_ID_FIELD = f"{ENRICHMENT_PREFIX}_product_object_id"
 PREFIX_PARAMETER_FOR_ENTITY_ID = ENRICHMENT_PREFIX + "_{}"
+
+# Oauth
+TOKEN_EXPIRY_BUFFER_SECONDS = 30  # 30 seconds buffer
+DEFAULT_EXPIRY_SECONDS = 1800 - TOKEN_EXPIRY_BUFFER_SECONDS  # 30 minutes
+EXPIRES_IN_KEY = "expiresIn"
