@@ -91,6 +91,8 @@ IOC_TYPES = {
     "hashes": "FILEHASH",
 }
 
+ENTITY_MAX_LENGTH = 2100
+
 
 def compile_re(string):
     return re.compile(string, flags=re.IGNORECASE | re.MULTILINE)
@@ -1676,6 +1678,11 @@ class EmailManager:
             )
             return
 
+        if len(new_entity) > ENTITY_MAX_LENGTH:
+            self.logger.info(
+                f"Trimming long entity: {new_entity[:ENTITY_MAX_LENGTH]}",
+            )
+            new_entity = new_entity[:ENTITY_MAX_LENGTH]
         new_entity = new_entity.strip()
         linked_entity = linked_entity.strip()
         self.siemplify.LOGGER.info(
