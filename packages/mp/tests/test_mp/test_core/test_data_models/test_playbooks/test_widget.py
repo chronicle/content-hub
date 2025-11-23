@@ -14,7 +14,7 @@
 
 import pytest
 
-from mp.core.data_models.playbooks.playbook_widget.metadata import (
+from mp.core.data_models.playbooks.widget.metadata import (
     PlaybookWidgetMetadata,
 )
 

@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 
 import pydantic
 
+import mp.core.constants
 import mp.core.data_models.abc
-from mp.core import constants
 
 from .step_debug_data import BuiltStepDebugData, NonBuiltStepDebugData, StepDebugData
 from .step_parameter import BuiltStepParameter, NonBuiltStepParameter, StepParameter
@@ -114,11 +114,15 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
     parameters: list[StepParameter]
     auto_skip_on_failure: bool
     is_debug_mock_data: bool
-    is_touched_by_ai: bool
     step_debug_data: StepDebugData | None = None
+    is_touched_by_ai: bool
     start_loop_step_id: str | None = None
     parent_container_id: str | None = None
-    parallel_actions: Annotated[list[Step], pydantic.Field(default_factory=list)]
+    parallel_actions: Annotated[
+        list[Step],
+        pydantic.Field(max_length=mp.core.constants.MAX_STEP_PARALLEL_ACTIONS),
+        pydantic.Field(default_factory=list),
+    ]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -156,7 +160,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             A list of Step objects.
 
         """
-        step_folder_path: Path = path / constants.STEPS_DIR
+        step_folder_path: Path = path / mp.core.constants.STEPS_DIR
         if not step_folder_path.exists():
             return []
 
@@ -179,10 +183,12 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_skippable=built["IsSkippable"],
             action_provider=built["ActionProvider"],
             parameters=[StepParameter.from_built(p) for p in built["Parameters"]],
-            step_debug_data=StepDebugData.from_built(built["StepDebugData"])
-            if built.get("StepDebugData")
-            else None,
             is_debug_mock_data=built["IsDebugMockData"],
+            step_debug_data=(
+                StepDebugData.from_built(built["StepDebugData"])
+                if built.get("StepDebugData")
+                else None
+            ),
             auto_skip_on_failure=built["AutoSkipOnFailure"],
             start_loop_step_id=built.get("StartLoopStepIdentifier"),
             integration=built["Integration"],
@@ -209,15 +215,17 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             action_name=non_built["action_name"],
             parent_container_id=non_built.get("parent_container_id"),
             start_loop_step_id=non_built.get("start_loop_step_id"),
-            step_debug_data=StepDebugData.from_non_built(non_built["step_debug_data"])
-            if non_built.get("step_debug_data")
-            else None,
             parallel_actions=[
                 cls.from_non_built(file_name, pa) for pa in non_built["parallel_actions"]
             ],
             parameters=[StepParameter.from_non_built(p) for p in non_built["parameters"]],
             auto_skip_on_failure=non_built["auto_skip_on_failure"],
             is_debug_mock_data=non_built["is_debug_mock_data"],
+            step_debug_data=(
+                StepDebugData.from_non_built(non_built["step_debug_data"])
+                if non_built.get("step_debug_data")
+                else None
+            ),
             integration=non_built["integration"],
             action_provider=non_built["action_provider"],
             previous_result_condition=non_built["previous_result_condition"],
@@ -242,15 +250,15 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             InstanceName=self.instance_name,
             IsAutomatic=self.is_automatic,
             IsSkippable=self.is_skippable,
-            StepDebugData=(
-                self.step_debug_data.to_built() if self.step_debug_data is not None else None
-            ),
             StartLoopStepIdentifier=self.start_loop_step_id,
             ActionName=self.action_name,
             Parameters=[p.to_built() for p in self.parameters],
             Integration=self.integration,
             ActionProvider=self.action_provider,
             IsDebugMockData=self.is_debug_mock_data,
+            StepDebugData=(
+                self.step_debug_data.to_built() if self.step_debug_data is not None else None
+            ),
             AutoSkipOnFailure=self.auto_skip_on_failure,
             ParentContainerIdentifier=self.parent_container_id,
             ParallelActions=[p.to_built() for p in self.parallel_actions],
@@ -277,9 +285,6 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_automatic=self.is_automatic,
             is_skippable=self.is_skippable,
             action_provider=self.action_provider,
-            step_debug_data=(
-                self.step_debug_data.to_non_built() if self.step_debug_data is not None else None
-            ),
             start_loop_step_id=self.start_loop_step_id,
             parameters=[p.to_non_built() for p in self.parameters],
             action_name=self.action_name,
@@ -288,6 +293,9 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             parent_container_id=self.parent_container_id,
             is_touched_by_ai=self.is_touched_by_ai,
             is_debug_mock_data=self.is_debug_mock_data,
+            step_debug_data=(
+                self.step_debug_data.to_non_built() if self.step_debug_data is not None else None
+            ),
             auto_skip_on_failure=self.auto_skip_on_failure,
             previous_result_condition=self.previous_result_condition,
             type=self.type_.to_string(),

@@ -23,13 +23,13 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum
-from mp.core.data_models.playbooks.playbook_widget.metadata import PlaybookWidgetMetadata
+from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import WidgetName
-    from mp.core.data_models.playbooks.playbook_widget.metadata import BuiltPlaybookWidgetMetadata
+    from mp.core.data_models.playbooks.widget.metadata import BuiltPlaybookWidgetMetadata
 
 
 class OverviewType(RepresentableEnum):
@@ -38,6 +38,12 @@ class OverviewType(RepresentableEnum):
     SYSTEM_ALERT = 2
     SYSTEM_CASE = 3
     ALERT_TYPE = 4
+
+
+class OverviewWidgetDetails(TypedDict):
+    title: str
+    size: str
+    order: int
 
 
 class BuiltOverviewDetails(TypedDict):
@@ -61,7 +67,7 @@ class NonBuiltOverview(TypedDict):
     name: str
     creator: str | None
     playbook_id: str
-    widgets: list[WidgetName]
+    widgets_details: list[OverviewWidgetDetails]
     type: str
     alert_rule_type: str | None
     roles: list[int]
@@ -202,6 +208,13 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
             alert_rule_type=self.alert_rule_type,
             roles=self.roles,
             role_names=self.role_names,
-            widgets=[w.title for w in self.widgets],
+            widgets_details=[
+                OverviewWidgetDetails(
+                    title=w.title,
+                    size=w.widget_size.to_string(),
+                    order=w.order,
+                )
+                for w in self.widgets
+            ],
         )
         return non_built
