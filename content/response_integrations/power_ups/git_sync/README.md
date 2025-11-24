@@ -164,9 +164,9 @@ This allows for shared instances that can be used across multiple environments, 
 - **Cached Results**: Instance lists are cached per environment for performance
 
 #### Instance Validation
-- Only **configured instances** (`isConfigured: true`) are considered
-- Instances are sorted by name for consistent selection
-- Invalid or unconfigured instances are filtered out
+- **Configured Instances Prioritized**: Configured instances (`isConfigured: true`) ar prioritized over unconfigured ones
+- **Unconfigured Instances Includes**: Unconfigured instances are included in the selection pool as a fallback
+- **Sorting**: Instances are sorted by configuration status (configured first) and then by name
 
 ### Existing Step Reuse Logic
 
