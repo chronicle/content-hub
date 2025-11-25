@@ -14,8 +14,11 @@
 
 from __future__ import annotations
 
-from typing import Self, TypedDict
+from typing import Annotated, Self, TypedDict
 
+import pydantic
+
+import mp.core.constants
 import mp.core.data_models.abc
 
 
@@ -44,7 +47,9 @@ class NonBuiltCondition(TypedDict):
 
 
 class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondition]):
-    field_name: str
+    field_name: Annotated[
+        str, pydantic.Field(min_length=mp.core.constants.CONDITION_FIELD_NAME_MIN_LENGTH)
+    ]
     value: str
     match_type: MatchType
 
