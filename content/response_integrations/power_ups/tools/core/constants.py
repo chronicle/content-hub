@@ -17,7 +17,6 @@ from __future__ import annotations
 import re
 from enum import Enum
 
-
 INTEGRATION_NAME: str = "Tools"
 DELAY_PLAYBOOK_SYNCHRONOUS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Delay Playbook Synchronous"
 OCR_IMAGE_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - OCR Image"
