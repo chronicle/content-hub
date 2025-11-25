@@ -147,6 +147,8 @@ def download_wheels_from_requirements(
         "--implementation",
         "cp",
         "--platform",
+        "manylinux1_x86_64",
+        "--platform",
         "none-any",
     ]
     runtime_config: list[str] = _get_runtime_config()
