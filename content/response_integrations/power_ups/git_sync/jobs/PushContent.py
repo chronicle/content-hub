@@ -140,8 +140,6 @@ def main():
                     for sett in settings:  # Remove Agent Identifiers from settings - should be created separately
                         if sett.property_name == "AgentIdentifier":
                             sett.value = None
-                        sett["creationTimeUnixTimeInMs"] = 0
-                        sett["modificationTimeUnixTimeInMs"] = 0
                     if commit_passwords:
                         try:
                             secrets = siemplify.get_configuration(instance.identifier)
@@ -166,7 +164,7 @@ def main():
                                 "modificationTimeUnixTimeInMs": 0,
                                 "propertyType": s.property_type,
                                 "isMandatory": s.is_mandatory,
-                                "id": s.id_,
+                                "id": s._id,
                                 "propertyDisplayName": s.display_name,
                                 "propertyDescription": s.property_description,
                                 "integrationIdentifier": instance.integration_identifier,
