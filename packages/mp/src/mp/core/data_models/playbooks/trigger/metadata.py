@@ -68,7 +68,7 @@ class TriggerType(RepresentableEnum):
     GET_INPUTS = 11
 
 
-class Trigger(mp.core.data_models.abc.SequentialMetadata):
+class Trigger(mp.core.data_models.abc.ComponentMetadata):
     """Represents a trigger for a playbook."""
 
     identifier: str
@@ -81,7 +81,7 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
     playbook_name: str | None = None
 
     @classmethod
-    def from_built_path(cls, path: Path) -> list[Self]:
+    def from_built_path(cls, path: Path) -> Self:
         """Create a list of Trigger objects from a built playbook path.
 
         Args:
@@ -99,14 +99,14 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
         built_playbook: str = path.read_text(encoding="utf-8")
         try:
             full_playbook = json.loads(built_playbook)
-            built_triggers: list[BuiltTrigger] = full_playbook["Definition"]["Triggers"]
-            return [cls._from_built(trigger) for trigger in built_triggers]
+            built_trigger: list[BuiltTrigger] = full_playbook["Definition"]["Triggers"]
+            return cls._from_built("", built_trigger[0])
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {path}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
 
     @classmethod
-    def from_non_built_path(cls, path: Path) -> list[Self]:
+    def from_non_built_path(cls, path: Path) -> Self:
         """Create a list of Trigger objects from a non-built playbook path.
 
         Args:
@@ -116,14 +116,14 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
             A list of Trigger objects.
 
         """
-        trigger_path: Path = path / mp.core.constants.TRIGGERS_FILE_NAME
+        trigger_path: Path = path / mp.core.constants.TRIGGER_FILE_NAME
         if not trigger_path.exists():
             return []
 
         return cls._from_non_built_path(trigger_path)
 
     @classmethod
-    def _from_built(cls, built: BuiltTrigger) -> Self:
+    def _from_built(cls, _: str, built: BuiltTrigger) -> Self:
         return cls(
             playbook_id=built["DefinitionIdentifier"],
             conditions=[Condition.from_built(c) for c in built["Conditions"]],
@@ -136,7 +136,7 @@ class Trigger(mp.core.data_models.abc.SequentialMetadata):
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltTrigger) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltTrigger) -> Self:
         return cls(
             identifier=non_built["identifier"],
             is_enabled=non_built["is_enabled"],

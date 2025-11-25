@@ -20,22 +20,12 @@ from mp.core.data_models.widget.data import (
     WidgetType,
 )
 
-HTML_CONTENT: str = """<!DOCTYPE html>
-<html>
-<head>
-<title>Test Widget</title>
-</head>
-<body>
-<h1>Hello, Widget!</h1>
-</body>
-</html>"""
-
 BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
     "htmlHeight": 100,
     "safeRendering": True,
     "type": 3,
     "widgetDefinitionScope": 0,
-    "htmlContent": HTML_CONTENT,
+    "htmlContent": "",
 }
 
 NON_BUILT_WIDGET_DATA_DEFINITION: NonBuiltWidgetDataDefinition = {
@@ -43,7 +33,6 @@ NON_BUILT_WIDGET_DATA_DEFINITION: NonBuiltWidgetDataDefinition = {
     "safe_rendering": True,
     "type": "html",
     "widget_definition_scope": "case",
-    "html_content": HTML_CONTENT,
 }
 
 HTML_WIDGET_DATA_DEFINITION = HtmlWidgetDataDefinition(
@@ -51,7 +40,6 @@ HTML_WIDGET_DATA_DEFINITION = HtmlWidgetDataDefinition(
     safe_rendering=True,
     type=WidgetType.HTML,
     widget_definition_scope=WidgetDefinitionScope.CASE,
-    html_content=HTML_CONTENT,
 )
 
 BUILT_WIDGET_DATA_DEFINITION_WITH_NONE: BuiltWidgetDataDefinition = {
@@ -59,7 +47,7 @@ BUILT_WIDGET_DATA_DEFINITION_WITH_NONE: BuiltWidgetDataDefinition = {
     "safeRendering": True,
     "type": 3,
     "widgetDefinitionScope": 0,
-    "htmlContent": None,
+    "htmlContent": "",
 }
 
 NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE: NonBuiltWidgetDataDefinition = {
@@ -67,7 +55,6 @@ NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE: NonBuiltWidgetDataDefinition = {
     "safe_rendering": True,
     "type": "html",
     "widget_definition_scope": "case",
-    "html_content": None,
 }
 
 HTML_WIDGET_DATA_DEFINITION_WITH_NONE = HtmlWidgetDataDefinition(
@@ -75,7 +62,6 @@ HTML_WIDGET_DATA_DEFINITION_WITH_NONE = HtmlWidgetDataDefinition(
     safe_rendering=True,
     type=WidgetType.HTML,
     widget_definition_scope=WidgetDefinitionScope.CASE,
-    html_content=None,
 )
 
 
