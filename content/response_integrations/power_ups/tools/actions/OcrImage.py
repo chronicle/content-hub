@@ -24,11 +24,8 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 
 from ..core.constants import OCR_IMAGE_SCRIPT_NAME
-from ..core.exceptions import (
-    OcrImageSetupError,
-    ParameterNotFoundError,
-    RemoteAgentRequiredException,
-)
+from ..core.exceptions import OcrImageSetupError, ParameterNotFoundError
+from ..core.ToolsCommon import ensure_remote_agent
 
 if TYPE_CHECKING:
     from typing import Never, NoReturn
@@ -53,11 +50,9 @@ class OcrImage(Action):
 
     def _validate_params(self) -> None:
         """Validate logical correctness of supplied parameters."""
-        ra_error_msg: str = "OCR Image action can only be executed on a Remote Agent."
         param_error_msg: str = 'either "Base64 Encoded Image" or "File Path" needs to have a value.'
 
-        if not getattr(self.soar_action, "is_remote", False):
-            raise RemoteAgentRequiredException(ra_error_msg)
+        ensure_remote_agent(self.soar_action, OCR_IMAGE_SCRIPT_NAME)
 
         if not self.params.base64_image and not self.params.file_path:
             raise ParameterNotFoundError(param_error_msg)
