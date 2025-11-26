@@ -155,9 +155,22 @@ def login(
             raise typer.Exit(1) from e
 
 
+@app.command(
+    deprecated=True,
+    help=(
+        "The 'dev-env deploy' command is deprecated."
+        " Please use 'dev-env push' instead. The usage stays the same."
+    ),
+)
+@track_command
+def deploy() -> None:
+    """This is the old command, which is now deprecated."""
+    rich.print("Please use 'dev-env push' instead.")
+
+
 @app.command(help="Deploy an integration to the SOAR environment configured by the login command.")
 @track_command
-def deploy(
+def push(
     integration: str = typer.Argument(..., help="Integration to build and deploy."),
     *,
     is_staging: Annotated[
