@@ -23,11 +23,13 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_case_overview_details
 
+WF_STATUS_NONE = 0
 WF_STATUS_INPROGRESS = 1
 WF_STATUS_COMPLETED = 2
 WF_STATUS_FAILED = 3
-WF_STATUS_PENDING = 4
-WF_STATUS_TERMINATED = 5
+WF_STATUS_TERMINATED = 4
+WF_STATUS_PENDING_IN_QUEUE = 5
+WF_STATUS_PENDING_FOR_USER = 6
 
 
 @output_handler
@@ -61,10 +63,7 @@ def main():
                 )
                 break
         if current_alert_index is not None:
-            if (
-                siemplify.current_alert.identifier
-                == siemplify.case.alerts[-1].identifier
-            ):
+            if siemplify.current_alert.identifier == siemplify.case.alerts[-1].identifier:
                 output_message = (
                     f"Alert Index: {current_alert_index}. Alert Id: "
                     f"{siemplify.current_alert.identifier}: "
@@ -72,10 +71,7 @@ def main():
                 )
                 result_value = "true"
                 status = EXECUTION_STATE_COMPLETED
-            elif (
-                alerts[current_alert_index - 1]["workflowsStatus"]
-                == WF_STATUS_INPROGRESS
-            ):
+            elif alerts[current_alert_index - 1]["workflowsStatus"] == WF_STATUS_INPROGRESS:
                 prev_case = alerts[current_alert_index - 1]["identifier"]
                 output_message = (
                     f"Alert Index: {current_alert_index}. Alert Id: "
