@@ -22,7 +22,6 @@ import rich
 
 import mp.core.config
 import mp.core.file_utils
-import mp.core.utils
 from mp.core.data_models.playbooks.playbook import Playbook
 
 from .restructure.playbooks.build import BuildPlaybook

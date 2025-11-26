@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING, Any
 
 import rich
 
-import mp.core.config
 import mp.core.constants
 import mp.core.file_utils.common.utils
 
