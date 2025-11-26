@@ -36,6 +36,7 @@ class BuiltStep(TypedDict):
     OriginalStepIdentifier: str
     ParentWorkflowIdentifier: str
     ParentStepIdentifiers: list[str]
+    ParentStepIdentifier: str
     PreviousResultCondition: str
     InstanceName: str
     IsAutomatic: bool
@@ -61,6 +62,7 @@ class NonBuiltStep(TypedDict):
     original_step_id: str
     playbook_id: str
     parent_step_ids: list[str]
+    parent_step_id: str
     previous_result_condition: str
     instance_name: str
     is_automatic: bool
@@ -103,6 +105,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
     original_step_id: str
     playbook_id: str
     parent_step_ids: list[str]
+    parent_step_id: str
     previous_result_condition: str | None = None
     instance_name: str
     is_automatic: bool
@@ -178,6 +181,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             original_step_id=built["OriginalStepIdentifier"],
             playbook_id=built["ParentWorkflowIdentifier"],
             parent_step_ids=built["ParentStepIdentifiers"],
+            parent_step_id=built["ParentStepIdentifier"],
             instance_name=built["InstanceName"],
             is_automatic=built["IsAutomatic"],
             is_skippable=built["IsSkippable"],
@@ -209,6 +213,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             original_step_id=non_built["original_step_id"],
             playbook_id=non_built["playbook_id"],
             parent_step_ids=non_built["parent_step_ids"],
+            parent_step_id=non_built["parent_step_id"],
             instance_name=non_built["instance_name"],
             is_automatic=non_built["is_automatic"],
             is_skippable=non_built["is_skippable"],
@@ -247,6 +252,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             OriginalStepIdentifier=self.original_step_id,
             ParentWorkflowIdentifier=self.playbook_id,
             ParentStepIdentifiers=self.parent_step_ids,
+            ParentStepIdentifier=self.parent_step_id,
             InstanceName=self.instance_name,
             IsAutomatic=self.is_automatic,
             IsSkippable=self.is_skippable,
@@ -281,6 +287,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             original_step_id=self.original_step_id,
             playbook_id=self.playbook_id,
             parent_step_ids=self.parent_step_ids,
+            parent_step_id=self.parent_step_id,
             instance_name=self.instance_name,
             is_automatic=self.is_automatic,
             is_skippable=self.is_skippable,

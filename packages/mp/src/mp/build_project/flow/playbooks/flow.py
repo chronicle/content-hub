@@ -1,0 +1,101 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import rich
+
+import mp.core.constants
+from mp.build_project.playbooks_repo import Playbooks
+from mp.build_project.post_build.playbooks.playbooks_json import write_playbooks_json
+from mp.core.custom_types import RepositoryType
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from pathlib import Path
+
+
+def build_playbooks(
+    playbooks: Iterable[str],
+    repositories: Iterable[RepositoryType],
+    *,
+    deconstruct: bool = False,
+) -> None:
+    """Entry point of the build or deconstruct playbook operation."""
+    commercial_playbooks: Playbooks = Playbooks(mp.core.constants.COMMERCIAL_DIR_NAME)
+    community_playbooks: Playbooks = Playbooks(mp.core.constants.COMMUNITY_DIR_NAME)
+
+    if playbooks:
+        _build_playbooks(set(playbooks), commercial_playbooks, deconstruct=deconstruct)
+        _build_playbooks(set(playbooks), community_playbooks, deconstruct=deconstruct)
+    elif repositories:
+        _build_playbooks_repositories(commercial_playbooks, community_playbooks)
+        write_playbooks_json(commercial_playbooks, community_playbooks)
+
+
+def _build_playbooks_repositories(
+    commercial_playbooks: Playbooks,
+    community_playbooks: Playbooks,
+) -> None:
+    rich.print("[blue]Building all playbooks in repository...[/blue]")
+    commercial_playbooks.build_playbooks(commercial_playbooks.repository_base_path.iterdir())
+    community_playbooks.build_playbooks(community_playbooks.repository_base_path.iterdir())
+    rich.print("[blue]Done repository playbook build.[/blue]")
+
+
+def _build_playbooks(
+    playbooks: Iterable[str],
+    repository: Playbooks,
+    *,
+    deconstruct: bool,
+) -> None:
+    valid_playbooks_paths: set[Path] = _get_playbooks_paths_from_repository(
+        playbooks, repository.repository_base_path
+    )
+    valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
+
+    not_found_playbooks: set[str] = set(playbooks).difference(valid_playbooks_names)
+    if not_found_playbooks:
+        rich.print(
+            f"[red]The following playbooks could not be found in the {repository.repository_name} "
+            f"repository: {', '.join(not_found_playbooks)}[/red]"
+        )
+
+    if valid_playbooks_paths:
+        rich.print(
+            f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]"
+        )
+
+        if deconstruct:
+            repository.deconstruct_playbooks(valid_playbooks_paths)
+        else:
+            repository.build_playbooks(valid_playbooks_paths)
+
+
+def _get_playbooks_paths_from_repository(
+    playbooks_names: Iterable[str], repository_path: Path
+) -> set[Path]:
+    return {p for n in playbooks_names if (p := repository_path / n).exists()}
+
+
+def should_build_playbooks(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
+    """Decide if needed to build playbooks or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return playbooks or RepositoryType.PLAYBOOKS in repos

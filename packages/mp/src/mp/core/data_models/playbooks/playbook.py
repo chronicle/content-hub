@@ -43,13 +43,13 @@ if TYPE_CHECKING:
         BuiltTrigger,
         NonBuiltTrigger,
     )
-    from packages.mp.src.mp.core.data_models.playbooks.widget import (
+    from packages.mp.src.mp.core.data_models.playbooks.widget.metadata import (
         BuiltPlaybookWidgetMetadata,
         NonBuiltPlaybookWidgetMetadata,
     )
 
     from .meta.display_info import NonBuiltPlaybookDisplayInfo
-    from .overview.metadata import BuiltOverview, NonBuiltOverview
+    from .overview.metadata import BuiltOverview, BuiltOverviewDetails, NonBuiltOverview
     from .step.metadata import BuiltStep, NonBuiltStep
 
 
@@ -88,7 +88,6 @@ class BuiltPlaybookDefinition(TypedDict):
     OriginalWorkflowIdentifier: str
     VersionComment: str | None
     VersionCreator: str | None
-    LastEditor: NotRequired[str | None]
     Creator: str
     Priority: int
     Category: int
@@ -96,8 +95,9 @@ class BuiltPlaybookDefinition(TypedDict):
     IsArchived: bool
     Steps: list[BuiltStep]
     Triggers: list[BuiltTrigger]
-    OverviewTemplates: list[BuiltOverview]
+    OverviewTemplates: list[BuiltOverviewDetails]
     Permissions: list[BuiltAccessPermission]
+    Environments: list[str]
 
 
 class BuiltPlaybook(TypedDict):
@@ -109,7 +109,7 @@ class BuiltPlaybook(TypedDict):
 
 class NonBuiltPlaybook(TypedDict):
     steps: list[NonBuiltStep]
-    triggers: NonBuiltTrigger
+    trigger: NonBuiltTrigger
     overviews: list[NonBuiltOverview]
     widgets: list[NonBuiltPlaybookWidgetMetadata]
     release_notes: list[NonBuiltReleaseNote]
@@ -117,7 +117,7 @@ class NonBuiltPlaybook(TypedDict):
     display_info: NonBuiltPlaybookDisplayInfo
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@dataclasses.dataclass(slots=True)
 class Playbook:
     steps: list[Step]
     overviews: list[Overview]
@@ -184,11 +184,15 @@ class Playbook:
         built_widgets: list[BuiltPlaybookWidgetMetadata] = [
             widget.to_built() for widget in self.widgets
         ]
+
         built_overviews: list[BuiltOverview] = [overview.to_built() for overview in self.overviews]
+        built_overviews_for_definition: list[BuiltOverviewDetails] = [
+            b_o["OverviewTemplate"] for b_o in built_overviews
+        ]
 
         built_playbook_meta: BuiltPlaybookMetadata = self.meta_data.to_built()
         steps: list[BuiltStep] = [step.to_built() for step in self.steps]
-        triggers: list[BuiltTrigger] = [self.trigger.to_built()]
+        trigger: list[BuiltTrigger] = [self.trigger.to_built()]
 
         built_playbook_definition: BuiltPlaybookDefinition = BuiltPlaybookDefinition(
             Identifier=built_playbook_meta["Identifier"],
@@ -207,16 +211,16 @@ class Playbook:
             OriginalWorkflowIdentifier=built_playbook_meta["OriginalWorkflowIdentifier"],
             VersionComment=built_playbook_meta["VersionComment"],
             VersionCreator=built_playbook_meta["VersionCreator"],
-            LastEditor=built_playbook_meta["LastEditor"],
             Creator=built_playbook_meta["Creator"],
             Priority=built_playbook_meta["Priority"],
             Category=built_playbook_meta["Category"],
             IsAutomatic=built_playbook_meta["IsAutomatic"],
             IsArchived=built_playbook_meta["IsArchived"],
             Steps=steps,
-            Triggers=triggers,
-            OverviewTemplates=built_overviews,
+            Triggers=trigger,
+            OverviewTemplates=built_overviews_for_definition,
             Permissions=built_playbook_meta["Permissions"],
+            Environments=built_playbook_meta["Environments"],
         )
 
         return BuiltPlaybook(
@@ -237,7 +241,7 @@ class Playbook:
             steps=[step.to_non_built() for step in self.steps],
             overviews=[overview.to_non_built() for overview in self.overviews],
             widgets=[widget.to_non_built() for widget in self.widgets],
-            triggers=self.trigger.to_non_built(),
+            trigger=self.trigger.to_non_built(),
             release_notes=[rn.to_non_built() for rn in self.release_notes],
             meta_data=self.meta_data.to_non_built(),
             display_info=self.display_info.to_non_built(),

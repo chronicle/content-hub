@@ -226,6 +226,7 @@ BUILT_STEP: BuiltStep = {
     "OriginalStepIdentifier": "original_step_id",
     "ParentWorkflowIdentifier": "playbook_id",
     "ParentStepIdentifiers": ["parent_step_id"],
+    "ParentStepIdentifier": "parent_step_id",
     "PreviousResultCondition": "previous_result_condition",
     "InstanceName": "instance_name",
     "IsAutomatic": True,
@@ -251,6 +252,7 @@ NON_BUILT_STEP: NonBuiltStep = {
     "original_step_id": "original_step_id",
     "playbook_id": "playbook_id",
     "parent_step_ids": ["parent_step_id"],
+    "parent_step_id": "parent_step_id",
     "previous_result_condition": "previous_result_condition",
     "instance_name": "instance_name",
     "is_automatic": True,
@@ -276,6 +278,7 @@ STEP = Step(
     original_step_id="original_step_id",
     playbook_id="playbook_id",
     parent_step_ids=["parent_step_id"],
+    parent_step_id="parent_step_id",
     previous_result_condition="previous_result_condition",
     instance_name="instance_name",
     is_automatic=True,
@@ -301,6 +304,7 @@ BUILT_STEP_WITH_NONE: BuiltStep = {
     "OriginalStepIdentifier": "original_step_id",
     "ParentWorkflowIdentifier": "playbook_id",
     "ParentStepIdentifiers": [],
+    "ParentStepIdentifier": "",
     "PreviousResultCondition": None,
     "InstanceName": "instance_name",
     "IsAutomatic": True,
@@ -326,6 +330,7 @@ NON_BUILT_STEP_WITH_NONE: NonBuiltStep = {
     "original_step_id": "original_step_id",
     "playbook_id": "playbook_id",
     "parent_step_ids": [],
+    "parent_step_id": "",
     "previous_result_condition": None,
     "instance_name": "instance_name",
     "is_automatic": True,
@@ -351,6 +356,7 @@ STEP_WITH_NONE = Step(
     original_step_id="original_step_id",
     playbook_id="playbook_id",
     parent_step_ids=[],
+    parent_step_id="",
     previous_result_condition=None,
     instance_name="instance_name",
     is_automatic=True,
@@ -525,6 +531,7 @@ BUILT_PLAYBOOK_METADATA: BuiltPlaybookMetadata = {
     "IsAutomatic": False,
     "IsArchived": False,
     "Permissions": [BUILT_ACCESS_PERMISSION],
+    "Environments": ["*"],
 }
 
 NON_BUILT_PLAYBOOK_METADATA: NonBuiltPlaybookMetadata = {
@@ -551,6 +558,7 @@ NON_BUILT_PLAYBOOK_METADATA: NonBuiltPlaybookMetadata = {
     "is_automatic": False,
     "is_archived": False,
     "permissions": [NON_BUILT_ACCESS_PERMISSION],
+    "environments": ["*"],
 }
 
 PLAYBOOK_METADATA = PlaybookMetadata(
@@ -577,6 +585,7 @@ PLAYBOOK_METADATA = PlaybookMetadata(
     is_automatic=False,
     is_archived=False,
     permissions=[ACCESS_PERMISSION],
+    environments=["*"],
 )
 
 BUILT_PLAYBOOK_METADATA_WITH_NONE: BuiltPlaybookMetadata = {
@@ -603,6 +612,7 @@ BUILT_PLAYBOOK_METADATA_WITH_NONE: BuiltPlaybookMetadata = {
     "IsAutomatic": False,
     "IsArchived": False,
     "Permissions": [],
+    "Environments": ["*"],
 }
 
 NON_BUILT_PLAYBOOK_METADATA_WITH_NONE: NonBuiltPlaybookMetadata = {
@@ -629,6 +639,7 @@ NON_BUILT_PLAYBOOK_METADATA_WITH_NONE: NonBuiltPlaybookMetadata = {
     "is_automatic": False,
     "is_archived": False,
     "permissions": [],
+    "environments": ["*"],
 }
 
 PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
@@ -655,6 +666,7 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     is_automatic=False,
     is_archived=False,
     permissions=[],
+    environments=["*"],
 )
 
 
