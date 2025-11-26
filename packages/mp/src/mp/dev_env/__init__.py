@@ -163,12 +163,20 @@ def login(
     ),
 )
 @track_command
-def deploy() -> None:
+def deploy(
+    integration: str = typer.Argument(..., help="Integration to build and deploy."),
+    *,
+    is_staging: Annotated[
+        bool,
+        typer.Option("--staging", help="Add this option to deploy integration in to staging mode."),
+    ] = False,
+) -> None:
     """Deprecated."""  # noqa: D401
     rich.print("Please use 'dev-env push' instead.")
+    push(integration, is_staging=is_staging)
 
 
-@app.command(help="Deploy an integration to the SOAR environment configured by the login command.")
+@app.command(help="Push an integration to the SOAR environment configured by the login command.")
 @track_command
 def push(
     integration: str = typer.Argument(..., help="Integration to build and deploy."),
