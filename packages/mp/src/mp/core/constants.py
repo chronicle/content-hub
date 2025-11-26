@@ -134,6 +134,7 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
 }
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",
+    "Darktrace",
     "Lacework Connector",
     "PagerDuty",
     "PagerDutyConnector",
@@ -225,11 +226,11 @@ EXCLUDED_PARAM_NAMES_WITH_TOO_MANY_WORDS: set[str] = {
     "Use document ID as ID in Arcanna",
 }
 LONG_DESCRIPTION_MAX_LENGTH: int = 2_200
-SHORT_DESCRIPTION_MAX_LENGTH: int = 400
+SHORT_DESCRIPTION_MAX_LENGTH: int = 2050
 DISPLAY_NAME_MAX_LENGTH: int = 150
 MAX_PARAMETERS_LENGTH: int = 50
 PARAM_NAME_MAX_LENGTH: int = 63
-PARAM_NAME_MAX_WORDS: int = 5
+PARAM_NAME_MAX_WORDS: int = 7
 MINIMUM_SCRIPT_VERSION: float = 1.0
 # language=regexp
 SCRIPT_DISPLAY_NAME_REGEX: str = (
