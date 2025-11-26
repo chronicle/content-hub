@@ -164,7 +164,7 @@ def login(
 )
 @track_command
 def deploy() -> None:
-    """This is the old command, which is now deprecated."""
+    """Deprecated."""  # noqa: D401
     rich.print("Please use 'dev-env push' instead.")
 
 
