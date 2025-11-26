@@ -101,11 +101,29 @@ class PlaybookDisplayInfo(
     def to_built(self) -> BuiltPlaybookDisplayInfo:
         """Convert the PlaybookDisplayInfo to its "built" representation.
 
-        Raises:
-            NotImplementedError: This method is not implemented.
+        Returns:
+            A BuiltPlaybookDisplayInfo dictionary.
 
         """
-        raise NotImplementedError
+        return BuiltPlaybookDisplayInfo(
+            Identifier="",
+            FileName=self.content_hub_display_name,
+            Type=self.type.value,
+            DisplayName=self.content_hub_display_name,
+            Description=self.description,
+            Author=self.author,
+            CreateTime=0,
+            ContactEmail=self.contact_email,
+            UpdateTime=0,
+            Version=0.0,
+            Integrations=[],
+            DependentPlaybookIds=self.dependent_playbook_ids,
+            Tags=self.tags,
+            Source=self.contribution_type.value,
+            Verified=self.is_google_verified,
+            Standalone=self.should_display_in_content_hub,
+            HasAlertOverview=False,
+        )
 
     def to_non_built(self) -> NonBuiltPlaybookDisplayInfo:
         """Convert the PlaybookDisplayInfo to its "non-built" representation.
