@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -24,7 +24,7 @@ import mp.core.data_models.abc
 import mp.core.utils
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
 def convert_epoch_to_iso(epoch_timestamp: int) -> str:
@@ -113,7 +113,7 @@ class ReleaseNote(
     ]
 
     @classmethod
-    def from_built_integration_path(cls, path: pathlib.Path) -> list[ReleaseNote]:
+    def from_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the 'built' integration path.
 
         Args:
@@ -123,14 +123,14 @@ class ReleaseNote(
             A sequence of `ReleaseNote` objects
 
         """
-        rn_path: pathlib.Path = path / mp.core.constants.RN_JSON_FILE
+        rn_path: Path = path / mp.core.constants.RN_JSON_FILE
         if not rn_path.exists():
             return []
 
-        return cls._from_built_integration_path(rn_path)
+        return cls._from_built_path(rn_path)
 
     @classmethod
-    def from_non_built_integration_path(cls, path: pathlib.Path) -> list[ReleaseNote]:
+    def from_non_built_path(cls, path: Path) -> list[Self]:
         """Create based on the metadata files found in the non-built-integration path.
 
         Args:
@@ -140,14 +140,14 @@ class ReleaseNote(
             A sequence of `ReleaseNote` objects
 
         """
-        rn_path: pathlib.Path = path / mp.core.constants.RELEASE_NOTES_FILE
+        rn_path: Path = path / mp.core.constants.RELEASE_NOTES_FILE
         if not rn_path.exists():
             return []
 
-        return cls._from_non_built_integration_path(rn_path)
+        return cls._from_non_built_path(rn_path)
 
     @classmethod
-    def _from_built(cls, built: BuiltReleaseNote) -> ReleaseNote:
+    def _from_built(cls, built: BuiltReleaseNote) -> Self:
         return cls(
             description=built["ChangeDescription"],
             deprecated=built["Deprecated"],
@@ -162,7 +162,7 @@ class ReleaseNote(
         )
 
     @classmethod
-    def _from_non_built(cls, non_built: NonBuiltReleaseNote) -> ReleaseNote:
+    def _from_non_built(cls, non_built: NonBuiltReleaseNote) -> Self:
         publish_time = non_built.get("publish_time")
 
         return cls(

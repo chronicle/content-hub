@@ -17,14 +17,17 @@ from __future__ import annotations
 import dataclasses
 import json
 import pathlib
-from typing import NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import rich
 
 from mp.core.unix import NonFatalCommandError
-from mp.validate.pre_build_validation.required_dependencies_validation import (
+from mp.validate.pre_build_validation.integrations.required_dependencies_validation import (
     RequiredDevDependenciesValidation,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestIssue(NamedTuple):
@@ -43,7 +46,8 @@ class IntegrationTestResults:
 
 
 def process_pytest_json_report(
-    integration_name: str, json_report_path: pathlib.Path
+    integration_name: str,
+    json_report_path: Path,
 ) -> IntegrationTestResults | None:
     """Process parsed JSON report data from pytest-json and return an IntegrationTestResults object.
 
@@ -58,7 +62,8 @@ def process_pytest_json_report(
     """
     try:
         with pathlib.Path.open(json_report_path, encoding="utf-8") as f:
-            report_data: dict = json.load(f)
+            report_data: dict[str, Any] = json.load(f)
+
         json_report_path.unlink(missing_ok=True)
 
     except FileNotFoundError:
@@ -77,6 +82,7 @@ def process_pytest_json_report(
     integration_results.skipped_tests = summary.get("skipped", 0)
     integration_results.passed_tests = summary.get("passed", 0)
 
+    issue: TestIssue
     for test_item in report_data.get("tests", []):
         outcome = test_item.get("outcome")
         if outcome == "failed":
@@ -93,15 +99,17 @@ def process_pytest_json_report(
 
 def _extract_failed_test_issue(test_item: dict) -> TestIssue:
     test_name: str = test_item.get("nodeid", "N/A")
-    call_info = test_item.get("call", {})
-    full_stack_trace = "No stack trace available"
+    call_info: dict[str, Any] = test_item.get("call", {})
+    full_stack_trace: str = "No stack trace available"
 
     longrepr = call_info.get("longrepr")
     if isinstance(longrepr, str):
         full_stack_trace = longrepr
+
     elif isinstance(longrepr, dict):
         if "reprtraceback" in longrepr and "content" in longrepr["reprtraceback"]:
             full_stack_trace = longrepr["reprtraceback"]["content"]
+
         elif "sections" in longrepr:
             for section in longrepr["sections"]:
                 if section[0].startswith("____ "):
@@ -113,15 +121,17 @@ def _extract_failed_test_issue(test_item: dict) -> TestIssue:
 
 def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
     test_name: str = test_item.get("nodeid", "N/A")
-    skip_reason = test_item.get("was_skipped", "Unknown reason").strip()
+    skip_reason: str = test_item.get("was_skipped", "Unknown reason").strip()
 
     if not skip_reason or skip_reason == "Unknown reason":
-        call_info = test_item.get("call", {})
-        longrepr = call_info.get("longrepr")
+        call_info: dict[str, Any] = test_item.get("call", {})
+        longrepr: str = call_info.get("longrepr")
         if isinstance(longrepr, str):
             skip_reason = longrepr.splitlines()[0] if longrepr else "No specific reason found."
+
         elif isinstance(longrepr, dict) and "reprcrash" in longrepr:
             skip_reason = longrepr["reprcrash"].get("message", "No specific reason found.")
+
         elif isinstance(longrepr, dict) and "sections" in longrepr:
             for section in longrepr["sections"]:
                 if "skip" in section[0].lower() or "skipped" in section[0].lower():
@@ -132,7 +142,8 @@ def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
 
 
 def _get_fnf_test_results(
-    integration_name: str, json_report_path: pathlib.Path
+    integration_name: str,
+    json_report_path: Path,
 ) -> IntegrationTestResults | None:
     rich.print(f"[bold red]Error:[/bold red] JSON report not found at {json_report_path}")
     try:
@@ -145,4 +156,5 @@ def _get_fnf_test_results(
         )
         result.failed_tests += 1
         return result
+
     return None

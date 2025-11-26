@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
+import itertools
 import pathlib
 from typing import TYPE_CHECKING
 
 from rich.console import Console
 
 if TYPE_CHECKING:
-    from mp.validate.data_models import FullReport, ValidationResults
+    from pathlib import Path
+
+    from mp.validate.data_models import FullReport, ValidationReport, ValidationResults
 
 
 class MarkdownFormat:
@@ -31,7 +34,7 @@ class MarkdownFormat:
     def display(self) -> None:
         """Generate a Markdown file with a validation report table."""
         try:
-            markdown_content_list = ["\n"]
+            markdown_content_list: list[str] = ["\n"]
             for stage_name, results_list in self.validation_results.items():
                 if _should_display_stage(results_list):
                     markdown_content_list.append(f"---\n\n## {stage_name} Validation:\n\n")  # noqa: FURB113
@@ -51,8 +54,8 @@ class MarkdownFormat:
 
                     markdown_content_list.append("</details>\n\n")
 
-            markdown_content_str = "".join(markdown_content_list)
-            _save_report_file(markdown_content_str, output_filename="validation_report.md")
+            markdown_content: str = "".join(markdown_content_list)
+            _save_report_file(markdown_content, output_filename="validation_report.md")
 
         except Exception as e:  # noqa: BLE001
             self.console.print(f"❌ Error generating report: {e}")
@@ -61,48 +64,49 @@ class MarkdownFormat:
 def _should_display_stage(results_list: list[ValidationResults]) -> bool:
     if not results_list:
         return False
+
     for validation_result in results_list:
-        report = validation_result.validation_report
+        report: ValidationReport = validation_result.validation_report
         if (
             report.failed_fatal_validations
             or report.failed_non_fatal_validations
             or validation_result.is_success
         ):
             return True
+
     return False
 
 
 def _get_integration_validation_data(validation_result: ValidationResults) -> list[list[str]]:
-    report = validation_result.validation_report
-    table_data = []
-
-    for issue in report.failed_fatal_validations:
-        table_data.append([f"⚠️ {issue.validation_name}", issue.info])  # noqa: PERF401
-    for issue in report.failed_non_fatal_validations:
-        table_data.append([f"⚠️ {issue.validation_name}", issue.info])  # noqa: PERF401
-
-    return table_data
+    return [
+        [f"⚠️ {issue.validation_name}", issue.info]
+        for issue in itertools.chain(
+            validation_result.validation_report.failed_fatal_validations,
+            validation_result.validation_report.failed_non_fatal_validations,
+        )
+    ]
 
 
 def _format_table(table_data: list[list[str]], integration_name: str) -> list[str]:
-    markdown_lines = []
+    markdown_lines: list[str] = []
     markdown_lines.append(f"### 🧩  {integration_name}\n\n")
 
-    headers = ["Validation Name", "Details"]
+    headers: list[str] = ["Validation Name", "Details"]
     markdown_lines.extend([
         "| " + " | ".join(headers) + " |\n",
         "|" + "---|".join(["-" * len(h) for h in headers]) + "|\n",
     ])
 
     for validation_name, validation_details in table_data:
-        formated_details = validation_details.replace("\n", " ").replace("|", "\\|")
+        formated_details: str = validation_details.replace("\n", " ").replace("|", "\\|")
         markdown_lines.append(f"| {validation_name} | {formated_details} |\n")
+
     markdown_lines.append("\n")
     return markdown_lines
 
 
 def _save_report_file(markdown_content_str: str, output_filename: str) -> None:
-    output_dir = pathlib.Path("./artifacts")
+    output_dir: Path = pathlib.Path("./artifacts")
     output_dir.mkdir(exist_ok=True)
-    report_path = output_dir / output_filename
+    report_path: Path = output_dir / output_filename
     report_path.write_text(markdown_content_str, encoding="utf-8")
