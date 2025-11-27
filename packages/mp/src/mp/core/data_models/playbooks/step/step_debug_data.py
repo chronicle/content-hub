@@ -157,6 +157,7 @@ class StepDebugData(
             scope_entities_enrichment_data=[
                 e.to_non_built() for e in self.scope_entities_enrichment_data
             ],
-            tenant_id=self.tenant_id,
         )
+        if self.tenant_id is not None:
+            non_built["tenant_id"] = self.tenant_id
         return non_built
