@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import rich
 
 import mp.core.file_utils
-from mp.build_project.integrations import Integrations
+from mp.build_project.integrations_repo import Integrations
 from mp.build_project.post_build.integrations.duplicate_integrations import (
     raise_errors_for_duplicate_integrations,
 )

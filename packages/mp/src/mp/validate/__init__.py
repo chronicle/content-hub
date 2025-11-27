@@ -24,7 +24,7 @@ import typer
 
 import mp.core.config
 import mp.core.file_utils
-from mp.build_project.integrations import Integrations
+from mp.build_project.integrations_repo import Integrations
 from mp.core.custom_types import RepositoryType
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command

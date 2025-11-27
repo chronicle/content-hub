@@ -28,14 +28,14 @@ from .step_debug_enrichment_data import (
 
 
 class BuiltStepDebugData(TypedDict):
-    OriginalStepIdentifier: str
-    OriginalWorkflowIdentifier: str
-    ModificationTimeUnixTimeInMs: int
     CreationTimeUnixTimeInMs: int
+    ModificationTimeUnixTimeInMs: int
+    OriginalWorkflowIdentifier: str
+    OriginalStepIdentifier: str
     ResultValue: str
     ResultJson: JsonString
-    ScopeEntitiesEnrichmentDataJson: str
     ScopeEntitiesEnrichmentData: list[BuiltStepDebugEnrichmentData]
+    ScopeEntitiesEnrichmentDataJson: str
     TenantId: NotRequired[str | None]
 
 
@@ -57,8 +57,8 @@ class StepDebugData(
     playbook_id: str
     creation_time: int
     modification_time: int
-    result_value: str
-    result_json: JsonString
+    result_value: str | None
+    result_json: JsonString | None
     scope_entities_enrichment_data: list[DebugStepEnrichmentData]
     tenant_id: str | None = None
 
@@ -126,17 +126,19 @@ class StepDebugData(
         enrichment_data: list[BuiltStepDebugEnrichmentData] = [
             e.to_built() for e in self.scope_entities_enrichment_data
         ]
-        return BuiltStepDebugData(
-            OriginalStepIdentifier=self.step_id,
-            OriginalWorkflowIdentifier=self.playbook_id,
-            ModificationTimeUnixTimeInMs=self.modification_time,
+        res: BuiltStepDebugData = BuiltStepDebugData(
             CreationTimeUnixTimeInMs=self.creation_time,
+            ModificationTimeUnixTimeInMs=self.modification_time,
+            OriginalWorkflowIdentifier=self.playbook_id,
+            OriginalStepIdentifier=self.step_id,
             ResultValue=self.result_value,
             ResultJson=self.result_json,
             ScopeEntitiesEnrichmentData=enrichment_data,
             ScopeEntitiesEnrichmentDataJson=json.dumps(enrichment_data),
-            TenantId=self.tenant_id,
         )
+        if self.tenant_id is not None:
+            res["TenantId"] = self.tenant_id
+        return res
 
     def to_non_built(self) -> NonBuiltStepDebugData:
         """Convert the StepDebugData to its "non-built" representation.
@@ -155,6 +157,7 @@ class StepDebugData(
             scope_entities_enrichment_data=[
                 e.to_non_built() for e in self.scope_entities_enrichment_data
             ],
-            tenant_id=self.tenant_id,
         )
+        if self.tenant_id is not None:
+            non_built["tenant_id"] = self.tenant_id
         return non_built

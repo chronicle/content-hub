@@ -163,7 +163,8 @@ def test_is_group(tmp_path: Path) -> None:
 
 def test_get_all_integrations_paths(tmp_path: Path) -> None:
     with unittest.mock.patch(
-        "mp.core.file_utils.create_or_get_integrations_path", return_value=tmp_path
+        "mp.core.file_utils.integrations.file_utils.create_or_get_integrations_path",
+        return_value=tmp_path,
     ):
         community_paths = mp.core.file_utils.get_all_integrations_paths(
             mp.core.constants.COMMUNITY_DIR_NAME
@@ -323,7 +324,9 @@ def test_svg_path_to_text(tmp_path: Path) -> None:
 
 def test_png_path_to_bytes(tmp_path: Path) -> None:
     sample_bytes = b"valid png bytes"
-    with unittest.mock.patch("mp.core.file_utils.validate_png_content", return_value=sample_bytes):
+    with unittest.mock.patch(
+        "mp.core.file_utils.integrations.file_utils.validate_png_content", return_value=sample_bytes
+    ):
         input_file = tmp_path / "test.png"
         input_file.write_bytes(sample_bytes)
         non_existent_file = tmp_path / "not_real.png"
