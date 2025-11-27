@@ -73,26 +73,26 @@ class BuiltPlaybookOverviewTemplateDetails(TypedDict):
 
 class BuiltPlaybookDefinition(TypedDict):
     Identifier: Annotated[str, pydantic.Field(pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX)]
-    Name: Annotated[str, pydantic.Field(max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH)]
     IsEnable: bool
     Version: float
-    Description: str
-    CreationSource: NotRequired[int | None]
-    DefaultAccessLevel: NotRequired[int | None]
-    SimulationClone: NotRequired[bool | None]
-    DebugAlertIdentifier: str | None
-    DebugBaseAlertIdentifier: str | None
-    IsDebugMode: bool
-    PlaybookType: int
-    TemplateName: str | None
-    OriginalWorkflowIdentifier: str
-    VersionComment: str | None
-    VersionCreator: str | None
-    Creator: str
-    Priority: int
-    Category: int
-    IsAutomatic: bool
     IsArchived: bool
+    IsAutomatic: bool
+    Name: Annotated[str, pydantic.Field(max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH)]
+    Category: int
+    Description: str
+    Priority: int
+    Creator: str
+    VersionCreator: str | None
+    VersionComment: str | None
+    OriginalWorkflowIdentifier: str
+    TemplateName: str | None
+    PlaybookType: int
+    IsDebugMode: bool
+    DebugBaseAlertIdentifier: str | None
+    DebugAlertIdentifier: str | None
+    SimulationClone: NotRequired[bool | None]
+    DefaultAccessLevel: NotRequired[int | None]
+    CreationSource: NotRequired[int | None]
     Steps: list[BuiltStep]
     Triggers: list[BuiltTrigger]
     OverviewTemplates: list[BuiltOverviewDetails]
@@ -196,26 +196,26 @@ class Playbook:
 
         built_playbook_definition: BuiltPlaybookDefinition = BuiltPlaybookDefinition(
             Identifier=built_playbook_meta["Identifier"],
-            Name=built_playbook_meta["Name"],
             IsEnable=built_playbook_meta["IsEnable"],
             Version=built_playbook_meta["Version"],
-            Description=built_playbook_meta["Description"],
-            CreationSource=built_playbook_meta["CreationSource"],
-            DefaultAccessLevel=built_playbook_meta["DefaultAccessLevel"],
-            SimulationClone=built_playbook_meta["SimulationClone"],
-            DebugAlertIdentifier=built_playbook_meta["DebugAlertIdentifier"],
-            DebugBaseAlertIdentifier=built_playbook_meta["DebugBaseAlertIdentifier"],
-            IsDebugMode=built_playbook_meta["IsDebugMode"],
-            PlaybookType=built_playbook_meta["PlaybookType"],
-            TemplateName=built_playbook_meta["TemplateName"],
-            OriginalWorkflowIdentifier=built_playbook_meta["OriginalWorkflowIdentifier"],
-            VersionComment=built_playbook_meta["VersionComment"],
-            VersionCreator=built_playbook_meta["VersionCreator"],
-            Creator=built_playbook_meta["Creator"],
-            Priority=built_playbook_meta["Priority"],
-            Category=built_playbook_meta["Category"],
-            IsAutomatic=built_playbook_meta["IsAutomatic"],
             IsArchived=built_playbook_meta["IsArchived"],
+            IsAutomatic=built_playbook_meta["IsAutomatic"],
+            Name=built_playbook_meta["Name"],
+            Category=built_playbook_meta["Category"],
+            Description=built_playbook_meta["Description"],
+            Priority=built_playbook_meta["Priority"],
+            Creator=built_playbook_meta["Creator"],
+            VersionCreator=built_playbook_meta["VersionCreator"],
+            VersionComment=built_playbook_meta["VersionComment"],
+            OriginalWorkflowIdentifier=built_playbook_meta["OriginalWorkflowIdentifier"],
+            TemplateName=built_playbook_meta["TemplateName"],
+            PlaybookType=built_playbook_meta["PlaybookType"],
+            IsDebugMode=built_playbook_meta["IsDebugMode"],
+            DebugBaseAlertIdentifier=built_playbook_meta["DebugBaseAlertIdentifier"],
+            DebugAlertIdentifier=built_playbook_meta["DebugAlertIdentifier"],
+            SimulationClone=built_playbook_meta["SimulationClone"],
+            DefaultAccessLevel=built_playbook_meta["DefaultAccessLevel"],
+            CreationSource=built_playbook_meta["CreationSource"],
             Steps=steps,
             Triggers=trigger,
             OverviewTemplates=built_overviews_for_definition,
