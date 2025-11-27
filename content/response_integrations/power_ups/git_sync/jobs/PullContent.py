@@ -17,7 +17,16 @@ from __future__ import annotations
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
-from TIPCommon.data_models import CaseTag
+from TIPCommon.data_models import (
+    CaseTag,
+    CaseStage,
+    Domain,
+    CustomList,
+    Network,
+    CaseCloseReasons,
+    SlaDefinition,
+)
+
 from TIPCommon.utils import platform_supports_1p_api
 
 from ..core.constants import (
@@ -103,9 +112,15 @@ def main():
 
         if features["Integration Instances"]:
             siemplify.LOGGER.info("========== Integration instances ==========")
-            current_instances = gitsync.api.get_integrations_instances(chronicle_soar=siemplify, environment=ALL_ENVIRONMENTS_IDENTIFIER)
+            current_instances = gitsync.api.get_integrations_instances(
+                chronicle_soar=siemplify, environment=ALL_ENVIRONMENTS_IDENTIFIER
+            )
             for env in gitsync.api.get_environment_names(chronicle_soar=siemplify):
-                current_instances.extend(gitsync.api.get_integrations_instances(chronicle_soar=siemplify, environment=env))
+                current_instances.extend(
+                    gitsync.api.get_integrations_instances(
+                        chronicle_soar=siemplify, environment=env
+                    )
+                )
             for instance in gitsync.content.get_integration_instances():
                 if instance["integrationIdentifier"] not in IGNORED_INTEGRATIONS:
                     current = next(
@@ -175,30 +190,39 @@ def main():
                 )
 
                 gitsync.api.add_case_tag(siemplify, current_tag)
-
+# 27 nov start
         if features["Case Stages"]:
             siemplify.LOGGER.info("Installing stages")
             current_stages = gitsync.api.get_case_stages(chronicle_soar=siemplify)
             for stage in gitsync.content.get_stages():
-                gitsync.api.add_case_stage(
-                    siemplify,
-                    id_validator(stage, "name", "id", current_stages),
+                current_stage = id_validator(stage, "name", "id", current_stages)
+                current_stage = (
+                    CaseStage.from_legacy_or_1p(current_stage).to_1p()
+                    if platform_supports_1p_api()
+                    else CaseStage.from_json(current_stage).to_legacy()
                 )
+
+                gitsync.api.add_case_stage(siemplify, current_stage)
 
         if features["Case Close Reasons"]:
             siemplify.LOGGER.info("Installing case close reasons")
             current_causes = gitsync.api.get_close_reasons(chronicle_soar=siemplify)
             for cause in gitsync.content.get_case_close_causes():
-                gitsync.api.add_close_reason(
-                    siemplify,
-                    id_validator(
+                current_cause= id_validator(
                         cause,
-                        ("rootCause", "forCloseReason"),
+                        "rootCause",
                         "id",
                         current_causes,
-                    ),
+                    )
+                current_cause = (
+                    CaseCloseReasons.from_legacy_or_1p(current_cause).to_1p()
+                    if platform_supports_1p_api()
+                    else CaseCloseReasons.from_json(current_cause).to_legacy()
                 )
 
+                gitsync.api.add_close_reason(siemplify, current_cause)
+
+# 27 nov end
         if features["Case Title Settings"]:
             case_title_settings = gitsync.content.get_case_titles()
             if case_title_settings:
@@ -226,24 +250,45 @@ def main():
             siemplify.LOGGER.info("Installing networks")
             current_networks = gitsync.api.get_networks(chronicle_soar=siemplify)
             for network in gitsync.content.get_networks():
-                gitsync.api.update_network(
-                    siemplify,
-                    id_validator(network, "name", "id", current_networks),
+                current_network = id_validator(network, "name", "id", current_networks)
+                current_network = (
+                    Network.from_legacy_or_1p(current_network).to_1p()
+                    if platform_supports_1p_api()
+                    else Network.from_json(current_network).to_legacy()
                 )
 
+                gitsync.api.update_network(siemplify, current_network)
+
+# 27 nov strt
         if features["Domains"]:
             siemplify.LOGGER.info("Installing domains")
             current_domains = gitsync.api.get_domains(chronicle_soar=siemplify)
             for domain in gitsync.content.get_domains():
-                gitsync.api.update_domain(
-                    siemplify,
-                    id_validator(domain, "domain", "id", current_domains),
+                current_domain = id_validator(domain, "domain", "id", current_domains)
+                current_domain = (
+                    Domain.from_legacy_or_1p(current_domain).to_1p()
+                    if platform_supports_1p_api()
+                    else Domain.from_json(current_domain).to_legacy()
                 )
 
+                gitsync.api.update_domain(siemplify, current_domain)
+                # gitsync.api.update_domain(
+                #     siemplify,
+                #     id_validator(domain, "domain", "id", current_domains),
+                # )
         if features["Custom Lists"]:
             siemplify.LOGGER.info("Installing custom lists")
+            current_lsts = gitsync.api.get_custom_lists(chronicle_soar=siemplify)
             for lst in gitsync.content.get_custom_lists():
-                gitsync.api.update_custom_list(siemplify, lst)
+                current_lst = id_validator(lst, "category", "id", current_lsts)
+                current_lst = (
+                    CustomList.from_legacy_or_1p(current_lst).to_1p()
+                    if platform_supports_1p_api()
+                    else CustomList.from_json(current_lst).to_legacy()
+                )
+
+                gitsync.api.update_custom_list(siemplify, current_lst)SlaDefinition
+# 27 nov end
 
         if features["Email Templates"]:
             siemplify.LOGGER.info("Installing email templates")
