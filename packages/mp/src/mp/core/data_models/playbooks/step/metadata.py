@@ -21,6 +21,7 @@ import pydantic
 
 import mp.core.constants
 import mp.core.data_models.abc
+import mp.core.utils
 
 from .step_debug_data import BuiltStepDebugData, NonBuiltStepDebugData, StepDebugData
 from .step_parameter import BuiltStepParameter, NonBuiltStepParameter, StepParameter
@@ -30,8 +31,6 @@ if TYPE_CHECKING:
 
 
 class BuiltStep(TypedDict):
-    Name: str
-    Description: str
     Identifier: str
     OriginalStepIdentifier: str
     ParentWorkflowIdentifier: str
@@ -40,7 +39,9 @@ class BuiltStep(TypedDict):
     PreviousResultCondition: str
     InstanceName: str
     IsAutomatic: bool
+    Name: str
     IsSkippable: bool
+    Description: str
     ActionProvider: str
     ActionName: str
     Type: int
@@ -49,10 +50,10 @@ class BuiltStep(TypedDict):
     AutoSkipOnFailure: bool
     IsDebugMockData: bool
     StepDebugData: BuiltStepDebugData | None
+    ParentStepContainerId: str | None
+    IsTouchedByAi: bool
     StartLoopStepIdentifier: str | None
     ParallelActions: list[BuiltStep]
-    ParentContainerIdentifier: str | None
-    IsTouchedByAi: bool
 
 
 class NonBuiltStep(TypedDict):
@@ -196,7 +197,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             auto_skip_on_failure=built["AutoSkipOnFailure"],
             start_loop_step_id=built.get("StartLoopStepIdentifier"),
             integration=built["Integration"],
-            parent_container_id=built.get("ParentContainerIdentifier"),
+            parent_container_id=built.get("ParentStepContainerId"),
             action_name=built["ActionName"],
             parallel_actions=[cls.from_built(file_name, pa) for pa in built["ParallelActions"]],
             previous_result_condition=built["PreviousResultCondition"],
@@ -246,31 +247,31 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
 
         """
         return BuiltStep(
-            Name=self.name,
-            Description=self.description,
             Identifier=self.identifier,
             OriginalStepIdentifier=self.original_step_id,
             ParentWorkflowIdentifier=self.playbook_id,
             ParentStepIdentifiers=self.parent_step_ids,
             ParentStepIdentifier=self.parent_step_id,
+            PreviousResultCondition=self.previous_result_condition,
             InstanceName=self.instance_name,
             IsAutomatic=self.is_automatic,
+            Name=self.name,
             IsSkippable=self.is_skippable,
-            StartLoopStepIdentifier=self.start_loop_step_id,
-            ActionName=self.action_name,
-            Parameters=[p.to_built() for p in self.parameters],
-            Integration=self.integration,
+            Description=self.description,
             ActionProvider=self.action_provider,
+            ActionName=self.action_name,
+            Type=self.type_.value,
+            Integration=self.integration,
+            Parameters=[p.to_built() for p in self.parameters],
+            AutoSkipOnFailure=self.auto_skip_on_failure,
             IsDebugMockData=self.is_debug_mock_data,
             StepDebugData=(
                 self.step_debug_data.to_built() if self.step_debug_data is not None else None
             ),
-            AutoSkipOnFailure=self.auto_skip_on_failure,
-            ParentContainerIdentifier=self.parent_container_id,
-            ParallelActions=[p.to_built() for p in self.parallel_actions],
+            ParentStepContainerId=self.parent_container_id,
             IsTouchedByAi=self.is_touched_by_ai,
-            Type=self.type_.value,
-            PreviousResultCondition=self.previous_result_condition,
+            StartLoopStepIdentifier=self.start_loop_step_id,
+            ParallelActions=[p.to_built() for p in self.parallel_actions],
         )
 
     def to_non_built(self) -> NonBuiltStep:

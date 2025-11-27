@@ -211,7 +211,6 @@ class PlaybookWidgetMetadata(
             Order=self.order,
             TemplateIdentifier=self.template_identifier,
             Type=self.type.value,
-            BlockStepInstanceName=self.block_step_instance_name,
             DataDefinitionJson=json.dumps(
                 self.data_definition.to_built()
                 if self.type == WidgetType.HTML
@@ -220,9 +219,10 @@ class PlaybookWidgetMetadata(
             GridColumns=self.widget_size.value,
             ActionWidgetTemplateIdentifier=self.action_widget_template_id,
             StepIdentifier=self.step_id,
-            BlockStepIdentifier=self.block_step_id,
-            PresentIfEmpty=self.present_if_empty,
             StepIntegration=self.step_integration,
+            BlockStepIdentifier=self.block_step_id,
+            BlockStepInstanceName=self.block_step_instance_name,
+            PresentIfEmpty=self.present_if_empty,
             ConditionsGroup=self.conditions_group.to_built(),
             IntegrationName=self.integration_name,
         )
