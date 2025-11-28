@@ -112,10 +112,12 @@ class ConvertFileAction(Action):
             self.output_message = "No output file was created. Check logs and parameters."
             return
 
-        self.json_results = {
-            "output_format": self.params.output_file_format,
-            "file_path": result_path,
-        }
+        self.json_results = [
+            {
+                "output_format": self.params.output_file_format,
+                "file_path": result_path,
+            }
+        ]
         self.output_message = "Successfully converted file."
 
     def _build_output_path(self) -> str:
