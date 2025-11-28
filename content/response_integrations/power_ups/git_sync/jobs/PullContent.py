@@ -186,11 +186,11 @@ def main():
                 current_tag = (
                     CaseTag.from_json(current_tag).to_json_1p()
                     if platform_supports_1p_api()
-                    else CaseTag.from_json(current_tag).to_json_legacy()
+                    else CaseTag.from_json(current_tag).to_json()
                 )
 
                 gitsync.api.add_case_tag(siemplify, current_tag)
-# 27 nov start
+
         if features["Case Stages"]:
             siemplify.LOGGER.info("Installing stages")
             current_stages = gitsync.api.get_case_stages(chronicle_soar=siemplify)
@@ -199,7 +199,7 @@ def main():
                 current_stage = (
                     CaseStage.from_legacy_or_1p(current_stage).to_1p()
                     if platform_supports_1p_api()
-                    else CaseStage.from_json(current_stage).to_legacy()
+                    else CaseStage.from_legacy_or_1p(current_stage).to_legacy()
                 )
 
                 gitsync.api.add_case_stage(siemplify, current_stage)
@@ -217,12 +217,12 @@ def main():
                 current_cause = (
                     CaseCloseReasons.from_legacy_or_1p(current_cause).to_1p()
                     if platform_supports_1p_api()
-                    else CaseCloseReasons.from_json(current_cause).to_legacy()
+                    else CaseCloseReasons.from_legacy_or_1p(current_cause).to_legacy()
                 )
 
                 gitsync.api.add_close_reason(siemplify, current_cause)
 
-# 27 nov end
+
         if features["Case Title Settings"]:
             case_title_settings = gitsync.content.get_case_titles()
             if case_title_settings:
@@ -254,12 +254,11 @@ def main():
                 current_network = (
                     Network.from_legacy_or_1p(current_network).to_1p()
                     if platform_supports_1p_api()
-                    else Network.from_json(current_network).to_legacy()
+                    else Network.from_legacy_or_1p(current_network).to_legacy()
                 )
 
                 gitsync.api.update_network(siemplify, current_network)
 
-# 27 nov strt
         if features["Domains"]:
             siemplify.LOGGER.info("Installing domains")
             current_domains = gitsync.api.get_domains(chronicle_soar=siemplify)
@@ -268,14 +267,11 @@ def main():
                 current_domain = (
                     Domain.from_legacy_or_1p(current_domain).to_1p()
                     if platform_supports_1p_api()
-                    else Domain.from_json(current_domain).to_legacy()
+                    else Domain.from_legacy_or_1p(current_domain).to_legacy()
                 )
 
                 gitsync.api.update_domain(siemplify, current_domain)
-                # gitsync.api.update_domain(
-                #     siemplify,
-                #     id_validator(domain, "domain", "id", current_domains),
-                # )
+
         if features["Custom Lists"]:
             siemplify.LOGGER.info("Installing custom lists")
             current_lsts = gitsync.api.get_custom_lists(chronicle_soar=siemplify)
@@ -284,11 +280,10 @@ def main():
                 current_lst = (
                     CustomList.from_legacy_or_1p(current_lst).to_1p()
                     if platform_supports_1p_api()
-                    else CustomList.from_json(current_lst).to_legacy()
+                    else CustomList.from_legacy_or_1p(current_lst).to_legacy()
                 )
 
-                gitsync.api.update_custom_list(siemplify, current_lst)SlaDefinition
-# 27 nov end
+                gitsync.api.update_custom_list(siemplify, current_lst)
 
         if features["Email Templates"]:
             siemplify.LOGGER.info("Installing email templates")
