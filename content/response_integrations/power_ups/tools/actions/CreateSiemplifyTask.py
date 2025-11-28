@@ -74,7 +74,7 @@ def main():
             "owner": assign_to,
             "content": task_content,
             "dueDate": "",
-            "dueDateUnixTimeInMs": client_time,
+            "dueDateUnixTimeMs": client_time,
             "title": task_title,
             "caseId": siemplify.case_id,
         }
@@ -98,7 +98,10 @@ def main():
     )
     add_task.raise_for_status()
 
-    output_message = f"A new task has been created for the user: {assign_to}.\nThis task should be handled in the next {duration} mintues"
+    output_message = (
+        "A new task has been created for the user: "
+        f"{assign_to}.\nThis task should be handled in the next {duration} mintues"
+    )
     siemplify.end(output_message, True)
 
 
