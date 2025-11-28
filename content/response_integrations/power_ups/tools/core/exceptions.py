@@ -17,3 +17,15 @@ from __future__ import annotations
 
 class MaxWaitTimeExceededException(Exception):
     """Exception raised when the specified wait time exceeds the maximum allowed limit."""
+
+
+class ParameterNotFoundError(Exception):
+    """Exception raised when a required parameter is not found."""
+
+
+class RemoteAgentRequiredException(Exception):
+    """Exception raised when an action requires execution on a Remote Agent."""
+
+
+class OcrImageSetupError(Exception):
+    """Exception raised when Tesseract OCR is not properly set up in the Remote Agent."""

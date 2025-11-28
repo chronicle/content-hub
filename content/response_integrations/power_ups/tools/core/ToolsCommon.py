@@ -15,12 +15,18 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING
 
 from tldextract import extract
 from tldextract.tldextract import ExtractResult
 
 from .constants import LABEL_REGEX
+from .exceptions import RemoteAgentRequiredException
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    from TIPCommon.types import ChronicleSOAR
 
 
 # CONSTS
@@ -232,3 +238,14 @@ def get_domain_from_string(identifier: str, extract_subdomain: bool) -> str | No
 
 def is_valid_label(label: str) -> bool:
     return bool(LABEL_REGEX.fullmatch(label))
+
+
+def ensure_remote_agent(chronicle_soar: ChronicleSOAR, script_name: str) -> None:
+    """Ensures the script is running on a Remote Agent.
+    Raises RemoteAgentRequiredException if not.
+    Args:
+        chronicle_soar: The ChronicleSoar object.
+        script_name: The name of the script/action.
+    """
+    if not getattr(chronicle_soar, "is_remote", False):
+        raise RemoteAgentRequiredException(f"{script_name} can only be executed on a Remote Agent.")
