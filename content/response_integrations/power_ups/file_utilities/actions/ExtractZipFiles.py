@@ -51,8 +51,6 @@ def main():
         siemplify.extract_action_param("Add to Case Wall", print_value=True).lower()
         == "true"
     )
-    # zip_password = siemplify.extract_action_param("Zip File Password", print_value=True)
-    # zip_password_delimiter = siemplify.extract_action_param("Zip Password List Delimiter", print_value=True)
 
     zip_passwords = list(
         filter(
@@ -71,7 +69,7 @@ def main():
             ],
         ),
     )
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    status = EXECUTION_STATE_COMPLETED
     output_message = (
         "output message :"  # human readable message, showed in UI as the action result
     )
@@ -118,9 +116,8 @@ def main():
                 )
                 x_file["attachment_id"] = attachment_res
 
-    if include_data == False:
+    if not include_data:
         for file_name in extracted_files:
-            x_files = extracted_files[file_name]
             for x_file in extracted_files[file_name]:
                 del x_file["raw"]
 
