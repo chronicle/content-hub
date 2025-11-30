@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -123,8 +124,10 @@ class ConvertFileAction(Action):
     def _build_output_path(self) -> str:
         input_path: Path = Path(self.params.input_file_path)
         output_dir: Path = Path(tempfile.gettempdir())
-
-        return str(output_dir / f"{input_path.stem}.{self.params.output_file_format.lower()}")
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        output_filename = f"{input_path.stem}_{timestamp}.{self.params.output_file_format.lower()}"
+    
+        return str(output_dir / output_filename)
 
     def _convert_pdf_to_png(self, output_path: str) -> str | None:
         if not shutil.which("pdftoppm"):
