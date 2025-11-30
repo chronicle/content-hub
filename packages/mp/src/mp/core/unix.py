@@ -164,6 +164,7 @@ def download_wheels_from_requirements(
                     "manylinux_2_17_x86_64",
                 ]
             )
+        run_pip_command(command, cwd=project_path)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
