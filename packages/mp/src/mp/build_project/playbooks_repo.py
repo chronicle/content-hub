@@ -33,11 +33,9 @@ if TYPE_CHECKING:
 
 
 class Playbooks:
-    def __init__(self, playbook_repository: str) -> None:
-        self.repository_name: str = playbook_repository
-        self.repository_base_path: Path = mp.core.file_utils.get_playbook_repository_base_path(
-            self.repository_name
-        )
+    def __init__(self, playbook_repository_path: Path) -> None:
+        self.repository_name: str = playbook_repository_path.name
+        self.repository_base_path: Path = playbook_repository_path
         self.out_dir: Path = mp.core.file_utils.get_playbook_out_dir()
 
     def build_playbooks(self, playbook_paths: Iterable[Path]) -> None:
@@ -71,13 +69,16 @@ class Playbooks:
         self._build_playbook(playbook_path)
 
     def _build_playbook(self, playbook_path: Path) -> None:
-        rich.print(f"[green]---------- Building {playbook_path.stem} ----------[/green]")
-
         if mp.core.file_utils.is_built_playbook(playbook_path):
-            mp.core.file_utils.recreate_dir(self.out_dir)
-            shutil.copytree(playbook_path, self.out_dir, dirs_exist_ok=True)
+            rich.print(
+                f"[green]---------- Playbook {playbook_path.name} "
+                f"is already built ----------[/green]"
+            )
+            self.out_dir.mkdir(exist_ok=True)
+            shutil.copy(playbook_path, self.out_dir / playbook_path.name)
             return
 
+        rich.print(f"[green]---------- Building {playbook_path.stem} ----------[/green]")
         playbook: Playbook = Playbook.from_non_built_path(playbook_path)
         build_playbook: BuildPlaybook = BuildPlaybook(playbook, playbook_path, self.out_dir)
         build_playbook.build_playbook()
@@ -117,14 +118,17 @@ class Playbooks:
 
     @staticmethod
     def _deconstruct_playbook(playbook_path: Path, playbook_out_path: Path) -> None:
-        rich.print(f"[green]---------- Deconstructing {playbook_path.stem} ----------[/green]")
         if mp.core.file_utils.is_non_built_playbook(playbook_path):
+            rich.print([
+                f"[green]---------- Playbook {playbook_path.name} "
+                f"is already deconstructed ----------[/green]"
+            ])
             mp.core.file_utils.recreate_dir(playbook_out_path)
             shutil.copytree(playbook_path, playbook_out_path, dirs_exist_ok=True)
             return
 
+        rich.print(f"[green]---------- Deconstructing {playbook_path.stem} ----------[/green]")
         playbook: Playbook = Playbook.from_built_path(playbook_path)
-
         deconstruct_playbook: DeconstructPlaybook = DeconstructPlaybook(playbook, playbook_out_path)
         deconstruct_playbook.deconstruct_playbook_files()
         rich.print(f"[green]----------Done Deconstructing {playbook_path.stem} ----------[/green]")

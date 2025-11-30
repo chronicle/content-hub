@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 import rich
 
 import mp.core.constants
+import mp.core.file_utils
 from mp.build_project.playbooks_repo import Playbooks
 from mp.build_project.post_build.playbooks.playbooks_json import write_playbooks_json
 from mp.core.custom_types import RepositoryType
@@ -35,8 +36,12 @@ def build_playbooks(
     deconstruct: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
-    commercial_playbooks: Playbooks = Playbooks(mp.core.constants.COMMERCIAL_DIR_NAME)
-    community_playbooks: Playbooks = Playbooks(mp.core.constants.COMMUNITY_DIR_NAME)
+    commercial_playbooks: Playbooks = Playbooks(
+        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMERCIAL_DIR_NAME)
+    )
+    community_playbooks: Playbooks = Playbooks(
+        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMUNITY_DIR_NAME)
+    )
 
     if playbooks:
         _build_playbooks(set(playbooks), commercial_playbooks, deconstruct=deconstruct)
