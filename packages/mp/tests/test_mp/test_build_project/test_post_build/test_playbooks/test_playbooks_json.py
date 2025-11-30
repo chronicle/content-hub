@@ -38,6 +38,7 @@ def test_write_playbooks_json(
 ) -> None:
     commercial: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
     commercial_playbooks = Playbooks(commercial)
+    commercial_playbooks.repository_base_path.mkdir(parents=True, exist_ok=True)
     commercial_playbooks.out_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy(built_playbook_path, commercial_playbooks.out_dir / "mock_non_built_playbook.json")
     shutil.copytree(
