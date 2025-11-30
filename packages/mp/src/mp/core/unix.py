@@ -147,17 +147,23 @@ def download_wheels_from_requirements(
         "--implementation",
         "cp",
         "--platform",
-        "manylinux1_x86_64",
-        "--platform",
         "none-any",
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
 
     try:
-        platform: str = "win_amd64" if is_windows() else "manylinux_2_17_x86_64"
-        command.extend(["--platform", platform])
-        run_pip_command(command, cwd=project_path)
+        if is_windows():
+            command.extend(["--platform", "win_amd64"])
+        else:
+            command.extend(
+                [
+                    "--platform",
+                    "manylinux1_x86_64",
+                    "--platform",
+                    "manylinux_2_17_x86_64",
+                ]
+            )
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
