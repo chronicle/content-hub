@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import strategies as st
 
-from mp.core.data_models.mapping_rules.metadata import (
+from mp.core.data_models.integrations.mapping_rules.metadata import (
     ComparisonType,
     ExtractionFunction,
     TransformationFunction,

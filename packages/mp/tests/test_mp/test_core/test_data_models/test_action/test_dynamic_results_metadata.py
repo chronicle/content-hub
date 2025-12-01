@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.action.dynamic_results_metadata import (
+from mp.core.data_models.integrations.action.dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
     DynamicResultsMetadata,
     NonBuiltDynamicResultsMetadata,

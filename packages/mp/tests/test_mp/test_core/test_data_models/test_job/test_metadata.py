@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.job.metadata import (
+from mp.core.data_models.integrations.job.metadata import (
     BuiltJobMetadata,
     JobMetadata,
     NonBuiltJobMetadata,

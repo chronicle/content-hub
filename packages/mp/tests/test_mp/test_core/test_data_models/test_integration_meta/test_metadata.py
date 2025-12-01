@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.integration_meta.metadata import (
+from mp.core.data_models.integrations.integration_meta.metadata import (
     BuiltIntegrationMetadata,
     IntegrationMetadata,
     NonBuiltIntegrationMetadata,
