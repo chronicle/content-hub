@@ -17,7 +17,7 @@ from __future__ import annotations
 import base64
 import json
 import pathlib
-from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 import yaml
@@ -26,7 +26,6 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
-import mp.core.validators
 
 from .feature_tags import BuiltFeatureTags, FeatureTags, NonBuiltFeatureTags
 from .parameter import BuiltIntegrationParameter, IntegrationParameter, NonBuiltIntegrationParameter
@@ -172,16 +171,6 @@ class IntegrationMetadata(
         pydantic.PositiveFloat,
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
-
-    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002
-        """Do a Hook to validate that the ssl parameter is valid.
-
-        Args:
-            context: The context.
-
-        """
-        if self.parameters:
-            mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
