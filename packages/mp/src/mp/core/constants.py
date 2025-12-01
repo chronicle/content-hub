@@ -86,6 +86,10 @@ RELEASE_NOTES_FILE: str = f"release_notes{DEF_FILE_SUFFIX}"
 IMAGE_FILE: str = f"image{IMAGE_FILE_SUFFIX}"
 LOGO_FILE: str = f"logo{SVG_FILE_SUFFIX}"
 SDK_PACKAGE_NAME: str = "soar_sdk"
+TRIGGERS_FILE_NAME: str = f"triggers{DEF_FILE_SUFFIX}"
+DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
+OVERVIEWS_FILE_NAME: str = "overviews.yaml"
+STEPS_DIR: str = "steps"
 
 SAFE_TO_IGNORE_PACKAGES: tuple[str, ...] = ("win-unicode-console",)
 SAFE_TO_IGNORE_ERROR_MESSAGES: tuple[str, ...] = (
@@ -134,6 +138,7 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
 }
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",
+    "Darktrace",
     "Lacework Connector",
     "PagerDuty",
     "PagerDutyConnector",

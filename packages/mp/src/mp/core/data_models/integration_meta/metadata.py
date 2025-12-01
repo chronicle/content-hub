@@ -173,13 +173,7 @@ class IntegrationMetadata(
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
 
-    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002
-        """Do a Hook to validate that the ssl parameter is valid.
-
-        Args:
-            context: The context.
-
-        """
+    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002, D102
         if self.parameters:
             mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
 
@@ -380,13 +374,7 @@ class IntegrationMetadata(
 
 
 def _read_image_files(metadata_content: NonBuiltIntegrationMetadata, path: Path) -> None:
-    """Read image files and update the metadata dictionary in place.
-
-    Args:
-        metadata_content: The metadata content.
-        path: The path to the integration.
-
-    """
+    """Read image files and update the metadata dictionary in place."""
     if image_str := metadata_content.get("image_path"):
         full_path = path / image_str
         metadata_content["image_path"] = mp.core.file_utils.png_path_to_bytes(full_path)
