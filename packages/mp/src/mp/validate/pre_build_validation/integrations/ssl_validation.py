@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from mp.core import constants
-from mp.core.data_models.script.parameter import ScriptParamType
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.utils import load_components_defs, load_integration_def
 
