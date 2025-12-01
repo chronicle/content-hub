@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+from unittest import mock
 
 import pytest
 
@@ -71,4 +72,16 @@ class TestIntegrationHasDocumentationLinkValidation:
         _remove_key_from_yaml(integration_def_file, "documentation_link")
 
         with pytest.raises(NonFatalValidationError, match="missing a documentation link"):
+            self.validator_runner.run(temp_integration)
+
+    def test_excluded_integrations_feature(self, temp_integration: pathlib.Path) -> None:
+        """Test the excluded integrations feature works correctly."""
+        integration_def_file = temp_integration / constants.DEFINITION_FILE
+        _remove_key_from_yaml(integration_def_file, "documentation_link")
+
+        with mock.patch.object(
+            constants,
+            "EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK",
+            {"mock_integration"},
+        ):
             self.validator_runner.run(temp_integration)
