@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.job.parameter import (
+from mp.core.data_models.integrations.job.parameter import (
     BuiltJobParameter,
     JobParameter,
     NonBuiltJobParameter,

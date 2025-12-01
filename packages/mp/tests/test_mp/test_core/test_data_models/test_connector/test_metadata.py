@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.connector.metadata import (
+from mp.core.data_models.integrations.connector.metadata import (
     BuiltConnectorMetadata,
     ConnectorMetadata,
     NonBuiltConnectorMetadata,

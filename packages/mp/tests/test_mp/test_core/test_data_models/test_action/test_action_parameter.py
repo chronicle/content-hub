@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.action.parameter import (
+from mp.core.data_models.integrations.action.parameter import (
     ActionParameter,
     BuiltActionParameter,
     NonBuiltActionParameter,

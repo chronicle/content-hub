@@ -17,7 +17,7 @@ from __future__ import annotations
 from hypothesis import strategies as st
 
 import mp.core.constants
-from mp.core.data_models.script.parameter import ScriptParamType
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from test_mp.test_core.test_data_models.utils import (
     st_valid_built_param_type,
     st_valid_display_name,

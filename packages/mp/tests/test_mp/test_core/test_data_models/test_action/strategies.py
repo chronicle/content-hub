@@ -19,7 +19,7 @@ import json
 from hypothesis import strategies as st
 
 import mp.core.constants
-from mp.core.data_models.action.parameter import (
+from mp.core.data_models.integrations.action.parameter import (
     ActionParamType,
 )
 from test_mp.test_core.test_data_models.utils import (

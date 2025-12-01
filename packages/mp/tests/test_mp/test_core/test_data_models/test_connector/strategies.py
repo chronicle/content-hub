@@ -17,13 +17,13 @@ from __future__ import annotations
 
 from hypothesis import strategies as st
 
-from mp.core.data_models.connector.parameter import (
+from mp.core.data_models.integrations.connector.parameter import (
     ParamMode,
 )
-from mp.core.data_models.connector.rule import (
+from mp.core.data_models.integrations.connector.rule import (
     ConnectorRuleType,
 )
-from mp.core.data_models.script.parameter import ScriptParamType
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from test_mp.test_core.test_data_models.utils import (
     st_excluded_param_name,
     st_valid_built_param_type,
