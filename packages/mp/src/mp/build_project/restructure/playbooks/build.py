@@ -18,7 +18,11 @@ import dataclasses
 import json
 from typing import TYPE_CHECKING
 
+import rich
+
 import mp.core.constants
+from mp.core.data_models.widget.data import WidgetType
+from mp.core.utils import to_snake_case
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -29,26 +33,25 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(slots=True)
-class BuildPlaybook:
+class PlaybookBuilder:
     playbook: Playbook
     playbook_path: Path
     out_path: Path
 
-    def build_playbook(self) -> None:
+    def build(self) -> None:
         """Build a specific playbook to its "out" path."""
+        rich.print("Loading widgets from external files...")
         self._load_widgets_html_content()
         self._load_widgets_html_content_to_overviews()
         built_playbook: BuiltPlaybook = self.playbook.to_built()
-        built_playbook_path = (
-            self.out_path / f"{_convert_to_snake_case(self.playbook.meta_data.name.lower())}.json"
-        )
+        built_playbook_path = self.out_path / f"{to_snake_case(self.playbook.meta_data.name)}.json"
         built_playbook_path.write_text(json.dumps(built_playbook, indent=4))
 
     def _load_widgets_html_content(self) -> None:
         widgets: list[PlaybookWidgetMetadata] = self.playbook.widgets
         widgets_folder_path: Path = self.playbook_path / mp.core.constants.WIDGETS_DIR
         for w in widgets:
-            if w.type.name == "HTML":
+            if w.type is WidgetType.HTML:
                 html_file_path = widgets_folder_path / f"{w.title}.html"
                 w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")
 
@@ -61,8 +64,3 @@ class BuildPlaybook:
                     html_file_path = widgets_folder_path / f"{w.title}.html"
                     if html_file_path.exists():
                         w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")
-
-
-def _convert_to_snake_case(s: str) -> str:
-    s = s.replace("-", "_")
-    return s.replace(" ", "_")

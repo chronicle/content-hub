@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import rich
 
 import mp.core.file_utils
-from mp.build_project.integrations_repo import Integrations
+from mp.build_project.integrations_repo import IntegrationsRepo
 from mp.build_project.post_build.integrations.duplicate_integrations import (
     raise_errors_for_duplicate_integrations,
 )
@@ -61,8 +61,8 @@ def build_integrations(
     """Entry point of the build or deconstruct integration operation."""
     commercial_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMERCIAL)
     community_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMUNITY)
-    commercial_mp: Integrations = Integrations(commercial_path)
-    community_mp: Integrations = Integrations(community_path)
+    commercial_mp: IntegrationsRepo = IntegrationsRepo(commercial_path)
+    community_mp: IntegrationsRepo = IntegrationsRepo(community_path)
     if integrations:
         rich.print("Building integrations...")
         commercial_not_found: set[str] = _build_integrations(
@@ -85,8 +85,8 @@ def build_integrations(
 
 def build_integration_groups(
     groups: Iterable[str],
-    commercial_mp: Integrations,
-    community_mp: Integrations,
+    commercial_mp: IntegrationsRepo,
+    community_mp: IntegrationsRepo,
 ) -> None:
     """Build integration according to their groups."""
     rich.print("Building integration groups...")
@@ -95,7 +95,7 @@ def build_integration_groups(
     rich.print("Done building integration groups.")
 
 
-def _build_integration_groups(groups: Iterable[str], marketplace_: Integrations) -> None:
+def _build_integration_groups(groups: Iterable[str], marketplace_: IntegrationsRepo) -> None:
     valid_groups: set[Path] = _get_marketplace_paths_from_names(groups, marketplace_.paths)
     valid_group_names: set[str] = {g.name for g in valid_groups}
     not_found: set[str] = set(groups).difference(valid_group_names)
@@ -109,8 +109,8 @@ def _build_integration_groups(groups: Iterable[str], marketplace_: Integrations)
 
 def _build_integration_repositories(
     repositories: Iterable[RepositoryType],
-    commercial_mp: Integrations,
-    community_mp: Integrations,
+    commercial_mp: IntegrationsRepo,
+    community_mp: IntegrationsRepo,
 ) -> None:
     repos: set[RepositoryType] = set(repositories)
     if _is_commercial_repo(repos):
@@ -148,7 +148,7 @@ def _is_full_repo_build(repos: Iterable[RepositoryType]) -> bool:
 
 def _build_integrations(
     integrations: Iterable[str],
-    marketplace_: Integrations,
+    marketplace_: IntegrationsRepo,
     *,
     deconstruct: bool,
 ) -> set[str]:

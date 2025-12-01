@@ -14,19 +14,29 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import rich
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.build_project.playbooks_repo import Playbooks
+from mp.build_project.playbooks_repo import PlaybooksRepo
 from mp.build_project.post_build.playbooks.playbooks_json import write_playbooks_json
 from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
+
+
+def should_build_playbooks(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
+    """Decide if needed to build playbooks or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return playbooks or RepositoryType.PLAYBOOKS in repos
 
 
 def build_playbooks(
@@ -36,10 +46,10 @@ def build_playbooks(
     deconstruct: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
-    commercial_playbooks: Playbooks = Playbooks(
+    commercial_playbooks: PlaybooksRepo = PlaybooksRepo(
         mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMERCIAL_DIR_NAME)
     )
-    community_playbooks: Playbooks = Playbooks(
+    community_playbooks: PlaybooksRepo = PlaybooksRepo(
         mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMUNITY_DIR_NAME)
     )
 
@@ -52,8 +62,8 @@ def build_playbooks(
 
 
 def _build_playbooks_repositories(
-    commercial_playbooks: Playbooks,
-    community_playbooks: Playbooks,
+    commercial_playbooks: PlaybooksRepo,
+    community_playbooks: PlaybooksRepo,
 ) -> None:
     rich.print("[blue]Building all playbooks in repository...[/blue]")
     commercial_playbooks.build_playbooks(commercial_playbooks.repository_base_path.iterdir())
@@ -63,7 +73,7 @@ def _build_playbooks_repositories(
 
 def _build_playbooks(
     playbooks: Iterable[str],
-    repository: Playbooks,
+    repository: PlaybooksRepo,
     *,
     deconstruct: bool,
 ) -> None:
@@ -71,8 +81,8 @@ def _build_playbooks(
         playbooks, repository.repository_base_path
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
-
-    not_found_playbooks: set[str] = set(playbooks).difference(valid_playbooks_names)
+    normalized_playbooks: set[str] = {_normalize_name_to_json(name) for name in playbooks}
+    not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
         rich.print(
             f"[red]The following playbooks could not be found in the {repository.repository_name} "
@@ -93,14 +103,12 @@ def _build_playbooks(
 def _get_playbooks_paths_from_repository(
     playbooks_names: Iterable[str], repository_path: Path
 ) -> set[Path]:
-    return {p for n in playbooks_names if (p := repository_path / n).exists()}
+    normalized_names = (_normalize_name_to_json(n) for n in playbooks_names)
+    return {p for n in normalized_names if (p := repository_path / n).exists()}
 
 
-def should_build_playbooks(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
-    """Decide if needed to build playbooks or not.
-
-    Returns:
-        True if yes overwise False
-
-    """
-    return playbooks or RepositoryType.PLAYBOOKS in repos
+def _normalize_name_to_json(name: str) -> str:
+    p = Path(name)
+    if p.suffix != ".json":
+        return p.with_suffix(".json").name
+    return p.name

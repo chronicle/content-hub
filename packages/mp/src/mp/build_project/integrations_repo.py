@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from mp.core.custom_types import Products
 
 
-class Integrations:
+class IntegrationsRepo:
     def __init__(self, integrations_dir: Path) -> None:
         """Class constructor.
 

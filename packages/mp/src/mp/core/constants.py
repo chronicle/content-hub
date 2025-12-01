@@ -399,7 +399,7 @@ PLAYBOOKS_JSON_NAME: str = "playbooks.json"
 MAX_STEP_PARALLEL_ACTIONS: int = 5
 CONDITION_FIELD_NAME_MIN_LENGTH: int = 1
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
-
+HTML_SUFFIX: str = "html"
 
 PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_DIR_NAME, COMMUNITY_DIR_NAME)
 

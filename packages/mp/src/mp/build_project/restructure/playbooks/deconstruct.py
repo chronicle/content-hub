@@ -17,9 +17,10 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
-import yaml
+import rich
 
 import mp.core.constants
+import mp.core.file_utils
 from mp.core.data_models.widget.data import WidgetType
 
 if TYPE_CHECKING:
@@ -36,11 +37,11 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class DeconstructPlaybook:
+class PlaybookDeconstructor:
     playbook: Playbook
     out_path: Path
 
-    def deconstruct_playbook_files(self) -> None:
+    def deconstruct(self) -> None:
         """Deconstruct a playbook's code to its "out" path."""
         non_built_playbook: NonBuiltPlaybook = self.playbook.to_non_built()
 
@@ -53,51 +54,56 @@ class DeconstructPlaybook:
         self._create_release_notes_file(non_built_playbook["release_notes"])
 
     def _create_steps_files(self, non_built_steps: list[NonBuiltStep]) -> None:
+        rich.print("Creating steps files...")
         step_dir: Path = self.out_path / mp.core.constants.STEPS_DIR
         step_dir.mkdir(exist_ok=True)
 
         for step in non_built_steps:
             step_path: Path = step_dir / f"{step['instance_name']}.yaml"
-            step_path.write_text(yaml.dump(step, indent=4), encoding="utf-8")
+            mp.core.file_utils.save_yaml(step, step_path)
 
     def _create_trigger_file(self, non_built_trigger: NonBuiltTrigger) -> None:
+        rich.print("Creating trigger file...")
         trigger_path: Path = self.out_path / mp.core.constants.TRIGGER_FILE_NAME
-        trigger_path.write_text(yaml.dump(non_built_trigger, indent=4), encoding="utf-8")
+        mp.core.file_utils.save_yaml(non_built_trigger, trigger_path)
 
     def _create_overviews_file(self, non_built_overviews: list[NonBuiltOverview]) -> None:
+        rich.print("Creating overviews file...")
         overviews_path: Path = self.out_path / mp.core.constants.OVERVIEWS_FILE_NAME
-        overviews_path.write_text(yaml.dump(non_built_overviews, indent=4), encoding="utf-8")
+        mp.core.file_utils.save_yaml(non_built_overviews, overviews_path)
 
     def _create_display_info_file(
         self, non_built_display_info: NonBuiltPlaybookDisplayInfo
     ) -> None:
+        rich.print("Creating display info file...")
         display_info_path: Path = self.out_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
-        display_info_path.write_text(yaml.dump(non_built_display_info, indent=4), encoding="utf-8")
+        mp.core.file_utils.save_yaml(non_built_display_info, display_info_path)
 
     def _create_definition_file(self, non_built_meta_data: NonBuiltPlaybookMetadata) -> None:
+        rich.print("Creating definition file...")
         definition_path: Path = self.out_path / mp.core.constants.DEFINITION_FILE
-        definition_path.write_text(yaml.dump(non_built_meta_data, indent=4), encoding="utf-8")
+        mp.core.file_utils.save_yaml(non_built_meta_data, definition_path)
 
     def _create_release_notes_file(
         self, non_built_release_notes: list[NonBuiltReleaseNote]
     ) -> None:
+        rich.print("Creating release notes file...")
         release_notes_path: Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
-        release_notes_path.write_text(
-            yaml.dump(non_built_release_notes, indent=4), encoding="utf-8"
-        )
+        mp.core.file_utils.save_yaml(non_built_release_notes, release_notes_path)
 
     def _create_widgets_files(
         self, non_built_widgets: list[NonBuiltPlaybookWidgetMetadata]
     ) -> None:
+        rich.print("Creating widgets files...")
         widgets_path: Path = self.out_path / mp.core.constants.WIDGETS_DIR
         widgets_path.mkdir(exist_ok=True)
 
         for w in non_built_widgets:
-            widget_path: Path = widgets_path / f"{w['title']}.yaml"
-            widget_path.write_text(yaml.dump(w, indent=4), encoding="utf-8")
+            widget_path: Path = widgets_path / f"{w['title']}.{mp.core.constants.DEF_FILE_SUFFIX}"
+            mp.core.file_utils.save_yaml(w, widget_path)
 
         for w in self.playbook.widgets:
-            widget_path: Path = widgets_path / f"{w.title}.html"
-            html_content: str = w.data_definition.html_content if w.type == WidgetType.HTML else ""
+            widget_path: Path = widgets_path / f"{w.title}.{mp.core.constants.HTML_SUFFIX}"
+            html_content: str = w.data_definition.html_content if w.type is WidgetType.HTML else ""
             if html_content:
                 widget_path.write_text(html_content)

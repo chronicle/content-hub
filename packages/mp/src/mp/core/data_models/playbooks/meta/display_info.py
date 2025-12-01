@@ -23,14 +23,16 @@ import mp.core.data_models.abc
 
 
 class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
-    PLAYBOOK = 0
-    BLOCK = 1
+    Unspecified = 0
+    PLAYBOOK = 1
+    BLOCK = 2
 
 
 class PlaybookContributionType(mp.core.data_models.abc.RepresentableEnum):
-    THIRD_PARTY = 0
-    PARTNER = 1
-    GOOGLE = 2
+    Unspecified = 0
+    Google = 1
+    THIRD_PARTY = 2
+    Partner = 3
 
 
 class BuiltPlaybookDisplayInfo(TypedDict):

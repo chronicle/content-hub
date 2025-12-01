@@ -24,15 +24,15 @@ import mp.core.config
 import mp.core.file_utils
 from mp.core.data_models.playbooks.playbook import Playbook
 
-from .restructure.playbooks.build import BuildPlaybook
-from .restructure.playbooks.deconstruct import DeconstructPlaybook
+from .restructure.playbooks.build import PlaybookBuilder
+from .restructure.playbooks.deconstruct import PlaybookDeconstructor
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
 
 
-class Playbooks:
+class PlaybooksRepo:
     def __init__(self, playbook_repository_path: Path) -> None:
         self.repository_name: str = playbook_repository_path.name
         self.repository_base_path: Path = playbook_repository_path
@@ -80,8 +80,8 @@ class Playbooks:
 
         rich.print(f"[green]---------- Building {playbook_path.stem} ----------[/green]")
         playbook: Playbook = Playbook.from_non_built_path(playbook_path)
-        build_playbook: BuildPlaybook = BuildPlaybook(playbook, playbook_path, self.out_dir)
-        build_playbook.build_playbook()
+        build_playbook: PlaybookBuilder = PlaybookBuilder(playbook, playbook_path, self.out_dir)
+        build_playbook.build()
         rich.print(f"[green]----------Done Building {playbook_path.stem} ----------[/green]")
 
     def deconstruct_playbooks(self, playbooks_paths: Iterable[Path]) -> None:
@@ -129,6 +129,8 @@ class Playbooks:
 
         rich.print(f"[green]---------- Deconstructing {playbook_path.stem} ----------[/green]")
         playbook: Playbook = Playbook.from_built_path(playbook_path)
-        deconstruct_playbook: DeconstructPlaybook = DeconstructPlaybook(playbook, playbook_out_path)
-        deconstruct_playbook.deconstruct_playbook_files()
+        deconstruct_playbook: PlaybookDeconstructor = PlaybookDeconstructor(
+            playbook, playbook_out_path
+        )
+        deconstruct_playbook.deconstruct()
         rich.print(f"[green]----------Done Deconstructing {playbook_path.stem} ----------[/green]")

@@ -17,10 +17,13 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING
 
+import yaml
+
 import mp.core.config
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any
 
 
 VALID_REPEATED_FILES: set[str] = {"__init__.py"}
@@ -105,3 +108,26 @@ def remove_files_by_suffix_from_dir(dir_: Path, suffix: str) -> None:
     for file in dir_.rglob(f"*{suffix}"):
         if file.is_file() and is_path_in_marketplace(file):
             file.unlink(missing_ok=True)
+
+
+def save_yaml(data: dict[str, Any], path: Path) -> None:
+    """Create or overwrites a YAML file at the specified path with the provided data.
+
+    Args:
+        data: The dictionary data to serialize and write to the YAML file.
+        path: The pathlib.Path object representing the target file location.
+
+    Raises:
+        OSError: If the file write operation fails (e.g., permission denied, invalid path).
+
+    """
+    try:
+        yaml_content = yaml.dump(data, indent=4, sort_keys=False)
+        path.write_text(yaml_content, encoding="utf-8")
+
+    except OSError as e:
+        msg = f"Failed to write YAML file to {path}. Check permissions or path validity."
+        raise OSError(msg) from e
+    except yaml.YAMLError as e:
+        msg = "Failed to serialize data to YAML format."
+        raise ValueError(msg) from e

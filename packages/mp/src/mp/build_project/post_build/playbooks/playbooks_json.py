@@ -29,35 +29,36 @@ from mp.core.data_models.playbooks.meta.display_info import (
 from mp.core.data_models.release_notes.metadata import ReleaseNote
 
 if TYPE_CHECKING:
-    from mp.build_project.playbooks_repo import Playbooks
+    from mp.build_project.playbooks_repo import PlaybooksRepo
+    from mp.core.data_models.playbooks.playbook import BuiltPlaybook
+    from mp.core.data_models.playbooks.step.metadata import BuiltStep
+    from mp.core.data_models.playbooks.step.step_parameter import BuiltStepParameter
 
 BLOCK_TYPE: int = 5
 
 
-class ReleaseNotesValues(NamedTuple):
-    creation_time: int | None
-    update_time: int | None
-    version: float | None
+class ReleaseNotesDisplayInfo(NamedTuple):
+    creation_time: int
+    update_time: int
+    version: float
 
 
-def write_playbooks_json(commercial_playbooks: Playbooks, community_playbooks: Playbooks) -> None:
+def write_playbooks_json(
+    commercial_playbooks: PlaybooksRepo, community_playbooks: PlaybooksRepo
+) -> None:
     """Generate and writes the playbooks.json file."""
-    commercial_playbooks_json_data: list[BuiltPlaybookDisplayInfo] = (
-        _generate_playbooks_display_info(
-            commercial_playbooks.repository_base_path, commercial_playbooks.out_dir
-        )
+    commercial_playbooks_json: list[BuiltPlaybookDisplayInfo] = _generate_playbooks_display_info(
+        commercial_playbooks.repository_base_path, commercial_playbooks.out_dir
     )
-    community_playbooks_json_data: list[BuiltPlaybookDisplayInfo] = (
-        _generate_playbooks_display_info(
-            community_playbooks.repository_base_path, community_playbooks.out_dir
-        )
+    community_playbooks_json: list[BuiltPlaybookDisplayInfo] = _generate_playbooks_display_info(
+        community_playbooks.repository_base_path, community_playbooks.out_dir
     )
     out_path: Path = commercial_playbooks.out_dir.parent / mp.core.constants.PLAYBOOKS_JSON_NAME
-    playbooks_json_data: list[BuiltPlaybookDisplayInfo] = (
-        commercial_playbooks_json_data + community_playbooks_json_data
+    playbooks_json: list[BuiltPlaybookDisplayInfo] = (
+        commercial_playbooks_json + community_playbooks_json
     )
     with Path.open(out_path, "w") as f:
-        json.dump(playbooks_json_data, f, indent=4)
+        json.dump(playbooks_json, f, indent=4)
 
 
 def _generate_playbooks_display_info(
@@ -72,9 +73,6 @@ def _generate_playbooks_display_info(
         if not display_info_path.exists():
             continue
 
-        built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
-            yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-        ).to_built()
         built_playbook_path: Path | None = _find_built_playbook_in_out_folder(
             non_built_playbook_path.name, out_path
         )
@@ -84,10 +82,12 @@ def _generate_playbooks_display_info(
             )
             continue
 
-        built_playbook: dict = json.loads(built_playbook_path.read_text(encoding="utf-8"))
-        built_display_info: BuiltPlaybookDisplayInfo = _parse_built_playbook_json(
-            built_playbook, built_display_info, non_built_playbook_path, out_path
-        )
+        built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
+            yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
+        ).to_built()
+
+        built_playbook: BuiltPlaybook = json.loads(built_playbook_path.read_text(encoding="utf-8"))
+        _update_display_info(built_playbook, built_display_info, non_built_playbook_path, out_path)
         res.append(built_display_info)
 
     return res
@@ -100,13 +100,13 @@ def _find_built_playbook_in_out_folder(non_built_playbook_name: str, out_path: P
     return None
 
 
-def _parse_built_playbook_json(
-    built_playbook: dict,
+def _update_display_info(
+    built_playbook: BuiltPlaybook,
     built_display_info: BuiltPlaybookDisplayInfo,
     rn_path: Path,
     out_path: Path,
-) -> BuiltPlaybookDisplayInfo:
-    rn_values: ReleaseNotesValues = _extract_info_from_rn(rn_path)
+) -> None:
+    rn_values: ReleaseNotesDisplayInfo = _extract_display_info_from_rn(rn_path)
 
     built_display_info["Identifier"] = built_playbook.get("Definition").get("Identifier")
     built_display_info["CreateTime"] = rn_values.creation_time
@@ -118,12 +118,13 @@ def _parse_built_playbook_json(
         if built_playbook.get("Definition").get("PlaybookType") == 0
         else []
     )
-    return built_display_info
 
 
-def _extract_integrations(built_playbook: dict, parent_folder: Path | None = None) -> list[str]:
+def _extract_integrations(
+    built_playbook: BuiltPlaybook, parent_folder: Path | None = None
+) -> list[str]:
     result: set[str] = set()
-    steps: list[dict] = built_playbook.get("Definition").get("Steps")
+    steps: list[BuiltStep] = built_playbook.get("Definition").get("Steps")
     for step in steps:
         step_type: int = step.get("Type")
         if step_type != BLOCK_TYPE:
@@ -131,7 +132,7 @@ def _extract_integrations(built_playbook: dict, parent_folder: Path | None = Non
             if integration_name not in {"Flow", None}:
                 result.add(integration_name)
         else:
-            step_parameters: list[dict] = step.get("Parameters")
+            step_parameters: list[BuiltStepParameter] = step.get("Parameters")
             for param in step_parameters:
                 if param.get("Name") == "NestedWorkflowIdentifier":
                     temp = _extract_integrations_from_nested_block(
@@ -150,6 +151,7 @@ def _extract_integrations_from_nested_block(block_identifier: str, base_folder: 
         found: bool = False
         with Path.open(file) as block_file:
             block_json: dict = json.load(block_file)
+
             if (
                 block_json.get("Definition").get("PlaybookType") == 0
                 or block_json.get("Definition").get("Identifier") != block_identifier
@@ -167,14 +169,14 @@ def _extract_integrations_from_nested_block(block_identifier: str, base_folder: 
     return result
 
 
-def _extract_block_identifier(built_playbook: dict) -> list[str]:
+def _extract_block_identifier(built_playbook: BuiltPlaybook) -> list[str]:
     result: set[str] = set()
-    steps: list[dict] = built_playbook.get("Definition").get("Steps")
+    steps: list[BuiltStep] = built_playbook.get("Definition").get("Steps")
     for step in steps:
         step_type: int = step.get("Type")
         if step_type != BLOCK_TYPE:
             continue
-        step_parameters: list[dict] = step.get("Parameters")
+        step_parameters: list[BuiltStepParameter] = step.get("Parameters")
         for param in step_parameters:
             if param.get("Name") == "NestedWorkflowIdentifier":
                 result.add(param.get("Value"))
@@ -182,9 +184,9 @@ def _extract_block_identifier(built_playbook: dict) -> list[str]:
     return list(result)
 
 
-def _extract_info_from_rn(rn_path: Path) -> ReleaseNotesValues:
+def _extract_display_info_from_rn(rn_path: Path) -> ReleaseNotesDisplayInfo:
     release_notes: list[ReleaseNote] = ReleaseNote.from_non_built_path(rn_path)
     latest_version: float = max(float(rn.version) for rn in release_notes)
     creation_time: int = min(rn.publish_time for rn in release_notes)
     update_time: int = max(rn.publish_time for rn in release_notes)
-    return ReleaseNotesValues(creation_time, update_time, latest_version)
+    return ReleaseNotesDisplayInfo(creation_time, update_time, latest_version)
