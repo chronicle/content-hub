@@ -46,7 +46,6 @@ class TestActionParameterValidation:
 
     def test_success_on_valid_integration(self, temp_integration: pathlib.Path) -> None:
         """Test that a valid integration passes."""
-        # This test assumes the default temp_integration fixture is valid
         self.validator_runner.run(temp_integration)
 
     def test_success_on_action_without_parameters(self, temp_integration: pathlib.Path) -> None:
