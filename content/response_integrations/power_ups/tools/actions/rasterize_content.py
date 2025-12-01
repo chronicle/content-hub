@@ -226,9 +226,19 @@ class RasterizeAction(Action):
             except Exception as e:
                 if PLAYWRIGHT_PACKAGE_ERROR in str(e):
                     raise ActionSetupError(
-                        "Playwright browser binaries not found. Please run\n"
-                        "python3.11 -m pip install playwright\n"
-                        "playwright install --with-deps chromium\nto install them."
+                        "Playwright browser binaries not found.\n\n"
+                        "To fix this, please install Playwright inside your Debian-based "
+                        "Remote Agent container:\n\n"
+                        "1. Bash into the container as root:\n"
+                        "   podman exec -it -u 0 <container_name> bash\n\n"
+                        "2. Install Playwright and Chromium dependencies:\n"
+                        "   python3.11 -m pip install playwright\n"
+                        "   playwright install --with-deps chromium\n\n"
+                        "3. Copy the downloaded browser binaries from root to the agent user:\n"
+                        "   cp -r /root/.cache/ms-playwright /home/siemplify_agent/.cache/\n"
+                        "   chown -R siemplify_agent:siemplify_agent /home/siemplify_agent/"
+                        ".cache/ms-playwright\n\n"
+                        "After completing these steps, re-run the action."
                     ) from e
                 self.logger.error(f"Failed to rasterize input '{item}': {e}")
                 self.logger.exception(e)
