@@ -99,7 +99,7 @@ def main():
     if add_to_case_wall:
         for file_name in extracted_files:
             for x_file in extracted_files[file_name]:
-                if x_file["filename"].endswith("/") or not x_file.get("raw"):
+                if x_file["filename"].endswith("/") or not x_file.get("raw", ""):
                     siemplify.LOGGER.info(
                         "Skipping directory or empty file: "
                         f"{x_file['filename']} from case wall.",
