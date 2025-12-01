@@ -246,9 +246,10 @@ class DeconstructIntegration:
         new_path: Path = self.out_path / out_dir
         new_path.mkdir(exist_ok=True)
         for file in old_path.iterdir():
-            shutil.copy(file, new_path)
-            copied_file: Path = new_path / file.name
-            copied_file.rename(copied_file.parent / copied_file.name)
+            if file.is_file():
+                shutil.copy(file, new_path)
+                copied_file: Path = new_path / file.name
+                copied_file.rename(copied_file.parent / copied_file.name)
 
         if metadata is not None:
             _write_definitions(new_path, metadata)

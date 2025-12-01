@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
 
 import mp.core.constants
 import mp.core.data_models.abc
+import mp.core.validators
 
 from .parameter import (
     BuiltConnectorParameter,
@@ -91,15 +92,19 @@ class ConnectorMetadata(
     rules: list[ConnectorRule]
     version: float
 
+    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002, D102
+        if self.parameters:
+            mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
+
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
-        """Create ConnectorMetadata objects from a built integration path.
+        """Create based on the metadata files found in the built-integration path.
 
         Args:
-            path: The path to the built integration.
+            path: the path to the built integration
 
         Returns:
-            A list of ConnectorMetadata objects.
+            A list of `ConnectorMetadata` objects
 
         """
         meta_path: Path = path / mp.core.constants.OUT_CONNECTORS_META_DIR
@@ -113,13 +118,13 @@ class ConnectorMetadata(
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
-        """Create ConnectorMetadata objects from a non-built integration path.
+        """Create based on the metadata files found in the non-built-integration path.
 
         Args:
-            path: The path to the non-built integration.
+            path: the path to the non-built integration
 
         Returns:
-            A list of ConnectorMetadata objects.
+            A list of `ConnectorMetadata` objects
 
         """
         meta_path: Path = path / mp.core.constants.CONNECTORS_DIR
@@ -168,10 +173,10 @@ class ConnectorMetadata(
         )
 
     def to_built(self) -> BuiltConnectorMetadata:
-        """Convert the connector metadata to a built dictionary.
+        """Create a built connector metadata dict.
 
         Returns:
-            A built version of the connector metadata dictionary.
+            A built version of the connector metadata dict
 
         """
         return BuiltConnectorMetadata(
@@ -193,10 +198,10 @@ class ConnectorMetadata(
         )
 
     def to_non_built(self) -> NonBuiltConnectorMetadata:
-        """Convert the connector metadata to a non-built dictionary.
+        """Create a non-built connector metadata dict.
 
         Returns:
-            A non-built version of the connector metadata dictionary.
+            A non-built version of the connector metadata dict
 
         """
         return NonBuiltConnectorMetadata(

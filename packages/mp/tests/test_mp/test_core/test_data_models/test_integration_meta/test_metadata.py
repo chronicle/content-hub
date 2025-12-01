@@ -16,15 +16,16 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.action.parameter import (
-    ActionParameter,
-    BuiltActionParameter,
-    NonBuiltActionParameter,
+from mp.core.data_models.integration_meta.metadata import (
+    BuiltIntegrationMetadata,
+    IntegrationMetadata,
+    NonBuiltIntegrationMetadata,
 )
+from test_mp.test_core.test_data_models.utils import FILE_NAME
 
 from .strategies import (
-    st_valid_built_param_dict,
-    st_valid_non_built_param_dict,
+    st_valid_built_integration_metadata_dict,
+    st_valid_non_built_integration_metadata_dict,
 )
 
 
@@ -34,11 +35,11 @@ class TestValidations:
     """
 
     @settings(max_examples=30)
-    @given(valid_non_built=st_valid_non_built_param_dict)
-    def test_valid_non_built(self, valid_non_built: NonBuiltActionParameter) -> None:
-        ActionParameter.from_non_built(valid_non_built)
+    @given(valid_non_built=st_valid_non_built_integration_metadata_dict)
+    def test_valid_non_built(self, valid_non_built: NonBuiltIntegrationMetadata) -> None:
+        IntegrationMetadata.from_non_built(FILE_NAME, valid_non_built)
 
     @settings(max_examples=30)
-    @given(valid_built=st_valid_built_param_dict)
-    def test_valid_built(self, valid_built: BuiltActionParameter) -> None:
-        ActionParameter.from_built(valid_built)
+    @given(valid_built=st_valid_built_integration_metadata_dict)
+    def test_valid_built(self, valid_built: BuiltIntegrationMetadata) -> None:
+        IntegrationMetadata.from_built(FILE_NAME, valid_built)

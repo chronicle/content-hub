@@ -17,7 +17,7 @@ from __future__ import annotations
 import base64
 import json
 import pathlib
-from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
 
 import pydantic
 import yaml
@@ -26,6 +26,7 @@ import mp.core.constants
 import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
+import mp.core.validators
 
 from .feature_tags import BuiltFeatureTags, FeatureTags, NonBuiltFeatureTags
 from .parameter import BuiltIntegrationParameter, IntegrationParameter, NonBuiltIntegrationParameter
@@ -171,6 +172,10 @@ class IntegrationMetadata(
         pydantic.PositiveFloat,
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
+
+    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002, D102
+        if self.parameters:
+            mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -369,13 +374,7 @@ class IntegrationMetadata(
 
 
 def _read_image_files(metadata_content: NonBuiltIntegrationMetadata, path: Path) -> None:
-    """Read image files and update the metadata dictionary in place.
-
-    Args:
-        metadata_content: The metadata content.
-        path: The path to the integration.
-
-    """
+    """Read image files and update the metadata dictionary in place."""
     if image_str := metadata_content.get("image_path"):
         full_path = path / image_str
         metadata_content["image_path"] = mp.core.file_utils.png_path_to_bytes(full_path)

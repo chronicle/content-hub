@@ -16,15 +16,15 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.action.parameter import (
-    ActionParameter,
-    BuiltActionParameter,
-    NonBuiltActionParameter,
+from mp.core.data_models.mapping_rules.metadata import (
+    BuiltMappingRule,
+    MappingRule,
+    NonBuiltMappingRule,
 )
 
 from .strategies import (
-    st_valid_built_param_dict,
-    st_valid_non_built_param_dict,
+    st_valid_built_mapping_rule_dict,
+    st_valid_non_built_mapping_rule_dict,
 )
 
 
@@ -34,11 +34,11 @@ class TestValidations:
     """
 
     @settings(max_examples=30)
-    @given(valid_non_built=st_valid_non_built_param_dict)
-    def test_valid_non_built(self, valid_non_built: NonBuiltActionParameter) -> None:
-        ActionParameter.from_non_built(valid_non_built)
+    @given(valid_non_built=st_valid_non_built_mapping_rule_dict)
+    def test_valid_non_built(self, valid_non_built: NonBuiltMappingRule) -> None:
+        MappingRule.from_non_built(valid_non_built)
 
     @settings(max_examples=30)
-    @given(valid_built=st_valid_built_param_dict)
-    def test_valid_built(self, valid_built: BuiltActionParameter) -> None:
-        ActionParameter.from_built(valid_built)
+    @given(valid_built=st_valid_built_mapping_rule_dict)
+    def test_valid_built(self, valid_built: BuiltMappingRule) -> None:
+        MappingRule.from_built(valid_built)
