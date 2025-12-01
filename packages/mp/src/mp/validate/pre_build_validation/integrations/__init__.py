@@ -19,13 +19,14 @@ from typing import TYPE_CHECKING, Protocol
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ValidationResults, ValidationTypes
 
+from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
+from .integration_ssl_validation import SslParameterExistsInIntegrationValidation
 from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
 from .ping_validation import IntegrationHasPingActionValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
-from .ssl_validation import SSLValidation
 from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation
 from .version_bump_validation import VersionBumpValidation
@@ -93,7 +94,8 @@ def get_validations() -> list[Validator]:
         NoDisabledComponentsInIntegrationValidation(),
         IntegrationHasPingActionValidation(),
         IntegrationHasMappingRulesIfHasConnectorValidation(),
-        SSLValidation(),
+        SslParameterExistsInIntegrationValidation(),
+        SslParameterExistsInConnectorsValidation(),
         IntegrationHasDocumentationLinkValidation(),
     ]
 

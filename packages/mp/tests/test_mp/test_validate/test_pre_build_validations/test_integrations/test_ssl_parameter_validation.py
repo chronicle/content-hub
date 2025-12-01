@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for the SSLValidation class."""
+"""Tests for the SslParameterExistsValidation class."""
 
 from __future__ import annotations
 
@@ -23,8 +23,11 @@ import pytest
 
 from mp.core import constants, file_utils
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.pre_build_validation.integrations.ssl_validation import (
-    SSLValidation,
+from mp.validate.pre_build_validation.integrations.connectors_ssl_validation import (
+    SslParameterExistsInConnectorsValidation,
+)
+from mp.validate.pre_build_validation.integrations.integration_ssl_validation import (
+    SslParameterExistsInIntegrationValidation,
 )
 
 if TYPE_CHECKING:
@@ -39,13 +42,15 @@ def _update_yaml_file(file_path: pathlib.Path, updates: dict[str, Any]) -> None:
 
 
 class TestSSLParameterValidation:
-    """Test suite for the SSLValidation runner."""
+    """Test suite for the SslParameterExistsInIntegrationValidation runner."""
 
-    validator_runner = SSLValidation()
+    integration_runner = SslParameterExistsInIntegrationValidation()
+    connectors_runner = SslParameterExistsInConnectorsValidation()
 
     def test_success_on_valid_integration(self, temp_integration: pathlib.Path) -> None:
         """Test that a valid integration passes."""
-        self.validator_runner.run(temp_integration)
+        self.integration_runner.run(temp_integration)
+        self.connectors_runner.run(temp_integration)
 
     def test_ssl_parameter_missing_in_integration(self, temp_integration: pathlib.Path) -> None:
         """Test failure when 'Verify SSL' is missing from the integration."""
@@ -53,7 +58,7 @@ class TestSSLParameterValidation:
         _update_yaml_file(integration_file, {"parameters": []})
 
         with pytest.raises(NonFatalValidationError, match="missing a 'Verify SSL' parameter"):
-            self.validator_runner.run(temp_integration)
+            self.integration_runner.run(temp_integration)
 
     def test_ssl_parameter_missing_in_connector(self, temp_integration: pathlib.Path) -> None:
         """Test failure when 'Verify SSL' is missing from a connector."""
@@ -61,7 +66,7 @@ class TestSSLParameterValidation:
         _update_yaml_file(connector_file, {"parameters": []})
 
         with pytest.raises(NonFatalValidationError, match="missing a 'Verify SSL' parameter"):
-            self.validator_runner.run(temp_integration)
+            self.connectors_runner.run(temp_integration)
 
     def test_ssl_parameter_excluded_integration(self, temp_integration: pathlib.Path) -> None:
         """Test that an excluded integration passes without SSL validation."""
@@ -73,7 +78,7 @@ class TestSSLParameterValidation:
             "EXCLUDED_NAMES_WITHOUT_VERIFY_SSL",
             {"Mock Integration"},
         ):
-            self.validator_runner.run(temp_integration)
+            self.integration_runner.run(temp_integration)
 
     def test_ssl_parameter_wrong_type(self, temp_integration: pathlib.Path) -> None:
         """Test failure when 'Verify SSL' has the wrong type."""
@@ -87,7 +92,7 @@ class TestSSLParameterValidation:
         _update_yaml_file(integration_file, {"parameters": params})
 
         with pytest.raises(NonFatalValidationError, match="must be of type 'boolean'"):
-            self.validator_runner.run(temp_integration)
+            self.integration_runner.run(temp_integration)
 
     def test_ssl_parameter_wrong_default_value(self, temp_integration: pathlib.Path) -> None:
         """Test failure when 'Verify SSL' has the wrong default value."""
@@ -102,7 +107,7 @@ class TestSSLParameterValidation:
         _update_yaml_file(integration_file, {"parameters": params})
 
         with pytest.raises(NonFatalValidationError, match="must be a boolean true"):
-            self.validator_runner.run(temp_integration)
+            self.integration_runner.run(temp_integration)
 
     def test_ssl_parameter_excluded_from_default_value_check(
         self, temp_integration: pathlib.Path
@@ -122,7 +127,7 @@ class TestSSLParameterValidation:
             "EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE",
             {"Mock Integration"},
         ):
-            self.validator_runner.run(temp_integration)  # Should not raise
+            self.integration_runner.run(temp_integration)  # Should not raise
 
     @pytest.mark.parametrize("ssl_param_name", sorted(constants.VALID_SSL_PARAM_NAMES))
     def test_valid_ssl_parameter_names(
@@ -139,4 +144,4 @@ class TestSSLParameterValidation:
         ]
         _update_yaml_file(integration_file, {"parameters": params})
 
-        self.validator_runner.run(temp_integration)  # Should not raise
+        self.integration_runner.run(temp_integration)  # Should not raise
