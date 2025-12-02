@@ -23,7 +23,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 from ..core import JinjaFilters
-from ..core.Widgets import card
+
 
 # Example Consts:
 INTEGRATION_NAME = "TemplateEngine"
@@ -103,7 +103,7 @@ def main():
         }
 
         jinja_env.filters.update(filters)
-        jinja_env.filters["widget_card"] = card
+
 
         try:
             import CustomFilters
