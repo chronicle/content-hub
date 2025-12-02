@@ -43,6 +43,7 @@ from ..core.constants import (
     ExportMethod,
     InputType,
     OutputType,
+    MIN_LIMIT,
     PlaywrightWaitUntil,
 )
 from ..core.exceptions import ParameterNotFoundError
@@ -158,6 +159,12 @@ class RasterizeAction(Action):
             "Wait For",
             self.params.wait_until,
             PlaywrightWaitUntil.values(),
+        )
+        self.params.timeout = validator.validate_range(
+            "Timeout",
+            self.params.timeout,
+            MIN_LIMIT,
+            DEFAULT_RASTERIZE_TIMEOUT,
         )
         if self.params.full_screen:
             self.logger.info(
