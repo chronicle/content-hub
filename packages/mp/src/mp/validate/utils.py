@@ -173,19 +173,18 @@ def _validate_ssl_parameter(
         (p for p in parameters if p["name"] in constants.VALID_SSL_PARAM_NAMES),
         None,
     )
-    msg: str
     if ssl_param is None:
-        msg = f"{script_name} is missing a 'Verify SSL' parameter"
+        return f"{script_name} is missing a 'Verify SSL' parameter"
 
-    elif ssl_param["type"] != ScriptParamType.BOOLEAN.to_string():
-        msg = f"The 'verify ssl' parameter in {script_name} must be of type 'boolean'"
+    if ssl_param["type"] != ScriptParamType.BOOLEAN.to_string():
+        return f"The 'verify ssl' parameter in {script_name} must be of type 'boolean'"
 
-    elif script_name in constants.EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE:
+    if script_name in constants.EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE:
         return None
 
-    elif not ssl_param["default_value"]:
-        msg = f"The default value of the 'Verify SSL' param in {script_name} must be a boolean true"
-    else:
-        return None
+    if not ssl_param["default_value"]:
+        return (
+            f"The default value of the 'Verify SSL' param in {script_name} must be a boolean true"
+        )
 
-    return msg
+    return None

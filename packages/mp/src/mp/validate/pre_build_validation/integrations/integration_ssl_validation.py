@@ -40,8 +40,6 @@ class SslParameterExistsInIntegrationValidation:
 
         """
         integration_def: YamlFileContent = load_integration_def(integration_path)
-
         validation_output_msg: str | None = validate_ssl_parameter_from_yaml(integration_def)
-
-        if validation_output_msg:
+        if validation_output_msg is not None:
             raise NonFatalValidationError(validation_output_msg)
