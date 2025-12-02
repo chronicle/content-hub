@@ -93,15 +93,21 @@ def main():
                 env_name = environment.get("name")
 
                 existing_env = next(
-                    (x for x in all_envs if x.displayName == environment.get("displayName")),
+                    (x for x in all_envs if x.display_name == environment.get("displayName")),
                     None
                 )
 
                 if existing_env:
-                    environment["id"] = existing_env.id
+                    environment["id"] = existing_env.identifier
                     siemplify.LOGGER.info(f"Updating environment {env_name}")
                 else:
                     siemplify.LOGGER.info(f"Adding environment {env_name}")
+
+                environment = (
+                    Environment.from_json(environment).to_1p()
+                    if platform_supports_1p_api()
+                    else Environment.from_json(environment).to_legacy()
+                )
 
                 gitsync.api.import_environment(siemplify, environment)
 
