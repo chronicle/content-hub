@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime
 
+from dateutil.parser import parse
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -49,7 +49,7 @@ def main():
     )
     duration = siemplify.extract_action_param(
         param_name="SLA (in minutes)",
-        is_mandatory=True,
+        is_mandatory=False,
         print_value=True,
     )
     task_title = siemplify.extract_action_param(
@@ -57,10 +57,24 @@ def main():
         is_mandatory=False,
         print_value=True,
     )
+    due_date = siemplify.extract_action_param(
+        param_name="Due Date",
+        is_mandatory=False,
+        print_value=True,
+    )
 
-    time_now = datetime.now()
-    time_now_epoch = int(time.mktime(time_now.timetuple())) * 1000
-    client_time = time_now_epoch + (int(duration) * 1000 * 60)
+    if not due_date and not duration:
+        raise ValueError(
+            'either "Due Date" or "SLA (in minutes)" parameter should have value.'
+        )
+
+    client_time = 0
+    if due_date:
+        dt_due_date = parse(due_date)
+        client_time = int(dt_due_date.timestamp() * 1000)
+    elif duration:
+        time_now_epoch = int(time.time() * 1000)
+        client_time = time_now_epoch + (int(duration) * 1000 * 60)
 
     current_version = siemplify.get_system_version()
     json_payload = {}
@@ -98,9 +112,12 @@ def main():
     )
     add_task.raise_for_status()
 
+    due_date_info = (
+        f"by {due_date}" if due_date else f"in the next {duration} minutes"
+    )
     output_message = (
-        "A new task has been created for the user: "
-        f"{assign_to}.\nThis task should be handled in the next {duration} mintues"
+        f"A new task has been created for the user: {assign_to}.\n"
+        f"This task should be handled {due_date_info}"
     )
     siemplify.end(output_message, True)
 
