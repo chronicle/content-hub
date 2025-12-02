@@ -85,22 +85,23 @@ def main():
 
         if features["Environments"]:
             siemplify.LOGGER.info("========== Environments ==========")
-            all_environments_names = gitsync.api.get_environment_names(chronicle_soar=siemplify)
+
+            all_envs = gitsync.api.get_environments(siemplify)
+            all_env_names = gitsync.api.get_environment_names(chronicle_soar=siemplify)
+
             for environment in gitsync.content.get_environments():
-                if environment.get("name") in all_environments_names:
-                    existing_env_id = next(
-                        x._id
-                        for x in gitsync.api.get_environments(siemplify)
-                        if x.name == environment.get("name")
-                    )
-                    environment["id"] = existing_env_id
-                    siemplify.LOGGER.info(
-                        f"Updating environment {environment.get('name')}",
-                    )
+                env_name = environment.get("name")
+
+                existing_env = next(
+                    (x for x in all_envs if x.displayName == environment.get("displayName")),
+                    None
+                )
+
+                if existing_env:
+                    environment["id"] = existing_env.id
+                    siemplify.LOGGER.info(f"Updating environment {env_name}")
                 else:
-                    siemplify.LOGGER.info(
-                        f"Adding environment {environment.get('name')}",
-                    )
+                    siemplify.LOGGER.info(f"Adding environment {env_name}")
 
                 gitsync.api.import_environment(siemplify, environment)
 
