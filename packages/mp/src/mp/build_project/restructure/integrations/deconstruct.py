@@ -167,7 +167,7 @@ class DeconstructIntegration:
 
     def _create_python_version_file(self) -> None:
         out_python_version_file: Path = self.out_path / mp.core.constants.PYTHON_VERSION_FILE
-        python_version_file: Path = self.out_path / mp.core.constants.PYTHON_VERSION_FILE
+        python_version_file: Path = self.path / mp.core.constants.PYTHON_VERSION_FILE
 
         python_version: str = ""
         if python_version_file.is_file():
