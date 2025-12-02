@@ -25,6 +25,7 @@ from TIPCommon.data_models import (
     Network,
     CaseCloseReasons,
     SlaDefinition,
+    Environment,
 )
 
 from TIPCommon.utils import platform_supports_1p_api
