@@ -21,60 +21,8 @@ from PIL import Image, UnidentifiedImageError
 
 import mp.core.constants
 
-from . import constants
-from .data_models.integrations.script.parameter import ScriptParamType
-
 if TYPE_CHECKING:
-    from collections.abc import Collection
     from pathlib import Path
-
-    from .data_models.integrations.connector.parameter import ConnectorParameter
-    from .data_models.integrations.integration_meta.parameter import IntegrationParameter
-
-
-def validate_ssl_parameter(
-    script_name: str,
-    parameters: Collection[IntegrationParameter | ConnectorParameter],
-) -> None:
-    """Validate the Verify SSL parameter.
-
-    Validates the presence and correctness of a 'Verify SSL' parameter in the provided
-    integration or connector's parameters. Ensures that the parameter exists, is of the
-    correct type, and has the correct default value unless the script is explicitly
-    excluded from verification.
-
-    Args:
-        script_name: The name of the integration or connector script.
-        parameters: collection of parameters associated with the component.
-
-    Raises:
-        ValueError: If the 'Verify SSL' parameter is missing or its default value is
-            not true
-        TypeError: If the 'Verify SSL' parameter exists but is not of type boolean.
-
-    """
-    if script_name in constants.EXCLUDED_NAMES_WITHOUT_VERIFY_SSL:
-        return
-
-    ssl_param: IntegrationParameter | ConnectorParameter | None = next(
-        (p for p in parameters if p.name in constants.VALID_SSL_PARAM_NAMES),
-        None,
-    )
-    msg: str
-    if ssl_param is None:
-        msg = f"{script_name} is missing a 'Verify SSL' parameter"
-        raise ValueError(msg)
-
-    if ssl_param.type_ is not ScriptParamType.BOOLEAN:
-        msg = f"The 'verify ssl' parameter in {script_name} must be of type 'boolean'"
-        raise TypeError(msg)
-
-    if script_name in constants.EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE:
-        return
-
-    if ssl_param.default_value is not True:
-        msg = f"The default value of the 'Verify SSL' param in {script_name} must be a boolean true"
-        raise ValueError(msg)
 
 
 def validate_param_name(name: str) -> str:
