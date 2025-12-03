@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import rich
@@ -27,6 +26,7 @@ from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
 
 def should_build_playbooks(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
@@ -54,8 +54,16 @@ def build_playbooks(
     )
 
     if playbooks:
-        _build_playbooks(set(playbooks), commercial_playbooks, deconstruct=deconstruct)
-        _build_playbooks(set(playbooks), community_playbooks, deconstruct=deconstruct)
+        commercial_not_found: set[str] = _build_playbooks(
+            set(playbooks), commercial_playbooks, deconstruct=deconstruct
+        )
+        community_not_found: set[str] = _build_playbooks(
+            set(playbooks), community_playbooks, deconstruct=deconstruct
+        )
+
+        if commercial_not_found.intersection(community_not_found):
+            rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+
     elif repositories:
         _build_playbooks_repositories(commercial_playbooks, community_playbooks)
         write_playbooks_json(commercial_playbooks, community_playbooks)
@@ -76,7 +84,7 @@ def _build_playbooks(
     repository: PlaybooksRepo,
     *,
     deconstruct: bool,
-) -> None:
+) -> set[str]:
     valid_playbooks_paths: set[Path] = _get_playbooks_paths_from_repository(
         playbooks, repository.repository_base_path, deconstruct=deconstruct
     )
@@ -87,8 +95,8 @@ def _build_playbooks(
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
         rich.print(
-            f"[red]The following playbooks could not be found in the {repository.repository_name} "
-            f"repository: {', '.join(not_found_playbooks)}[/red]"
+            f"The following playbooks could not be found in the {repository.repository_name} "
+            f"repository: {', '.join(not_found_playbooks)}"
         )
 
     if valid_playbooks_paths:
@@ -101,6 +109,8 @@ def _build_playbooks(
         else:
             repository.build_playbooks(valid_playbooks_paths)
 
+    return not_found_playbooks
+
 
 def _get_playbooks_paths_from_repository(
     playbooks_names: Iterable[str], repository_path: Path, *, deconstruct: bool = False
@@ -112,7 +122,9 @@ def _get_playbooks_paths_from_repository(
 
 
 def _normalize_name_to_json(name: str, *, deconstruct: bool = False) -> str:
-    p = Path(name)
-    if deconstruct and p.suffix != ".json":
-        return p.with_suffix(".json").name
-    return p.name
+    if deconstruct and not name.endswith(mp.core.constants.WIDGETS_META_SUFFIX):
+        name = name.join(mp.core.constants.WIDGETS_META_SUFFIX)
+    return name
+
+
+mp.core.file_utils.create_or_get_content_dir()

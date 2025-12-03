@@ -52,7 +52,7 @@ app: typer.Typer = typer.Typer()
 class BuildParams:
     repository: Iterable[RepositoryType]
     integrations: Iterable[str]
-    groups: Iterable[str]
+    group: Iterable[str]
     playbooks: Iterable[str]
     deconstruct: bool
 
@@ -86,20 +86,22 @@ class BuildParams:
             msg = "Only one of --repository, --groups, --integration, --playbook shall be used."
             raise typer.BadParameter(msg)
 
-        if self.deconstruct and (self.groups or self.repository):
+        if self.deconstruct and (self.group or self.repository):
             msg = "--deconstruct works only with --integration or --playbook."
             raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
-        return [self.repository, self.integrations, self.groups, self.playbooks]
+        return [self.repository, self.integrations, self.group, self.playbooks]
 
 
 @app.command(name="build", help="Build the marketplace")
 @track_command
 def build(  # noqa: PLR0913
-    repository: Annotated[
+    repositories: Annotated[
         list[RepositoryType],
         typer.Option(
+            "--repository",
+            "-r",
             help="Build all integrations in specified integration repositories",
             default_factory=list,
         ),
@@ -155,7 +157,7 @@ def build(  # noqa: PLR0913
     """Run the `mp build` command.
 
     Args:
-        repository: the repository to build
+        repositories: the repositories to build
         integrations: the integrations to build
         integration_group: the integration groups to build
         playbooks: the playbooks to build
@@ -164,25 +166,25 @@ def build(  # noqa: PLR0913
         verbose: Verbose log options
 
     """
-    repository = ensure_valid_list(repository)
-    integration = ensure_valid_list(integrations)
+    repositories = ensure_valid_list(repositories)
+    integrations = ensure_valid_list(integrations)
     integration_group = ensure_valid_list(integration_group)
-    playbook = ensure_valid_list(playbooks)
+    playbooks = ensure_valid_list(playbooks)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
     params: BuildParams = BuildParams(
-        repository=repository,
-        integrations=integration,
-        groups=integration_group,
-        playbooks=playbook,
+        repository=repositories,
+        integrations=integrations,
+        group=integration_group,
+        playbooks=playbooks,
         deconstruct=deconstruct,
     )
     params.validate()
 
-    if should_build_integrations(integration, repository):
-        build_integrations(integration, integration_group, repository, deconstruct=deconstruct)
+    if should_build_integrations(integrations, repositories):
+        build_integrations(integrations, integration_group, repositories, deconstruct=deconstruct)
 
-    if should_build_playbooks(playbook, repository):
-        build_playbooks(playbook, repository, deconstruct=deconstruct)
+    if should_build_playbooks(playbooks, repositories):
+        build_playbooks(playbooks, repositories, deconstruct=deconstruct)

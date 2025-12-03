@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import rich
 
+import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.integrations_repo import IntegrationsRepo
 from mp.build_project.post_build.integrations.duplicate_integrations import (
@@ -28,14 +29,6 @@ from mp.core.custom_types import RepositoryType
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
-
-RECONFIGURE_MP_MSG: str = (
-    "Please ensure the content-hub path is properly configured.\n"
-    "You can verify your configuration by running [bold]mp config "
-    "--display-config[/bold].\n"
-    "If the path is incorrect, re-configure it by running [bold]mp config "
-    "--root-path <your_path>[/bold]."
-)
 
 
 def should_build_integrations(
@@ -72,7 +65,7 @@ def build_integrations(
             set(integrations), community_mp, deconstruct=deconstruct
         )
         if commercial_not_found.intersection(community_not_found):
-            rich.print(RECONFIGURE_MP_MSG)
+            rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
 
         rich.print("Done building integrations.")
 
@@ -166,9 +159,9 @@ def _build_integrations(
 
     if valid_integrations_:
         rich.print(
-            "Building the following integrations in the"
+            "[blue]Building the following integrations in the"
             f" the {marketplace_.name} marketplace:"
-            f" {', '.join(valid_integration_names)}"
+            f" {', '.join(valid_integration_names)}[/blue]"
         )
         if deconstruct:
             marketplace_.deconstruct_integrations(valid_integrations_)

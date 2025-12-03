@@ -27,6 +27,7 @@ from mp.core.data_models.playbooks.meta.display_info import (
     PlaybookDisplayInfo,
     PlaybookType,
 )
+from mp.core.data_models.playbooks.step.metadata import StepType
 from mp.core.data_models.release_notes.metadata import ReleaseNote
 
 if TYPE_CHECKING:
@@ -34,8 +35,6 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.playbook import BuiltPlaybook
     from mp.core.data_models.playbooks.step.metadata import BuiltStep
     from mp.core.data_models.playbooks.step.step_parameter import BuiltStepParameter
-
-BLOCK_TYPE: int = 5
 
 
 class ReleaseNotesDisplayInfo(NamedTuple):
@@ -113,10 +112,11 @@ def _update_display_info(
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
     built_display_info["Version"] = rn_values.version
+    built_display_info["Type"] += 1
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
     built_display_info["DependentPlaybookIds"] = (
         _extract_block_identifier(built_playbook)
-        if built_playbook.get("Definition").get("PlaybookType") == 0
+        if built_playbook.get("Definition").get("PlaybookType") == PlaybookType.PLAYBOOK
         else []
     )
 
@@ -128,7 +128,7 @@ def _extract_integrations(
     steps: list[BuiltStep] = built_playbook["Definition"]["Steps"]
     for step in steps:
         step_type: int = step.get("Type")
-        if step_type != BLOCK_TYPE:
+        if step_type != StepType.BLOCK:
             _extract_from_step(step, result)
         else:
             _extract_from_block(step, parent_folder, result)
@@ -158,24 +158,25 @@ def _extract_integrations_from_nested_block(block_identifier: str, base_folder: 
 
         with Path.open(file) as block_file:
             block_json: dict = json.load(block_file)
-            if not _is_specific_block(block_json, block_identifier):
-                continue
 
-            steps: list[dict] = block_json.get("Definition").get("Steps")
-            for step in steps:
-                integration_name: str = step.get("Integration")
-                if integration_name not in {"Flow", None}:
-                    result.add(integration_name)
+        if not _is_specific_block(block_json, block_identifier):
+            continue
 
-            return result
+        steps: list[dict] = block_json.get("Definition").get("Steps")
+        for step in steps:
+            integration_name: str = step.get("Integration")
+            if integration_name not in {"Flow", None}:
+                result.add(integration_name)
+
+        break
 
     return result
 
 
 def _is_specific_block(block_json: dict, block_identifier: str) -> bool:
     return (
-        block_json.get("Definition").get("PlaybookType") != PlaybookType.BLOCK.value
-        or block_json.get("Definition").get("Identifier") != block_identifier
+        block_json.get("Definition").get("PlaybookType") == PlaybookType.BLOCK
+        and block_json.get("Definition").get("Identifier") == block_identifier
     )
 
 
@@ -184,7 +185,7 @@ def _extract_block_identifier(built_playbook: BuiltPlaybook) -> list[str]:
     steps: list[BuiltStep] = built_playbook.get("Definition").get("Steps")
     for step in steps:
         step_type: int = step.get("Type")
-        if step_type != BLOCK_TYPE:
+        if step_type != StepType.BLOCK:
             continue
         step_parameters: list[BuiltStepParameter] = step.get("Parameters")
         for param in step_parameters:

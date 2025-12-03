@@ -54,7 +54,7 @@ class PlaybookDeconstructor:
         self._create_release_notes_file(non_built_playbook["release_notes"])
 
     def _create_steps_files(self, non_built_steps: list[NonBuiltStep]) -> None:
-        rich.print("Creating steps files...")
+        rich.print("Creating steps files")
         step_dir: Path = self.out_path / mp.core.constants.STEPS_DIR
         step_dir.mkdir(exist_ok=True)
 
@@ -63,38 +63,38 @@ class PlaybookDeconstructor:
             mp.core.file_utils.save_yaml(step, step_path)
 
     def _create_trigger_file(self, non_built_trigger: NonBuiltTrigger) -> None:
-        rich.print("Creating trigger file...")
+        rich.print("Creating trigger file")
         trigger_path: Path = self.out_path / mp.core.constants.TRIGGER_FILE_NAME
         mp.core.file_utils.save_yaml(non_built_trigger, trigger_path)
 
     def _create_overviews_file(self, non_built_overviews: list[NonBuiltOverview]) -> None:
-        rich.print("Creating overviews file...")
+        rich.print("Creating overviews file")
         overviews_path: Path = self.out_path / mp.core.constants.OVERVIEWS_FILE_NAME
         mp.core.file_utils.save_yaml(non_built_overviews, overviews_path)
 
     def _create_display_info_file(
         self, non_built_display_info: NonBuiltPlaybookDisplayInfo
     ) -> None:
-        rich.print("Creating display info file...")
+        rich.print("Creating display info file")
         display_info_path: Path = self.out_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
         mp.core.file_utils.save_yaml(non_built_display_info, display_info_path)
 
     def _create_definition_file(self, non_built_meta_data: NonBuiltPlaybookMetadata) -> None:
-        rich.print("Creating definition file...")
+        rich.print("Creating definition file")
         definition_path: Path = self.out_path / mp.core.constants.DEFINITION_FILE
         mp.core.file_utils.save_yaml(non_built_meta_data, definition_path)
 
     def _create_release_notes_file(
         self, non_built_release_notes: list[NonBuiltReleaseNote]
     ) -> None:
-        rich.print("Creating release notes file...")
+        rich.print("Creating release notes file")
         release_notes_path: Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
         mp.core.file_utils.save_yaml(non_built_release_notes, release_notes_path)
 
     def _create_widgets_files(
         self, non_built_widgets: list[NonBuiltPlaybookWidgetMetadata]
     ) -> None:
-        rich.print("Creating widgets files...")
+        rich.print("Creating widgets files")
         widgets_path: Path = self.out_path / mp.core.constants.WIDGETS_DIR
         widgets_path.mkdir(exist_ok=True)
 

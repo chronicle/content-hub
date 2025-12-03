@@ -107,25 +107,24 @@ class PlaybooksRepo:
         if not playbook_path.exists():
             msg: str = f"Invalid playbook {playbook_path}"
             raise FileNotFoundError(msg)
+
         playbook_out_path: Path = self.out_dir / playbook_path.stem.lower()
         playbook_out_path.mkdir(exist_ok=True)
-        self._deconstruct_playbook(playbook_path, playbook_out_path)
+        _deconstruct_playbook(playbook_path, playbook_out_path)
 
-    @staticmethod
-    def _deconstruct_playbook(playbook_path: Path, playbook_out_path: Path) -> None:
-        if mp.core.file_utils.is_non_built_playbook(playbook_path):
-            rich.print([
-                f"[green]---------- Playbook {playbook_path.name} "
-                f"is already deconstructed ----------[/green]"
-            ])
-            mp.core.file_utils.recreate_dir(playbook_out_path)
-            shutil.copytree(playbook_path, playbook_out_path, dirs_exist_ok=True)
-            return
 
-        rich.print(f"[green]---------- Deconstructing {playbook_path.stem} ----------[/green]")
-        playbook: Playbook = Playbook.from_built_path(playbook_path)
-        deconstruct_playbook: PlaybookDeconstructor = PlaybookDeconstructor(
-            playbook, playbook_out_path
-        )
-        deconstruct_playbook.deconstruct()
-        rich.print(f"[green]----------Done Deconstructing {playbook_path.stem} ----------[/green]")
+def _deconstruct_playbook(playbook_path: Path, playbook_out_path: Path) -> None:
+    if mp.core.file_utils.is_non_built_playbook(playbook_path):
+        rich.print([
+            f"[green]---------- Playbook {playbook_path.name} "
+            f"is already deconstructed ----------[/green]"
+        ])
+        mp.core.file_utils.recreate_dir(playbook_out_path)
+        shutil.copytree(playbook_path, playbook_out_path, dirs_exist_ok=True)
+        return
+
+    rich.print(f"[green]---------- Deconstructing {playbook_path.stem} ----------[/green]")
+    playbook: Playbook = Playbook.from_built_path(playbook_path)
+    deconstruct_playbook: PlaybookDeconstructor = PlaybookDeconstructor(playbook, playbook_out_path)
+    deconstruct_playbook.deconstruct()
+    rich.print(f"[green]----------Done Deconstructing {playbook_path.stem} ----------[/green]")
