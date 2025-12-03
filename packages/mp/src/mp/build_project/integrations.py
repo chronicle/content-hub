@@ -168,6 +168,7 @@ class Integrations:
 
         built: BuiltIntegration = integration.to_built()
         restructure_integration(built, integration_path, integration_out_path)
+        _copy_python_version_file(integration_path, integration_out_path)
 
         full_details: BuiltFullDetails = integration.to_built_full_details()
         write_full_details(full_details, integration_out_path)
@@ -265,3 +266,10 @@ class Integrations:
             integration / mp.core.constants.README_FILE,
             integration / mp.core.constants.INTEGRATION_VENV,
         )
+
+
+def _copy_python_version_file(integration_path: Path, integration_out_path: Path) -> None:
+    """Copy the .python-version file to the out path."""
+    python_version_file: Path = integration_path / mp.core.constants.PYTHON_VERSION_FILE
+    if python_version_file.exists():
+        shutil.copy(python_version_file, integration_out_path)
