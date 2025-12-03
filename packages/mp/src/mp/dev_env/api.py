@@ -63,6 +63,10 @@ class BackendAPI:
             rich.print("[red]You must provide username and password or api key[/red]")
             raise typer.Exit(1)
 
+    def disable_ssl(self) -> None:
+        """Disables tls verification."""
+        self.session.verify = False
+
     def login(self) -> None:
         """Authenticate and store the session token or API key header."""
         if self.api_key is not None:

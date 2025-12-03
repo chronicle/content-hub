@@ -89,6 +89,10 @@ def login(
             help="Skip credential verification after saving.",
         ),
     ] = False,
+    no_ssl: Annotated[
+        bool,
+        typer.Option("--no-ssl", help="Ignore SSL verification."),
+    ] = False,
 ) -> None:
     """Authenticate to the dev environment (playground).
 
@@ -98,6 +102,7 @@ def login(
         password: The password to authenticate with.
         api_key: The API key for authentication.
         no_verify: Skip credential verification after saving.
+        no_ssl: Disables ssl certificate verification.
 
     Raises:
         typer.Exit: If the API root, username, or password is not provided.
@@ -147,6 +152,8 @@ def login(
                 backend_api = api.BackendAPI(
                     api_root=params.api_root, username=params.username, password=params.password
                 )
+            if no_ssl:
+                backend_api.disable_ssl()
             backend_api.login()
             rich.print("[green]✅ Credentials verified successfully.[/green]")
         except Exception as e:
@@ -185,12 +192,17 @@ def push(
         bool,
         typer.Option("--staging", help="Add this option to deploy integration in to staging mode."),
     ] = False,
+    no_ssl: Annotated[
+        bool,
+        typer.Option("--no-ssl", help="Ignore SSL verification."),
+    ] = False,
 ) -> None:
     """Build and deploy an integration to the dev environment (playground).
 
     Args:
         integration: The integration to build and deploy.
         is_staging: Add this option to deploy integration in to staging mode.
+        no_ssl: Ignore SSL verification.
 
     Raises:
         typer.Exit: If the integration is not found.
@@ -209,13 +221,17 @@ def push(
 
     try:
         if config.get("api_key"):
-            backend_api = api.BackendAPI(api_root=config["api_root"], api_key=config["api_key"])
+            backend_api = api.BackendAPI(
+                api_root=config["api_root"], api_key=config["api_key"],
+            )
         else:
             backend_api = api.BackendAPI(
                 api_root=config["api_root"],
                 username=config["username"],
                 password=config["password"],
             )
+        if no_ssl:
+            backend_api.disable_ssl()
         backend_api.login()
         details = backend_api.get_integration_details(zip_path, is_staging=is_staging)
         integration_id: str = details["identifier"]
