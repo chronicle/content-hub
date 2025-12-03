@@ -61,7 +61,7 @@ def test_non_existing_playbook_raises_file_not_found(
         unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path),
         pytest.raises(FileNotFoundError, match=r"Invalid playbook .*"),
     ):
-        assert_build_playbook(Path(tmp_path / "non_existing_playbook.yaml"))
+        assert_build_playbook(Path(tmp_path / "non_existing_playbook"))
 
 
 def test_save_values_while_deconstruct_and_build_playbook(

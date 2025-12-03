@@ -82,7 +82,7 @@ def _build_playbooks(
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
     normalized_playbooks: set[str] = {
-        _normalize_name_to_json(name, deconstruct) for name in playbooks
+        _normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks
     }
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:

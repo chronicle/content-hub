@@ -54,9 +54,16 @@ class PlaybooksRepo:
         """Build a single playbook provided by `playbook_path`.
 
         Args:
-            playbook_path: The paths of the playbook to build
+            playbook_path: The path of the playbook to build.
+
+        Raises:
+            FileNotFoundError: If `playbook_path` does not exist.
 
         """
+        if not playbook_path.exists():
+            msg: str = f"Invalid playbook {playbook_path}"
+            raise FileNotFoundError(msg)
+
         self._build_playbook(playbook_path)
 
     def _build_playbook(self, playbook_path: Path) -> None:
@@ -88,12 +95,18 @@ class PlaybooksRepo:
             pool.map(self.deconstruct_playbook, paths)
 
     def deconstruct_playbook(self, playbook_path: Path) -> None:
-        """Deconstruct a single playbook provided by `integration_path`.
+        """Deconstruct a single playbook provided by `playbook_path`.
 
         Args:
-            playbook_path: The paths of the playbook to deconstruct
+            playbook_path: The path of the playbook to deconstruct.
+
+        Raises:
+            FileNotFoundError: If `playbook_path` does not exist.
 
         """
+        if not playbook_path.exists():
+            msg: str = f"Invalid playbook {playbook_path}"
+            raise FileNotFoundError(msg)
         playbook_out_path: Path = self.out_dir / playbook_path.stem.lower()
         playbook_out_path.mkdir(exist_ok=True)
         self._deconstruct_playbook(playbook_path, playbook_out_path)
