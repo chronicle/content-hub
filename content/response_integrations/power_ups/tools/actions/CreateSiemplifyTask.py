@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
 
 from dateutil.parser import parse
 from TIPCommon.base.action import Action
@@ -24,6 +25,9 @@ from ..core.ToolsCommon import (
     is_supported_siemplify_version,
     parse_version_string_to_tuple,
 )
+
+if TYPE_CHECKING:
+    from typing import NoReturn
 
 X5_TASK_URL = "{}/external/v1/cases/AddOrUpdateCaseTask"
 X6_TASK_URL = "{}/external/v1/sdk/AddOrUpdateCaseTask"
@@ -142,7 +146,7 @@ class CreateSiemplifyTaskAction(Action):
         add_task.raise_for_status()
 
 
-def main():
+def main() -> NoReturn:
     CreateSiemplifyTaskAction().run()
 
 
