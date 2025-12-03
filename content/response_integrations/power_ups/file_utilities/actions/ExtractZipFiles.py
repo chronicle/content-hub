@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import io
-import os
+import zipfile
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -51,8 +51,6 @@ def main():
         siemplify.extract_action_param("Add to Case Wall", print_value=True).lower()
         == "true"
     )
-    # zip_password = siemplify.extract_action_param("Zip File Password", print_value=True)
-    # zip_password_delimiter = siemplify.extract_action_param("Zip Password List Delimiter", print_value=True)
 
     zip_passwords = list(
         filter(
@@ -71,7 +69,7 @@ def main():
             ],
         ),
     )
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    status = EXECUTION_STATE_COMPLETED
     output_message = (
         "output message :"  # human readable message, showed in UI as the action result
     )
@@ -84,25 +82,29 @@ def main():
             siemplify.LOGGER.info(
                 f"The entity {entity.identifier} is being checked for being zip",
             )
-            if (
-                "attachment_id" in entity.additional_properties
-                and os.path.splitext(entity.identifier)[1].lower() == ".zip"
-            ):
+            if "attachment_id" in entity.additional_properties:
                 _attachment = siemplify.get_attachment(
                     entity.additional_properties["attachment_id"],
                 )
                 zip_file_content = io.BytesIO(_attachment.getvalue())
-                extracted_files[entity.identifier] = attach_mgr.extract_zip(
-                    entity.identifier,
-                    zip_file_content,
-                    bruteforce=bruteforce_password,
-                    pwds=zip_passwords,
-                )
-                result_value = "true"
+                if zipfile.is_zipfile(zip_file_content):
+                    extracted_files[entity.identifier] = attach_mgr.extract_zip(
+                        entity.identifier,
+                        zip_file_content,
+                        bruteforce=bruteforce_password,
+                        pwds=zip_passwords,
+                    )
+                    result_value = "true"
 
     if add_to_case_wall:
         for file_name in extracted_files:
             for x_file in extracted_files[file_name]:
+                if x_file["filename"].endswith("/") or not x_file.get("raw", ""):
+                    siemplify.LOGGER.info(
+                        "Skipping directory or empty file: "
+                        f"{x_file['filename']} from case wall.",
+                    )
+                    continue
                 siemplify.LOGGER.info(
                     f"Adding the file: {x_file['filename']} to the case wall",
                 )
@@ -114,9 +116,8 @@ def main():
                 )
                 x_file["attachment_id"] = attachment_res
 
-    if include_data == False:
+    if not include_data:
         for file_name in extracted_files:
-            x_files = extracted_files[file_name]
             for x_file in extracted_files[file_name]:
                 del x_file["raw"]
 
