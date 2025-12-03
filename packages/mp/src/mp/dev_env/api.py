@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import base64
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 import requests
 import rich
 import typer
+import urllib3
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -54,6 +56,11 @@ class BackendAPI:
         self.session = requests.Session()
         self.token = None
 
+        if self._is_localhost():
+            rich.print("[yellow]Localhost deployment detected. "
+                       "TLS verification disabled.[/yellow]")
+            self._disable_tls()
+
         if api_key is not None:
             if username is not None or password is not None:
                 rich.print("[red]Cannot use both API key and username/password[/red]")
@@ -62,6 +69,22 @@ class BackendAPI:
         elif username is None or password is None:
             rich.print("[red]You must provide username and password or api key[/red]")
             raise typer.Exit(1)
+
+    def _disable_tls(self) -> None:
+        """Disables tls verification."""
+        self.session.verify = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def _is_localhost(self) -> bool:
+        """Check if the api_root is localhost.
+
+        Returns:
+            True if the api_root is localhost, False otherwise.
+
+        """
+        hostname = urlparse(self.api_root).hostname
+        local_hostnames = ["localhost", "127.0.0.1"]
+        return hostname in local_hostnames
 
     def login(self) -> None:
         """Authenticate and store the session token or API key header."""
