@@ -21,7 +21,6 @@ from soar_sdk.ScriptResult import (
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.rest.soar_api import get_case_overview_details
 from TIPCommon.rest.soar_api import get_workflow_instance_card
 
 WF_STATUS_NONE = 0

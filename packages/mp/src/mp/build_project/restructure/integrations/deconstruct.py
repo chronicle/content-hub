@@ -124,6 +124,7 @@ class DeconstructIntegration:
         self._create_mapping_rules()
         self._create_scripts_dirs()
         self._create_package_file()
+        self._create_python_version_file()
 
     def _create_resource_files(self) -> None:
         """Create the image files in the resources directory."""
@@ -163,6 +164,18 @@ class DeconstructIntegration:
             content=self.integration.metadata.to_non_built(),
             path=def_file,
         )
+
+    def _create_python_version_file(self) -> None:
+        out_python_version_file: Path = self.out_path / mp.core.constants.PYTHON_VERSION_FILE
+        python_version_file: Path = self.path / mp.core.constants.PYTHON_VERSION_FILE
+
+        python_version: str = ""
+        if python_version_file.is_file():
+            python_version = python_version_file.read_text(encoding="utf-8")
+        if not python_version:
+            python_version = self.integration.metadata.python_version.to_string()
+
+        out_python_version_file.write_text(python_version, encoding="utf-8")
 
     def _create_release_notes(self) -> None:
         rn: Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
