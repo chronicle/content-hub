@@ -23,7 +23,7 @@ from deepdiff import DeepDiff
 
 import mp.core.constants
 import test_mp.common
-from mp.build_project.playbooks_repo import Playbooks
+from mp.build_project.playbooks_repo import PlaybooksRepo
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -84,7 +84,7 @@ def assert_deconstruct_playbook(
         mocked_repo: Path = tmp_path / playbook_path.parent.name
         shutil.copytree(playbook_path.parent, mocked_repo)
 
-        playbook_repo: Playbooks = Playbooks(mocked_repo)
+        playbook_repo: PlaybooksRepo = PlaybooksRepo(mocked_repo)
 
         playbook: Path = mocked_repo / playbook_path.name
         playbook_repo.deconstruct_playbook(playbook)

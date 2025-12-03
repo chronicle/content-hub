@@ -25,6 +25,7 @@ import mp.core.constants
 from mp.core.data_models.playbooks.meta.display_info import (
     BuiltPlaybookDisplayInfo,
     PlaybookDisplayInfo,
+    PlaybookType,
 )
 from mp.core.data_models.release_notes.metadata import ReleaseNote
 
@@ -124,23 +125,29 @@ def _extract_integrations(
     built_playbook: BuiltPlaybook, parent_folder: Path | None = None
 ) -> list[str]:
     result: set[str] = set()
-    steps: list[BuiltStep] = built_playbook.get("Definition").get("Steps")
+    steps: list[BuiltStep] = built_playbook["Definition"]["Steps"]
     for step in steps:
         step_type: int = step.get("Type")
         if step_type != BLOCK_TYPE:
-            integration_name: str = step.get("Integration")
-            if integration_name not in {"Flow", None}:
-                result.add(integration_name)
+            _extract_from_step(step, result)
         else:
-            step_parameters: list[BuiltStepParameter] = step.get("Parameters")
-            for param in step_parameters:
-                if param.get("Name") == "NestedWorkflowIdentifier":
-                    temp = _extract_integrations_from_nested_block(
-                        param.get("Value"), parent_folder
-                    )
-                    result.update(temp)
+            _extract_from_block(step, parent_folder, result)
 
     return list(result)
+
+
+def _extract_from_step(step: BuiltStep, result: set[str]) -> None:
+    integration_name: str = step.get("Integration")
+    if integration_name not in {"Flow", None}:
+        result.add(integration_name)
+
+
+def _extract_from_block(step: BuiltStep, parent_folder: Path | None, result: set[str]) -> None:
+    step_parameters: list[BuiltStepParameter] = step.get("Parameters")
+    for param in step_parameters:
+        if param.get("Name") == "NestedWorkflowIdentifier":
+            temp = _extract_integrations_from_nested_block(param.get("Value"), parent_folder)
+            result.update(temp)
 
 
 def _extract_integrations_from_nested_block(block_identifier: str, base_folder: Path) -> set[str]:
@@ -148,25 +155,28 @@ def _extract_integrations_from_nested_block(block_identifier: str, base_folder: 
     for file in base_folder.iterdir():
         if file.is_dir():
             continue
-        found: bool = False
+
         with Path.open(file) as block_file:
             block_json: dict = json.load(block_file)
-
-            if (
-                block_json.get("Definition").get("PlaybookType") == 0
-                or block_json.get("Definition").get("Identifier") != block_identifier
-            ):
+            if not _is_specific_block(block_json, block_identifier):
                 continue
-            found = True
+
             steps: list[dict] = block_json.get("Definition").get("Steps")
             for step in steps:
                 integration_name: str = step.get("Integration")
                 if integration_name not in {"Flow", None}:
                     result.add(integration_name)
-        if found:
-            break
+
+            return result
 
     return result
+
+
+def _is_specific_block(block_json: dict, block_identifier: str) -> bool:
+    return (
+        block_json.get("Definition").get("PlaybookType") != PlaybookType.BLOCK.value
+        or block_json.get("Definition").get("Identifier") != block_identifier
+    )
 
 
 def _extract_block_identifier(built_playbook: BuiltPlaybook) -> list[str]:

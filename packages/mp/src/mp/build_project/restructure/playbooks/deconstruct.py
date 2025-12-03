@@ -99,7 +99,7 @@ class PlaybookDeconstructor:
         widgets_path.mkdir(exist_ok=True)
 
         for w in non_built_widgets:
-            widget_path: Path = widgets_path / f"{w['title']}.{mp.core.constants.DEF_FILE_SUFFIX}"
+            widget_path: Path = widgets_path / f"{w['title']}{mp.core.constants.DEF_FILE_SUFFIX}"
             mp.core.file_utils.save_yaml(w, widget_path)
 
         for w in self.playbook.widgets:

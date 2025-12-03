@@ -78,10 +78,12 @@ def _build_playbooks(
     deconstruct: bool,
 ) -> None:
     valid_playbooks_paths: set[Path] = _get_playbooks_paths_from_repository(
-        playbooks, repository.repository_base_path
+        playbooks, repository.repository_base_path, deconstruct=deconstruct
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
-    normalized_playbooks: set[str] = {_normalize_name_to_json(name) for name in playbooks}
+    normalized_playbooks: set[str] = {
+        _normalize_name_to_json(name, deconstruct) for name in playbooks
+    }
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
         rich.print(
@@ -101,14 +103,16 @@ def _build_playbooks(
 
 
 def _get_playbooks_paths_from_repository(
-    playbooks_names: Iterable[str], repository_path: Path
+    playbooks_names: Iterable[str], repository_path: Path, *, deconstruct: bool = False
 ) -> set[Path]:
-    normalized_names = (_normalize_name_to_json(n) for n in playbooks_names)
+    normalized_names = (
+        _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
+    )
     return {p for n in normalized_names if (p := repository_path / n).exists()}
 
 
-def _normalize_name_to_json(name: str) -> str:
+def _normalize_name_to_json(name: str, *, deconstruct: bool = False) -> str:
     p = Path(name)
-    if p.suffix != ".json":
+    if deconstruct and p.suffix != ".json":
         return p.with_suffix(".json").name
     return p.name

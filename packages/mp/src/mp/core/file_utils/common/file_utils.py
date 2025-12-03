@@ -119,6 +119,7 @@ def save_yaml(data: dict[str, Any], path: Path) -> None:
 
     Raises:
         OSError: If the file write operation fails (e.g., permission denied, invalid path).
+        ValueError: If got yaml error.
 
     """
     try:

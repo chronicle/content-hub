@@ -45,9 +45,7 @@ class PlaybooksRepo:
             playbook_paths: The paths of playbooks to build
 
         """
-        paths: Iterator[Path] = (
-            p for p in playbook_paths if p.exists() and mp.core.file_utils.is_non_built_playbook(p)
-        )
+        paths: Iterator[Path] = (p for p in playbook_paths if p.exists())
         processes: int = mp.core.config.get_processes_number()
         with multiprocessing.Pool(processes=processes) as pool:
             pool.map(self.build_playbook, paths)
@@ -58,14 +56,7 @@ class PlaybooksRepo:
         Args:
             playbook_path: The paths of the playbook to build
 
-        Raises:
-            FileNotFoundError: when `playbook_path` does not exist
-
         """
-        if not playbook_path.exists():
-            msg: str = f"Invalid playbook {playbook_path}"
-            raise FileNotFoundError(msg)
-
         self._build_playbook(playbook_path)
 
     def _build_playbook(self, playbook_path: Path) -> None:
@@ -91,9 +82,7 @@ class PlaybooksRepo:
             playbooks_paths: The paths of playbook to deconstruct
 
         """
-        paths: Iterator[Path] = (
-            p for p in playbooks_paths if p.exists() and mp.core.file_utils.is_built_playbook(p)
-        )
+        paths: Iterator[Path] = (p for p in playbooks_paths if p.exists())
         processes: int = mp.core.config.get_processes_number()
         with multiprocessing.Pool(processes=processes) as pool:
             pool.map(self.deconstruct_playbook, paths)
@@ -104,14 +93,7 @@ class PlaybooksRepo:
         Args:
             playbook_path: The paths of the playbook to deconstruct
 
-        Raises:
-            FileNotFoundError: when `playbook_path` does not exist
-
         """
-        if not playbook_path.exists():
-            msg: str = f"Invalid playbook {playbook_path}"
-            raise FileNotFoundError(msg)
-
         playbook_out_path: Path = self.out_dir / playbook_path.stem.lower()
         playbook_out_path.mkdir(exist_ok=True)
         self._deconstruct_playbook(playbook_path, playbook_out_path)

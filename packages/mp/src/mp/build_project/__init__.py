@@ -104,9 +104,11 @@ def build(  # noqa: PLR0913
             default_factory=list,
         ),
     ],
-    integration: Annotated[
+    integrations: Annotated[
         list[str],
         typer.Option(
+            "--integration",
+            "-i",
             help="Build a specified integration",
             default_factory=list,
         ),
@@ -118,9 +120,11 @@ def build(  # noqa: PLR0913
             default_factory=list,
         ),
     ],
-    playbook: Annotated[
+    playbooks: Annotated[
         list[str],
         typer.Option(
+            "--playbook",
+            "-p",
             help="Build a specified playbook",
             default_factory=list,
         ),
@@ -130,7 +134,7 @@ def build(  # noqa: PLR0913
         bool,
         typer.Option(
             help=(
-                "Deconstruct built integrations instead of building them."
+                "Deconstruct built integrations or playbooks instead of building them."
                 " Does work only with --integration."
             ),
         ),
@@ -152,18 +156,18 @@ def build(  # noqa: PLR0913
 
     Args:
         repository: the repository to build
-        integration: the integrations to build
+        integrations: the integrations to build
         integration_group: the integration groups to build
-        playbook: the playbooks to build
+        playbooks: the playbooks to build
         deconstruct: whether to deconstruct instead of build
         quiet: quiet log options
         verbose: Verbose log options
 
     """
     repository = ensure_valid_list(repository)
-    integration = ensure_valid_list(integration)
+    integration = ensure_valid_list(integrations)
     integration_group = ensure_valid_list(integration_group)
-    playbook = ensure_valid_list(playbook)
+    playbook = ensure_valid_list(playbooks)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()

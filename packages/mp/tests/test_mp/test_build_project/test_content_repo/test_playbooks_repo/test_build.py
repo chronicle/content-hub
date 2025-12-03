@@ -24,7 +24,7 @@ import pytest
 from deepdiff import DeepDiff
 
 import test_mp.common
-from mp.build_project.playbooks_repo import Playbooks
+from mp.build_project.playbooks_repo import PlaybooksRepo
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -72,7 +72,7 @@ def test_save_values_while_deconstruct_and_build_playbook(
         shutil.copytree(built_playbook_path.parent, mocked_repo)
         playbook_to_deconstruct: Path = mocked_repo / built_playbook_path.name
 
-        playbook_repo = Playbooks(mocked_repo)
+        playbook_repo = PlaybooksRepo(mocked_repo)
         playbook_repo.deconstruct_playbook(playbook_to_deconstruct)
         deconstructed_playbook_path: Path = playbook_repo.out_dir / playbook_to_deconstruct.stem
 
@@ -95,7 +95,7 @@ def assert_build_playbook(
         mocked_repo: Path = tmp_path / playbook_path.parent.name
         shutil.copytree(playbook_path.parent, mocked_repo)
 
-        playbook_repo: Playbooks = Playbooks(mocked_repo)
+        playbook_repo: PlaybooksRepo = PlaybooksRepo(mocked_repo)
 
         playbook: Path = mocked_repo / playbook_path.name
         playbook_repo.build_playbook(playbook)
