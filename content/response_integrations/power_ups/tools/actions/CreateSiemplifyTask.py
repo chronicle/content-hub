@@ -17,8 +17,8 @@ from __future__ import annotations
 import time
 
 from dateutil.parser import parse
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.base.action import Action
+from TIPCommon.extraction import extract_action_param
 
 from ..core.ToolsCommon import (
     is_supported_siemplify_version,
@@ -32,94 +32,118 @@ CREATE_TASK_SIEMPLIFY_5X_VERSION = "5.0.0.0"
 CREATE_TASK_SIEMPLIFY_6X_VERSION = "6.0.0.0"
 
 
-@output_handler
-def main():
-    siemplify = SiemplifyAction()
-    siemplify.script_name = ACTION_NAME
+class CreateSiemplifyTaskAction(Action):
+    def __init__(self):
+        super().__init__(ACTION_NAME)
 
-    assign_to = siemplify.extract_action_param(
-        param_name="Assign To",
-        is_mandatory=True,
-        print_value=True,
-    )
-    task_content = siemplify.extract_action_param(
-        param_name="Task Content",
-        is_mandatory=True,
-        print_value=True,
-    )
-    duration = siemplify.extract_action_param(
-        param_name="SLA (in minutes)",
-        is_mandatory=False,
-        print_value=True,
-    )
-    task_title = siemplify.extract_action_param(
-        param_name="Task Title",
-        is_mandatory=False,
-        print_value=True,
-    )
-    due_date = siemplify.extract_action_param(
-        param_name="Due Date",
-        is_mandatory=False,
-        print_value=True,
-    )
-
-    if not due_date and not duration:
-        raise ValueError(
-            'either "Due Date" or "SLA (in minutes)" parameter should have value.'
+    def _extract_action_parameters(self):
+        self.params.assign_to = extract_action_param(
+            self.soar_action,
+            param_name="Assign To",
+            is_mandatory=True,
+            print_value=True,
+        )
+        self.params.task_content = extract_action_param(
+            self.soar_action,
+            param_name="Task Content",
+            is_mandatory=True,
+            print_value=True,
+        )
+        self.params.duration = extract_action_param(
+            self.soar_action,
+            param_name="SLA (in minutes)",
+            is_mandatory=False,
+            print_value=True,
+        )
+        self.params.task_title = extract_action_param(
+            self.soar_action,
+            param_name="Task Title",
+            is_mandatory=False,
+            print_value=True,
+        )
+        self.params.due_date = extract_action_param(
+            self.soar_action,
+            param_name="Due Date",
+            is_mandatory=False,
+            print_value=True,
         )
 
-    client_time = 0
-    if due_date:
-        dt_due_date = parse(due_date)
-        client_time = int(dt_due_date.timestamp() * 1000)
-    elif duration:
-        time_now_epoch = int(time.time() * 1000)
-        client_time = time_now_epoch + (int(duration) * 1000 * 60)
+    def _validate_params(self):
+        if not self.params.due_date and not self.params.duration:
+            raise ValueError(
+                'either "Due Date" or "SLA (in minutes)" parameter should have a value.'
+            )
 
-    current_version = siemplify.get_system_version()
-    json_payload = {}
-    task_url = ""
+    def _init_api_clients(self) -> None:
+        """Initialize API clients if required (placeholder)."""
 
-    if is_supported_siemplify_version(
-        parse_version_string_to_tuple(current_version),
-        parse_version_string_to_tuple(CREATE_TASK_SIEMPLIFY_6X_VERSION),
-    ):
-        json_payload = {
-            "owner": assign_to,
-            "content": task_content,
-            "dueDate": "",
-            "dueDateUnixTimeMs": client_time,
-            "title": task_title,
-            "caseId": siemplify.case_id,
-        }
-        task_url = X6_TASK_URL
-    elif is_supported_siemplify_version(
-        parse_version_string_to_tuple(current_version),
-        parse_version_string_to_tuple(CREATE_TASK_SIEMPLIFY_5X_VERSION),
-    ):
-        json_payload = {
-            "owner": assign_to,
-            "name": task_content,
-            "dueDate": "",
-            "dueDateUnixTimeMs": client_time,
-            "caseId": siemplify.case_id,
-        }
-        task_url = X5_TASK_URL
+    def _perform_action(self, _) -> None:
+        client_time = self._client_time()
 
-    add_task = siemplify.session.post(
-        task_url.format(siemplify.API_ROOT),
-        json=json_payload,
-    )
-    add_task.raise_for_status()
+        self._create_task(client_time)
 
-    due_date_info = (
-        f"by {due_date}" if due_date else f"in the next {duration} minutes"
-    )
-    output_message = (
-        f"A new task has been created for the user: {assign_to}.\n"
-        f"This task should be handled {due_date_info}"
-    )
-    siemplify.end(output_message, True)
+        due_date_info = (
+            f"by {self.params.due_date}"
+            if self.params.due_date
+            else f"in the next {self.params.duration} minutes"
+        )
+        self.output_message = (
+            f"A new task has been created for the user: {self.params.assign_to}.\n"
+            f"This task should be handled {due_date_info}"
+        )
+        self.result_value = True
+
+    def _client_time(self):
+        client_time = 0
+
+        if self.params.due_date:
+            dt_due_date = parse(self.params.due_date)
+            client_time = int(dt_due_date.timestamp() * 1000)
+        elif self.params.duration:
+            time_now_epoch = int(time.time() * 1000)
+            client_time = time_now_epoch + (int(self.params.duration) * 1000 * 60)
+        return client_time
+
+    def _create_task(self, client_time: int):
+        current_version = self.soar_action.get_system_version()
+        json_payload = {}
+        task_url = ""
+
+        if is_supported_siemplify_version(
+            parse_version_string_to_tuple(current_version),
+            parse_version_string_to_tuple(CREATE_TASK_SIEMPLIFY_6X_VERSION),
+        ):
+            json_payload = {
+                "owner": self.params.assign_to,
+                "content": self.params.task_content,
+                "dueDate": "",
+                "dueDateUnixTimeMs": client_time,
+                "title": self.params.task_title,
+                "caseId": self.soar_action.case_id,
+            }
+            task_url = X6_TASK_URL
+        elif is_supported_siemplify_version(
+            parse_version_string_to_tuple(current_version),
+            parse_version_string_to_tuple(CREATE_TASK_SIEMPLIFY_5X_VERSION),
+        ):
+            json_payload = {
+                "owner": self.params.assign_to,
+                "name": self.params.task_content,
+                "dueDate": "",
+                "dueDateUnixTimeMs": client_time,
+                "caseId": self.soar_action.case_id,
+            }
+            task_url = X5_TASK_URL
+
+        add_task = self.soar_action.session.post(
+            task_url.format(self.soar_action.API_ROOT),
+            json=json_payload,
+        )
+        add_task.raise_for_status()
+
+
+def main():
+    CreateSiemplifyTaskAction().run()
 
 
 if __name__ == "__main__":
