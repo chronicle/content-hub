@@ -94,7 +94,9 @@ class PlaybookDisplayInfo(
             author=non_built["author"],
             contact_email=non_built["contact_email"],
             tags=non_built["tags"],
-            contribution_type=PlaybookContributionType.from_string(non_built["contribution_type"].upper()),
+            contribution_type=PlaybookContributionType.from_string(
+                non_built["contribution_type"].upper()
+            ),
             is_google_verified=non_built["is_google_verified"],
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
         )
