@@ -125,6 +125,3 @@ def _normalize_name_to_json(name: str, *, deconstruct: bool = False) -> str:
     if deconstruct and not name.endswith(mp.core.constants.WIDGETS_META_SUFFIX):
         name = name.join(mp.core.constants.WIDGETS_META_SUFFIX)
     return name
-
-
-mp.core.file_utils.create_or_get_content_dir()
