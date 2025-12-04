@@ -27,14 +27,14 @@ class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
     BLOCK = 1
 
 
-class PlaybookTypeProto(mp.core.data_models.abc.RepresentableEnum):
+class PlaybookDisplayInfoType(mp.core.data_models.abc.RepresentableEnum):
     Playbook = 1
     Block = 2
 
 
-TO_PROTO_PLAYBOOK_TYPE_MAPPER = {
-    PlaybookType.PLAYBOOK.value: PlaybookTypeProto.Playbook.value,
-    PlaybookType.BLOCK.value: PlaybookTypeProto.Block.value,
+PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE = {
+    PlaybookType.PLAYBOOK.value: PlaybookDisplayInfoType.Playbook.value,
+    PlaybookType.BLOCK.value: PlaybookDisplayInfoType.Block.value,
 }
 
 

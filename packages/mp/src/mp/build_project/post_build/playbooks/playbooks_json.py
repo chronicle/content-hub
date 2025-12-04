@@ -23,7 +23,7 @@ import yaml
 
 import mp.core.constants
 from mp.core.data_models.playbooks.meta.display_info import (
-    TO_PROTO_PLAYBOOK_TYPE_MAPPER,
+    PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE,
     BuiltPlaybookDisplayInfo,
     PlaybookDisplayInfo,
     PlaybookType,
@@ -116,7 +116,7 @@ def _update_display_info(
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
     built_display_info["Version"] = rn_values.version
-    built_display_info["Type"] = TO_PROTO_PLAYBOOK_TYPE_MAPPER[
+    built_display_info["Type"] = PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE[
         built_playbook["Definition"]["PlaybookType"]
     ]
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
