@@ -52,12 +52,12 @@ if TYPE_CHECKING:
     from mp.core.custom_types import Products
 
 
-class Integrations:
+class IntegrationsRepo:
     def __init__(self, integrations_dir: Path) -> None:
         """Class constructor.
 
         Args:
-            integrations_dir: The path to a marketplace's integrations folders
+            integrations_dir: The path to a Content-Hub integrations folders
                 and groups exist
 
         """
@@ -142,7 +142,7 @@ class Integrations:
         self._remove_project_files_from_built_out_path(integration.identifier)
 
     def _get_integration_to_build(self, integration_path: Path) -> Integration:
-        if not mp.core.file_utils.is_non_built(integration_path):
+        if not mp.core.file_utils.is_non_built_integration(integration_path):
             rich.print(f"Integration {integration_path.name} is built")
             self._prepare_built_integration_for_build(integration_path)
             return Integration.from_built_path(integration_path)
@@ -231,7 +231,7 @@ class Integrations:
 
     def _deconstruct_integration(self, integration_path: Path, integration_out_path: Path) -> None:
         rich.print(f"---------- Deconstructing {integration_path.stem} ----------")
-        if mp.core.file_utils.is_non_built(integration_path):
+        if mp.core.file_utils.is_non_built_integration(integration_path):
             rich.print(f"Integration {integration_path.name} is deconstructed")
             mp.core.file_utils.recreate_dir(integration_out_path)
             shutil.copytree(integration_path, integration_out_path, dirs_exist_ok=True)
