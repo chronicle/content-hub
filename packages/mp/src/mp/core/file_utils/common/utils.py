@@ -75,5 +75,5 @@ def create_dir_if_not_exists(p: Path, /) -> Path:
         The created path
 
     """
-    p.mkdir(exist_ok=True)
+    p.mkdir(parents=True, exist_ok=True)
     return p
