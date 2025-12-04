@@ -109,10 +109,10 @@ DEBUG_STEP_ENRICHMENT_DATA = DebugStepEnrichmentData(
 )
 
 BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
-    "OriginalStepIdentifier": "step_id",
-    "OriginalWorkflowIdentifier": "playbook_id",
-    "ModificationTimeUnixTimeInMs": 1234567890,
     "CreationTimeUnixTimeInMs": 1234567890,
+    "ModificationTimeUnixTimeInMs": 1234567890,
+    "OriginalWorkflowIdentifier": "playbook_id",
+    "OriginalStepIdentifier": "step_id",
     "ResultValue": "result_value",
     "ResultJson": '{"key": "value"}',
     "ScopeEntitiesEnrichmentData": [BUILT_STEP_DEBUG_ENRICHMENT_DATA],
@@ -144,15 +144,14 @@ STEP_DEBUG_DATA = StepDebugData(
 )
 
 BUILT_STEP_DEBUG_DATA_WITH_NONE: BuiltStepDebugData = {
-    "OriginalStepIdentifier": "step_id",
-    "OriginalWorkflowIdentifier": "playbook_id",
-    "ModificationTimeUnixTimeInMs": 1234567890,
     "CreationTimeUnixTimeInMs": 1234567890,
+    "ModificationTimeUnixTimeInMs": 1234567890,
+    "OriginalWorkflowIdentifier": "playbook_id",
+    "OriginalStepIdentifier": "step_id",
     "ResultValue": "result_value",
     "ResultJson": '{"key": "value"}',
     "ScopeEntitiesEnrichmentData": [],
     "ScopeEntitiesEnrichmentDataJson": "[]",
-    "TenantId": None,
 }
 
 NON_BUILT_STEP_DEBUG_DATA_WITH_NONE: NonBuiltStepDebugData = {
@@ -163,7 +162,6 @@ NON_BUILT_STEP_DEBUG_DATA_WITH_NONE: NonBuiltStepDebugData = {
     "result_value": "result_value",
     "result_json": '{"key": "value"}',
     "scope_entities_enrichment_data": [],
-    "tenant_id": None,
 }
 
 STEP_DEBUG_DATA_WITH_NONE = StepDebugData(
@@ -174,7 +172,6 @@ STEP_DEBUG_DATA_WITH_NONE = StepDebugData(
     result_value="result_value",
     result_json='{"key": "value"}',
     scope_entities_enrichment_data=[],
-    tenant_id=None,
 )
 
 BUILT_STEP_PARAMETER: BuiltStepParameter = {
@@ -220,16 +217,17 @@ STEP_PARAMETER_WITH_NONE = StepParameter(
 )
 
 BUILT_STEP: BuiltStep = {
-    "Name": "name",
-    "Description": "description",
     "Identifier": "identifier",
     "OriginalStepIdentifier": "original_step_id",
     "ParentWorkflowIdentifier": "playbook_id",
     "ParentStepIdentifiers": ["parent_step_id"],
+    "ParentStepIdentifier": "parent_step_id",
     "PreviousResultCondition": "previous_result_condition",
     "InstanceName": "instance_name",
     "IsAutomatic": True,
+    "Name": "name",
     "IsSkippable": True,
+    "Description": "description",
     "ActionProvider": "action_provider",
     "ActionName": "action_name",
     "Type": 0,
@@ -238,10 +236,10 @@ BUILT_STEP: BuiltStep = {
     "AutoSkipOnFailure": True,
     "IsDebugMockData": True,
     "StepDebugData": BUILT_STEP_DEBUG_DATA,
+    "ParentStepContainerId": "parent_container_id",
+    "IsTouchedByAi": True,
     "StartLoopStepIdentifier": "start_loop_step_id",
     "ParallelActions": [],
-    "ParentContainerIdentifier": "parent_container_id",
-    "IsTouchedByAi": True,
 }
 
 NON_BUILT_STEP: NonBuiltStep = {
@@ -251,6 +249,7 @@ NON_BUILT_STEP: NonBuiltStep = {
     "original_step_id": "original_step_id",
     "playbook_id": "playbook_id",
     "parent_step_ids": ["parent_step_id"],
+    "parent_step_id": "parent_step_id",
     "previous_result_condition": "previous_result_condition",
     "instance_name": "instance_name",
     "is_automatic": True,
@@ -276,6 +275,7 @@ STEP = Step(
     original_step_id="original_step_id",
     playbook_id="playbook_id",
     parent_step_ids=["parent_step_id"],
+    parent_step_id="parent_step_id",
     previous_result_condition="previous_result_condition",
     instance_name="instance_name",
     is_automatic=True,
@@ -295,16 +295,17 @@ STEP = Step(
 )
 
 BUILT_STEP_WITH_NONE: BuiltStep = {
-    "Name": "name",
-    "Description": "description",
     "Identifier": "identifier",
     "OriginalStepIdentifier": "original_step_id",
     "ParentWorkflowIdentifier": "playbook_id",
     "ParentStepIdentifiers": [],
+    "ParentStepIdentifier": "",
     "PreviousResultCondition": None,
     "InstanceName": "instance_name",
     "IsAutomatic": True,
+    "Name": "name",
     "IsSkippable": True,
+    "Description": "description",
     "ActionProvider": "action_provider",
     "ActionName": "action_name",
     "Type": 0,
@@ -313,10 +314,10 @@ BUILT_STEP_WITH_NONE: BuiltStep = {
     "AutoSkipOnFailure": True,
     "IsDebugMockData": False,
     "StepDebugData": None,
+    "ParentStepContainerId": None,
+    "IsTouchedByAi": True,
     "StartLoopStepIdentifier": None,
     "ParallelActions": [],
-    "ParentContainerIdentifier": None,
-    "IsTouchedByAi": True,
 }
 
 NON_BUILT_STEP_WITH_NONE: NonBuiltStep = {
@@ -326,6 +327,7 @@ NON_BUILT_STEP_WITH_NONE: NonBuiltStep = {
     "original_step_id": "original_step_id",
     "playbook_id": "playbook_id",
     "parent_step_ids": [],
+    "parent_step_id": "",
     "previous_result_condition": None,
     "instance_name": "instance_name",
     "is_automatic": True,
@@ -351,6 +353,7 @@ STEP_WITH_NONE = Step(
     original_step_id="original_step_id",
     playbook_id="playbook_id",
     parent_step_ids=[],
+    parent_step_id="",
     previous_result_condition=None,
     instance_name="instance_name",
     is_automatic=True,
@@ -422,10 +425,10 @@ BUILT_TRIGGER: BuiltTrigger = {
     "IsEnabled": True,
     "DefinitionIdentifier": "playbook_id",
     "Type": 0,
+    "WorkflowName": "playbook_name",
     "LogicalOperator": 0,
     "Conditions": [BUILT_CONDITION],
     "Environments": ["env1", "env2"],
-    "WorkflowName": "playbook_name",
 }
 
 NON_BUILT_TRIGGER: NonBuiltTrigger = {
@@ -455,10 +458,10 @@ BUILT_TRIGGER_WITH_NONE: BuiltTrigger = {
     "IsEnabled": True,
     "DefinitionIdentifier": "playbook_id",
     "Type": 0,
+    "WorkflowName": None,
     "LogicalOperator": 0,
     "Conditions": [],
     "Environments": [],
-    "WorkflowName": None,
 }
 
 NON_BUILT_TRIGGER_WITH_NONE: NonBuiltTrigger = {
@@ -525,6 +528,7 @@ BUILT_PLAYBOOK_METADATA: BuiltPlaybookMetadata = {
     "IsAutomatic": False,
     "IsArchived": False,
     "Permissions": [BUILT_ACCESS_PERMISSION],
+    "Environments": ["*"],
 }
 
 NON_BUILT_PLAYBOOK_METADATA: NonBuiltPlaybookMetadata = {
@@ -551,6 +555,7 @@ NON_BUILT_PLAYBOOK_METADATA: NonBuiltPlaybookMetadata = {
     "is_automatic": False,
     "is_archived": False,
     "permissions": [NON_BUILT_ACCESS_PERMISSION],
+    "environments": ["*"],
 }
 
 PLAYBOOK_METADATA = PlaybookMetadata(
@@ -577,6 +582,7 @@ PLAYBOOK_METADATA = PlaybookMetadata(
     is_automatic=False,
     is_archived=False,
     permissions=[ACCESS_PERMISSION],
+    environments=["*"],
 )
 
 BUILT_PLAYBOOK_METADATA_WITH_NONE: BuiltPlaybookMetadata = {
@@ -603,6 +609,7 @@ BUILT_PLAYBOOK_METADATA_WITH_NONE: BuiltPlaybookMetadata = {
     "IsAutomatic": False,
     "IsArchived": False,
     "Permissions": [],
+    "Environments": ["*"],
 }
 
 NON_BUILT_PLAYBOOK_METADATA_WITH_NONE: NonBuiltPlaybookMetadata = {
@@ -629,6 +636,7 @@ NON_BUILT_PLAYBOOK_METADATA_WITH_NONE: NonBuiltPlaybookMetadata = {
     "is_automatic": False,
     "is_archived": False,
     "permissions": [],
+    "environments": ["*"],
 }
 
 PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
@@ -655,6 +663,7 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     is_automatic=False,
     is_archived=False,
     permissions=[],
+    environments=["*"],
 )
 
 

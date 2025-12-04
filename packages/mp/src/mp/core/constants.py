@@ -386,15 +386,34 @@ PARAM_DISPLAY_NAME_REGEX: str = (
 
 WINDOWS_PLATFORM: str = "win32"
 
+RECONFIGURE_MP_MSG: str = (
+    "Please ensure the content-hub path is properly configured.\n"
+    "You can verify your configuration by running [bold]mp config "
+    "--display-config[/bold].\n"
+    "If the path is incorrect, re-configure it by running [bold]mp config "
+    "--root-path <your_path>[/bold]."
+)
 
 PLAYBOOKS_DIR_NAME: str = "playbooks"
-
+PLAYBOOK_BASE_OUT_DIR_NAME: str = "Playbooks"
+PLAYBOOK_OUT_DIR_NAME: str = "playbook_definitions"
 TRIGGER_FILE_NAME: str = f"trigger{DEF_FILE_SUFFIX}"
 DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
 OVERVIEWS_FILE_NAME: str = "overviews.yaml"
 STEPS_DIR: str = "steps"
-
+PLAYBOOKS_JSON_NAME: str = "playbooks.json"
 
 MAX_STEP_PARALLEL_ACTIONS: int = 5
 CONDITION_FIELD_NAME_MIN_LENGTH: int = 1
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
+HTML_SUFFIX: str = "html"
+
+PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_DIR_NAME, COMMUNITY_DIR_NAME)
+
+
+PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
+    "CategoryName",
+    "OverviewTemplatesDetails",
+    "WidgetTemplates",
+    "Definition",
+}

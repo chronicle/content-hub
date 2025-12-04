@@ -34,10 +34,10 @@ class BuiltTrigger(TypedDict):
     IsEnabled: bool
     DefinitionIdentifier: str
     Type: int
+    WorkflowName: str | None
     LogicalOperator: int
     Conditions: list[BuiltCondition]
     Environments: list[str]
-    WorkflowName: str | None
 
 
 class NonBuiltTrigger(TypedDict):
@@ -163,11 +163,11 @@ class Trigger(mp.core.data_models.abc.ComponentMetadata):
             Identifier=self.identifier,
             IsEnabled=self.is_enabled,
             DefinitionIdentifier=self.playbook_id,
+            WorkflowName=self.playbook_name,
             Type=self.type_.value,
             LogicalOperator=self.logical_operator.value,
             Conditions=[Condition.to_built(c) for c in self.conditions if c is not None],
             Environments=self.environments,
-            WorkflowName=self.playbook_name,
         )
 
     def to_non_built(self) -> NonBuiltTrigger:

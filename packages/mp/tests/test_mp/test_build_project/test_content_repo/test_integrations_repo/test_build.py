@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import mp.build_project.integrations
+import mp.build_project.integrations_repo
 import mp.core.constants
 import test_mp.common
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from mp.build_project.integrations import Integrations
+    from mp.build_project.integrations_repo import IntegrationsRepo
 
 
 def test_build_half_built_integration(
@@ -88,7 +88,9 @@ def assert_build_integration(
         if integration.exists():
             py_version.write_text("3.11", encoding="utf-8")
 
-        marketplace: Integrations = mp.build_project.integrations.Integrations(community)
+        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(
+            community
+        )
         marketplace.build_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
