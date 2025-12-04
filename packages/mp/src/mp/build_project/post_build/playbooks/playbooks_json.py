@@ -26,6 +26,10 @@ from mp.core.data_models.playbooks.meta.display_info import (
     BuiltPlaybookDisplayInfo,
     PlaybookDisplayInfo,
     PlaybookType,
+    TO_PROTO_PLAYBOOK_TYPE_MAPPER
+)
+from mp.core.data_models.playbooks.playbook import (
+    BuiltPlaybook,
 )
 from mp.core.data_models.playbooks.step.metadata import StepType
 from mp.core.data_models.release_notes.metadata import ReleaseNote
@@ -82,15 +86,15 @@ def _generate_playbooks_display_info(
             )
             continue
 
-        non_built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
+        built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
             yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
         ).to_built()
 
         built_playbook: BuiltPlaybook = json.loads(built_playbook_path.read_text(encoding="utf-8"))
         _update_display_info(
-            built_playbook, non_built_display_info, non_built_playbook_path, out_path
+            built_playbook, built_display_info, non_built_playbook_path, out_path
         )
-        res.append(non_built_display_info)
+        res.append(built_display_info)
 
     return res
 
@@ -114,7 +118,7 @@ def _update_display_info(
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
     built_display_info["Version"] = rn_values.version
-    built_display_info["Type"] = built_playbook["Definition"]["PlaybookType"] + 1
+    built_display_info["Type"] = TO_PROTO_PLAYBOOK_TYPE_MAPPER[built_playbook["Definition"]["PlaybookType"]]
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
     built_display_info["DependentPlaybookIds"] = (
         _extract_block_identifier(built_playbook)

@@ -27,6 +27,17 @@ class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
     BLOCK = 1
 
 
+class PlaybookTypeProto(mp.core.data_models.abc.RepresentableEnum):
+    Playbook = 1
+    Block = 2
+    
+    
+TO_PROTO_PLAYBOOK_TYPE_MAPPER = {
+    PlaybookType.PLAYBOOK.value: PlaybookTypeProto.Playbook.value,
+    PlaybookType.BLOCK.value: PlaybookTypeProto.Block.value
+}
+
+
 class PlaybookContributionType(mp.core.data_models.abc.RepresentableEnum):
     Unspecified = 0
     Google = 1
