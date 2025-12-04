@@ -53,3 +53,20 @@ integration's root directory to install/sync the production and dev dependencies
 ```bash
 uv sync --dev
 ```
+
+## Alternative: Manual IDE Setup
+
+If you prefer to have the SDK source code visible and editable in your project (e.g., for easier debugging or reference), you can add it as a content root in your IDE instead of installing it as a dependency.
+
+1.  **Clone the SDK**:
+    Clone the `soar-sdk` repository to your local machine:
+    ```bash
+    git clone https://github.com/chronicle/soar-sdk.git
+    ```
+
+2.  **Add to PyCharm**:
+    *   Go to **Settings** > **Project** > **Project Structure** (macOS) or **File** > **Settings** > **Project** > **Project Structure** (Windows/Linux).
+    *   Click **Add Content Root** on the right side.
+    *   Select the folder where you cloned the `soar-sdk`.
+    *   Once added, select the `src` folder (or the root package folder inside the repo) and mark it as **Sources** (click the blue "Sources" folder icon). This tells PyCharm to index this code for completion and imports.
+
