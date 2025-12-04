@@ -156,11 +156,11 @@ def main():
                             instance["environment"],
                         )
                     for i in instance["settings"]["settings"]:
-                        i["integrationInstance"] = instance_to_update.identifier
+                        i["integrationInstance"] = instance_to_update.get("integrationIdentifier")
 
                     gitsync.api.save_integration_instance_settings(
                         siemplify,
-                        instance_to_update.identifier,
+                        instance_to_update.get("integrationIdentifier"),
                         instance["settings"],
                         instance["environment"],
                     )
@@ -309,6 +309,11 @@ def main():
         if features["SLA Records"]:
             siemplify.LOGGER.info("Installing SLA definition")
             for definition in gitsync.content.get_sla_definitions():
+                definition = (
+                    SlaDefinition.from_legacy_or_1p(definition).to_1p()
+                    if platform_supports_1p_api()
+                    else SlaDefinition.from_legacy_or_1p(definition).to_legacy()
+                )
                 gitsync.api.update_sla_record(siemplify, definition)
 
         if features["Logo"]:
