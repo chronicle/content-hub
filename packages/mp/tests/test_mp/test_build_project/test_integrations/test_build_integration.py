@@ -92,8 +92,6 @@ def assert_build_integration(
         marketplace.build_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
-        out_py_version: Path = out_integration / mp.core.constants.PYTHON_VERSION_FILE
-        out_py_version.unlink(missing_ok=True)
 
         expected_file_names: set[str]
         actual_file_names: set[str]
