@@ -123,5 +123,5 @@ def _get_playbooks_paths_from_repository(
 
 def _normalize_name_to_json(name: str, *, deconstruct: bool = False) -> str:
     if deconstruct and not name.endswith(mp.core.constants.WIDGETS_META_SUFFIX):
-        name = name + mp.core.constants.WIDGETS_META_SUFFIX
+        name += mp.core.constants.WIDGETS_META_SUFFIX
     return name

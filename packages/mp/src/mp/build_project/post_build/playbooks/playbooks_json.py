@@ -87,7 +87,9 @@ def _generate_playbooks_display_info(
         ).to_built()
 
         built_playbook: BuiltPlaybook = json.loads(built_playbook_path.read_text(encoding="utf-8"))
-        _update_display_info(built_playbook, non_built_display_info, non_built_playbook_path, out_path)
+        _update_display_info(
+            built_playbook, non_built_display_info, non_built_playbook_path, out_path
+        )
         res.append(non_built_display_info)
 
     return res
@@ -132,7 +134,7 @@ def _extract_integrations(
             _extract_from_block(step, parent_folder, result)
         else:
             _extract_from_step(step, result)
-            
+
     return list(result)
 
 
@@ -141,12 +143,14 @@ def _extract_from_step(step: BuiltStep, result: set[str]) -> None:
     if integration_name not in {"Flow", None}:
         result.add(integration_name)
 
+
 def _extract_from_block(step: BuiltStep, parent_folder: Path | None, result: set[str]) -> None:
     step_parameters: list[BuiltStepParameter] = step.get("Parameters")
     for param in step_parameters:
         if param.get("Name") == "NestedWorkflowIdentifier":
             temp = _extract_integrations_from_nested_block(param.get("Value"), parent_folder)
             result.update(temp)
+
 
 def _extract_integrations_from_nested_block(block_identifier: str, base_folder: Path) -> set[str]:
     result: set[str] = set()
