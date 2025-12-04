@@ -17,6 +17,8 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING
 
+from deepdiff import DeepDiff
+
 import mp.build_project.post_build.playbooks.playbooks_json
 import mp.core.constants
 import test_mp.common
@@ -75,4 +77,4 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
         expected=playbooks_json_path, actual=out_playbooks_json_path
     )
 
-    assert actual == expected
+    assert DeepDiff(expected, actual, ignore_order=True) == NO_DIFF
