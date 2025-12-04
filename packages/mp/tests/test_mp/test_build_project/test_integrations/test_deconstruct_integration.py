@@ -92,8 +92,6 @@ def assert_deconstruct_integration(
         marketplace.deconstruct_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
-        out_py_version: Path = out_integration / mp.core.constants.PYTHON_VERSION_FILE
-        out_py_version.unlink(missing_ok=True)
         actual_files: set[str] = {p.name for p in out_integration.rglob("*.*")}
         expected_files: set[str] = {p.name for p in non_built_integration.rglob("*.*")}
         assert actual_files == expected_files
