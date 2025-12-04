@@ -45,7 +45,7 @@ class BuiltStep(TypedDict):
     ActionProvider: str
     ActionName: str
     Type: int
-    Integration: str
+    Integration: str | None
     Parameters: list[BuiltStepParameter]
     AutoSkipOnFailure: bool
     IsDebugMockData: bool
@@ -70,7 +70,7 @@ class NonBuiltStep(TypedDict):
     is_skippable: bool
     action_provider: str
     action_name: str
-    integration: str
+    integration: str | None
     type: str
     parameters: list[NonBuiltStepParameter]
     auto_skip_on_failure: bool
@@ -113,7 +113,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
     is_skippable: bool
     action_provider: str
     action_name: str
-    integration: str
+    integration: str | None = None
     type_: StepType
     parameters: list[StepParameter]
     auto_skip_on_failure: bool

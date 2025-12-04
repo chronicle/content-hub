@@ -30,7 +30,9 @@ INTEGRATION_NAME: str = "mock_integration"
 BUILT_INTEGRATION_DIR_NAME: str = "mock_built_integration"
 
 NON_BUILT_PLAYBOOK: str = "mock_non_built_playbook"
+MOCK_NON_BUILT_BLOCK: str = "mock_non_built_block"
 BUILT_PLAYBOOK: str = "mock_built_playbook/mock_built_playbook.json"
+BUILT_BLOCK: str = "mock_built_block/mock_built_block.json"
 
 
 @pytest.fixture(autouse=True)
@@ -118,9 +120,21 @@ def non_built_playbook_path(mock_playbook_path: Path) -> Path:
 
 
 @pytest.fixture
+def non_built_block_path(mock_playbook_path: Path) -> Path:
+    """Path to mocked non-built block."""
+    return mock_playbook_path / MOCK_NON_BUILT_BLOCK
+
+
+@pytest.fixture
 def built_playbook_path(mock_playbook_path: Path) -> Path:
     """Path to the mocked built playbook"""
     return mock_playbook_path / BUILT_PLAYBOOK
+
+
+@pytest.fixture
+def built_block_path(mock_playbook_path: Path) -> Path:
+    """Path to the mocked built block"""
+    return mock_playbook_path / BUILT_BLOCK
 
 
 @pytest.fixture
