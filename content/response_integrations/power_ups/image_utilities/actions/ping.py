@@ -15,11 +15,11 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from TIPCommon.base.action import Action
-from TIPCommon.exceptions import ActionSetupError
 
 import pytesseract
 from playwright.sync_api import sync_playwright
+from TIPCommon.base.action import Action
+from TIPCommon.exceptions import ActionSetupError
 
 from ..core.constants import PING_SCRIPT_NAME
 from ..core.utils import ensure_remote_agent
