@@ -17,8 +17,6 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING
 
-from deepdiff import DeepDiff
-
 import mp.build_project.post_build.playbooks.playbooks_json
 import mp.core.constants
 import test_mp.common
@@ -38,25 +36,33 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
     non_built_block_path: Path,
     playbooks_json_path: Path,
 ) -> None:
-    commercial: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
-    commercial_playbooks = PlaybooksRepo(commercial)
-    commercial_playbooks.repository_base_path.mkdir(parents=True, exist_ok=True)
-    commercial_playbooks.out_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy(built_playbook_path, commercial_playbooks.out_dir / "mock_non_built_playbook.json")
-    shutil.copy(built_playbook_path, commercial_playbooks.out_dir / "mock_non_built_block.json")
+    commercial = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+    commercial.mkdir(parents=True, exist_ok=True)
+
     shutil.copytree(
         non_built_playbook_path,
-        commercial_playbooks.repository_base_path / non_built_playbook_path.name,
+        commercial / non_built_playbook_path.name,
     )
     shutil.copytree(
         non_built_block_path,
-        commercial_playbooks.repository_base_path / non_built_block_path.name,
+        commercial / non_built_block_path.name,
+    )
+
+    commercial_playbooks = PlaybooksRepo(commercial)
+
+    commercial_playbooks.out_dir = commercial_playbooks.repository_base_path / "out"
+    commercial_playbooks.out_dir.mkdir(parents=True, exist_ok=True)
+
+    shutil.copy(
+        built_playbook_path, commercial_playbooks.out_dir / f"{non_built_playbook_path.name}.json"
+    )
+    shutil.copy(
+        built_block_path, commercial_playbooks.out_dir / f"{non_built_block_path.name}.json"
     )
 
     community: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
     community_playbooks = PlaybooksRepo(community)
     community_playbooks.repository_base_path.mkdir(parents=True, exist_ok=True)
-    community_playbooks.out_dir.mkdir(parents=True, exist_ok=True)
 
     mp.build_project.post_build.playbooks.playbooks_json.write_playbooks_json(
         commercial_playbooks, community_playbooks
@@ -68,4 +74,5 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
     expected, actual = test_mp.common.get_json_content(
         expected=playbooks_json_path, actual=out_playbooks_json_path
     )
-    assert DeepDiff(actual, expected, ignore_order=True)
+
+    assert actual == expected
