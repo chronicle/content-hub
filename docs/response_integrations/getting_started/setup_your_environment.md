@@ -23,8 +23,8 @@ project to be the interpreter found in the virtual environment of the integratio
 2. Configure Python Interpreter:
 
     * Make sure to have uv installed in your system by running pip install uv
-    * Go to `File > Settings > Project > Python Interpreter` (on macOS: `PyCharm > Preferences >
-      Project > Python Interpreter`)
+    * Go to `PyCharm > Settings > Python > Interpreter` (on macOS) or `File > Settings > Python > Interpreter` (on Windows/Linux).
+    * **Tip:** You can also use the search feature in the Settings/Preferences dialog to find "Python Interpreter" quickly.
     * Click the gear icon and select Add
     * Choose python and select whether to generate a new one or select an existing environment if
       one exists. The venv’s name should be `.venv`. You can create it at the base of the project if
@@ -37,17 +37,19 @@ project to be the interpreter found in the virtual environment of the integratio
 
 ## Essential Plugins
 
+**Installation:**
+
+1.  Go to `PyCharm > Settings > Plugins` (macOS) or `File > Settings > Plugins` (Windows/Linux).
+2.  Select the "Marketplace" tab.
+3.  Search for the plugin name and click **Install**.
+
 ### Ruff
 
 **Purpose:** Provides integration with the Ruff linter and formatter
 
-**Installation:**
-
-* Go to `File > Settings > Plugins`, search for "Ruff" and install
-
 **Configuration:**
 
-* Go to `File > Settings > Tools > Ruff`
+* Go to `Settings > Tools > Ruff`
 * Enable Use Ruff formatter
 * Set the path to Ruff executable (in your virtual environment)
 * Enable Run on save
@@ -56,13 +58,11 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Purpose:** Type checking integration
 
-**Installation:**
 
-* Go to `File > Settings > Plugins`, search for "Mypy" and install
 
 **Configuration:**
 
-* Go to `File > Settings > Tools > Mypy`
+* Go to `Settings > Tools > Mypy`
 * Set the path to the Mypy executable (in your virtual environment)
 * Enable Check effects to show type errors in real-time
 
@@ -70,17 +70,12 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Purpose:** Enhanced support for Pydantic models
 
-**Installation:**
-
-* Go to `File > Settings > Plugins`, search for "Pydantic" and install
 
 ### PyVenv Manage 2
 
 **Purpose:** Change the IDE's python interpreter
 
-**Installation:**
 
-* Go to `File > Settings > Plugins`, search for "PyVenv Manage 2" and install
 
 **Setting the project’s interpreter using this plugin**
 
@@ -100,18 +95,12 @@ You can repeat the process with every “.venv” in the project for every folde
 
 **Purpose:** Colorizes matching brackets to improve code readability
 
-**Installation:**
-
-* Search for "Rainbow Brackets" in the plugin marketplace
 
 ### Key Promoter X
 
 **Purpose:** Learn keyboard shortcuts by showing notifications when you use the mouse for actions
 that have shortcuts
 
-**Installation:**
-
-* Search for "Key Promoter X" in the plugin marketplace
 
 ## Code Style Configuration
 
@@ -166,3 +155,12 @@ You can set up mp commands as run configurations
     * Arguments: Add your arguments for mp. For this example, test `--repository third_party`
     * Python interpreter: Select the uv interpreter that was configured earlier
     * Click OK to save
+
+## Tooling
+
+This repository uses specific tools to streamline development and ensure code quality.
+
+*   [**mp CLI**](/docs/response_integrations/tools_and_sdk/mp.md): A command-line tool for building, testing, and managing response integrations.
+*   [**Google SecOps SOAR SDK**](/docs/response_integrations/tools_and_sdk/soar_sdk.md): A library providing the necessary types and classes for developing integrations.
+
+It is highly recommended to read the documentation for these tools to understand the full development workflow.

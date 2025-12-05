@@ -27,10 +27,22 @@ class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
     BLOCK = 1
 
 
+class PlaybookDisplayInfoType(mp.core.data_models.abc.RepresentableEnum):
+    Playbook = 1
+    Block = 2
+
+
+PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE = {
+    PlaybookType.PLAYBOOK.value: PlaybookDisplayInfoType.Playbook.value,
+    PlaybookType.BLOCK.value: PlaybookDisplayInfoType.Block.value,
+}
+
+
 class PlaybookContributionType(mp.core.data_models.abc.RepresentableEnum):
-    THIRD_PARTY = 0
-    PARTNER = 1
-    GOOGLE = 2
+    Unspecified = 0
+    Google = 1
+    THIRD_PARTY = 2
+    Partner = 3
 
 
 class BuiltPlaybookDisplayInfo(TypedDict):
@@ -93,7 +105,9 @@ class PlaybookDisplayInfo(
             author=non_built["author"],
             contact_email=non_built["contact_email"],
             tags=non_built["tags"],
-            contribution_type=PlaybookContributionType.from_string(non_built["contribution_type"]),
+            contribution_type=PlaybookContributionType.from_string(
+                non_built["contribution_type"].upper()
+            ),
             is_google_verified=non_built["is_google_verified"],
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
         )
@@ -101,11 +115,29 @@ class PlaybookDisplayInfo(
     def to_built(self) -> BuiltPlaybookDisplayInfo:
         """Convert the PlaybookDisplayInfo to its "built" representation.
 
-        Raises:
-            NotImplementedError: This method is not implemented.
+        Returns:
+            A BuiltPlaybookDisplayInfo dictionary.
 
         """
-        raise NotImplementedError
+        return BuiltPlaybookDisplayInfo(
+            Identifier="",
+            FileName=self.content_hub_display_name,
+            Type=self.type.value,
+            DisplayName=self.content_hub_display_name,
+            Description=self.description,
+            Author=self.author,
+            CreateTime=0,
+            ContactEmail=self.contact_email,
+            UpdateTime=0,
+            Version=0.0,
+            Integrations=[],
+            DependentPlaybookIds=self.dependent_playbook_ids,
+            Tags=self.tags,
+            Source=self.contribution_type.value,
+            Verified=self.is_google_verified,
+            Standalone=self.should_display_in_content_hub,
+            HasAlertOverview=False,
+        )
 
     def to_non_built(self) -> NonBuiltPlaybookDisplayInfo:
         """Convert the PlaybookDisplayInfo to its "non-built" representation.

@@ -24,9 +24,15 @@ import mp.core.constants
 if TYPE_CHECKING:
     from mp.core.config import RuntimeParams
 
-MOCK_MARKETPLACE_DIR_NAME: str = "mock_content_hub"
+MOCK_CONTENT_HUB_DIR_NAME: str = "mock_content_hub"
+
 INTEGRATION_NAME: str = "mock_integration"
 BUILT_INTEGRATION_DIR_NAME: str = "mock_built_integration"
+
+NON_BUILT_PLAYBOOK: str = "mock_non_built_playbook"
+MOCK_NON_BUILT_BLOCK: str = "mock_non_built_block"
+BUILT_PLAYBOOK: str = "mock_built_playbook/mock_built_playbook.json"
+BUILT_BLOCK: str = "mock_built_block/mock_built_block.json"
 
 
 @pytest.fixture(autouse=True)
@@ -42,9 +48,33 @@ def mock_get_marketplace_path() -> str:
 
 
 @pytest.fixture
-def built_integration(mock_marketplace: Path) -> Path:
+def mock_content_hub() -> Path:
+    """Path of a mocked marketplace."""
+    return Path(__file__).parent / MOCK_CONTENT_HUB_DIR_NAME
+
+
+@pytest.fixture
+def mock_response_integrations(mock_content_hub: Path) -> Path:
+    """Path to the mocked response integrations."""
+    return mock_content_hub / mp.core.constants.INTEGRATIONS_DIR_NAME
+
+
+@pytest.fixture
+def mock_community(mock_response_integrations: Path) -> Path:
+    """Path of mocked third_party community integrations."""
+    return mock_response_integrations / mp.core.constants.COMMUNITY_DIR_NAME
+
+
+@pytest.fixture
+def mock_commercial(mock_response_integrations: Path) -> Path:
+    """Path of mocked commercial integrations."""
+    return mock_response_integrations / mp.core.constants.COMMERCIAL_DIR_NAME
+
+
+@pytest.fixture
+def built_integration(mock_response_integrations: Path) -> Path:
     """Path of a mocked built integration."""
-    return mock_marketplace / BUILT_INTEGRATION_DIR_NAME / INTEGRATION_NAME
+    return mock_response_integrations / BUILT_INTEGRATION_DIR_NAME / INTEGRATION_NAME
 
 
 @pytest.fixture
@@ -60,26 +90,6 @@ def non_built_integration(mock_community: Path) -> Path:
 
 
 @pytest.fixture
-def mock_marketplace() -> Path:
-    """Path of a mocked marketplace."""
-    return (
-        Path(__file__).parent / MOCK_MARKETPLACE_DIR_NAME / mp.core.constants.INTEGRATIONS_DIR_NAME
-    )
-
-
-@pytest.fixture
-def mock_community(mock_marketplace: Path) -> Path:
-    """Path of mocked third_party community integrations."""
-    return mock_marketplace / mp.core.constants.COMMUNITY_DIR_NAME
-
-
-@pytest.fixture
-def mock_commercial(mock_marketplace: Path) -> Path:
-    """Path of mocked commercial integrations."""
-    return mock_marketplace / mp.core.constants.COMMERCIAL_DIR_NAME
-
-
-@pytest.fixture
 def full_details(built_integration: Path) -> Path:
     """Path to a mock `full-details` file."""
     return built_integration / mp.core.constants.INTEGRATION_FULL_DETAILS_FILE.format(
@@ -88,12 +98,46 @@ def full_details(built_integration: Path) -> Path:
 
 
 @pytest.fixture
-def marketplace_json(mock_marketplace: Path) -> Path:
+def marketplace_json(mock_response_integrations: Path) -> Path:
     """Path to a mock `marketplace.json` file."""
-    return mock_marketplace / BUILT_INTEGRATION_DIR_NAME / mp.core.constants.MARKETPLACE_JSON_NAME
+    return (
+        mock_response_integrations
+        / BUILT_INTEGRATION_DIR_NAME
+        / mp.core.constants.MARKETPLACE_JSON_NAME
+    )
 
 
 @pytest.fixture
-def mock_playbook_path() -> Path:
+def mock_playbook_path(mock_content_hub: Path) -> Path:
     """Path to the mocked playbook folder."""
-    return Path(__file__).parent / "mock_content_hub/playbooks"
+    return mock_content_hub / mp.core.constants.PLAYBOOKS_DIR_NAME
+
+
+@pytest.fixture
+def non_built_playbook_path(mock_playbook_path: Path) -> Path:
+    """Path to mocked non-built playbook."""
+    return mock_playbook_path / NON_BUILT_PLAYBOOK
+
+
+@pytest.fixture
+def non_built_block_path(mock_playbook_path: Path) -> Path:
+    """Path to mocked non-built block."""
+    return mock_playbook_path / MOCK_NON_BUILT_BLOCK
+
+
+@pytest.fixture
+def built_playbook_path(mock_playbook_path: Path) -> Path:
+    """Path to the mocked built playbook"""
+    return mock_playbook_path / BUILT_PLAYBOOK
+
+
+@pytest.fixture
+def built_block_path(mock_playbook_path: Path) -> Path:
+    """Path to the mocked built block"""
+    return mock_playbook_path / BUILT_BLOCK
+
+
+@pytest.fixture
+def playbooks_json_path(mock_playbook_path: Path) -> Path:
+    """Path to the mocked playbooks.json file"""
+    return mock_playbook_path / mp.core.constants.PLAYBOOKS_JSON_NAME

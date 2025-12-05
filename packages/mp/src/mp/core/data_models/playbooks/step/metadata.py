@@ -21,6 +21,7 @@ import pydantic
 
 import mp.core.constants
 import mp.core.data_models.abc
+import mp.core.utils
 
 from .step_debug_data import BuiltStepDebugData, NonBuiltStepDebugData, StepDebugData
 from .step_parameter import BuiltStepParameter, NonBuiltStepParameter, StepParameter
@@ -30,28 +31,29 @@ if TYPE_CHECKING:
 
 
 class BuiltStep(TypedDict):
-    Name: str
-    Description: str
     Identifier: str
     OriginalStepIdentifier: str
     ParentWorkflowIdentifier: str
     ParentStepIdentifiers: list[str]
+    ParentStepIdentifier: str
     PreviousResultCondition: str
     InstanceName: str
     IsAutomatic: bool
+    Name: str
     IsSkippable: bool
+    Description: str
     ActionProvider: str
     ActionName: str
     Type: int
-    Integration: str
+    Integration: str | None
     Parameters: list[BuiltStepParameter]
     AutoSkipOnFailure: bool
     IsDebugMockData: bool
     StepDebugData: BuiltStepDebugData | None
+    ParentStepContainerId: str | None
+    IsTouchedByAi: bool
     StartLoopStepIdentifier: str | None
     ParallelActions: list[BuiltStep]
-    ParentContainerIdentifier: str | None
-    IsTouchedByAi: bool
 
 
 class NonBuiltStep(TypedDict):
@@ -61,13 +63,14 @@ class NonBuiltStep(TypedDict):
     original_step_id: str
     playbook_id: str
     parent_step_ids: list[str]
+    parent_step_id: str
     previous_result_condition: str
     instance_name: str
     is_automatic: bool
     is_skippable: bool
     action_provider: str
     action_name: str
-    integration: str
+    integration: str | None
     type: str
     parameters: list[NonBuiltStepParameter]
     auto_skip_on_failure: bool
@@ -103,13 +106,14 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
     original_step_id: str
     playbook_id: str
     parent_step_ids: list[str]
+    parent_step_id: str
     previous_result_condition: str | None = None
     instance_name: str
     is_automatic: bool
     is_skippable: bool
     action_provider: str
     action_name: str
-    integration: str
+    integration: str | None = None
     type_: StepType
     parameters: list[StepParameter]
     auto_skip_on_failure: bool
@@ -178,6 +182,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             original_step_id=built["OriginalStepIdentifier"],
             playbook_id=built["ParentWorkflowIdentifier"],
             parent_step_ids=built["ParentStepIdentifiers"],
+            parent_step_id=built["ParentStepIdentifier"],
             instance_name=built["InstanceName"],
             is_automatic=built["IsAutomatic"],
             is_skippable=built["IsSkippable"],
@@ -192,7 +197,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             auto_skip_on_failure=built["AutoSkipOnFailure"],
             start_loop_step_id=built.get("StartLoopStepIdentifier"),
             integration=built["Integration"],
-            parent_container_id=built.get("ParentContainerIdentifier"),
+            parent_container_id=built.get("ParentStepContainerId"),
             action_name=built["ActionName"],
             parallel_actions=[cls.from_built(file_name, pa) for pa in built["ParallelActions"]],
             previous_result_condition=built["PreviousResultCondition"],
@@ -209,6 +214,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             original_step_id=non_built["original_step_id"],
             playbook_id=non_built["playbook_id"],
             parent_step_ids=non_built["parent_step_ids"],
+            parent_step_id=non_built["parent_step_id"],
             instance_name=non_built["instance_name"],
             is_automatic=non_built["is_automatic"],
             is_skippable=non_built["is_skippable"],
@@ -241,30 +247,31 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
 
         """
         return BuiltStep(
-            Name=self.name,
-            Description=self.description,
             Identifier=self.identifier,
             OriginalStepIdentifier=self.original_step_id,
             ParentWorkflowIdentifier=self.playbook_id,
             ParentStepIdentifiers=self.parent_step_ids,
+            ParentStepIdentifier=self.parent_step_id,
+            PreviousResultCondition=self.previous_result_condition,
             InstanceName=self.instance_name,
             IsAutomatic=self.is_automatic,
+            Name=self.name,
             IsSkippable=self.is_skippable,
-            StartLoopStepIdentifier=self.start_loop_step_id,
-            ActionName=self.action_name,
-            Parameters=[p.to_built() for p in self.parameters],
-            Integration=self.integration,
+            Description=self.description,
             ActionProvider=self.action_provider,
+            ActionName=self.action_name,
+            Type=self.type_.value,
+            Integration=self.integration,
+            Parameters=[p.to_built() for p in self.parameters],
+            AutoSkipOnFailure=self.auto_skip_on_failure,
             IsDebugMockData=self.is_debug_mock_data,
             StepDebugData=(
                 self.step_debug_data.to_built() if self.step_debug_data is not None else None
             ),
-            AutoSkipOnFailure=self.auto_skip_on_failure,
-            ParentContainerIdentifier=self.parent_container_id,
-            ParallelActions=[p.to_built() for p in self.parallel_actions],
+            ParentStepContainerId=self.parent_container_id,
             IsTouchedByAi=self.is_touched_by_ai,
-            Type=self.type_.value,
-            PreviousResultCondition=self.previous_result_condition,
+            StartLoopStepIdentifier=self.start_loop_step_id,
+            ParallelActions=[p.to_built() for p in self.parallel_actions],
         )
 
     def to_non_built(self) -> NonBuiltStep:
@@ -281,6 +288,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             original_step_id=self.original_step_id,
             playbook_id=self.playbook_id,
             parent_step_ids=self.parent_step_ids,
+            parent_step_id=self.parent_step_id,
             instance_name=self.instance_name,
             is_automatic=self.is_automatic,
             is_skippable=self.is_skippable,

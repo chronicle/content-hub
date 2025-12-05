@@ -84,6 +84,7 @@ class HtmlWidgetDataDefinition(
     safe_rendering: bool
     type: WidgetType
     widget_definition_scope: WidgetDefinitionScope
+    html_content: str = ""
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
@@ -100,6 +101,7 @@ class HtmlWidgetDataDefinition(
             safe_rendering=built["safeRendering"],
             widget_definition_scope=WidgetDefinitionScope(built["widgetDefinitionScope"]),
             type=WidgetType(built["type"]),
+            html_content=built["htmlContent"] if built.get("htmlContent") else "",
         )
 
     @classmethod
@@ -125,7 +127,7 @@ class HtmlWidgetDataDefinition(
             safeRendering=self.safe_rendering,
             type=self.type.value,
             widgetDefinitionScope=self.widget_definition_scope.value,
-            htmlContent="",
+            htmlContent=self.html_content,
         )
 
     def to_non_built(self) -> NonBuiltWidgetDataDefinition:

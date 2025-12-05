@@ -214,3 +214,22 @@ def filter_and_map_yaml_files(
 
     """
     return [map_fn(d) for d in yaml_files if filter_fn(d)]
+
+
+def to_snake_case(s: str, /) -> str:
+    """Change string to snake case.
+
+    Args:
+        s: The input string to convert.
+
+    Returns:
+        The string converted to snake_case.
+
+    """
+    s = (
+        re.sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
+        .strip()
+        .replace(" ", "_")
+        .replace("-", "_")
+    )
+    return s.lower()

@@ -67,6 +67,7 @@ class BuiltPlaybookMetadata(TypedDict):
     IsAutomatic: bool
     IsArchived: bool
     Permissions: list[BuiltAccessPermission]
+    Environments: list[str]
 
 
 class NonBuiltPlaybookMetadata(TypedDict):
@@ -93,6 +94,7 @@ class NonBuiltPlaybookMetadata(TypedDict):
     is_automatic: bool
     is_archived: bool
     permissions: list[NonBuiltAccessPermission]
+    environments: list[str]
 
 
 class PlaybookMetadata(
@@ -128,6 +130,7 @@ class PlaybookMetadata(
     creation_source: PlaybookCreationSource | None = None
     default_access_level: PlaybookAccessLevel | None = None
     simulation_clone: bool | None = None
+    environments: list[str] = []  # noqa: RUF012
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -206,6 +209,7 @@ class PlaybookMetadata(
             ),
             simulation_clone=built.get("SimulationClone"),
             permissions=[AccessPermission.from_built(p) for p in built["Permissions"]],
+            environments=built.get("Environments", []),
         )
 
     @classmethod
@@ -242,6 +246,7 @@ class PlaybookMetadata(
             ),
             simulation_clone=non_built.get("simulation_clone"),
             permissions=[AccessPermission.from_non_built(p) for p in non_built["permissions"]],
+            environments=non_built.get("environments", []),
         )
 
     def to_built(self) -> BuiltPlaybookMetadata:
@@ -277,6 +282,7 @@ class PlaybookMetadata(
             CreationSource=self.creation_source.value if self.creation_source is not None else None,
             SimulationClone=self.simulation_clone,
             Permissions=[p.to_built() for p in self.permissions],
+            Environments=self.environments,
         )
 
     def to_non_built(self) -> NonBuiltPlaybookMetadata:
@@ -314,5 +320,6 @@ class PlaybookMetadata(
             else None,
             simulation_clone=self.simulation_clone,
             permissions=[p.to_non_built() for p in self.permissions],
+            environments=self.environments,
         )
         return non_built

@@ -41,3 +41,14 @@ Please fork the repository to work on it. When your changes are ready you can op
 All submissions, including submissions by project members, require review. We
 use [GitHub pull requests](https://docs.github.com/articles/about-pull-requests)
 for this purpose.
+
+### Review Process
+
+*   **Validations**: Ensure all automated checks pass.
+*   **Ready for Review**: If you opened your PR as a "Draft", please mark it as "Ready for Review" once all validations pass. This signals to maintainers that the code is ready for inspection.
+*   **Version Bump**: If you are modifying an existing integration, remember to bump the version in the `pyproject.toml` file. This is required for the changes to be released.
+
+### Pre-Submission Checklist
+
+Before submitting your Pull Request, please review the [Pull Request Template Checklist](/.github/PULL_REQUEST_TEMPLATE.md).
+Ensuring your contribution meets these criteria will help speed up the review process.

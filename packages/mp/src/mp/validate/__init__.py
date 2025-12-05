@@ -24,7 +24,7 @@ import typer
 
 import mp.core.config
 import mp.core.file_utils
-from mp.build_project.integrations import Integrations
+from mp.build_project.integrations_repo import IntegrationsRepo
 from mp.core.custom_types import RepositoryType
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
@@ -166,8 +166,8 @@ def validate(  # noqa: PLR0913
 
     commercial_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMERCIAL)
     community_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMUNITY)
-    commercial_mp: Integrations = Integrations(commercial_path)
-    community_mp: Integrations = Integrations(community_path)
+    commercial_mp: IntegrationsRepo = IntegrationsRepo(commercial_path)
+    community_mp: IntegrationsRepo = IntegrationsRepo(community_path)
 
     run_configurations: Configurations = Configurations(only_pre_build=only_pre_build)
 
@@ -221,7 +221,7 @@ def validate(  # noqa: PLR0913
         raise typer.Exit(code=1)
 
 
-def _validate_repo(marketplace: Integrations, configurations: Configurations) -> FullReport:
+def _validate_repo(marketplace: IntegrationsRepo, configurations: Configurations) -> FullReport:
     products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
         *marketplace.paths
     )
@@ -240,7 +240,7 @@ def _validate_repo(marketplace: Integrations, configurations: Configurations) ->
 
 def _validate_groups(
     groups: Iterable[Path],
-    marketplace: Integrations,
+    marketplace: IntegrationsRepo,
     configurations: Configurations,
 ) -> FullReport:
     """Validate a list of integration group names within a specific marketplace scope.
@@ -285,7 +285,7 @@ def _process_groups_for_validation(
 
 def _validate_integrations(
     integrations: Iterable[Path],
-    marketplace: Integrations,
+    marketplace: IntegrationsRepo,
     configurations: Configurations,
 ) -> FullReport:
     """Validate a list of integration names within a specific marketplace scope.

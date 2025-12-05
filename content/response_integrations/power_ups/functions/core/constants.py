@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from enum import Enum
 
+DEFANG_TEXT_SCRIPT_NAME: str = "Defang Text"
 CALCULATE_TIMESTAMP_SCRIPT_NAME: str = "Calculate Timestamp"
 DEFAULT_TIMESTAMP_DELTA: str = "+30M,-30M"
 TIMESTAMP_DELTA_REGEX = re.compile(r"^([+-])(\d+)([mdHMS])$")
