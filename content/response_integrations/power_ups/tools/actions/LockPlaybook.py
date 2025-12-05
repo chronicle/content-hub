@@ -32,7 +32,7 @@ WF_STATUS_PENDING_IN_QUEUE = 5
 WF_STATUS_PENDING_FOR_USER = 6
 
 
-def are_playbooks_complete(siemplify: SiemplifyAction, alert_group_id: str) -> int:
+def are_playbooks_complete(siemplify: SiemplifyAction, alert_group_id: str) -> bool:
     """Get workflow status for current alert.
 
     Args:
