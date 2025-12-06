@@ -22,22 +22,19 @@ from __future__ import annotations
 import base64
 import dataclasses
 import json
-import shutil
 from typing import TYPE_CHECKING, Any
 
 import yaml
 
 import mp.core.constants
-
-from . import config, constants
-from .custom_types import JsonString, ManagerName, Products
-from .validators import validate_png_content, validate_svg_content
+import mp.core.file_utils.common.utils
+from mp.core import constants
+from mp.core.custom_types import JsonString, ManagerName, Products
+from mp.core.validators import validate_png_content, validate_svg_content
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
-
-VALID_REPEATED_FILES: set[str] = {"__init__.py"}
 
 
 def get_integrations_path(
@@ -62,7 +59,10 @@ def create_or_get_integrations_path() -> Path:
         The content/integrations directory path
 
     """
-    return create_dir_if_not_exists(create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME)
+    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
+        mp.core.file_utils.common.utils.create_or_get_content_dir()
+        / constants.INTEGRATIONS_DIR_NAME
+    )
 
 
 def get_all_integrations_paths(integrations_classification: str) -> list[Path]:
@@ -90,19 +90,10 @@ def create_or_get_integrations_dir() -> Path:
         The root/content/integrations directory path
 
     """
-    return create_dir_if_not_exists(create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME)
-
-
-def create_or_get_content_dir() -> Path:
-    """Get the content path.
-
-    If the directory doesn't exist, it creates it
-
-    Returns:
-        The root/content/integrations directory path
-
-    """
-    return create_dir_if_not_exists(config.get_marketplace_path() / constants.CONTENT_DIR_NAME)
+    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
+        mp.core.file_utils.common.utils.create_or_get_content_dir()
+        / constants.INTEGRATIONS_DIR_NAME
+    )
 
 
 def create_or_get_out_integrations_dir() -> Path:
@@ -114,33 +105,10 @@ def create_or_get_out_integrations_dir() -> Path:
         The out/content/integrations directory path
 
     """
-    return create_dir_if_not_exists(
-        create_or_get_out_contents_dir() / constants.OUT_INTEGRATIONS_DIR_NAME
+    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
+        mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
+        / constants.OUT_INTEGRATIONS_DIR_NAME
     )
-
-
-def create_or_get_out_contents_dir() -> Path:
-    """Get the out/content/ path.
-
-    If the directory doesn't exist, it creates it
-
-    Returns:
-        The out/content/ directory path
-
-    """
-    return create_dir_if_not_exists(create_or_get_out_dir() / constants.CONTENT_DIR_NAME)
-
-
-def create_or_get_out_dir() -> Path:
-    """Get the out/ path.
-
-    If the directory doesn't exist, it creates it
-
-    Returns:
-        The out/ directory path
-
-    """
-    return create_dir_if_not_exists(config.get_marketplace_path() / constants.OUT_DIR_NAME)
 
 
 def discover_core_modules(path: Path) -> list[ManagerName]:
@@ -270,53 +238,6 @@ def replace_file_content(file: Path, replace_fn: Callable[[str], str]) -> None:
     file.write_text(file_content, encoding="utf-8")
 
 
-def remove_paths_if_exists(*paths: Path) -> None:
-    """Remove all the provided paths."""
-    for path in paths:
-        _remove_path_if_exists(path)
-
-
-def remove_rglobs_if_exists(*patterns: str, root: Path) -> None:
-    """Remove all files and directories matching the given glob patterns.
-
-    Args:
-        *patterns: Glob patterns to match (e.g., "*.pyc", "**/__pycache__").
-        root: The root directory to search from.
-
-    """
-    for pattern in patterns:
-        for path in root.rglob(pattern):
-            _remove_path_if_exists(path)
-
-
-def _remove_path_if_exists(path: Path) -> None:
-    if path.is_file() and is_path_in_marketplace(path):
-        path.unlink(missing_ok=True)
-
-    elif path.is_dir() and path.exists() and is_path_in_marketplace(path):
-        shutil.rmtree(path)
-
-
-def recreate_dir(path: Path) -> None:
-    """Remove the provided directory and create a new one."""
-    if path.exists() and is_path_in_marketplace(path):
-        shutil.rmtree(path)
-        path.mkdir()
-
-
-def is_path_in_marketplace(path: Path) -> bool:
-    """Check whether a path is in the marketplace.
-
-    This is mostly used to ensure any file deletion will not occur outside the
-    boundaries of the configured project.
-
-    Returns:
-        Whether the path is a sub path of the configured marketplace.
-
-    """
-    return config.get_marketplace_path() in path.parents
-
-
 def is_built(integration: Path) -> bool:
     """Check whether an integration is built.
 
@@ -342,7 +263,7 @@ def is_half_built(integration: Path) -> bool:
     return pyproject.exists() and def_file.exists()
 
 
-def is_non_built(integration: Path) -> bool:
+def is_non_built_integration(integration: Path) -> bool:
     """Check whether an integration is non-built.
 
     Returns:
@@ -353,33 +274,6 @@ def is_non_built(integration: Path) -> bool:
     def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
     definition_file: Path = integration / constants.DEFINITION_FILE
     return pyproject.exists() and definition_file.exists() and not def_file.exists()
-
-
-def flatten_dir(path: Path, dest: Path) -> None:
-    """Flatten a nested directory.
-
-    Args:
-        path: The path to the directory to flatten
-        dest: The destination of the flattened dir
-
-    Raises:
-        FileExistsError: If more than one file with the same name is found
-
-    """
-    if path.is_file() and is_path_in_marketplace(path):
-        new_path: Path = dest / path.name
-        if new_path.exists():
-            if new_path.name in VALID_REPEATED_FILES:
-                return
-
-            msg: str = f"File already exists: {new_path}"
-            raise FileExistsError(msg)
-
-        shutil.copyfile(path, new_path)
-
-    elif path.is_dir() and is_path_in_marketplace(path):
-        for child in path.iterdir():
-            flatten_dir(child, dest)
 
 
 def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: Path) -> None:
@@ -398,13 +292,6 @@ def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: Path) -
         allow_unicode=True,
     )
     path.write_text(dumped, encoding="utf-8")
-
-
-def remove_files_by_suffix_from_dir(dir_: Path, suffix: str) -> None:
-    """Remove all files with a specific suffix from a directory."""
-    for file in dir_.rglob(f"*{suffix}"):
-        if file.is_file() and is_path_in_marketplace(file):
-            file.unlink(missing_ok=True)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -607,22 +494,6 @@ def load_yaml_file(path: Path) -> dict[str, Any]:
         raise ValueError(msg) from e
 
 
-def create_dir_if_not_exists(p: Path, /) -> Path:
-    """Create the provided path as a directory if it doesn't exist.
-
-    Doesn't raise any error if the dir already exists
-
-    Args:
-        p: The dir's path to create if it doesn't exist
-
-    Returns:
-        The created path
-
-    """
-    p.mkdir(exist_ok=True)
-    return p
-
-
 def get_playbooks_dir_path() -> Path:
     """Get the content/playbooks path, creating it if it doesn't exist.
 
@@ -630,8 +501,10 @@ def get_playbooks_dir_path() -> Path:
         The content/playbooks directory path.
 
     """
-    content_dir: Path = create_or_get_content_dir()
-    return create_dir_if_not_exists(content_dir / constants.PLAYBOOKS_DIR_NAME)
+    content_dir: Path = mp.core.file_utils.common.utils.create_or_get_content_dir()
+    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
+        content_dir / constants.PLAYBOOKS_DIR_NAME
+    )
 
 
 def create_or_get_playbook_out_dir() -> Path:
@@ -641,8 +514,8 @@ def create_or_get_playbook_out_dir() -> Path:
         The out/content/playbooks directory path.
 
     """
-    out_content_dir: Path = create_or_get_out_contents_dir()
-    playbooks_out_dir: Path = create_dir_if_not_exists(
+    out_content_dir: Path = mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
+    playbooks_out_dir: Path = mp.core.file_utils.common.utils.create_dir_if_not_exists(
         out_content_dir / constants.PLAYBOOKS_DIR_NAME
     )
     return playbooks_out_dir
