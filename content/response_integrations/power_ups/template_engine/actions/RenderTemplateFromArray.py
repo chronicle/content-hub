@@ -27,7 +27,7 @@ from ..core import JinjaFilters
 # Example Consts:
 INTEGRATION_NAME = "TemplateEngine"
 
-SCRIPT_NAME = "RenderTemplate"
+SCRIPT_NAME = "RenderTemplateFromArray"
 
 
 @output_handler
@@ -140,6 +140,7 @@ def main():
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",
     )
+    siemplify.result.add_result_json({"html_output": result_value})
     siemplify.end(output_message, result_value, status)
 
 
