@@ -68,4 +68,8 @@ def _missing_documentation_link(yaml_content: YamlFileContent) -> bool:
         True if the component doesn't have a documentation link.
 
     """
-    return not yaml_content.get("documentation_link")
+    return (
+        not yaml_content.get("documentation_link")
+        and yaml_content.get("name")
+        not in mp.core.constants.EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK
+    )

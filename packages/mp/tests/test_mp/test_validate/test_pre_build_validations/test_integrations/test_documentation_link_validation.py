@@ -102,3 +102,15 @@ class TestIntegrationHasDocumentationLinkValidation:
             NonFatalValidationError, match="contains connectors with missing documentation link"
         ):
             self.connectors_validator_runner.run(temp_integration)
+
+    def test_excluded_integrations_feature_connectors(self, temp_integration: pathlib.Path) -> None:
+        """Test the excluded integrations feature works correctly."""
+        connector_def_file = temp_integration / constants.CONNECTORS_DIR / "connector.yaml"
+        _remove_key_from_yaml(connector_def_file, "documentation_link")
+
+        with mock.patch.object(
+            constants,
+            "EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK",
+            {"Mock Integration Connector"},
+        ):
+            self.connectors_validator_runner.run(temp_integration)
