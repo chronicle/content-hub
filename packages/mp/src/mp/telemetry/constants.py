@@ -33,6 +33,7 @@ NAME_MAPPER: dict[str, str] = {
     "format_files": "format",
     "login": "dev-env login",
     "deploy": "dev-env deploy",
+    "push": "dev-env push",
     "build": "build",
 }
 

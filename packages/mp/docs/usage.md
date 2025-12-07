@@ -126,12 +126,12 @@ Skip credential verification:
 mp dev-env login --no-verify
 ```
 
-### Deploy an Integration to Dev Environment
+### Push an Integration to Dev Environment
 
-Build and deploy an integration to the dev environment:
+Build and push an integration to the dev environment:
 
 ```bash
-mp dev-env deploy <integration_name>
+mp dev-env push <integration_name>
 ```
 
 - `<integration_name>`: The name of the integration directory under `integrations/commercial` or `integrations/third_party`.
