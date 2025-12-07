@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Protocol
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ValidationResults, ValidationTypes
 
+from .connectors_documentation_link_validation import ConnectorsHasDocumentationLinkValidation
 from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
@@ -97,6 +98,7 @@ def get_validations() -> list[Validator]:
         SslParameterExistsInIntegrationValidation(),
         SslParameterExistsInConnectorsValidation(),
         IntegrationHasDocumentationLinkValidation(),
+        ConnectorsHasDocumentationLinkValidation(),
     ]
 
 
