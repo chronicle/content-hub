@@ -24,8 +24,8 @@ from mp.core.data_models.integrations.action.metadata import (
 from test_mp.test_core.test_data_models.utils import FILE_NAME
 
 from .strategies import (
-    st_valid_built_action_metadata_dict,
-    st_valid_non_built_action_metadata_dict,
+    ST_VALID_BUILT_ACTION_METADATA_DICT,
+    ST_VALID_NON_BUILT_ACTION_METADATA_DICT,
 )
 
 
@@ -35,11 +35,11 @@ class TestValidations:
     """
 
     @settings(max_examples=30)
-    @given(valid_non_built=st_valid_non_built_action_metadata_dict)
+    @given(valid_non_built=ST_VALID_NON_BUILT_ACTION_METADATA_DICT)
     def test_valid_non_built(self, valid_non_built: NonBuiltActionMetadata) -> None:
         ActionMetadata.from_non_built(FILE_NAME, valid_non_built)
 
     @settings(max_examples=30)
-    @given(valid_built=st_valid_built_action_metadata_dict)
+    @given(valid_built=ST_VALID_BUILT_ACTION_METADATA_DICT)
     def test_valid_built(self, valid_built: BuiltActionMetadata) -> None:
         ActionMetadata.from_built(FILE_NAME, valid_built)

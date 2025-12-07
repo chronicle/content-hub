@@ -30,7 +30,7 @@ from test_mp.test_core.test_data_models.utils import (
 )
 
 # Strategies for JobParameter
-st_valid_built_job_parameter_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_JOB_PARAMETER_DICT = st.fixed_dictionaries(
     {
         "Name": st_valid_param_name,
         "IsMandatory": st.booleans(),
@@ -42,7 +42,7 @@ st_valid_built_job_parameter_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_non_built_job_parameter_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_JOB_PARAMETER_DICT = st.fixed_dictionaries(
     {
         "name": st_valid_param_name,
         "description": st_valid_short_description,
@@ -55,14 +55,14 @@ st_valid_non_built_job_parameter_dict = st.fixed_dictionaries(
 )
 
 # Strategies for JobMetadata
-st_valid_built_job_metadata_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_JOB_METADATA_DICT = st.fixed_dictionaries(
     {
         "Creator": st.text(),
         "Description": st_valid_long_description,
         "Integration": st_valid_identifier_name,
         "Name": st_valid_display_name,
         "Parameters": st.lists(
-            st_valid_built_job_parameter_dict, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
+            ST_VALID_BUILT_JOB_PARAMETER_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
         ),
         "RunIntervalInSeconds": st.integers(),
     },
@@ -73,14 +73,14 @@ st_valid_built_job_metadata_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_non_built_job_metadata_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_JOB_METADATA_DICT = st.fixed_dictionaries(
     {
         "creator": st.text(),
         "description": st_valid_long_description,
         "integration": st_valid_identifier_name,
         "name": st_valid_display_name,
         "parameters": st.lists(
-            st_valid_non_built_job_parameter_dict, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
+            ST_VALID_NON_BUILT_JOB_PARAMETER_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
         ),
     },
     optional={

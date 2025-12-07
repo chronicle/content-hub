@@ -23,8 +23,8 @@ from mp.core.data_models.integrations.connector.rule import (
 )
 
 from .strategies import (
-    st_valid_built_connector_rule_dict,
-    st_valid_non_built_connector_rule_dict,
+    ST_VALID_BUILT_CONNECTOR_RULE_DICT,
+    ST_VALID_NON_BUILT_CONNECTOR_RULE_DICT,
 )
 
 
@@ -34,11 +34,11 @@ class TestValidations:
     """
 
     @settings(max_examples=30)
-    @given(valid_non_built=st_valid_non_built_connector_rule_dict)
+    @given(valid_non_built=ST_VALID_NON_BUILT_CONNECTOR_RULE_DICT)
     def test_valid_non_built(self, valid_non_built: NonBuiltConnectorRule) -> None:
         ConnectorRule.from_non_built(valid_non_built)
 
     @settings(max_examples=30)
-    @given(valid_built=st_valid_built_connector_rule_dict)
+    @given(valid_built=ST_VALID_BUILT_CONNECTOR_RULE_DICT)
     def test_valid_built(self, valid_built: BuiltConnectorRule) -> None:
         ConnectorRule.from_built(valid_built)

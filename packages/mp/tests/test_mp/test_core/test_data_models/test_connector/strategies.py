@@ -37,8 +37,8 @@ from test_mp.test_core.test_data_models.utils import (
     st_valid_version,
 )
 
-# Parameter Strategies
-st_valid_non_built_connector_param_dict = st.fixed_dictionaries(
+# Parameter Strategiesֿ
+ST_VALID_NON_BUILT_CONNECTOR_PARAM_DICT = st.fixed_dictionaries(
     {
         "name": st.one_of(st_valid_param_name, st_excluded_param_name),
         "description": st_valid_short_description,
@@ -52,7 +52,7 @@ st_valid_non_built_connector_param_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_built_connector_param_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_CONNECTOR_PARAM_DICT = st.fixed_dictionaries(
     {
         "Name": st.one_of(st_valid_param_name, st_excluded_param_name),
         "Description": st_valid_short_description,
@@ -68,27 +68,27 @@ st_valid_built_connector_param_dict = st.fixed_dictionaries(
 
 
 # Rule Strategies
-st_valid_non_built_connector_rule_dict = st.fixed_dictionaries({
+ST_VALID_NON_BUILT_CONNECTOR_RULE_DICT = st.fixed_dictionaries({
     "rule_name": st_valid_display_name,
     "rule_type": st_valid_non_built_param_type(ConnectorRuleType),
 })
 
-st_valid_built_connector_rule_dict = st.fixed_dictionaries({
+ST_VALID_BUILT_CONNECTOR_RULE_DICT = st.fixed_dictionaries({
     "RuleName": st_valid_display_name,
     "RuleType": st_valid_built_type(ConnectorRuleType),
 })
 
 
 # Metadata Strategies
-st_valid_non_built_connector_metadata_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_CONNECTOR_METADATA_DICT = st.fixed_dictionaries(
     {
         "creator": st.text(),
         "description": st_valid_long_description,
         "integration": st.text(),
         "is_connector_rules_supported": st.booleans(),
         "name": st_valid_display_name,
-        "parameters": st.lists(st_valid_non_built_connector_param_dict),
-        "rules": st.lists(st_valid_non_built_connector_rule_dict),
+        "parameters": st.lists(ST_VALID_NON_BUILT_CONNECTOR_PARAM_DICT),
+        "rules": st.lists(ST_VALID_NON_BUILT_CONNECTOR_RULE_DICT),
     },
     optional={
         "is_custom": st.booleans(),
@@ -98,7 +98,7 @@ st_valid_non_built_connector_metadata_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_built_connector_metadata_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_CONNECTOR_METADATA_DICT = st.fixed_dictionaries(
     {
         "Creator": st.text(),
         "Description": st_valid_long_description,
@@ -108,10 +108,10 @@ st_valid_built_connector_metadata_dict = st.fixed_dictionaries(
         "IsCustom": st.booleans(),
         "IsEnabled": st.booleans(),
         "Name": st_valid_display_name,
-        "Parameters": st.lists(st_valid_built_connector_param_dict),
+        "Parameters": st.lists(ST_VALID_BUILT_CONNECTOR_PARAM_DICT),
     },
     optional={
-        "Rules": st.lists(st_valid_built_connector_rule_dict),
+        "Rules": st.lists(ST_VALID_BUILT_CONNECTOR_RULE_DICT),
         "Version": st_valid_version,
     },
 )

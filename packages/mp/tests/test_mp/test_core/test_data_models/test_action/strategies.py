@@ -33,13 +33,13 @@ from test_mp.test_core.test_data_models.utils import (
 )
 
 # Strategies for dynamic_results_metadata
-st_valid_built_dynamic_results_dict = st.fixed_dictionaries({
+ST_VALID_BUILT_DYNAMIC_RESULTS_DICT = st.fixed_dictionaries({
     "ResultExample": st.none() | st_json_serializable.map(json.dumps) | st.just(""),
     "ResultName": st.text(),
     "ShowResult": st.booleans(),
 })
 
-st_valid_non_built_dynamic_results_dict = st.fixed_dictionaries({
+ST_VALID_NON_BUILT_DYNAMIC_RESULTS_DICT = st.fixed_dictionaries({
     "result_example_path": st.none() | st_json_serializable.map(json.dumps),
     "result_name": st.text(),
     "show_result": st.booleans(),
@@ -47,7 +47,7 @@ st_valid_non_built_dynamic_results_dict = st.fixed_dictionaries({
 
 # Strategies for action_parameter
 
-st_valid_non_built_param_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_PARAM_DICT = st.fixed_dictionaries(
     # Required keys
     {
         "description": st_valid_short_description,
@@ -62,7 +62,7 @@ st_valid_non_built_param_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_built_param_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_PARAM_DICT = st.fixed_dictionaries(
     # Required keys
     {
         "Description": st_valid_short_description,
@@ -80,14 +80,14 @@ st_valid_built_param_dict = st.fixed_dictionaries(
 
 
 # Strategies for action_metadata
-st_valid_built_action_metadata_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_ACTION_METADATA_DICT = st.fixed_dictionaries(
     {
         "Description": st_valid_short_description,
-        "DynamicResultsMetadata": st.lists(st_valid_built_dynamic_results_dict),
+        "DynamicResultsMetadata": st.lists(ST_VALID_BUILT_DYNAMIC_RESULTS_DICT),
         "IntegrationIdentifier": st_valid_identifier_name,
         "Name": st_valid_display_name,
         "Parameters": st.lists(
-            st_valid_built_param_dict, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
+            ST_VALID_BUILT_PARAM_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
         ),
         "Creator": st.text(),
     },
@@ -102,14 +102,14 @@ st_valid_built_action_metadata_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_non_built_action_metadata_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_ACTION_METADATA_DICT = st.fixed_dictionaries(
     {
         "description": st_valid_short_description,
-        "dynamic_results_metadata": st.lists(st_valid_non_built_dynamic_results_dict),
+        "dynamic_results_metadata": st.lists(ST_VALID_NON_BUILT_DYNAMIC_RESULTS_DICT),
         "integration_identifier": st_valid_identifier_name,
         "name": st_valid_display_name,
         "parameters": st.lists(
-            st_valid_non_built_param_dict, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
+            ST_VALID_NON_BUILT_PARAM_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
         ),
     },
     optional={

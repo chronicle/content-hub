@@ -27,7 +27,7 @@ from test_mp.test_core.test_data_models.utils import (
 )
 
 # Strategies for MappingRule
-st_valid_built_mapping_rule_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_MAPPING_RULE_DICT = st.fixed_dictionaries(
     {
         "Source": st.text() | st.none(),
         "Product": st.none() | st.text(),
@@ -49,7 +49,7 @@ st_valid_built_mapping_rule_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_non_built_mapping_rule_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_MAPPING_RULE_DICT = st.fixed_dictionaries(
     {
         "source": st.text(),
         "security_event_file_name": st.text(),

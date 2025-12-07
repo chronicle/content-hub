@@ -22,7 +22,7 @@ from test_mp.test_core.test_data_models.utils import (
 )
 
 # Strategies for ReleaseNote
-st_valid_built_release_note_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_RELEASE_NOTE_DICT = st.fixed_dictionaries(
     {
         "ChangeDescription": st_valid_long_description,
         "Deprecated": st.booleans(),
@@ -39,7 +39,7 @@ st_valid_built_release_note_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_non_built_release_note_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_RELEASE_NOTE_DICT = st.fixed_dictionaries(
     {
         "description": st_valid_long_description,
         "integration_version": st_valid_version,

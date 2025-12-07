@@ -23,8 +23,8 @@ from mp.core.data_models.integrations.connector.parameter import (
 )
 
 from .strategies import (
-    st_valid_built_connector_param_dict,
-    st_valid_non_built_connector_param_dict,
+    ST_VALID_BUILT_CONNECTOR_PARAM_DICT,
+    ST_VALID_NON_BUILT_CONNECTOR_PARAM_DICT,
 )
 
 
@@ -34,11 +34,11 @@ class TestValidations:
     """
 
     @settings(max_examples=30)
-    @given(valid_non_built=st_valid_non_built_connector_param_dict)
+    @given(valid_non_built=ST_VALID_NON_BUILT_CONNECTOR_PARAM_DICT)
     def test_valid_non_built(self, valid_non_built: NonBuiltConnectorParameter) -> None:
         ConnectorParameter.from_non_built(valid_non_built)
 
     @settings(max_examples=30)
-    @given(valid_built=st_valid_built_connector_param_dict)
+    @given(valid_built=ST_VALID_BUILT_CONNECTOR_PARAM_DICT)
     def test_valid_built(self, valid_built: BuiltConnectorParameter) -> None:
         ConnectorParameter.from_built(valid_built)

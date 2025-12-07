@@ -37,34 +37,34 @@ from test_mp.test_core.test_data_models.utils import (
     st_valid_version,
 )
 
-st_valid_system_version = st.floats(min_value=MINIMUM_SYSTEM_VERSION)
+ST_VALID_SYSTEM_VERSION = st.floats(min_value=MINIMUM_SYSTEM_VERSION)
 
 # Strategies for IntegrationVisibilityProperty
-st_valid_built_integration_visibility_property_dict = st.fixed_dictionaries({
+ST_VALID_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT = st.fixed_dictionaries({
     "Kind": st.sampled_from(["SystemMode", "FeatureFlag"]),
     "Value": st.sampled_from(["Nexus", "featEnableFederationSecondary"]),
 })
 
-st_valid_non_built_integration_visibility_property_dict = st.fixed_dictionaries({
+ST_VALID_NON_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT = st.fixed_dictionaries({
     "kind": st.sampled_from(["SystemMode", "FeatureFlag"]),
     "value": st.sampled_from(["Nexus", "featEnableFederationSecondary"]),
 })
 
 # Strategies for FeatureTags
-st_valid_built_feature_tags_dict = st.fixed_dictionaries({
+ST_VALID_BUILT_FEATURE_TAGS_DICT = st.fixed_dictionaries({
     "IntegrationVisibilityProperties": st.lists(
-        st_valid_built_integration_visibility_property_dict
+        ST_VALID_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT
     ),
 })
 
-st_valid_non_built_feature_tags_dict = st.fixed_dictionaries({
+ST_VALID_NON_BUILT_FEATURE_TAGS_DICT = st.fixed_dictionaries({
     "integration_visibility_properties": st.lists(
-        st_valid_non_built_integration_visibility_property_dict
+        ST_VALID_NON_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT
     ),
 })
 
 # Strategies for IntegrationParameter
-st_valid_built_integration_parameter_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_INTEGRATION_PARAMETER_DICT = st.fixed_dictionaries(
     {
         "PropertyName": st_valid_param_name,
         "Value": st.none() | st.text() | st.booleans() | st.floats() | st.integers(),
@@ -77,7 +77,7 @@ st_valid_built_integration_parameter_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_non_built_integration_parameter_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_INTEGRATION_PARAMETER_DICT = st.fixed_dictionaries(
     {
         "name": st_valid_param_name,
         "description": st_valid_short_description,
@@ -91,7 +91,7 @@ st_valid_non_built_integration_parameter_dict = st.fixed_dictionaries(
 )
 
 # Strategies for IntegrationMetadata
-st_valid_built_integration_metadata_dict = st.fixed_dictionaries(
+ST_VALID_BUILT_INTEGRATION_METADATA_DICT = st.fixed_dictionaries(
     {
         "Categories": st.lists(st.text()),
         "Description": st_valid_long_description,
@@ -101,18 +101,18 @@ st_valid_built_integration_metadata_dict = st.fixed_dictionaries(
         "Identifier": st_valid_identifier_name,
         "ImageBase64": st_valid_png_b64_string | st.none(),
         "IntegrationProperties": st.lists(
-            st_valid_built_integration_parameter_dict,
+            ST_VALID_BUILT_INTEGRATION_PARAMETER_DICT,
             max_size=mp.core.constants.MAX_PARAMETERS_LENGTH,
         ),
         "ShouldInstalledInSystem": st.booleans(),
         "MarketingDisplayName": st_valid_display_name,
-        "MinimumSystemVersion": st_valid_system_version,
+        "MinimumSystemVersion": ST_VALID_SYSTEM_VERSION,
         "SvgImage": st.none() | st_valid_svg_string,
         "Version": st_valid_version,
         "IsCertified": st.booleans(),
     },
     optional={
-        "FeatureTags": st.none() | st_valid_built_feature_tags_dict,
+        "FeatureTags": st.none() | ST_VALID_BUILT_FEATURE_TAGS_DICT,
         "SVGImage": st_valid_svg_string,
         "IsAvailableForCommunity": st.booleans(),
         "IsCustom": st.booleans(),
@@ -120,20 +120,20 @@ st_valid_built_integration_metadata_dict = st.fixed_dictionaries(
     },
 )
 
-st_valid_non_built_integration_metadata_dict = st.fixed_dictionaries(
+ST_VALID_NON_BUILT_INTEGRATION_METADATA_DICT = st.fixed_dictionaries(
     {
         "categories": st.lists(st.text()),
         "name": st_valid_display_name,
         "identifier": st_valid_identifier_name,
         "image_path": st_valid_png_b64_string,
         "parameters": st.lists(
-            st_valid_non_built_integration_parameter_dict,
+            ST_VALID_NON_BUILT_INTEGRATION_PARAMETER_DICT,
             max_size=mp.core.constants.MAX_PARAMETERS_LENGTH,
         ),
     },
     optional={
         "description": st_valid_long_description,
-        "feature_tags": st.none() | st_valid_non_built_feature_tags_dict,
+        "feature_tags": st.none() | ST_VALID_NON_BUILT_FEATURE_TAGS_DICT,
         "python_version": st_valid_built_param_type(PythonVersion),
         "documentation_link": st_valid_url,
         "should_install_in_system": st.booleans(),
