@@ -23,6 +23,7 @@ scripts, definitions, and other related files into designated directories.
 from __future__ import annotations
 
 import dataclasses
+import re
 import shutil
 import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
@@ -57,6 +58,18 @@ if TYPE_CHECKING:
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
 
+SDK_MODULES: set[str] = {
+    "ScriptResult",
+    "Siemplify",
+    "SiemplifyAction",
+    "SiemplifyBase",
+    "SiemplifyConnectors",
+    "SiemplifyConnectorsDataModel",
+    "SiemplifyDataModel",
+    "SiemplifyJob",
+    "SiemplifyUtils",
+}
+
 
 def _update_pyproject_from_integration_meta(
     pyproject_toml: MutableMapping[str, Any],
@@ -73,11 +86,73 @@ def _update_pyproject_from_integration_meta(
     )
 
 
+def transform_imports_content(content: str, manager_names: set[str], out_dir: str) -> str:
+    """Transform import statements in a Python file content.
+
+    Args:
+        content: The content of the python file.
+        manager_names: A set of manager names.
+        out_dir: The output directory of the script.
+
+    Returns:
+        The transformed content.
+
+    """
+    if "from __future__ import annotations" not in content and re.search(
+        r"^(import|from)\s", content, re.MULTILINE
+    ):
+        content = f"from __future__ import annotations\n\n{content}"
+
+    # Apply 'soar_sdk.' prefix for SDK modules
+    for module in SDK_MODULES:
+        # Matches 'from <module> import ...' or 'import <module>'
+        content = re.sub(
+            rf"^(from\s+)(?!soar_sdk\.)({module})\b",
+            r"from soar_sdk.\2",
+            content,
+            flags=re.MULTILINE,
+        )
+        content = re.sub(
+            rf"^(import\s+)(?!soar_sdk\.)({module})\b",
+            r"import soar_sdk.\2",
+            content,
+            flags=re.MULTILINE,
+        )
+
+    # Apply relative '..core' prefix for manager imports in non-core scripts
+    if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
+        for manager in manager_names:
+            # Matches 'from <manager> import ...'
+            content = re.sub(
+                rf"^(from\s+)(?!\.\.core\.)({manager})\b",
+                r"from ..core.\2",
+                content,
+                flags=re.MULTILINE,
+            )
+            # Matches 'import <manager>'
+            content = re.sub(
+                rf"^(import\s+)({manager})\b",
+                r"from ..core import \2",
+                content,
+                flags=re.MULTILINE,
+            )
+
+    return content
+
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class DeconstructIntegration:
     path: Path
     out_path: Path
     integration: Integration
+
+    @property
+    def manager_names(self) -> set[str]:
+        """Extracts the names of manager modules from the built integration path."""
+        managers_path = self.path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
+        if not managers_path.exists():
+            return set()
+        return {f.stem for f in managers_path.glob("*.py") if f.stem != "__init__"}
 
     def initiate_project(self) -> None:
         """Initialize a new python project.
@@ -232,6 +307,16 @@ class DeconstructIntegration:
             metadata=None,
         )
 
+    def _transform_imports(self, file_path: Path, out_dir: str) -> None:
+        if file_path.suffix != ".py":
+            return
+
+        original_content: str = file_path.read_text(encoding="utf-8")
+        transformed_content: str = transform_imports_content(
+            original_content, self.manager_names, out_dir
+        )
+        file_path.write_text(transformed_content, encoding="utf-8")
+
     def _create_scripts_dir(
         self,
         repo_dir: str,
@@ -251,6 +336,7 @@ class DeconstructIntegration:
                 shutil.copy(file, new_path)
                 copied_file: Path = new_path / file.name
                 copied_file.rename(copied_file.parent / copied_file.name)
+                self._transform_imports(copied_file, out_dir)
 
         if metadata is not None:
             _write_definitions(new_path, metadata)

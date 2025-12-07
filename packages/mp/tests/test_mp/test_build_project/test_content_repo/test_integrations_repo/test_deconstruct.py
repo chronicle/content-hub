@@ -23,6 +23,9 @@ import pytest
 import mp.build_project.integrations_repo
 import mp.core.constants
 import test_mp.common
+from mp.build_project.restructure.integrations.deconstruct import (
+    transform_imports_content,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -131,3 +134,67 @@ def assert_deconstruct_integration(
         assert actual == expected
 
     return wrapper
+
+
+@pytest.mark.parametrize(
+    ("initial_content", "expected_content", "manager_names", "out_dir"),
+    [
+        (
+            "import SiemplifyAction\n\nclass MyAction(SiemplifyAction): ...",
+            "from __future__ import annotations\n\nimport soar_sdk.SiemplifyAction\n\nclass "
+            r"MyAction(SiemplifyAction): ...",
+            set(),
+            mp.core.constants.ACTIONS_DIR,
+        ),
+        (
+            "from SiemplifyUtils import output_handler\n\n@output_handler\ndef main(): ...",
+            "from __future__ import annotations\n\nfrom soar_sdk.SiemplifyUtils import"
+            " output_handler\n\n@output_handler\ndef main(): ...",
+            set(),
+            mp.core.constants.ACTIONS_DIR,
+        ),
+        (
+            "import manager\n\nclass MyAction(SiemplifyAction): ...",
+            "from __future__ import annotations\n\nfrom ..core import manager\n\nclass "
+            "MyAction(SiemplifyAction): ...",
+            {"manager"},
+            mp.core.constants.ACTIONS_DIR,
+        ),
+        (
+            "from manager import some_func\n\nclass MyAction(SiemplifyAction): ...",
+            "from __future__ import annotations\n\nfrom ..core.manager import some_func\n\n"
+            "class MyAction(SiemplifyAction): ...",
+            {"manager"},
+            mp.core.constants.ACTIONS_DIR,
+        ),
+        (
+            "import manager\n\nclass MyAction(SiemplifyAction): ...",
+            "from __future__ import annotations\n\nimport manager\n\nclass "
+            "MyAction(SiemplifyAction): ...",
+            {"manager"},
+            mp.core.constants.CORE_SCRIPTS_DIR,
+        ),
+        (
+            "import other_module\n\nclass MyAction(SiemplifyAction): ...",
+            "from __future__ import annotations\n\nimport other_module\n\nclass "
+            "MyAction(SiemplifyAction): ...",
+            set(),
+            mp.core.constants.ACTIONS_DIR,
+        ),
+        (
+            "print('hello world')",
+            "print('hello world')",
+            set(),
+            mp.core.constants.ACTIONS_DIR,
+        ),
+    ],
+)
+def test_transform_imports_content(
+    initial_content: str,
+    expected_content: str,
+    manager_names: set[str],
+    out_dir: str,
+) -> None:
+    """Verify that `transform_imports_content` correctly modifies file content."""
+    transformed_content = transform_imports_content(initial_content, manager_names, out_dir)
+    assert transformed_content == expected_content
