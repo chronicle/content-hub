@@ -275,6 +275,7 @@ class IntegrationMetadata(
             name=name,
             identifier=non_built["identifier"],
             documentation_link=non_built.get("documentation_link"),
+            description=non_built.get("description", ""),
             image_base64=non_built["image_path"],
             parameters=[IntegrationParameter.from_non_built(p) for p in non_built["parameters"]],
             should_install_in_system=non_built.get("should_install_in_system", False),
