@@ -32,11 +32,11 @@ import typer
 
 import mp.core.config
 from mp.core.custom_types import RepositoryType  # noqa: TC001
-from mp.core.utils import ensure_valid_list
+from mp.core.utils import ensure_valid_list, should_build_integrations, should_build_playbooks
 from mp.telemetry import track_command
 
-from .flow.integrations.flow import build_integrations, should_build_integrations
-from .flow.playbooks.flow import build_playbooks, should_build_playbooks
+from .flow.integrations.flow import build_integrations
+from .flow.playbooks.flow import build_playbooks
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

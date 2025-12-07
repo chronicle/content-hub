@@ -29,16 +29,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def should_build_playbooks(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
-    """Decide if needed to build playbooks or not.
-
-    Returns:
-        True if yes overwise False
-
-    """
-    return playbooks or RepositoryType.PLAYBOOKS in repos
-
-
 def build_playbooks(
     playbooks: Iterable[str],
     repositories: Iterable[RepositoryType],
