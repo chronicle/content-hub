@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from dateutil.parser import parse
 from TIPCommon.base.action import Action
+from TIPCommon.consts import NUM_OF_MILLI_IN_SEC, NUM_OF_SEC_IN_MIN
 from TIPCommon.extraction import extract_action_param
 
 from ..core.ToolsCommon import (
@@ -82,8 +83,8 @@ class CreateSiemplifyTaskAction(Action):
         """Initialize API clients if required (placeholder)."""
 
     def _perform_action(self, __: Never) -> None:
-        client_time: int = self._compute_due_time()
-        self._create_task(client_time)
+        task_due_date: int = self._compute_due_time()
+        self._create_task(task_due_date)
 
         due_date_info: str = (
             f"by {self.params.due_date}"
@@ -99,12 +100,15 @@ class CreateSiemplifyTaskAction(Action):
     def _compute_due_time(self) -> int:
         """Return due time in epoch millis based on given parameters."""
         if self.params.due_date:
-            return int(parse(self.params.due_date).timestamp() * 1000)
+            return int(parse(self.params.due_date).timestamp() * NUM_OF_MILLI_IN_SEC)
 
         minutes: int = int(self.params.duration)
-        return int(time.time() * 1000) + minutes * 60 * 1000
+        return (
+            int(time.time() * NUM_OF_MILLI_IN_SEC)
+            + minutes * NUM_OF_SEC_IN_MIN * NUM_OF_MILLI_IN_SEC
+        )
 
-    def _create_task(self, client_time: int) -> None:
+    def _create_task(self, task_due_date: int) -> None:
         current_version = self.soar_action.get_system_version()
         json_payload = {}
         task_url = ""
@@ -117,7 +121,7 @@ class CreateSiemplifyTaskAction(Action):
                 "owner": self.params.assign_to,
                 "content": self.params.task_content,
                 "dueDate": "",
-                "dueDateUnixTimeMs": client_time,
+                "dueDateUnixTimeMs": task_due_date,
                 "title": self.params.task_title,
                 "caseId": self.soar_action.case_id,
             }
@@ -130,7 +134,7 @@ class CreateSiemplifyTaskAction(Action):
                 "owner": self.params.assign_to,
                 "name": self.params.task_content,
                 "dueDate": "",
-                "dueDateUnixTimeMs": client_time,
+                "dueDateUnixTimeMs": task_due_date,
                 "caseId": self.soar_action.case_id,
             }
             task_url = X5_TASK_URL
