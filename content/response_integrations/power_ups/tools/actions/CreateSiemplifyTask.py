@@ -104,7 +104,7 @@ class CreateSiemplifyTaskAction(Action):
         minutes = int(self.params.duration)
         return int(time.time() * 1000) + minutes * 60 * 1000
 
-    def _create_task(self, client_time: int):
+    def _create_task(self, client_time: int) -> None:
         current_version = self.soar_action.get_system_version()
         json_payload = {}
         task_url = ""
