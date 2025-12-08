@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-@dataclass(frozen=False)
+@dataclass
 class TrackCommandVars:
     start_time: float = time.monotonic()
     error: Exception | None = None
