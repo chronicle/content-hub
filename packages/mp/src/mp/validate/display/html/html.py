@@ -18,7 +18,7 @@ import datetime
 import pathlib
 import tempfile
 import webbrowser
-from typing import TYPE_CHECKING, NamedTuple, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import jinja2
 from rich.console import Console
