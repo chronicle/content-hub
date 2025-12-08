@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Never
 
 from dateutil.parser import parse
 from TIPCommon.base.action import Action
@@ -40,7 +40,7 @@ class CreateSiemplifyTaskAction(Action):
     def __init__(self):
         super().__init__(ACTION_NAME)
 
-    def _extract_action_parameters(self):
+    def _extract_action_parameters(self) -> None:
         self.params.assign_to = extract_action_param(
             self.soar_action,
             param_name="Assign To",
@@ -72,7 +72,7 @@ class CreateSiemplifyTaskAction(Action):
             print_value=True,
         )
 
-    def _validate_params(self):
+    def _validate_params(self) -> None:
         if not self.params.due_date and not self.params.duration:
             raise ValueError(
                 'either "Due Date" or "SLA (in minutes)" parameter should have a value.'
@@ -81,8 +81,8 @@ class CreateSiemplifyTaskAction(Action):
     def _init_api_clients(self) -> None:
         """Initialize API clients if required (placeholder)."""
 
-    def _perform_action(self, _) -> None:
-        client_time = self._client_time()
+    def _perform_action(self, __: Never) -> None:
+        client_time = self._compute_due_time()
 
         self._create_task(client_time)
 
@@ -97,16 +97,12 @@ class CreateSiemplifyTaskAction(Action):
         )
         self.result_value = True
 
-    def _client_time(self):
-        client_time = 0
-
+    def _compute_due_time(self) -> int:
+        """Return due time in epoch millis based on given parameters."""
         if self.params.due_date:
-            dt_due_date = parse(self.params.due_date)
-            client_time = int(dt_due_date.timestamp() * 1000)
-        elif self.params.duration:
-            time_now_epoch = int(time.time() * 1000)
-            client_time = time_now_epoch + (int(self.params.duration) * 1000 * 60)
-        return client_time
+            return int(parse(self.params.due_date).timestamp() * 1000)
+        minutes = int(self.params.duration)
+        return int(time.time() * 1000) + minutes * 60 * 1000
 
     def _create_task(self, client_time: int):
         current_version = self.soar_action.get_system_version()
