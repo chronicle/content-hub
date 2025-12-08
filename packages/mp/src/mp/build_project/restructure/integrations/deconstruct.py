@@ -154,7 +154,9 @@ class DeconstructIntegration:
                 if not drm.result_example:
                     continue
 
-                json_file_name: str = f"{action_name}_{drm.result_name}_example.json"
+                json_file_name: str = (
+                    f"{mp.core.utils.str_to_snake_case(action_name)}_{drm.result_name}_example.json"
+                )
                 json_file_path: Path = resources_dir / json_file_name
                 mp.core.file_utils.write_str_to_json_file(json_file_path, drm.result_example)
 
@@ -244,9 +246,10 @@ class DeconstructIntegration:
         new_path: Path = self.out_path / out_dir
         new_path.mkdir(exist_ok=True)
         for file in old_path.iterdir():
-            shutil.copy(file, new_path)
-            copied_file: Path = new_path / file.name
-            copied_file.rename(copied_file.parent / copied_file.name)
+            if file.is_file():
+                shutil.copy(file, new_path)
+                copied_file: Path = new_path / file.name
+                copied_file.rename(copied_file.parent / copied_file.name)
 
         if metadata is not None:
             _write_definitions(new_path, metadata)

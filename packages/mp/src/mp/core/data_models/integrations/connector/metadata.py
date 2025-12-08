@@ -14,13 +14,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
 import mp.core.constants
 import mp.core.data_models.abc
-import mp.core.validators
 
 from .parameter import (
     BuiltConnectorParameter,
@@ -92,16 +91,6 @@ class ConnectorMetadata(
     rules: list[ConnectorRule]
     version: float
 
-    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002
-        """Validate SSL parameter after model initialization.
-
-        Args:
-            context: The pydantic model context (unused).
-
-        """
-        if self.parameters:
-            mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
-
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
         """Create ConnectorMetadata objects from a built integration path.
@@ -155,8 +144,8 @@ class ConnectorMetadata(
             is_enabled=built["IsEnabled"],
             name=built["Name"],
             parameters=[ConnectorParameter.from_built(param) for param in built["Parameters"]],
-            rules=[ConnectorRule.from_built(rule) for rule in built["Rules"]],
-            version=built.get("Version", 1.0),
+            rules=[ConnectorRule.from_built(rule) for rule in built.get("Rules", [])],
+            version=built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
         )
 
     @classmethod
@@ -175,7 +164,7 @@ class ConnectorMetadata(
                 ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
             ],
             rules=[ConnectorRule.from_non_built(rule) for rule in non_built["rules"]],
-            version=non_built.get("version", 1.0),
+            version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
         )
 
     def to_built(self) -> BuiltConnectorMetadata:
