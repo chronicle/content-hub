@@ -25,7 +25,7 @@ REQUEST_TIMEOUT: int = 3
 APP_AUTHOR: str = "Google"
 APP_NAME: str = "mp-cli-tool"
 MP_CACHE_DIR: Path = Path(user_config_dir(APP_NAME, APP_AUTHOR))
-CONFIG_FILE_PATH: Path = MP_CACHE_DIR / Path("config.yaml")
+CONFIG_FILE_PATH: Path = MP_CACHE_DIR / Path("telemetry_config.yaml")
 
 
 class ConfigYaml(TypedDict):
