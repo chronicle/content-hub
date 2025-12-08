@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, NotRequired, Self, TypedDict
+from typing import Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -44,6 +44,13 @@ class ActionParamType(mp.core.data_models.abc.RepresentableEnum):
     TIME_SPAN_SECONDS = 17
     MULTI_CHOICE_PARAMETER = 21
     NULL = -1
+
+
+OPT_TYPES: set[ActionParamType] = {
+    ActionParamType.DDL,
+    ActionParamType.MULTI_CHOICE_PARAMETER,
+    ActionParamType.MULTI_VALUES,
+}
 
 
 class BuiltActionParameter(TypedDict):
@@ -84,51 +91,6 @@ class ActionParameter(
     optional_values: list[str] | None
     type_: ActionParamType
     default_value: str | bool | float | int | None
-
-    def model_post_init(self, context: Any, /) -> None:  # noqa: ANN401, ARG002
-        """Post-initialization validation.
-
-        This method is called after the model is initialized and validates that
-        optional values are handled correctly and that the default value is valid.
-
-        Args:
-            context: The context, which is not used.
-
-        """
-        self._validate_optional_values()
-        self._validate_default_value_is_in_optional_values()
-
-    def _validate_optional_values(self) -> None:
-        msg: str
-        if self._is_optional_values_type and self.optional_values is None:
-            msg = "Multiple options parameters must have optional values"
-            raise ValueError(msg)
-
-        if self.optional_values is not None and not self._is_optional_values_type:
-            msg = "Non-multiple options parameters must not have optional values"
-            raise ValueError(msg)
-
-    @property
-    def _is_optional_values_type(self) -> bool:
-        return self.type_ in {
-            ActionParamType.DDL,
-            ActionParamType.MULTI_CHOICE_PARAMETER,
-            ActionParamType.MULTI_VALUES,
-        }
-
-    def _validate_default_value_is_in_optional_values(self) -> None:
-        if not self._is_default_value_in_optional_values():
-            msg: str = (
-                "The default value of a multiple options parameter must be one of the options"
-            )
-            raise ValueError(msg)
-
-    def _is_default_value_in_optional_values(self) -> bool:
-        return (
-            self.default_value in {None, ""}
-            or self.optional_values is None
-            or self.default_value in self.optional_values
-        )
 
     @classmethod
     def _from_built(cls, built: BuiltActionParameter) -> Self:
