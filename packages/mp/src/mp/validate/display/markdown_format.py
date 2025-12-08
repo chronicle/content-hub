@@ -20,39 +20,37 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 
+from .constants import ICON_MAP
+
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.validate.data_models import FullReport, ValidationReport, ValidationResults
+    from mp.validate.data_models import ContentType, FullReport, ValidationReport, ValidationResults
 
 
 class MarkdownFormat:
-    def __init__(self, validation_results: FullReport) -> None:
+    def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
         self.validation_results = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
-        """Generate a Markdown file with a validation report table."""
+        """Generate a Markdown file with validation report tables."""
         try:
-            markdown_content_list: list[str] = ["\n"]
-            for stage_name, results_list in self.validation_results.items():
-                if _should_display_stage(results_list):
-                    markdown_content_list.append(f"---\n\n## {stage_name} Validation:\n\n")  # noqa: FURB113
+            markdown_content_list: list[str] = ["# Validation Report\n\n"]
 
-                    markdown_content_list.append("<details>\n")
-                    markdown_content_list.append("  <summary>Click to view details</summary>\n\n")
+            for content_type, full_report in self.validation_results.items():
+                if not _has_issues_to_display(full_report):
+                    continue
 
-                    for validation_result in results_list:
-                        table_data = _get_integration_validation_data(validation_result)
+                icon = ICON_MAP[content_type.value]
 
-                        if table_data:
-                            markdown_content_list.extend(
-                                _format_table(
-                                    table_data, validation_result.validation_report.integration_name
-                                )
-                            )
+                summary_header = f"<summary><strong>{icon} {content_type.value}s</strong></summary>"
+                markdown_content_list.append(f"<details>\n{summary_header}\n\n")
 
-                    markdown_content_list.append("</details>\n\n")
+                for stage_name, results_list in full_report.items():
+                    markdown_content_list.extend(_generate_stage_content(stage_name, results_list))
+
+                markdown_content_list.append("</details>\n\n")
 
             markdown_content: str = "".join(markdown_content_list)
             _save_report_file(markdown_content, output_filename="validation_report.md")
@@ -61,20 +59,42 @@ class MarkdownFormat:
             self.console.print(f"❌ Error generating report: {e}")
 
 
-def _should_display_stage(results_list: list[ValidationResults]) -> bool:
+def _has_issues_to_display(full_report: FullReport) -> bool:
+    return any(_should_display_stage(results_list) for results_list in full_report.values())
+
+
+def _should_display_stage(results_list: list[ValidationResults] | None) -> bool:
     if not results_list:
         return False
 
     for validation_result in results_list:
         report: ValidationReport = validation_result.validation_report
-        if (
-            report.failed_fatal_validations
-            or report.failed_non_fatal_validations
-            or validation_result.is_success
-        ):
+        if report.failed_fatal_validations or report.failed_non_fatal_validations:
             return True
 
     return False
+
+
+def _generate_stage_content(
+    stage_name: str, results_list: list[ValidationResults] | None
+) -> list[str]:
+    content: list[str] = []
+    if not _should_display_stage(results_list):
+        return content
+
+    content.append(f"<details>\n<summary>{stage_name} Stage</summary>\n\n")
+
+    if results_list:
+        for validation_result in results_list:
+            table_data = _get_integration_validation_data(validation_result)
+
+            if table_data:
+                content.extend(
+                    _format_table(table_data, validation_result.validation_report.content_name)
+                )
+
+    content.append("</details>\n\n")
+    return content
 
 
 def _get_integration_validation_data(validation_result: ValidationResults) -> list[list[str]]:
@@ -88,8 +108,7 @@ def _get_integration_validation_data(validation_result: ValidationResults) -> li
 
 
 def _format_table(table_data: list[list[str]], integration_name: str) -> list[str]:
-    markdown_lines: list[str] = []
-    markdown_lines.append(f"### 🧩  {integration_name}\n\n")
+    markdown_lines: list[str] = [f"#### {integration_name}\n\n"]
 
     headers: list[str] = ["Validation Name", "Details"]
     markdown_lines.extend([
