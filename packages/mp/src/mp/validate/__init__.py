@@ -106,6 +106,8 @@ def validate(  # noqa: PLR0913
     groups: Annotated[
         list[str],
         typer.Option(
+            "--group",
+            "-g",
             help="Run validations on all integrations belonging to a specified integration group.",
             default_factory=list,
         ),

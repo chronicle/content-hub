@@ -71,13 +71,13 @@ def validate_integrations(
     community_output: FullReport
 
     if integrations:
-        commercial_output: FullReport = _validate_integrations(
+        commercial_output = _validate_integrations(
             get_marketplace_paths_from_names(integrations, commercial_mp.paths),
             commercial_mp,
             run_configurations,
         )
 
-        community_output: FullReport = _validate_integrations(
+        community_output = _validate_integrations(
             get_marketplace_paths_from_names(integrations, community_mp.paths),
             community_mp,
             run_configurations,

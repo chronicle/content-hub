@@ -18,7 +18,7 @@ import datetime
 import pathlib
 import tempfile
 import webbrowser
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple, Any
 
 import jinja2
 from rich.console import Console
@@ -27,6 +27,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.validate.data_models import ContentType, FullReport
+
+
+class ReportStatistics(NamedTuple):
+    groups_data: dict[str, Any]
+    total_items: int
+    total_fatal: int
+    total_warn: int
 
 
 class HtmlFormat:
@@ -62,13 +69,13 @@ class HtmlFormat:
             autoescape=jinja2.select_autoescape(["html"]),
         )
 
-        groups_data, total_items, total_fatal, total_warn = self._get_report_statistics()
+        report_statistics: ReportStatistics = self._get_report_statistics()
 
         return env.get_template(template_name).render(
-            validation_groups=groups_data,
-            total_integrations=total_items,
-            total_fatal_issues=total_fatal,
-            total_non_fatal_issues=total_warn,
+            validation_groups=report_statistics.groups_data,
+            total_integrations=report_statistics.total_items,
+            total_fatal_issues=report_statistics.total_fatal,
+            total_non_fatal_issues=report_statistics.total_warn,
             current_time=datetime.datetime.now(datetime.UTC)
             .astimezone()
             .strftime("%B %d, %Y at %I:%M %p %Z"),
@@ -76,7 +83,7 @@ class HtmlFormat:
             js_content=(template_dir / "static" / "script.js").read_text(encoding="utf-8-sig"),
         )
 
-    def _get_report_statistics(self) -> tuple[dict, int, int, int]:
+    def _get_report_statistics(self) -> ReportStatistics:
         groups_data = {}
         total_items = total_fatal = total_warn = 0
 
@@ -98,4 +105,4 @@ class HtmlFormat:
             total_fatal += fatal
             total_warn += warn
 
-        return groups_data, total_items, total_fatal, total_warn
+        return ReportStatistics(groups_data, total_items, total_fatal, total_warn)
