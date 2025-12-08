@@ -32,7 +32,7 @@ import typer
 
 import mp.core.config
 from mp.core.custom_types import RepositoryType  # noqa: TC001
-from mp.core.utils import ensure_valid_list, should_build_integrations, should_build_playbooks
+from mp.core.utils import ensure_valid_list, should_preform_integration_logic, should_preform_playbook_logic
 from mp.telemetry import track_command
 
 from .flow.integrations.flow import build_integrations
@@ -182,8 +182,8 @@ def build(  # noqa: PLR0913
     )
     params.validate()
 
-    if should_build_integrations(integrations, repositories):
+    if should_preform_integration_logic(integrations, repositories):
         build_integrations(integrations, integration_group, repositories, deconstruct=deconstruct)
 
-    if should_build_playbooks(playbooks, repositories):
+    if should_preform_playbook_logic(playbooks, repositories):
         build_playbooks(playbooks, repositories, deconstruct=deconstruct)

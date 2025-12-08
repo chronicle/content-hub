@@ -236,7 +236,7 @@ def to_snake_case(s: str, /) -> str:
     return s.lower()
 
 
-def should_build_integrations(
+def should_preform_integration_logic(
     integrations: Iterable[str],
     repos: Iterable[RepositoryType],
 ) -> bool:
@@ -249,7 +249,7 @@ def should_build_integrations(
     return integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
 
 
-def should_build_playbooks(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
+def should_preform_playbook_logic(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
     """Decide if needed to build playbooks or not.
 
     Returns:
