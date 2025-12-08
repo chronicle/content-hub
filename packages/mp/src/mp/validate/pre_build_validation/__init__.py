@@ -35,7 +35,7 @@ class PreBuildValidations:
 
     def run_pre_build_validation(self) -> None:
         """Run all the pre-build validations."""
-        validations: list[Validator] = _get_validations_factory(self.content_type)
+        validations: list[Validator] = _get_content_validations(self.content_type)
 
         for validator in validations:
             try:
@@ -57,7 +57,7 @@ class PreBuildValidations:
         self.results.is_success = False
 
 
-def _get_validations_factory(content_type: ContentType) -> list[Validator]:
+def _get_content_validations(content_type: ContentType) -> list[Validator]:
     if content_type == ContentType.INTEGRATION:
         return get_integration_pre_build_validations()
 

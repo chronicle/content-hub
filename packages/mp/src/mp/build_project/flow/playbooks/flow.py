@@ -22,11 +22,12 @@ import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
 from mp.build_project.post_build.playbooks.playbooks_json import write_playbooks_json
-from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
+
+    from mp.core.custom_types import RepositoryType
 
 
 def build_playbooks(

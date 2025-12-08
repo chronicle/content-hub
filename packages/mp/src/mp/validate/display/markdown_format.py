@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 
+from .constants import ICON_MAP
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -40,9 +42,8 @@ class MarkdownFormat:
                 if not _has_issues_to_display(full_report):
                     continue
 
-                icon = "📘" if content_type.value == "Playbook" else "🧩"
+                icon = ICON_MAP[content_type.value]
 
-                # Level 1: Content Type Collapsible
                 summary_header = f"<summary><strong>{icon} {content_type.value}s</strong></summary>"
                 markdown_content_list.append(f"<details>\n{summary_header}\n\n")
 
@@ -81,7 +82,6 @@ def _generate_stage_content(
     if not _should_display_stage(results_list):
         return content
 
-    # Level 2: Stage Collapsible
     content.append(f"<details>\n<summary>{stage_name} Stage</summary>\n\n")
 
     if results_list:
@@ -90,7 +90,7 @@ def _generate_stage_content(
 
             if table_data:
                 content.extend(
-                    _format_table(table_data, validation_result.validation_report.integration_name)
+                    _format_table(table_data, validation_result.validation_report.content_name)
                 )
 
     content.append("</details>\n\n")
@@ -108,8 +108,7 @@ def _get_integration_validation_data(validation_result: ValidationResults) -> li
 
 
 def _format_table(table_data: list[list[str]], integration_name: str) -> list[str]:
-    markdown_lines: list[str] = []
-    markdown_lines.append(f"#### {integration_name}\n\n")
+    markdown_lines: list[str] = [f"#### {integration_name}\n\n"]
 
     headers: list[str] = ["Validation Name", "Details"]
     markdown_lines.extend([

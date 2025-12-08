@@ -20,32 +20,22 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-import mp.core.file_utils
-from mp.core.custom_types import RepositoryType
+from mp.core.custom_types import RepositoryType  # noqa: TC001
 from mp.core.utils import ensure_valid_list, should_build_integrations, should_build_playbooks
 from mp.telemetry import track_command
 from mp.validate.flow.integrations.flow import validate_integrations
 from mp.validate.flow.playbooks.flow import validate_playbooks
 
-from .data_models import Configurations, ContentType, FullReport, ValidationResults
+from .data_models import ContentType, FullReport
 from .display import display_validation_reports
-from .pre_build_validation import PreBuildValidations
-from .utils import get_marketplace_paths_from_names
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from mp.core.config import RuntimeParams
-    from mp.core.custom_types import RepositoryType
 
 __all__: list[str] = [
-    "Configurations",
-    "FullReport",
-    "PreBuildValidations",
-    "ValidationResults",
     "app",
-    "display_validation_reports",
-    "get_marketplace_paths_from_names",
     "validate",
 ]
 app: typer.Typer = typer.Typer()
@@ -113,7 +103,7 @@ def validate(  # noqa: PLR0913
             default_factory=list,
         ),
     ],
-    group: Annotated[
+    groups: Annotated[
         list[str],
         typer.Option(
             help="Run validations on all integrations belonging to a specified integration group.",
@@ -161,7 +151,7 @@ def validate(  # noqa: PLR0913
                     Validation will be performed on all integrations found
                     within these repositories.
         integrations: A list of specific integrations to validate.
-        group: A list of integration groups. Validation will apply to all
+        groups: A list of integration groups. Validation will apply to all
                integrations associated with these groups.
         playbooks: A list of specific playbooks to validate.
         only_pre_build: If set to True, only pre-build validation checks are
@@ -175,20 +165,20 @@ def validate(  # noqa: PLR0913
     """
     repositories = ensure_valid_list(repositories)
     integrations = ensure_valid_list(integrations)
-    group = ensure_valid_list(group)
+    groups = ensure_valid_list(groups)
     playbooks = ensure_valid_list(playbooks)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    params: ValidateParams = ValidateParams(repositories, integrations, group, playbooks)
+    params: ValidateParams = ValidateParams(repositories, integrations, groups, playbooks)
     params.validate()
 
     full_report: dict[ContentType, FullReport] = {}
     f1, f2 = False, False
     if should_build_integrations(integrations, repositories):
         full_report[ContentType.INTEGRATION], f1 = validate_integrations(
-            integrations, group, repositories, only_pre_build=only_pre_build
+            integrations, groups, repositories, only_pre_build=only_pre_build
         )
 
     if should_build_playbooks(playbooks, repositories):

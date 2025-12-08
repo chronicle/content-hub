@@ -201,7 +201,7 @@ def combine_results(*validations_outputs: FullReport) -> FullReport:
 
     """
     combined_output: FullReport = {}
-    keys_to_combine = [PRE_BUILD, BUILD, POST_BUILD]
+    keys_to_combine = (PRE_BUILD, BUILD, POST_BUILD)
 
     for key in keys_to_combine:
         combined_list: list[ValidationResults] = []
@@ -213,10 +213,7 @@ def combine_results(*validations_outputs: FullReport) -> FullReport:
                 combined_list.extend(current_list)
                 all_lists_are_none = False
 
-        if all_lists_are_none:
-            combined_output[key] = None
-        else:
-            combined_output[key] = combined_list
+        combined_output[key] = [] if all_lists_are_none else combined_list
 
     return combined_output
 

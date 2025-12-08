@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 def validate_integrations(
     integrations: Iterable[str],
-    group: Iterable[str],
+    groups: Iterable[str],
     repositories: Iterable[RepositoryType],
     *,
     only_pre_build: bool = False,
@@ -52,7 +52,7 @@ def validate_integrations(
 
     Args:
         integrations: An iterable of playbook names to validate.
-        group: A list of integration groups.
+        groups: A list of integration groups.
         repositories: An iterable of repository to validate.
         only_pre_build: If True, only pre-build validations will run.
 
@@ -67,50 +67,46 @@ def validate_integrations(
 
     run_configurations: Configurations = Configurations(only_pre_build=only_pre_build)
 
-    validations_output: FullReport = {}
-    commercial_output: FullReport = {}
-    community_output: FullReport = {}
+    commercial_output: FullReport
+    community_output: FullReport
 
     if integrations:
-        commercial_output = _validate_integrations(
+        commercial_output: FullReport = _validate_integrations(
             get_marketplace_paths_from_names(integrations, commercial_mp.paths),
             commercial_mp,
             run_configurations,
         )
 
-        community_output = _validate_integrations(
+        community_output: FullReport = _validate_integrations(
             get_marketplace_paths_from_names(integrations, community_mp.paths),
             community_mp,
             run_configurations,
         )
 
-        validations_output = combine_results(commercial_output, community_output)
-
-    elif group:
+    elif groups:
         commercial_output = _validate_groups(
-            get_marketplace_paths_from_names(group, commercial_mp.paths),
+            get_marketplace_paths_from_names(groups, commercial_mp.paths),
             commercial_mp,
             run_configurations,
         )
 
         community_output = _validate_groups(
-            get_marketplace_paths_from_names(group, community_mp.paths),
+            get_marketplace_paths_from_names(groups, community_mp.paths),
             community_mp,
             run_configurations,
         )
 
-        validations_output = combine_results(commercial_output, community_output)
-
-    elif repositories:
+    else:
         repos: set[RepositoryType] = set(repositories)
-
+        commercial_output = {}
+        community_output = {}
         if RepositoryType.COMMERCIAL in repos:
             commercial_output = _validate_repo(commercial_mp, run_configurations)
 
         if RepositoryType.COMMUNITY in repos:
             community_output = _validate_repo(community_mp, run_configurations)
 
-        validations_output = combine_results(commercial_output, community_output)
+    validations_output: FullReport = combine_results(commercial_output, community_output)
 
     should_fail: bool = should_fail_program(validations_output)
     return validations_output, should_fail
@@ -121,14 +117,12 @@ def _validate_repo(marketplace: IntegrationsRepo, configurations: Configurations
         *marketplace.paths
     )
 
-    validation_outputs: FullReport
-
     integrations_outputs: FullReport = _validate_integrations(
         products.integrations, marketplace, configurations
     )
     groups_output: FullReport = _validate_groups(products.groups, marketplace, configurations)
 
-    validation_outputs = combine_results(integrations_outputs, groups_output)
+    validation_outputs: FullReport = combine_results(integrations_outputs, groups_output)
 
     return validation_outputs
 
@@ -145,14 +139,16 @@ def _validate_groups(
 
     """
     validation_outputs: FullReport = {}
-    if groups:
-        pre_build_output: list[ValidationResults] = _process_groups_for_validation(
-            groups, _run_pre_build_validations
-        )
-        validation_outputs[PRE_BUILD] = pre_build_output
+    if not groups:
+        return validation_outputs
 
-        if not configurations.only_pre_build:
-            marketplace.build_groups(groups)
+    pre_build_output: list[ValidationResults] = _process_groups_for_validation(
+        groups, _run_pre_build_validations
+    )
+    validation_outputs[PRE_BUILD] = pre_build_output
+
+    if not configurations.only_pre_build:
+        marketplace.build_groups(groups)
 
     return validation_outputs
 

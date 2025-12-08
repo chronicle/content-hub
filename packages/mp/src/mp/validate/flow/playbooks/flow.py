@@ -64,26 +64,22 @@ def validate_playbooks(
 
     run_configurations: Configurations = Configurations(only_pre_build=only_pre_build)
 
-    validations_output: FullReport = {}
+    commercial_output: FullReport = {}
+    community_output: FullReport = {}
 
     if playbooks:
-        commercial_output: FullReport = _validate_playbooks(
+        commercial_output = _validate_playbooks(
             playbooks, commercial_playbooks_repo, run_configurations
         )
-
-        community_output: FullReport = _validate_playbooks(
+        community_output = _validate_playbooks(
             playbooks, community_playbooks_repo, run_configurations
         )
 
-        validations_output = combine_results(commercial_output, community_output)
-
     elif repositories:
-        commercial_output: FullReport = _validate_repo(
-            commercial_playbooks_repo, run_configurations
-        )
-        community_output: FullReport = _validate_repo(community_playbooks_repo, run_configurations)
+        commercial_output = _validate_repo(commercial_playbooks_repo, run_configurations)
+        community_output = _validate_repo(community_playbooks_repo, run_configurations)
 
-        validations_output = combine_results(commercial_output, community_output)
+    validations_output: FullReport = combine_results(commercial_output, community_output)
 
     should_fail: bool = should_fail_program(validations_output)
     return validations_output, should_fail

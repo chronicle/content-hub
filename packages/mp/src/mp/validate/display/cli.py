@@ -21,13 +21,15 @@ from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
 
+from .constants import ICON_MAP
+
 if TYPE_CHECKING:
     from mp.validate.data_models import ContentType, FullReport, ValidationResults
 
 
 class CliDisplay:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
-        self.validation_results = validation_results
+        self.validation_results: dict[ContentType, FullReport] = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
@@ -42,7 +44,7 @@ class CliDisplay:
             if not any(full_report.values()):
                 continue
 
-            icon = "📘" if content_type.value == "Playbook" else "🧩"
+            icon = ICON_MAP[content_type.value]
 
             self.console.print(Rule(f"[bold magenta]{icon} {content_type.value} Validations"))
 

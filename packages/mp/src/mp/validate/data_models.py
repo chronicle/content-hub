@@ -94,7 +94,7 @@ class ValidationReport:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the ValidationReport object into a dictionary..
+        """Convert the ValidationReport object into a dictionary.
 
         Returns:
             A dictionary representation of the validation report suitable for JSON export.
