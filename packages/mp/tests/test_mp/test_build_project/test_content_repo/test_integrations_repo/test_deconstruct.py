@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import mp.build_project.integrations
+import mp.build_project.integrations_repo
 import mp.core.constants
 import test_mp.common
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from mp.build_project.integrations import Integrations
+    from mp.build_project.integrations_repo import IntegrationsRepo
 
 
 def test_deconstruct_half_built_integration(
@@ -88,12 +88,12 @@ def assert_deconstruct_integration(
             requirements.write_text("requests==2.32.4\n", encoding="utf-8")
             py_version.write_text("3.11", encoding="utf-8")
 
-        marketplace: Integrations = mp.build_project.integrations.Integrations(commercial)
+        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(
+            commercial
+        )
         marketplace.deconstruct_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
-        out_py_version: Path = out_integration / mp.core.constants.PYTHON_VERSION_FILE
-        out_py_version.unlink(missing_ok=True)
         actual_files: set[str] = {p.name for p in out_integration.rglob("*.*")}
         expected_files: set[str] = {p.name for p in non_built_integration.rglob("*.*")}
         assert actual_files == expected_files

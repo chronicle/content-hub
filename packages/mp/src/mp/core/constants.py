@@ -132,6 +132,82 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
     "connectors",
     "lacework",
 }
+
+EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK: set[str] = {
+    "full_contact",
+    "workflow_tools",
+    "docker_hub",
+    "hibob",
+    "google_drive",
+    "vorlon",
+    "aws_ec2",
+    "google_sheets",
+    "stairwell",
+    "microsoft_graph_security_tools",
+    "ipqs_fraud_and_risk_scoring",
+    "telegram",
+    "tools",
+    "lacework",
+    "spell_checker",
+    "data_dog",
+    "superna_zero_trust",
+    "insights",
+    "cybersixgill_darkfeed",
+    "anyrun_ti_lookup",
+    "bitdefender_gravity_zone",
+    "arcanna_ai",
+    "file_utilities",
+    "cybersixgill_dve_feed",
+    "anyrun_ti_feeds",
+    "cybersixgill_dve_enrichment",
+    "pager_duty",
+    "houdin_io",
+    "grey_noise",
+    "cybersixgill_darkfeed_enrichment",
+    "luminar_iocs_and_leaked_credentials",
+    "cylusone",
+    "google_safe_browsing",
+    "imgbb",
+    "netenrich_connect",
+    "eclectic_iq",
+    "nucleon_cyber",
+    "cybersixgill_actionable_alerts",
+    "chronicle_support_tools",
+    "whois_xml_api",
+    "azure_devops",
+    "doppel_vision",
+    "phish_tank",
+    "perimeter_x",
+    "philips_hue",
+    "functions",
+    "abuse_ipdb",
+    "clarotyxdome",
+    "torq",
+    "group_ib_ti",
+    "pulsedive",
+    "git_sync",
+    "lists",
+    "zoom",
+    "flashpoint",
+    "google_docs",
+    "be_secure",
+    "jamf",
+    "asana",
+    "air_table",
+    "country_flags",
+    "duo",
+    "thinkst_canary",
+    "bandura_cyber",
+    "webhook",
+    "vanilla_forums",
+    "anyrun_sandbox",
+    "template_engine",
+    "send_grid",
+    "connectors",
+    "marketo",
+    "enrichment",
+    "email_utilities",
+}
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",
     "Lacework Connector",
@@ -225,11 +301,11 @@ EXCLUDED_PARAM_NAMES_WITH_TOO_MANY_WORDS: set[str] = {
     "Use document ID as ID in Arcanna",
 }
 LONG_DESCRIPTION_MAX_LENGTH: int = 2_200
-SHORT_DESCRIPTION_MAX_LENGTH: int = 400
+SHORT_DESCRIPTION_MAX_LENGTH: int = 2050
 DISPLAY_NAME_MAX_LENGTH: int = 150
 MAX_PARAMETERS_LENGTH: int = 50
-PARAM_NAME_MAX_LENGTH: int = 63
-PARAM_NAME_MAX_WORDS: int = 5
+PARAM_NAME_MAX_LENGTH: int = 150
+PARAM_NAME_MAX_WORDS: int = 7
 MINIMUM_SCRIPT_VERSION: float = 1.0
 # language=regexp
 SCRIPT_DISPLAY_NAME_REGEX: str = (
@@ -310,15 +386,34 @@ PARAM_DISPLAY_NAME_REGEX: str = (
 
 WINDOWS_PLATFORM: str = "win32"
 
+RECONFIGURE_MP_MSG: str = (
+    "Please ensure the content-hub path is properly configured.\n"
+    "You can verify your configuration by running [bold]mp config "
+    "--display-config[/bold].\n"
+    "If the path is incorrect, re-configure it by running [bold]mp config "
+    "--root-path <your_path>[/bold]."
+)
 
 PLAYBOOKS_DIR_NAME: str = "playbooks"
-
+PLAYBOOK_BASE_OUT_DIR_NAME: str = "Playbooks"
+PLAYBOOK_OUT_DIR_NAME: str = "playbook_definitions"
 TRIGGER_FILE_NAME: str = f"trigger{DEF_FILE_SUFFIX}"
 DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
 OVERVIEWS_FILE_NAME: str = "overviews.yaml"
 STEPS_DIR: str = "steps"
-
+PLAYBOOKS_JSON_NAME: str = "playbooks.json"
 
 MAX_STEP_PARALLEL_ACTIONS: int = 5
 CONDITION_FIELD_NAME_MIN_LENGTH: int = 1
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
+HTML_SUFFIX: str = "html"
+
+PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_DIR_NAME, COMMUNITY_DIR_NAME)
+
+
+PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
+    "CategoryName",
+    "OverviewTemplatesDetails",
+    "WidgetTemplates",
+    "Definition",
+}

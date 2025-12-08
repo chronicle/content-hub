@@ -21,6 +21,7 @@ from mp.validate.data_models import ValidationResults, ValidationTypes
 
 from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
+from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
 from .ping_validation import IntegrationHasPingActionValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
@@ -91,6 +92,7 @@ def get_validations() -> list[Validator]:
         NoDisabledComponentsInIntegrationValidation(),
         IntegrationHasPingActionValidation(),
         IntegrationHasMappingRulesIfHasConnectorValidation(),
+        IntegrationHasDocumentationLinkValidation(),
     ]
 
 
