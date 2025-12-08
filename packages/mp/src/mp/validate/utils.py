@@ -18,6 +18,7 @@ import re
 from typing import TYPE_CHECKING, NamedTuple
 
 from mp.core import constants, file_utils
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
 
 if TYPE_CHECKING:
@@ -134,3 +135,56 @@ def extract_name(yaml_content: YamlFileContent) -> ActionName | JobName | Connec
 
     """
     return yaml_content.get(DEF_FILE_NAME_KEY)
+
+
+def validate_ssl_parameter_from_yaml(yaml_content: YamlFileContent) -> str | None:
+    """Filter function to check if a component has a valid SSL parameter or is in excluded list.
+
+    Returns:
+        An error message if the component's ssl parameter is not valid, else None.
+
+    """
+    return _validate_ssl_parameter(yaml_content["name"], yaml_content.get("parameters", []))
+
+
+def _validate_ssl_parameter(
+    script_name: str,
+    parameters: list[YamlFileContent],
+) -> str | None:
+    """Validate the Verify SSL parameter.
+
+    Validates the presence and correctness of a 'Verify SSL' parameter in the provided
+    integration or connector's parameters. Ensures that the parameter exists, is of the
+    correct type, and has the correct default value unless the script is explicitly
+    excluded from verification.
+
+    Args:
+        script_name: The name of the integration or connector script.
+        parameters: collection of parameters associated with the component.
+
+    Returns:
+        An error message if the parameter is invalid, else None.
+
+    """
+    if script_name in constants.EXCLUDED_NAMES_WITHOUT_VERIFY_SSL:
+        return None
+
+    ssl_param: YamlFileContent = next(
+        (p for p in parameters if p["name"] in constants.VALID_SSL_PARAM_NAMES),
+        None,
+    )
+    if ssl_param is None:
+        return f"{script_name} is missing a 'Verify SSL' parameter"
+
+    if ssl_param["type"] != ScriptParamType.BOOLEAN.to_string():
+        return f"The 'verify ssl' parameter in {script_name} must be of type 'boolean'"
+
+    if script_name in constants.EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE:
+        return None
+
+    if not ssl_param["default_value"]:
+        return (
+            f"The default value of the 'Verify SSL' param in {script_name} must be a boolean true"
+        )
+
+    return None
