@@ -21,7 +21,11 @@ import typer
 
 import mp.core.config
 from mp.core.custom_types import RepositoryType  # noqa: TC001
-from mp.core.utils import ensure_valid_list, should_preform_integration_logic, should_preform_playbook_logic
+from mp.core.utils import (
+    ensure_valid_list,
+    should_preform_integration_logic,
+    should_preform_playbook_logic,
+)
 from mp.telemetry import track_command
 from mp.validate.flow.integrations.flow import validate_integrations
 from mp.validate.flow.playbooks.flow import validate_playbooks
