@@ -23,17 +23,18 @@ scripts, definitions, and other related files into designated directories.
 from __future__ import annotations
 
 import dataclasses
-import re
 import shutil
 import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
 
+import libcst as cst
 import rich
 import toml
 
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
+from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR, SDK_MODULES
 import mp.core.utils
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
@@ -58,17 +59,12 @@ if TYPE_CHECKING:
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
 
-SDK_MODULES: set[str] = {
-    "ScriptResult",
-    "Siemplify",
-    "SiemplifyAction",
-    "SiemplifyBase",
-    "SiemplifyConnectors",
-    "SiemplifyConnectorsDataModel",
-    "SiemplifyDataModel",
-    "SiemplifyJob",
-    "SiemplifyUtils",
-}
+SDK_PREFIX = f"{mp.core.constants.SDK_PACKAGE_NAME}."
+
+
+def _create_prefixed_module(full_module_name: str, prefix: str) -> cst.BaseExpression:
+    new_module_name: str = prefix + full_module_name
+    return cst.parse_expression(new_module_name)
 
 
 def _update_pyproject_from_integration_meta(
@@ -86,58 +82,141 @@ def _update_pyproject_from_integration_meta(
     )
 
 
-def transform_imports_content(content: str, manager_names: set[str], out_dir: str) -> str:
-    """Transform import statements in a Python file content.
+class SdkImportTransformer(cst.CSTTransformer):
+    def leave_Module(self, original_node: cst.Module, updated_node: cst.Module) -> cst.Module:  # noqa: N802, PLR6301
+        """Ensure `from __future__ import annotations` is present at the top of the module.
 
-    Args:
-        content: The content of the python file.
-        manager_names: A set of manager names.
-        out_dir: The output directory of the script.
+        Returns:
+            The updated module with `from __future__ import annotations` at the top.
+
+        """
+        if not original_node.body:
+            return updated_node
+        import_annotations: cst.SimpleStatementLine = cst.parse_statement(
+            "from __future__ import annotations"
+        )
+        new_body: list[cst.SimpleStatementLine] = [
+            import_annotations,
+            cst.EmptyLine(),
+            *updated_node.body,
+        ]
+        return updated_node.with_changes(body=new_body)
+
+    def leave_ImportFrom(  # noqa: N802, PLR6301
+        self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+    ) -> cst.ImportFrom:
+        """Transform `from <module> import ...` statements for SDK modules.
+
+        Returns:
+            The updated `ImportFrom` node with SDK modules prefixed.
+
+        """
+        full_module_name: str = cst.helpers.get_full_name_for_node(original_node.module)
+        if not full_module_name:
+            return updated_node
+
+        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
+
+        if first_module_part in SDK_MODULES and not full_module_name.startswith(SDK_PREFIX):
+            prefixed_module: cst.BaseExpression = _create_prefixed_module(
+                full_module_name, SDK_PREFIX
+            )
+            return updated_node.with_changes(module=prefixed_module)
+
+        return updated_node
+
+    def leave_Import(self, original_node: cst.Import, updated_node: cst.Import) -> cst.Import:  # noqa: N802, PLR6301
+        """Transform `import <module>` statements for SDK modules.
+
+        Returns:
+            The updated `Import` node with SDK modules prefixed.
+
+        """
+        full_module_name: str = cst.helpers.get_full_name_for_node(original_node.names[0].name)
+        if not full_module_name:
+            return updated_node
+
+        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
+
+        if first_module_part in SDK_MODULES and not full_module_name.startswith(SDK_PREFIX):
+            prefixed_module: cst.BaseExpression = _create_prefixed_module(
+                full_module_name, SDK_PREFIX
+            )
+            return updated_node.with_changes(names=[cst.ImportAlias(name=prefixed_module)])
+
+        return updated_node
+
+
+class ManagerImportTransformer(cst.CSTTransformer):
+    def __init__(self, manager_names: set[str]) -> None:
+        self.manager_names: set[str] = manager_names
+
+    def leave_ImportFrom(  # noqa: N802
+        self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+    ) -> cst.ImportFrom:
+        """Transform `from <module> import ...` statements for manager modules.
+
+        Returns:
+            The updated `ImportFrom` node with manager modules transformed to relative imports.
+
+        """
+        if original_node.relative:
+            return updated_node
+
+        full_module_name: str = cst.helpers.get_full_name_for_node(original_node.module)
+        if not full_module_name:
+            return updated_node
+
+        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
+
+        if first_module_part in self.manager_names:
+            prefixed_module: cst.BaseExpression = _create_prefixed_module(full_module_name, "core.")
+            return updated_node.with_changes(
+                module=prefixed_module, relative=(cst.Dot(), cst.Dot())
+            )
+
+        return updated_node
+
+    def leave_Import(  # noqa: N802
+        self, original_node: cst.Import, updated_node: cst.Import
+    ) -> cst.ImportFrom | cst.Import:
+        """Transform `import <module>` statements for manager modules.
+
+        Returns:
+            The updated `Import` or a new `ImportFrom` node for manager modules.
+
+        """
+        full_module_name: str = cst.helpers.get_full_name_for_node(original_node.names[0].name)
+        if not full_module_name:
+            return updated_node
+
+        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
+
+        if first_module_part in self.manager_names:
+            return cst.ImportFrom(
+                module=cst.Name(value="core"),
+                names=[cst.ImportAlias(name=cst.Name(value=first_module_part))],
+                relative=(cst.Dot(), cst.Dot()),
+            )
+
+        return updated_node
+
+
+def apply_transformers(content: str, transformers: list[cst.CSTTransformer]) -> str:
+    """Parse code once and apply a list of transformers sequentially.
 
     Returns:
-        The transformed content.
+        The transformed code as a string, or the original content if a syntax error occurs.
 
     """
-    if "from __future__ import annotations" not in content and re.search(
-        r"^(import|from)\s", content, re.MULTILINE
-    ):
-        content = f"from __future__ import annotations\n\n{content}"
-
-    # Apply 'soar_sdk.' prefix for SDK modules
-    for module in SDK_MODULES:
-        # Matches 'from <module> import ...' or 'import <module>'
-        content = re.sub(
-            rf"^(from\s+)(?!soar_sdk\.)({module})\b",
-            r"from soar_sdk.\2",
-            content,
-            flags=re.MULTILINE,
-        )
-        content = re.sub(
-            rf"^(import\s+)(?!soar_sdk\.)({module})\b",
-            r"import soar_sdk.\2",
-            content,
-            flags=re.MULTILINE,
-        )
-
-    # Apply relative '..core' prefix for manager imports in non-core scripts
-    if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
-        for manager in manager_names:
-            # Matches 'from <manager> import ...'
-            content = re.sub(
-                rf"^(from\s+)(?!\.\.core\.)({manager})\b",
-                r"from ..core.\2",
-                content,
-                flags=re.MULTILINE,
-            )
-            # Matches 'import <manager>'
-            content = re.sub(
-                rf"^(import\s+)({manager})\b",
-                r"from ..core import \2",
-                content,
-                flags=re.MULTILINE,
-            )
-
-    return content
+    try:
+        tree = cst.parse_module(content)
+        for transformer in transformers:
+            tree = tree.visit(transformer)
+    except cst.ParserSyntaxError:
+        return content
+    else:
+        return tree.code
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -148,10 +227,8 @@ class DeconstructIntegration:
 
     @property
     def manager_names(self) -> set[str]:
-        """Extracts the names of manager modules from the built integration path."""
+        """Extract the names of manager modules from the built integration path."""
         managers_path = self.path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
-        if not managers_path.exists():
-            return set()
         return {f.stem for f in managers_path.glob("*.py") if f.stem != "__init__"}
 
     def initiate_project(self) -> None:
@@ -311,10 +388,13 @@ class DeconstructIntegration:
         if file_path.suffix != ".py":
             return
 
+        transformers: list[cst.CSTTransformer] = [SdkImportTransformer()]
+
+        if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
+            transformers.append(ManagerImportTransformer(self.manager_names))
+
         original_content: str = file_path.read_text(encoding="utf-8")
-        transformed_content: str = transform_imports_content(
-            original_content, self.manager_names, out_dir
-        )
+        transformed_content: str = apply_transformers(original_content, transformers)
         file_path.write_text(transformed_content, encoding="utf-8")
 
     def _create_scripts_dir(

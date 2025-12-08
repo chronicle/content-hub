@@ -24,12 +24,16 @@ import mp.build_project.integrations_repo
 import mp.core.constants
 import test_mp.common
 from mp.build_project.restructure.integrations.deconstruct import (
-    transform_imports_content,
+    ManagerImportTransformer,
+    SdkImportTransformer,
+    apply_transformers,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+    import libcst
 
     from mp.build_project.integrations_repo import IntegrationsRepo
 
@@ -137,64 +141,66 @@ def assert_deconstruct_integration(
 
 
 @pytest.mark.parametrize(
-    ("initial_content", "expected_content", "manager_names", "out_dir"),
+    ("test_name", "initial_content", "expected_content", "transformers"),
     [
         (
-            "import SiemplifyAction\n\nclass MyAction(SiemplifyAction): ...",
-            "from __future__ import annotations\n\nimport soar_sdk.SiemplifyAction\n\nclass "
-            r"MyAction(SiemplifyAction): ...",
-            set(),
-            mp.core.constants.ACTIONS_DIR,
+            "sdk_import",
+            "import SiemplifyAction",
+            "from __future__ import annotations\n\nimport soar_sdk.SiemplifyAction",
+            [SdkImportTransformer()],
         ),
         (
-            "from SiemplifyUtils import output_handler\n\n@output_handler\ndef main(): ...",
-            "from __future__ import annotations\n\nfrom soar_sdk.SiemplifyUtils import"
-            " output_handler\n\n@output_handler\ndef main(): ...",
-            set(),
-            mp.core.constants.ACTIONS_DIR,
+            "sdk_from_import",
+            "from SiemplifyUtils import output_handler",
+            "from __future__ import annotations\n\nfrom soar_sdk.SiemplifyUtils import "
+            "output_handler",
+            [SdkImportTransformer()],
         ),
         (
-            "import manager\n\nclass MyAction(SiemplifyAction): ...",
-            "from __future__ import annotations\n\nfrom ..core import manager\n\nclass "
-            "MyAction(SiemplifyAction): ...",
-            {"manager"},
-            mp.core.constants.ACTIONS_DIR,
+            "manager_import",
+            "import manager",
+            "from ..core import manager",
+            [ManagerImportTransformer({"manager"})],
         ),
         (
-            "from manager import some_func\n\nclass MyAction(SiemplifyAction): ...",
-            "from __future__ import annotations\n\nfrom ..core.manager import some_func\n\n"
-            "class MyAction(SiemplifyAction): ...",
-            {"manager"},
-            mp.core.constants.ACTIONS_DIR,
+            "manager_from_import",
+            "from manager import some_func",
+            "from ..core.manager import some_func",
+            [ManagerImportTransformer({"manager"})],
         ),
         (
-            "import manager\n\nclass MyAction(SiemplifyAction): ...",
-            "from __future__ import annotations\n\nimport manager\n\nclass "
-            "MyAction(SiemplifyAction): ...",
-            {"manager"},
-            mp.core.constants.CORE_SCRIPTS_DIR,
+            "sdk_and_manager_imports",
+            "import manager\nimport SiemplifyAction",
+            "from __future__ import annotations\n\nfrom ..core import manager\nimport "
+            "soar_sdk.SiemplifyAction",
+            [SdkImportTransformer(), ManagerImportTransformer({"manager"})],
         ),
         (
-            "import other_module\n\nclass MyAction(SiemplifyAction): ...",
-            "from __future__ import annotations\n\nimport other_module\n\nclass "
-            "MyAction(SiemplifyAction): ...",
-            set(),
-            mp.core.constants.ACTIONS_DIR,
+            "unrelated_import",
+            "import other_module",
+            "from __future__ import annotations\n\nimport other_module",
+            [SdkImportTransformer(), ManagerImportTransformer(set())],
         ),
         (
+            "no_imports",
             "print('hello world')",
-            "print('hello world')",
-            set(),
-            mp.core.constants.ACTIONS_DIR,
+            "from __future__ import annotations\n\nprint('hello world')",
+            [SdkImportTransformer()],
+        ),
+        (
+            "empty_file",
+            "",
+            "",
+            [SdkImportTransformer(), ManagerImportTransformer({"manager"})],
         ),
     ],
 )
-def test_transform_imports_content(
+def test_apply_transformers(
+    test_name: str,
     initial_content: str,
     expected_content: str,
-    manager_names: set[str],
-    out_dir: str,
+    transformers: list[libcst.CSTTransformer],
 ) -> None:
-    """Verify that `transform_imports_content` correctly modifies file content."""
-    transformed_content = transform_imports_content(initial_content, manager_names, out_dir)
+    """Verify that `apply_transformers` correctly modifies file content."""
+    transformed_content = apply_transformers(initial_content, transformers)
     assert transformed_content == expected_content
