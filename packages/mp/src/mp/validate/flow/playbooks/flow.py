@@ -18,7 +18,6 @@ import multiprocessing
 from typing import TYPE_CHECKING
 
 import mp.core.config
-import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
 from mp.core.custom_types import RepositoryType
