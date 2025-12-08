@@ -52,7 +52,7 @@ def restructure_integration(
 
     """
     rich.print(f"Restructuring {integration_metadata['metadata']['Identifier']}")
-    if mp.core.file_utils.is_non_built(integration_path):
+    if mp.core.file_utils.is_non_built_integration(integration_path):
         rich.print("Restructuring metadata")
         metadata.Metadata(integration_out_path, integration_metadata).restructure()
 

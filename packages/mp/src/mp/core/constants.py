@@ -37,7 +37,7 @@ INTEGRATIONS_TYPES: tuple[str, ...] = (
     COMMERCIAL_DIR_NAME,
     POWERUPS_DIR_NAME,
 )
-OUT_INTEGRATIONS_DIR_NAME: str = "integrations"
+OUT_INTEGRATIONS_DIR_NAME: str = "response_integrations"
 OUT_DIR_NAME: str = "out"
 REQUIREMENTS_FILE: str = "requirements.txt"
 INTEGRATION_DEF_FILE: str = "Integration-{0}.def"
@@ -86,6 +86,10 @@ RELEASE_NOTES_FILE: str = f"release_notes{DEF_FILE_SUFFIX}"
 IMAGE_FILE: str = f"image{IMAGE_FILE_SUFFIX}"
 LOGO_FILE: str = f"logo{SVG_FILE_SUFFIX}"
 SDK_PACKAGE_NAME: str = "soar_sdk"
+TRIGGERS_FILE_NAME: str = f"triggers{DEF_FILE_SUFFIX}"
+DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
+OVERVIEWS_FILE_NAME: str = "overviews.yaml"
+STEPS_DIR: str = "steps"
 
 SAFE_TO_IGNORE_PACKAGES: tuple[str, ...] = ("win-unicode-console",)
 SAFE_TO_IGNORE_ERROR_MESSAGES: tuple[str, ...] = (
@@ -208,8 +212,41 @@ EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK: set[str] = {
     "enrichment",
     "email_utilities",
 }
+EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK: set[str] = {
+    "Vectra RUX - Entities Connector",
+    "Lacework Connector",
+    "Cybersixgill - DVE Connector",
+    "EclecticIQ - Feed Connector",
+    "Thinkst - Alert Connector",
+    "Cybersixgill - Darkfeed Connector",
+    "Pull reports",
+    "Cybersixgill Actionable Alerts",
+    "LOGZIO fetch-security-events",
+    "Sheet Connector",
+    "Generate Alert from GreyNoise GNQL",
+    "DUO - Trust Monitor Connector",
+    "Slack Connector For Code Defender",
+    "Luminar IOCs and Leaked Credentials  Connector",
+    "TI IoC Hash Connector",
+    "TI IoC IP Connector",
+    "Telegram Connector",
+    "Infoblox - DNS Security Events Connector",
+    "Infoblox - SOC Insights Connector",
+    "DataDog Connector",
+    "PagerDutyConnector",
+    "AirTable Connector",
+    "Flashpoint - Compromised Credential Connector",
+    "Sample Integration - Simple Connector Example",
+    "MS365 MFA Alert",
+    "MS SecureScore Alert",
+    "Vorlon Connector",
+    "Vectra QUX - Entities Connector",
+    "Cron Scheduled Connector",
+    "Scheduled Connector",
+}
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",
+    "Darktrace",
     "Lacework Connector",
     "PagerDuty",
     "PagerDutyConnector",
@@ -234,6 +271,17 @@ EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Azure DevOps",
     "Asana",
     "Full Contact",
+    "Functions",
+    "Lists",
+    "CountryFlags",
+    "TemplateEngine",
+    "ChronicleSupportTools",
+    "Tools",
+    "Spell Checker",
+    "Lacework",
+    "Insights",
+    "Connectors",
+    "EmailUtilities",
     "DataDog",
     "DataDog Connector",
     "Logzio",
@@ -386,15 +434,34 @@ PARAM_DISPLAY_NAME_REGEX: str = (
 
 WINDOWS_PLATFORM: str = "win32"
 
+RECONFIGURE_MP_MSG: str = (
+    "Please ensure the content-hub path is properly configured.\n"
+    "You can verify your configuration by running [bold]mp config "
+    "--display-config[/bold].\n"
+    "If the path is incorrect, re-configure it by running [bold]mp config "
+    "--root-path <your_path>[/bold]."
+)
 
 PLAYBOOKS_DIR_NAME: str = "playbooks"
-
+PLAYBOOK_BASE_OUT_DIR_NAME: str = "Playbooks"
+PLAYBOOK_OUT_DIR_NAME: str = "playbook_definitions"
 TRIGGER_FILE_NAME: str = f"trigger{DEF_FILE_SUFFIX}"
 DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
 OVERVIEWS_FILE_NAME: str = "overviews.yaml"
 STEPS_DIR: str = "steps"
-
+PLAYBOOKS_JSON_NAME: str = "playbooks.json"
 
 MAX_STEP_PARALLEL_ACTIONS: int = 5
 CONDITION_FIELD_NAME_MIN_LENGTH: int = 1
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
+HTML_SUFFIX: str = "html"
+
+PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_DIR_NAME, COMMUNITY_DIR_NAME)
+
+
+PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
+    "CategoryName",
+    "OverviewTemplatesDetails",
+    "WidgetTemplates",
+    "Definition",
+}
