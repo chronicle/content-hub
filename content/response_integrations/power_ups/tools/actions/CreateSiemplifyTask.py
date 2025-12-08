@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Never
+from typing import TYPE_CHECKING
 
 from dateutil.parser import parse
 from TIPCommon.base.action import Action
@@ -27,17 +27,17 @@ from ..core.ToolsCommon import (
 )
 
 if TYPE_CHECKING:
-    from typing import NoReturn
+    from typing import Never, NoReturn
 
-X5_TASK_URL = "{}/external/v1/cases/AddOrUpdateCaseTask"
-X6_TASK_URL = "{}/external/v1/sdk/AddOrUpdateCaseTask"
-ACTION_NAME = "CreateNewTask"
-CREATE_TASK_SIEMPLIFY_5X_VERSION = "5.0.0.0"
-CREATE_TASK_SIEMPLIFY_6X_VERSION = "6.0.0.0"
+X5_TASK_URL: str = "{}/external/v1/cases/AddOrUpdateCaseTask"
+X6_TASK_URL: str = "{}/external/v1/sdk/AddOrUpdateCaseTask"
+ACTION_NAME: str = "CreateNewTask"
+CREATE_TASK_SIEMPLIFY_5X_VERSION: str = "5.0.0.0"
+CREATE_TASK_SIEMPLIFY_6X_VERSION: str = "6.0.0.0"
 
 
 class CreateSiemplifyTaskAction(Action):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(ACTION_NAME)
 
     def _extract_action_parameters(self) -> None:
@@ -82,11 +82,10 @@ class CreateSiemplifyTaskAction(Action):
         """Initialize API clients if required (placeholder)."""
 
     def _perform_action(self, __: Never) -> None:
-        client_time = self._compute_due_time()
-
+        client_time: int = self._compute_due_time()
         self._create_task(client_time)
 
-        due_date_info = (
+        due_date_info: str = (
             f"by {self.params.due_date}"
             if self.params.due_date
             else f"in the next {self.params.duration} minutes"
@@ -101,7 +100,8 @@ class CreateSiemplifyTaskAction(Action):
         """Return due time in epoch millis based on given parameters."""
         if self.params.due_date:
             return int(parse(self.params.due_date).timestamp() * 1000)
-        minutes = int(self.params.duration)
+
+        minutes: int = int(self.params.duration)
         return int(time.time() * 1000) + minutes * 60 * 1000
 
     def _create_task(self, client_time: int) -> None:
