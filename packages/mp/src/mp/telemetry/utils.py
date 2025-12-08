@@ -22,7 +22,7 @@ from mp.core.utils import get_current_platform
 from mp.telemetry.constants import CONFIG_FILE_PATH, MP_CACHE_DIR, ConfigYaml
 
 
-def create_and_load_config_yaml() -> ConfigYaml:
+def get_or_create_config_yaml() -> ConfigYaml:
     """Load the configuration from the config YAML file.
 
     If the config file doesn't exist, it will be created with default values.
@@ -58,7 +58,7 @@ def _save_config_yaml(config_yaml: ConfigYaml) -> None:
         pass
 
 
-def check_and_fix_missing_values(config_yaml: ConfigYaml) -> ConfigYaml:
+def fix_missing_keys_and_save_if_fixed(config_yaml: ConfigYaml) -> ConfigYaml:
     """Check the configuration and fix missing values in the config YAML.
 
     Args:

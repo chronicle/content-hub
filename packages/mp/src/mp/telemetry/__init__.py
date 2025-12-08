@@ -20,6 +20,7 @@ import json
 import sys
 import time
 import traceback
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -39,14 +40,23 @@ from mp.telemetry.constants import (
 )
 from mp.telemetry.data_models import TelemetryPayload
 from mp.telemetry.utils import (
-    check_and_fix_missing_values,
-    create_and_load_config_yaml,
+    fix_missing_keys_and_save_if_fixed,
     get_install_id,
+    get_or_create_config_yaml,
     is_report_enabled,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+@dataclass(frozen=False)
+class TrackCommandVars:
+    start_time: float = time.monotonic()
+    error: Exception | None = None
+    exit_code: int = 0
+    unexpected_exit: bool = False
+    stack: str | None = None
 
 
 def track_command(mp_command_function: Callable) -> Callable:
@@ -62,30 +72,26 @@ def track_command(mp_command_function: Callable) -> Callable:
 
     @functools.wraps(mp_command_function)
     def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401
-        config_yaml: ConfigYaml = create_and_load_config_yaml()
-        config_yaml = check_and_fix_missing_values(config_yaml)
+        config_yaml: ConfigYaml = get_or_create_config_yaml()
+        config_yaml = fix_missing_keys_and_save_if_fixed(config_yaml)
         if is_ci_cd() or not is_report_enabled(config_yaml):
             return mp_command_function(*args, **kwargs)
 
-        start_time: float = time.monotonic()
-        error: Exception | None = None
-        exit_code: int = 0
-        unexpected_exit: bool = False
-        stack: str | None = None
+        command_vars: TrackCommandVars = TrackCommandVars()
 
         try:
             mp_command_function(*args, **kwargs)
         except typer.Exit as e:
-            exit_code = e.exit_code
+            command_vars.exit_code = e.exit_code
         except Exception as e:  # noqa: BLE001
-            unexpected_exit = True
+            command_vars.unexpected_exit = True
             raw_stack = traceback.format_exc()
-            stack: str = _sanitize_traceback(raw_stack)
-            error = e
-            exit_code = 1
+            command_vars.stack = _sanitize_traceback(raw_stack)
+            command_vars.error = e
+            command_vars.exit_code = 1
         finally:
             end_time: float = time.monotonic()
-            duration_ms: int = int((end_time - start_time) * 1000)
+            duration_ms: int = int((end_time - command_vars.start_time) * 1000)
 
             platform_name, platform_version = get_current_platform()
 
@@ -102,19 +108,19 @@ def track_command(mp_command_function: Callable) -> Callable:
                 command=_determine_command_name(mp_command_function.__name__, **kwargs),
                 command_args=command_args_str,
                 duration_ms=duration_ms,
-                success=bool(not unexpected_exit),
-                exit_code=exit_code,
-                error_type=type(error).__name__ if error else None,
-                stack=stack,
+                success=bool(not command_vars.unexpected_exit),
+                exit_code=command_vars.exit_code,
+                error_type=type(command_vars.error).__name__ if command_vars.error else None,
+                stack=command_vars.stack,
                 timestamp=datetime.now(UTC),
             )
 
             send_telemetry_report(payload)
 
-            if error:
-                raise error
-            if exit_code != 0:
-                raise typer.Exit(code=exit_code)
+            if command_vars.error:
+                raise command_vars.error
+            if command_vars.exit_code != 0:
+                raise typer.Exit(code=command_vars.exit_code)
 
     return wrapper
 
