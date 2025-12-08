@@ -22,7 +22,7 @@ from mp.core.utils import get_current_platform
 from mp.telemetry.constants import CONFIG_FILE_PATH, MP_CACHE_DIR, ConfigYaml
 
 
-def load_config_yaml() -> ConfigYaml:
+def create_and_load_config_yaml() -> ConfigYaml:
     """Load the configuration from the config YAML file.
 
     If the config file doesn't exist, it will be created with default values.
@@ -38,7 +38,7 @@ def load_config_yaml() -> ConfigYaml:
         return config_yaml
 
     try:
-        with Path.open(CONFIG_FILE_PATH) as f:
+        with CONFIG_FILE_PATH.open(encoding="utf-8") as f:
             config_yaml = yaml.safe_load(f) or {}
 
     except (yaml.YAMLError, OSError):
@@ -46,19 +46,28 @@ def load_config_yaml() -> ConfigYaml:
         _save_config_yaml(config_yaml)
         return config_yaml
 
-    return _check_missing_values(config_yaml)
+    return config_yaml
 
 
 def _save_config_yaml(config_yaml: ConfigYaml) -> None:
     try:
-        Path(MP_CACHE_DIR).mkdir(parents=True, exist_ok=True)
-        with Path.open(CONFIG_FILE_PATH, "w") as f:
+        MP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with CONFIG_FILE_PATH.open("w", encoding="utf-8") as f:
             yaml.safe_dump(config_yaml, f)
     except OSError:
         pass
 
 
-def _check_missing_values(config_yaml: ConfigYaml) -> ConfigYaml:
+def check_and_fix_missing_values(config_yaml: ConfigYaml) -> ConfigYaml:
+    """Check the configuration and fix missing values in the config YAML.
+
+    Args:
+        config_yaml: The configuration to check.
+
+    Returns:
+        The updated configuration.
+
+    """
     if "uuid4" not in config_yaml:
         new_config: ConfigYaml = _create_config_yaml()
         _save_config_yaml(new_config)
@@ -87,7 +96,9 @@ def _create_config_yaml() -> ConfigYaml:
     base_dir: Path = Path("~").expanduser()
     platform_name = get_current_platform()[0]
     unique_id: str = str(uuid.uuid4())
-    hashed_id: str = hashlib.sha256(f"{base_dir}{platform_name}{unique_id}".encode()).hexdigest()
+    hashed_id: str = hashlib.sha256(
+        f"{base_dir}{platform_name}{unique_id}".encode(), usedforsecurity=False
+    ).hexdigest()
     return ConfigYaml(
         install_id=hashed_id,
         uuid4=unique_id,

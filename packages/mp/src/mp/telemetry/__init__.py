@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 import typer
 
+from mp.core.custom_types import RepositoryType
 from mp.core.utils import get_current_platform, is_ci_cd
 from mp.telemetry.constants import (
     ALLOWED_COMMAND_ARGUMENTS,
@@ -36,14 +37,13 @@ from mp.telemetry.constants import (
     REQUEST_TIMEOUT,
     ConfigYaml,
 )
-from mp.telemetry.constants import (
-    CONFIG_FILE_PATH as CONFIG_FILE_PATH,
-)
-from mp.telemetry.constants import (
-    MP_CACHE_DIR as MP_CACHE_DIR,
-)
 from mp.telemetry.data_models import TelemetryPayload
-from mp.telemetry.utils import get_install_id, is_report_enabled, load_config_yaml
+from mp.telemetry.utils import (
+    check_and_fix_missing_values,
+    create_and_load_config_yaml,
+    get_install_id,
+    is_report_enabled,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -62,7 +62,8 @@ def track_command(mp_command_function: Callable) -> Callable:
 
     @functools.wraps(mp_command_function)
     def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401, PLR0914
-        config_yaml: ConfigYaml = load_config_yaml()
+        config_yaml: ConfigYaml = create_and_load_config_yaml()
+        config_yaml = check_and_fix_missing_values(config_yaml)
         if is_ci_cd() or not is_report_enabled(config_yaml):
             return mp_command_function(*args, **kwargs)
 
@@ -162,8 +163,8 @@ def _sanitize_argument_value(value: Enum | list[Any] | tuple[Any] | Any) -> Any:
 
 
 def _sanitize_traceback(raw_stack: str) -> str:
-    home = Path("~").expanduser()
-    return raw_stack.replace(home, "<HOME>")
+    home: Path = Path("~").expanduser()
+    return raw_stack.replace(str(home), "<HOME>")
 
 
 def _determine_command_name(command: str, **kwargs: dict[str, Any]) -> str:
@@ -172,14 +173,18 @@ def _determine_command_name(command: str, **kwargs: dict[str, Any]) -> str:
     if command not in {"build", "validate"}:
         return command
 
-    repo_values = {r.value for r in kwargs.get("repositories", [])}
+    repo_values: set[str] = {r.value for r in kwargs.get("repositories", [])}
     has_integrations = bool(kwargs.get("integrations"))
     has_playbooks = bool(kwargs.get("playbooks"))
 
-    if has_integrations or "third_party" in repo_values or "commercial" in repo_values:
+    if (
+        has_integrations
+        or RepositoryType.COMMUNITY.value in repo_values
+        or RepositoryType.COMMERCIAL.value in repo_values
+    ):
         return f"{command} integrations"
 
-    if has_playbooks or "playbooks" in repo_values:
+    if has_playbooks or RepositoryType.PLAYBOOKS.value in repo_values:
         return f"{command} playbooks"
 
     return command
