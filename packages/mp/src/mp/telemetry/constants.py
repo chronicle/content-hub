@@ -14,16 +14,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from pathlib import Path
-from platformdirs import user_cache_dir
 from typing import TypedDict
 
 from platformdirs import user_config_dir
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 ENDPOINT: str = "https://34-36-216-242.sslip.io/v1/ingest"
 REQUEST_TIMEOUT: int = 3
@@ -45,14 +39,17 @@ NAME_MAPPER: dict[str, str] = {
     "run_pre_build_tests": "test",
     "format_files": "format",
     "login": "dev-env login",
-    "deploy": "dev-env deploy",
+    "deploy": "dev-env push",
     "push": "dev-env push",
     "build": "build",
 }
 
 ALLOWED_COMMAND_ARGUMENTS: set[str] = {
-    "repository",
+    "repositories",
+    "integrations",
     "integration",
+    "playbooks",
+    "playbook",
     "group",
     "only_pre_build",
     "quiet",
@@ -60,4 +57,7 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "raise_error_on_violations",
     "deconstruct",
     "changed_files",
+    "-r",
+    "-i",
+    "-p",
 }

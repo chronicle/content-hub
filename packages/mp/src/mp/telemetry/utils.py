@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import uuid
-import yaml
 import hashlib
-
+import uuid
 from pathlib import Path
-from mp.telemetry.constants import ConfigYaml, CONFIG_FILE_PATH, MP_CACHE_DIR
+
+import yaml
+
 from mp.core.utils import get_current_platform
+from mp.telemetry.constants import CONFIG_FILE_PATH, MP_CACHE_DIR, ConfigYaml
 
 
 def load_config_yaml() -> ConfigYaml:
@@ -32,7 +32,6 @@ def load_config_yaml() -> ConfigYaml:
         ConfigYaml: The loaded or newly created configuration.
 
     """
-    config: ConfigYaml
     if not CONFIG_FILE_PATH.exists():
         config_yaml: ConfigYaml = _create_config_yaml()
         _save_config_yaml(config_yaml)
@@ -61,7 +60,9 @@ def _save_config_yaml(config_yaml: ConfigYaml) -> None:
 
 def _check_missing_values(config_yaml: ConfigYaml) -> ConfigYaml:
     if "uuid4" not in config_yaml:
-        return _create_config_yaml()
+        new_config: ConfigYaml = _create_config_yaml()
+        _save_config_yaml(new_config)
+        return new_config
 
     made_changes: bool = False
     if "report" not in config_yaml:
@@ -69,8 +70,10 @@ def _check_missing_values(config_yaml: ConfigYaml) -> ConfigYaml:
         made_changes = True
 
     if "install_id" not in config_yaml:
-        config_yaml["install_id"] = hashlib.md5(
-            (os.path.expanduser("~") + get_current_platform()[0] + config_yaml["uuid4"]).encode()
+        base_dir: Path = Path("~").expanduser()
+        platform_name = get_current_platform()[0]
+        config_yaml["install_id"] = hashlib.sha256(
+            f"{base_dir}{platform_name}{config_yaml['uuid4']}".encode()
         ).hexdigest()
         made_changes = True
 
@@ -81,10 +84,10 @@ def _check_missing_values(config_yaml: ConfigYaml) -> ConfigYaml:
 
 
 def _create_config_yaml() -> ConfigYaml:
-    base_dir: str = os.path.expanduser("~")
+    base_dir: Path = Path("~").expanduser()
     platform_name = get_current_platform()[0]
     unique_id: str = str(uuid.uuid4())
-    hashed_id: str = hashlib.md5((base_dir + platform_name + unique_id).encode()).hexdigest()
+    hashed_id: str = hashlib.sha256(f"{base_dir}{platform_name}{unique_id}".encode()).hexdigest()
     return ConfigYaml(
         install_id=hashed_id,
         uuid4=unique_id,

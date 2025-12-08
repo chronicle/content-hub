@@ -22,25 +22,28 @@ import time
 import traceback
 from datetime import UTC, datetime
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
-import os
+
 import requests
 import typer
 
 from mp.core.utils import get_current_platform, is_ci_cd
-
 from mp.telemetry.constants import (
     ALLOWED_COMMAND_ARGUMENTS,
-    CONFIG_FILE_PATH,
     ENDPOINT,
-    MP_CACHE_DIR,
     NAME_MAPPER,
     REQUEST_TIMEOUT,
     ConfigYaml,
 )
+from mp.telemetry.constants import (
+    CONFIG_FILE_PATH as CONFIG_FILE_PATH,
+)
+from mp.telemetry.constants import (
+    MP_CACHE_DIR as MP_CACHE_DIR,
+)
 from mp.telemetry.data_models import TelemetryPayload
-from mp.telemetry.utils import load_config_yaml, is_report_enabled, get_install_id
-
+from mp.telemetry.utils import get_install_id, is_report_enabled, load_config_yaml
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -58,7 +61,7 @@ def track_command(mp_command_function: Callable) -> Callable:
     """
 
     @functools.wraps(mp_command_function)
-    def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+    def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401, PLR0914
         config_yaml: ConfigYaml = load_config_yaml()
         if is_ci_cd() or not is_report_enabled(config_yaml):
             return mp_command_function(*args, **kwargs)
@@ -97,7 +100,7 @@ def track_command(mp_command_function: Callable) -> Callable:
                 python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
                 platform=platform_name,
                 platform_version=platform_version,
-                command=_command_name_mapper(mp_command_function.__name__),
+                command=_determine_command_name(mp_command_function.__name__, **kwargs),
                 command_args=command_args_str,
                 duration_ms=duration_ms,
                 success=bool(not unexpected_exit),
@@ -134,10 +137,6 @@ def send_telemetry_report(event_payload: TelemetryPayload) -> None:
         pass
 
 
-def _command_name_mapper(command_name: str) -> str:
-    return NAME_MAPPER[command_name]
-
-
 def _filter_command_arguments(kwargs: dict[Any, Any]) -> dict[str, Any]:
     sanitized_args = {}
     for key, value in kwargs.items():
@@ -163,6 +162,24 @@ def _sanitize_argument_value(value: Enum | list[Any] | tuple[Any] | Any) -> Any:
 
 
 def _sanitize_traceback(raw_stack: str) -> str:
-    home = os.path.expanduser("~")
-    sanitized = raw_stack.replace(home, "<HOME>")
-    return sanitized
+    home = Path("~").expanduser()
+    return raw_stack.replace(home, "<HOME>")
+
+
+def _determine_command_name(command: str, **kwargs: dict[str, Any]) -> str:
+    command = NAME_MAPPER[command]
+
+    if command not in {"build", "validate"}:
+        return command
+
+    repo_values = {r.value for r in kwargs.get("repositories", [])}
+    has_integrations = bool(kwargs.get("integrations"))
+    has_playbooks = bool(kwargs.get("playbooks"))
+
+    if has_integrations or "third_party" in repo_values or "commercial" in repo_values:
+        return f"{command} integrations"
+
+    if has_playbooks or "playbooks" in repo_values:
+        return f"{command} playbooks"
+
+    return command
