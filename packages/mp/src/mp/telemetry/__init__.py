@@ -61,7 +61,7 @@ def track_command(mp_command_function: Callable) -> Callable:
     """
 
     @functools.wraps(mp_command_function)
-    def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401, PLR0914
+    def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         config_yaml: ConfigYaml = create_and_load_config_yaml()
         config_yaml = check_and_fix_missing_values(config_yaml)
         if is_ci_cd() or not is_report_enabled(config_yaml):
@@ -87,17 +87,15 @@ def track_command(mp_command_function: Callable) -> Callable:
             end_time: float = time.monotonic()
             duration_ms: int = int((end_time - start_time) * 1000)
 
-            tool_version: str = importlib.metadata.version("mp")
             platform_name, platform_version = get_current_platform()
 
-            error_type = type(error).__name__ if error else None
             safe_args: dict[str, Any] = _filter_command_arguments(kwargs)
             command_args_str: str = json.dumps(safe_args) if safe_args else None
 
             payload = TelemetryPayload(
                 install_id=get_install_id(config_yaml),
                 tool="mp",
-                tool_version=tool_version,
+                tool_version=importlib.metadata.version("mp"),
                 python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
                 platform=platform_name,
                 platform_version=platform_version,
@@ -106,7 +104,7 @@ def track_command(mp_command_function: Callable) -> Callable:
                 duration_ms=duration_ms,
                 success=bool(not unexpected_exit),
                 exit_code=exit_code,
-                error_type=error_type,
+                error_type=type(error).__name__ if error else None,
                 stack=stack,
                 timestamp=datetime.now(UTC),
             )
