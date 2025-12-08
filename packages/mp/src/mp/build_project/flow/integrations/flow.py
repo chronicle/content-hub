@@ -31,19 +31,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def should_build_integrations(
-    integrations: Iterable[str],
-    repos: Iterable[RepositoryType],
-) -> bool:
-    """Decide if needed to build integrations or not.
-
-    Returns:
-        True if yes overwise False
-
-    """
-    return integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
-
-
 def build_integrations(
     integrations: Iterable[str],
     integration_groups: Iterable[str],

@@ -11,28 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from mp.validate.data_models import Validator
-
-
-def get_playbooks_pre_build_validations() -> list[Validator]:
-    """Get a list of all available pre-build validations.
-
-    Returns:
-        A list of all `Validator` instances.
-
-    """
-    return _get_non_priority_validations() + _get_priority_validations()
-
-
-def _get_non_priority_validations() -> list[Validator]:
-    return []
-
-
-def _get_priority_validations() -> list[Validator]:
-    return []
