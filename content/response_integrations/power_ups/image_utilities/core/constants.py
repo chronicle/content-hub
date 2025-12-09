@@ -37,30 +37,46 @@ RGB_FORMAT: str = "RGB"
 
 
 class DDLEnum(Enum):
+    """Base class for DDL enums."""
+
     @classmethod
     def values(cls) -> list[str]:
+        """Get a list of values for the enum.
+
+        Returns:
+            list[str]: A list of values for the enum.
+
+        """
         return [item.value for item in cls]
 
 
 class InputType(DDLEnum):
+    """Enum for input types."""
+
     URL = "URL"
     HTML = "HTML"
     EMAIL = "Email"
 
 
 class OutputType(DDLEnum):
+    """Enum for output types."""
+
     PNG = "PNG"
     PDF = "PDF"
     BOTH = "Both"
 
 
 class ExportMethod(DDLEnum):
+    """Enum for export methods."""
+
     CASE_ATTACHMENT = "Case Attachment"
     FILE_PATH = "File Path"
     BOTH = "Both"
 
 
 class PlaywrightWaitUntil(DDLEnum):
+    """Enum for Playwright's `wait_until` options."""
+
     LOAD = "LOAD"
     DOM_CONTENT_LOADED = "DOM_CONTENT_LOADED"
     NETWORK_IDLE = "NETWORK_IDLE"

@@ -16,18 +16,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .exceptions import RemoteAgentRequiredException
+from .exceptions import RemoteAgentRequiredError
 
 if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR
 
 
 def ensure_remote_agent(chronicle_soar: ChronicleSOAR, script_name: str) -> None:
-    """Ensures the script is running on a Remote Agent.
-    Raises RemoteAgentRequiredException if not.
+    """Ensure the script is running on a Remote Agent.
+
     Args:
         chronicle_soar: The ChronicleSoar object.
         script_name: The name of the script/action.
+
+    Raises:
+        RemoteAgentRequiredError: If the script is not running on a Remote Agent.
+
     """
+    error_message: str = f"{script_name} can only be executed on a Remote Agent."
     if not getattr(chronicle_soar, "is_remote", False):
-        raise RemoteAgentRequiredException(f"{script_name} can only be executed on a Remote Agent.")
+        raise RemoteAgentRequiredError(error_message)

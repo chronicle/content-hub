@@ -41,6 +41,7 @@ from ..core.exceptions import ParameterNotFoundError
 from ..core.utils import ensure_remote_agent
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Never
 
 
@@ -48,6 +49,7 @@ class ConvertFileAction(Action):
     """Convert files between PNG and PDF formats."""
 
     def __init__(self) -> None:
+        """Initialize the Convert File action."""
         super().__init__(CONVERT_FILE_SCRIPT_NAME)
 
     def _extract_action_parameters(self) -> None:
@@ -80,7 +82,8 @@ class ConvertFileAction(Action):
 
         input_path: Path = Path(self.params.input_file_path)
         if not input_path.exists():
-            raise ParameterNotFoundError(f"Source file not found: {input_path}")
+            error_msg: str = f"Source file not found: {input_path}"
+            raise ParameterNotFoundError(error_msg)
 
         self.params.input_file_format = validator.validate_ddl(
             param_name="Input File Format",
@@ -95,12 +98,13 @@ class ConvertFileAction(Action):
         )
 
         if self.params.input_file_format == self.params.output_file_format:
-            raise ParameterNotFoundError("Input and output file formats cannot be the same.")
+            error_msg: str = "Input and output file formats cannot be the same."
+            raise ParameterNotFoundError(error_msg)
 
     def _perform_action(self, _: Never) -> None:
         output_path: str = self._build_output_path()
 
-        converter: callable = (
+        converter: Callable[[str], str | None] = (
             self._convert_pdf_to_png
             if self.params.output_file_format == PNG_FORMAT
             else self._convert_png_to_pdf
@@ -117,7 +121,7 @@ class ConvertFileAction(Action):
             {
                 "output_format": self.params.output_file_format,
                 "file_path": result_path,
-            }
+            },
         ]
         self.output_message = "Successfully converted file."
 
@@ -131,9 +135,8 @@ class ConvertFileAction(Action):
 
     def _convert_pdf_to_png(self, output_path: str) -> str | None:
         if not shutil.which("pdftoppm"):
-            raise ParameterNotFoundError(
-                "Dependency 'poppler' is missing. Install 'poppler-utils'."
-            )
+            error_msg: str = "Dependency 'pdftoppm' is missing. Install 'poppler-utils'."
+            raise ParameterNotFoundError(error_msg)
 
         self.logger.info(f"Converting PDF '{self.params.input_file_path}' → PNG '{output_path}'")
 
@@ -148,10 +151,12 @@ class ConvertFileAction(Action):
             return output_path
 
         except (PDFInfoNotInstalledError, PDFPageCountError, PDFSyntaxError) as e:
-            raise ParameterNotFoundError(f"PDF processing error: {e}") from e
+            error_msg: str = f"PDF processing error: {e}"
+            raise ParameterNotFoundError(error_msg) from e
 
-        except (OSError, IOError) as e:
-            raise ParameterNotFoundError(f"Failed to save PNG file: {e}") from e
+        except OSError as e:
+            error_msg: str = f"Failed to save PNG file: {e}"
+            raise ParameterNotFoundError(error_msg) from e
 
     def _convert_png_to_pdf(self, output_path: str) -> str | None:
         self.logger.info(f"Converting PNG '{self.params.input_file_path}' → PDF '{output_path}'")
@@ -162,20 +167,20 @@ class ConvertFileAction(Action):
             return output_path
 
         except FileNotFoundError as e:
-            raise ParameterNotFoundError(
-                f"PNG file not found: {self.params.input_file_path}"
-            ) from e
+            error_msg: str = f"PNG file not found: {self.params.input_file_path}"
+            raise ParameterNotFoundError(error_msg) from e
 
         except UnidentifiedImageError as e:
-            raise ParameterNotFoundError(
-                f"Cannot identify image file: {self.params.input_file_path}"
-            ) from e
+            error_msg: str = f"Cannot identify image file: {self.params.input_file_path}"
+            raise ParameterNotFoundError(error_msg) from e
 
-        except (OSError, IOError) as e:
-            raise ParameterNotFoundError(f"Failed to save PDF file: {e}") from e
+        except OSError as e:
+            error_msg: str = f"Failed to save PDF file: {e}"
+            raise ParameterNotFoundError(error_msg) from e
 
 
 def main() -> None:
+    """Run the Convert File action."""
     ConvertFileAction().run()
 
 

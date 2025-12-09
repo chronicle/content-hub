@@ -19,7 +19,7 @@ class ParameterNotFoundError(Exception):
     """Exception raised when a required parameter is not found."""
 
 
-class RemoteAgentRequiredException(Exception):
+class RemoteAgentRequiredError(Exception):
     """Exception raised when an action requires execution on a Remote Agent."""
 
 

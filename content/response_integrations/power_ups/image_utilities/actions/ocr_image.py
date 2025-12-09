@@ -32,7 +32,10 @@ if TYPE_CHECKING:
 
 
 class OcrImage(Action):
+    """OCR Image action."""
+
     def __init__(self) -> None:
+        """Initialize the OCR Image action."""
         super().__init__(OCR_IMAGE_SCRIPT_NAME)
 
     def _extract_action_parameters(self) -> None:
@@ -61,42 +64,52 @@ class OcrImage(Action):
         """Initialize API clients if needed."""
 
     def _perform_action(self, _: Never) -> None:
-        """Main OCR execution entry."""
+        """Perform OCR on the provided image."""
         text: str
         if self.params.base64_image:
             image_data: bytes = base64.b64decode(self.params.base64_image)
             with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
                 tmp.write(image_data)
                 tmp.flush()
-                text = self._extract_text(tmp.name)
+                text = _extract_text(tmp.name)
         else:
-            text = self._extract_text(self.params.file_path)
+            text = _extract_text(self.params.file_path)
 
         self.json_results = {"extracted_text": text.strip()}
         self.output_message = "Successfully performed OCR on the provided image."
 
-    def _extract_text(self, file_path: str) -> str:
-        """Run OCR and handle missing-Tesseract errors."""
-        tesseract_error_msg: str = (
-            "Tesseract OCR engine is not installed in the Remote Agent container.\n\n"
-            "To fix this issue, follow these steps:\n"
-            "1. Identify and open the Docker/Podman container that runs your Remote Agent.\n"
-            "2. Install Tesseract inside that container (Debian-based image):\n"
-            "   apt-get update && apt-get install -y tesseract-ocr\n\n"
-            "3. Verify that Tesseract is installed by running:\n"
-            "   which tesseract\n\n"
-            "After installing Tesseract, rerun the 'OCR Image' action."
-        )
 
-        try:
-            with Image.open(file_path) as img:
-                return pytesseract.image_to_string(img)
+def _extract_text(file_path: str) -> str:
+    """Run OCR and handle missing-Tesseract errors.
 
-        except pytesseract.TesseractNotFoundError as e:
-            raise OcrImageSetupError(tesseract_error_msg) from e
+    Args:
+        file_path: The path of the image file.
+
+    Returns:
+        The extracted text from the image.
+
+    """
+    tesseract_error_msg: str = (
+        "Tesseract OCR engine is not installed in the Remote Agent container.\n\n"
+        "To fix this issue, follow these steps:\n"
+        "1. Identify and open the Docker/Podman container that runs your Remote Agent.\n"
+        "2. Install Tesseract inside that container (Debian-based image):\n"
+        "   apt-get update && apt-get install -y tesseract-ocr\n\n"
+        "3. Verify that Tesseract is installed by running:\n"
+        "   which tesseract\n\n"
+        "After installing Tesseract, rerun the 'OCR Image' action."
+    )
+
+    try:
+        with Image.open(file_path) as img:
+            return pytesseract.image_to_string(img)
+
+    except pytesseract.TesseractNotFoundError as e:
+        raise OcrImageSetupError(tesseract_error_msg) from e
 
 
 def main() -> NoReturn:
+    """Run the OCR Image action."""
     OcrImage().run()
 
 
