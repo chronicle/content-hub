@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 from mp.core import constants
@@ -22,15 +23,17 @@ from mp.core.utils import filter_and_map_yaml_files
 from mp.validate.utils import extract_name, load_components_defs
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class NoDisabledComponentsInIntegrationValidation:
     name: str = "Disabled Components Validation"
 
-    def run(self, validation_path: pathlib.Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(validation_path: Path) -> None:
         """Check if any of the integration components are marked as disabled.
 
         Args:

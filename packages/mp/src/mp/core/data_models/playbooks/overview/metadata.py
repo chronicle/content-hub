@@ -20,9 +20,8 @@ from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 import yaml
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
-from mp.core.data_models.abc import RepresentableEnum
+from mp.core.data_models.abc import RepresentableEnum, SequentialMetadata
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 
 if TYPE_CHECKING:
@@ -74,7 +73,7 @@ class NonBuiltOverview(TypedDict):
     role_names: list[str]
 
 
-class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuiltOverview]):
+class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
     identifier: str
     name: str
     creator: str | None

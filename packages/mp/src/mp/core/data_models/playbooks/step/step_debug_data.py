@@ -17,8 +17,8 @@ from __future__ import annotations
 import json
 from typing import NotRequired, Self, TypedDict
 
-import mp.core.data_models.abc
 from mp.core.custom_types import JsonString  # noqa: TC001
+from mp.core.data_models.abc import Buildable
 
 from .step_debug_enrichment_data import (
     BuiltStepDebugEnrichmentData,
@@ -32,8 +32,8 @@ class BuiltStepDebugData(TypedDict):
     ModificationTimeUnixTimeInMs: int
     OriginalWorkflowIdentifier: str
     OriginalStepIdentifier: str
-    ResultValue: str
-    ResultJson: JsonString
+    ResultValue: str | None
+    ResultJson: JsonString | None
     ScopeEntitiesEnrichmentData: list[BuiltStepDebugEnrichmentData]
     ScopeEntitiesEnrichmentDataJson: str
     TenantId: NotRequired[str | None]
@@ -44,15 +44,13 @@ class NonBuiltStepDebugData(TypedDict):
     playbook_id: str
     creation_time: int
     modification_time: int
-    result_value: str
-    result_json: str
+    result_value: str | None
+    result_json: str | None
     scope_entities_enrichment_data: list[NonBuiltStepDebugEnrichmentData]
     tenant_id: NotRequired[str | None]
 
 
-class StepDebugData(
-    mp.core.data_models.abc.Buildable[BuiltStepDebugData, NonBuiltStepDebugData],
-):
+class StepDebugData(Buildable[BuiltStepDebugData, NonBuiltStepDebugData]):
     step_id: str
     playbook_id: str
     creation_time: int

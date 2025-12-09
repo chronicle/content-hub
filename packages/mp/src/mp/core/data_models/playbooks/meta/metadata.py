@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
+from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
 
 from .access_permissions import (
     AccessPermission,
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class PlaybookCreationSource(mp.core.data_models.abc.RepresentableEnum):
+class PlaybookCreationSource(RepresentableEnum):
     """Represents the source of a playbook's creation."""
 
     USER_OR_API_INITIATED = 0
@@ -97,9 +97,7 @@ class NonBuiltPlaybookMetadata(TypedDict):
     environments: list[str]
 
 
-class PlaybookMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltPlaybookMetadata, NonBuiltPlaybookMetadata]
-):
+class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuiltPlaybookMetadata]):
     """Represents the metadata of a playbook."""
 
     identifier: str
@@ -146,9 +144,6 @@ class PlaybookMetadata(
             ValueError: If the file at `path` fails to load or parse as JSON.
 
         """
-        if not path.exists():
-            return []
-
         built_playbook: str = path.read_text(encoding="utf-8")
 
         try:
@@ -171,12 +166,10 @@ class PlaybookMetadata(
 
         """
         definition_path: Path = path / mp.core.constants.DEFINITION_FILE
-        if definition_path.exists():
-            return cls._from_non_built_path(definition_path)
-        return None
+        return cls._from_non_built_path(definition_path)
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltPlaybookMetadata) -> Self:
+    def _from_built(cls, _: str, built: BuiltPlaybookMetadata) -> Self:  # ty:ignore[invalid-method-override]
         access_level: int | None = built.get("DefaultAccessLevel")
         creation_source: int | None = built.get("CreationSource")
         return cls(
@@ -213,7 +206,7 @@ class PlaybookMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookMetadata) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookMetadata) -> Self:  # ty:ignore[invalid-method-override]
         access_level: str | None = non_built.get("default_access_level")
         creation_source: str | None = non_built.get("creation_source")
         return cls(

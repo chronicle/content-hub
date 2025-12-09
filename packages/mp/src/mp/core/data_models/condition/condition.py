@@ -19,10 +19,10 @@ from typing import Annotated, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
-class MatchType(mp.core.data_models.abc.RepresentableEnum):
+class MatchType(RepresentableEnum):
     EQUAL = 0
     CONTAINS = 1
     STARTS_WITH = 2
@@ -46,7 +46,7 @@ class NonBuiltCondition(TypedDict):
     match_type: str
 
 
-class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondition]):
+class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
     field_name: Annotated[
         str, pydantic.Field(min_length=mp.core.constants.CONDITION_FIELD_NAME_MIN_LENGTH)
     ]

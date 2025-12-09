@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import ComponentMetadata
 
 from .parameter import (
     BuiltConnectorParameter,
@@ -63,9 +63,7 @@ class NonBuiltConnectorMetadata(TypedDict):
     version: NotRequired[float]
 
 
-class ConnectorMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]
-):
+class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]):
     file_name: str
     creator: str
     description: Annotated[

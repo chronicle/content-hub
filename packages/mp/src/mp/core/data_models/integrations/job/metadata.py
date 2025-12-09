@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import ComponentMetadata
 
 from .parameter import BuiltJobParameter, JobParameter, NonBuiltJobParameter
 
@@ -53,9 +53,7 @@ class NonBuiltJobMetadata(TypedDict):
     version: NotRequired[float]
 
 
-class JobMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata],
-):
+class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
     file_name: str
     creator: str
     description: Annotated[

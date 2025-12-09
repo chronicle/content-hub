@@ -19,9 +19,9 @@ from typing import Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
 import mp.core.validators
+from mp.core.data_models.abc import Buildable
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
 
@@ -44,9 +44,7 @@ class NonBuiltIntegrationParameter(TypedDict):
     integration_identifier: str
 
 
-class IntegrationParameter(
-    mp.core.data_models.abc.Buildable[BuiltIntegrationParameter, NonBuiltIntegrationParameter]
-):
+class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrationParameter]):
     name: Annotated[
         str,
         pydantic.Field(

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Literal, Self, TypedDict
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable
 
 
 class BuiltIntegrationVisibilityProperty(TypedDict):
@@ -30,7 +30,7 @@ class NonBuiltIntegrationVisibilityProperty(TypedDict):
 
 
 class IntegrationVisibilityProperty(
-    mp.core.data_models.abc.Buildable[
+    Buildable[
         BuiltIntegrationVisibilityProperty,
         NonBuiltIntegrationVisibilityProperty,
     ],

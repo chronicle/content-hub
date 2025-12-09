@@ -26,7 +26,7 @@ from pydantic import FileUrl, HttpUrl, TypeAdapter, ValidationError
 import mp.core.constants
 
 if TYPE_CHECKING:
-    import enum
+    from enum import Enum
 
     from hypothesis.strategies import SearchStrategy
 
@@ -102,13 +102,13 @@ st_valid_png_b64_string = st.binary(min_size=1).map(lambda b: base64.b64encode(b
 st_valid_svg_string = st.just("<svg></svg>")
 
 
-def st_valid_non_built_param_type(param_type: enum) -> SearchStrategy[dict[str, Any]]:
+def st_valid_non_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
     return st.sampled_from(param_type).map(lambda e: e.to_string())
 
 
-def st_valid_built_param_type(param_type: enum) -> SearchStrategy[dict[str, Any]]:
+def st_valid_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
     return st.sampled_from(param_type).flatmap(lambda e: st.sampled_from([e.value, str(e.value)]))
 
 
-def st_valid_built_type(param_type: enum) -> SearchStrategy[dict[str, Any]]:
+def st_valid_built_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
     return st.sampled_from(param_type).map(lambda e: e.value)

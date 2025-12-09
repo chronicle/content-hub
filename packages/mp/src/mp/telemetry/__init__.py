@@ -24,12 +24,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, Protocol, cast
 
 import requests
 import typer
 
-from mp.core.custom_types import RepositoryType
+from mp.core.custom_types import P, RepositoryType
 from mp.core.utils import get_current_platform, is_ci_cd
 from mp.telemetry.constants import (
     ALLOWED_COMMAND_ARGUMENTS,
@@ -46,9 +46,6 @@ from mp.telemetry.utils import (
     is_report_enabled,
 )
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 
 @dataclass(slots=True)
 class TrackCommandVars:
@@ -59,7 +56,14 @@ class TrackCommandVars:
     stack: str | None = None
 
 
-def track_command(mp_command_function: Callable) -> Callable:
+class MpCommand(Protocol[P]):
+    __name__: str
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> None:
+        """Call the method."""
+
+
+def track_command(mp_command_function: MpCommand[P]) -> MpCommand[P]:
     """A_Decorator function to wrap Typer commands for telemetry reporting.
 
     Args:
@@ -71,7 +75,7 @@ def track_command(mp_command_function: Callable) -> Callable:
     """
 
     @functools.wraps(mp_command_function)
-    def wrapper(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
         config_yaml: ConfigYaml = get_or_create_config_yaml()
         config_yaml = fix_missing_keys_and_save_if_fixed(config_yaml)
         if is_ci_cd() or not is_report_enabled(config_yaml):
@@ -96,7 +100,7 @@ def track_command(mp_command_function: Callable) -> Callable:
             platform_name, platform_version = get_current_platform()
 
             safe_args: dict[str, Any] = _filter_command_arguments(kwargs)
-            command_args_str: str = json.dumps(safe_args) if safe_args else None
+            command_args_str: str | None = json.dumps(safe_args) if safe_args else None
 
             payload = TelemetryPayload(
                 install_id=get_install_id(config_yaml),
@@ -171,13 +175,15 @@ def _sanitize_traceback(raw_stack: str) -> str:
     return raw_stack.replace(str(home), "<HOME>")
 
 
-def _determine_command_name(command: str, **kwargs: dict[str, Any]) -> str:
-    command = NAME_MAPPER[command]
+def _determine_command_name(command: str, **kwargs: list[RepositoryType | str] | Any) -> str:  # noqa: ANN401
+    command: str = NAME_MAPPER[command]
 
     if command not in {"build", "validate"}:
         return command
 
-    repo_values: set[str] = {r.value for r in kwargs.get("repositories", [])}
+    repo_values: set[str] = {
+        r.value for r in cast("list[RepositoryType]", kwargs.get("repositories", []))
+    }
     has_integrations = bool(kwargs.get("integrations"))
     has_playbooks = bool(kwargs.get("playbooks"))
 

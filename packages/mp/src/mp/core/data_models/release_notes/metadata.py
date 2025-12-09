@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
+from mp.core.data_models.abc import SequentialMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -92,9 +92,7 @@ class NonBuiltReleaseNote(TypedDict):
     new: NotRequired[bool]
 
 
-class ReleaseNote(
-    mp.core.data_models.abc.SequentialMetadata[BuiltReleaseNote, NonBuiltReleaseNote]
-):
+class ReleaseNote(SequentialMetadata[BuiltReleaseNote, NonBuiltReleaseNote]):
     description: Annotated[
         str,
         pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),

@@ -18,15 +18,14 @@ import json
 from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
-from mp.core.data_models.abc import RepresentableEnum
+from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
 from mp.core.data_models.condition.condition_group import Condition, LogicalOperator
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.condition import BuiltCondition, NonBuiltCondition
+    from mp.core.data_models.condition.condition import BuiltCondition, NonBuiltCondition
 
 
 class BuiltTrigger(TypedDict):
@@ -68,7 +67,7 @@ class TriggerType(RepresentableEnum):
     GET_INPUTS = 11
 
 
-class Trigger(mp.core.data_models.abc.ComponentMetadata):
+class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
     """Represents a trigger for a playbook."""
 
     identifier: str
@@ -94,8 +93,6 @@ class Trigger(mp.core.data_models.abc.ComponentMetadata):
             ValueError: If the file at `path` fails to load or parse as JSON.
 
         """
-        if not path.exists():
-            return []
         built_playbook: str = path.read_text(encoding="utf-8")
         try:
             full_playbook = json.loads(built_playbook)
@@ -117,13 +114,10 @@ class Trigger(mp.core.data_models.abc.ComponentMetadata):
 
         """
         trigger_path: Path = path / mp.core.constants.TRIGGER_FILE_NAME
-        if not trigger_path.exists():
-            return []
-
         return cls._from_non_built_path(trigger_path)
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltTrigger) -> Self:
+    def _from_built(cls, _: str, built: BuiltTrigger) -> Self:  # ty:ignore[invalid-method-override]
         return cls(
             playbook_id=built["DefinitionIdentifier"],
             conditions=[Condition.from_built(c) for c in built["Conditions"]],
@@ -136,7 +130,7 @@ class Trigger(mp.core.data_models.abc.ComponentMetadata):
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltTrigger) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltTrigger) -> Self:  # ty:ignore[invalid-method-override]
         return cls(
             identifier=non_built["identifier"],
             is_enabled=non_built["is_enabled"],

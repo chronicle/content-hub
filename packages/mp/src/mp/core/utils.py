@@ -246,7 +246,9 @@ def should_preform_integration_logic(
         True if yes overwise False
 
     """
-    return integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
+    return bool(
+        integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
+    )
 
 
 def should_preform_playbook_logic(
@@ -258,4 +260,4 @@ def should_preform_playbook_logic(
         True if yes overwise False
 
     """
-    return playbooks or RepositoryType.PLAYBOOKS in repos
+    return bool(playbooks or RepositoryType.PLAYBOOKS in repos)

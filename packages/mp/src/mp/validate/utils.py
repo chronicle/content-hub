@@ -130,7 +130,7 @@ def load_components_defs(
         return component_defs
 
 
-def extract_name(yaml_content: YamlFileContent) -> ActionName | JobName | ConnectorName:
+def extract_name(yaml_content: YamlFileContent) -> ActionName | JobName | ConnectorName | None:
     """Extract the component's name from it's YAML file.
 
     Returns:
@@ -172,7 +172,7 @@ def _validate_ssl_parameter(
     if script_name in constants.EXCLUDED_NAMES_WITHOUT_VERIFY_SSL:
         return None
 
-    ssl_param: YamlFileContent = next(
+    ssl_param: YamlFileContent | None = next(
         (p for p in parameters if p["name"] in constants.VALID_SSL_PARAM_NAMES),
         None,
     )

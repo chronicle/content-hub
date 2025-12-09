@@ -20,9 +20,9 @@ from typing import Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
 import mp.core.validators
+from mp.core.data_models.abc import Buildable
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
 
@@ -42,7 +42,7 @@ class NonBuiltJobParameter(TypedDict):
     default_value: NotRequired[str | float | bool | int | None]
 
 
-class JobParameter(mp.core.data_models.abc.Buildable[BuiltJobParameter, NonBuiltJobParameter]):
+class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
     name: Annotated[
         str,
         pydantic.Field(

@@ -19,12 +19,12 @@ from typing import Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
 import mp.core.validators
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
-class ActionParamType(mp.core.data_models.abc.RepresentableEnum):
+class ActionParamType(RepresentableEnum):
     STRING = 0
     INTEGER = 0
     BOOLEAN = 1
@@ -73,7 +73,7 @@ class NonBuiltActionParameter(TypedDict):
 
 
 class ActionParameter(
-    mp.core.data_models.abc.Buildable[BuiltActionParameter, NonBuiltActionParameter],
+    Buildable[BuiltActionParameter, NonBuiltActionParameter],
 ):
     description: Annotated[
         str,

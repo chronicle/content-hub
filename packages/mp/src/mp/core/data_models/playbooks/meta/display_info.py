@@ -19,15 +19,15 @@ from typing import Annotated, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
-class PlaybookType(mp.core.data_models.abc.RepresentableEnum):
+class PlaybookType(RepresentableEnum):
     PLAYBOOK = 0
     BLOCK = 1
 
 
-class PlaybookDisplayInfoType(mp.core.data_models.abc.RepresentableEnum):
+class PlaybookDisplayInfoType(RepresentableEnum):
     Playbook = 1
     Block = 2
 
@@ -38,7 +38,7 @@ PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE = {
 }
 
 
-class PlaybookContributionType(mp.core.data_models.abc.RepresentableEnum):
+class PlaybookContributionType(RepresentableEnum):
     Unspecified = 0
     Google = 1
     THIRD_PARTY = 2
@@ -57,7 +57,7 @@ class BuiltPlaybookDisplayInfo(TypedDict):
     Author: str
     ContactEmail: str
     Integrations: list[str]
-    DependentPlaybookIds: list[str]
+    DependentPlaybookIds: list[str | None]
     Tags: list[str]
     Source: int
     Verified: bool
@@ -71,29 +71,27 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
     description: str
     author: str
     contact_email: str
-    dependent_playbook_ids: list[str]
+    dependent_playbook_ids: list[str | None]
     tags: list[str]
     contribution_type: str
     is_google_verified: bool
     should_display_in_content_hub: bool
 
 
-class PlaybookDisplayInfo(
-    mp.core.data_models.abc.Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo]
-):
+class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo]):
     type: PlaybookType = PlaybookType.PLAYBOOK
     content_hub_display_name: str = "The name that will appear in the Content Hub"
     description: str = "The description that will appear in the Content Hub"
     author: str = "Please Fill"
     contact_email: str = "Please Fill"
-    dependent_playbook_ids: list[str] = []  # noqa: RUF012
-    tags: list[str] = []  # noqa: RUF012
+    dependent_playbook_ids: Annotated[list[str | None], pydantic.Field(default_factory=list)]
+    tags: Annotated[list[str], pydantic.Field(default_factory=list)]
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
     should_display_in_content_hub: bool = False
 
     @classmethod
-    def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:
+    def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:  # ty:ignore[invalid-method-override]
         return cls()
 
     @classmethod

@@ -23,9 +23,9 @@ import pydantic
 import yaml
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
+from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
 
 from .feature_tags import BuiltFeatureTags, FeatureTags, NonBuiltFeatureTags
 from .parameter import BuiltIntegrationParameter, IntegrationParameter, NonBuiltIntegrationParameter
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 MINIMUM_SYSTEM_VERSION: float = 5.3
 
 
-class PythonVersion(mp.core.data_models.abc.RepresentableEnum):
+class PythonVersion(RepresentableEnum):
     PY_3_11 = 3
 
     @classmethod
@@ -128,7 +128,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
 
 
 class IntegrationMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
+    SingularComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
 ):
     categories: list[str]
     feature_tags: FeatureTags | None
@@ -227,7 +227,7 @@ class IntegrationMetadata(
             return metadata
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltIntegrationMetadata) -> Self:
+    def _from_built(cls, _: str, built: BuiltIntegrationMetadata) -> Self:  # ty:ignore[invalid-method-override]
         feature_tags: FeatureTags | None = None
         raw_feature_tags: BuiltFeatureTags | None = built.get("FeatureTags")
         if raw_feature_tags is not None:
@@ -260,7 +260,7 @@ class IntegrationMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltIntegrationMetadata) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltIntegrationMetadata) -> Self:  # ty:ignore[invalid-method-override]
         feature_tags: FeatureTags | None = None
         raw_feature_tags: NonBuiltFeatureTags | None = non_built.get("feature_tags")
         if raw_feature_tags is not None:

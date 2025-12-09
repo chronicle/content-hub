@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
+from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 from mp.core.data_models.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class WidgetScope(mp.core.data_models.abc.RepresentableEnum):
+class WidgetScope(RepresentableEnum):
     ALERT = 0
     CASE = 1
 
@@ -66,10 +66,7 @@ class NonBuiltActionWidgetMetadata(TypedDict):
 
 
 class ActionWidgetMetadata(
-    mp.core.data_models.abc.ComponentMetadata[
-        BuiltActionWidgetMetadata,
-        NonBuiltActionWidgetMetadata,
-    ]
+    ComponentMetadata[BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata]
 ):
     file_name: str
     title: Annotated[
@@ -82,7 +79,7 @@ class ActionWidgetMetadata(
     type_: WidgetType
     scope: WidgetScope
     action_identifier: Annotated[
-        str | None,
+        str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
             pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,

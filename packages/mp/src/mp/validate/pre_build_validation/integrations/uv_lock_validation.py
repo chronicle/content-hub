@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 import mp.core.file_utils
@@ -24,10 +25,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class UvLockValidation:
     name: str = "Uv Lock"
 
-    def run(self, integration_path: Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(integration_path: Path) -> None:
         """Check if the 'uv.lock' file is consistent with the 'pyproject.toml' file.
 
         Args:

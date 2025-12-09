@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 from typing import TYPE_CHECKING, NotRequired, TypeAlias, TypedDict
 
@@ -58,10 +59,12 @@ class NewIntegrationFiles(TypedDict):
 VersionBumpValidationData: TypeAlias = tuple[ExistingIntegrationFiles, NewIntegrationFiles]
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class VersionBumpValidation:
     name: str = "Integration Version Bump"
 
-    def run(self, integration_path: Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(integration_path: Path) -> None:
         """Validate that `project.toml` and `release_notes.yml` files are correctly versioned.
 
         Args:
@@ -138,7 +141,7 @@ def _create_data_for_version_bump_validation(
 
 
 def _get_last_note(content: str) -> ReleaseNote | None:
-    notes: ReleaseNote = ReleaseNote.from_non_built_str(content)
+    notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(content)
     return notes[-1] if notes else None
 
 
