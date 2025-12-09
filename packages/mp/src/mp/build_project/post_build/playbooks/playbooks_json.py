@@ -92,6 +92,7 @@ def _generate_playbooks_display_info(
 
         built_playbook: BuiltPlaybook = json.loads(built_playbook_path.read_text(encoding="utf-8"))
         _update_display_info(built_playbook, built_display_info, non_built_playbook_path, out_path)
+        built_display_info["FileName"] = built_playbook_path.name
         res.append(built_display_info)
 
     return res

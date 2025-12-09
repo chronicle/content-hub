@@ -15,20 +15,24 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING
 
 from mp.core import constants, file_utils
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
+from mp.validate.data_models import (
+    BUILD,
+    POST_BUILD,
+    PRE_BUILD,
+    FullReport,
+    ValidationResults,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
-
-
-class Configurations(NamedTuple):
-    only_pre_build: bool
 
 
 DEF_FILE_NAME_KEY: str = "name"
@@ -134,3 +138,91 @@ def extract_name(yaml_content: YamlFileContent) -> ActionName | JobName | Connec
 
     """
     return yaml_content.get(DEF_FILE_NAME_KEY)
+
+
+def validate_ssl_parameter_from_yaml(yaml_content: YamlFileContent) -> str | None:
+    """Filter function to check if a component has a valid SSL parameter or is in excluded list.
+
+    Returns:
+        An error message if the component's ssl parameter is not valid, else None.
+
+    """
+    return _validate_ssl_parameter(yaml_content["name"], yaml_content.get("parameters", []))
+
+
+def _validate_ssl_parameter(
+    script_name: str,
+    parameters: list[YamlFileContent],
+) -> str | None:
+    """Validate the Verify SSL parameter.
+
+    Validates the presence and correctness of a 'Verify SSL' parameter in the provided
+    integration or connector's parameters. Ensures that the parameter exists, is of the
+    correct type, and has the correct default value unless the script is explicitly
+    excluded from verification.
+
+    Args:
+        script_name: The name of the integration or connector script.
+        parameters: collection of parameters associated with the component.
+
+    Returns:
+        An error message if the parameter is invalid, else None.
+
+    """
+    if script_name in constants.EXCLUDED_NAMES_WITHOUT_VERIFY_SSL:
+        return None
+
+    ssl_param: YamlFileContent = next(
+        (p for p in parameters if p["name"] in constants.VALID_SSL_PARAM_NAMES),
+        None,
+    )
+    if ssl_param is None:
+        return f"{script_name} is missing a 'Verify SSL' parameter"
+
+    if ssl_param["type"] != ScriptParamType.BOOLEAN.to_string():
+        return f"The 'verify ssl' parameter in {script_name} must be of type 'boolean'"
+
+    if script_name in constants.EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE:
+        return None
+
+    if not ssl_param["default_value"]:
+        return (
+            f"The default value of the 'Verify SSL' param in {script_name} must be a boolean true"
+        )
+
+    return None
+
+
+def combine_results(*validations_outputs: FullReport) -> FullReport:
+    """Take few reports and combine them into a single report.
+
+    Returns:
+        A single report.
+
+    """
+    combined_output: FullReport = {}
+    keys_to_combine = (PRE_BUILD, BUILD, POST_BUILD)
+
+    for key in keys_to_combine:
+        combined_list: list[ValidationResults] = []
+        all_lists_are_none = True
+
+        for output_dict in validations_outputs:
+            current_list = output_dict.get(key)
+            if current_list is not None:
+                combined_list.extend(current_list)
+                all_lists_are_none = False
+
+        combined_output[key] = [] if all_lists_are_none else combined_list
+
+    return combined_output
+
+
+def should_fail_program(validations_output: FullReport) -> bool:
+    """Decide if the validate command should fail if one of the validation output was fail.
+
+    Returns:
+        True if need to fail overwise False.
+
+    """
+    return any(validation_result for validation_result in validations_output.values())

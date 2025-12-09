@@ -88,7 +88,7 @@ class ActionMetadata(
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX,
         ),
     ]
     is_async: bool
@@ -173,6 +173,9 @@ class ActionMetadata(
             An `ActionMetadata` object
 
         """
+        version: float = built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION)
+        version = max(version, mp.core.constants.MINIMUM_SCRIPT_VERSION)
+
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -186,15 +189,15 @@ class ActionMetadata(
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
             name=built["Name"],
-            parameters=[ActionParameter.from_built(p) for p in built["Parameters"]],
-            script_result_name=built.get("ScriptResultName", "is_success"),
-            simulation_data_json=built.get("SimulationDataJson", '{"Entities": []}'),
+            parameters=[ActionParameter.from_built(p) for p in built.get("Parameters", [])],
+            script_result_name=(built.get("ScriptResultName") or DEFAULT_SCRIPT_RESULT_NAME),
+            simulation_data_json=(built.get("SimulationDataJson") or DEFAULT_SIMULATION_DATA),
             default_result_value=built.get("DefaultResultValue"),
-            version=built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
+            version=version,
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltActionMetadata) -> Self:
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltActionMetadata) -> ActionMetadata:
         """Create the obj from a non-built action metadata dict.
 
         Args:
@@ -219,10 +222,10 @@ class ActionMetadata(
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
             parameters=[ActionParameter.from_non_built(p) for p in non_built["parameters"]],
-            script_result_name=non_built.get("script_result_name", "is_success"),
+            script_result_name=non_built.get("script_result_name", DEFAULT_SCRIPT_RESULT_NAME),
             simulation_data_json=non_built.get(
                 "simulation_data_json",
-                '{"Entities": []}',
+                DEFAULT_SIMULATION_DATA,
             ),
             default_result_value=non_built.get("default_result_value"),
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
