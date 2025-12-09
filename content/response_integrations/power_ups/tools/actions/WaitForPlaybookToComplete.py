@@ -19,12 +19,13 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_workflow_instance_card
 
+WF_STATUS_NONE = 0
 WF_STATUS_INPROGRESS = 1
 WF_STATUS_COMPLETED = 2
 WF_STATUS_FAILED = 3
-WF_STATUS_PENDING = 4
-WF_STATUS_TERMINATED = 5
-WF_STATUS_WAITING = 6
+WF_STATUS_TERMINATED = 4
+WF_STATUS_PENDING_IN_QUEUE = 5
+WF_STATUS_PENDING_FOR_USER = 6
 
 
 def get_wf_status(siemplify: SiemplifyAction, workflow_name: str) -> int:
@@ -47,7 +48,7 @@ def get_wf_status(siemplify: SiemplifyAction, workflow_name: str) -> int:
         if alert_wf["name"] == workflow_name:
             return alert_wf["status"]
 
-    return None
+    return WF_STATUS_NONE
 
 
 @output_handler
@@ -81,7 +82,11 @@ def main():
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
 
-    elif wf_status in (WF_STATUS_INPROGRESS, WF_STATUS_PENDING, WF_STATUS_WAITING):
+    elif wf_status in (
+        WF_STATUS_INPROGRESS,
+        WF_STATUS_PENDING_FOR_USER,
+        WF_STATUS_PENDING_IN_QUEUE,
+    ):
         output_message = (
             f"Alert Id: {siemplify.current_alert.identifier}: "
             f"Playbook {playbook_name} Inprogress. Current playbook locked."
@@ -94,7 +99,7 @@ def main():
             f"Alert Id: {siemplify.current_alert.identifier}: Playbook {playbook_name} not found."
         )
         result_value = "true"
-        status = status = EXECUTION_STATE_COMPLETED
+        status = EXECUTION_STATE_COMPLETED
 
     siemplify.end(output_message, result_value, status)
 
