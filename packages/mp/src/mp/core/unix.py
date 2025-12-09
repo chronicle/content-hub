@@ -270,8 +270,8 @@ def ruff_format(paths: Iterable[Path], /, **flags: bool | str) -> int:
     return execute_command_and_get_output(command, paths, **flags)
 
 
-def ty(paths: Iterable[Path], /, **flags: bool | str) -> int:
-    """Run `mypy` on the provided paths.
+def ty_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
+    """Run `ty check` on the provided paths.
 
     Returns:
         The status code
