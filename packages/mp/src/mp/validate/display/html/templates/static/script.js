@@ -1,22 +1,19 @@
-/* Copyright 2025 Google LLC*/
-/**/
-/* Licensed under the Apache License, Version 2.0 (the "License");*/
-/* you may not use this file except in compliance with the License.*/
-/* You may obtain a copy of the License at*/
-/**/
-/*     http://www.apache.org/licenses/LICENSE-2.0*/
-/**/
-/* Unless required by applicable law or agreed to in writing, software*/
-/* distributed under the License is distributed on an "AS IS" BASIS,*/
-/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*/
-/* See the License for the specific language governing permissions and*/
-/* limitations under the License.*/
+ // Copyright 2025 Google LLC
+ //
+ // Licensed under the Apache License, Version 2.0 (the "License");
+ // you may not use this file except in compliance with the License.
+ // You may obtain a copy of the License at
+ //
+ //     http://www.apache.org/licenses/LICENSE-2.0
+ //
+ // Unless required by applicable law or agreed to in writing, software
+ // distributed under the License is distributed on an "AS IS" BASIS,
+ // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
 
 document.addEventListener('DOMContentLoaded', function() {
-  /**
-   * Toggles the visibility of collapsible content, typically used for accordions.
-   * @param {HTMLElement} element The clicked element (e.g., accordion header) that triggers the toggle.
-   */
+
   function toggleAccordion(element) {
     const content = element.nextElementSibling;
     if (content && content.classList.contains('collapsible-content')) {
@@ -26,23 +23,43 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   /**
-   * Switches between different tab contents based on the clicked tab button.
-   * @param {HTMLElement} buttonElement The tab button that was clicked.
-   * @param {string} categoryId The ID of the tab content div to display.
+   * Switches tabs within a specific scope.
+   * @param {HTMLElement} buttonElement The clicked tab button.
+   * @param {string} contentId The ID of the content to show.
+   * @param {string} scopeSelector CSS selector to limit the scope (e.g., '.main-tabs', '.sub-tabs-integrations')
    */
-  function switchTab(buttonElement, categoryId) {
-    document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+  function switchTab(buttonElement, contentId, scopeSelector) {
+    // Find the container for this set of tabs
+    const container = buttonElement.closest(scopeSelector || '.tab-container');
+
+    if (!container) return;
+
+    // Deactivate all buttons in this container
+    container.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+
+    // Activate clicked button
     buttonElement.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-    const targetContent = document.getElementById('tab-content-' + categoryId);
+
+    // Hide all content sections associated with this container
+    // We look for the sibling content container
+    const contentContainer = container.nextElementSibling || container.parentElement.querySelector('.tab-content-container');
+
+    if (contentContainer) {
+      // Hide direct children that are tab contents
+      Array.from(contentContainer.children).forEach(child => {
+        if (child.classList.contains('tab-content')) {
+          child.classList.add('hidden');
+        }
+      });
+    }
+
+    // Show target content
+    const targetContent = document.getElementById(contentId);
     if (targetContent) {
       targetContent.classList.remove('hidden');
     }
   }
 
-  /**
-   * Downloads the current HTML page as an HTML file.
-   */
   function downloadReport() {
     const htmlContent = document.documentElement.outerHTML;
     const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -56,13 +73,13 @@ document.addEventListener('DOMContentLoaded', function() {
     URL.revokeObjectURL(url);
   }
 
-
   window.toggleAccordion = toggleAccordion;
   window.switchTab = switchTab;
   window.downloadReport = downloadReport;
 
-  const firstTabButton = document.querySelector('.tab-button');
-  if (firstTabButton) {
-    firstTabButton.click();
-  }
+  // Initialize: Click the first tab in every tab-container
+  document.querySelectorAll('.tab-container').forEach(container => {
+    const firstTab = container.querySelector('.tab-button');
+    if (firstTab) firstTab.click();
+  });
 });

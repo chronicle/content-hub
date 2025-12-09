@@ -23,9 +23,10 @@ import sys
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
 from mp.core.constants import WINDOWS_PLATFORM
+from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from .custom_types import YamlFileContent
 
@@ -214,3 +215,47 @@ def filter_and_map_yaml_files(
 
     """
     return [map_fn(d) for d in yaml_files if filter_fn(d)]
+
+
+def to_snake_case(s: str, /) -> str:
+    """Change string to snake case.
+
+    Args:
+        s: The input string to convert.
+
+    Returns:
+        The string converted to snake_case.
+
+    """
+    s = (
+        re.sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
+        .strip()
+        .replace(" ", "_")
+        .replace("-", "_")
+    )
+    return s.lower()
+
+
+def should_preform_integration_logic(
+    integrations: Iterable[str],
+    repos: Iterable[RepositoryType],
+) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
+
+
+def should_preform_playbook_logic(
+    playbooks: Iterable[str], repos: Iterable[RepositoryType]
+) -> bool:
+    """Decide if needed to build playbooks or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return playbooks or RepositoryType.PLAYBOOKS in repos

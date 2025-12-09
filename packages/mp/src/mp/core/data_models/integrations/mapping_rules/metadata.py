@@ -158,7 +158,7 @@ class MappingRule(
             extract_function = ExtractionFunction.NONE.value
 
         return cls(
-            source=built["Source"],
+            source=built["Source"] or "",
             product=built["Product"],
             event_name=built["EventName"],
             security_event_file_name=built["SecurityEventFieldName"],
@@ -166,7 +166,7 @@ class MappingRule(
                 built["TransformationFunction"],
             ),
             transformation_function_param=built["TransformationFunctionParam"],
-            raw_data_primary_field_match_term=built["RawDataPrimaryFieldMatchTerm"],
+            raw_data_primary_field_match_term=(built.get("RawDataPrimaryFieldMatchTerm") or ""),
             raw_data_primary_field_comparison_type=ComparisonType(
                 built["RawDataPrimaryFieldComparisonType"],
             ),
@@ -248,7 +248,7 @@ class MappingRule(
             TransformationFunction=self.transformation_function.value,
             TransformationFunctionParam=self.transformation_function_param,
             RawDataPrimaryFieldMatchTerm=self.raw_data_primary_field_match_term,
-            RawDataPrimaryFieldComparisonType=(self.raw_data_primary_field_comparison_type.value),
+            RawDataPrimaryFieldComparisonType=self.raw_data_primary_field_comparison_type.value,
             RawDataSecondaryFieldMatchTerm=self.raw_data_secondary_field_match_term,
             RawDataSecondaryFieldComparisonType=(
                 self.raw_data_secondary_field_comparison_type.value
