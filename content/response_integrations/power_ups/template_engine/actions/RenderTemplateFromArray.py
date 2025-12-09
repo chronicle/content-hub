@@ -27,7 +27,7 @@ from ..core import JinjaFilters
 # Example Consts:
 INTEGRATION_NAME = "TemplateEngine"
 
-SCRIPT_NAME = "RenderTemplateFromArray"
+SCRIPT_NAME = "RenderTemplate"
 
 
 @output_handler
