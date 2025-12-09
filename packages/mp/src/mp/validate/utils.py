@@ -15,21 +15,24 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING
 
 from mp.core import constants, file_utils
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
+from mp.validate.data_models import (
+    BUILD,
+    POST_BUILD,
+    PRE_BUILD,
+    FullReport,
+    ValidationResults,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
-
-
-class Configurations(NamedTuple):
-    only_pre_build: bool
 
 
 DEF_FILE_NAME_KEY: str = "name"
@@ -188,3 +191,38 @@ def _validate_ssl_parameter(
         )
 
     return None
+
+
+def combine_results(*validations_outputs: FullReport) -> FullReport:
+    """Take few reports and combine them into a single report.
+
+    Returns:
+        A single report.
+
+    """
+    combined_output: FullReport = {}
+    keys_to_combine = (PRE_BUILD, BUILD, POST_BUILD)
+
+    for key in keys_to_combine:
+        combined_list: list[ValidationResults] = []
+        all_lists_are_none = True
+
+        for output_dict in validations_outputs:
+            current_list = output_dict.get(key)
+            if current_list is not None:
+                combined_list.extend(current_list)
+                all_lists_are_none = False
+
+        combined_output[key] = [] if all_lists_are_none else combined_list
+
+    return combined_output
+
+
+def should_fail_program(validations_output: FullReport) -> bool:
+    """Decide if the validate command should fail if one of the validation output was fail.
+
+    Returns:
+        True if need to fail overwise False.
+
+    """
+    return any(validation_result for validation_result in validations_output.values())
