@@ -18,44 +18,57 @@ from typing import TYPE_CHECKING
 
 from rich import box
 from rich.console import Console
+from rich.rule import Rule
 from rich.table import Table
 
+from .constants import ICON_MAP
+
 if TYPE_CHECKING:
-    from mp.validate.data_models import FullReport, ValidationResults
+    from mp.validate.data_models import ContentType, FullReport, ValidationResults
 
 
 class CliDisplay:
-    def __init__(self, validation_results: FullReport) -> None:
-        self.validation_results: FullReport = validation_results
+    def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
+        self.validation_results: dict[ContentType, FullReport] = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
-        """Display the validation result in the cli."""
-        if self._is_results_empty():
+        """Display the validation results in the CLI."""
+        if self._is_all_empty():
             self.console.print("[bold green]All Validations Passed\n[/bold green]")
+            return
 
         display_categories: list[str] = ["Pre-Build", "Build", "Post-Build"]
 
-        for category in display_categories:
-            validation_results: list[ValidationResults] = self.validation_results.get(category)
-            if not validation_results:
+        for content_type, full_report in self.validation_results.items():
+            if not any(full_report.values()):
                 continue
 
-            self.console.print(
-                f"[bold underline blue]\n{category} Validations\n[/bold underline blue]"
-            )
-            for integration_result in validation_results:
-                self.console.print(_build_table(integration_result), "\n")
+            icon = ICON_MAP[content_type.value]
 
-    def _is_results_empty(self) -> bool:
-        return not any(
-            integration_result for integration_result in self.validation_results.values()
-        )
+            self.console.print(Rule(f"[bold magenta]{icon} {content_type.value} Validations"))
+
+            for category in display_categories:
+                stage_results: list[ValidationResults] | None = full_report.get(category)
+                if not stage_results:
+                    continue
+
+                self.console.print(f"[bold underline blue]\n{category} Stage[/bold underline blue]")
+                for integration_result in stage_results:
+                    self.console.print(_build_table(integration_result), "\n")
+
+            self.console.print("\n")
+
+    def _is_all_empty(self) -> bool:
+        for full_report in self.validation_results.values():
+            if any(full_report.values()):
+                return False
+        return True
 
 
 def _build_table(integration_result: ValidationResults) -> Table:
     table = Table(
-        title=f"🧩  {integration_result.integration_name}",
+        title=f"  {integration_result.integration_name}",
         title_style="bold",
         show_lines=True,
         box=box.ROUNDED,
