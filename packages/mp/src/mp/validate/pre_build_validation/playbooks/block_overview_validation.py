@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 class BlockOverviewValidation:
     name: str = "Block Overview Validation"
 
-    def run(self, playbook_path: Path) -> None:
+    @staticmethod
+    def run(playbook_path: Path) -> None:
         """Validate that blocks do not contain overviews.
 
         Args:
