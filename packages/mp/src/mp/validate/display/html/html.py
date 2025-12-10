@@ -18,7 +18,7 @@ import datetime
 import pathlib
 import tempfile
 import webbrowser
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import jinja2
 from rich.console import Console
@@ -26,14 +26,19 @@ from rich.console import Console
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from jinja2 import Environment, Template
+    from mp.validate.data_models import ContentType, FullReport
 
-    from mp.validate.data_models import FullReport, ValidationResults
+
+class ReportStatistics(NamedTuple):
+    groups_data: dict[str, Any]
+    total_items: int
+    total_fatal: int
+    total_warn: int
 
 
 class HtmlFormat:
-    def __init__(self, validation_results: FullReport) -> None:
-        self.validation_results: FullReport = validation_results
+    def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
+        self.validation_results: dict[ContentType, FullReport] = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
@@ -58,39 +63,46 @@ class HtmlFormat:
     def _generate_validation_report_html(
         self, template_name: str = "html_report/report.html"
     ) -> str:
-        script_dir: Path = pathlib.Path(__file__).parent.resolve()
-        template_dir: Path = script_dir / "templates"
-        env: Environment = jinja2.Environment(
+        template_dir = pathlib.Path(__file__).parent.resolve() / "templates"
+        env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dir),
             autoescape=jinja2.select_autoescape(["html"]),
         )
-        template: Template = env.get_template(template_name)
 
-        css_file_path: Path = template_dir / "static" / "style.css"
-        js_file_path: Path = template_dir / "static" / "script.js"
+        report_statistics: ReportStatistics = self._get_report_statistics()
 
-        css_content: str = css_file_path.read_text(encoding="utf-8-sig")
-        js_content: str = js_file_path.read_text(encoding="utf-8-sig")
+        return env.get_template(template_name).render(
+            validation_groups=report_statistics.groups_data,
+            total_integrations=report_statistics.total_items,
+            total_fatal_issues=report_statistics.total_fatal,
+            total_non_fatal_issues=report_statistics.total_warn,
+            current_time=datetime.datetime.now(datetime.UTC)
+            .astimezone()
+            .strftime("%B %d, %Y at %I:%M %p %Z"),
+            css_content=(template_dir / "static" / "style.css").read_text(encoding="utf-8-sig"),
+            js_content=(template_dir / "static" / "script.js").read_text(encoding="utf-8-sig"),
+        )
 
-        all_reports: list[ValidationResults] = [
-            report
-            for reports_list in self.validation_results.values()
-            if reports_list is not None
-            for report in reports_list
-        ]
+    def _get_report_statistics(self) -> ReportStatistics:
+        groups_data = {}
+        total_items = total_fatal = total_warn = 0
 
-        current_time_aware: datetime.datetime = datetime.datetime.now(datetime.UTC).astimezone()
-        context: dict[str, Any] = {
-            "reports_by_category": self.validation_results,
-            "total_integrations": len(all_reports),
-            "total_fatal_issues": sum(
-                len(r.validation_report.failed_fatal_validations) for r in all_reports
-            ),
-            "total_non_fatal_issues": sum(
-                len(r.validation_report.failed_non_fatal_validations) for r in all_reports
-            ),
-            "current_time": current_time_aware.strftime("%B %d, %Y at %I:%M %p %Z"),
-            "css_content": css_content,
-            "js_content": js_content,
-        }
-        return template.render(context)
+        for content_type, full_report in self.validation_results.items():
+            all_reports = [
+                report for reports in full_report.values() if reports for report in reports
+            ]
+
+            fatal = sum(len(r.validation_report.failed_fatal_validations) for r in all_reports)
+            warn = sum(len(r.validation_report.failed_non_fatal_validations) for r in all_reports)
+
+            groups_data[content_type.value] = {
+                "reports_by_category": full_report,
+                "total_items": len(all_reports),
+                "total_fatal": fatal,
+                "total_warn": warn,
+            }
+            total_items += len(all_reports)
+            total_fatal += fatal
+            total_warn += warn
+
+        return ReportStatistics(groups_data, total_items, total_fatal, total_warn)
