@@ -76,9 +76,9 @@ def main():
     )
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-        output_message = "output message :"  # human readable message, showed in UI as the action result
-        result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
+        status = EXECUTION_STATE_COMPLETED
+        output_message = "output message :"
+        result_value = None
         try:
             input_json = json.loads(json_object)
 
@@ -116,7 +116,7 @@ def main():
             siemplify.LOGGER.info("Unable to load CustomFilters")
             siemplify.LOGGER.info(e)
 
-        if type(input_json) == list:
+        if isinstance(input_json, list):
             result_value = ""
             if jinja:
                 template = jinja_env.from_string(jinja)
@@ -128,7 +128,7 @@ def main():
                     entry.update({"SiemplifyEntities": entities})
                 result_value += template.render(entry, input_json=entry)
                 output_message = "Successfully rendered the template."
-        elif type(input_json) == dict:
+        elif isinstance(input_json, dict):
             if include_case_data:
                 input_json.update({"SiemplifyEvents": events})
                 input_json.update({"SiemplifyEntities": entities})
@@ -145,8 +145,8 @@ def main():
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
-        raise  # used to return entire error details - including stacktrace back to client UI. Best for most usecases
-        # in case you want to handle the error yourself, don't raise, and handle error result ouputs:
+        raise  # Return full error details to the client UI. Best for most use cases.
+        # For manual error handling, comment out raise and use the lines below:
         status = EXECUTION_STATE_FAILED
         result_value = "Failed"
         output_message += "\n unknown failure"
@@ -155,6 +155,7 @@ def main():
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",
     )
+    siemplify.result.add_result_json({"html_output": result_value})
     siemplify.end(output_message, result_value, status)
 
 
