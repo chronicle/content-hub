@@ -318,6 +318,7 @@ EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Generate Alert from GreyNoise GNQL",
     "beSECURE",
     "Pull reports",
+    "Image Utilities",
 }
 EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE: set[str] = {
     "Bitdefender GravityZone",
