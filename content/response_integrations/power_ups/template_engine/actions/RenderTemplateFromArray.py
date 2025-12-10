@@ -69,9 +69,9 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-        output_message = "output message :"  # human readable message, showed in UI as the action result
-        result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
+        status = EXECUTION_STATE_COMPLETED  # Action final status.
+        output_message = "output message :"  # Human-readable message for the UI.
+        result_value = None  # Simple result value for playbook logic.
         try:
             input_json = json.loads(arrayInput)
 
@@ -130,8 +130,8 @@ def main():
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
-        raise  # used to return entire error details - including stacktrace back to client UI. Best for most usecases
-        # in case you want to handle the error yourself, don't raise, and handle error result ouputs:
+        raise  # Return full error details to the client UI. Best for most use cases.
+        # For manual error handling, comment out raise and use the lines below:
         status = EXECUTION_STATE_FAILED
         result_value = "Failed"
         output_message += "\n unknown failure"
@@ -140,6 +140,7 @@ def main():
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",
     )
+    siemplify.result.add_result_json({"html_output": result_value})
     siemplify.end(output_message, result_value, status)
 
 
