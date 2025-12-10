@@ -31,13 +31,14 @@ import mp.core.constants
 
 from .utils import is_ci_cd
 
+APP_AUTHOR: str = "Google"
+APP_NAME: str = "mp-cli-tool"
+MP_CACHE_DIR: Path = Path(user_config_dir(APP_NAME, APP_AUTHOR))
 CONFIG_FILE_NAME: str = ".mp_config"
 if is_ci_cd():
     CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
 else:
-    APP_AUTHOR: str = "Google"
-    APP_NAME: str = "mp-cli-tool"
-    MP_CACHE_DIR: Path = Path(user_config_dir(APP_NAME, APP_AUTHOR))
+
     CONFIG_PATH: Path = MP_CACHE_DIR / CONFIG_FILE_NAME
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
