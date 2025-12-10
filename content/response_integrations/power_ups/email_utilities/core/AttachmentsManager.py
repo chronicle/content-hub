@@ -16,11 +16,18 @@ from __future__ import annotations
 
 import base64
 import os
+import requests
 
 from soar_sdk.SiemplifyDataModel import Attachment
 
+from TIPCommon.rest.soar_api import (
+    get_attachments_metadata,
+    add_attachment_to_case_wall,
+)
+from TIPCommon.types import SingleJson
+
+
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
-CASE_DETAILS_URL = "/external/v1/cases/GetCaseFullDetails/"
 
 
 class AttachmentsManager:
@@ -28,6 +35,7 @@ class AttachmentsManager:
         self.siemplify = siemplify
         self.logger = siemplify.LOGGER
         self.alert_entities = self.get_alert_entities()
+        self.attachments = self._get_attachments()
 
     def get_alert_entities(self):
         return [
@@ -35,13 +43,8 @@ class AttachmentsManager:
         ]
 
     def get_attachments(self):
-        response = self.siemplify.session.get(
-            f"{self.siemplify.API_ROOT}{CASE_DETAILS_URL}"
-            + self.siemplify.case.identifier,
-        )
-        wall_items = response.json()["wallData"]
         attachments = []
-        for wall_item in wall_items:
+        for wall_item in self.attachments:
             if wall_item["type"] == 4:
                 if not wall_item["alertIdentifier"]:
                     attachments.append(wall_item)
@@ -49,13 +52,8 @@ class AttachmentsManager:
         return attachments
 
     def get_alert_attachments(self):
-        response = self.siemplify.session.get(
-            f"{self.siemplify.API_ROOT}{CASE_DETAILS_URL}"
-            + self.siemplify.case.identifier,
-        )
-        wall_items = response.json()["wallData"]
         attachments = []
-        for wall_item in wall_items:
+        for wall_item in self.attachments:
             if wall_item["type"] == 4:
                 if (
                     self.siemplify.current_alert.identifier
@@ -63,6 +61,17 @@ class AttachmentsManager:
                 ):
                     attachments.append(wall_item)
         return attachments
+
+    def _get_attachments(self) -> list[SingleJson]:
+        """Get attachments metadata from case wall and alert wall.
+
+        Returns:
+            list[SingleJson]: List of attachments metadata
+        """
+        return [
+            attachment.to_json() for attachment in
+            get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
+        ]
 
     def add_attachment(
         self,
@@ -97,15 +106,15 @@ class AttachmentsManager:
         )
         attachment.case_identifier = case_id
         attachment.alert_identifier = alert_identifier
-        address = (
-            f"{self.siemplify.API_ROOT}/{'external/v1/sdk/AddAttachment?format=snake'}"
-        )
-        response = self.siemplify.session.post(address, json=attachment.__dict__)
+        result = None
         try:
-            self.siemplify.validate_siemplify_error(response)
-        except Exception as e:
-            if "Attachment size" in e:
-                raise Exception(
-                    f"Attachment size should be < 5MB. Original file size: {attachment.orig_size}. Size after encoding: {attachment.size}.",
-                )
-        return response.json()
+            result = add_attachment_to_case_wall(self.siemplify, attachment)
+
+        except requests.HTTPError as e:
+            if "Attachment size" in str(e):
+                raise ValueError(
+                    "Attachment size should be < 5MB. Original file size: "
+                    f"{attachment.orig_size}. Size after encoding: {attachment.size}.",
+                ) from e
+
+        return result
