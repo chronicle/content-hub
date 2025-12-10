@@ -38,7 +38,6 @@ CONFIG_FILE_NAME: str = ".mp_config"
 if is_ci_cd():
     CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
 else:
-
     CONFIG_PATH: Path = MP_CACHE_DIR / CONFIG_FILE_NAME
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
