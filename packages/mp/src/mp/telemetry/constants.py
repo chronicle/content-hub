@@ -17,11 +17,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TypedDict
 
-from mp.core.config import MP_CACHE_DIR
+from platformdirs import user_config_dir
 
 ENDPOINT: str = "https://34-36-216-242.sslip.io/v1/ingest"
 REQUEST_TIMEOUT: int = 3
 
+APP_AUTHOR: str = "Google"
+APP_NAME: str = "mp-cli-tool"
+MP_CACHE_DIR: Path = Path(user_config_dir(APP_NAME, APP_AUTHOR))
 CONFIG_FILE_PATH: Path = MP_CACHE_DIR / Path("telemetry_config.yaml")
 
 
