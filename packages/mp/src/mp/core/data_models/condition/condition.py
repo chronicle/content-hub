@@ -36,13 +36,13 @@ class MatchType(RepresentableEnum):
 
 class BuiltCondition(TypedDict):
     FieldName: str
-    Value: str
+    Value: str | None
     MatchType: int
 
 
 class NonBuiltCondition(TypedDict):
     field_name: str
-    value: str
+    value: str | None
     match_type: str
 
 
@@ -50,7 +50,7 @@ class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
     field_name: Annotated[
         str, pydantic.Field(min_length=mp.core.constants.CONDITION_FIELD_NAME_MIN_LENGTH)
     ]
-    value: str
+    value: str | None
     match_type: MatchType
 
     @classmethod
