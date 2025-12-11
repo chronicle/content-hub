@@ -157,6 +157,8 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
 
 
 class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
+    """Represents a component that can be built and deconstructed."""
+
     @classmethod
     @abc.abstractmethod
     def _from_built(cls, file_name: str, built: _BT) -> T_BuildableComponent:
@@ -251,6 +253,13 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
 
 
 class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
+    """Represents a component stored by a single object in a single file.
+
+    Examples:
+        A playbook trigger is a single object that appears only once in a playbook.
+
+    """
+
     @classmethod
     @abc.abstractmethod
     def from_built_path(cls, path: Path) -> T_SingularComponentMetadata:
@@ -327,6 +336,13 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
 
 
 class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
+    """Represents a component stored by a single object in multiple files.
+
+    Examples:
+        A response action is a single object that may appear in multiple times in an integration.
+
+    """
+
     @classmethod
     @abc.abstractmethod
     def from_built_path(cls, path: Path) -> list[T_ComponentMetadata]:
@@ -403,6 +419,14 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
 
 
 class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
+    """Represents a sequence of components stored in a single file.
+
+    Examples:
+        Release notest are stored in a single file per content type, but each file contains
+        a sequence of release notes.
+
+    """
+
     @classmethod
     @abc.abstractmethod
     def from_built_path(cls, path: Path) -> list[T_SequentialMetadata]:
