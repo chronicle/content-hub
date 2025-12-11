@@ -180,7 +180,7 @@ def main():
             )[0]
             payload = {
                 "cyberCaseId": siemplify.case_id,
-                "alertGroupIdetifier": attached_wf["IndicatorIdentifier"],
+                "alertGroupIdentifier": attached_wf["IndicatorIdentifier"],
                 "alertIdentifier": alert["identifier"],
                 "shouldRunAutomatic": True,
                 "wfName": playbook_name,
