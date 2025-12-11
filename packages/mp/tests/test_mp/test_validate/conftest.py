@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
-import pathlib
 import shutil
 import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -26,10 +26,10 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def temp_integration(non_built_integration: pathlib.Path) -> Iterator[pathlib.Path]:
+def temp_integration(non_built_integration: Path) -> Iterator[Path]:
     """Create a temporary integration directory with mock files."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_root = pathlib.Path(temp_dir)
+        temp_root = Path(temp_dir)
 
         # Get the name of the valid parent directory
         parent_name = non_built_integration.parent.name
@@ -42,3 +42,23 @@ def temp_integration(non_built_integration: pathlib.Path) -> Iterator[pathlib.Pa
         shutil.copytree(non_built_integration.resolve(), temp_integration_path)
 
         yield temp_integration_path
+
+
+@pytest.fixture
+def temp_non_built_playbook(non_built_playbook_path: Path) -> Iterator[Path]:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_root: Path = Path(temp_dir)
+        temp_non_built_playbook: Path = temp_root / non_built_playbook_path.name
+
+        shutil.copytree(non_built_playbook_path, temp_non_built_playbook)
+        yield temp_non_built_playbook
+
+
+@pytest.fixture
+def temp_non_built_block(non_built_block_path: Path) -> Iterator[Path]:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_root: Path = Path(temp_dir)
+        temp_non_built_playbook: Path = temp_root / non_built_block_path.name
+
+        shutil.copytree(non_built_block_path, temp_non_built_playbook)
+        yield temp_non_built_playbook

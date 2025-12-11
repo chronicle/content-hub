@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from mp.validate.pre_build_validation.common.version_bump_validation import VersionBumpValidation
+
 from .connectors_documentation_link_validation import ConnectorsHasDocumentationLinkValidation
 from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
@@ -27,7 +29,6 @@ from .ping_validation import IntegrationHasPingActionValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
 from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation
-from .version_bump_validation import VersionBumpValidation
 
 if TYPE_CHECKING:
     from mp.validate.pre_build_validation import Validator
