@@ -17,9 +17,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.data_models.playbooks.step.metadata import Step, StepType
 from mp.core.exceptions import FatalValidationError
+from mp.core.utils import get_all_blocks_id_from_path
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,13 +43,13 @@ class AllBlocksExistValidation:
         required_block_ids: set[str] = set()
         steps: list[Step] = Step.from_non_built_path(playbook_path)
         for step in steps:
-            if step.type_ != StepType.BLOCK:
+            if step.type_ is not StepType.BLOCK:
                 continue
 
             for parm in step.parameters:
                 if parm.name == "NestedWorkflowIdentifier":
                     block_id: str | None = parm.value
-                    if not block_id:
+                    if block_id is None:
                         continue
                     required_block_ids.add(block_id)
                     break
@@ -57,7 +57,7 @@ class AllBlocksExistValidation:
         if not required_block_ids:
             return
 
-        available_block_ids = _get_all_block_ids_in_content_hub(playbook_path.parent)
+        available_block_ids = get_all_blocks_id_from_path(playbook_path.parent)
         missing_blocks = required_block_ids - available_block_ids
         if missing_blocks:
             msg: str = (
@@ -66,11 +66,3 @@ class AllBlocksExistValidation:
                 f"missing blocks: {', '.join(missing_blocks)}"
             )
             raise FatalValidationError(msg)
-
-
-def _get_all_block_ids_in_content_hub(content_hub_path: Path) -> set[str]:
-    return {
-        PlaybookMetadata.from_non_built_path(playbook).identifier
-        for playbook in content_hub_path.iterdir()
-        if playbook.is_dir()
-    }
