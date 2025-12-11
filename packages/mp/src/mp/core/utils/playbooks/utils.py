@@ -38,6 +38,7 @@ def get_all_blocks_id_from_path(base_path: Path) -> set[str]:
     for playbook in base_path.iterdir():
         if not playbook.is_dir():
             continue
+
         meta: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook)
         if meta.type_ is PlaybookType.BLOCK:
             res.add(meta.identifier)
