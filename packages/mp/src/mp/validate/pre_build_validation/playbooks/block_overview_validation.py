@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pydantic import dataclasses
+
 from mp.core.data_models.playbooks.meta.display_info import PlaybookType
 from mp.core.data_models.playbooks.playbook import Playbook
 from mp.core.exceptions import NonFatalValidationError
@@ -24,6 +26,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class BlockOverviewValidation:
     name: str = "Block Overview Validation"
 
