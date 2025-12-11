@@ -17,8 +17,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from mp.validate.pre_build_validation.common.version_bump_validation import VersionBumpValidation
-
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
+from .all_blocks_existing_validation import AllBlocksExistValidation
 
 if TYPE_CHECKING:
     from mp.validate.data_models import Validator
@@ -39,4 +39,4 @@ def _get_non_priority_validations() -> list[Validator]:
 
 
 def _get_priority_validations() -> list[Validator]:
-    return []
+    return [AllBlocksExistValidation()]
