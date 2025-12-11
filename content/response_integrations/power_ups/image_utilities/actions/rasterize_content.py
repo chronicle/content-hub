@@ -271,7 +271,7 @@ class RasterizeAction(Action):
                             "1. Bash into the container as root:\n"
                             "   podman exec -it -u 0 <container_name> bash\n\n"
                             "2. Install Playwright and Chromium dependencies:\n"
-                            "   python3.11 -m pip install playwright\n"
+                            "   python3.11 -m pip install playwright==1.56.0\n"
                             "   playwright install --with-deps chromium\n\n"
                             "3. Copy the downloaded browser binaries from root to the agent user:\n"
                             "   cp -r /root/.cache/ms-playwright /home/siemplify_agent/.cache/\n"
