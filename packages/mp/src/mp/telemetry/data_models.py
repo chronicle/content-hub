@@ -65,6 +65,10 @@ class TelemetryPayload(pydantic.BaseModel):
             A dictionary representation of the event payload.
 
         """
+        timestamp: str | None = None
+        if self.timestamp is not None:
+            timestamp = self.timestamp.isoformat(timespec="milliseconds")
+
         return {
             "install_id": self.install_id,
             "tool": self.tool,
@@ -79,5 +83,5 @@ class TelemetryPayload(pydantic.BaseModel):
             "duration_ms": self.duration_ms,
             "error_type": self.error_type,
             "stack": self.stack,
-            "timestamp": self.timestamp.isoformat().replace("+00:00", "Z"),
+            "timestamp": timestamp,
         }

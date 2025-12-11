@@ -16,13 +16,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class WidgetType(mp.core.data_models.abc.RepresentableEnum):
+class WidgetType(RepresentableEnum):
     KEY_VALUE = 0
     EVENTS = 1
     JSON_RESULT = 2
@@ -47,13 +47,13 @@ class WidgetType(mp.core.data_models.abc.RepresentableEnum):
     QUICK_ACTIONS = 21
 
 
-class WidgetDefinitionScope(mp.core.data_models.abc.RepresentableEnum):
+class WidgetDefinitionScope(RepresentableEnum):
     CASE = 0
     ALERT = 1
     BOTH = 2
 
 
-class WidgetSize(mp.core.data_models.abc.RepresentableEnum):
+class WidgetSize(RepresentableEnum):
     HALF_WIDTH = 1
     FULL_WIDTH = 2
     THIRD_WIDTH = 3
@@ -76,9 +76,7 @@ class NonBuiltWidgetDataDefinition(TypedDict):
 
 
 class HtmlWidgetDataDefinition(
-    mp.core.data_models.abc.ComponentMetadata[
-        BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition
-    ]
+    ComponentMetadata[BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition]
 ):
     html_height: int
     safe_rendering: bool
@@ -88,14 +86,14 @@ class HtmlWidgetDataDefinition(
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
-        pass
+        raise NotImplementedError
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
-        pass
+        raise NotImplementedError
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltWidgetDataDefinition) -> Self:
+    def _from_built(cls, _: str, built: BuiltWidgetDataDefinition) -> Self:  # ty:ignore[invalid-method-override]
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
@@ -105,7 +103,7 @@ class HtmlWidgetDataDefinition(
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltWidgetDataDefinition) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltWidgetDataDefinition) -> Self:  # ty:ignore[invalid-method-override]
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],

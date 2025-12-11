@@ -19,11 +19,12 @@ from __future__ import annotations
 import dataclasses
 import enum
 from collections.abc import Iterable, Mapping
-from typing import Any, Generic, NamedTuple, TypeAlias, TypeVar
+from typing import Any, Generic, NamedTuple, ParamSpec, TypeAlias, TypeVar
 
 from . import constants
 
 _T = TypeVar("_T", bound=Iterable[Any])
+P = ParamSpec("P")
 
 
 @dataclasses.dataclass(slots=True)

@@ -123,14 +123,12 @@ def _update_display_info(
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
     built_display_info["DependentPlaybookIds"] = (
         _extract_block_identifier(built_playbook)
-        if built_playbook.get("Definition").get("PlaybookType") == PlaybookType.PLAYBOOK.value
+        if built_playbook.get("Definition", {}).get("PlaybookType") == PlaybookType.PLAYBOOK.value
         else []
     )
 
 
-def _extract_integrations(
-    built_playbook: BuiltPlaybook, parent_folder: Path | None = None
-) -> list[str]:
+def _extract_integrations(built_playbook: BuiltPlaybook, parent_folder: Path) -> list[str]:
     result: set[str] = set()
     steps: list[BuiltStep] = built_playbook["Definition"]["Steps"]
     for step in steps:
@@ -144,12 +142,12 @@ def _extract_integrations(
 
 
 def _extract_from_step(step: BuiltStep, result: set[str]) -> None:
-    integration_name: str = step.get("Integration")
+    integration_name: str | None = step.get("Integration")
     if integration_name not in {"Flow", None}:
         result.add(integration_name)
 
 
-def _extract_from_block(step: BuiltStep, parent_folder: Path | None, result: set[str]) -> None:
+def _extract_from_block(step: BuiltStep, parent_folder: Path, result: set[str]) -> None:
     step_parameters: list[BuiltStepParameter] = step.get("Parameters")
     for param in step_parameters:
         if param.get("Name") == "NestedWorkflowIdentifier":
@@ -157,7 +155,10 @@ def _extract_from_block(step: BuiltStep, parent_folder: Path | None, result: set
             result.update(temp)
 
 
-def _extract_integrations_from_nested_block(block_identifier: str, base_folder: Path) -> set[str]:
+def _extract_integrations_from_nested_block(
+    block_identifier: str | None,
+    base_folder: Path,
+) -> set[str]:
     result: set[str] = set()
     for file in base_folder.iterdir():
         if file.is_dir():
@@ -180,31 +181,33 @@ def _extract_integrations_from_nested_block(block_identifier: str, base_folder: 
     return result
 
 
-def _is_specific_block(block_json: dict, block_identifier: str) -> bool:
+def _is_specific_block(block_json: dict, block_identifier: str | None) -> bool:
     return (
-        block_json.get("Definition").get("PlaybookType") == PlaybookType.BLOCK.value
-        and block_json.get("Definition").get("Identifier") == block_identifier
+        block_json.get("Definition", {}).get("PlaybookType") == PlaybookType.BLOCK.value
+        and block_json.get("Definition", {}).get("Identifier") == block_identifier
     )
 
 
-def _extract_block_identifier(built_playbook: BuiltPlaybook) -> list[str]:
-    result: set[str] = set()
+def _extract_block_identifier(built_playbook: BuiltPlaybook) -> list[str | None]:
+    result: set[str | None] = set()
     steps: list[BuiltStep] = built_playbook.get("Definition").get("Steps")
     for step in steps:
         step_type: int = step.get("Type")
         if step_type != StepType.BLOCK.value:
             continue
+
         step_parameters: list[BuiltStepParameter] = step.get("Parameters")
         for param in step_parameters:
             if param.get("Name") == "NestedWorkflowIdentifier":
                 result.add(param.get("Value"))
                 break
+
     return list(result)
 
 
 def _extract_display_info_from_rn(rn_path: Path) -> ReleaseNotesDisplayInfo:
     release_notes: list[ReleaseNote] = ReleaseNote.from_non_built_path(rn_path)
     latest_version: float = max(float(rn.version) for rn in release_notes)
-    creation_time: int = min(rn.publish_time for rn in release_notes)
-    update_time: int = max(rn.publish_time for rn in release_notes)
+    creation_time: int = min(rn.publish_time for rn in release_notes if rn.publish_time is not None)
+    update_time: int = max(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     return ReleaseNotesDisplayInfo(creation_time, update_time, latest_version)

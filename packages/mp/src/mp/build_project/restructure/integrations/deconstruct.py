@@ -33,6 +33,7 @@ import toml
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
+import mp.core.utils
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata

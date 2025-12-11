@@ -156,14 +156,12 @@ def download_wheels_from_requirements(
         if is_windows():
             command.extend(["--platform", "win_amd64"])
         else:
-            command.extend(
-                [
-                    "--platform",
-                    "manylinux1_x86_64",
-                    "--platform",
-                    "manylinux_2_17_x86_64",
-                ]
-            )
+            command.extend([
+                "--platform",
+                "manylinux1_x86_64",
+                "--platform",
+                "manylinux_2_17_x86_64",
+            ])
         run_pip_command(command, cwd=project_path)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
@@ -279,14 +277,14 @@ def ruff_format(paths: Iterable[Path], /, **flags: bool | str) -> int:
     return execute_command_and_get_output(command, paths, **flags)
 
 
-def mypy(paths: Iterable[Path], /, **flags: bool | str) -> int:
-    """Run `mypy` on the provided paths.
+def ty_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
+    """Run `ty check` on the provided paths.
 
     Returns:
         The status code
 
     """
-    command: list[str] = [sys.executable, "-m", "mypy"]
+    command: list[str] = [sys.executable, "-m", "ty", "check"]
     return execute_command_and_get_output(command, paths, **flags)
 
 

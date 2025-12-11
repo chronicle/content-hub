@@ -107,17 +107,17 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
 
 
 def is_built_playbook(path: Path) -> bool:
-    """Check whether a path is a built-playbook.
+    """Check whether a path is a built playbook.
 
     Returns:
-        Whether the provided path is a built-playbook.
+        Whether the provided path is a built playbook.
 
     """
     if not path.exists() or path.is_dir() or path.suffix != ".json":
         return False
 
     try:
-        with path.open("r", encoding="utf-8") as f:
+        with path.open(encoding="utf-8") as f:
             data: dict[str, Any] = json.load(f)
 
         if not mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS.issubset(data.keys()):

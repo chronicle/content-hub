@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pydantic import dataclasses
+
 from mp.core import constants
 from mp.core.exceptions import NonFatalValidationError
 from mp.core.utils import filter_and_map_yaml_files
@@ -26,15 +28,17 @@ from mp.validate.utils import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class NoCustomComponentsInIntegrationValidation:
     name: str = "Custom Components Validation"
 
-    def run(self, validation_path: pathlib.Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(validation_path: Path) -> None:
         """Check if the integration or its components are marked as custom.
 
         Args:

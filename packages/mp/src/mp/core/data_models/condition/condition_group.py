@@ -16,12 +16,12 @@ from __future__ import annotations
 
 from typing import Self, TypedDict
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 from .condition import BuiltCondition, Condition, NonBuiltCondition
 
 
-class LogicalOperator(mp.core.data_models.abc.RepresentableEnum):
+class LogicalOperator(RepresentableEnum):
     AND = 0
     OR = 1
 
@@ -36,9 +36,7 @@ class NonBuiltConditionGroup(TypedDict):
     logical_operator: str
 
 
-class ConditionGroup(
-    mp.core.data_models.abc.Buildable[BuiltConditionGroup, NonBuiltConditionGroup]
-):
+class ConditionGroup(Buildable[BuiltConditionGroup, NonBuiltConditionGroup]):
     conditions: list[Condition]
     logical_operator: LogicalOperator
 

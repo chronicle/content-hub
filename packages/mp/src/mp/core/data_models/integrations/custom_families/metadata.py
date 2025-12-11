@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import SequentialMetadata
 
 from .rule import BuiltCustomFamilyRule, CustomFamilyRule, NonBuiltCustomFamilyRule
 
@@ -44,9 +44,7 @@ class NonBuiltCustomFamily(TypedDict):
     rules: list[NonBuiltCustomFamilyRule]
 
 
-class CustomFamily(
-    mp.core.data_models.abc.SequentialMetadata[BuiltCustomFamily, NonBuiltCustomFamily]
-):
+class CustomFamily(SequentialMetadata[BuiltCustomFamily, NonBuiltCustomFamily]):
     family: str
     description: Annotated[
         str,

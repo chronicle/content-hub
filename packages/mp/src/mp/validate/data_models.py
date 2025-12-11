@@ -116,7 +116,8 @@ class ValidationReport:
 class Validator(Protocol):
     name: str
 
-    def run(self, validation_path: Path) -> None:
+    @staticmethod
+    def run(validation_path: Path) -> None:
         """Execute the validation process on the specified path.
 
         Args:

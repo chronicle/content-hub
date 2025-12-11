@@ -19,13 +19,13 @@ from typing import Annotated, NotRequired, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
 import mp.core.validators
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
 
-class ParamMode(mp.core.data_models.abc.RepresentableEnum):
+class ParamMode(RepresentableEnum):
     REGULAR = 0
     SCRIPT = 2
 
@@ -51,7 +51,7 @@ class NonBuiltConnectorParameter(TypedDict):
 
 
 class ConnectorParameter(
-    mp.core.data_models.abc.Buildable[BuiltConnectorParameter, NonBuiltConnectorParameter],
+    Buildable[BuiltConnectorParameter, NonBuiltConnectorParameter],
 ):
     name: Annotated[
         str,

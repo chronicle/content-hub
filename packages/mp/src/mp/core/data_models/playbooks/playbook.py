@@ -36,14 +36,14 @@ from mp.core.data_models.release_notes.metadata import NonBuiltReleaseNote, Rele
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from packages.mp.src.mp.core.data_models.playbooks.meta.access_permissions import (
+    from mp.core.data_models.playbooks.meta.access_permissions import (
         BuiltAccessPermission,
     )
-    from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import (
+    from mp.core.data_models.playbooks.trigger.metadata import (
         BuiltTrigger,
         NonBuiltTrigger,
     )
-    from packages.mp.src.mp.core.data_models.playbooks.widget.metadata import (
+    from mp.core.data_models.playbooks.widget.metadata import (
         BuiltPlaybookWidgetMetadata,
         NonBuiltPlaybookWidgetMetadata,
     )
@@ -58,7 +58,7 @@ EMPTY_RN: ReleaseNote = ReleaseNote(
     new=True,
     item_name="Playbook name",
     item_type="Playbook",
-    publish_time="1762436207",
+    publish_time=1762436207,
     regressive=False,
     removed=False,
     ticket=None,
@@ -145,7 +145,7 @@ class Playbook:
             trigger=Trigger.from_built_path(path),
             release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
-            display_info=PlaybookDisplayInfo.from_built({}),
+            display_info=PlaybookDisplayInfo.from_built({}),  # ty:ignore[missing-typed-dict-key, invalid-argument-type]
         )
 
     @classmethod

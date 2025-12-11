@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Self, TypedDict
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable
 
 from .visibility_property import (
     BuiltIntegrationVisibilityProperty,
@@ -33,7 +33,7 @@ class NonBuiltFeatureTags(TypedDict):
     integration_visibility_properties: list[NonBuiltIntegrationVisibilityProperty]
 
 
-class FeatureTags(mp.core.data_models.abc.Buildable[BuiltFeatureTags, NonBuiltFeatureTags]):
+class FeatureTags(Buildable[BuiltFeatureTags, NonBuiltFeatureTags]):
     integration_visibility_properties: list[IntegrationVisibilityProperty]
 
     @classmethod
