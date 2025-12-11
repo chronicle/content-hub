@@ -28,7 +28,7 @@ from mp.core.custom_types import RepositoryType
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from .custom_types import YamlFileContent
+    from mp.core.custom_types import YamlFileContent
 
 SNAKE_PATTERN_1 = re.compile(r"(.)([A-Z][a-z]+)")
 SNAKE_PATTERN_2 = re.compile(r"([a-z0-9])([A-Z])")
