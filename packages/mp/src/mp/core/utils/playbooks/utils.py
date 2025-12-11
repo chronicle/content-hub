@@ -16,8 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from libcst.matchers import From
-
 from mp.core.data_models.playbooks.meta.display_info import PlaybookType
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 
