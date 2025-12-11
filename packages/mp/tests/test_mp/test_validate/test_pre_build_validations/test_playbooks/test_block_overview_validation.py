@@ -22,7 +22,7 @@ import pytest
 from mp.core.constants import OVERVIEWS_FILE_NAME
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.pre_build_validation.playbooks.block_overview_validation import (
-    BlockOverviewValidation,
+    BlockDoesNotContainAnOverviewValidation,
 )
 
 if TYPE_CHECKING:
@@ -30,7 +30,9 @@ if TYPE_CHECKING:
 
 
 class TestBlockOverviewValidation:
-    validator_runner: BlockOverviewValidation = BlockOverviewValidation()
+    validator_runner: BlockDoesNotContainAnOverviewValidation = (
+        BlockDoesNotContainAnOverviewValidation()
+    )
 
     def test_valid_block_success(self, temp_non_built_block: Path) -> None:
         self.validator_runner.run(temp_non_built_block)

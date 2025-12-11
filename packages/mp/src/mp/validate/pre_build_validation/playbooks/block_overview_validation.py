@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class BlockOverviewValidation:
+class BlockDoesNotContainAnOverviewValidation:
     name: str = "Block Overview Validation"
 
     @staticmethod
@@ -42,6 +42,6 @@ class BlockOverviewValidation:
 
         """
         playbook: Playbook = Playbook.from_non_built_path(playbook_path)
-        if playbook.meta_data.type_ == PlaybookType.BLOCK and playbook.overviews != []:
+        if playbook.meta_data.type_ is PlaybookType.BLOCK and playbook.overviews:
             msg: str = "Block cannot have overviews"
             raise NonFatalValidationError(msg)
