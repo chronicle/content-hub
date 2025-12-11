@@ -45,9 +45,13 @@ import magic
 import olefile
 from html2text import HTML2Text
 from msg_parser import MsOxMessage
+import requests
+
 from soar_sdk.SiemplifyDataModel import Attachment, EntityTypes
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
 from soar_sdk.SiemplifyUtils import dict_to_flat
+
+from TIPCommon.rest.soar_api import add_attachment_to_case_wall
 from tld import get_fld
 from urlextract import URLExtract
 
@@ -2118,19 +2122,16 @@ class EmailManager:
         )
         attachment.case_identifier = case_id
         attachment.alert_identifier = alert_identifier
-        address = (
-            f"{self.siemplify.API_ROOT}/{'external/v1/sdk/AddAttachment?format=snake'}"
-        )
-        response = self.siemplify.session.post(address, json=attachment.__dict__)
         try:
-            self.siemplify.validate_siemplify_error(response)
-        except Exception as e:
-            if "Attachment size" in e:
+            add_attachment_to_case_wall(self.siemplify, attachment)
+
+        except requests.HTTPError as e:
+            if "Attachment size" in str(e):
                 error_message = (
                     "Attachment size should be < 5MB. "
                     f"Original file size: {attachment.orig_size}. "
                     f"Size after encoding: {attachment.size}."
                 )
-                raise Exception(
+                raise ValueError(
                     error_message,
-                )
+                ) from e
