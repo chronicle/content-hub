@@ -14,8 +14,12 @@
 
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 
+import pytest
+
+from mp.core.exceptions import FatalValidationError
 from mp.validate.pre_build_validation.playbooks.all_blocks_existing_validation import (
     AllBlocksExistValidation,
 )
@@ -27,5 +31,14 @@ if TYPE_CHECKING:
 class TestAllBlocksExistValidation:
     validator_runner: AllBlocksExistValidation = AllBlocksExistValidation()
 
-    def test_all_blocks_exist_success(self, temp_playbook: Path):
-        self.validator_runner.run(temp_playbook)
+    def test_all_blocks_exist_success(
+        self, temp_non_built_playbook: Path, temp_non_built_block: Path
+    ) -> None:
+        destination_dir = temp_non_built_playbook.parent / temp_non_built_block.name
+        shutil.copytree(temp_non_built_block, destination_dir)
+
+        self.validator_runner.run(temp_non_built_playbook)
+
+    def test_missing_block_fail(self, temp_non_built_playbook: Path) -> None:
+        with pytest.raises(FatalValidationError, match="There are missing blocks"):
+            self.validator_runner.run(temp_non_built_playbook)
