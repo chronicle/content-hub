@@ -21,6 +21,7 @@ from mp.validate.pre_build_validation.common.version_bump_validation import Vers
 from .all_blocks_existing_validation import AllBlocksExistValidation
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
 from .environments_validation import EnvironmentsValidation
+from .steps_papameters_validation import StepParamsValidation
 
 if TYPE_CHECKING:
     from mp.validate.data_models import Validator
@@ -41,6 +42,7 @@ def _get_non_priority_validations() -> list[Validator]:
         VersionBumpValidation(),
         BlockDoesNotContainAnOverviewValidation(),
         EnvironmentsValidation(),
+        StepParamsValidation(),
     ]
 
 
