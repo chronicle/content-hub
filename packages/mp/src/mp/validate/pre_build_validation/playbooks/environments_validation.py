@@ -42,7 +42,7 @@ class EnvironmentsValidation:
 
         """
         meta: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
-        invalid_environments = set(meta.environments) - VALID_ENVIRONMENTS
+        invalid_environments = set(meta.environments).difference(VALID_ENVIRONMENTS)
         if invalid_environments:
             invalid_str = ", ".join(sorted(invalid_environments))
             valid_str = ", ".join(sorted(VALID_ENVIRONMENTS))

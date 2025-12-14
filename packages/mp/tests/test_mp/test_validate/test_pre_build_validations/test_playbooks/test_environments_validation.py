@@ -21,6 +21,7 @@ import mp.core.file_utils
 from mp.core.data_models.playbooks.meta.metadata import NonBuiltPlaybookMetadata, PlaybookMetadata
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.pre_build_validation.playbooks.environments_validation import (
+    VALID_ENVIRONMENTS,
     EnvironmentsValidation,
 )
 
@@ -28,8 +29,11 @@ from mp.validate.pre_build_validation.playbooks.environments_validation import (
 class TestEnvironmentsValidation:
     validator_runner: EnvironmentsValidation = EnvironmentsValidation()
 
-    def test_all_environments_valid(self, non_built_playbook_path: Path) -> None:
-        self.validator_runner.run(non_built_playbook_path)
+    def test_all_environments_valid(self, tmp_path: Path, non_built_playbook_path: Path) -> None:
+        playbook_path = self._set_playbook_environments(
+            tmp_path, non_built_playbook_path, environments=list(VALID_ENVIRONMENTS)
+        )
+        self.validator_runner.run(playbook_path)
 
     def test_all_environments_invalid(self, tmp_path: Path, non_built_playbook_path: Path) -> None:
         playbook_path = self._set_playbook_environments(
@@ -41,7 +45,9 @@ class TestEnvironmentsValidation:
 
     def test_one_invalid_one_valid(self, tmp_path: Path, non_built_playbook_path: Path) -> None:
         playbook_path = self._set_playbook_environments(
-            tmp_path, non_built_playbook_path, environments=["*", "personal env 2"]
+            tmp_path,
+            non_built_playbook_path,
+            environments=["personal env 2", *list(VALID_ENVIRONMENTS)],
         )
 
         with pytest.raises(NonFatalValidationError):
