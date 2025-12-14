@@ -42,10 +42,11 @@ class EnvironmentsValidation:
 
         """
         meta: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
-        for env in meta.environments:
-            if env not in VALID_ENVIRONMENTS:
-                msg: str = (
-                    "The only valid environments for playbook that is contributable are "
-                    f"{', '.join(VALID_ENVIRONMENTS)}"
-                )
-                raise NonFatalValidationError(msg)
+        invalid_environments = set(meta.environments) - VALID_ENVIRONMENTS
+        if invalid_environments:
+            invalid_str = ", ".join(sorted(invalid_environments))
+            valid_str = ", ".join(sorted(VALID_ENVIRONMENTS))
+            msg = (
+                f"Invalid environment(s) found: {invalid_str}. Valid environments are: {valid_str}."
+            )
+            raise NonFatalValidationError(msg)

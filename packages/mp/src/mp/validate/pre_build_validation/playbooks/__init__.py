@@ -20,6 +20,7 @@ from mp.validate.pre_build_validation.common.version_bump_validation import Vers
 
 from .all_blocks_existing_validation import AllBlocksExistValidation
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
+from .environments_validation import EnvironmentsValidation
 
 if TYPE_CHECKING:
     from mp.validate.data_models import Validator
@@ -36,7 +37,11 @@ def get_playbooks_pre_build_validations() -> list[Validator]:
 
 
 def _get_non_priority_validations() -> list[Validator]:
-    return [VersionBumpValidation(), BlockDoesNotContainAnOverviewValidation()]
+    return [
+        VersionBumpValidation(),
+        BlockDoesNotContainAnOverviewValidation(),
+        EnvironmentsValidation(),
+    ]
 
 
 def _get_priority_validations() -> list[Validator]:
