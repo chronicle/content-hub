@@ -35,28 +35,37 @@ class TestEnvironmentsValidation:
         )
         self.validator_runner.run(playbook_path)
 
-    def test_all_environments_invalid(self, tmp_path: Path, non_built_playbook_path: Path) -> None:
+    def test_all_environments_invalid_fail(
+        self, tmp_path: Path, non_built_playbook_path: Path
+    ) -> None:
         playbook_path = self._set_playbook_environments(
             tmp_path, non_built_playbook_path, environments=["personal env 1", "personal env 2"]
         )
-
-        with pytest.raises(NonFatalValidationError):
+        validation_msg: str = r"^Invalid environment\(s\) found: personal env 1, personal env 2\."
+        with pytest.raises(NonFatalValidationError, match=validation_msg):
             self.validator_runner.run(playbook_path)
 
-    def test_one_invalid_one_valid(self, tmp_path: Path, non_built_playbook_path: Path) -> None:
-        playbook_path = self._set_playbook_environments(
-            tmp_path,
-            non_built_playbook_path,
-            environments=["personal env 2", *list(VALID_ENVIRONMENTS)],
-        )
-
-        with pytest.raises(NonFatalValidationError):
-            self.validator_runner.run(playbook_path)
+    def test_one_invalid_one_valid_fail(
+        self, tmp_path: Path, non_built_playbook_path: Path
+    ) -> None:
+        validation_msg: str = r"^Invalid environment\(s\) found: personal env 2\."
+        for env in VALID_ENVIRONMENTS:
+            playbook_path = self._set_playbook_environments(
+                tmp_path,
+                non_built_playbook_path,
+                environments=["personal env 2", env],
+            )
+            with pytest.raises(NonFatalValidationError, match=validation_msg):
+                self.validator_runner.run(playbook_path)
 
     def _set_playbook_environments(
         self, tmp_path: Path, non_built_playbook_path: Path, environments: list[str]
     ) -> Path:
         playbook_path = tmp_path / non_built_playbook_path.name
+
+        if playbook_path.exists():
+            shutil.rmtree(playbook_path)
+
         shutil.copytree(non_built_playbook_path, playbook_path)
         definition_path = playbook_path / mp.core.constants.DEFINITION_FILE
 
