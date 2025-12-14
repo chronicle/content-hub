@@ -81,7 +81,7 @@ def _process_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
                 async_action_timeout = param.value
 
             case "AsyncPollingInterval":
-                if param.value and int(param.value) < MAX_ASYNC_ACTION_TIMEOUT:
+                if param.value and int(param.value) < MIN_ASYNC_POLLING_INTERVAL_IN_SECONDS:
                     step_result.append("AsyncPollingInterval must be at least 30 seconds.")
                 async_polling_interval = param.value
 
