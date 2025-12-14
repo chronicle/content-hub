@@ -24,9 +24,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-MinAsyncPollingIntervalInSeconds: int = 30
-MinPendingActionTimeout: int = 300
-MaxAsyncActionTimeout: int = 1209600
+MIN_ASYNC_POLLING_INTERVAL_IN_SECONDS: int = 30
+MIN_PENDING_ACTION_TIMEOUT: int = 300
+MAX_ASYNC_ACTION_TIMEOUT: int = 1209600
 
 
 @dataclass(slots=True, frozen=True)
@@ -48,7 +48,7 @@ class StepParamsValidation:
 
         steps: list[Step] = Step.from_non_built_path(playbook_path)
         for step in steps:
-            step_result: dict[str, list[str]] | None = _proccess_step(step)
+            step_result: dict[str, list[str]] | None = _process_step(step)
             if step_result:
                 validation_result.append(step_result)
 
@@ -57,7 +57,7 @@ class StepParamsValidation:
             raise NonFatalValidationError(msg)
 
 
-def _proccess_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
+def _process_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
     step_result: list[str] = []
 
     async_action_timeout: str = ""
@@ -70,18 +70,18 @@ def _proccess_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
                     step_result.append("AssignedUsers is not allowed for automatic steps.")
 
             case "PendingActionTimeout":
-                if param.value and int(param.value) < MinPendingActionTimeout:
+                if param.value and int(param.value) < MIN_PENDING_ACTION_TIMEOUT:
                     step_result.append("PendingActionTimeout must be at least 300 seconds.")
 
             case "AsyncActionTimeout":
-                if param.value and not (0 <= int(param.value) <= MaxAsyncActionTimeout):
+                if param.value and not (0 < int(param.value) <= MAX_ASYNC_ACTION_TIMEOUT):
                     step_result.append(
                         "AsyncActionTimeout must positive number less than 14 days (in seconds)."
                     )
                 async_action_timeout = param.value
 
             case "AsyncPollingInterval":
-                if param.value and int(param.value) < MinAsyncPollingIntervalInSeconds:
+                if param.value and int(param.value) < MAX_ASYNC_ACTION_TIMEOUT:
                     step_result.append("AsyncPollingInterval must be at least 30 seconds.")
                 async_polling_interval = param.value
 
