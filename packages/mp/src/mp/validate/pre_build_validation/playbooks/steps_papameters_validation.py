@@ -71,7 +71,7 @@ def _proccess_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
 
             case "PendingActionTimeout":
                 if param.value and int(param.value) < MinPendingActionTimeout:
-                    step_result.append("PendingActionTimeout must be greater than 300 seconds.")
+                    step_result.append("PendingActionTimeout must be at least 300 seconds.")
 
             case "AsyncActionTimeout":
                 if param.value and not (0 <= int(param.value) <= MaxAsyncActionTimeout):
@@ -82,13 +82,13 @@ def _proccess_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
 
             case "AsyncPollingInterval":
                 if param.value and int(param.value) < MinAsyncPollingIntervalInSeconds:
-                    step_result.append("AsyncPollingInterval must be greater than 30 seconds.")
+                    step_result.append("AsyncPollingInterval must be at least 30 seconds.")
                 async_polling_interval = param.value
 
     if (
         async_action_timeout
         and async_polling_interval
-        and int(async_polling_interval) > int(async_action_timeout)
+        and int(async_polling_interval) >= int(async_action_timeout)
     ):
         step_result.append("AsyncPollingInterval must be less than AsyncActionTimeout.")
 
