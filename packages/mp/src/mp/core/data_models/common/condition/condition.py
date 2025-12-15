@@ -14,11 +14,8 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Self, TypedDict
+from typing import Self, TypedDict
 
-import pydantic
-
-import mp.core.constants
 from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
