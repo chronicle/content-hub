@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
-from mp.core.data_models.release_notes.metadata import (
+from mp.core.data_models.common.release_notes.metadata import (
     BuiltReleaseNote,
     NonBuiltReleaseNote,
     ReleaseNote,
