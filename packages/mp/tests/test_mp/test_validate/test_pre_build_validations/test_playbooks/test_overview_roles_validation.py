@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.pre_build_validation.playbooks.overview_contains_only_allowed_roles_validation import (  # noqa: E501
+from mp.validate.pre_build_validation.playbooks.overview_roles_validation import (
     ALLOWED_ROLES,
     OverviewContainsOnlyAllowedRolesValidation,
 )
