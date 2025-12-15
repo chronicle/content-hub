@@ -92,7 +92,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
 
     @classmethod
     def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:  # ty:ignore[invalid-method-override]
-        return cls()
+        return cls()  # ty:ignore[missing-argument]
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltPlaybookDisplayInfo) -> Self:
@@ -108,6 +108,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             ),
             is_google_verified=non_built["is_google_verified"],
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
+            dependent_playbook_ids=[],
         )
 
     def to_built(self) -> BuiltPlaybookDisplayInfo:

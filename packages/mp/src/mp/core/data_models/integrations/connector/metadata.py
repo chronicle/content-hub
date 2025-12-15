@@ -135,7 +135,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
-            documentation_link=built["DocumentationLink"],
+            documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
             integration=built["Integration"],
             is_connector_rules_supported=built["IsConnectorRulesSupported"],
             is_custom=built["IsCustom"],
@@ -152,7 +152,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
             file_name=file_name,
             creator=non_built["creator"],
             description=non_built["description"],
-            documentation_link=non_built.get("documentation_link"),
+            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             integration=non_built["integration"],
             is_connector_rules_supported=non_built["is_connector_rules_supported"],
             is_custom=non_built.get("is_custom", False),

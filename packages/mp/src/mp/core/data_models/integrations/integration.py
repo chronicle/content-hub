@@ -97,7 +97,7 @@ class BuiltFullDetails(TypedDict):
     Managers: Sequence[str]
     CustomFamilies: Sequence[str]
     MappingRules: Sequence[str]
-    Widgets: Sequence[str]
+    Widgets: Sequence[str | None]
     Version: float
     IsCustom: bool
     ExampleUseCases: Sequence[str]

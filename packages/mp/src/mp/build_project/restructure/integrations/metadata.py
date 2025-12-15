@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from pathlib import Path
 
+    from mp.core.data_models.common.release_notes.metadata import BuiltReleaseNote
     from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata
     from mp.core.data_models.integrations.action_widget.metadata import BuiltActionWidgetMetadata
     from mp.core.data_models.integrations.connector.metadata import BuiltConnectorMetadata
@@ -44,7 +45,6 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.integration_meta.metadata import BuiltIntegrationMetadata
     from mp.core.data_models.integrations.job.metadata import BuiltJobMetadata
     from mp.core.data_models.integrations.mapping_rules.metadata import BuiltMappingRule
-    from mp.core.data_models.release_notes.metadata import BuiltReleaseNote
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

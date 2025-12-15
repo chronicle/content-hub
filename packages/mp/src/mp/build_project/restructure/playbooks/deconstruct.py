@@ -26,6 +26,7 @@ from mp.core.data_models.common.widget.data import WidgetType
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote
     from mp.core.data_models.playbooks.meta.display_info import NonBuiltPlaybookDisplayInfo
     from mp.core.data_models.playbooks.meta.metadata import NonBuiltPlaybookMetadata
     from mp.core.data_models.playbooks.overview.metadata import NonBuiltOverview
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.step.metadata import NonBuiltStep
     from mp.core.data_models.playbooks.trigger.metadata import NonBuiltTrigger
     from mp.core.data_models.playbooks.widget.metadata import NonBuiltPlaybookWidgetMetadata
-    from mp.core.data_models.release_notes.metadata import NonBuiltReleaseNote
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
