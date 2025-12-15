@@ -248,7 +248,7 @@ class IntegrationMetadata(
             name=built["DisplayName"],
             identifier=built["Identifier"],
             python_version=PythonVersion(built["PythonVersion"]),
-            documentation_link=built["DocumentationLink"],
+            documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
             image_base64=image,
             parameters=[IntegrationParameter.from_built(p) for p in built["IntegrationProperties"]],
             should_install_in_system=built["ShouldInstalledInSystem"],
@@ -274,9 +274,9 @@ class IntegrationMetadata(
             feature_tags=feature_tags,
             name=name,
             identifier=non_built["identifier"],
-            documentation_link=non_built.get("documentation_link"),
+            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             description=non_built.get("description", ""),
-            image_base64=non_built["image_path"],
+            image_base64=non_built["image_path"],  # ty:ignore[invalid-argument-type]
             parameters=[IntegrationParameter.from_non_built(p) for p in non_built["parameters"]],
             should_install_in_system=non_built.get("should_install_in_system", False),
             is_custom=non_built.get("is_custom", False),
