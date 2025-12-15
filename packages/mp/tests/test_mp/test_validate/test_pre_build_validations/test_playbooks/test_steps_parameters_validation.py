@@ -18,45 +18,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import mp.core.constants
-import mp.core.file_utils
-from mp.core.data_models.playbooks.step.metadata import Step
-from mp.core.data_models.playbooks.step.step_parameter import StepParameter
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.pre_build_validation.playbooks.steps_parameters_validation import (
     StepParamsValidation,
 )
 
+from .common import update_step_yaml
+
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-def _update_step_yaml(playbook_path: Path, updates: dict) -> None:
-    step: Step = Step.from_non_built_path(playbook_path)[0]
-
-    new_params = updates.pop("parameters")
-    if updates.get("is_automatic"):
-        step.is_automatic = updates["is_automatic"]
-    for new_param in new_params:
-        found = False
-        for existing_param in step.parameters:
-            if existing_param.name == new_param["name"]:
-                existing_param.value = new_param["value"]
-                found = True
-                break
-        if not found:
-            step.parameters.append(
-                StepParameter(
-                    name=new_param["name"],
-                    value=new_param["value"],
-                    step_id="1",
-                    playbook_id="1",
-                )
-            )
-    mp.core.file_utils.save_yaml(
-        step.to_non_built(),
-        playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
-    )
 
 
 class TestStepParamsValidation:
@@ -66,7 +36,7 @@ class TestStepParamsValidation:
         self.validator_runner.run(non_built_playbook_path)
 
     def test_assigned_users_for_automatic_step_fail(self, temp_non_built_playbook: Path) -> None:
-        _update_step_yaml(
+        update_step_yaml(
             temp_non_built_playbook,
             {
                 "is_automatic": True,
@@ -80,7 +50,7 @@ class TestStepParamsValidation:
         assert "AssignedUsers is not allowed for automatic steps." in str(excinfo.value)
 
     def test_pending_action_timeout_too_low_fail(self, temp_non_built_playbook: Path) -> None:
-        _update_step_yaml(
+        update_step_yaml(
             temp_non_built_playbook,
             {"parameters": [{"name": "PendingActionTimeout", "value": "299"}]},
         )
@@ -91,7 +61,7 @@ class TestStepParamsValidation:
         assert "PendingActionTimeout must be at least 300 seconds." in str(excinfo.value)
 
     def test_async_action_timeout_too_high_fail(self, temp_non_built_playbook: Path) -> None:
-        _update_step_yaml(
+        update_step_yaml(
             temp_non_built_playbook,
             {"parameters": [{"name": "AsyncActionTimeout", "value": "1209601"}]},
         )
@@ -104,7 +74,7 @@ class TestStepParamsValidation:
         )
 
     def test_async_action_timeout_not_positive_fail(self, temp_non_built_playbook: Path) -> None:
-        _update_step_yaml(
+        update_step_yaml(
             temp_non_built_playbook,
             {"parameters": [{"name": "AsyncActionTimeout", "value": "0"}]},
         )
@@ -117,7 +87,7 @@ class TestStepParamsValidation:
         )
 
     def test_async_polling_interval_too_low_fail(self, temp_non_built_playbook: Path) -> None:
-        _update_step_yaml(
+        update_step_yaml(
             temp_non_built_playbook,
             {"parameters": [{"name": "AsyncPollingInterval", "value": "29"}]},
         )
@@ -128,7 +98,7 @@ class TestStepParamsValidation:
         assert "AsyncPollingInterval must be at least 30 seconds." in str(excinfo.value)
 
     def test_fail_async_polling_interval_ge_timeout(self, temp_non_built_playbook: Path) -> None:
-        _update_step_yaml(
+        update_step_yaml(
             temp_non_built_playbook,
             {
                 "parameters": [
@@ -143,8 +113,8 @@ class TestStepParamsValidation:
 
         assert "AsyncPollingInterval must be less than AsyncActionTimeout." in str(excinfo.value)
 
-    def test_multiple_errors_in_one_step_fail(self, temp_non_built_playbook: Path) -> None:
-        _update_step_yaml(
+    def test_all_errors_in_step_fail(self, temp_non_built_playbook: Path) -> None:
+        update_step_yaml(
             temp_non_built_playbook,
             {
                 "is_automatic": True,

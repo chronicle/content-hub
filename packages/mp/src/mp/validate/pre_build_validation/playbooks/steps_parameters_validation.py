@@ -47,10 +47,9 @@ class StepParamsValidation:
         validation_result: list[dict[str, list[str]]] = []
 
         steps: list[Step] = Step.from_non_built_path(playbook_path)
-        for step in steps:
-            step_result: dict[str, list[str]] | None = _process_step(step)
-            if step_result:
-                validation_result.append(step_result)
+        validation_result: list[dict[str, list[str]]] = [
+            step_result for step in steps if (step_result := _process_step(step)) is not None
+        ]
 
         if validation_result:
             msg: str = _create_validation_msg(validation_result)
