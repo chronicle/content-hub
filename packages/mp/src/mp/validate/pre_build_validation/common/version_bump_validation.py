@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, NotRequired, TypeAlias, TypedDict
 
 import mp.core.unix
 from mp.core.constants import PROJECT_FILE, RELEASE_NOTES_FILE
-from mp.core.data_models.pyproject_toml import PyProjectToml
-from mp.core.data_models.release_notes.metadata import ReleaseNote
+from mp.core.data_models.common.release_notes.metadata import ReleaseNote
+from mp.core.data_models.integrations.pyproject_toml import PyProjectToml
 from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:

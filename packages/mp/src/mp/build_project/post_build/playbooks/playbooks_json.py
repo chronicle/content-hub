@@ -22,6 +22,7 @@ import rich
 import yaml
 
 import mp.core.constants
+from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import (
     PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE,
     BuiltPlaybookDisplayInfo,
@@ -32,7 +33,6 @@ from mp.core.data_models.playbooks.playbook import (
     BuiltPlaybook,
 )
 from mp.core.data_models.playbooks.step.metadata import StepType
-from mp.core.data_models.release_notes.metadata import ReleaseNote
 
 if TYPE_CHECKING:
     from mp.build_project.playbooks_repo import PlaybooksRepo

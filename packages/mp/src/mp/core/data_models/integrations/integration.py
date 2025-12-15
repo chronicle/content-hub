@@ -21,8 +21,7 @@ from typing import TYPE_CHECKING, Self, TypedDict
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.core.data_models.pyproject_toml import PyProjectToml
-from mp.core.data_models.release_notes.metadata import ReleaseNote
+from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 
 from .action.metadata import ActionMetadata
 from .action_widget.metadata import ActionWidgetMetadata
@@ -31,14 +30,17 @@ from .custom_families.metadata import CustomFamily
 from .integration_meta.metadata import IntegrationMetadata
 from .job.metadata import JobMetadata
 from .mapping_rules.metadata import MappingRule
+from .pyproject_toml import PyProjectToml
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, ManagerName, WidgetName
-    from mp.core.data_models.pyproject_toml import PyProjectTomlFile
-    from mp.core.data_models.release_notes.metadata import BuiltReleaseNote, NonBuiltReleaseNote
+    from mp.core.data_models.common.release_notes.metadata import (
+        BuiltReleaseNote,
+        NonBuiltReleaseNote,
+    )
 
     from .action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
     from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
@@ -48,6 +50,7 @@ if TYPE_CHECKING:
     from .integration_meta.parameter import BuiltIntegrationParameter
     from .job.metadata import BuiltJobMetadata, NonBuiltJobMetadata
     from .mapping_rules.metadata import BuiltMappingRule, NonBuiltMappingRule
+    from .pyproject_toml import PyProjectTomlFile
 
 
 class BuiltIntegration(TypedDict):
