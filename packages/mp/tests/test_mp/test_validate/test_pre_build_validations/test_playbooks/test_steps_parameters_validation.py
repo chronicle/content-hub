@@ -23,7 +23,7 @@ from mp.validate.pre_build_validation.playbooks.steps_parameters_validation impo
     StepParamsValidation,
 )
 
-from .common import update_step_yaml
+from .common import update_single_step
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,7 +36,7 @@ class TestStepParamsValidation:
         self.validator_runner.run(non_built_playbook_path)
 
     def test_assigned_users_for_automatic_step_fail(self, temp_non_built_playbook: Path) -> None:
-        update_step_yaml(
+        update_single_step(
             temp_non_built_playbook,
             {
                 "is_automatic": True,
@@ -50,7 +50,7 @@ class TestStepParamsValidation:
         assert "AssignedUsers is not allowed for automatic steps." in str(excinfo.value)
 
     def test_pending_action_timeout_too_low_fail(self, temp_non_built_playbook: Path) -> None:
-        update_step_yaml(
+        update_single_step(
             temp_non_built_playbook,
             {"parameters": [{"name": "PendingActionTimeout", "value": "299"}]},
         )
@@ -61,7 +61,7 @@ class TestStepParamsValidation:
         assert "PendingActionTimeout must be at least 300 seconds." in str(excinfo.value)
 
     def test_async_action_timeout_too_high_fail(self, temp_non_built_playbook: Path) -> None:
-        update_step_yaml(
+        update_single_step(
             temp_non_built_playbook,
             {"parameters": [{"name": "AsyncActionTimeout", "value": "1209601"}]},
         )
@@ -74,7 +74,7 @@ class TestStepParamsValidation:
         )
 
     def test_async_action_timeout_not_positive_fail(self, temp_non_built_playbook: Path) -> None:
-        update_step_yaml(
+        update_single_step(
             temp_non_built_playbook,
             {"parameters": [{"name": "AsyncActionTimeout", "value": "0"}]},
         )
@@ -87,7 +87,7 @@ class TestStepParamsValidation:
         )
 
     def test_async_polling_interval_too_low_fail(self, temp_non_built_playbook: Path) -> None:
-        update_step_yaml(
+        update_single_step(
             temp_non_built_playbook,
             {"parameters": [{"name": "AsyncPollingInterval", "value": "29"}]},
         )
@@ -98,7 +98,7 @@ class TestStepParamsValidation:
         assert "AsyncPollingInterval must be at least 30 seconds." in str(excinfo.value)
 
     def test_fail_async_polling_interval_ge_timeout(self, temp_non_built_playbook: Path) -> None:
-        update_step_yaml(
+        update_single_step(
             temp_non_built_playbook,
             {
                 "parameters": [
@@ -114,7 +114,7 @@ class TestStepParamsValidation:
         assert "AsyncPollingInterval must be less than AsyncActionTimeout." in str(excinfo.value)
 
     def test_all_errors_in_step_fail(self, temp_non_built_playbook: Path) -> None:
-        update_step_yaml(
+        update_single_step(
             temp_non_built_playbook,
             {
                 "is_automatic": True,

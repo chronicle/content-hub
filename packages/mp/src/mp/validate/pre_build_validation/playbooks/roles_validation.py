@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from mp.core.data_models.playbooks.overview.metadata import Overview
+from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,4 +33,20 @@ class RolesValidation:
 
     @staticmethod
     def run(playbook_path: Path) -> None:
+        """Validate playbook roles in the overviews section.
+
+        Args:
+            playbook_path: The path to the playbook directory.
+
+        Raises:
+            NonFatalValidationError: If invalid roles are found in playbook overviews.
+
+        """
         overviews: list[Overview] = Overview.from_non_built_path(playbook_path)
+        for ov in overviews:
+            if invalid_roles := set(ov.role_names).difference(ALLOWED_ROLES):
+                msg: str = (
+                    f"Found invalid roles in playbook overviews: {', '.join(invalid_roles)}."
+                    f" Only the following roles are allowed: {', '.join(ALLOWED_ROLES)}"
+                )
+                raise NonFatalValidationError(msg)

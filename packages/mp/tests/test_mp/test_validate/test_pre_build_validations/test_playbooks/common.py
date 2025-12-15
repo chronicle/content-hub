@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.step.step_parameter import StepParameter
 
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def update_step_yaml(playbook_path: Path, updates: dict) -> None:
+def update_single_step(playbook_path: Path, updates: dict) -> None:
     """Update step params and values."""
     step: Step = Step.from_non_built_path(playbook_path)[0]
 
@@ -51,4 +52,16 @@ def update_step_yaml(playbook_path: Path, updates: dict) -> None:
     mp.core.file_utils.save_yaml(
         step.to_non_built(),
         playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
+    )
+
+
+def update_single_overview_roles(playbook_path: Path, new_roles: list[str]) -> None:
+    """Update overview roles"""
+
+    overviews: list[Overview] = Overview.from_non_built_path(playbook_path)
+    overview: Overview = overviews[0]
+    overview.role_names = new_roles
+
+    mp.core.file_utils.save_yaml(
+        [overview.to_non_built()], playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME
     )
