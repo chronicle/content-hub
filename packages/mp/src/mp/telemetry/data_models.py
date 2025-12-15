@@ -39,20 +39,20 @@ class TelemetryPayload(pydantic.BaseModel):
 
     """
 
-    install_id: str
-    tool: str
-    tool_version: str
-    python_version: str
-    platform: str
-    platform_version: str
-    command: str
+    install_id: str | None
+    tool: str | None
+    tool_version: str | None
+    python_version: str | None
+    platform: str | None
+    platform_version: str | None
+    command: str | None
     command_args: str | None
-    duration_ms: int
-    success: bool
-    exit_code: int
+    duration_ms: int | None
+    success: bool | None
+    exit_code: int | None
     error_type: str | None
     stack: str | None
-    timestamp: datetime
+    timestamp: datetime | None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the event payload into a dictionary.
