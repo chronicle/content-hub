@@ -88,7 +88,7 @@ def _process_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
     if (
         async_action_timeout
         and async_polling_interval
-        and int(async_polling_interval) >= int(async_action_timeout)
+        and int(async_polling_interval) > int(async_action_timeout)
     ):
         step_result.append("AsyncPollingInterval must be less than AsyncActionTimeout.")
 
