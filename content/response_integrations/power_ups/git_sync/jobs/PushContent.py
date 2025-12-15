@@ -34,6 +34,12 @@ from ..core.definitions import (
     VisualFamily,
     Workflow,
 )
+
+from TIPCommon.data_models import Environment
+
+
+from TIPCommon.utils import platform_supports_1p_api
+
 from ..core.GitSyncManager import GitSyncManager
 
 SCRIPT_NAME = "Push Content"
@@ -234,12 +240,18 @@ def main():
         siemplify.LOGGER.info("========== Settings ==========")
         if features["Environments"]:
             siemplify.LOGGER.info("Pushing environments")
-            environments = gitsync.api.get_environments(siemplify)
-            for environment in environments:
-                environment._id = 0
-            gitsync.content.push_environments(
-                [environment.to_json() for environment in environments ]
-            )
+
+            raw_envs = gitsync.api.get_environments(siemplify)
+            converted_envs = []
+
+            for env in raw_envs:
+                env_obj = env if isinstance(env, Environment) else Environment.from_json(env)
+                env_obj.identifier = 0
+
+                converted = env_obj.to_1p() if platform_supports_1p_api() else env_obj.to_legacy()
+                converted_envs.append(converted)
+
+            gitsync.content.push_environments(converted_envs)
 
         if features["Dynamic Parameters"]:
             siemplify.LOGGER.info("Pushing dynamic parameters")
