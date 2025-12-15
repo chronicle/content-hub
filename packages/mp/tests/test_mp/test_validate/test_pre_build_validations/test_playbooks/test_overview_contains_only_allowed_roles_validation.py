@@ -19,7 +19,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.pre_build_validation.playbooks.roles_validation import RolesValidation
+from mp.validate.pre_build_validation.playbooks.overview_contains_only_allowed_roles_validation import (  # noqa: E501
+    ALLOWED_ROLES,
+    OverviewContainsOnlyAllowedRolesValidation,
+)
 
 from .common import update_single_overview_roles
 
@@ -28,7 +31,9 @@ if TYPE_CHECKING:
 
 
 class TestRolesValidation:
-    validator_runner: RolesValidation = RolesValidation()
+    validator_runner: OverviewContainsOnlyAllowedRolesValidation = (
+        OverviewContainsOnlyAllowedRolesValidation()
+    )
 
     def test_all_roles_valid(self, non_built_playbook_path: Path) -> None:
         self.validator_runner.run(non_built_playbook_path)
@@ -42,7 +47,7 @@ class TestRolesValidation:
         assert "Found invalid roles in playbook overviews: invalid_role." in str(excinfo.value)
 
     def test_mixed_roles_fail(self, temp_non_built_playbook: Path) -> None:
-        update_single_overview_roles(temp_non_built_playbook, ["invalid_role", "Tier1"])
+        update_single_overview_roles(temp_non_built_playbook, ["invalid_role", *ALLOWED_ROLES])
 
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_non_built_playbook)

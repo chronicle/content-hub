@@ -28,7 +28,7 @@ ALLOWED_ROLES: set[str] = {"Administrator", "Tier1", "Tier2", "Tier3", "SocManag
 
 
 @dataclass(slots=True, frozen=True)
-class RolesValidation:
+class OverviewContainsOnlyAllowedRolesValidation:
     name: str = "Roles Validation"
 
     @staticmethod
