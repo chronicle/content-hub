@@ -22,12 +22,12 @@ import pydantic  # noqa: TC002
 import mp.core.constants
 import mp.core.utils
 from mp.core.data_models.abc import ComponentMetadata
-from mp.core.data_models.condition.condition_group import (
+from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
     NonBuiltConditionGroup,
 )
-from mp.core.data_models.widget.data import (
+from mp.core.data_models.common.widget.data import (
     BuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
     NonBuiltWidgetDataDefinition,

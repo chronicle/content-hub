@@ -21,7 +21,7 @@ import rich
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.core.data_models.widget.data import WidgetType
+from mp.core.data_models.common.widget.data import WidgetType
 
 if TYPE_CHECKING:
     from pathlib import Path

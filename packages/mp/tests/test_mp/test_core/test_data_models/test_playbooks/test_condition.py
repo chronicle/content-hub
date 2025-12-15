@@ -14,10 +14,10 @@
 
 import pytest
 
-from mp.core.data_models.condition.condition import (
+from mp.core.data_models.common.condition.condition import (
     Condition,
 )
-from mp.core.data_models.condition.condition_group import (
+from mp.core.data_models.common.condition.condition_group import (
     ConditionGroup,
 )
 

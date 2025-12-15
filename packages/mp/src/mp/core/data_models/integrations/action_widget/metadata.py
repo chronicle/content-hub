@@ -21,12 +21,12 @@ import pydantic
 import mp.core.constants
 import mp.core.utils
 from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
-from mp.core.data_models.condition.condition_group import (
+from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
     NonBuiltConditionGroup,
 )
-from mp.core.data_models.widget.data import (
+from mp.core.data_models.common.widget.data import (
     BuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
     NonBuiltWidgetDataDefinition,
@@ -109,8 +109,7 @@ class ActionWidgetMetadata(
             return []
 
         return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.WIDGETS_META_SUFFIX}")
+            cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JSON_SUFFIX}")
         ]
 
     @classmethod

@@ -55,7 +55,7 @@ OUT_WIDGETS_META_DIR: str = "Widgets"
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"
 JOBS_META_SUFFIX: str = ".jobdef"
-WIDGETS_META_SUFFIX: str = ".json"
+JSON_SUFFIX: str = ".json"
 DEF_FILE_SUFFIX: str = ".yaml"
 IMAGE_FILE_SUFFIX: str = ".png"
 SVG_FILE_SUFFIX: str = ".svg"
@@ -453,7 +453,6 @@ STEPS_DIR: str = "steps"
 PLAYBOOKS_JSON_NAME: str = "playbooks.json"
 
 MAX_STEP_PARALLEL_ACTIONS: int = 5
-CONDITION_FIELD_NAME_MIN_LENGTH: int = 1
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
 HTML_SUFFIX: str = "html"
 
