@@ -100,7 +100,9 @@ def _generate_playbooks_display_info(
 
 
 def _find_built_playbook_in_out_folder(non_built_playbook_name: str, out_path: Path) -> Path | None:
-    built_playbook_name: str = to_snake_case(non_built_playbook_name) + ".json"
+    built_playbook_name: str = (
+        to_snake_case(non_built_playbook_name) + mp.core.constants.JSON_SUFFIX
+    )
     if (out_path / built_playbook_name).exists():
         return out_path / built_playbook_name
     return None

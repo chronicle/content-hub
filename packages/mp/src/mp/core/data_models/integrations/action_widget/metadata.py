@@ -109,8 +109,7 @@ class ActionWidgetMetadata(
             return []
 
         return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.WIDGETS_META_SUFFIX}")
+            cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JSON_SUFFIX}")
         ]
 
     @classmethod

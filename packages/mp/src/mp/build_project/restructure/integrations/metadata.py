@@ -123,7 +123,7 @@ class Metadata(Restructurable):
         self._restructure_metadata(
             metadata_json=self.metadata["widgets"],
             dir_name=mp.core.constants.OUT_WIDGETS_META_DIR,
-            file_suffix=mp.core.constants.WIDGETS_META_SUFFIX,
+            file_suffix=mp.core.constants.JSON_SUFFIX,
         )
 
     def _restructure_metadata(
