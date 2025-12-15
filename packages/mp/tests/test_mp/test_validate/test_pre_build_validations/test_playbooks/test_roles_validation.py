@@ -41,7 +41,7 @@ class TestRolesValidation:
 
         assert "Found invalid roles in playbook overviews: invalid_role." in str(excinfo.value)
 
-    def test_mixed_roles_fail(self, temp_non_built_playbook) -> None:
+    def test_mixed_roles_fail(self, temp_non_built_playbook: Path) -> None:
         update_single_overview_roles(temp_non_built_playbook, ["invalid_role", "Tier1"])
 
         with pytest.raises(NonFatalValidationError) as excinfo:
