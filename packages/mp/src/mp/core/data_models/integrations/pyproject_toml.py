@@ -22,7 +22,7 @@ import toml
 import mp.core.constants
 import mp.core.utils
 
-from .integrations.integration_meta.metadata import PythonVersion
+from .integration_meta.metadata import PythonVersion
 
 
 class PyProjectTomlFile(TypedDict):

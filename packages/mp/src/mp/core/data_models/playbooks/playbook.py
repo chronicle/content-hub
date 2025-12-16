@@ -21,6 +21,7 @@ import pydantic
 import yaml
 
 import mp.core.constants
+from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 from mp.core.data_models.playbooks.meta.metadata import (
     BuiltPlaybookMetadata,
@@ -31,7 +32,6 @@ from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.trigger.metadata import Trigger
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
-from mp.core.data_models.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 
 if TYPE_CHECKING:
     from pathlib import Path

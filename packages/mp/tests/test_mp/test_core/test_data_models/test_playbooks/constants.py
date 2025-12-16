@@ -14,17 +14,25 @@
 
 import json
 
-from mp.core.data_models.condition.condition import (
+from mp.core.data_models.common.condition.condition import (
     BuiltCondition,
     Condition,
     MatchType,
     NonBuiltCondition,
 )
-from mp.core.data_models.condition.condition_group import (
+from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
     LogicalOperator,
     NonBuiltConditionGroup,
+)
+from mp.core.data_models.common.widget.data import (
+    BuiltWidgetDataDefinition,
+    HtmlWidgetDataDefinition,
+    NonBuiltWidgetDataDefinition,
+    WidgetDefinitionScope,
+    WidgetSize,
+    WidgetType,
 )
 from mp.core.data_models.playbooks.meta.access_permissions import (
     AccessPermission,
@@ -77,14 +85,6 @@ from mp.core.data_models.playbooks.widget.metadata import (
     BuiltPlaybookWidgetMetadata,
     NonBuiltPlaybookWidgetMetadata,
     PlaybookWidgetMetadata,
-)
-from mp.core.data_models.widget.data import (
-    BuiltWidgetDataDefinition,
-    HtmlWidgetDataDefinition,
-    NonBuiltWidgetDataDefinition,
-    WidgetDefinitionScope,
-    WidgetSize,
-    WidgetType,
 )
 
 BUILT_STEP_DEBUG_ENRICHMENT_DATA: BuiltStepDebugEnrichmentData = {
@@ -376,18 +376,21 @@ BUILT_CONDITION: BuiltCondition = {
     "FieldName": "field_name",
     "Value": "value",
     "MatchType": 0,
+    "CustomOperatorName": "custom_operator",
 }
 
 NON_BUILT_CONDITION: NonBuiltCondition = {
     "field_name": "field_name",
     "value": "value",
     "match_type": "equal",
+    "custom_operator_name": "custom_operator",
 }
 
 CONDITION = Condition(
     field_name="field_name",
     value="value",
     match_type=MatchType.EQUAL,
+    custom_operator_name="custom_operator",
 )
 
 BUILT_CONDITION_GROUP: BuiltConditionGroup = {

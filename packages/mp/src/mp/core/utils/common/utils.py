@@ -227,13 +227,13 @@ def to_snake_case(s: str, /) -> str:
         The string converted to snake_case.
 
     """
-    s = (
+    return (
         re.sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
         .strip()
         .replace(" ", "_")
         .replace("-", "_")
+        .lower()
     )
-    return s.lower()
 
 
 def should_preform_integration_logic(

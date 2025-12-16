@@ -77,8 +77,7 @@ class HtmlFormat:
         total_failed_tests: int = sum(r.failed_tests for r in all_results)
         total_skipped_tests: int = sum(r.skipped_tests for r in all_results)
 
-        system_local_timezone: datetime.tzinfo = datetime.datetime.now().astimezone().tzinfo
-        current_time_aware: datetime.datetime = datetime.datetime.now(system_local_timezone)
+        current_time_aware: datetime.datetime = datetime.datetime.now().astimezone()
 
         context = {
             "integration_results_list": all_results,

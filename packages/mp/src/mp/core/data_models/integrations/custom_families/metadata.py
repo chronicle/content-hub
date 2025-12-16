@@ -97,7 +97,7 @@ class CustomFamily(SequentialMetadata[BuiltCustomFamily, NonBuiltCustomFamily]):
         return cls(
             family=built["Family"],
             description=built["Description"],
-            image_base64=built["ImageBase64"],
+            image_base64=built["ImageBase64"],  # ty:ignore[invalid-argument-type]
             is_custom=built.get("IsCustom", False),
             rules=[CustomFamilyRule.from_built(rule) for rule in built["Rules"]],
         )
@@ -107,7 +107,7 @@ class CustomFamily(SequentialMetadata[BuiltCustomFamily, NonBuiltCustomFamily]):
         return cls(
             family=non_built["family"],
             description=non_built["description"],
-            image_base64=non_built["image_base64"],
+            image_base64=non_built["image_base64"],  # ty:ignore[invalid-argument-type]
             is_custom=non_built.get("is_custom", False),
             rules=[CustomFamilyRule.from_non_built(rule) for rule in non_built["rules"]],
         )

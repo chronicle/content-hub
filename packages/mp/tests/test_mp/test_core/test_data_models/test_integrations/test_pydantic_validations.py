@@ -20,7 +20,8 @@ import pydantic
 import pytest
 
 import mp.core.constants
-from mp.core.data_models.condition.condition_group import ConditionGroup
+from mp.core.data_models.common.condition.condition_group import ConditionGroup
+from mp.core.data_models.common.widget.data import HtmlWidgetDataDefinition, WidgetType
 from mp.core.data_models.integrations.action_widget.metadata import (
     ActionWidgetMetadata,
     WidgetScope,
@@ -29,7 +30,6 @@ from mp.core.data_models.integrations.action_widget.metadata import (
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
 from mp.core.data_models.integrations.job.metadata import JobMetadata
 from mp.core.data_models.integrations.job.parameter import JobParameter
-from mp.core.data_models.widget.data import HtmlWidgetDataDefinition, WidgetType
 
 
 class TestDescriptionLengthValidations:

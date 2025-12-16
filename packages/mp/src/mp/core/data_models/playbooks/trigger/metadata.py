@@ -20,12 +20,12 @@ from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 import mp.core.constants
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
-from mp.core.data_models.condition.condition_group import Condition, LogicalOperator
+from mp.core.data_models.common.condition.condition_group import Condition, LogicalOperator
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.condition.condition import BuiltCondition, NonBuiltCondition
+    from mp.core.data_models.common.condition.condition import BuiltCondition, NonBuiltCondition
 
 
 class BuiltTrigger(TypedDict):

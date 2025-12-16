@@ -113,6 +113,6 @@ def _get_playbooks_paths_from_repository(
 
 
 def _normalize_name_to_json(name: str, *, deconstruct: bool = False) -> str:
-    if deconstruct and not name.endswith(mp.core.constants.WIDGETS_META_SUFFIX):
-        name = f"{name}{mp.core.constants.WIDGETS_META_SUFFIX}"
+    if deconstruct and not name.endswith(mp.core.constants.JSON_SUFFIX):
+        name = f"{name}{mp.core.constants.JSON_SUFFIX}"
     return name

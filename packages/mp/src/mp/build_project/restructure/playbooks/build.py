@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import rich
 
 import mp.core.constants
-from mp.core.data_models.widget.data import WidgetType
+from mp.core.data_models.common.widget.data import WidgetType
 from mp.core.utils import to_snake_case
 
 if TYPE_CHECKING:
