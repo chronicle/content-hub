@@ -138,7 +138,8 @@ class AttachmentsManager:
                 del properties["filename"]
                 if "parent_file" in properties:
                     self.logger.info(
-                        f"creating with relation: {entity_identifier} to {properties['parent_file']}",
+                        f"creating with relation: {entity_identifier} to "
+                        f"{properties['parent_file']}"
                     )
                     self.create_entity_with_relation(
                         entity_identifier,
@@ -179,7 +180,7 @@ class AttachmentsManager:
                 self.logger.error(e)
                 raise
             self.logger.info(
-                f"Creating entity: {properties['hash_md5']} and linking it to f{entity_identifier}.",
+                f"Creating entity: {properties['hash_md5']} and linking it to f{entity_identifier}."
             )
             self.create_entity_with_relation(
                 properties["hash_md5"],
@@ -238,7 +239,7 @@ class AttachmentsManager:
                     extracted_file["parent_file"] = zip_filename
                     extracted_files.append(extracted_file)
                 return extracted_files
-            except:
+            except Exception:
                 pass
             pwd = None
             if bruteforce:
@@ -254,7 +255,7 @@ class AttachmentsManager:
                             self.logger.info(f"Password found {pwd}")
                             break
                         break
-                    except:
+                    except Exception:
                         pass
 
             if pwds and pwd is None:
@@ -318,8 +319,9 @@ class AttachmentsManager:
             data: Binary data.
 
         Returns:
-            typing.Tuple[str, str]: Identified mime information and mime-type. If **magic** is not available, returns *None, None*.
-                                    E.g. *"ELF 64-bit LSB shared object, x86-64, version 1 (SYSV)", "application/x-sharedlib"*
+            typing.Tuple[str, str]: Identified mime information and mime-type. If **magic** is not,
+            available returns *None, None*. E.g. *"ELF 64-bit LSB shared object, x86-64,
+             version 1 (SYSV)", "application/x-sharedlib"*
 
         """
         if magic is None:
