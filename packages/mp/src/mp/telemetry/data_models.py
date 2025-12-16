@@ -48,11 +48,11 @@ class TelemetryPayload(pydantic.BaseModel):
     command: str | None
     command_args: str | None
     duration_ms: int | None
-    success: bool
-    exit_code: int
-    error_type: str
-    stack: str
-    timestamp: datetime
+    success: bool | None
+    exit_code: int | None
+    error_type: str | None
+    stack: str | None
+    timestamp: datetime | None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the event payload into a dictionary.
@@ -65,7 +65,7 @@ class TelemetryPayload(pydantic.BaseModel):
             A dictionary representation of the event payload.
 
         """
-        timestamp: str = None
+        timestamp: str | None = None
         if self.timestamp is not None:
             timestamp = self.timestamp.isoformat(timespec="milliseconds")
 
