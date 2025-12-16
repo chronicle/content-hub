@@ -103,7 +103,7 @@ PYTHON_VERSION_FILE: str = ".python-version"
 
 MS_IN_SEC: int = 1_000
 
-SDK_MODULES: set[str] = {
+SDK_MODULES: frozenset[str] = frozenset({
     "SiemplifyVaultCyberArkPam",
     "CaseAlertsProvider",
     "FileRetentionManager",
@@ -135,7 +135,7 @@ SDK_MODULES: set[str] = {
     "SiemplifyVaultUtils",
     "SimulatedCasesCreator",
     "VaultProviderFactory",
-}
+})
 
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",

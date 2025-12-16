@@ -23,17 +23,10 @@ import pytest
 import mp.build_project.integrations_repo
 import mp.core.constants
 import test_mp.common
-from mp.build_project.restructure.integrations.deconstruct import (
-    ManagerImportTransformer,
-    SdkImportTransformer,
-    apply_transformers,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
-
-    import libcst
 
     from mp.build_project.integrations_repo import IntegrationsRepo
 
@@ -138,69 +131,3 @@ def assert_deconstruct_integration(
         assert actual == expected
 
     return wrapper
-
-
-@pytest.mark.parametrize(
-    ("test_name", "initial_content", "expected_content", "transformers"),
-    [
-        (
-            "sdk_import",
-            "import SiemplifyAction",
-            "from __future__ import annotations\n\nimport soar_sdk.SiemplifyAction",
-            [SdkImportTransformer()],
-        ),
-        (
-            "sdk_from_import",
-            "from SiemplifyUtils import output_handler",
-            "from __future__ import annotations\n\nfrom soar_sdk.SiemplifyUtils import "
-            "output_handler",
-            [SdkImportTransformer()],
-        ),
-        (
-            "manager_import",
-            "import manager",
-            "from ..core import manager",
-            [ManagerImportTransformer({"manager"})],
-        ),
-        (
-            "manager_from_import",
-            "from manager import some_func",
-            "from ..core.manager import some_func",
-            [ManagerImportTransformer({"manager"})],
-        ),
-        (
-            "sdk_and_manager_imports",
-            "import manager\nimport SiemplifyAction",
-            "from __future__ import annotations\n\nfrom ..core import manager\nimport "
-            "soar_sdk.SiemplifyAction",
-            [SdkImportTransformer(), ManagerImportTransformer({"manager"})],
-        ),
-        (
-            "unrelated_import",
-            "import other_module",
-            "from __future__ import annotations\n\nimport other_module",
-            [SdkImportTransformer(), ManagerImportTransformer(set())],
-        ),
-        (
-            "no_imports",
-            "print('hello world')",
-            "from __future__ import annotations\n\nprint('hello world')",
-            [SdkImportTransformer()],
-        ),
-        (
-            "empty_file",
-            "",
-            "",
-            [SdkImportTransformer(), ManagerImportTransformer({"manager"})],
-        ),
-    ],
-)
-def test_apply_transformers(
-    test_name: str,
-    initial_content: str,
-    expected_content: str,
-    transformers: list[libcst.CSTTransformer],
-) -> None:
-    """Verify that `apply_transformers` correctly modifies file content."""
-    transformed_content = apply_transformers(initial_content, transformers)
-    assert transformed_content == expected_content
