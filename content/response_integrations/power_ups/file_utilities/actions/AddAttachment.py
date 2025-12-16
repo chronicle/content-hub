@@ -23,6 +23,10 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
+from TIPCommon.data_models import CaseWallAttachment
+from TIPCommon.rest.soar_api import save_attachment_to_case_wall
+
+
 SCRIPT_NAME = "Add Attachment"
 
 
@@ -34,41 +38,29 @@ def main():
     name = siemplify.parameters.get("Name")
     file_type = siemplify.parameters.get("Type")
     base64_blob = siemplify.parameters.get("Base64 Blob")
-    isFavorite = (
-        True
-        if siemplify.parameters.get("isFavorite", "False").casefold() == "true"
-        else False
-    )
-    headers = {"AppKey": siemplify.api_key, "Content-Type": "application/json"}
-
-    conf = siemplify.get_configuration("FileUtilities")
-    verify_ssl = True if conf.get("Verify SSL", "False").casefold() == "true" else False
+    is_favorite = siemplify.parameters.get("isFavorite", "False").casefold() == "true"
     case_id = int(siemplify.case.identifier)
-
-    body = {
-        "CaseIdentifier": case_id,
-        "Base64Blob": base64_blob,
-        "Name": name,
-        "Description": description,
-        "Type": file_type,
-        "IsImportant": isFavorite,
-    }
-    response = requests.post(
-        f"{siemplify.API_ROOT}/external/v1/cases/AddEvidence/",
-        json=body,
-        headers=headers,
-        verify=verify_ssl,
+    attachment_data = CaseWallAttachment(
+        name=name,
+        file_type=file_type,
+        base64_blob=base64_blob,
+        is_important=is_favorite,
+        case_id=case_id,
+        description=description,
     )
     try:
-        validate_response(response, "Unable to add attachment. Reason:")
+        attachment = save_attachment_to_case_wall(
+            chronicle_soar=siemplify,
+            attachment_data=attachment_data
+        )
 
-    except FileUtilitiesHTTPException as e:
+    except requests.HTTPError as e:
         siemplify.LOGGER.error(f"Error occurred while adding attachment. Error: {e}")
         siemplify.LOGGER.exception(e)
         output_message = f'Error executing action "{SCRIPT_NAME}": {e}'
         siemplify.end(output_message, False, EXECUTION_STATE_FAILED)
 
-    json_response = response.json()
+    json_response = attachment.json()
 
     siemplify.result.add_result_json(json.dumps(json_response))
 

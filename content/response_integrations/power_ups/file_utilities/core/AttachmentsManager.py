@@ -23,12 +23,18 @@ import time
 import zipfile
 
 import magic
+import requests
 from soar_sdk.SiemplifyDataModel import Attachment
 from soar_sdk.SiemplifyUtils import dict_to_flat
+from TIPCommon.data_models import CreateEntity
+from TIPCommon.rest.soar_api import (
+    add_attachment_to_case_wall,
+    create_entity,
+    get_attachments_metadata,
+)
+from TIPCommon.types import SingleJson
 
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
-EXTEND_GRAPH_URL = "{}/external/v1/investigator/ExtendCaseGraph"
-CASE_DETAILS_URL = "/external/v1/cases/GetCaseFullDetails/"
 
 
 class AttachmentsManager:
@@ -36,6 +42,7 @@ class AttachmentsManager:
         self.siemplify = siemplify
         self.logger = siemplify.LOGGER
         self.alert_entities = self.get_alert_entities()
+        self.attachments = self._get_attachments()
 
     def get_alert_entities(self):
         return [
@@ -43,13 +50,8 @@ class AttachmentsManager:
         ]
 
     def get_attachments(self):
-        response = self.siemplify.session.get(
-            f"{self.siemplify.API_ROOT}{CASE_DETAILS_URL}"
-            + self.siemplify.case.identifier,
-        )
-        wall_items = response.json()["wallData"]
         attachments = []
-        for wall_item in wall_items:
+        for wall_item in self.attachments:
             if wall_item["type"] == 4:
                 if not wall_item["alertIdentifier"]:
                     attachments.append(wall_item)
@@ -57,13 +59,8 @@ class AttachmentsManager:
         return attachments
 
     def get_alert_attachments(self):
-        response = self.siemplify.session.get(
-            f"{self.siemplify.API_ROOT}{CASE_DETAILS_URL}"
-            + self.siemplify.case.identifier,
-        )
-        wall_items = response.json()["wallData"]
         attachments = []
-        for wall_item in wall_items:
+        for wall_item in self.attachments:
             if wall_item["type"] == 4:
                 if (
                     self.siemplify.current_alert.identifier
@@ -71,6 +68,17 @@ class AttachmentsManager:
                 ):
                     attachments.append(wall_item)
         return attachments
+
+    def _get_attachments(self) -> list[SingleJson]:
+        """Get attachments metadata from case wall and alert wall.
+
+        Returns:
+            list[SingleJson]: List of attachments metadata
+        """
+        return [
+            attachment.to_json() for attachment in
+            get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
+        ]
 
     def add_attachment(
         self,
@@ -105,18 +113,18 @@ class AttachmentsManager:
         )
         attachment.case_identifier = case_id
         attachment.alert_identifier = alert_identifier
-        address = (
-            f"{self.siemplify.API_ROOT}/{'external/v1/sdk/AddAttachment?format=snake'}"
-        )
-        response = self.siemplify.session.post(address, json=attachment.__dict__)
+        result = None
         try:
-            self.siemplify.validate_siemplify_error(response)
-        except Exception as e:
-            if "Attachment size" in e:
-                raise Exception(
-                    f"Attachment size should be < 5MB. Original file size: {attachment.orig_size}. Size after encoding: {attachment.size}.",
-                )
-        return response.json()
+            result = add_attachment_to_case_wall(self.siemplify, attachment)
+
+        except requests.HTTPError as e:
+            if "Attachment size" in str(e):
+                raise ValueError(
+                    "Attachment size should be < 5MB. Original file size: "
+                    f"{attachment.orig_size}. Size after encoding: {attachment.size}."
+                ) from e
+
+        return result
 
     def create_file_entities(self, attachments):
         new_entities_w_rel = {}
@@ -211,22 +219,15 @@ class AttachmentsManager:
         linked_entity,
         entity_type="FILENAME",
     ):
-        json_payload = {
-            "caseId": self.siemplify.case_id,
-            "alertIdentifier": self.siemplify.alert_id,
-            "entityType": f"{entity_type}",
-            "isPrimaryLink": False,
-            "isDirectional": False,
-            "typesToConnect": [],
-            "entityToConnectRegEx": f"{re.escape(linked_entity.upper())}$",
-            "entityIdentifier": new_entity.upper(),
-        }
-        payload = json_payload.copy()
-        created_entity = self.siemplify.session.post(
-            EXTEND_GRAPH_URL.format(self.siemplify.API_ROOT),
-            json=json_payload,
+        entity_to_create = CreateEntity(
+            case_id=self.siemplify.case_id,
+            alert_identifier=self.siemplify.alert_id,
+            entity_type=f"{entity_type}",
+            entity_identifier=new_entity.upper(),
+            entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
+            types_to_connect=[],
         )
-        created_entity.raise_for_status()
+        create_entity(self.siemplify, entity_to_create)
 
     def extract_zip(self, zip_filename, content, bruteforce=False, pwds=None):
         with zipfile.ZipFile(content) as attach_zip:
@@ -256,7 +257,7 @@ class AttachmentsManager:
                     except:
                         pass
 
-            if pwds and pwd == None:
+            if pwds and pwd is None:
                 try:
                     found = 0
                     for passwd in pwds:
