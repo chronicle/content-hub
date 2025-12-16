@@ -34,7 +34,7 @@ import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
 import mp.core.utils
-from mp.core import code_utilities
+from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
@@ -241,28 +241,6 @@ class DeconstructIntegration:
             metadata=None,
         )
 
-    def _transform_imports(self, file_path: Path, out_dir: str) -> None:
-        if file_path.suffix != ".py":
-            return
-
-        transformers: list[cst.CSTTransformer] = [
-            code_utilities.FutureAnnotationsTransformer(),
-            code_utilities.SdkImportTransformer(),
-        ]
-
-        if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
-            transformers.append(code_utilities.CorePackageImportTransformer(self.core_module_names))
-        else:
-            transformers.append(
-                code_utilities.CorePackageInternalImportTransformer(
-                    self.core_module_names, file_path.stem
-                )
-            )
-
-        original_content: str = file_path.read_text(encoding="utf-8")
-        transformed_content: str = code_utilities.apply_transformers(original_content, transformers)
-        file_path.write_text(transformed_content, encoding="utf-8")
-
     def _create_scripts_dir(
         self,
         repo_dir: str,
@@ -289,6 +267,32 @@ class DeconstructIntegration:
 
         if is_python_dir:
             (new_path / mp.core.constants.PACKAGE_FILE).touch()
+
+    def _transform_imports(self, file_path: Path, out_dir: str) -> None:
+        if file_path.suffix != ".py":
+            return
+
+        transformers: list[cst.CSTTransformer] = [
+            code_manipulation.FutureAnnotationsTransformer(),
+            code_manipulation.SdkImportTransformer(),
+        ]
+
+        if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
+            transformers.append(
+                code_manipulation.CorePackageImportTransformer(self.core_module_names)
+            )
+        else:
+            transformers.append(
+                code_manipulation.CorePackageInternalImportTransformer(
+                    self.core_module_names, file_path.stem
+                )
+            )
+
+        original_content: str = file_path.read_text(encoding="utf-8")
+        transformed_content: str = code_manipulation.apply_transformers(
+            original_content, transformers
+        )
+        file_path.write_text(transformed_content, encoding="utf-8")
 
     def _create_package_file(self) -> None:
         (self.out_path / mp.core.constants.PACKAGE_FILE).touch()

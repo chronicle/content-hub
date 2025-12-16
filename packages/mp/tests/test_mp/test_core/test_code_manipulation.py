@@ -14,10 +14,22 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import mp.core.code_manipulation
+from mp.core.code_manipulation import (
+    CorePackageImportTransformer,
+    CorePackageInternalImportTransformer,
+    FutureAnnotationsTransformer,
+    SdkImportTransformer,
+    apply_transformers,
+)
 from mp.core.constants import COMMON_SCRIPTS_DIR, CORE_SCRIPTS_DIR, SDK_PACKAGE_NAME
+
+if TYPE_CHECKING:
+    import libcst
 
 
 @pytest.mark.parametrize(
@@ -103,14 +115,8 @@ from mp.core.constants import COMMON_SCRIPTS_DIR, CORE_SCRIPTS_DIR, SDK_PACKAGE_
             "from ..another_package.sub_package.module import another_thing",
             "from another_package.sub_package.module import another_thing",
         ),
-        (
-            "import os",
-            "import os",
-        ),
-        (
-            "import pathlib.Path",
-            "import pathlib.Path",
-        ),
+        ("import os", "import os"),
+        ("import pathlib.Path", "import pathlib.Path"),
     ],
 )
 def test_other_imports_are_not_modified(
@@ -122,3 +128,154 @@ def test_other_imports_are_not_modified(
     )
     assert modified_code == expected_restructured_import
     compile(modified_code, filename="test_import_errors", mode="exec")
+
+
+@pytest.mark.parametrize(
+    ("test_name", "initial_content", "expected_content"),
+    [
+        (
+            "simple_import",
+            "import SiemplifyAction",
+            "from __future__ import annotations\nimport SiemplifyAction",
+        ),
+        (
+            "with_double_quotes_docstring",
+            '"""This is a module docstring."""\nimport SiemplifyAction',
+            '"""This is a module docstring."""\n'
+            "from __future__ import annotations\n"
+            "import SiemplifyAction",
+        ),
+        (
+            "with_single_quotes_docstring",
+            "'This is a module docstring.'\nimport SiemplifyAction",
+            "'This is a module docstring.'\n"
+            "from __future__ import annotations\n"
+            "import SiemplifyAction",
+        ),
+        (
+            "with_comment",
+            "# This is a comment\nimport SiemplifyAction",
+            "# This is a comment\nfrom __future__ import annotations\nimport SiemplifyAction",
+        ),
+        (
+            "already_exists",
+            "from __future__ import annotations\nimport SiemplifyAction",
+            "from __future__ import annotations\nimport SiemplifyAction",
+        ),
+        ("empty_file", "", ""),
+    ],
+)
+def test_future_annotations_transformer(
+    test_name: str, initial_content: str, expected_content: str
+) -> None:
+    """Verify that `FutureAnnotationsTransformer` correctly modifies file content."""
+    transformer = FutureAnnotationsTransformer()
+    transformed_content = apply_transformers(initial_content, [transformer])
+    assert transformed_content == expected_content
+
+
+@pytest.mark.parametrize(
+    ("test_name", "initial_content", "expected_content"),
+    [
+        ("sdk_import", "import SiemplifyAction", "import soar_sdk.SiemplifyAction"),
+        (
+            "sdk_from_import",
+            "from SiemplifyUtils import output_handler",
+            "from soar_sdk.SiemplifyUtils import output_handler",
+        ),
+        ("unrelated_import", "import other_module", "import other_module"),
+    ],
+)
+def test_sdk_import_transformer(
+    test_name: str, initial_content: str, expected_content: str
+) -> None:
+    """Verify that `SdkImportTransformer` correctly modifies file content."""
+    transformer = SdkImportTransformer()
+    transformed_content = apply_transformers(initial_content, [transformer])
+    assert transformed_content == expected_content
+
+
+@pytest.mark.parametrize(
+    ("test_name", "initial_content", "expected_content"),
+    [
+        ("manager_import", "import manager", "from ..core import manager"),
+        (
+            "manager_from_import",
+            "from manager import some_func",
+            "from ..core.manager import some_func",
+        ),
+    ],
+)
+def test_core_package_import_transformer(
+    test_name: str, initial_content: str, expected_content: str
+) -> None:
+    """Verify that `CorePackageImportTransformer` correctly modifies file content."""
+    transformer = CorePackageImportTransformer({"manager"})
+    transformed_content = apply_transformers(initial_content, [transformer])
+    assert transformed_content == expected_content
+
+
+@pytest.mark.parametrize(
+    ("test_name", "initial_content", "expected_content"),
+    [
+        ("core_internal_import", "import constants", "from . import constants"),
+        (
+            "core_internal_from_import",
+            "from constants import MY_CONST",
+            "from .constants import MY_CONST",
+        ),
+        ("import_self", "import api_client", "import api_client"),
+    ],
+)
+def test_core_package_internal_import_transformer(
+    test_name: str, initial_content: str, expected_content: str
+) -> None:
+    """Verify that `CorePackageInternalImportTransformer` correctly modifies file content."""
+    transformer = CorePackageInternalImportTransformer({"constants", "api_client"}, "api_client")
+    transformed_content = apply_transformers(initial_content, [transformer])
+    assert transformed_content == expected_content
+
+
+@pytest.mark.parametrize(
+    ("test_name", "initial_content", "expected_content", "transformers"),
+    [
+        (
+            "sdk_and_manager_imports",
+            "import manager\nimport SiemplifyAction",
+            (
+                "from __future__ import annotations\n"
+                "from ..core import manager\n"
+                "import soar_sdk.SiemplifyAction"
+            ),
+            [
+                FutureAnnotationsTransformer(),
+                SdkImportTransformer(),
+                CorePackageImportTransformer({"manager"}),
+            ],
+        ),
+        (
+            "all_transformers",
+            "import constants\nfrom SiemplifyUtils import output_handler",
+            (
+                "from __future__ import annotations\n"
+                "from . import constants\n"
+                "from soar_sdk.SiemplifyUtils import output_handler"
+            ),
+            [
+                FutureAnnotationsTransformer(),
+                SdkImportTransformer(),
+                CorePackageInternalImportTransformer({"constants", "api_client"}, "api_client"),
+            ],
+        ),
+    ],
+)
+def test_mixed_transformers(
+    test_name: str,
+    initial_content: str,
+    expected_content: str,
+    transformers: list[libcst.CSTTransformer],
+) -> None:
+    """Verify that `apply_transformers` correctly modifies file content
+    with multiple transformers."""
+    transformed_content = apply_transformers(initial_content, transformers)
+    assert transformed_content == expected_content
