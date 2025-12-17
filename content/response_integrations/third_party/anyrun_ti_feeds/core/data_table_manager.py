@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
-from shlex import quote
 
 from anyrun.connectors import FeedsConnector
 from anyrun.iterators import FeedsIterator
@@ -25,41 +24,31 @@ class DataTableManager:
     """Provides methods to manage IOCs and interact with DataTables"""
 
     def __init__(self, siemplify: SiemplifyJob) -> None:
-        token = quote(
-            extract_configuration_param(
-                siemplify,
-                Config.INTEGRATION_NAME,
-                param_name="ANYRUN TI Feeds Basic token",
-                is_mandatory=True,
-            )
+        token = extract_configuration_param(
+            siemplify,
+            Config.INTEGRATION_NAME,
+            param_name="ANYRUN TI Feeds Basic token",
+            is_mandatory=True,
         )
 
-        google_secops_project_id = quote(
-            extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Project ID", is_mandatory=True
-            )
+        google_secops_project_id = extract_configuration_param(
+            siemplify, Config.INTEGRATION_NAME, param_name="Project ID", is_mandatory=True
         )
 
-        google_secops_project_location = quote(
-            extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Project location", is_mandatory=True
-            )
+        google_secops_project_location = extract_configuration_param(
+            siemplify, Config.INTEGRATION_NAME, param_name="Project location", is_mandatory=True
         )
 
-        google_secops_instance_id = quote(
-            extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Instance ID", is_mandatory=True
-            )
+        google_secops_instance_id = extract_configuration_param(
+            siemplify, Config.INTEGRATION_NAME, param_name="Instance ID", is_mandatory=True
         )
 
         google_secops_sevice_account_json = json.loads(
-            quote(
-                extract_configuration_param(
-                    siemplify,
-                    Config.INTEGRATION_NAME,
-                    param_name="Google service account",
-                    is_mandatory=True,
-                )
+            extract_configuration_param(
+                siemplify,
+                Config.INTEGRATION_NAME,
+                param_name="Google service account",
+                is_mandatory=True,
             )
         )
 
@@ -107,7 +96,7 @@ class DataTableManager:
         url = f"{self._base_url}/dataTables/{data_table_name}"
         response = self._make_request("GET", url)
 
-        if response.status == HTTPStatus.OK:
+        if response.status_code == HTTPStatus.OK:
             self._logger.info(f"DataTable: {data_table_name} is already exists.")
             return True
 
