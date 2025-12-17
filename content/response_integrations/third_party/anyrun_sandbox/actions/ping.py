@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from shlex import quote
-
 from anyrun import RunTimeException
 from anyrun.connectors.sandbox.base_connector import BaseSandboxConnector
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -17,17 +15,15 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{Config.INTEGRATION_NAME} - Ping"
 
-    sandbox_token = quote(
-        extract_configuration_param(
-            siemplify,
-            Config.INTEGRATION_NAME,
-            param_name="ANYRUN Sandbox API KEY",
-            is_mandatory=True,
-        )
+    sandbox_token = extract_configuration_param(
+        siemplify,
+        Config.INTEGRATION_NAME,
+        param_name="ANYRUN Sandbox API KEY",
+        is_mandatory=True,
     )
 
-    verify_ssl = quote(
-        extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL")
+    verify_ssl = extract_configuration_param(
+        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL", input_type=bool
     )
 
     try:
@@ -59,12 +55,11 @@ def main():
 
 def check_proxy(siemplify: SiemplifyAction, token: str, verify_ssl: bool) -> None:
     try:
-        host = quote(
-            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy host")
+        host = extract_configuration_param(
+            siemplify, Config.INTEGRATION_NAME, param_name="Proxy host"
         )
-
-        port = quote(
-            extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Proxy port")
+        port = extract_configuration_param(
+            siemplify, Config.INTEGRATION_NAME, param_name="Proxy port"
         )
 
         with BaseSandboxConnector(
