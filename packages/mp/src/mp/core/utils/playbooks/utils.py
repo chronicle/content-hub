@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def get_playbook_dependent_blocks_ids(non_built_playbook_path: Path) -> set[str | None]:
+def get_playbook_dependent_blocks_ids(non_built_playbook_path: Path) -> set[str]:
     """Get all dependent block identifiers from a playbook.
 
     Args:
@@ -34,7 +34,7 @@ def get_playbook_dependent_blocks_ids(non_built_playbook_path: Path) -> set[str 
         A set of unique block identifiers that the playbook depends on.
 
     """
-    required_block_ids: set[str | None] = set()
+    required_block_ids: set[str] = set()
     for step in Step.from_non_built_path(non_built_playbook_path):
         if step.type_ is not StepType.BLOCK:
             continue

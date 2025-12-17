@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+import mp.core.utils
+from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -28,4 +30,7 @@ class BlockIncludesAllEnvironmentsValidation:
 
     @staticmethod
     def run(playbook_path: Path) -> None:
-        pass
+        dependent_blocks_ids: set[str] = mp.core.utils.get_playbook_dependent_blocks_ids(
+            playbook_path
+        )
+        def_file: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
