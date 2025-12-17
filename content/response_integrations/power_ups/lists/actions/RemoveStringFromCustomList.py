@@ -50,7 +50,7 @@ def main():
     except Exception:
         status = EXECUTION_STATE_FAILED
         result_value = False
-        output_message += "\n unknown failure"
+        output_message += "output message :\n unknown failure"
 
     siemplify.end(output_message, result_value, status)
 
