@@ -44,6 +44,7 @@ DEFAULT_PROCESSES_NUMBER: int = 5
 DEFAULT_QUIET_VALUE: str = "no"
 DEFAULT_VERBOSE_VALUE: str = "no"
 DEFAULT_MARKETPLACE_PATH: Path = Path.home() / mp.core.constants.REPO_NAME
+LOCAL_PACKAGES_PATH: str = "packages"
 
 
 def get_marketplace_path() -> Path:
@@ -80,6 +81,16 @@ def set_marketplace_path(p: Path, /) -> None:
         MARKETPLACE_PATH_KEY,
         value=p.resolve().absolute().expanduser(),
     )
+
+
+def get_local_packages_path() -> Path:
+    """Get the local packages' path.
+
+    Returns:
+        The local packages path as a `pathlib.Path` object.
+
+    """
+    return get_marketplace_path() / LOCAL_PACKAGES_PATH
 
 
 def get_processes_number() -> int:
