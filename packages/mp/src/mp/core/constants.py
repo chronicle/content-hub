@@ -85,6 +85,7 @@ CONNECTORS_DIR: str = "connectors"
 JOBS_DIR: str = "jobs"
 WIDGETS_DIR: str = "widgets"
 TESTS_DIR: str = "tests"
+TESTING_DIR: str = "Testing"
 CORE_SCRIPTS_DIR: str = "core"
 RESOURCES_DIR: str = "resources"
 PACKAGE_FILE: str = "__init__.py"
@@ -104,6 +105,20 @@ SAFE_TO_IGNORE_ERROR_MESSAGES: tuple[str, ...] = (
     "Could not find a version that satisfies the requirement",
     "No matching distribution found",
 )
+LOCAL_PACKAGES_CONFIG: dict[str, dict[str, str]] = {
+    "tipcommon": {
+        "wheel_prefix": "TIPCommon",
+        "dir_name": "tipcommon",
+    },
+    "environmentcommon": {
+        "wheel_prefix": "EnvironmentCommon",
+        "dir_name": "envcommon",
+    },
+    "integration-testing": {
+        "wheel_prefix": "integration_testing",
+        "dir_name": "integration_testing_whls",
+    },
+}
 
 README_FILE: str = "README.md"
 LOCK_FILE: str = "uv.lock"

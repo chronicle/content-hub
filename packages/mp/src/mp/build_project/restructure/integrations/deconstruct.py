@@ -103,8 +103,7 @@ class DeconstructIntegration:
             try:
                 rich.print(f"Adding requirements to {mp.core.constants.PROJECT_FILE}")
                 mp.core.unix.add_dependencies_to_toml(
-                    project_path=self.out_path,
-                    requirements_path=requirements,
+                    project_path=self.out_path, requirements_path=requirements
                 )
             except mp.core.unix.FatalCommandError as e:
                 rich.print(f"Failed to install dependencies from requirements: {e}")

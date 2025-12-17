@@ -251,7 +251,7 @@ class IntegrationMetadata(
             documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
             image_base64=image,
             parameters=[IntegrationParameter.from_built(p) for p in built["IntegrationProperties"]],
-            should_install_in_system=built["ShouldInstalledInSystem"],
+            should_install_in_system=built.get("ShouldInstalledInSystem", False),
             svg_logo=svg,
             version=built["Version"],
             is_custom=built.get("IsCustom", False),
