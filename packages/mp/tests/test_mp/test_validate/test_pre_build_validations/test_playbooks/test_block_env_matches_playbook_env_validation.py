@@ -33,6 +33,13 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
     validator_runner: BlockEnvMatchesPlaybookEnvValidation = BlockEnvMatchesPlaybookEnvValidation()
 
     def test_blocks_has_all_env_valid(self, temp_playbooks_repo: Path) -> None:
+        update_playbook_definition(
+            temp_playbooks_repo / "mock_non_built_playbook",
+            {"environments": ["env1", "env2", "env3"]},
+        )
+        update_playbook_definition(
+            temp_playbooks_repo / "mock_non_built_block", {"environments": ["env1", "env2", "env3"]}
+        )
         self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 
     def test_block_missing_all_env_fail(self, temp_playbooks_repo: Path) -> None:
@@ -43,14 +50,30 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
             self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 
         error_msg: str = str(excinfo.value)
-        assert "{'*', 'Default Environment'}" in error_msg
+        assert "*" in error_msg
+        assert "Default Environment" in error_msg
 
-    def test_block_mix_env_fail(self, temp_playbooks_repo: Path) -> None:
+    def test_block_has_all_env_valid(self, temp_playbooks_repo: Path) -> None:
+        update_playbook_definition(
+            temp_playbooks_repo / "mock_non_built_playbook",
+            {"environments": ["env1", "env2", "env3"]},
+        )
         update_playbook_definition(
             temp_playbooks_repo / "mock_non_built_block", {"environments": ["*"]}
+        )
+        self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
+
+    def test_block_missing_env_fail(self, temp_playbooks_repo: Path) -> None:
+        update_playbook_definition(
+            temp_playbooks_repo / "mock_non_built_playbook",
+            {"environments": ["env1", "env2", "env3"]},
+        )
+        update_playbook_definition(
+            temp_playbooks_repo / "mock_non_built_block", {"environments": ["env1"]}
         )
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 
         error_msg: str = str(excinfo.value)
-        assert "{'Default Environment'}" in error_msg
+        assert "env2" in error_msg
+        assert "env3" in error_msg

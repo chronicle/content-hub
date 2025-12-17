@@ -26,6 +26,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+ALL_ENV: str = "*"
+
+
 @dataclass(slots=True, frozen=True)
 class BlockEnvMatchesPlaybookEnvValidation:
     name: str = "Blocks Includes All Playbook Environments Validation"
@@ -62,6 +65,9 @@ class BlockEnvMatchesPlaybookEnvValidation:
                 block_def_file.type_ is not PlaybookType.BLOCK
                 or block_def_file.identifier not in dependent_blocks_ids
             ):
+                continue
+
+            if ALL_ENV in block_def_file.environments:
                 continue
 
             if missing := playbook_env.difference(set(block_def_file.environments)):
