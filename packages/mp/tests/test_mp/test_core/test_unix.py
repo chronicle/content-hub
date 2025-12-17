@@ -17,7 +17,7 @@ from __future__ import annotations
 import sys
 import tomllib
 import unittest.mock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -30,45 +30,63 @@ if TYPE_CHECKING:
 
 DEV_DEPENDENCY_NAME: str = "beautifulsoup4"
 REQUIREMENT_LINE: str = "black>=24.10.0"
-TOML_CONTENT_WITH_DEV_DEPENDENCIES: str = f"""
+TIPCOMMON_NAME: str = "tipcommon"
+ENVCOMMON_NAME: str = "environmentcommon"
+INTEGRATION_TESTING_NAME: str = "integration-testing"
+NEW_TIPCOMMON_VERSION: str = "2.0.2"
+NEW_TIPCOMMON_LINE: str = f"{TIPCOMMON_NAME}=={NEW_TIPCOMMON_VERSION}"
+OLD_TIPCOMMON_LINE: str = f"{TIPCOMMON_NAME}==1.0.10"
+ENVCOMMON_LINE: str = f"{ENVCOMMON_NAME}==1.0.0"
+INTEGRATION_TESTING_LINE: str = f"{INTEGRATION_TESTING_NAME}=={NEW_TIPCOMMON_VERSION}"
+DEFAULT_INDEX_SECTION: list[dict[str, Any]] = [{"default": True, "url": "https://pypi.org/simple"}]
+DEFAULT_DEV_DEPENDENCIES: list[str] = ["pytest", "pytest-json-report", "soar-sdk"]
+DEFAULT_SOURCE_SECTION: dict[str, Any] = {
+    "soar-sdk": {"git": "https://github.com/chronicle/soar-sdk.git"}
+}
+LOCAL_DEPS_NAMES: set[str] = {ENVCOMMON_NAME, TIPCOMMON_NAME}
+
+TOML_TEMPLATE: str = f"""
 [project]
 name = "mock"
 version = "1.0.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    {{ name = "me", email = "me@google.com" }}
+    {{ "name" = "me", "email" = "me@google.com" }}
 ]
 requires-python = ">={sys.version_info.major}.{sys.version_info.minor}"
+"""
+
+TOML_CONTENT_WITH_DEV_DEPENDENCIES: str = (
+    TOML_TEMPLATE
+    + f"""
 dependencies = ["{REQUIREMENT_LINE}"]
 
 [dependency-groups]
 dev = ["{DEV_DEPENDENCY_NAME}>=4.13.3"]
 """
-TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES: str = f"""
-[project]
-name = "mock"
-version = "1.0.0"
-description = "Add your description here"
-readme = "README.md"
-authors = [
-    {{ name = "me", email = "me@google.com" }}
-]
-requires-python = ">={sys.version_info.major}.{sys.version_info.minor}"
+)
+
+TOML_CONTENT_WITH_LOCAL_DEPS: str = (
+    TOML_TEMPLATE
+    + f"""
+dependencies = ['{ENVCOMMON_NAME}', '{TIPCOMMON_NAME}']
+"""
+)
+
+TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES: str = (
+    TOML_TEMPLATE
+    + f"""
 dependencies = ["{REQUIREMENT_LINE}"]
 """
-TOML_CONTENT_WITHOUT_DEPENDENCIES: str = f"""
-[project]
-name = "mock"
-version = "1.0.0"
-description = "Add your description here"
-readme = "README.md"
-authors = [
-    {{ name = "me", email = "me@google.com" }}
-]
-requires-python = ">={sys.version_info.major}.{sys.version_info.minor}"
+)
+
+TOML_CONTENT_WITHOUT_DEPENDENCIES: str = (
+    TOML_TEMPLATE
+    + """
 dependencies = []
 """
+)
 
 
 @pytest.mark.parametrize(
@@ -185,11 +203,78 @@ def test_add_dependencies_to_toml(tmp_path: Path) -> None:
     requirements.write_text(REQUIREMENT_LINE, encoding="utf-8")
 
     mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
-    toml_content: str = pyproject_toml.read_text(encoding="utf-8")
+    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
 
-    assert tomllib.loads(toml_content) == tomllib.loads(
-        TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES,
+    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_DEV_DEPENDENCIES)
+    assert toml_content["project"] == toml_expected_content["project"]
+    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
+    for basic_dev_dep in DEFAULT_DEV_DEPENDENCIES:
+        assert any(
+            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
+        )
+
+
+def test_add_dependencies_to_toml_with_integration_testing_required(tmp_path: Path) -> None:
+    (tmp_path / mp.core.constants.TESTING_DIR).mkdir()
+    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
+    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
+    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements.write_text(f"{NEW_TIPCOMMON_LINE}\n{ENVCOMMON_LINE}", encoding="utf-8")
+
+    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
+    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
+
+    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_LOCAL_DEPS)
+    assert toml_content["project"] == toml_expected_content["project"]
+    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
+    dev_deps: list[str] = [*DEFAULT_DEV_DEPENDENCIES, INTEGRATION_TESTING_NAME]
+    for basic_dev_dep in dev_deps:
+        assert any(
+            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
+        )
+    local_deps_with_integration_testing = LOCAL_DEPS_NAMES.union({INTEGRATION_TESTING_NAME})
+    assert local_deps_with_integration_testing.issubset(
+        toml_content["tool"]["uv"]["sources"].keys()
     )
+
+
+def test_add_dependencies_to_toml_no_integration_testing_required(tmp_path: Path) -> None:
+    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
+    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
+    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements.write_text(f"{NEW_TIPCOMMON_LINE}\n{ENVCOMMON_LINE}", encoding="utf-8")
+
+    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
+    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
+
+    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_LOCAL_DEPS)
+    assert toml_content["project"] == toml_expected_content["project"]
+    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
+    for basic_dev_dep in DEFAULT_DEV_DEPENDENCIES:
+        assert any(
+            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
+        )
+    assert LOCAL_DEPS_NAMES.issubset(toml_content["tool"]["uv"]["sources"].keys())
+
+
+def test_add_dependencies_to_toml_with_old_tipcommon(tmp_path: Path) -> None:
+    (tmp_path / mp.core.constants.TESTING_DIR).mkdir()
+    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
+    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
+    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements.write_text(f"{OLD_TIPCOMMON_LINE}\n{ENVCOMMON_LINE}", encoding="utf-8")
+
+    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
+    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
+
+    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_LOCAL_DEPS)
+    assert toml_content["project"] == toml_expected_content["project"]
+    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
+    for basic_dev_dep in DEFAULT_DEV_DEPENDENCIES:
+        assert any(
+            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
+        )
+    assert LOCAL_DEPS_NAMES.issubset(toml_content["tool"]["uv"]["sources"].keys())
 
 
 def test_init_python_project(tmp_path: Path) -> None:
