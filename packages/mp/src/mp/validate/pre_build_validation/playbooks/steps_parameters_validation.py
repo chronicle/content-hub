@@ -59,8 +59,8 @@ class StepParamsValidation:
 def _process_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
     step_result: list[str] = []
 
-    async_action_timeout: str = ""
-    async_polling_interval: str = ""
+    async_action_timeout: str | None = ""
+    async_polling_interval: str | None = ""
 
     for param in step.parameters:
         match param.name:

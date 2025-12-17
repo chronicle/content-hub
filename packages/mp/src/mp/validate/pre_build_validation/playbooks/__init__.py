@@ -21,6 +21,7 @@ from mp.validate.pre_build_validation.common.version_bump_validation import Vers
 from .all_blocks_existing_validation import AllBlocksExistValidation
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
 from .environments_validation import EnvironmentsValidation
+from .loop_step_validation import LoopStepValidation
 from .steps_parameters_validation import StepParamsValidation
 
 if TYPE_CHECKING:
@@ -47,4 +48,4 @@ def _get_non_priority_validations() -> list[Validator]:
 
 
 def _get_priority_validations() -> list[Validator]:
-    return [AllBlocksExistValidation()]
+    return [AllBlocksExistValidation(), LoopStepValidation()]

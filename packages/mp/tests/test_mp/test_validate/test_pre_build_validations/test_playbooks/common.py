@@ -65,3 +65,11 @@ def update_single_overview_roles(playbook_path: Path, new_roles: list[str]) -> N
     mp.core.file_utils.save_yaml(
         [overview.to_non_built()], playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME
     )
+
+
+def ingest_new_steps(playbook_path: Path, steps: list[Step]) -> None:
+    for step in steps:
+        mp.core.file_utils.save_yaml(
+            step.to_non_built(),
+            playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
+        )
