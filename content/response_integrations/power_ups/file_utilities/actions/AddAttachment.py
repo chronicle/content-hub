@@ -56,7 +56,7 @@ def main():
         output_message = f'Error executing action "{SCRIPT_NAME}": {e}'
         siemplify.end(output_message, False, EXECUTION_STATE_FAILED)
 
-    json_response = attachment.json()
+    json_response = attachment
 
     siemplify.result.add_result_json(json.dumps(json_response))
 
