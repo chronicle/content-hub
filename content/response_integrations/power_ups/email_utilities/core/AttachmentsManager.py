@@ -16,16 +16,14 @@ from __future__ import annotations
 
 import base64
 import os
+
 import requests
-
 from soar_sdk.SiemplifyDataModel import Attachment
-
 from TIPCommon.rest.soar_api import (
-    get_attachments_metadata,
     add_attachment_to_case_wall,
+    get_attachments_metadata,
 )
 from TIPCommon.types import SingleJson
-
 
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
 

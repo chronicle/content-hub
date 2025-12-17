@@ -43,14 +43,12 @@ import extract_msg
 import ioc_fanger
 import magic
 import olefile
+import requests
 from html2text import HTML2Text
 from msg_parser import MsOxMessage
-import requests
-
 from soar_sdk.SiemplifyDataModel import Attachment, EntityTypes
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
 from soar_sdk.SiemplifyUtils import dict_to_flat
-
 from TIPCommon.data_models import CreateEntity
 from TIPCommon.rest.soar_api import add_attachment_to_case_wall, create_entity
 from tld import get_fld
