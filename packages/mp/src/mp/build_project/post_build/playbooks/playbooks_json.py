@@ -22,6 +22,7 @@ import rich
 import yaml
 
 import mp.core.constants
+import mp.core.utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import (
     PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE,
@@ -111,10 +112,10 @@ def _find_built_playbook_in_out_folder(non_built_playbook_name: str, out_path: P
 def _update_display_info(
     built_playbook: BuiltPlaybook,
     built_display_info: BuiltPlaybookDisplayInfo,
-    rn_path: Path,
+    non_built_playbook_path: Path,
     out_path: Path,
 ) -> None:
-    rn_values: ReleaseNotesDisplayInfo = _extract_display_info_from_rn(rn_path)
+    rn_values: ReleaseNotesDisplayInfo = _extract_display_info_from_rn(non_built_playbook_path)
 
     built_display_info["Identifier"] = built_playbook["Definition"]["Identifier"]
     built_display_info["CreateTime"] = rn_values.creation_time
@@ -124,10 +125,8 @@ def _update_display_info(
         built_playbook["Definition"]["PlaybookType"]
     ]
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
-    built_display_info["DependentPlaybookIds"] = (
-        _extract_block_identifier(built_playbook)
-        if built_playbook.get("Definition", {}).get("PlaybookType") == PlaybookType.PLAYBOOK.value
-        else []
+    built_display_info["DependentPlaybookIds"] = list(
+        mp.core.utils.get_playbook_dependent_blocks_ids(non_built_playbook_path)
     )
 
 
@@ -189,23 +188,6 @@ def _is_specific_block(block_json: dict, block_identifier: str | None) -> bool:
         block_json.get("Definition", {}).get("PlaybookType") == PlaybookType.BLOCK.value
         and block_json.get("Definition", {}).get("Identifier") == block_identifier
     )
-
-
-def _extract_block_identifier(built_playbook: BuiltPlaybook) -> list[str | None]:
-    result: set[str | None] = set()
-    steps: list[BuiltStep] = built_playbook.get("Definition").get("Steps")
-    for step in steps:
-        step_type: int = step.get("Type")
-        if step_type != StepType.BLOCK.value:
-            continue
-
-        step_parameters: list[BuiltStepParameter] = step.get("Parameters")
-        for param in step_parameters:
-            if param.get("Name") == "NestedWorkflowIdentifier":
-                result.add(param.get("Value"))
-                break
-
-    return list(result)
 
 
 def _extract_display_info_from_rn(rn_path: Path) -> ReleaseNotesDisplayInfo:

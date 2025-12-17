@@ -18,9 +18,36 @@ from typing import TYPE_CHECKING
 
 from mp.core.data_models.playbooks.meta.display_info import PlaybookType
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
+from mp.core.data_models.playbooks.step.metadata import Step, StepType
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def get_playbook_dependent_blocks_ids(non_built_playbook_path: Path) -> set[str | None]:
+    """Get all dependent block identifiers from a playbook.
+
+    Args:
+        non_built_playbook_path: The path to the non-built playbook directory.
+
+    Returns:
+        A set of unique block identifiers that the playbook depends on.
+
+    """
+    required_block_ids: set[str | None] = set()
+    for step in Step.from_non_built_path(non_built_playbook_path):
+        if step.type_ is not StepType.BLOCK:
+            continue
+
+        for parm in step.parameters:
+            if parm.name == "NestedWorkflowIdentifier":
+                block_id: str | None = parm.value
+                if block_id is None:
+                    continue
+                required_block_ids.add(block_id)
+                break
+
+    return required_block_ids
 
 
 def get_all_blocks_id_from_path(base_path: Path) -> set[str]:
