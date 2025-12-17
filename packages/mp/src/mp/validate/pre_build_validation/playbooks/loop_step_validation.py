@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True, frozen=True)
 class LoopStepValidation:
-    name: str = "Loop Validation"
+    name: str = "Loop Step Validation"
 
     @staticmethod
     def run(playbook_path: Path) -> None:
