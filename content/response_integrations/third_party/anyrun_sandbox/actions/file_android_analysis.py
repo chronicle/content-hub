@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from base64 import b64encode
-from shlex import quote
 
 from anyrun.connectors import SandboxConnector
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -12,7 +11,6 @@ from TIPCommon.extraction import extract_action_param, extract_configuration_par
 from TIPCommon.rest.soar_api import save_attachment_to_case_wall
 
 from ..core.config import Config
-from ..core.data_table_manager import DataTableManager
 from ..core.utils import prepare_base_params, prepare_report_comment, setup_action_proxy
 
 
@@ -20,17 +18,15 @@ from ..core.utils import prepare_base_params, prepare_report_comment, setup_acti
 def main():
     siemplify = SiemplifyAction()
 
-    token = quote(
-        extract_configuration_param(
-            siemplify,
-            Config.INTEGRATION_NAME,
-            param_name="ANYRUN Sandbox API KEY",
-            is_mandatory=True,
-        )
+    token = extract_configuration_param(
+        siemplify,
+        Config.INTEGRATION_NAME,
+        param_name="ANYRUN Sandbox API KEY",
+        is_mandatory=True,
     )
 
-    verify_ssl = quote(
-        extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL")
+    verify_ssl = extract_configuration_param(
+        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL", input_type=bool
     )
 
     attachments = siemplify.get_attachments()
@@ -50,7 +46,7 @@ def main():
         task_uuid = connector.run_file_analysis(
             attachment_data,
             attachment_name,
-            obj_ext_cmd=quote(extract_action_param(siemplify, param_name="Obj Ext Cmd")),
+            obj_ext_cmd=extract_action_param(siemplify, param_name="Command line"),
             **prepare_base_params(siemplify),
         )
 
@@ -74,8 +70,6 @@ def main():
         )
 
         if iocs := connector.get_analysis_report(task_uuid, report_format="ioc"):
-            data_tables = DataTableManager(siemplify)
-            data_tables.update_sandbox_indicators(iocs, task_uuid)
             siemplify.add_comment(prepare_report_comment(iocs))
 
         status = connector.get_analysis_verdict(task_uuid)
