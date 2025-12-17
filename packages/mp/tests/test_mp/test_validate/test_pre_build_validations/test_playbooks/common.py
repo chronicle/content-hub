@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.step.step_parameter import StepParameter
@@ -73,3 +74,21 @@ def ingest_new_steps(playbook_path: Path, steps: list[Step]) -> None:
             step.to_non_built(),
             playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
         )
+
+
+def update_playbook_definition(playbook_path: Path, updates: dict) -> None:
+    """Update the playbook definition file with the provided attributes.
+
+    Args:
+        playbook_path: The path to the playbook directory.
+        updates: A dictionary of attribute names and values to apply.
+
+    """
+    def_file: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
+
+    for key, value in updates.items():
+        setattr(def_file, key, value)
+
+    mp.core.file_utils.save_yaml(
+        def_file.to_non_built(), playbook_path / mp.core.constants.DEFINITION_FILE
+    )

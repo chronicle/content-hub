@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from mp.validate.pre_build_validation.common.version_bump_validation import VersionBumpValidation
 
 from .all_blocks_existing_validation import AllBlocksExistValidation
+from .block_env_matches_playbook_env_validation import BlockEnvMatchesPlaybookEnvValidation
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
 from .environments_validation import EnvironmentsValidation
 from .loop_step_validation import LoopStepValidation
@@ -44,6 +45,7 @@ def _get_non_priority_validations() -> list[Validator]:
         BlockDoesNotContainAnOverviewValidation(),
         EnvironmentsValidation(),
         StepParamsValidation(),
+        BlockEnvMatchesPlaybookEnvValidation(),
     ]
 
 
