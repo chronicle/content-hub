@@ -27,138 +27,53 @@ from .common import ingest_new_steps
 if TYPE_CHECKING:
     from pathlib import Path
 
-# region Constants
-START_LOOP_1 = Step(
-    name="Start Loop 1",
-    description="",
-    identifier="start_loop_1",
-    original_step_id="start_loop_1",
-    playbook_id="playbook1",
-    parent_step_ids=[],
-    parent_step_id="",
-    instance_name="Start Loop 1",
-    is_automatic=True,
-    is_skippable=False,
-    action_provider="",
-    action_name="",
-    start_loop_step_id="start_loop_1",
-    type_=StepType.FOR_EACH_START_LOOP,
-    parameters=[],
-    auto_skip_on_failure=False,
-    is_debug_mock_data=False,
-    is_touched_by_ai=False,
-    parallel_actions=[],
-)
 
-END_LOOP_1 = Step(
-    name="End Loop 1",
-    description="",
-    identifier="end_loop_1",
-    original_step_id="end_loop_1",
-    playbook_id="playbook1",
-    parent_step_ids=[],
-    parent_step_id="",
-    instance_name="End Loop 1",
-    is_automatic=True,
-    is_skippable=False,
-    action_provider="",
-    action_name="",
-    start_loop_step_id="start_loop_1",
-    type_=StepType.FOR_EACH_END_LOOP,
-    parameters=[],
-    auto_skip_on_failure=False,
-    is_debug_mock_data=False,
-    is_touched_by_ai=False,
-    parallel_actions=[],
-)
+def create_step(
+    name: str,
+    identifier: str,
+    step_type: StepType,
+    start_loop_id: str | None = None,
+    playbook_id: str = "playbook1",
+) -> Step:
+    """Factory function to reduce boilerplate for Step creation."""
+    return Step(
+        name=name,
+        identifier=identifier,
+        original_step_id=identifier,
+        playbook_id=playbook_id,
+        instance_name=name,
+        type_=step_type,
+        start_loop_step_id=start_loop_id,
+        # Default values for boilerplate fields
+        description="",
+        parent_step_ids=[],
+        parent_step_id="",
+        is_automatic=True,
+        is_skippable=False,
+        action_provider="",
+        action_name="",
+        parameters=[],
+        auto_skip_on_failure=False,
+        is_debug_mock_data=False,
+        is_touched_by_ai=False,
+        parallel_actions=[],
+    )
 
-START_LOOP_2 = Step(
-    name="Start Loop 2",
-    description="",
-    identifier="start_loop_2",
-    original_step_id="start_loop_2",
-    playbook_id="playbook1",
-    parent_step_ids=[],
-    parent_step_id="",
-    instance_name="Start Loop 2",
-    is_automatic=True,
-    is_skippable=False,
-    action_provider="",
-    action_name="",
-    start_loop_step_id="start_loop_2",
-    type_=StepType.FOR_EACH_START_LOOP,
-    parameters=[],
-    auto_skip_on_failure=False,
-    is_debug_mock_data=False,
-    is_touched_by_ai=False,
-    parallel_actions=[],
-)
 
-END_LOOP_2 = Step(
-    name="End Loop 2",
-    description="",
-    identifier="end_loop_2",
-    original_step_id="end_loop_2",
-    playbook_id="playbook1",
-    parent_step_ids=[],
-    parent_step_id="",
-    instance_name="End Loop 2",
-    is_automatic=True,
-    is_skippable=False,
-    action_provider="",
-    action_name="",
-    type_=StepType.FOR_EACH_END_LOOP,
-    parameters=[],
-    auto_skip_on_failure=False,
-    is_debug_mock_data=False,
-    is_touched_by_ai=False,
-    start_loop_step_id="start_loop_2",
-    parallel_actions=[],
+START_LOOP_1 = create_step(
+    "Start Loop 1", "start_loop_1", StepType.FOR_EACH_START_LOOP, "start_loop_1"
 )
+END_LOOP_1 = create_step("End Loop 1", "end_loop_1", StepType.FOR_EACH_END_LOOP, "start_loop_1")
 
-END_LOOP_1_INVALID_START_ID = Step(
-    name="End Loop 1",
-    description="",
-    identifier="end_loop_1",
-    original_step_id="end_loop_1",
-    playbook_id="playbook1",
-    parent_step_ids=[],
-    parent_step_id="",
-    instance_name="End Loop 1",
-    is_automatic=True,
-    is_skippable=False,
-    action_provider="",
-    action_name="",
-    type_=StepType.FOR_EACH_END_LOOP,
-    parameters=[],
-    auto_skip_on_failure=False,
-    is_debug_mock_data=False,
-    is_touched_by_ai=False,
-    start_loop_step_id="non_existent_start_loop",
-    parallel_actions=[],
+START_LOOP_2 = create_step(
+    "Start Loop 2", "start_loop_2", StepType.FOR_EACH_START_LOOP, "start_loop_2"
 )
+END_LOOP_2 = create_step("End Loop 2", "end_loop_2", StepType.FOR_EACH_END_LOOP, "start_loop_2")
 
-END_LOOP_1_NULL_START_ID = Step(
-    name="End Loop 1",
-    description="",
-    identifier="end_loop_1",
-    original_step_id="end_loop_1",
-    playbook_id="playbook1",
-    parent_step_ids=[],
-    parent_step_id="",
-    instance_name="End Loop 1",
-    is_automatic=True,
-    is_skippable=False,
-    action_provider="",
-    action_name="",
-    type_=StepType.FOR_EACH_END_LOOP,
-    parameters=[],
-    auto_skip_on_failure=False,
-    is_debug_mock_data=False,
-    is_touched_by_ai=False,
-    start_loop_step_id=None,
-    parallel_actions=[],
+END_LOOP_1_INVALID_START_ID = create_step(
+    "End Loop 1", "end_loop_1", StepType.FOR_EACH_END_LOOP, "non_existent_start_loop"
 )
+END_LOOP_1_NULL_START_ID = create_step("End Loop 1", "end_loop_1", StepType.FOR_EACH_END_LOOP, None)
 
 
 class TestLoopStepValidation:
