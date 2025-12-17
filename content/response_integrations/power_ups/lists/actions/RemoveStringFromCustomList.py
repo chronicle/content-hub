@@ -36,7 +36,7 @@ def get_custom_list_items(siemplify, category_name, input_string):
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    output_message = "output message :"
+    output_message = ""
     result_value = True
     status = EXECUTION_STATE_COMPLETED
 
