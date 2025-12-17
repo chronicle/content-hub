@@ -115,15 +115,6 @@ def restructure_script_imports(code_string: str) -> str:
     return modified_tree.code
 
 
-def _create_prefixed_module(full_module_name: str, prefix: str) -> cst.Attribute | cst.Name:
-    new_module_name: str = f"{prefix}{full_module_name}"
-    expression: cst.BaseExpression = cst.parse_expression(new_module_name)
-    if not isinstance(expression, cst.Attribute | cst.Name):
-        msg: str = f"Expected 'Attribute' or 'Name', but got {type(expression).__name__}"
-        raise TypeError(msg)
-    return expression
-
-
 class FutureAnnotationsTransformer(cst.CSTTransformer):
     def leave_Module(self, original_node: cst.Module, updated_node: cst.Module) -> cst.Module:  # noqa: N802, PLR6301
         """Ensure `from __future__ import annotations` is present at the top of the module.
@@ -145,7 +136,6 @@ class FutureAnnotationsTransformer(cst.CSTTransformer):
         insert_pos = 0
 
         # Find the position after the docstring and any leading comments.
-        # A docstring is the first statement if it's an expression containing a string.
         if new_body and isinstance(new_body[0], cst.SimpleStatementLine):
             statement_body = new_body[0].body
             if (
@@ -319,6 +309,15 @@ class CorePackageInternalImportTransformer(cst.CSTTransformer):
             )
 
         return updated_node
+
+
+def _create_prefixed_module(full_module_name: str, prefix: str) -> cst.Attribute | cst.Name:
+    new_module_name: str = f"{prefix}{full_module_name}"
+    expression: cst.BaseExpression = cst.parse_expression(new_module_name)
+    if not isinstance(expression, cst.Attribute | cst.Name):
+        msg: str = f"Expected 'Attribute' or 'Name', but got {type(expression).__name__}"
+        raise TypeError(msg)
+    return expression
 
 
 def apply_transformers(content: str, transformers: list[cst.CSTTransformer]) -> str:
