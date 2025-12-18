@@ -57,7 +57,7 @@ class BuiltPlaybookDisplayInfo(TypedDict):
     Author: str
     ContactEmail: str
     Integrations: list[str]
-    DependentPlaybookIds: list[str | None]
+    DependentPlaybookIds: list[str]
     Tags: list[str]
     Source: int
     Verified: bool
@@ -71,7 +71,7 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
     description: str
     author: str
     contact_email: str
-    dependent_playbook_ids: list[str | None]
+    dependent_playbook_ids: list[str]
     tags: list[str]
     contribution_type: str
     is_google_verified: bool
@@ -84,7 +84,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
     description: str = "The description that will appear in the Content Hub"
     author: str = "Please Fill"
     contact_email: str = "Please Fill"
-    dependent_playbook_ids: Annotated[list[str | None], pydantic.Field(default_factory=list)]
+    dependent_playbook_ids: Annotated[list[str], pydantic.Field(default_factory=list)]
     tags: Annotated[list[str], pydantic.Field(default_factory=list)]
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False

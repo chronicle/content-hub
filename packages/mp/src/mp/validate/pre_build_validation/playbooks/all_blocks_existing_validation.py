@@ -17,9 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from mp.core.data_models.playbooks.step.metadata import Step, StepType
 from mp.core.exceptions import FatalValidationError
-from mp.core.utils import get_all_blocks_id_from_path
+from mp.core.utils import get_all_blocks_id_from_path, get_playbook_dependent_blocks_ids
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -40,19 +39,7 @@ class AllBlocksExistValidation:
             FatalValidationError: If any referenced blocks are missing.
 
         """
-        required_block_ids: set[str] = set()
-        steps: list[Step] = Step.from_non_built_path(playbook_path)
-        for step in steps:
-            if step.type_ is not StepType.BLOCK:
-                continue
-
-            for parm in step.parameters:
-                if parm.name == "NestedWorkflowIdentifier":
-                    block_id: str | None = parm.value
-                    if block_id is None:
-                        continue
-                    required_block_ids.add(block_id)
-                    break
+        required_block_ids: set[str] = get_playbook_dependent_blocks_ids(playbook_path)
 
         if not required_block_ids:
             return
