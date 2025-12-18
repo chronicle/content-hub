@@ -21,6 +21,10 @@ from dateutil.parser import parse
 from TIPCommon.base.action import Action
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC, NUM_OF_SEC_IN_MIN
 from TIPCommon.extraction import extract_action_param
+from TIPCommon.rest.soar_api import (
+    add_or_update_case_task_v5,
+    add_or_update_case_task_v6,
+)
 
 from ..core.ToolsCommon import (
     is_supported_siemplify_version,
@@ -30,8 +34,6 @@ from ..core.ToolsCommon import (
 if TYPE_CHECKING:
     from typing import Never, NoReturn
 
-X5_TASK_URL: str = "{}/external/v1/cases/AddOrUpdateCaseTask"
-X6_TASK_URL: str = "{}/external/v1/sdk/AddOrUpdateCaseTask"
 ACTION_NAME: str = "CreateNewTask"
 CREATE_TASK_SIEMPLIFY_5X_VERSION: str = "5.0.0.0"
 CREATE_TASK_SIEMPLIFY_6X_VERSION: str = "6.0.0.0"
@@ -110,40 +112,31 @@ class CreateSiemplifyTaskAction(Action):
 
     def _create_task(self, task_due_date: int) -> None:
         current_version = self.soar_action.get_system_version()
-        json_payload = {}
-        task_url = ""
 
         if is_supported_siemplify_version(
             parse_version_string_to_tuple(current_version),
             parse_version_string_to_tuple(CREATE_TASK_SIEMPLIFY_6X_VERSION),
         ):
-            json_payload = {
-                "owner": self.params.assign_to,
-                "content": self.params.task_content,
-                "dueDate": "",
-                "dueDateUnixTimeMs": task_due_date,
-                "title": self.params.task_title,
-                "caseId": self.soar_action.case_id,
-            }
-            task_url = X6_TASK_URL
+            add_or_update_case_task_v5(
+                self.soar_action,
+                owner=self.params.assign_to,
+                title=self.params.task_title,
+                content=self.params.task_content,
+                due_date_unix_time_ms=task_due_date,
+                case_id=self.soar_action.case_id,
+            )
         elif is_supported_siemplify_version(
             parse_version_string_to_tuple(current_version),
             parse_version_string_to_tuple(CREATE_TASK_SIEMPLIFY_5X_VERSION),
         ):
-            json_payload = {
-                "owner": self.params.assign_to,
-                "name": self.params.task_content,
-                "dueDate": "",
-                "dueDateUnixTimeMs": task_due_date,
-                "caseId": self.soar_action.case_id,
-            }
-            task_url = X5_TASK_URL
-
-        add_task = self.soar_action.session.post(
-            task_url.format(self.soar_action.API_ROOT),
-            json=json_payload,
-        )
-        add_task.raise_for_status()
+            add_or_update_case_task_v6(
+                self.soar_action,
+                owner=self.params.assign_to,
+                title=self.params.task_title,
+                content=self.params.task_content,
+                due_date_unix_time_ms=task_due_date,
+                case_id=self.soar_action.case_id,
+            )
 
 
 def main() -> NoReturn:
