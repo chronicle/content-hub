@@ -21,11 +21,15 @@ import mp.core.file_utils
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
+from mp.core.data_models.playbooks.step.step_debug_data import StepDebugData
 from mp.core.data_models.playbooks.step.step_parameter import StepParameter
+from mp.core.file_utils.playbooks.file_utils import open_display_info
 
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
+
+    from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 
 def update_single_step(playbook_path: Path, updates: dict) -> None:
@@ -92,4 +96,39 @@ def update_playbook_definition(playbook_path: Path, updates: dict[str, Any]) -> 
 
     mp.core.file_utils.save_yaml(
         def_file.to_non_built(), playbook_path / mp.core.constants.DEFINITION_FILE
+    )
+
+
+def update_display_info(playbook_path: Path, updates: dict) -> None:
+    """Update display info."""
+    display_info: PlaybookDisplayInfo = open_display_info(playbook_path)
+    for key, value in updates.items():
+        setattr(display_info, key, value)
+    mp.core.file_utils.save_yaml(
+        display_info.to_non_built(),
+        playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME,
+    )
+
+
+def update_step_with_debug_data(
+    playbook_path: Path, is_debug_mock_data: bool, has_debug_data: bool
+) -> None:
+    """Update step with debug data."""
+    step: Step = Step.from_non_built_path(playbook_path)[0]
+    step.is_debug_mock_data = is_debug_mock_data
+    if has_debug_data:
+        step.step_debug_data = StepDebugData(
+            step_id=step.identifier,
+            playbook_id=step.playbook_id,
+            creation_time=0,
+            modification_time=0,
+            result_value=None,
+            result_json=None,
+            scope_entities_enrichment_data=[],
+        )
+    else:
+        step.step_debug_data = None
+    mp.core.file_utils.save_yaml(
+        step.to_non_built(),
+        playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
     )

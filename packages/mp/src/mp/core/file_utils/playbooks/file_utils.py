@@ -18,9 +18,11 @@ import json
 from typing import TYPE_CHECKING, Any
 
 import rich
+import yaml
 
 import mp.core.constants
 import mp.core.file_utils.common.utils
+from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -135,3 +137,26 @@ def is_built_playbook(path: Path) -> bool:
         return False
 
     return True
+
+
+def open_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
+    """Open the display info file for a playbook.
+
+    Args:
+        playbook_path: The path to the playbook directory.
+
+    Returns:
+        A PlaybookDisplayInfo object.
+
+    Raises:
+        FileNotFoundError: If the display info file is not found.
+
+    """
+    display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+    try:
+        return PlaybookDisplayInfo.from_non_built(
+            yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
+        )
+    except FileNotFoundError as e:
+        msg: str = f"Display info file not found at {display_info_path}"
+        raise FileNotFoundError(msg) from e
