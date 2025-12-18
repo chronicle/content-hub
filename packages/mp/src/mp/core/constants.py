@@ -16,8 +16,6 @@
 
 from __future__ import annotations
 
-from rich.themes import DEFAULT
-
 REPO_NAME: str = "marketplace"
 
 PROJECT_FILE: str = "pyproject.toml"
