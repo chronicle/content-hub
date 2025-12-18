@@ -45,24 +45,25 @@ class DebugDataValidation:
         display_info: PlaybookDisplayInfo = mp.core.file_utils.open_display_info(playbook_path)
 
         steps: list[Step] = Step.from_non_built_path(playbook_path)
+        steps_with_debug_data: list[Step] = [step for step in steps if step.step_debug_data]
+
         error_messages: list[str] = []
-        has_debug_data = False
+        if not steps_with_debug_data:
+            return
 
-        for step in steps:
-            if step.step_debug_data:
-                has_debug_data = True
-                if not step.is_debug_mock_data:
-                    error_messages.append(
-                        f"Step <{step.instance_name}> has debug data but flag "
-                        f"'is_debug_mock_data' is False."
-                    )
-
-        if has_debug_data and not display_info.allowed_debug_data:
+        if not display_info.allowed_debug_data:
             error_messages.append(
                 "Playbook contains debug data but the field 'allowed_debug_data' in "
                 "the display info is set to False, to allow debug data mark "
                 "it True."
             )
+
+        for step in steps_with_debug_data:
+            if not step.is_debug_mock_data:
+                error_messages.append(  # noqa: PERF401
+                    f"Step <{step.instance_name}> has debug data but flag "
+                    "'is_debug_mock_data' is False."
+                )
 
         if error_messages:
             raise NonFatalValidationError("\n".join(error_messages))
