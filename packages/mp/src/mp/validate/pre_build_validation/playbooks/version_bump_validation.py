@@ -22,6 +22,7 @@ import mp.core.unix
 from mp.core.constants import RELEASE_NOTES_FILE
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.exceptions import NonFatalValidationError
+from mp.validate import utils
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -81,7 +82,7 @@ class VersionBumpValidation:
                 rn_path = p
                 break
 
-        if rn_path is None:
+        if not rn_path:
             msg = "release_notes.yml file must be updated before PR"
             raise NonFatalValidationError(msg)
 
@@ -99,8 +100,8 @@ def _create_data_for_version_bump_validation(
 
     try:
         old_rn_content = mp.core.unix.get_file_content_from_main_branch(rn_path)
-        existing_files["rn"]["old"] = _get_last_note(old_rn_content)
-        existing_files["rn"]["new"] = _get_new_rn_notes(
+        existing_files["rn"]["old"] = utils.get_last_release_note(old_rn_content)
+        existing_files["rn"]["new"] = utils.get_new_release_notes(
             rn_path.read_text(encoding="utf-8"), old_rn_content
         )
 
@@ -108,17 +109,6 @@ def _create_data_for_version_bump_validation(
         new_files["rn"] = ReleaseNote.from_non_built_str(rn_path.read_text(encoding="utf-8"))
 
     return existing_files, new_files
-
-
-def _get_last_note(content: str) -> ReleaseNote | None:
-    notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(content)
-    return notes[-1] if notes else None
-
-
-def _get_new_rn_notes(new_rn_content: str, old_rn_content: str) -> list[ReleaseNote]:
-    new_notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(new_rn_content)
-    old_notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(old_rn_content)
-    return new_notes[len(old_notes) :]
 
 
 def _version_bump_validation_run_checks(
@@ -130,7 +120,7 @@ def _version_bump_validation_run_checks(
         new_version: float = old_rn.version + 1.0
         new_notes: list[ReleaseNote] | None = existing_files["rn"].get("new")
 
-        if not _rn_is_valid(new_notes, new_version):
+        if not utils.are_new_release_notes_valid(new_notes, new_version):
             msg = (
                 f"The release note's version must be incremented to {new_version} and be"
                 " consistent in all the newly added notes."
@@ -138,16 +128,10 @@ def _version_bump_validation_run_checks(
             raise NonFatalValidationError(msg)
 
     elif new_notes := new_files.get("rn"):
-        if not _rn_is_valid(new_notes):
+        if not utils.are_new_release_notes_valid(new_notes):
             msg = "New playbook release_note.yaml version must be initialize to 1.0"
             raise NonFatalValidationError(msg)
 
     elif not new_files.get("rn"):
         msg = "New playbook release_note.yaml cannot be empty."
         raise NonFatalValidationError(msg)
-
-
-def _rn_is_valid(new_notes: list[ReleaseNote] | None, version_to_compare: float = 1.0) -> bool:
-    return new_notes is not None and all(
-        new_note.version == version_to_compare for new_note in new_notes
-    )
