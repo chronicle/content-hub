@@ -16,8 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mp.validate.pre_build_validation.common.version_bump_validation import VersionBumpValidation
-
 from .all_blocks_existing_validation import AllBlocksExistValidation
 from .block_env_matches_playbook_env_validation import BlockEnvMatchesPlaybookEnvValidation
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
@@ -25,6 +23,7 @@ from .debug_data_validation import DebugDataValidation
 from .environments_validation import EnvironmentsValidation
 from .loop_step_validation import LoopStepValidation
 from .steps_parameters_validation import StepParamsValidation
+from .version_bump_validation import VersionBumpValidation
 
 if TYPE_CHECKING:
     from mp.validate.data_models import Validator
