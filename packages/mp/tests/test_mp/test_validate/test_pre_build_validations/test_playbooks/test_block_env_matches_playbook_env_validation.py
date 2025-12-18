@@ -38,12 +38,13 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
     validator_runner: BlockEnvMatchesPlaybookEnvValidation = BlockEnvMatchesPlaybookEnvValidation()
 
     def test_blocks_has_all_env_valid(self, temp_playbooks_repo: Path) -> None:
+        envs: list[str] = [ENV1, ENV2, ENV3]
         update_playbook_definition(
             temp_playbooks_repo / "mock_non_built_playbook",
-            {"environments": [ENV1, ENV2, ENV3]},
+            {"environments": envs},
         )
         update_playbook_definition(
-            temp_playbooks_repo / "mock_non_built_block", {"environments": ["env1", "env2", "env3"]}
+            temp_playbooks_repo / "mock_non_built_block", {"environments": envs}
         )
         self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 

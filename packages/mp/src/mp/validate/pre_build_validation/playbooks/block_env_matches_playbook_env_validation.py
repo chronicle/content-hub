@@ -52,22 +52,22 @@ class BlockEnvMatchesPlaybookEnvValidation:
         playbook: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
         playbook_env: set[str] = set(playbook.environments)
         error_msg: list[str] = []
-        for block in playbook_path.parent.iterdir():
-            if not block.is_dir():
+        for block_file in playbook_path.parent.iterdir():
+            if not block_file.is_dir():
                 continue
 
-            block_file: PlaybookMetadata = PlaybookMetadata.from_non_built_path(block)
+            block: PlaybookMetadata = PlaybookMetadata.from_non_built_path(block_file)
 
             if (
-                block_file.type_ is not PlaybookType.BLOCK
-                or block_file.identifier not in dependent_blocks_ids
+                block.type_ is not PlaybookType.BLOCK
+                or block.identifier not in dependent_blocks_ids
             ):
                 continue
 
-            if ALL_ENV in block_file.environments:
+            if ALL_ENV in block.environments:
                 continue
 
-            if missing := playbook_env.difference(set(block_file.environments)):
+            if missing := playbook_env.difference(set(block.environments)):
                 error_msg.append(
                     f"Block <{block_file.name}> has missing environments from its playbook env"
                     f" {missing}"
