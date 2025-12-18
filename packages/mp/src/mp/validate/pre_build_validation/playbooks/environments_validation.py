@@ -17,13 +17,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from mp.core.constants import VALID_ENVIRONMENTS
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-VALID_ENVIRONMENTS: set[str] = {"*", "Default Environment"}
 
 
 @dataclass(slots=True, frozen=True)

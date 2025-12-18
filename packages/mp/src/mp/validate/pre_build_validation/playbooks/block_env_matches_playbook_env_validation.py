@@ -18,15 +18,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import mp.core.utils
+from mp.core.constants import ALL_ENV
 from mp.core.data_models.playbooks.meta.display_info import PlaybookType
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-ALL_ENV: str = "*"
 
 
 @dataclass(slots=True, frozen=True)
@@ -51,28 +49,27 @@ class BlockEnvMatchesPlaybookEnvValidation:
         if not dependent_blocks_ids:
             return
 
-        playbook_env: set[str] = set(
-            PlaybookMetadata.from_non_built_path(playbook_path).environments
-        )
+        playbook: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
+        playbook_env: set[str] = set(playbook.environments)
         error_msg: list[str] = []
         for block in playbook_path.parent.iterdir():
             if not block.is_dir():
                 continue
 
-            block_def_file: PlaybookMetadata = PlaybookMetadata.from_non_built_path(block)
+            block_file: PlaybookMetadata = PlaybookMetadata.from_non_built_path(block)
 
             if (
-                block_def_file.type_ is not PlaybookType.BLOCK
-                or block_def_file.identifier not in dependent_blocks_ids
+                block_file.type_ is not PlaybookType.BLOCK
+                or block_file.identifier not in dependent_blocks_ids
             ):
                 continue
 
-            if ALL_ENV in block_def_file.environments:
+            if ALL_ENV in block_file.environments:
                 continue
 
-            if missing := playbook_env.difference(set(block_def_file.environments)):
+            if missing := playbook_env.difference(set(block_file.environments)):
                 error_msg.append(
-                    f"Block <{block_def_file.name}> has missing environments from its playbook env"
+                    f"Block <{block_file.name}> has missing environments from its playbook env"
                     f" {missing}"
                 )
 

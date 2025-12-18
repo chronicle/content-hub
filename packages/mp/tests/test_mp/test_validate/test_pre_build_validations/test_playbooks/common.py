@@ -25,6 +25,7 @@ from mp.core.data_models.playbooks.step.step_parameter import StepParameter
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any
 
 
 def update_single_step(playbook_path: Path, updates: dict) -> None:
@@ -76,7 +77,7 @@ def ingest_new_steps(playbook_path: Path, steps: list[Step]) -> None:
         )
 
 
-def update_playbook_definition(playbook_path: Path, updates: dict) -> None:
+def update_playbook_definition(playbook_path: Path, updates: dict[str, Any]) -> None:
     """Update the playbook definition file with the provided attributes.
 
     Args:
