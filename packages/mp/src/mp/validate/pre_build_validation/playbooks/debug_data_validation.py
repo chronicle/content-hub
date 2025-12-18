@@ -55,7 +55,7 @@ class DebugDataValidation:
             error_messages.append(
                 "Playbook contains debug data but the field 'allowed_debug_data' in "
                 "the display info is set to False, to allow debug data mark "
-                "it True."
+                "it True. "
             )
 
         for step in steps_with_debug_data:
