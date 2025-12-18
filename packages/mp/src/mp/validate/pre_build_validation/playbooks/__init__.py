@@ -22,6 +22,7 @@ from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
 from .debug_data_validation import DebugDataValidation
 from .environments_validation import EnvironmentsValidation
 from .loop_step_validation import LoopStepValidation
+from .overview_roles_validation import OverviewContainsOnlyAllowedRolesValidation
 from .steps_parameters_validation import StepParamsValidation
 from .version_bump_validation import VersionBumpValidation
 
@@ -46,6 +47,7 @@ def _get_non_priority_validations() -> list[Validator]:
         EnvironmentsValidation(),
         StepParamsValidation(),
         BlockEnvMatchesPlaybookEnvValidation(),
+        OverviewContainsOnlyAllowedRolesValidation(),
         DebugDataValidation(),
     ]
 
