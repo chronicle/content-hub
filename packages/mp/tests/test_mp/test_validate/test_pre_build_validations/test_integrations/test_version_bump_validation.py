@@ -44,7 +44,7 @@ OLD_RN_CONTENT = """
 -   deprecated: true
     description: New Integration Added - Mock Integration.
     integration_version: 1.0
-    item_name: Connector Name  hnnhyhyg
+    item_name: Connector Name
     item_type: Connector
     new: true
     regressive: false

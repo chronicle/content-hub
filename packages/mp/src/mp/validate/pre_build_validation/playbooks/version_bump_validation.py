@@ -76,11 +76,9 @@ class VersionBumpValidation:
         if not changed_files:
             return
 
-        rn_path: Path | None = None
-        for p in changed_files:
-            if p.name == RELEASE_NOTES_FILE:
-                rn_path = p
-                break
+        rn_path: Path | None = next(
+            (p for p in changed_files if p.name == RELEASE_NOTES_FILE), None
+        )
 
         if not rn_path:
             msg = "release_notes.yml file must be updated before PR"
