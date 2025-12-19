@@ -113,7 +113,7 @@ class CreateSiemplifyTaskAction(Action):
     def _create_task(self, task_due_date: int) -> None:
         current_version = self.soar_action.get_system_version()
 
-        if is_supported_siemplify_version(
+        if not is_supported_siemplify_version(
             parse_version_string_to_tuple(current_version),
             parse_version_string_to_tuple(CREATE_TASK_SIEMPLIFY_6X_VERSION),
         ):
@@ -122,7 +122,7 @@ class CreateSiemplifyTaskAction(Action):
                 owner=self.params.assign_to,
                 title=self.params.task_title,
                 content=self.params.task_content,
-                due_date_unix_time_ms=task_due_date,
+                due_date_unix_in_ms=task_due_date,
                 case_id=self.soar_action.case_id,
             )
         elif is_supported_siemplify_version(
@@ -134,7 +134,7 @@ class CreateSiemplifyTaskAction(Action):
                 owner=self.params.assign_to,
                 title=self.params.task_title,
                 content=self.params.task_content,
-                due_date_unix_time_ms=task_due_date,
+                due_date_unix_in_ms=task_due_date,
                 case_id=self.soar_action.case_id,
             )
 
