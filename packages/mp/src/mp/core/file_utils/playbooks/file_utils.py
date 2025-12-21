@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
-    """Get all content-hub playbooks repository path.
+    """Get content-hub playbook specific repository path.
 
     Args:
         playbooks_classification: the name of the repository.
@@ -44,7 +44,7 @@ def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
 
 
 def get_playbook_base_dir() -> Path:
-    """Get the root folder for the playbooks' repository.
+    """Get the root folder for the playbooks' repositories.
 
     Returns:
         the root folder for the playbooks' repository.
@@ -139,7 +139,7 @@ def is_built_playbook(path: Path) -> bool:
     return True
 
 
-def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
+def open_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
     """Open the display info file for a playbook.
 
     Args:
@@ -148,8 +148,15 @@ def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
     Returns:
         A PlaybookDisplayInfo object.
 
+    Raises:
+        FileNotFoundError: If the display info file is not found.
+
     """
     display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
-    return PlaybookDisplayInfo.from_non_built(
-        yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-    )
+    try:
+        return PlaybookDisplayInfo.from_non_built(
+            yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
+        )
+    except FileNotFoundError as e:
+        msg: str = f"Display info file not found at {display_info_path}"
+        raise FileNotFoundError(msg) from e
