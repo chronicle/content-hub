@@ -18,13 +18,11 @@ import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
-from mp.core.exceptions import FatalValidationError
 from mp.validate.pre_build_validation.playbooks.unique_name_validation import (
     UniqueNameValidation,
 )
+
+from .common import update_display_info
 
 
 def _setup(temp_non_built_playbook: Path) -> None:
@@ -43,5 +41,9 @@ class TestUniqueNameValidation:
     ) -> None:
         _setup(temp_non_built_playbook)
         mock_get_playbook_repository_base_path.return_value = temp_non_built_playbook.parent
+        update_display_info(temp_non_built_playbook, {"content_hub_display_name": "test"})
+        update_display_info(
+            Path(f"{temp_non_built_playbook}2"), {"content_hub_display_name": "test2"}
+        )
 
         self.validator_runner.run(temp_non_built_playbook)
