@@ -114,21 +114,21 @@ def update_step_with_debug_data(
     playbook_path: Path, is_debug_mock_data: bool, has_debug_data: bool
 ) -> None:
     """Update step with debug data."""
-    step: Step = Step.from_non_built_path(playbook_path)[0]
-    step.is_debug_mock_data = is_debug_mock_data
-    if has_debug_data:
-        step.step_debug_data = StepDebugData(
-            step_id=step.identifier,
-            playbook_id=step.playbook_id,
-            creation_time=0,
-            modification_time=0,
-            result_value=None,
-            result_json=None,
-            scope_entities_enrichment_data=[],
+    for step in Step.from_non_built_path(playbook_path):
+        step.is_debug_mock_data = is_debug_mock_data
+        if has_debug_data:
+            step.step_debug_data = StepDebugData(
+                step_id=step.identifier,
+                playbook_id=step.playbook_id,
+                creation_time=0,
+                modification_time=0,
+                result_value=None,
+                result_json=None,
+                scope_entities_enrichment_data=[],
+            )
+        else:
+            step.step_debug_data = None
+        mp.core.file_utils.save_yaml(
+            step.to_non_built(),
+            playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
         )
-    else:
-        step.step_debug_data = None
-    mp.core.file_utils.save_yaml(
-        step.to_non_built(),
-        playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
-    )

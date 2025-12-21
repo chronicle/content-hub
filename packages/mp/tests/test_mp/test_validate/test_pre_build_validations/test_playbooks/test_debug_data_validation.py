@@ -23,7 +23,7 @@ from mp.validate.pre_build_validation.playbooks.debug_data_validation import (
     DebugDataValidation,
 )
 
-from .common import update_display_info, update_step_with_debug_data
+from .common import update_display_info, update_playbook_definition, update_step_with_debug_data
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -34,13 +34,27 @@ class TestDebugDataValidation:
 
     def test_valid_debug_data(self, temp_non_built_playbook: Path) -> None:
         update_display_info(temp_non_built_playbook, {"allowed_debug_data": True})
+        update_playbook_definition(temp_non_built_playbook, {"is_debug_mode": False})
         update_step_with_debug_data(
-            temp_non_built_playbook, is_debug_mock_data=True, has_debug_data=True
+            temp_non_built_playbook, is_debug_mock_data=False, has_debug_data=True
         )
         self.validator_runner.run(temp_non_built_playbook)
 
-    def test_is_debug_mock_data_false_fail(self, temp_non_built_playbook: Path) -> None:
+    def test_is_debug_mock_data_true_fail(self, temp_non_built_playbook: Path) -> None:
         update_display_info(temp_non_built_playbook, {"allowed_debug_data": True})
+        update_playbook_definition(temp_non_built_playbook, {"is_debug_mode": False})
+        update_step_with_debug_data(
+            temp_non_built_playbook, is_debug_mock_data=True, has_debug_data=True
+        )
+
+        with pytest.raises(NonFatalValidationError) as excinfo:
+            self.validator_runner.run(temp_non_built_playbook)
+
+        assert "debug mode cannot be enabled. Please disable it." in str(excinfo.value)
+
+    def test_allowed_debug_data_false_fail(self, temp_non_built_playbook: Path) -> None:
+        update_display_info(temp_non_built_playbook, {"allowed_debug_data": False})
+        update_playbook_definition(temp_non_built_playbook, {"is_debug_mode": False})
         update_step_with_debug_data(
             temp_non_built_playbook, is_debug_mock_data=False, has_debug_data=True
         )
@@ -48,34 +62,43 @@ class TestDebugDataValidation:
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_non_built_playbook)
 
-        assert "has debug data but flag 'is_debug_mock_data' is False" in str(excinfo.value)
+        assert (
+            "The playbook contains debug data, but 'allowed_debug_data' is set to False"
+            " in the display info file. Set 'allowed_debug_data' to True to allow this data."
+        ) in str(excinfo.value)
 
-    def test_allowed_debug_data_false_fail(self, temp_non_built_playbook: Path) -> None:
-        update_display_info(temp_non_built_playbook, {"allowed_debug_data": False})
+    def test_is_debug_mode_true_fail(self, temp_non_built_playbook: Path) -> None:
+        update_display_info(temp_non_built_playbook, {"allowed_debug_data": True})
+        update_playbook_definition(temp_non_built_playbook, {"is_debug_mode": True})
         update_step_with_debug_data(
-            temp_non_built_playbook, is_debug_mock_data=True, has_debug_data=True
+            temp_non_built_playbook, is_debug_mock_data=False, has_debug_data=True
         )
 
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_non_built_playbook)
 
         assert (
-            "Playbook contains debug data but the field 'allowed_debug_data' in the display"
-            " info is set to False"
+            "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be "
+            "enabled. Please disable it."
         ) in str(excinfo.value)
 
     def test_all_errors_fail(self, temp_non_built_playbook: Path) -> None:
         update_display_info(temp_non_built_playbook, {"allowed_debug_data": False})
         update_step_with_debug_data(
-            temp_non_built_playbook, is_debug_mock_data=False, has_debug_data=True
+            temp_non_built_playbook, is_debug_mock_data=True, has_debug_data=True
         )
+        update_playbook_definition(temp_non_built_playbook, {"is_debug_mode": True})
 
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_non_built_playbook)
 
         error_msg = str(excinfo.value)
-        assert "has debug data but flag 'is_debug_mock_data' is False" in error_msg
+        assert "debug mode cannot be enabled. Please disable it." in error_msg
         assert (
-            "Playbook contains debug data but the field 'allowed_debug_data' in "
-            "the display info is set to False" in error_msg
-        )
+            "The playbook contains debug data, but 'allowed_debug_data' is set to False"
+            " in the display info file. Set 'allowed_debug_data' to True to allow this data."
+        ) in error_msg
+        assert (
+            "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be "
+            "enabled. Please disable it."
+        ) in error_msg

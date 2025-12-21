@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import mp.core.file_utils
+from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.exceptions import NonFatalValidationError
 
@@ -43,26 +44,31 @@ class DebugDataValidation:
 
         """
         display_info: PlaybookDisplayInfo = mp.core.file_utils.open_display_info(playbook_path)
-
+        playbook_metadata: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
         steps: list[Step] = Step.from_non_built_path(playbook_path)
         steps_with_debug_data: list[Step] = [step for step in steps if step.step_debug_data]
-
-        error_messages: list[str] = []
         if not steps_with_debug_data:
             return
 
+        error_messages: list[str] = []
         if not display_info.allowed_debug_data:
             error_messages.append(
-                "Playbook contains debug data but the field 'allowed_debug_data' in "
-                "the display info is set to False, to allow debug data mark "
-                "it True. "
+                "The playbook contains debug data, but 'allowed_debug_data' is set to False"
+                " in the display info file. Set 'allowed_debug_data' to True to allow this data."
+            )
+
+        if playbook_metadata.is_debug_mode:
+            error_messages.append(
+                "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be "
+                "enabled. Please disable it."
             )
 
         for step in steps_with_debug_data:
-            if not step.is_debug_mock_data:
-                error_messages.append(  # noqa: PERF401
-                    f"Step <{step.instance_name}> has debug data but flag "
-                    "'is_debug_mock_data' is False."
+            if not display_info.allowed_debug_data:
+                error_messages.append(f"Step <{step.instance_name}> contains debug data.")
+            if step.is_debug_mock_data:
+                error_messages.append(
+                    f"Step <{step.instance_name}> debug mode cannot be enabled. Please disable it."
                 )
 
         if error_messages:

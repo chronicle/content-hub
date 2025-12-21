@@ -148,15 +148,8 @@ def open_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
     Returns:
         A PlaybookDisplayInfo object.
 
-    Raises:
-        FileNotFoundError: If the display info file is not found.
-
     """
     display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
-    try:
-        return PlaybookDisplayInfo.from_non_built(
-            yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-        )
-    except FileNotFoundError as e:
-        msg: str = f"Display info file not found at {display_info_path}"
-        raise FileNotFoundError(msg) from e
+    return PlaybookDisplayInfo.from_non_built(
+        yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
+    )

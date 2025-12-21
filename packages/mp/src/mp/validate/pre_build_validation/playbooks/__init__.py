@@ -21,6 +21,7 @@ from mp.validate.pre_build_validation.common.version_bump_validation import Vers
 from .all_blocks_existing_validation import AllBlocksExistValidation
 from .block_env_matches_playbook_env_validation import BlockEnvMatchesPlaybookEnvValidation
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
+from .debug_data_validation import DebugDataValidation
 from .environments_validation import EnvironmentsValidation
 from .loop_step_validation import LoopStepValidation
 from .steps_parameters_validation import StepParamsValidation
@@ -46,6 +47,7 @@ def _get_non_priority_validations() -> list[Validator]:
         EnvironmentsValidation(),
         StepParamsValidation(),
         BlockEnvMatchesPlaybookEnvValidation(),
+        DebugDataValidation(),
     ]
 
 
