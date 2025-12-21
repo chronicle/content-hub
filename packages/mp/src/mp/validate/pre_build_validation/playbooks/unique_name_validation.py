@@ -15,15 +15,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 from mp.core.exceptions import FatalValidationError
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 
 @dataclass(slots=True, frozen=True)
@@ -46,14 +46,14 @@ class UniqueNameValidation:
         )
         duplicate_paths += _search_duplicate_names(display_name, community_repo)
 
-        actual_duplicates = [
+        actual_duplicates: set[str] = {
             path for path in duplicate_paths if Path(path).resolve() != playbook_path.resolve()
-        ]
+        }
 
         if actual_duplicates:
             msg: str = (
-                f"The playbook name '{display_name}' is already in use at the following locations: "
-                f"{', '.join(actual_duplicates)}. "
+                f"The playbook display name '{display_name}' is already in use at the following "
+                f"locations: {', '.join(actual_duplicates)}. "
                 "Please use a unique name for your playbook before merging."
             )
             raise FatalValidationError(msg)
