@@ -76,6 +76,7 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
     contribution_type: str
     is_google_verified: bool
     should_display_in_content_hub: bool
+    allowed_debug_data: bool
 
 
 class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo]):
@@ -89,6 +90,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
     should_display_in_content_hub: bool = False
+    allowed_debug_data: bool = False
 
     @classmethod
     def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:  # ty:ignore[invalid-method-override]
@@ -109,6 +111,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             is_google_verified=non_built["is_google_verified"],
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
             dependent_playbook_ids=[],
+            allowed_debug_data=non_built["allowed_debug_data"],
         )
 
     def to_built(self) -> BuiltPlaybookDisplayInfo:
@@ -156,5 +159,6 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             should_display_in_content_hub=self.should_display_in_content_hub,
             contribution_type=self.contribution_type.to_string(),
             is_google_verified=self.is_google_verified,
+            allowed_debug_data=self.allowed_debug_data,
         )
         return non_built
