@@ -47,15 +47,19 @@ class DebugDataValidation:
         playbook_metadata: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
         steps: list[Step] = Step.from_non_built_path(playbook_path)
         steps_with_debug_data: list[Step] = [step for step in steps if step.step_debug_data]
+
         if not steps_with_debug_data:
             return
 
         error_messages: list[str] = []
+
         if not display_info.allowed_debug_data:
             error_messages.append(
                 "The playbook contains debug data, but 'allowed_debug_data' is set to False"
                 " in the display info file. Set 'allowed_debug_data' to True to allow this data."
             )
+            for step in steps_with_debug_data:
+                error_messages.append(f"Step <{step.instance_name}> contains debug data.")  # noqa: PERF401
 
         if playbook_metadata.is_debug_mode:
             error_messages.append(
@@ -64,10 +68,8 @@ class DebugDataValidation:
             )
 
         for step in steps_with_debug_data:
-            if not display_info.allowed_debug_data:
-                error_messages.append(f"Step <{step.instance_name}> contains debug data.")
             if step.is_debug_mock_data:
-                error_messages.append(
+                error_messages.append(  # noqa: PERF401
                     f"Step <{step.instance_name}> debug mode cannot be enabled. Please disable it."
                 )
 
