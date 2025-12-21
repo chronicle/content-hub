@@ -43,7 +43,7 @@ class DebugDataValidation:
             NonFatalValidationError: If any debug data inconsistencies are found.
 
         """
-        display_info: PlaybookDisplayInfo = mp.core.file_utils.open_display_info(playbook_path)
+        display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_path)
         playbook_metadata: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
         steps: list[Step] = Step.from_non_built_path(playbook_path)
         steps_with_debug_data: list[Step] = [step for step in steps if step.step_debug_data]

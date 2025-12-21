@@ -166,7 +166,7 @@ class Playbook:
             trigger=Trigger.from_non_built_path(path),
             release_notes=ReleaseNote.from_non_built_path(path),
             meta_data=PlaybookMetadata.from_non_built_path(path),
-            display_info=mp.core.file_utils.open_display_info(path),
+            display_info=mp.core.file_utils.get_display_info(path),
         )
 
     def to_built(self) -> BuiltPlaybook:

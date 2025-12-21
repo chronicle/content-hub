@@ -23,7 +23,7 @@ from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.step.step_debug_data import StepDebugData
 from mp.core.data_models.playbooks.step.step_parameter import StepParameter
-from mp.core.file_utils.playbooks.file_utils import open_display_info
+from mp.core.file_utils.playbooks.file_utils import get_display_info
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -101,7 +101,7 @@ def update_playbook_definition(playbook_path: Path, updates: dict[str, Any]) -> 
 
 def update_display_info(playbook_path: Path, updates: dict) -> None:
     """Update display info."""
-    display_info: PlaybookDisplayInfo = open_display_info(playbook_path)
+    display_info: PlaybookDisplayInfo = get_display_info(playbook_path)
     for key, value in updates.items():
         setattr(display_info, key, value)
     mp.core.file_utils.save_yaml(
@@ -128,6 +128,7 @@ def update_step_with_debug_data(
             )
         else:
             step.step_debug_data = None
+
         mp.core.file_utils.save_yaml(
             step.to_non_built(),
             playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
