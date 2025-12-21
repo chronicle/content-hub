@@ -48,11 +48,8 @@ def main():
 
     try:
         siemplify.LOGGER.info("Getting custom list records")
-        records = get_traking_list_record(siemplify, list_categories, string)
-        records = (
-            records.get("custom_lists", [])
-            if isinstance(records, dict) else records
-        )
+        records = get_traking_list_record(siemplify, list_categories)
+        records = records.get("custom_lists", []) if isinstance(records, dict) else records
 
         siemplify.LOGGER.info("Searching records for match criteria")
         if list_categories:

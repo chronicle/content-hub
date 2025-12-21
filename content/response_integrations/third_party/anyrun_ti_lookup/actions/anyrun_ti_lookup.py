@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from base64 import b64encode
-from shlex import quote
 
 from anyrun.connectors import LookupConnector
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -63,22 +62,20 @@ def main():
 
     lookup_depth = siemplify.extract_action_param("Lookup Depth", input_type=int)
 
-    token = quote(
-        extract_configuration_param(
-            siemplify,
-            Config.INTEGRATION_NAME,
-            param_name="ANYRUN TI Lookup API KEY",
-            is_mandatory=True,
-        )
+    token = extract_configuration_param(
+        siemplify,
+        Config.INTEGRATION_NAME,
+        param_name="ANYRUN TI Lookup API KEY",
+        is_mandatory=True,
     )
 
-    verify_ssl = quote(
-        extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL")
+    verify_ssl = extract_configuration_param(
+        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL", input_type=bool
     )
 
     if query := siemplify.extract_action_param("Query"):
         verdict = initialize_lookup(siemplify, token, "query", query, lookup_depth, verify_ssl)
-        results.append(("Query", "query", verdict))
+        results.append(("Query", query, verdict))
     else:
         entity_identifiers = convert_comma_separated_to_list(
             siemplify.extract_action_param("Identifiers")
