@@ -66,4 +66,4 @@ class TestUniqueNameValidation:
         with pytest.raises(FatalValidationError) as excinfo:
             self.validator_runner.run(temp_non_built_playbook)
 
-        assert "The playbook display name 'test' is already in use at the following" in str(excinfo) 
+        assert "The playbook display name 'test' is already in use at the following" in str(excinfo)
