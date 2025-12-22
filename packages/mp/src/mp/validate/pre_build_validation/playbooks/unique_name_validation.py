@@ -32,7 +32,17 @@ class UniqueNameValidation:
 
     @staticmethod
     def run(playbook_path: Path) -> None:
-        display_name: str = mp.core.file_utils.open_display_info(
+        """Validate that a playbook's display name is unique.
+
+        Args:
+            playbook_path: The path to the playbook to validate.
+
+        Raises:
+            FatalValidationError: If a playbook with the same display name
+                already exists.
+
+        """
+        display_name: str = mp.core.file_utils.get_display_info(
             playbook_path
         ).content_hub_display_name
 
@@ -65,7 +75,7 @@ def _search_duplicate_names(display_name: str, playbook_repo: Path) -> list[str]
         if not playbook_dir.is_dir():
             continue
 
-        display_info: PlaybookDisplayInfo = mp.core.file_utils.open_display_info(playbook_dir)
+        display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_dir)
         if display_name == display_info.content_hub_display_name:
             res.append(str(playbook_dir))
 

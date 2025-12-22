@@ -139,7 +139,7 @@ def is_built_playbook(path: Path) -> bool:
     return True
 
 
-def open_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
+def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
     """Open the display info file for a playbook.
 
     Args:

@@ -18,6 +18,9 @@ import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from mp.core.exceptions import FatalValidationError
 from mp.validate.pre_build_validation.playbooks.unique_name_validation import (
     UniqueNameValidation,
 )
@@ -47,3 +50,20 @@ class TestUniqueNameValidation:
         )
 
         self.validator_runner.run(temp_non_built_playbook)
+
+    @patch("mp.core.file_utils.get_playbook_repository_base_path")
+    def test_duplicate_name_validation_fail(
+        self,
+        mock_get_playbook_repository_base_path: MagicMock,
+        temp_non_built_playbook: Path,
+    ) -> None:
+        _setup(temp_non_built_playbook)
+        mock_get_playbook_repository_base_path.return_value = temp_non_built_playbook.parent
+        update_display_info(temp_non_built_playbook, {"content_hub_display_name": "test"})
+        update_display_info(
+            Path(f"{temp_non_built_playbook}2"), {"content_hub_display_name": "test"}
+        )
+        with pytest.raises(FatalValidationError) as excinfo:
+            self.validator_runner.run(temp_non_built_playbook)
+
+        assert "The playbook display name 'test' is already in use at the following" in str(excinfo) 
