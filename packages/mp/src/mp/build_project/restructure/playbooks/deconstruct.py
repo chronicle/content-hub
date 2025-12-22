@@ -117,9 +117,10 @@ class PlaybookDeconstructor:
 def _sanitize_yaml_filename(filename: str) -> str:
     """Sanitizes a filename to be used as a YAML file name.
 
-    For example:
-    'Proceed to Remediation : Isolate Host and/or Reset User Credentials' ->
-    'Proceed to Remediation Isolate Host and or Reset User Credentials'
+    Examples:
+        >>> s = "Proceed to Remediation: Isolate Host and/or Reset User Credentials"
+        >>> _sanitize_yaml_filename(s)
+        'Proceed to Remediation Isolate Host and or Reset User Credentials'
 
     Returns:
         The sanitized filename.
