@@ -44,8 +44,6 @@ class StepParamsValidation:
             NonFatalValidationError: If any step parameter validation fails.
 
         """
-        validation_result: list[dict[str, list[str]]] = []
-
         steps: list[Step] = Step.from_non_built_path(playbook_path)
         validation_result: list[dict[str, list[str]]] = [
             step_result for step in steps if (step_result := _process_step(step)) is not None
