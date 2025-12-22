@@ -23,7 +23,7 @@ from mp.core.data_models.abc import Buildable
 
 
 class BuiltDynamicResultsMetadata(TypedDict):
-    ResultExample: str | dict
+    ResultExample: str
     ResultName: str
     ShowResult: bool
 
@@ -53,7 +53,7 @@ class DynamicResultsMetadata(
 
         """
         result_example = built.get("ResultExample")
-        if result_example in ({}, ""):
+        if result_example in {"{}", ""}:
             result_example = None
         return cls(
             result_example=result_example,
@@ -86,9 +86,7 @@ class DynamicResultsMetadata(
 
         """
         return BuiltDynamicResultsMetadata(
-            ResultExample=json.dumps(self.result_example)
-            if self.result_example is not None
-            else {},
+            ResultExample=json.dumps(self.result_example or {}),
             ResultName=self.result_name,
             ShowResult=self.show_result,
         )

@@ -34,7 +34,7 @@ from test_mp.test_core.test_data_models.utils import (
 
 # Strategies for dynamic_results_metadata
 ST_VALID_BUILT_DYNAMIC_RESULTS_DICT = st.fixed_dictionaries({
-    "ResultExample": st.just({}) | st_json_serializable.map(json.dumps) | st.just(""),
+    "ResultExample": st.just("{}") | st_json_serializable.map(json.dumps) | st.just(""),
     "ResultName": st.text(),
     "ShowResult": st.booleans(),
 })
