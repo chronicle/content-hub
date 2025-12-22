@@ -65,4 +65,4 @@ class LoopStepValidation:
             error_msgs.append(f"There are missing {balance} end loop steps.")
 
         if error_msgs:
-            raise FatalValidationError(",\n".join(error_msgs) + "\n")
+            raise FatalValidationError(",\n".join(error_msgs))
