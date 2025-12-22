@@ -76,8 +76,10 @@ st_valid_param_name = (
     st.from_regex(SAFE_PARAM_DISPLAY_NAME_REGEX, fullmatch=True)
     .map(str.strip)
     .filter(
-        lambda v: 0 < len(v) < mp.core.constants.PARAM_NAME_MAX_LENGTH
-        and len(v.split()) <= mp.core.constants.PARAM_NAME_MAX_WORDS
+        lambda v: (
+            0 < len(v) < mp.core.constants.PARAM_NAME_MAX_LENGTH
+            and len(v.split()) <= mp.core.constants.PARAM_NAME_MAX_WORDS
+        )
     )
 )
 st_excluded_param_name = st.sampled_from(

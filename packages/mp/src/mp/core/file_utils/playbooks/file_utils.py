@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
-    """Get all content-hub playbooks repository path.
+    """Get content-hub playbook specific repository path.
 
     Args:
         playbooks_classification: the name of the repository.
@@ -44,7 +44,7 @@ def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
 
 
 def get_playbook_base_dir() -> Path:
-    """Get the root folder for the playbooks' repository.
+    """Get the root folder for the playbooks' repositories.
 
     Returns:
         the root folder for the playbooks' repository.
