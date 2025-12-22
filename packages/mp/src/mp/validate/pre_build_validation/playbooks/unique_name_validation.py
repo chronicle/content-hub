@@ -52,7 +52,7 @@ class UniqueNameValidation:
             repo_path: Path = mp.core.file_utils.get_playbook_repository_base_path(repo)
             duplicate_paths.update(_search_duplicate_names(display_name, repo_path))
 
-        duplicate_paths.remove(playbook_path)
+        duplicate_paths.discard(playbook_path)
 
         if duplicate_paths:
             msg: str = (
@@ -68,9 +68,11 @@ def _search_duplicate_names(display_name: str, playbook_repo: Path) -> set[Path]
     for playbook_dir in playbook_repo.iterdir():
         if not playbook_dir.is_dir():
             continue
-
-        display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_dir)
-        if display_name == display_info.content_hub_display_name:
-            res.add(playbook_dir)
+        try:
+            display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_dir)
+            if display_name == display_info.content_hub_display_name:
+                res.add(playbook_dir)
+        except FileNotFoundError:
+            continue
 
     return res

@@ -76,8 +76,7 @@ class HtmlFormat:
             total_integrations=report_statistics.total_items,
             total_fatal_issues=report_statistics.total_fatal,
             total_non_fatal_issues=report_statistics.total_warn,
-            current_time=datetime.datetime
-            .now(datetime.UTC)
+            current_time=datetime.datetime.now(datetime.UTC)
             .astimezone()
             .strftime("%B %d, %Y at %I:%M %p %Z"),
             css_content=(template_dir / "static" / "style.css").read_text(encoding="utf-8-sig"),

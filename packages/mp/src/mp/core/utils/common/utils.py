@@ -228,8 +228,7 @@ def to_snake_case(s: str, /) -> str:
 
     """
     return (
-        re
-        .sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
+        re.sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
         .strip()
         .replace(" ", "_")
         .replace("-", "_")
