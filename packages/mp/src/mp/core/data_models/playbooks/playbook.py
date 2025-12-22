@@ -18,9 +18,9 @@ import dataclasses
 from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
-import yaml
 
 import mp.core.constants
+import mp.core.file_utils
 from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 from mp.core.data_models.playbooks.meta.metadata import (
@@ -159,7 +159,6 @@ class Playbook:
             A Playbook object.
 
         """
-        display_info_path: Path = path / mp.core.constants.DISPLAY_INFO_FILE_MAME
         return cls(
             steps=Step.from_non_built_path(path),
             overviews=Overview.from_non_built_path(path),
@@ -167,11 +166,7 @@ class Playbook:
             trigger=Trigger.from_non_built_path(path),
             release_notes=ReleaseNote.from_non_built_path(path),
             meta_data=PlaybookMetadata.from_non_built_path(path),
-            display_info=(
-                PlaybookDisplayInfo.from_non_built(
-                    yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-                )
-            ),
+            display_info=mp.core.file_utils.get_display_info(path),
         )
 
     def to_built(self) -> BuiltPlaybook:
