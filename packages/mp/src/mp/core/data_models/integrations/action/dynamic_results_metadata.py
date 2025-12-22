@@ -86,7 +86,7 @@ class DynamicResultsMetadata(
 
         """
         return BuiltDynamicResultsMetadata(
-            ResultExample=json.dumps(self.result_example or {}),
+            ResultExample=json.dumps(self.result_example or "{}"),
             ResultName=self.result_name,
             ShowResult=self.show_result,
         )
