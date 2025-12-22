@@ -46,15 +46,10 @@ class UniqueNameValidation:
             playbook_path
         ).content_hub_display_name
 
-        commercial_repo: Path = mp.core.file_utils.get_playbook_repository_base_path(
-            mp.core.constants.COMMERCIAL_DIR_NAME
-        )
-        duplicate_paths: list[str] = _search_duplicate_names(display_name, commercial_repo)
-
-        community_repo: Path = mp.core.file_utils.get_playbook_repository_base_path(
-            mp.core.constants.COMMUNITY_DIR_NAME
-        )
-        duplicate_paths += _search_duplicate_names(display_name, community_repo)
+        duplicate_paths: list[str] = []
+        for repo in mp.core.constants.PLAYBOOK_REPOSITORY_TYPE:
+            repo_path: Path = mp.core.file_utils.get_playbook_repository_base_path(repo)
+            duplicate_paths.extend(_search_duplicate_names(display_name, repo_path))
 
         actual_duplicates: set[str] = {
             path for path in duplicate_paths if Path(path).resolve() != playbook_path.resolve()
