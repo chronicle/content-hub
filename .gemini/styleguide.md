@@ -97,6 +97,7 @@ We follow the **Google Style Docstrings** with a focus on reducing "stale" infor
 from pathlib import Path
 from typing import Any
 
+
 def process_hub_config(config_path: Path, retry_count: int = 3) -> dict[str, Any]:
     """Processes the central hub configuration file.
 
@@ -113,6 +114,51 @@ def process_hub_config(config_path: Path, retry_count: int = 3) -> dict[str, Any
     """
     if not config_path.exists():
         raise FileNotFoundError(f"Missing config at: {config_path}")
-    
+
     # Body implementation...
     return {}
+```
+
+---
+
+## Integration-Specific Requirements
+
+> **Gemini Action:** The following rules apply **strictly** to changes made within the
+`content/response_integrations/**` directory.
+
+### Testing
+
+All new features, bug fixes, or integrations added to `content/response_integrations/**` **must**
+include corresponding unit tests to ensure production stability.
+
+* **Framework:** Use `pytest` for test execution.
+* **Reference Examples:** When generating or suggesting tests, Gemini **must** model the code after
+  the **"Golden Tests"** found in:
+    * `content/response_integrations/third_party/telegram/tests/`
+    * `content/response_integrations/third_party/sample_integration/tests/`
+* **Mocking:** Follow the mocking patterns established in the reference examples above. **Strict
+  Rule:** Never make real network calls during unit tests.
+
+> **Gemini Action:** If a contributor modifies or adds files in this path, check for a corresponding
+> test file. If missing or incomplete, suggest generating a test suite modeled specifically after the
+> patterns found in the Telegram or Sample Integration reference paths.
+
+### Validation & JSON Results
+
+For integrations utilizing the `TIPCommon` Action base class or standard result reporting, we
+require explicit documentation of the output schema.
+
+* **Detection:** Identify if an action returns a JSON result by looking for:
+    * Calls to `result.add_result_json(...)`
+    * Assignments to `self.soar_action.json = ...`
+    * Assignments to `self.json_results = ...`
+* **Requirement:** If a JSON result is detected, a corresponding JSON example file **must** exist in
+  the integration's `resources/` directory.
+* **Naming Convention:** The example file must match the action's filename (e.g., `action_name.py`
+  or `action_name.yaml` requires `resources/action_name_json_example.json`).
+
+> **Gemini Action:** If a JSON result assignment is detected but the corresponding
+`_json_example.json` file is missing in the `resources/` folder, alert the contributor and offer to
+> generate a placeholder JSON structure based on the code's logic.
+
+---
