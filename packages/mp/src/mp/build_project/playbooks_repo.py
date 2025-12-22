@@ -115,10 +115,10 @@ class PlaybooksRepo:
 
 def _deconstruct_playbook(playbook_path: Path, playbook_out_path: Path) -> None:
     if mp.core.file_utils.is_non_built_playbook(playbook_path):
-        rich.print([
+        rich.print(
             f"[green]---------- Playbook {playbook_path.name} "
             f"is already deconstructed ----------[/green]"
-        ])
+        )
         mp.core.file_utils.recreate_dir(playbook_out_path)
         shutil.copytree(playbook_path, playbook_out_path, dirs_exist_ok=True)
         return

@@ -43,11 +43,11 @@ class TestUniqueNameValidation:
         temp_non_built_playbook: Path,
     ) -> None:
         _setup(temp_non_built_playbook)
-        mock_get_playbook_repository_base_path.return_value = temp_non_built_playbook.parent
         update_display_info(temp_non_built_playbook, {"content_hub_display_name": "test"})
         update_display_info(
             Path(f"{temp_non_built_playbook}2"), {"content_hub_display_name": "test2"}
         )
+        mock_get_playbook_repository_base_path.return_value = temp_non_built_playbook.parent
 
         self.validator_runner.run(temp_non_built_playbook)
 

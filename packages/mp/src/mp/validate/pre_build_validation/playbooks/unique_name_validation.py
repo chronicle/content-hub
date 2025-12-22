@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import mp.core.constants
@@ -23,6 +22,8 @@ import mp.core.file_utils
 from mp.core.exceptions import FatalValidationError
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 
@@ -46,32 +47,31 @@ class UniqueNameValidation:
             playbook_path
         ).content_hub_display_name
 
-        duplicate_paths: list[str] = []
+        duplicate_paths: set[Path] = set()
         for repo in mp.core.constants.PLAYBOOK_REPOSITORY_TYPE:
             repo_path: Path = mp.core.file_utils.get_playbook_repository_base_path(repo)
-            duplicate_paths.extend(_search_duplicate_names(display_name, repo_path))
+            duplicate_paths.update(_search_duplicate_names(display_name, repo_path))
 
-        actual_duplicates: set[str] = {
-            path for path in duplicate_paths if Path(path).resolve() != playbook_path.resolve()
-        }
+        duplicate_paths.remove(playbook_path)
+        paths_as_strings: list[str] = [str(p) for p in duplicate_paths]
 
-        if actual_duplicates:
+        if duplicate_paths:
             msg: str = (
                 f"The playbook display name '{display_name}' is already in use at the following "
-                f"locations: {', '.join(actual_duplicates)}. "
+                f"locations: {', '.join(paths_as_strings)}. "
                 "Please use a unique name for your playbook before merging."
             )
             raise FatalValidationError(msg)
 
 
-def _search_duplicate_names(display_name: str, playbook_repo: Path) -> list[str]:
-    res: list[str] = []
+def _search_duplicate_names(display_name: str, playbook_repo: Path) -> set[Path]:
+    res: set[Path] = set()
     for playbook_dir in playbook_repo.iterdir():
         if not playbook_dir.is_dir():
             continue
 
         display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_dir)
         if display_name == display_info.content_hub_display_name:
-            res.append(str(playbook_dir))
+            res.add(playbook_dir)
 
     return res
