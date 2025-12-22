@@ -73,7 +73,8 @@ st_pydantic_valid_file_url = urls().filter(
 st_valid_url = st.one_of(st_pydantic_valid_https_url, st_pydantic_valid_file_url)
 
 st_valid_param_name = (
-    st.from_regex(SAFE_PARAM_DISPLAY_NAME_REGEX, fullmatch=True)
+    st
+    .from_regex(SAFE_PARAM_DISPLAY_NAME_REGEX, fullmatch=True)
     .map(str.strip)
     .filter(
         lambda v: (

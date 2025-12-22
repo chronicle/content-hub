@@ -60,7 +60,8 @@ class PlaybookDeconstructor:
         step_dir.mkdir(exist_ok=True)
 
         for step in non_built_steps:
-            step_path: Path = step_dir / f"{_sanitize_yaml_filename(step['instance_name'])}.yaml"
+            sanitized_file_name: str = _sanitize_yaml_filename(step["instance_name"])
+            step_path: Path = step_dir / f"{sanitized_file_name}{mp.core.constants.DEF_FILE_SUFFIX}"
             mp.core.file_utils.save_yaml(step, step_path)
 
     def _create_trigger_file(self, non_built_trigger: NonBuiltTrigger) -> None:
@@ -114,6 +115,16 @@ class PlaybookDeconstructor:
 
 
 def _sanitize_yaml_filename(filename: str) -> str:
+    """Sanitizes a filename to be used as a YAML file name.
+
+    For example:
+    'Proceed to Remediation : Isolate Host and/or Reset User Credentials' ->
+    'Proceed to Remediation Isolate Host and or Reset User Credentials'
+
+    Returns:
+        The sanitized filename.
+
+    """
     invalid_chars: str = r'[\/:*?"<>|]'
     sanitized: str = re.sub(invalid_chars, " ", filename)
 
