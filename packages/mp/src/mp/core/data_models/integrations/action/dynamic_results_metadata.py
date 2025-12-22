@@ -23,7 +23,7 @@ from mp.core.data_models.abc import Buildable
 
 
 class BuiltDynamicResultsMetadata(TypedDict):
-    ResultExample: str | None
+    ResultExample: str | dict
     ResultName: str
     ShowResult: bool
 
@@ -53,7 +53,7 @@ class DynamicResultsMetadata(
 
         """
         result_example = built.get("ResultExample")
-        if result_example == "":  # noqa:PLC1901
+        if result_example in ({}, ""):
             result_example = None
         return cls(
             result_example=result_example,
@@ -85,12 +85,10 @@ class DynamicResultsMetadata(
             A built version of the dynamic results metadata dict
 
         """
-        example: str | None = None
-        if self.result_example is not None:
-            example = json.dumps(self.result_example)
-
         return BuiltDynamicResultsMetadata(
-            ResultExample=example,
+            ResultExample=json.dumps(self.result_example)
+            if self.result_example is not None
+            else {},
             ResultName=self.result_name,
             ShowResult=self.show_result,
         )
