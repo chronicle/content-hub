@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 from typing import TYPE_CHECKING
 
 import rich
@@ -59,7 +60,7 @@ class PlaybookDeconstructor:
         step_dir.mkdir(exist_ok=True)
 
         for step in non_built_steps:
-            step_path: Path = step_dir / f"{step['instance_name']}.yaml"
+            step_path: Path = step_dir / f"{_sanitize_yaml_filename(step['instance_name'])}.yaml"
             mp.core.file_utils.save_yaml(step, step_path)
 
     def _create_trigger_file(self, non_built_trigger: NonBuiltTrigger) -> None:
@@ -99,7 +100,10 @@ class PlaybookDeconstructor:
         widgets_path.mkdir(exist_ok=True)
 
         for w in non_built_widgets:
-            widget_path: Path = widgets_path / f"{w['title']}{mp.core.constants.DEF_FILE_SUFFIX}"
+            widget_path: Path = (
+                widgets_path
+                / f"{_sanitize_yaml_filename(w['title'])}{mp.core.constants.DEF_FILE_SUFFIX}"
+            )
             mp.core.file_utils.save_yaml(w, widget_path)
 
         for w in self.playbook.widgets:
@@ -107,3 +111,10 @@ class PlaybookDeconstructor:
             html_content: str = w.data_definition.html_content if w.type is WidgetType.HTML else ""
             if html_content:
                 widget_path.write_text(html_content)
+
+
+def _sanitize_yaml_filename(filename: str) -> str:
+    invalid_chars: str = r'[\/:*?"<>|]'
+    sanitized: str = re.sub(invalid_chars, " ", filename)
+
+    return " ".join(sanitized.split())
