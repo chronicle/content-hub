@@ -53,12 +53,11 @@ class UniqueNameValidation:
             duplicate_paths.update(_search_duplicate_names(display_name, repo_path))
 
         duplicate_paths.remove(playbook_path)
-        paths_as_strings: list[str] = [str(p) for p in duplicate_paths]
 
         if duplicate_paths:
             msg: str = (
                 f"The playbook display name '{display_name}' is already in use at the following "
-                f"locations: {', '.join(paths_as_strings)}. "
+                f"locations: {', '.join(str(p) for p in duplicate_paths)}. "
                 "Please use a unique name for your playbook before merging."
             )
             raise FatalValidationError(msg)
