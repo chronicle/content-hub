@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import tomllib
 from typing import TYPE_CHECKING, Any
 
@@ -24,20 +25,16 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class RequiredDevDependenciesValidation:
     name: str = "Required Dev Dependencies"
 
-    @classmethod
-    def run(
-        cls,
-        integration_path: Path,
-        required_dependencies: set[str] | None = None,
-    ) -> None:
+    @staticmethod
+    def run(integration_path: Path) -> None:
         """Run the validation against the specified project.
 
         Args:
             integration_path: The root path of the project to validate.
-            required_dependencies: [Optional] The required dependencies to validate.
 
         Raises:
             NonFatalCommandError: If the `pyproject.toml` file is not found,
@@ -50,8 +47,7 @@ class RequiredDevDependenciesValidation:
         with pyproject_path.open("rb") as f:
             pyproject_toml: dict[str, Any] = tomllib.load(f)
 
-        if not required_dependencies:
-            required_dependencies: set[str] = {"soar-sdk", "pytest", "pytest-json-report"}
+        required_dependencies: set[str] = {"soar-sdk", "pytest", "pytest-json-report"}
 
         try:
             dev_dependencies_section: list[str] = pyproject_toml["dependency-groups"]["dev"]

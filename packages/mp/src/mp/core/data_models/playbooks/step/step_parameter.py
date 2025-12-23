@@ -19,7 +19,7 @@ from typing import Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable
 
 
 class BuiltStepParameter(TypedDict):
@@ -36,9 +36,7 @@ class NonBuiltStepParameter(TypedDict):
     value: NotRequired[str | None]
 
 
-class StepParameter(
-    mp.core.data_models.abc.Buildable[BuiltStepParameter, NonBuiltStepParameter],
-):
+class StepParameter(Buildable[BuiltStepParameter, NonBuiltStepParameter]):
     step_id: str
     playbook_id: str
     name: Annotated[

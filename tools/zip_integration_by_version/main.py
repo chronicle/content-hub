@@ -24,9 +24,7 @@ import zipfile
 from typing import Any
 
 MARKETPLACE_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent.parent
-CURRENT_INTEGRATIONS_PATH: pathlib.Path = (
-    MARKETPLACE_PATH / "integrations" / "third_party"
-)
+CURRENT_INTEGRATIONS_PATH: pathlib.Path = MARKETPLACE_PATH / "integrations" / "third_party"
 PREVIOUS_INTEGRATIONS_PATH: pathlib.Path = MARKETPLACE_PATH / "Integrations"
 INTEGRATION_DEF: str = "Integration-{0}.def"
 RN_JSON: str = "RN.json"
@@ -38,9 +36,7 @@ PYTHON_UPDATE_MSG: str = (
     "upgrade-python-versions"
 )
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger: logging.Logger = logging.getLogger(__name__)
 
 
@@ -57,9 +53,7 @@ def main() -> None:  # noqa: D103
     original_branch: str = _get_current_branch()
     success: bool = False
     try:
-        commit_sha: str = _get_commit_sha(
-            integration=args.integration, version=args.version
-        )
+        commit_sha: str = _get_commit_sha(integration=args.integration, version=args.version)
         logger.info("Commit SHA found %s", commit_sha)
         _git_checkout(commit_sha)
         _validate_integration(
@@ -70,9 +64,7 @@ def main() -> None:  # noqa: D103
         _adjust_integration(args.integration)
         _zip_integration(args.integration, args.version, args.dir)
         success = True
-        logger.info(
-            "Successfully created zip for %s version %s", args.integration, args.version
-        )
+        logger.info("Successfully created zip for %s version %s", args.integration, args.version)
 
     except Exception:
         logger.exception("Error during execution")
@@ -83,12 +75,10 @@ def main() -> None:  # noqa: D103
                 _restore_environment(original_branch)
             except Exception:
                 logger.exception(
-                    "Couldn't fully restore environment,"
-                    " but zip was created successfully"
+                    "Couldn't fully restore environment, but zip was created successfully"
                 )
                 logger.exception(
-                    "Note: Couldn't fully restore Git state,"
-                    " but zip was created successfully."
+                    "Note: Couldn't fully restore Git state, but zip was created successfully."
                 )
         else:
             try:
@@ -168,9 +158,7 @@ def _get_commit_sha(integration: str, version: float) -> str:
             if last_commit:
                 return last_commit
     except Exception:
-        logger.exception(
-            "Error searching in origin/develop branch, path %s", integration_def
-        )
+        logger.exception("Error searching in origin/develop branch, path %s", integration_def)
     msg = (
         f"No commit found for integration {integration} "
         f"at version {version} in branch origin/develop"

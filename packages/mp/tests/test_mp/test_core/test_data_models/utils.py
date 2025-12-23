@@ -26,7 +26,7 @@ from pydantic import FileUrl, HttpUrl, TypeAdapter, ValidationError
 import mp.core.constants
 
 if TYPE_CHECKING:
-    import enum
+    from enum import Enum
 
     from hypothesis.strategies import SearchStrategy
 
@@ -73,11 +73,14 @@ st_pydantic_valid_file_url = urls().filter(
 st_valid_url = st.one_of(st_pydantic_valid_https_url, st_pydantic_valid_file_url)
 
 st_valid_param_name = (
-    st.from_regex(SAFE_PARAM_DISPLAY_NAME_REGEX, fullmatch=True)
+    st
+    .from_regex(SAFE_PARAM_DISPLAY_NAME_REGEX, fullmatch=True)
     .map(str.strip)
     .filter(
-        lambda v: 0 < len(v) < mp.core.constants.PARAM_NAME_MAX_LENGTH
-        and len(v.split()) <= mp.core.constants.PARAM_NAME_MAX_WORDS
+        lambda v: (
+            0 < len(v) < mp.core.constants.PARAM_NAME_MAX_LENGTH
+            and len(v.split()) <= mp.core.constants.PARAM_NAME_MAX_WORDS
+        )
     )
 )
 st_excluded_param_name = st.sampled_from(
@@ -102,13 +105,13 @@ st_valid_png_b64_string = st.binary(min_size=1).map(lambda b: base64.b64encode(b
 st_valid_svg_string = st.just("<svg></svg>")
 
 
-def st_valid_non_built_param_type(param_type: enum) -> SearchStrategy[dict[str, Any]]:
+def st_valid_non_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
     return st.sampled_from(param_type).map(lambda e: e.to_string())
 
 
-def st_valid_built_param_type(param_type: enum) -> SearchStrategy[dict[str, Any]]:
+def st_valid_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
     return st.sampled_from(param_type).flatmap(lambda e: st.sampled_from([e.value, str(e.value)]))
 
 
-def st_valid_built_type(param_type: enum) -> SearchStrategy[dict[str, Any]]:
+def st_valid_built_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
     return st.sampled_from(param_type).map(lambda e: e.value)

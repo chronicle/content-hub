@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 from mp.core import constants
@@ -35,10 +36,12 @@ OPT_PARAMS: frozenset[ActionParamType] = frozenset({
 })
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class ActionParametersValuesValidation:
     name: str = "Action Parameters Validation"
 
-    def run(self, validation_path: Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(validation_path: Path) -> None:
         """Validate all actions parameters type, default value, and optional values.
 
         Args:
@@ -100,7 +103,7 @@ def _has_parameters(yaml_content: YamlFileContent) -> bool:
         True if the component has parameters.
 
     """
-    return yaml_content.get(PARAMETERS_KEY)
+    return yaml_content.get(PARAMETERS_KEY, False)
 
 
 def _extract_name_and_parameters(
@@ -112,7 +115,7 @@ def _extract_name_and_parameters(
         The action's name and parameters as a tuple.
 
     """
-    return yaml_content.get(DEF_FILE_NAME_KEY), yaml_content.get(PARAMETERS_KEY)
+    return yaml_content.get(DEF_FILE_NAME_KEY, ""), yaml_content.get(PARAMETERS_KEY, [])
 
 
 def _is_optional_values_type(param_type: ActionParamType) -> bool:

@@ -16,6 +16,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .all_blocks_existing_validation import AllBlocksExistValidation
+from .block_env_matches_playbook_env_validation import BlockEnvMatchesPlaybookEnvValidation
+from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
+from .debug_data_validation import DebugDataValidation
+from .environments_validation import EnvironmentsValidation
+from .loop_step_validation import LoopStepValidation
+from .overview_roles_validation import OverviewContainsOnlyAllowedRolesValidation
+from .steps_parameters_validation import StepParamsValidation
+from .unique_name_validation import UniqueNameValidation
+from .version_bump_validation import VersionBumpValidation
+
 if TYPE_CHECKING:
     from mp.validate.data_models import Validator
 
@@ -31,8 +42,16 @@ def get_playbooks_pre_build_validations() -> list[Validator]:
 
 
 def _get_non_priority_validations() -> list[Validator]:
-    return []
+    return [
+        VersionBumpValidation(),
+        BlockDoesNotContainAnOverviewValidation(),
+        EnvironmentsValidation(),
+        StepParamsValidation(),
+        BlockEnvMatchesPlaybookEnvValidation(),
+        OverviewContainsOnlyAllowedRolesValidation(),
+        DebugDataValidation(),
+    ]
 
 
 def _get_priority_validations() -> list[Validator]:
-    return []
+    return [AllBlocksExistValidation(), LoopStepValidation(), UniqueNameValidation()]

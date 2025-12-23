@@ -22,6 +22,8 @@ import rich
 import yaml
 
 import mp.core.constants
+import mp.core.utils
+from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import (
     PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE,
     BuiltPlaybookDisplayInfo,
@@ -32,7 +34,7 @@ from mp.core.data_models.playbooks.playbook import (
     BuiltPlaybook,
 )
 from mp.core.data_models.playbooks.step.metadata import StepType
-from mp.core.data_models.release_notes.metadata import ReleaseNote
+from mp.core.utils import to_snake_case
 
 if TYPE_CHECKING:
     from mp.build_project.playbooks_repo import PlaybooksRepo
@@ -99,7 +101,9 @@ def _generate_playbooks_display_info(
 
 
 def _find_built_playbook_in_out_folder(non_built_playbook_name: str, out_path: Path) -> Path | None:
-    built_playbook_name: str = non_built_playbook_name + ".json"
+    built_playbook_name: str = (
+        f"{to_snake_case(non_built_playbook_name)}{mp.core.constants.JSON_SUFFIX}"
+    )
     if (out_path / built_playbook_name).exists():
         return out_path / built_playbook_name
     return None
@@ -108,10 +112,10 @@ def _find_built_playbook_in_out_folder(non_built_playbook_name: str, out_path: P
 def _update_display_info(
     built_playbook: BuiltPlaybook,
     built_display_info: BuiltPlaybookDisplayInfo,
-    rn_path: Path,
+    non_built_playbook_path: Path,
     out_path: Path,
 ) -> None:
-    rn_values: ReleaseNotesDisplayInfo = _extract_display_info_from_rn(rn_path)
+    rn_values: ReleaseNotesDisplayInfo = _extract_display_info_from_rn(non_built_playbook_path)
 
     built_display_info["Identifier"] = built_playbook["Definition"]["Identifier"]
     built_display_info["CreateTime"] = rn_values.creation_time
@@ -121,16 +125,12 @@ def _update_display_info(
         built_playbook["Definition"]["PlaybookType"]
     ]
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
-    built_display_info["DependentPlaybookIds"] = (
-        _extract_block_identifier(built_playbook)
-        if built_playbook.get("Definition").get("PlaybookType") == PlaybookType.PLAYBOOK.value
-        else []
+    built_display_info["DependentPlaybookIds"] = list(
+        mp.core.utils.get_playbook_dependent_blocks_ids(non_built_playbook_path)
     )
 
 
-def _extract_integrations(
-    built_playbook: BuiltPlaybook, parent_folder: Path | None = None
-) -> list[str]:
+def _extract_integrations(built_playbook: BuiltPlaybook, parent_folder: Path) -> list[str]:
     result: set[str] = set()
     steps: list[BuiltStep] = built_playbook["Definition"]["Steps"]
     for step in steps:
@@ -144,12 +144,12 @@ def _extract_integrations(
 
 
 def _extract_from_step(step: BuiltStep, result: set[str]) -> None:
-    integration_name: str = step.get("Integration")
+    integration_name: str | None = step.get("Integration")
     if integration_name not in {"Flow", None}:
         result.add(integration_name)
 
 
-def _extract_from_block(step: BuiltStep, parent_folder: Path | None, result: set[str]) -> None:
+def _extract_from_block(step: BuiltStep, parent_folder: Path, result: set[str]) -> None:
     step_parameters: list[BuiltStepParameter] = step.get("Parameters")
     for param in step_parameters:
         if param.get("Name") == "NestedWorkflowIdentifier":
@@ -157,7 +157,10 @@ def _extract_from_block(step: BuiltStep, parent_folder: Path | None, result: set
             result.update(temp)
 
 
-def _extract_integrations_from_nested_block(block_identifier: str, base_folder: Path) -> set[str]:
+def _extract_integrations_from_nested_block(
+    block_identifier: str | None,
+    base_folder: Path,
+) -> set[str]:
     result: set[str] = set()
     for file in base_folder.iterdir():
         if file.is_dir():
@@ -180,31 +183,16 @@ def _extract_integrations_from_nested_block(block_identifier: str, base_folder: 
     return result
 
 
-def _is_specific_block(block_json: dict, block_identifier: str) -> bool:
+def _is_specific_block(block_json: dict, block_identifier: str | None) -> bool:
     return (
-        block_json.get("Definition").get("PlaybookType") == PlaybookType.BLOCK.value
-        and block_json.get("Definition").get("Identifier") == block_identifier
+        block_json.get("Definition", {}).get("PlaybookType") == PlaybookType.BLOCK.value
+        and block_json.get("Definition", {}).get("Identifier") == block_identifier
     )
-
-
-def _extract_block_identifier(built_playbook: BuiltPlaybook) -> list[str]:
-    result: set[str] = set()
-    steps: list[BuiltStep] = built_playbook.get("Definition").get("Steps")
-    for step in steps:
-        step_type: int = step.get("Type")
-        if step_type != StepType.BLOCK.value:
-            continue
-        step_parameters: list[BuiltStepParameter] = step.get("Parameters")
-        for param in step_parameters:
-            if param.get("Name") == "NestedWorkflowIdentifier":
-                result.add(param.get("Value"))
-                break
-    return list(result)
 
 
 def _extract_display_info_from_rn(rn_path: Path) -> ReleaseNotesDisplayInfo:
     release_notes: list[ReleaseNote] = ReleaseNote.from_non_built_path(rn_path)
     latest_version: float = max(float(rn.version) for rn in release_notes)
-    creation_time: int = min(rn.publish_time for rn in release_notes)
-    update_time: int = max(rn.publish_time for rn in release_notes)
+    creation_time: int = min(rn.publish_time for rn in release_notes if rn.publish_time is not None)
+    update_time: int = max(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     return ReleaseNotesDisplayInfo(creation_time, update_time, latest_version)

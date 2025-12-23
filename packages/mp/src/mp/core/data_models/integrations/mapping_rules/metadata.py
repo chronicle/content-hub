@@ -17,14 +17,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
+from mp.core.data_models.abc import RepresentableEnum, SequentialMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TransformationFunction(mp.core.data_models.abc.RepresentableEnum):
+class TransformationFunction(RepresentableEnum):
     TO_STRING = 0
     TO_INTEGER = 1
     TO_DOUBLE = 2
@@ -45,14 +45,14 @@ class TransformationFunction(mp.core.data_models.abc.RepresentableEnum):
     CLEAN_URL = 110
 
 
-class ComparisonType(mp.core.data_models.abc.RepresentableEnum):
+class ComparisonType(RepresentableEnum):
     EQUAL = 0
     CONTAINS = 1
     STARTS_WITH = 2
     ENDS_WITH = 3
 
 
-class ExtractionFunction(mp.core.data_models.abc.RepresentableEnum):
+class ExtractionFunction(RepresentableEnum):
     NONE = 0
     REGEX = 1
     DELIMITER = 2
@@ -94,9 +94,7 @@ class NonBuiltMappingRule(TypedDict):
     extract_function: NotRequired[str]
 
 
-class MappingRule(
-    mp.core.data_models.abc.SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]
-):
+class MappingRule(SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]):
     source: str
     product: str | None
     event_name: str | None

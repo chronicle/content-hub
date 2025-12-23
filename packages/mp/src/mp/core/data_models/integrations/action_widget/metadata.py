@@ -19,14 +19,14 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
-from mp.core.data_models.condition.condition_group import (
+from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
+from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
     NonBuiltConditionGroup,
 )
-from mp.core.data_models.widget.data import (
+from mp.core.data_models.common.widget.data import (
     BuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
     NonBuiltWidgetDataDefinition,
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class WidgetScope(mp.core.data_models.abc.RepresentableEnum):
+class WidgetScope(RepresentableEnum):
     ALERT = 0
     CASE = 1
 
@@ -66,10 +66,7 @@ class NonBuiltActionWidgetMetadata(TypedDict):
 
 
 class ActionWidgetMetadata(
-    mp.core.data_models.abc.ComponentMetadata[
-        BuiltActionWidgetMetadata,
-        NonBuiltActionWidgetMetadata,
-    ]
+    ComponentMetadata[BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata]
 ):
     file_name: str
     title: Annotated[
@@ -112,8 +109,7 @@ class ActionWidgetMetadata(
             return []
 
         return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.WIDGETS_META_SUFFIX}")
+            cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JSON_SUFFIX}")
         ]
 
     @classmethod

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import hashlib
+import typing
 import uuid
 from pathlib import Path
 
@@ -32,17 +33,18 @@ def get_or_create_config_yaml() -> ConfigYaml:
         ConfigYaml: The loaded or newly created configuration.
 
     """
+    config_yaml: ConfigYaml
     if not CONFIG_FILE_PATH.exists():
-        config_yaml: ConfigYaml = _create_config_yaml()
+        config_yaml = _create_config_yaml()
         _save_config_yaml(config_yaml)
         return config_yaml
 
     try:
         with CONFIG_FILE_PATH.open(encoding="utf-8") as f:
-            config_yaml = yaml.safe_load(f) or {}
+            config_yaml = typing.cast("ConfigYaml", yaml.safe_load(f) or {})
 
     except (yaml.YAMLError, OSError):
-        config_yaml: ConfigYaml = _create_config_yaml()
+        config_yaml = _create_config_yaml()
         _save_config_yaml(config_yaml)
         return config_yaml
 

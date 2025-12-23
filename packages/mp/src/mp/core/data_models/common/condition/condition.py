@@ -14,15 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Self, TypedDict
+from typing import Self, TypedDict
 
-import pydantic
-
-import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
-class MatchType(mp.core.data_models.abc.RepresentableEnum):
+class MatchType(RepresentableEnum):
     EQUAL = 0
     CONTAINS = 1
     STARTS_WITH = 2
@@ -36,22 +33,23 @@ class MatchType(mp.core.data_models.abc.RepresentableEnum):
 
 class BuiltCondition(TypedDict):
     FieldName: str
-    Value: str
+    Value: str | None
     MatchType: int
+    CustomOperatorName: str | None
 
 
 class NonBuiltCondition(TypedDict):
     field_name: str
-    value: str
+    value: str | None
     match_type: str
+    custom_operator_name: str | None
 
 
-class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondition]):
-    field_name: Annotated[
-        str, pydantic.Field(min_length=mp.core.constants.CONDITION_FIELD_NAME_MIN_LENGTH)
-    ]
-    value: str
+class Condition(Buildable[BuiltCondition, NonBuiltCondition]):
+    field_name: str
+    value: str | None
     match_type: MatchType
+    custom_operator_name: str | None
 
     @classmethod
     def _from_built(cls, built: BuiltCondition) -> Self:
@@ -59,6 +57,7 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
             field_name=built["FieldName"],
             value=built["Value"],
             match_type=MatchType(built["MatchType"]),
+            custom_operator_name=built.get("CustomOperatorName"),
         )
 
     @classmethod
@@ -67,6 +66,7 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
             field_name=non_built["field_name"],
             value=non_built["value"],
             match_type=MatchType.from_string(non_built["match_type"]),
+            custom_operator_name=non_built.get("custom_operator_name"),
         )
 
     def to_built(self) -> BuiltCondition:
@@ -80,6 +80,7 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
             FieldName=self.field_name,
             Value=self.value,
             MatchType=self.match_type.value,
+            CustomOperatorName=self.custom_operator_name,
         )
 
     def to_non_built(self) -> NonBuiltCondition:
@@ -93,4 +94,5 @@ class Condition(mp.core.data_models.abc.Buildable[BuiltCondition, NonBuiltCondit
             field_name=self.field_name,
             value=self.value,
             match_type=self.match_type.to_string(),
+            custom_operator_name=self.custom_operator_name,
         )

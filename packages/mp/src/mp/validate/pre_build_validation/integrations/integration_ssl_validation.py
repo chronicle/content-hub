@@ -14,21 +14,24 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.utils import load_integration_def, validate_ssl_parameter_from_yaml
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.custom_types import YamlFileContent
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class SslParameterExistsInIntegrationValidation:
     name: str = "SSL Integration Validation"
 
-    def run(self, integration_path: pathlib.Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(integration_path: Path) -> None:
         """Run validation for SSL parameters in the integration.
 
         Args:

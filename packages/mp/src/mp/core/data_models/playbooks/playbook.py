@@ -18,9 +18,10 @@ import dataclasses
 from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
-import yaml
 
 import mp.core.constants
+import mp.core.file_utils
+from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 from mp.core.data_models.playbooks.meta.metadata import (
     BuiltPlaybookMetadata,
@@ -31,19 +32,18 @@ from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.trigger.metadata import Trigger
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
-from mp.core.data_models.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from packages.mp.src.mp.core.data_models.playbooks.meta.access_permissions import (
+    from mp.core.data_models.playbooks.meta.access_permissions import (
         BuiltAccessPermission,
     )
-    from packages.mp.src.mp.core.data_models.playbooks.trigger.metadata import (
+    from mp.core.data_models.playbooks.trigger.metadata import (
         BuiltTrigger,
         NonBuiltTrigger,
     )
-    from packages.mp.src.mp.core.data_models.playbooks.widget.metadata import (
+    from mp.core.data_models.playbooks.widget.metadata import (
         BuiltPlaybookWidgetMetadata,
         NonBuiltPlaybookWidgetMetadata,
     )
@@ -58,7 +58,7 @@ EMPTY_RN: ReleaseNote = ReleaseNote(
     new=True,
     item_name="Playbook name",
     item_type="Playbook",
-    publish_time="1762436207",
+    publish_time=1762436207,
     regressive=False,
     removed=False,
     ticket=None,
@@ -145,7 +145,7 @@ class Playbook:
             trigger=Trigger.from_built_path(path),
             release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
-            display_info=PlaybookDisplayInfo.from_built({}),
+            display_info=PlaybookDisplayInfo.from_built({}),  # ty:ignore[missing-typed-dict-key, invalid-argument-type]
         )
 
     @classmethod
@@ -159,7 +159,6 @@ class Playbook:
             A Playbook object.
 
         """
-        display_info_path: Path = path / mp.core.constants.DISPLAY_INFO_FILE_MAME
         return cls(
             steps=Step.from_non_built_path(path),
             overviews=Overview.from_non_built_path(path),
@@ -167,11 +166,7 @@ class Playbook:
             trigger=Trigger.from_non_built_path(path),
             release_notes=ReleaseNote.from_non_built_path(path),
             meta_data=PlaybookMetadata.from_non_built_path(path),
-            display_info=(
-                PlaybookDisplayInfo.from_non_built(
-                    yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-                )
-            ),
+            display_info=mp.core.file_utils.get_display_info(path),
         )
 
     def to_built(self) -> BuiltPlaybook:

@@ -19,7 +19,7 @@ from typing import Any, Self, TypedDict
 
 import pydantic  # noqa: TC002
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable
 
 
 class BuiltDynamicResultsMetadata(TypedDict):
@@ -35,10 +35,7 @@ class NonBuiltDynamicResultsMetadata(TypedDict):
 
 
 class DynamicResultsMetadata(
-    mp.core.data_models.abc.Buildable[
-        BuiltDynamicResultsMetadata,
-        NonBuiltDynamicResultsMetadata,
-    ],
+    Buildable[BuiltDynamicResultsMetadata, NonBuiltDynamicResultsMetadata]
 ):
     result_example: pydantic.Json[Any] | None
     result_name: str

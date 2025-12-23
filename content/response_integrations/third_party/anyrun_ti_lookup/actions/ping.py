@@ -25,7 +25,7 @@ def main():
     )
 
     verify_ssl = extract_configuration_param(
-        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL"
+        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL", input_type=bool
     )
 
     try:

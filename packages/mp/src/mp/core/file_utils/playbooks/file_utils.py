@@ -18,16 +18,18 @@ import json
 from typing import TYPE_CHECKING, Any
 
 import rich
+import yaml
 
 import mp.core.constants
 import mp.core.file_utils.common.utils
+from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
-    """Get all content-hub playbooks repository path.
+    """Get content-hub playbook specific repository path.
 
     Args:
         playbooks_classification: the name of the repository.
@@ -42,7 +44,7 @@ def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
 
 
 def get_playbook_base_dir() -> Path:
-    """Get the root folder for the playbooks' repository.
+    """Get the root folder for the playbooks' repositories.
 
     Returns:
         the root folder for the playbooks' repository.
@@ -107,17 +109,17 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
 
 
 def is_built_playbook(path: Path) -> bool:
-    """Check whether a path is a built-playbook.
+    """Check whether a path is a built playbook.
 
     Returns:
-        Whether the provided path is a built-playbook.
+        Whether the provided path is a built playbook.
 
     """
     if not path.exists() or path.is_dir() or path.suffix != ".json":
         return False
 
     try:
-        with path.open("r", encoding="utf-8") as f:
+        with path.open(encoding="utf-8") as f:
             data: dict[str, Any] = json.load(f)
 
         if not mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS.issubset(data.keys()):
@@ -135,3 +137,19 @@ def is_built_playbook(path: Path) -> bool:
         return False
 
     return True
+
+
+def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
+    """Open the display info file for a playbook.
+
+    Args:
+        playbook_path: The path to the playbook directory.
+
+    Returns:
+        A PlaybookDisplayInfo object.
+
+    """
+    display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+    return PlaybookDisplayInfo.from_non_built(
+        yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
+    )

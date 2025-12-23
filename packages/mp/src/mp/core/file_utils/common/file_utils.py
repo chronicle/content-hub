@@ -22,6 +22,7 @@ import yaml
 import mp.core.config
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
     from pathlib import Path
     from typing import Any
 
@@ -110,7 +111,7 @@ def remove_files_by_suffix_from_dir(dir_: Path, suffix: str) -> None:
             file.unlink(missing_ok=True)
 
 
-def save_yaml(data: dict[str, Any], path: Path) -> None:
+def save_yaml(data: Mapping[str, Any] | Sequence[Mapping[str, Any]], path: Path) -> None:
     """Create or overwrites a YAML file at the specified path with the provided data.
 
     Args:

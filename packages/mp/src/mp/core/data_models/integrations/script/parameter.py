@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import RepresentableEnum
 
 
-class ScriptParamType(mp.core.data_models.abc.RepresentableEnum):
+class ScriptParamType(RepresentableEnum):
     BOOLEAN = 0
     INTEGER = 1
     STRING = 2

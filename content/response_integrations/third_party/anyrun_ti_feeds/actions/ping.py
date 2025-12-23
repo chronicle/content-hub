@@ -17,24 +17,20 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{Config.INTEGRATION_NAME} - Ping"
 
-    feeds_token = quote(
-        extract_configuration_param(
-            siemplify,
-            Config.INTEGRATION_NAME,
-            param_name="ANYRUN TI Feeds Basic token",
-            is_mandatory=True,
-        )
+    feeds_token = extract_configuration_param(
+        siemplify,
+        Config.INTEGRATION_NAME,
+        param_name="ANYRUN TI Feeds Basic token",
+        is_mandatory=True,
     )
 
-    verify_ssl = quote(
-        extract_configuration_param(siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL")
+    verify_ssl = extract_configuration_param(
+        siemplify, Config.INTEGRATION_NAME, param_name="Verify SSL", input_type=bool
     )
 
     try:
-        if quote(
-            extract_configuration_param(
-                siemplify, Config.INTEGRATION_NAME, param_name="Enable proxy", input_type=bool
-            )
+        if extract_configuration_param(
+            siemplify, Config.INTEGRATION_NAME, param_name="Enable proxy", input_type=bool
         ):
             check_proxy(siemplify, feeds_token, verify_ssl)
 

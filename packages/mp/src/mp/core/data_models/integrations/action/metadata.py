@@ -19,9 +19,9 @@ from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
+from mp.core.data_models.abc import ComponentMetadata
 
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
@@ -75,9 +75,7 @@ class NonBuiltActionMetadata(TypedDict):
     version: NotRequired[float]
 
 
-class ActionMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]
-):
+class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
     file_name: str
     description: Annotated[
         str,

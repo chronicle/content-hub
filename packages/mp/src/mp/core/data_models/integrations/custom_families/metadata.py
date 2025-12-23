@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import SequentialMetadata
 
 from .rule import BuiltCustomFamilyRule, CustomFamilyRule, NonBuiltCustomFamilyRule
 
@@ -44,9 +44,7 @@ class NonBuiltCustomFamily(TypedDict):
     rules: list[NonBuiltCustomFamilyRule]
 
 
-class CustomFamily(
-    mp.core.data_models.abc.SequentialMetadata[BuiltCustomFamily, NonBuiltCustomFamily]
-):
+class CustomFamily(SequentialMetadata[BuiltCustomFamily, NonBuiltCustomFamily]):
     family: str
     description: Annotated[
         str,
@@ -99,7 +97,7 @@ class CustomFamily(
         return cls(
             family=built["Family"],
             description=built["Description"],
-            image_base64=built["ImageBase64"],
+            image_base64=built["ImageBase64"],  # ty:ignore[invalid-argument-type]
             is_custom=built.get("IsCustom", False),
             rules=[CustomFamilyRule.from_built(rule) for rule in built["Rules"]],
         )
@@ -109,7 +107,7 @@ class CustomFamily(
         return cls(
             family=non_built["family"],
             description=non_built["description"],
-            image_base64=non_built["image_base64"],
+            image_base64=non_built["image_base64"],  # ty:ignore[invalid-argument-type]
             is_custom=non_built.get("is_custom", False),
             rules=[CustomFamilyRule.from_non_built(rule) for rule in non_built["rules"]],
         )

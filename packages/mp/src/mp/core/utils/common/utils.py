@@ -28,7 +28,7 @@ from mp.core.custom_types import RepositoryType
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from .custom_types import YamlFileContent
+    from mp.core.custom_types import YamlFileContent
 
 SNAKE_PATTERN_1 = re.compile(r"(.)([A-Z][a-z]+)")
 SNAKE_PATTERN_2 = re.compile(r"([a-z0-9])([A-Z])")
@@ -227,13 +227,14 @@ def to_snake_case(s: str, /) -> str:
         The string converted to snake_case.
 
     """
-    s = (
-        re.sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
+    return (
+        re
+        .sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
         .strip()
         .replace(" ", "_")
         .replace("-", "_")
+        .lower()
     )
-    return s.lower()
 
 
 def should_preform_integration_logic(
@@ -246,7 +247,9 @@ def should_preform_integration_logic(
         True if yes overwise False
 
     """
-    return integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
+    return bool(
+        integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
+    )
 
 
 def should_preform_playbook_logic(
@@ -258,4 +261,4 @@ def should_preform_playbook_logic(
         True if yes overwise False
 
     """
-    return playbooks or RepositoryType.PLAYBOOKS in repos
+    return bool(playbooks or RepositoryType.PLAYBOOKS in repos)

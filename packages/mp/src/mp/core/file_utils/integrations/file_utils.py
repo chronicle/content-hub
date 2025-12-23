@@ -36,10 +36,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
 
+    from mp.core.custom_types import RepositoryType
 
-def get_integrations_path(
-    integrations_classification: mp.core.custom_types.RepositoryType,
-) -> Path:
+
+def get_integrations_path(integrations_classification: RepositoryType) -> Path:
     """Get a marketplace integrations' path.
 
     Args:
@@ -440,7 +440,7 @@ def png_path_to_bytes(file_path: Path) -> str | None:
 
     """
     if file_path.exists():
-        return base64.b64encode(validate_png_content(file_path)).decode("utf-8")
+        return base64.b64encode(validate_png_content(file_path)).decode()
     return None
 
 
@@ -480,7 +480,7 @@ def load_yaml_file(path: Path) -> dict[str, Any]:
         ValueError: If the file doesn't exist or is an invalid YAML.
 
     Returns:
-        The decoded YAML content of the YAML file if exists.
+        The decoded YAML content of the YAML file if it exists.
 
     """
     try:

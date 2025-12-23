@@ -19,10 +19,10 @@ from typing import Annotated, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
-class ConnectorRuleType(mp.core.data_models.abc.RepresentableEnum):
+class ConnectorRuleType(RepresentableEnum):
     ALLOW_LIST = 0
     DISALLOW_LIST = 1
 
@@ -37,7 +37,7 @@ class NonBuiltConnectorRule(TypedDict):
     rule_type: str
 
 
-class ConnectorRule(mp.core.data_models.abc.Buildable[BuiltConnectorRule, NonBuiltConnectorRule]):
+class ConnectorRule(Buildable[BuiltConnectorRule, NonBuiltConnectorRule]):
     rule_name: Annotated[
         str,
         pydantic.Field(

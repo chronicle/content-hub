@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 class Config:
-    VERSION: str = "Google-SecOps:1.0"
+    VERSION: str = "Google-SecOps:2.0"
     INTEGRATION_NAME: str = "ANYRUN-TI-Lookup"
 
     ENTITIES: dict[str, str] = {
