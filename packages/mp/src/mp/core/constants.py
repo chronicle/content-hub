@@ -103,6 +103,40 @@ PYTHON_VERSION_FILE: str = ".python-version"
 
 MS_IN_SEC: int = 1_000
 
+SDK_MODULES: frozenset[str] = frozenset({
+    "SiemplifyVaultCyberArkPam",
+    "CaseAlertsProvider",
+    "FileRetentionManager",
+    "GcpTokenProvider",
+    "MockConnector",
+    "MockRunner",
+    "OtelLoggingUtils",
+    "OverflowManager",
+    "PersistentFileStorageMixin",
+    "ScriptResult",
+    "Siemplify",
+    "SiemplifyAction",
+    "SiemplifyAddressProvider",
+    "SiemplifyBase",
+    "SiemplifyCaseWallDataModel",
+    "SiemplifyConnectors",
+    "SiemplifyConnectorsDataModel",
+    "SiemplifyConstants",
+    "SiemplifyDataModel",
+    "SiemplifyExtensionTypesBase",
+    "SiemplifyJob",
+    "SiemplifyLogger",
+    "SiemplifyLogicalOperator",
+    "SiemplifyPublisherUtils",
+    "SiemplifySdkConfig",
+    "SiemplifyTransformer",
+    "SiemplifyUtils",
+    "SiemplifyVault",
+    "SiemplifyVaultUtils",
+    "SimulatedCasesCreator",
+    "VaultProviderFactory",
+})
+
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",
     "__pycache__",
@@ -457,6 +491,9 @@ NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
 HTML_SUFFIX: str = "html"
 
 PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_DIR_NAME, COMMUNITY_DIR_NAME)
+ALL_ENV: str = "*"
+DEFAULT_ENV: str = "Default Environment"
+VALID_ENVIRONMENTS: set[str] = {ALL_ENV, DEFAULT_ENV}
 
 
 PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
