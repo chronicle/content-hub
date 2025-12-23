@@ -27,7 +27,9 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     result = True
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    status = (
+        EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    )
     try:
         # list to contain results from action
         res = []

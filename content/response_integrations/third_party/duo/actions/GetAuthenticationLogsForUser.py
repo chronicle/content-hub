@@ -30,7 +30,9 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     result = True
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    status = (
+        EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    )
 
     def get_duo_user_data(username):
         from time import sleep
@@ -154,9 +156,7 @@ def main():
                                     )
                                 if "location" in value:
                                     if "state" in value:
-                                        count_access_state[
-                                            value["location"]["state"]
-                                        ] = (
+                                        count_access_state[value["location"]["state"]] = (
                                             count_access_state.get(
                                                 value["location"]["state"],
                                                 0,

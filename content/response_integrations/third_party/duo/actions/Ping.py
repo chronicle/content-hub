@@ -24,7 +24,9 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     result = True
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    status = (
+        EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    )
     try:
         duoApi = siemplify.extract_configuration_param(
             provider_name=INTEGRATION_NAME,

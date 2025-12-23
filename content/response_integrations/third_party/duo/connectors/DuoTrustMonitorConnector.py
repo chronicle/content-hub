@@ -84,9 +84,7 @@ def dict_to_flat(target_dict):
         return [(get_unicode(key), get_unicode(value))]
 
     items = [
-        item
-        for sub_key, sub_value in target_dict.items()
-        for item in expand(sub_key, sub_value)
+        item for sub_key, sub_value in target_dict.items() for item in expand(sub_key, sub_value)
     ]
     return dict(items)
 
@@ -140,9 +138,7 @@ def create_alert(siemplify, alert_id, trust_mon_event_data):
     case_info.identifier = alert_id
     case_info.ticket_id = alert_id
     case_info.display_id = alert_id
-    case_info.priority = (
-        60  # Informative = -1,Low = 40,Medium = 60,High = 80,Critical = 100.
-    )
+    case_info.priority = 60  # Informative = -1,Low = 40,Medium = 60,High = 80,Critical = 100.
     case_info.device_vendor = VENDOR
     case_info.device_product = PRODUCT
     # case_info.events = [trust_mon_event_data]
