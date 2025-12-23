@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-from urllib.parse import urljoin
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
 import requests
 from packaging import version
@@ -24,39 +24,59 @@ from TIPCommon.rest.soar_api import (
     add_case_stage,
     add_case_tag,
     add_close_reason,
+    add_custom_family,
+    add_email_template,
+    add_job,
+    add_mapping_rules,
     create_integrations_instance,
+    create_playbook_category,
+    export_playbooks,
+    get_bearer_token,
     get_block_lists_details,
     get_case_close_reasons,
     get_case_stages,
     get_case_tags,
     get_custom_lists,
+    get_denylists,
     get_domains,
     get_email_templates,
     get_env_dynamic_parameters,
     get_environment_names,
     get_environments,
+    get_ide_cards,
+    get_ide_item,
     get_integration_instance_details_by_id,
     get_integration_instance_details_by_name,
     get_integration_instance_settings,
     get_installed_connectors,
     get_installed_integrations_of_environment,
     get_installed_jobs,
+    get_mapping_rules,
     get_networks,
     get_ontology_records,
+    get_playbook_categories,
     get_playbook_workflow_menu_cards_by_identifier,
     get_playbook_workflow_menu_cards_by_identifier_with_env,
     get_playbooks_workflow_menu_cards,
     get_playbooks_workflow_menu_cards_with_env,
+    get_simulated_cases,
     get_sla_records,
+    get_store_data,
     get_visual_families,
     get_visual_family_by_id,
     import_environment,
+    import_package,
+    import_playbooks,
     import_simulated_case,
     save_integration_instance_settings,
     save_playbook,
+    set_mappings_visual_family,
+    update_api_record,
     update_blocklist,
+    update_connector,
     update_custom_list,
     update_domain,
+    update_ide_item,
     update_network,
     update_sla_record,
 )
@@ -112,11 +132,7 @@ class SiemplifyApiClient:
             self._bearer_token = self.get_bearer_token(smp_password, smp_username)
 
     def get_bearer_token(self, smp_password, smp_username):
-        payload = {"password": smp_password, "username": smp_username}
-        res = self.session.post("auth/login", json=payload)
-        self.validate_response(res)
-
-        return f"Bearer {res.text}"
+        return get_bearer_token(self.siemplify_soar, smp_password, smp_username)
 
     @property
     def system_version(self):
@@ -180,11 +196,7 @@ class SiemplifyApiClient:
         return res.content
 
     def get_store_data(self):
-        store = self.session.get("store/GetIntegrationsStoreData")
-        self.validate_response(store)
-        powerups = self.session.get("store/GetPowerUpsStoreData")
-        self.validate_response(powerups)
-        return store.json()["integrations"] + powerups.json()["integrations"]
+        return get_store_data(self.siemplify_soar)
 
     def get_environments(self, siemplify):
         return get_environments(siemplify)
@@ -193,8 +205,7 @@ class SiemplifyApiClient:
         return import_environment(siemplify, env_payload)
 
     def update_api_record(self, api_record):
-        res = self.session.post("settings/addOrUpdateAPIKeyRecord", json=api_record)
-        self.validate_response(res)
+        update_api_record(self.siemplify_soar, api_record)
 
     def install_integration(
         self,
@@ -221,26 +232,17 @@ class SiemplifyApiClient:
         return res.content
 
     def import_package(self, integration_name, b64_blob):
-        data = {
-            "data": b64_blob,
-            "integrationIdentifier": integration_name,
-            "isCustom": True,
-        }
-        res = self.session.post("ide/ImportPackage", json=data)
-        self.validate_response(res)
-        return res.content
+        return import_package(self.siemplify_soar, integration_name, b64_blob)
 
     def update_ide_item(self, input_json):
-        res = self.session.post("ide/AddOrUpdateItem", json=input_json)
-        self.validate_response(res)
-        return res.json()
+        return update_ide_item(self.siemplify_soar, input_json)
 
     def get_integrations_instances(
         self,
         chronicle_soar: ChronicleSoar,
         environment: str,
     ) -> list[InstalledIntegrationInstance]:
-        """ Gets integration instances for the given environment.
+        """Gets integration instances for the given environment.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -292,17 +294,10 @@ class SiemplifyApiClient:
         )
 
     def get_ide_cards(self, include_staging=False):
-        res = self.session.get("ide/GetIdeItemCards", verify=False)
-        self.validate_response(res)
-        if include_staging:
-            return res.json()
-        return [x for x in res.json() if not x.get("productionIntegrationIdentifier")]
+        return get_ide_cards(self.siemplify_soar, include_staging)
 
     def get_ide_item(self, item_id, item_type):
-        query = {"itemId": item_id, "ideItemType": item_type}
-        res = self.session.post("ide/GetIdeItem", json=query, verify=False)
-        self.validate_response(res)
-        return res.json()
+        return get_ide_item(self.siemplify_soar, item_id, item_type)
 
     def get_custom_families(
         self,
@@ -343,12 +338,10 @@ class SiemplifyApiClient:
         )
 
     def add_custom_family(self, visual_family):
-        res = self.session.post("ontology/AddOrUpdateVisualFamily", json=visual_family)
-        self.validate_response(res)
-        return res.content
+        return add_custom_family(self.siemplify_soar, visual_family)
 
     def get_ontology_records(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets ontology records.
+        """Gets ontology records.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -359,32 +352,22 @@ class SiemplifyApiClient:
         return get_ontology_records(chronicle_soar=chronicle_soar)
 
     def get_mapping_rules(self, source, product, event_name):
-        payload = {"source": source, "product": product, "eventName": event_name}
-        res = self.session.post("ontology/GetMappingRulesForSettings", json=payload)
-        self.validate_response(res)
-        return res.json()
+        return get_mapping_rules(self.siemplify_soar, source, product, event_name)
 
     def add_mapping_rules(self, mapping_rule):
-        res = self.session.post("ontology/AddOrUpdateMappingRules", json=mapping_rule)
-        self.validate_response(res)
-        return res.content
+        return add_mapping_rules(self.siemplify_soar, mapping_rule)
 
     def set_mappings_visual_family(self, source, product, event_name, visual_family):
-        payload = {
-            "source": source,
-            "product": product or "",
-            "eventName": event_name,
-            "visualFamily": visual_family,
-        }
-        res = self.session.post(
-            "ontology/AddOrUpdateProductToVisualizationFamilyRecord",
-            json=payload,
+        return set_mappings_visual_family(
+            self.siemplify_soar,
+            source,
+            product,
+            event_name,
+            visual_family,
         )
-        self.validate_response(res)
-        return True
 
     def get_playbooks(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets playbooks.
+        """Gets playbooks.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -404,7 +387,7 @@ class SiemplifyApiClient:
         chronicle_soar: ChronicleSoar,
         identifier: str,
     ) -> SingleJson:
-        """ Gets a playbook by its identifier.
+        """Gets a playbook by its identifier.
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
             identifier (str): Playbook identifier.
@@ -424,21 +407,16 @@ class SiemplifyApiClient:
         )
 
     def export_playbooks(self, definitions):
-        payload = {"identifiers": definitions}
-        res = self.session.post("playbooks/ExportDefinitions", json=payload)
-        self.validate_response(res)
-        return res.content
+        return export_playbooks(self.siemplify_soar, definitions)
 
     def import_playbooks(self, playbooks):
-        res = self.session.post("playbooks/ImportDefinitions", json=playbooks)
-        self.validate_response(res)
-        return res.content
+        return import_playbooks(self.siemplify_soar, playbooks)
 
     def save_playbook(self, playbook):
         return save_playbook(self.siemplify_soar, playbook)
 
     def get_networks(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets networks.
+        """Gets networks.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -452,7 +430,7 @@ class SiemplifyApiClient:
         return update_network(siemplify, network)
 
     def get_domains(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets domains.
+        """Gets domains.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -466,7 +444,7 @@ class SiemplifyApiClient:
         return update_domain(siemplify, domain)
 
     def get_connectors(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets connectors.
+        """Gets connectors.
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
 
@@ -477,9 +455,7 @@ class SiemplifyApiClient:
         return res.get("connector_instances", res.get("installedConnectors", []))
 
     def update_connector(self, connector_data):
-        res = self.session.post("connectors/AddOrUpdateConnector", json=connector_data)
-        self.validate_response(res)
-        return res
+        return update_connector(self.siemplify_soar, connector_data)
 
     def get_custom_lists(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         """Gets custom lists.
@@ -516,7 +492,7 @@ class SiemplifyApiClient:
         return True
 
     def get_case_stages(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets case stages.
+        """Gets case stages.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -541,12 +517,10 @@ class SiemplifyApiClient:
         return get_email_templates(chronicle_soar=chronicle_soar)
 
     def add_email_template(self, template):
-        res = self.session.post("settings/AddEmailTemplateRecords", json=template)
-        self.validate_response(res)
-        return True
+        return add_email_template(self.siemplify_soar, template)
 
     def get_denylists(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets denylists.
+        """Gets denylists.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -557,9 +531,7 @@ class SiemplifyApiClient:
         if self.system_version > VERSION_6117:
             return self.get_blocklists(chronicle_soar=chronicle_soar)
 
-        res = self.session.get("settings/GetAllModelBlackRecords") # Not available in 1P tracker.
-        self.validate_response(res)
-        return res.json()
+        return get_denylists(chronicle_soar)
 
     def update_denylist(self, siemplify, denylist):
         return self.update_blocklist(siemplify, denylist)
@@ -574,7 +546,7 @@ class SiemplifyApiClient:
         return res
 
     def get_sla_records(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets sla records.
+        """Gets sla records.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -594,9 +566,7 @@ class SiemplifyApiClient:
         return res if isinstance(res, list) else res["job_instances"]
 
     def add_job(self, job):
-        res = self.session.post("jobs/SaveOrUpdateJobData", json=job)
-        self.validate_response(res)
-        return res.content
+        return add_job(self.siemplify_soar, job)
 
     def get_case_tags(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         return get_case_tags(chronicle_soar=chronicle_soar)
@@ -605,7 +575,7 @@ class SiemplifyApiClient:
         return add_case_tag(siemplify, tag)
 
     def get_close_reasons(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
-        """ Gets case close reasons.
+        """Gets case close reasons.
 
         Args:
             chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
@@ -619,25 +589,13 @@ class SiemplifyApiClient:
         return add_close_reason(siemplify, cause)
 
     def create_playbook_category(self, name):
-        req = {
-            "categoryState": 0,  # Empty
-            "id": 0,
-            "isDefaultCategory": False,
-            "name": name,
-        }
-        res = self.session.post("playbooks/AddOrUpdatePlaybookCategory", json=req)
-        self.validate_response(res)
-        return res.json()
+        return create_playbook_category(self.siemplify_soar, name)
 
     def get_playbook_categories(self):
-        res = self.session.get("playbooks/GetWorkflowCategories")
-        self.validate_response(res)
-        return res.json()
+        return get_playbook_categories(self.siemplify_soar)
 
     def get_simulated_cases(self):
-        res = self.session.get("attackssimulator/GetCustomCases")
-        self.validate_response(res)
-        return res.json()
+        return get_simulated_cases(self.siemplify_soar)
 
     def export_simulated_case(self, name):
         res = self.session.get(f"attackssimulator/ExportCustomCase/{name}")
