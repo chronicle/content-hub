@@ -351,10 +351,12 @@ class GitSyncManager:
             + [ALL_ENVIRONMENTS_IDENTIFIER]
         )
         for p in workflows:
-            if not all(x in environments for x in p.environments):
+            invalid_environments = [x for x in p.environments if x not in environments]
+            if invalid_environments:
                 raise Exception(
-                    f"Playbook {p.name} is assigned to environment that doesn't exist - "
-                    f"{p.environments[0]}",
+                    f"Playbook '{p.name}' is assigned to environment(s) that don't "
+                    f"exist: {', '.join(invalid_environments)}. "
+                    f"Available environments: {', '.join(environments)}"
                 )
 
         # Remove duplicates and split by type
@@ -591,7 +593,7 @@ class WorkflowInstaller:
 
     def __init__(
         self,
-        chronicle_soar: ChronicleSOAR,
+        chronicle_soar: ChronicleSOAR, # type: ignore
         api: SiemplifyApiClient,
         logger: SiemplifyLogger,
         mod_time_cache: Cache[str, int],
