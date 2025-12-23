@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 import mp.core.constants
@@ -23,15 +24,17 @@ from mp.validate.utils import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.custom_types import YamlFileContent
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class IntegrationHasDocumentationLinkValidation:
     name: str = "Documentation Link Validation"
 
-    def run(self, validation_path: pathlib.Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(validation_path: Path) -> None:
         """Check if the integration has a documentation link.
 
         Args:

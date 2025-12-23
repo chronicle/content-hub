@@ -74,26 +74,6 @@ def test_missing_dev_dependencies_section_fail(temp_integration: Path) -> None:
         RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
 
-def test_custom_required_dependencies_success(temp_integration: Path) -> None:
-    pyproject_content = {"dependency-groups": {"dev": ["black", "flake8"]}}
-    _create_pyproject_toml(temp_integration, pyproject_content)
-    custom_required = {"black", "flake8"}
-    RequiredDevDependenciesValidation.run(
-        integration_path=temp_integration, required_dependencies=custom_required
-    )
-
-
-def test_custom_required_dependencies_missing_fail(temp_integration: Path) -> None:
-    pyproject_content = {"dependency-groups": {"dev": ["black"]}}
-    _create_pyproject_toml(temp_integration, pyproject_content)
-    custom_required = {"black", "flake8"}
-    error_msg: str = "Missing required development dependencies in pyproject.toml: flake8"
-    with pytest.raises(NonFatalCommandError, match=error_msg):
-        RequiredDevDependenciesValidation.run(
-            integration_path=temp_integration, required_dependencies=custom_required
-        )
-
-
 def _create_pyproject_toml(integration_path: Path, content: dict[str, Any]) -> None:
     pyproject_path = integration_path / "pyproject.toml"
     with Path.open(pyproject_path, "w") as f:

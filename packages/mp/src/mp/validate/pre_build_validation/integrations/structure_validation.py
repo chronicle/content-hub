@@ -14,19 +14,22 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 import mp.core.file_utils
 from mp.core.exceptions import FatalValidationError
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class IntegrationFileStructureValidation:
     name: str = "Integration Structure Check"
 
-    def run(self, integration_path: pathlib.Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(integration_path: Path) -> None:
         """Check basic integration structure, including file presence and parity.
 
         Args:

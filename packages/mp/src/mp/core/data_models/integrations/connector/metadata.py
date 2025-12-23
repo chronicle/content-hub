@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
+from mp.core.data_models.abc import ComponentMetadata
 
 from .parameter import (
     BuiltConnectorParameter,
@@ -63,9 +63,7 @@ class NonBuiltConnectorMetadata(TypedDict):
     version: NotRequired[float]
 
 
-class ConnectorMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]
-):
+class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]):
     file_name: str
     creator: str
     description: Annotated[
@@ -137,7 +135,7 @@ class ConnectorMetadata(
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
-            documentation_link=built["DocumentationLink"],
+            documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
             integration=built["Integration"],
             is_connector_rules_supported=built["IsConnectorRulesSupported"],
             is_custom=built["IsCustom"],
@@ -154,7 +152,7 @@ class ConnectorMetadata(
             file_name=file_name,
             creator=non_built["creator"],
             description=non_built["description"],
-            documentation_link=non_built.get("documentation_link"),
+            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             integration=non_built["integration"],
             is_connector_rules_supported=non_built["is_connector_rules_supported"],
             is_custom=non_built.get("is_custom", False),

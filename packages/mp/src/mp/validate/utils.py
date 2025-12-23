@@ -18,6 +18,7 @@ import re
 from typing import TYPE_CHECKING
 
 from mp.core import constants, file_utils
+from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
 from mp.validate.data_models import (
@@ -130,7 +131,7 @@ def load_components_defs(
         return component_defs
 
 
-def extract_name(yaml_content: YamlFileContent) -> ActionName | JobName | ConnectorName:
+def extract_name(yaml_content: YamlFileContent) -> ActionName | JobName | ConnectorName | None:
     """Extract the component's name from it's YAML file.
 
     Returns:
@@ -172,7 +173,7 @@ def _validate_ssl_parameter(
     if script_name in constants.EXCLUDED_NAMES_WITHOUT_VERIFY_SSL:
         return None
 
-    ssl_param: YamlFileContent = next(
+    ssl_param: YamlFileContent | None = next(
         (p for p in parameters if p["name"] in constants.VALID_SSL_PARAM_NAMES),
         None,
     )
@@ -191,6 +192,52 @@ def _validate_ssl_parameter(
         )
 
     return None
+
+
+def get_last_release_note(content: str) -> ReleaseNote | None:
+    """Get the last release note from a string content.
+
+    Args:
+        content: The string content of the release notes file.
+
+    Returns:
+        The last release note object, or None if no notes are found.
+
+    """
+    notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(content)
+    return notes[-1] if notes else None
+
+
+def get_new_release_notes(new_rn_content: str, old_rn_content: str) -> list[ReleaseNote]:
+    """Extract new release notes by comparing new and old content.
+
+    Args:
+        new_rn_content: The string content of the new release notes file.
+        old_rn_content: The string content of the old release notes file.
+
+    Returns:
+        A list of new release note objects.
+
+    """
+    new_notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(new_rn_content)
+    old_notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(old_rn_content)
+    return new_notes[len(old_notes) :]
+
+
+def are_new_release_notes_valid(
+    new_notes: list[ReleaseNote] | None, version_to_compare: float = 1.0
+) -> bool:
+    """Validate a list of new release notes against a specific version.
+
+    Args:
+        new_notes: A list of new release notes.
+        version_to_compare: The version to check against. Defaults to 1.0.
+
+    Returns:
+        True if the notes are valid, False otherwise.
+
+    """
+    return bool(new_notes) and all(new_note.version == version_to_compare for new_note in new_notes)
 
 
 def combine_results(*validations_outputs: FullReport) -> FullReport:

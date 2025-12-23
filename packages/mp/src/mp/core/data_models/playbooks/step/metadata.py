@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Annotated, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
+from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 
 from .step_debug_data import BuiltStepDebugData, NonBuiltStepDebugData, StepDebugData
 from .step_parameter import BuiltStepParameter, NonBuiltStepParameter, StepParameter
@@ -36,7 +36,7 @@ class BuiltStep(TypedDict):
     ParentWorkflowIdentifier: str
     ParentStepIdentifiers: list[str]
     ParentStepIdentifier: str
-    PreviousResultCondition: str
+    PreviousResultCondition: str | None
     InstanceName: str
     IsAutomatic: bool
     Name: str
@@ -64,7 +64,7 @@ class NonBuiltStep(TypedDict):
     playbook_id: str
     parent_step_ids: list[str]
     parent_step_id: str
-    previous_result_condition: str
+    previous_result_condition: str | None
     instance_name: str
     is_automatic: bool
     is_skippable: bool
@@ -82,7 +82,7 @@ class NonBuiltStep(TypedDict):
     parallel_actions: list[NonBuiltStep]
 
 
-class StepType(mp.core.data_models.abc.RepresentableEnum):
+class StepType(RepresentableEnum):
     """Represents the type of a step."""
 
     ACTION = 0
@@ -97,7 +97,7 @@ class StepType(mp.core.data_models.abc.RepresentableEnum):
     FOR_EACH_END_LOOP = 9
 
 
-class Step(mp.core.data_models.abc.ComponentMetadata):
+class Step(ComponentMetadata[BuiltStep, NonBuiltStep]):
     """Represents a step in a playbook."""
 
     name: str
@@ -191,7 +191,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_debug_mock_data=built["IsDebugMockData"],
             step_debug_data=(
                 StepDebugData.from_built(built["StepDebugData"])
-                if built.get("StepDebugData")
+                if "StepDebugData" in built and built["StepDebugData"] is not None
                 else None
             ),
             auto_skip_on_failure=built["AutoSkipOnFailure"],
@@ -229,7 +229,7 @@ class Step(mp.core.data_models.abc.ComponentMetadata):
             is_debug_mock_data=non_built["is_debug_mock_data"],
             step_debug_data=(
                 StepDebugData.from_non_built(non_built["step_debug_data"])
-                if non_built.get("step_debug_data")
+                if "step_debug_data" in non_built and non_built["step_debug_data"] is not None
                 else None
             ),
             integration=non_built["integration"],

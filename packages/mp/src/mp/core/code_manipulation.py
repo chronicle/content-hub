@@ -67,7 +67,7 @@ def lint_python_files(paths: Iterable[Path], params: RuffParams) -> None:
 def static_type_check_python_files(paths: Iterable[Path]) -> None:
     """Run a type checker on python files."""
     paths = [p for p in paths if p.is_dir() or file_utils.is_python_file(p)]
-    status_code: int = unix.mypy(paths)
+    status_code: int = unix.ty_check(paths)
     if status_code != 0:
         msg: str = "Found type check issues"
         warnings.warn(msg, TypeCheckerWarning, stacklevel=1)

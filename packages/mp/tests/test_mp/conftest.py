@@ -15,20 +15,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
 import mp.core.constants
-
-if TYPE_CHECKING:
-    from mp.core.config import RuntimeParams
+from mp.core.config import RuntimeParams
 
 MOCK_CONTENT_HUB_DIR_NAME: str = "mock_content_hub"
-
 INTEGRATION_NAME: str = "mock_integration"
 BUILT_INTEGRATION_DIR_NAME: str = "mock_built_integration"
-
 NON_BUILT_PLAYBOOK: str = "mock_non_built_playbook"
 MOCK_NON_BUILT_BLOCK: str = "mock_non_built_block"
 BUILT_PLAYBOOK: str = "mock_built_playbook/mock_built_playbook.json"
@@ -37,7 +32,7 @@ BUILT_BLOCK: str = "mock_built_block/mock_built_block.json"
 
 @pytest.fixture(autouse=True)
 def set_runtime_params() -> None:
-    params: RuntimeParams = mp.core.config.RuntimeParams(quiet=True, verbose=False)
+    params: RuntimeParams = RuntimeParams(quiet=True, verbose=False)
     params.set_in_config()
 
 

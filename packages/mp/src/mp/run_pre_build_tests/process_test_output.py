@@ -147,7 +147,7 @@ def _get_fnf_test_results(
 ) -> IntegrationTestResults | None:
     rich.print(f"[bold red]Error:[/bold red] JSON report not found at {json_report_path}")
     try:
-        RequiredDevDependenciesValidation.run(json_report_path.parent, {"pytest-json-report"})
+        RequiredDevDependenciesValidation.run(json_report_path.parent)
     except NonFatalCommandError as e:
         error_msg: str = f"{e}"
         result: IntegrationTestResults = IntegrationTestResults(integration_name=integration_name)

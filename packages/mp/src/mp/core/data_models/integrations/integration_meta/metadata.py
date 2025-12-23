@@ -23,9 +23,9 @@ import pydantic
 import yaml
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.file_utils
 import mp.core.utils
+from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
 
 from .feature_tags import BuiltFeatureTags, FeatureTags, NonBuiltFeatureTags
 from .parameter import BuiltIntegrationParameter, IntegrationParameter, NonBuiltIntegrationParameter
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 MINIMUM_SYSTEM_VERSION: float = 5.3
 
 
-class PythonVersion(mp.core.data_models.abc.RepresentableEnum):
+class PythonVersion(RepresentableEnum):
     PY_3_11 = 3
 
     @classmethod
@@ -128,7 +128,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
 
 
 class IntegrationMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
+    SingularComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
 ):
     categories: list[str]
     feature_tags: FeatureTags | None
@@ -227,7 +227,7 @@ class IntegrationMetadata(
             return metadata
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltIntegrationMetadata) -> Self:
+    def _from_built(cls, _: str, built: BuiltIntegrationMetadata) -> Self:  # ty:ignore[invalid-method-override]
         feature_tags: FeatureTags | None = None
         raw_feature_tags: BuiltFeatureTags | None = built.get("FeatureTags")
         if raw_feature_tags is not None:
@@ -248,7 +248,7 @@ class IntegrationMetadata(
             name=built["DisplayName"],
             identifier=built["Identifier"],
             python_version=PythonVersion(built["PythonVersion"]),
-            documentation_link=built["DocumentationLink"],
+            documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
             image_base64=image,
             parameters=[IntegrationParameter.from_built(p) for p in built["IntegrationProperties"]],
             should_install_in_system=built["ShouldInstalledInSystem"],
@@ -260,7 +260,7 @@ class IntegrationMetadata(
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltIntegrationMetadata) -> Self:
+    def _from_non_built(cls, _: str, non_built: NonBuiltIntegrationMetadata) -> Self:  # ty:ignore[invalid-method-override]
         feature_tags: FeatureTags | None = None
         raw_feature_tags: NonBuiltFeatureTags | None = non_built.get("feature_tags")
         if raw_feature_tags is not None:
@@ -274,9 +274,9 @@ class IntegrationMetadata(
             feature_tags=feature_tags,
             name=name,
             identifier=non_built["identifier"],
-            documentation_link=non_built.get("documentation_link"),
+            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             description=non_built.get("description", ""),
-            image_base64=non_built["image_path"],
+            image_base64=non_built["image_path"],  # ty:ignore[invalid-argument-type]
             parameters=[IntegrationParameter.from_non_built(p) for p in non_built["parameters"]],
             should_install_in_system=non_built.get("should_install_in_system", False),
             is_custom=non_built.get("is_custom", False),

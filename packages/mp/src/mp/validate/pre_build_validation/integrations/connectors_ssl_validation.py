@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pydantic import dataclasses
+
 from mp.core import constants
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.utils import (
@@ -24,15 +26,17 @@ from mp.validate.utils import (
 )
 
 if TYPE_CHECKING:
-    import pathlib
+    from pathlib import Path
 
     from mp.core.custom_types import YamlFileContent
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class SslParameterExistsInConnectorsValidation:
     name: str = "SSL Connectors Validation"
 
-    def run(self, integration_path: pathlib.Path) -> None:  # noqa: PLR6301
+    @staticmethod
+    def run(integration_path: Path) -> None:
         """Run validation for SSL parameters in the integration's connectors.
 
         Args:
