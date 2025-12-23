@@ -103,6 +103,40 @@ PYTHON_VERSION_FILE: str = ".python-version"
 
 MS_IN_SEC: int = 1_000
 
+SDK_MODULES: frozenset[str] = frozenset({
+    "SiemplifyVaultCyberArkPam",
+    "CaseAlertsProvider",
+    "FileRetentionManager",
+    "GcpTokenProvider",
+    "MockConnector",
+    "MockRunner",
+    "OtelLoggingUtils",
+    "OverflowManager",
+    "PersistentFileStorageMixin",
+    "ScriptResult",
+    "Siemplify",
+    "SiemplifyAction",
+    "SiemplifyAddressProvider",
+    "SiemplifyBase",
+    "SiemplifyCaseWallDataModel",
+    "SiemplifyConnectors",
+    "SiemplifyConnectorsDataModel",
+    "SiemplifyConstants",
+    "SiemplifyDataModel",
+    "SiemplifyExtensionTypesBase",
+    "SiemplifyJob",
+    "SiemplifyLogger",
+    "SiemplifyLogicalOperator",
+    "SiemplifyPublisherUtils",
+    "SiemplifySdkConfig",
+    "SiemplifyTransformer",
+    "SiemplifyUtils",
+    "SiemplifyVault",
+    "SiemplifyVaultUtils",
+    "SimulatedCasesCreator",
+    "VaultProviderFactory",
+})
+
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",
     "__pycache__",
