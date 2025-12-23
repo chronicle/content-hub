@@ -23,6 +23,7 @@ from mp.core.constants import PROJECT_FILE, RELEASE_NOTES_FILE
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.pyproject_toml import PyProjectToml
 from mp.core.exceptions import NonFatalValidationError
+from mp.validate import utils
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -128,8 +129,8 @@ def _create_data_for_version_bump_validation(
         )
 
         old_rn_content = mp.core.unix.get_file_content_from_main_branch(rn_path)
-        existing_files["rn"]["old"] = _get_last_note(old_rn_content)
-        existing_files["rn"]["new"] = _get_new_rn_notes(
+        existing_files["rn"]["old"] = utils.get_last_release_note(old_rn_content)
+        existing_files["rn"]["new"] = utils.get_new_release_notes(
             rn_path.read_text(encoding="utf-8"), old_rn_content
         )
 
@@ -138,17 +139,6 @@ def _create_data_for_version_bump_validation(
         new_files["rn"] = ReleaseNote.from_non_built_str(rn_path.read_text(encoding="utf-8"))
 
     return existing_files, new_files
-
-
-def _get_last_note(content: str) -> ReleaseNote | None:
-    notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(content)
-    return notes[-1] if notes else None
-
-
-def _get_new_rn_notes(new_rn_content: str, old_rn_content: str) -> list[ReleaseNote]:
-    new_notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(new_rn_content)
-    old_notes: list[ReleaseNote] = ReleaseNote.from_non_built_str(old_rn_content)
-    return new_notes[len(old_notes) :]
 
 
 def _version_bump_validation_run_checks(
@@ -167,16 +157,16 @@ def _version_bump_validation_run_checks(
             raise NonFatalValidationError(msg)
 
         new_notes: list[ReleaseNote] | None = existing_files["rn"].get("new")
-        if not _rn_is_valid(new_notes, toml_new_version):
+        if not utils.are_new_release_notes_valid(new_notes, toml_new_version):
             msg = (
                 "The release note's version must match the new version of the project.toml and be"
                 " consistent in all the newly added notes."
             )
             raise NonFatalValidationError(msg)
 
-    elif (new_toml := new_files["toml"]) and (new_notes := new_files["rn"]):
+    elif (new_toml := new_files.get("toml")) and (new_notes := new_files.get("rn")):
         toml_version: float = new_toml.project.version
-        if toml_version != 1.0 or not _rn_is_valid(new_notes):
+        if toml_version != 1.0 or not utils.are_new_release_notes_valid(new_notes):
             msg = (
                 "New integration project.toml and release_note.yaml version must be initialize to"
                 " 1.0"
@@ -186,9 +176,3 @@ def _version_bump_validation_run_checks(
     else:
         msg = "New integration missing project.toml and/or release_note.yaml."
         raise NonFatalValidationError(msg)
-
-
-def _rn_is_valid(new_notes: list[ReleaseNote] | None, version_to_compare: float = 1.0) -> bool:
-    return new_notes is not None and all(
-        new_note.version == version_to_compare for new_note in new_notes
-    )
