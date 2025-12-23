@@ -62,3 +62,19 @@ def temp_non_built_block(non_built_block_path: Path) -> Iterator[Path]:
 
         shutil.copytree(non_built_block_path, temp_non_built_playbook)
         yield temp_non_built_playbook
+
+
+@pytest.fixture
+def temp_playbooks_repo(
+    non_built_playbook_path: Path, non_built_block_path: Path
+) -> Iterator[Path]:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_root = Path(temp_dir)
+
+        temp_playbook_dest = temp_root / non_built_playbook_path.name
+        temp_block_dest = temp_root / non_built_block_path.name
+
+        shutil.copytree(non_built_playbook_path, temp_playbook_dest)
+        shutil.copytree(non_built_block_path, temp_block_dest)
+
+        yield temp_root
