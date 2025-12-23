@@ -88,7 +88,6 @@ def main():
             siemplify.LOGGER.info("========== Environments ==========")
 
             all_envs = gitsync.api.get_environments(siemplify)
-            all_env_names = gitsync.api.get_environment_names(chronicle_soar=siemplify)
 
             for environment in gitsync.content.get_environments():
                 env_name = environment.get("name")
