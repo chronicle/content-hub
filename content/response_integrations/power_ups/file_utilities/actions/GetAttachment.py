@@ -26,12 +26,12 @@ from TIPCommon.rest.soar_api import get_attachments_metadata
 def main():
     siemplify = SiemplifyAction()
     scope = siemplify.parameters.get("Attachment Scope")
-    results = [
+    attachments_metadata = [
         attachment.to_json() for attachment in
         get_attachments_metadata(siemplify, siemplify.case.identifier)
     ]
     attachments = []
-    for wall_item in results:
+    for wall_item in attachments_metadata:
         if wall_item["type"] == 4:
             if scope.lower() == "alert":
                 if siemplify.current_alert.identifier == wall_item["alertIdentifier"]:
