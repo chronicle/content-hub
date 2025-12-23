@@ -25,7 +25,6 @@ from TIPCommon.data_models import CaseWallAttachment
 from TIPCommon.rest.soar_api import save_attachment_to_case_wall
 from TIPCommon.types import SingleJson
 
-
 SCRIPT_NAME = "Add Attachment"
 
 
