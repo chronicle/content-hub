@@ -52,12 +52,12 @@ def main():
     )
     archive_name = siemplify.extract_action_param("Archive Base Name", print_value=True)
 
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    status = EXECUTION_STATE_COMPLETED
     output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
+        "output message :"
     )
     result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
+        None
     )
 
     # Does directory exist? If not, then create it.

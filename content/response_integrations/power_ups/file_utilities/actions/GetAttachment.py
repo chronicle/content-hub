@@ -17,29 +17,21 @@ from __future__ import annotations
 import base64
 import json
 
-import requests
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.rest.soar_api import get_attachments_metadata
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
     scope = siemplify.parameters.get("Attachment Scope")
-
-    conf = siemplify.get_configuration("FileUtilities")
-    verify_ssl = True if conf.get("Verify SSL", "False").casefold() == "true" else False
-
-    headers = {"AppKey": siemplify.api_key}
-    response = requests.get(
-        f"{siemplify.API_ROOT}/external/v1/cases/GetCaseFullDetails/"
-        f"{siemplify.case.identifier}",
-        headers=headers,
-        verify=verify_ssl,
-    )
-    wall_items = response.json()["wallData"]
+    attachments_metadata = [
+        attachment.to_json() for attachment in
+        get_attachments_metadata(siemplify, siemplify.case.identifier)
+    ]
     attachments = []
-    for wall_item in wall_items:
+    for wall_item in attachments_metadata:
         if wall_item["type"] == 4:
             if scope.lower() == "alert":
                 if siemplify.current_alert.identifier == wall_item["alertIdentifier"]:
