@@ -154,11 +154,11 @@ def run_pre_build_tests(  # noqa: PLR0913
     params: TestParams = TestParams(repository, integration, group)
     params.validate()
 
-    commercial_paths: Iterable[Path] = mp.core.file_utils.get_all_integrations_paths(
+    commercial_paths: Iterable[Path] = mp.core.file_utils.get_integration_base_folders_paths(
         mp.core.constants.COMMERCIAL_DIR_NAME
     )
-    community_paths: Iterable[Path] = mp.core.file_utils.get_all_integrations_paths(
-        mp.core.constants.COMMUNITY_DIR_NAME
+    community_paths: Iterable[Path] = mp.core.file_utils.get_integration_base_folders_paths(
+        mp.core.constants.THIRD_PARTY_DIR_NAME
     )
 
     all_integration_results: list[IntegrationTestResults] = []
@@ -194,7 +194,7 @@ def run_pre_build_tests(  # noqa: PLR0913
         if RepositoryType.COMMERCIAL in repos:
             all_integration_results.extend(_test_repository(commercial_paths))
 
-        if RepositoryType.COMMUNITY in repos:
+        if RepositoryType.THIRD_PARTY in repos:
             all_integration_results.extend(_test_repository(community_paths))
 
     display_test_reports(all_integration_results)

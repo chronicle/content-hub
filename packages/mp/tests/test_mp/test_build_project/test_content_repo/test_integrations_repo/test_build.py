@@ -81,7 +81,7 @@ def assert_build_integration(
     built_integration: Path,
 ) -> Callable[[Path], None]:
     def wrapper(integration_path: Path) -> None:
-        community: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+        community: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
         shutil.copytree(integration_path.parent, community)
         integration: Path = community / built_integration.name
         py_version: Path = integration / mp.core.constants.PYTHON_VERSION_FILE

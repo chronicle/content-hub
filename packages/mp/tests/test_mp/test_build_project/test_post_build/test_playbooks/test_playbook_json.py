@@ -62,7 +62,7 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
         built_block_path, commercial_playbooks.out_dir / f"{non_built_block_path.name}.json"
     )
 
-    community: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    community: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
     community_playbooks = PlaybooksRepo(community)
     community_playbooks.repository_base_path.mkdir(parents=True, exist_ok=True)
 
