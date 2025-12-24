@@ -189,7 +189,7 @@ def _determine_command_name(command: str, **kwargs: list[RepositoryType | str] |
 
     if (
         has_integrations
-        or RepositoryType.COMMUNITY.value in repo_values
+        or RepositoryType.THIRD_PARTY.value in repo_values
         or RepositoryType.COMMERCIAL.value in repo_values
     ):
         return f"{command} integrations"
