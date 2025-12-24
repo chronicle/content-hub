@@ -155,10 +155,10 @@ def run_pre_build_tests(  # noqa: PLR0913
     params.validate()
 
     commercial_paths: Iterable[Path] = mp.core.file_utils.get_integration_base_folders_paths(
-        mp.core.constants.COMMERCIAL_DIR_NAME
+        mp.core.constants.COMMERCIAL_REPO_NAME
     )
     community_paths: Iterable[Path] = mp.core.file_utils.get_integration_base_folders_paths(
-        mp.core.constants.THIRD_PARTY_DIR_NAME
+        mp.core.constants.THIRD_PARTY_REPO_NAME
     )
 
     all_integration_results: list[IntegrationTestResults] = []
