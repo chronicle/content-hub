@@ -38,10 +38,12 @@ def build_playbooks(
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
     commercial_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMERCIAL_DIR_NAME)
+        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMERCIAL_REPO_NAME)
     )
     community_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.THIRD_PARTY_DIR_NAME)
+        mp.core.file_utils.get_playbook_repository_base_path(
+            mp.core.constants.THIRD_PARTY_REPO_NAME
+        )
     )
 
     if playbooks:

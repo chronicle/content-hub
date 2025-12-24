@@ -56,7 +56,7 @@ def test_discover_managers_not_built(tmp_path: Path) -> None:
 
 
 def test_get_integrations_and_groups_from_paths(tmp_path: Path) -> None:
-    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
     commercial_dir.mkdir()
     (commercial_dir / "integration1").mkdir()
     (commercial_dir / "integration1" / mp.core.constants.PROJECT_FILE).touch()
@@ -64,7 +64,7 @@ def test_get_integrations_and_groups_from_paths(tmp_path: Path) -> None:
     (commercial_dir / "group1" / "integration2").mkdir()
     (commercial_dir / "group1" / "integration2" / mp.core.constants.PROJECT_FILE).touch()
 
-    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
+    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
     community_dir.mkdir()
     (community_dir / "integration3").mkdir()
     (community_dir / "integration3" / mp.core.constants.PROJECT_FILE).touch()
@@ -106,8 +106,8 @@ def test_is_python_file(tmp_path: Path) -> None:
 
 
 def test_is_integration(tmp_path: Path) -> None:
-    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
-    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
+    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
     powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
 
     integration_dir_comm: Path = community_dir / "integration"
@@ -133,8 +133,8 @@ def test_is_integration(tmp_path: Path) -> None:
 
 
 def test_is_group(tmp_path: Path) -> None:
-    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
-    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
+    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
     powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
 
     commercial_dir.mkdir()
@@ -166,23 +166,23 @@ def test_get_all_integrations_paths(tmp_path: Path) -> None:
         "mp.core.file_utils.integrations.file_utils.create_or_get_integrations_path",
         return_value=tmp_path,
     ):
-        community_paths = mp.core.file_utils.get_all_integrations_paths(
-            mp.core.constants.THIRD_PARTY_DIR_NAME
+        community_paths = mp.core.file_utils.get_integration_base_folders_paths(
+            mp.core.constants.THIRD_PARTY_REPO_NAME
         )
-        commercial_paths = mp.core.file_utils.get_all_integrations_paths(
-            mp.core.constants.COMMERCIAL_DIR_NAME
+        commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(
+            mp.core.constants.COMMERCIAL_REPO_NAME
         )
 
         expected_community_paths = [
             tmp_path / dir_name
             for dir_name in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT[
-                mp.core.constants.THIRD_PARTY_DIR_NAME
+                mp.core.constants.THIRD_PARTY_REPO_NAME
             ]
         ]
         expected_commercial_paths = [
             tmp_path / dir_name
             for dir_name in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT[
-                mp.core.constants.COMMERCIAL_DIR_NAME
+                mp.core.constants.COMMERCIAL_REPO_NAME
             ]
         ]
         assert community_paths == expected_community_paths

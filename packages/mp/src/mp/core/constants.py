@@ -21,22 +21,22 @@ REPO_NAME: str = "marketplace"
 PROJECT_FILE: str = "pyproject.toml"
 CONTENT_DIR_NAME: str = "content"
 INTEGRATIONS_DIR_NAME: str = "response_integrations"
-COMMERCIAL_DIR_NAME: str = "google"
-THIRD_PARTY_DIR_NAME: str = "third_party"
+COMMERCIAL_REPO_NAME: str = "google"
+THIRD_PARTY_REPO_NAME: str = "third_party"
 COMMUNITY_DIR_NAME: str = "community"
 PARTNER_DIR_NAME: str = "partner"
 POWERUPS_DIR_NAME: str = "power_ups"
 INTEGRATIONS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
-    THIRD_PARTY_DIR_NAME: (
+    THIRD_PARTY_REPO_NAME: (
         COMMUNITY_DIR_NAME,
         PARTNER_DIR_NAME,
         POWERUPS_DIR_NAME,
     ),
-    COMMERCIAL_DIR_NAME: (COMMERCIAL_DIR_NAME,),
+    COMMERCIAL_REPO_NAME: (COMMERCIAL_REPO_NAME,),
 }
 
 INTEGRATIONS_TYPES: tuple[str, ...] = (
-    COMMERCIAL_DIR_NAME,
+    COMMERCIAL_REPO_NAME,
     COMMUNITY_DIR_NAME,
     PARTNER_DIR_NAME,
     POWERUPS_DIR_NAME,
@@ -491,7 +491,7 @@ MAX_STEP_PARALLEL_ACTIONS: int = 5
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
 HTML_SUFFIX: str = "html"
 
-PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_DIR_NAME, THIRD_PARTY_DIR_NAME)
+PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_REPO_NAME, THIRD_PARTY_REPO_NAME)
 ALL_ENV: str = "*"
 DEFAULT_ENV: str = "Default Environment"
 VALID_ENVIRONMENTS: set[str] = {ALL_ENV, DEFAULT_ENV}

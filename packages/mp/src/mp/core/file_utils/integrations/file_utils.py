@@ -64,11 +64,11 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
     """
     base_path: Path = create_or_get_integrations_path()
     match integrations_classification:
-        case constants.COMMERCIAL_DIR_NAME:
-            return [base_path / constants.COMMERCIAL_DIR_NAME]
+        case constants.COMMERCIAL_REPO_NAME:
+            return [base_path / constants.COMMERCIAL_REPO_NAME]
 
-        case constants.THIRD_PARTY_DIR_NAME:
-            third_party = base_path / constants.THIRD_PARTY_DIR_NAME
+        case constants.THIRD_PARTY_REPO_NAME:
+            third_party = base_path / constants.THIRD_PARTY_REPO_NAME
 
             return [
                 base_path / constants.POWERUPS_DIR_NAME,
@@ -390,7 +390,7 @@ def is_commercial_integration(path: Path) -> bool:
     return (
         is_integration(path)
         and path.parent.name
-        in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_DIR_NAME]
+        in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_REPO_NAME]
     )
 
 
