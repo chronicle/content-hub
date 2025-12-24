@@ -57,7 +57,7 @@ def mock_response_integrations(mock_content_hub: Path) -> Path:
 @pytest.fixture
 def mock_community(mock_response_integrations: Path) -> Path:
     """Path of mocked third_party community integrations."""
-    return mock_response_integrations / mp.core.constants.COMMUNITY_DIR_NAME
+    return mock_response_integrations / mp.core.constants.THIRD_PARTY_DIR_NAME
 
 
 @pytest.fixture

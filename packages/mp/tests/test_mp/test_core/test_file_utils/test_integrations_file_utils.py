@@ -64,7 +64,7 @@ def test_get_integrations_and_groups_from_paths(tmp_path: Path) -> None:
     (commercial_dir / "group1" / "integration2").mkdir()
     (commercial_dir / "group1" / "integration2" / mp.core.constants.PROJECT_FILE).touch()
 
-    community_dir: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
     community_dir.mkdir()
     (community_dir / "integration3").mkdir()
     (community_dir / "integration3" / mp.core.constants.PROJECT_FILE).touch()
@@ -107,7 +107,7 @@ def test_is_python_file(tmp_path: Path) -> None:
 
 def test_is_integration(tmp_path: Path) -> None:
     commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
-    community_dir: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
     powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
 
     integration_dir_comm: Path = community_dir / "integration"
@@ -134,7 +134,7 @@ def test_is_integration(tmp_path: Path) -> None:
 
 def test_is_group(tmp_path: Path) -> None:
     commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
-    community_dir: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
+    community_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_DIR_NAME
     powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
 
     commercial_dir.mkdir()
@@ -167,7 +167,7 @@ def test_get_all_integrations_paths(tmp_path: Path) -> None:
         return_value=tmp_path,
     ):
         community_paths = mp.core.file_utils.get_all_integrations_paths(
-            mp.core.constants.COMMUNITY_DIR_NAME
+            mp.core.constants.THIRD_PARTY_DIR_NAME
         )
         commercial_paths = mp.core.file_utils.get_all_integrations_paths(
             mp.core.constants.COMMERCIAL_DIR_NAME
@@ -176,7 +176,7 @@ def test_get_all_integrations_paths(tmp_path: Path) -> None:
         expected_community_paths = [
             tmp_path / dir_name
             for dir_name in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT[
-                mp.core.constants.COMMUNITY_DIR_NAME
+                mp.core.constants.THIRD_PARTY_DIR_NAME
             ]
         ]
         expected_commercial_paths = [

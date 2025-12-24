@@ -39,8 +39,12 @@ def build_integrations(
     deconstruct: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct integration operation."""
-    commercial_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMERCIAL)
-    community_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMUNITY)
+    commercial_path: Path = mp.core.file_utils.get_integrations_repo_base_path(
+        RepositoryType.COMMERCIAL
+    )
+    community_path: Path = mp.core.file_utils.get_integrations_repo_base_path(
+        RepositoryType.THIRD_PARTY
+    )
     commercial_mp: IntegrationsRepo = IntegrationsRepo(commercial_path)
     community_mp: IntegrationsRepo = IntegrationsRepo(community_path)
     if integrations:
@@ -99,7 +103,7 @@ def _build_integration_repositories(
         commercial_mp.write_marketplace_json()
         rich.print("Done Commercial integrations build.")
 
-    if _is_community_repo(repos):
+    if _is_third_party_repo(repos):
         rich.print("Building all integrations and groups in third party repo...")
         community_mp.build()
         community_mp.write_marketplace_json()
@@ -118,12 +122,12 @@ def _is_commercial_repo(repos: Iterable[RepositoryType]) -> bool:
     return RepositoryType.COMMERCIAL in repos
 
 
-def _is_community_repo(repos: Iterable[RepositoryType]) -> bool:
-    return RepositoryType.COMMUNITY in repos
+def _is_third_party_repo(repos: Iterable[RepositoryType]) -> bool:
+    return RepositoryType.THIRD_PARTY in repos
 
 
 def _is_full_repo_build(repos: Iterable[RepositoryType]) -> bool:
-    return RepositoryType.COMMERCIAL in repos and RepositoryType.COMMUNITY in repos
+    return RepositoryType.COMMERCIAL in repos and RepositoryType.THIRD_PARTY in repos
 
 
 def _build_integrations(

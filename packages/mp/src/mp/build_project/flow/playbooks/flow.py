@@ -41,7 +41,7 @@ def build_playbooks(
         mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMERCIAL_DIR_NAME)
     )
     community_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMUNITY_DIR_NAME)
+        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.THIRD_PARTY_DIR_NAME)
     )
 
     if playbooks:
