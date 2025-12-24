@@ -26,11 +26,10 @@ SCRIPT_NAME = "Push Playbook"
 
 
 def create_root_readme(gitsync: GitSyncManager):
-    playbooks = []
-    for pb in gitsync.content.get_playbooks():
-        playbook_data = pb.raw_data
-        playbook_data["description"] = playbook_data.get("description", "").replace("\n", " ").replace("\r", "")
-        playbooks.append(playbook_data)
+    playbooks = [
+        dict(pb.raw_data, description=pb.raw_data.get("description", "").replace("\n", " ").replace("\r", ""))
+        for pb in gitsync.content.get_playbooks()
+    ]
     readme = Template(PLAYBOOKS_ROOT_README)
     return readme.render(playbooks=playbooks)
 
