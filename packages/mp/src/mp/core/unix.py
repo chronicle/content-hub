@@ -244,11 +244,13 @@ def _resolve_dependencies(requirements_path: Path) -> tuple[list[str], list[str]
                 continue
             name, version = match.groups()
             if name in constants.LOCAL_PACKAGES_CONFIG:
-                dev_deps_to_add.extend(
-                    _resolve_local_dependency(
-                        local_packages_base_path, name, version, integration_path
-                    )
+                resolved_deps: list[str] = _resolve_local_dependency(
+                    local_packages_base_path, name, version, integration_path
                 )
+                deps_to_add.append(resolved_deps[0])
+                # Check if integration-testing is added
+                if len(resolved_deps) > 1:
+                    dev_deps_to_add.append(resolved_deps[1])
             else:
                 deps_to_add.append(stripped_line)
 
