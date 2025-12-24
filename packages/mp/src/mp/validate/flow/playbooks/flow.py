@@ -17,7 +17,10 @@ from __future__ import annotations
 import multiprocessing
 from typing import TYPE_CHECKING
 
+import rich
+
 import mp.core.config
+import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
 from mp.core.custom_types import RepositoryType
@@ -55,10 +58,10 @@ def validate_playbooks(
 
     """
     commercial_playbooks_repo: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repository_base_path(RepositoryType.COMMERCIAL.value)
+        mp.core.file_utils.get_playbook_repo_base_path(mp.core.constants.COMMERCIAL_REPO_NAME)
     )
     community_playbooks_repo: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repository_base_path(RepositoryType.COMMUNITY.value)
+        mp.core.file_utils.get_playbook_repo_base_path(mp.core.constants.THIRD_PARTY_REPO_NAME)
     )
 
     run_configurations: Configurations = Configurations(only_pre_build=only_pre_build)
@@ -85,9 +88,9 @@ def validate_playbooks(
 
 
 def _validate_repo(playbook_repo: PlaybooksRepo, run_configurations: Configurations) -> FullReport:
-    all_playbooks_in_repo: Iterable[str] = [
-        n.name for n in playbook_repo.repository_base_path.iterdir()
-    ]
+    all_playbooks_in_repo: Iterable[str] = []
+    for folder in playbook_repo.repository_base_folders:
+        all_playbooks_in_repo += [p.name for p in folder.iterdir()]
     return _validate_playbooks(all_playbooks_in_repo, playbook_repo, run_configurations)
 
 
@@ -98,7 +101,7 @@ def _validate_playbooks(
 ) -> FullReport:
     validation_outputs: FullReport = {}
     playbooks_paths: Iterable[Path] = _get_playbooks_paths_from_repository(
-        playbooks_names, content_repo.repository_base_path
+        playbooks_names, content_repo.repository_base_folders
     )
 
     if not playbooks_paths:
@@ -141,10 +144,14 @@ def _run_pre_build_validations(playbook_path: Path) -> ValidationResults:
 
 
 def _get_playbooks_paths_from_repository(
-    playbooks_names: Iterable[str], repository_path: Path
+    playbooks_names: Iterable[str], repository_folders: list[Path]
 ) -> set[Path]:
-    return {
-        p
-        for n in playbooks_names
-        if (p := repository_path / n).exists() and mp.core.file_utils.is_non_built_playbook(p)
-    }
+    result: set[Path] = set()
+    for path in repository_folders:
+        result.update({
+            p
+            for n in playbooks_names
+            if (p := path / n).exists() and mp.core.file_utils.is_non_built_playbook(p)
+        })
+
+    return result
