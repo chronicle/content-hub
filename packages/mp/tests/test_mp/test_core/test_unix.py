@@ -15,9 +15,8 @@
 from __future__ import annotations
 
 import sys
-import tomllib
 import unittest.mock
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -27,23 +26,16 @@ import mp.core.unix
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
+    from unittest.mock import MagicMock
 
 DEV_DEPENDENCY_NAME: str = "beautifulsoup4"
 REQUIREMENT_LINE: str = "black>=24.10.0"
 TIPCOMMON_NAME: str = "tipcommon"
 ENVCOMMON_NAME: str = "environmentcommon"
-INTEGRATION_TESTING_NAME: str = "integration-testing"
 NEW_TIPCOMMON_VERSION: str = "2.0.2"
-NEW_TIPCOMMON_LINE: str = f"{TIPCOMMON_NAME}=={NEW_TIPCOMMON_VERSION}"
-OLD_TIPCOMMON_LINE: str = f"{TIPCOMMON_NAME}==1.0.10"
-ENVCOMMON_LINE: str = f"{ENVCOMMON_NAME}==1.0.0"
-INTEGRATION_TESTING_LINE: str = f"{INTEGRATION_TESTING_NAME}=={NEW_TIPCOMMON_VERSION}"
-DEFAULT_INDEX_SECTION: list[dict[str, Any]] = [{"default": True, "url": "https://pypi.org/simple"}]
+OLD_TIPCOMMON_VERSION: str = "1.0.10"
+PACKAGE_PATH: str = "path/to/{0}.whl"
 DEFAULT_DEV_DEPENDENCIES: list[str] = ["pytest", "pytest-json-report", "soar-sdk"]
-DEFAULT_SOURCE_SECTION: dict[str, Any] = {
-    "soar-sdk": {"git": "https://github.com/chronicle/soar-sdk.git"}
-}
-LOCAL_DEPS_NAMES: set[str] = {ENVCOMMON_NAME, TIPCOMMON_NAME}
 
 TOML_TEMPLATE: str = f"""
 [project]
@@ -67,24 +59,10 @@ dev = ["{DEV_DEPENDENCY_NAME}>=4.13.3"]
 """
 )
 
-TOML_CONTENT_WITH_LOCAL_DEPS: str = (
-    TOML_TEMPLATE
-    + f"""
-dependencies = ['{ENVCOMMON_NAME}', '{TIPCOMMON_NAME}']
-"""
-)
-
 TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES: str = (
     TOML_TEMPLATE
     + f"""
 dependencies = ["{REQUIREMENT_LINE}"]
-"""
-)
-
-TOML_CONTENT_WITHOUT_DEPENDENCIES: str = (
-    TOML_TEMPLATE
-    + """
-dependencies = []
 """
 )
 
@@ -196,85 +174,67 @@ def test_download_wheels_from_requirements(tmp_path: Path) -> None:
     assert DEV_DEPENDENCY_NAME not in wheels
 
 
-def test_add_dependencies_to_toml(tmp_path: Path) -> None:
-    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
-    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
+@pytest.mark.parametrize(
+    ("name", "version", "has_testing_dir", "expected"),
+    [
+        (TIPCOMMON_NAME, NEW_TIPCOMMON_VERSION, True, True),
+        (TIPCOMMON_NAME, NEW_TIPCOMMON_VERSION, False, False),
+        (TIPCOMMON_NAME, OLD_TIPCOMMON_VERSION, True, False),
+        (ENVCOMMON_NAME, "1.0.0", True, False),
+    ],
+)
+def test_should_add_integration_testing(
+    tmp_path: Path, name: str, version: str, has_testing_dir: bool, expected: bool
+) -> None:
+    integration_path = tmp_path
+    if has_testing_dir:
+        (integration_path / mp.core.constants.TESTING_DIR).mkdir()
+
+    result = mp.core.unix._should_add_integration_testing(name, version, integration_path)  # noqa: SLF001
+    assert result is expected
+
+
+def test_add_dependencies_to_toml(
+    tmp_path: Path,
+    mock_subprocess_run: MagicMock,
+) -> None:
+    """Test add_dependencies_to_toml with mocked dependencies."""
     requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
-    requirements.write_text(REQUIREMENT_LINE, encoding="utf-8")
 
-    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
-    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
+    resolved_deps = [REQUIREMENT_LINE]
+    resolved_dev_deps = [
+        *DEFAULT_DEV_DEPENDENCIES,
+        PACKAGE_PATH.format(TIPCOMMON_NAME),
+        PACKAGE_PATH.format(ENVCOMMON_NAME),
+    ]
 
-    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_DEV_DEPENDENCIES)
-    assert toml_content["project"] == toml_expected_content["project"]
-    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
-    for basic_dev_dep in DEFAULT_DEV_DEPENDENCIES:
-        assert any(
-            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
-        )
+    with unittest.mock.patch(
+        "mp.core.unix._resolve_dependencies",
+        return_value=(resolved_deps, resolved_dev_deps),
+    ):
+        mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
 
+        assert mock_subprocess_run.call_count == 3
 
-def test_add_dependencies_to_toml_with_integration_testing_required(tmp_path: Path) -> None:
-    (tmp_path / mp.core.constants.TESTING_DIR).mkdir()
-    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
-    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
-    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
-    requirements.write_text(f"{NEW_TIPCOMMON_LINE}\n{ENVCOMMON_LINE}", encoding="utf-8")
+        calls = mock_subprocess_run.call_args_list
 
-    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
-    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
+        # Regular dependencies
+        regular_deps_call_args = calls[0].args[0]
+        assert REQUIREMENT_LINE in regular_deps_call_args
+        assert "--group" not in regular_deps_call_args
+        assert "--default-index" in regular_deps_call_args
 
-    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_LOCAL_DEPS)
-    assert toml_content["project"] == toml_expected_content["project"]
-    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
-    dev_deps: list[str] = [*DEFAULT_DEV_DEPENDENCIES, INTEGRATION_TESTING_NAME]
-    for basic_dev_dep in dev_deps:
-        assert any(
-            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
-        )
-    local_deps_with_integration_testing = LOCAL_DEPS_NAMES.union({INTEGRATION_TESTING_NAME})
-    assert local_deps_with_integration_testing.issubset(
-        toml_content["tool"]["uv"]["sources"].keys()
-    )
+        # VCS dev dependencies
+        vcs_dev_deps_call_args = calls[1].args[0]
+        assert "--group" in vcs_dev_deps_call_args
+        assert "dev" in vcs_dev_deps_call_args
+        assert any("git+" in arg for arg in vcs_dev_deps_call_args)
 
-
-def test_add_dependencies_to_toml_no_integration_testing_required(tmp_path: Path) -> None:
-    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
-    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
-    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
-    requirements.write_text(f"{NEW_TIPCOMMON_LINE}\n{ENVCOMMON_LINE}", encoding="utf-8")
-
-    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
-    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
-
-    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_LOCAL_DEPS)
-    assert toml_content["project"] == toml_expected_content["project"]
-    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
-    for basic_dev_dep in DEFAULT_DEV_DEPENDENCIES:
-        assert any(
-            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
-        )
-    assert LOCAL_DEPS_NAMES.issubset(toml_content["tool"]["uv"]["sources"].keys())
-
-
-def test_add_dependencies_to_toml_with_old_tipcommon(tmp_path: Path) -> None:
-    (tmp_path / mp.core.constants.TESTING_DIR).mkdir()
-    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
-    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
-    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
-    requirements.write_text(f"{OLD_TIPCOMMON_LINE}\n{ENVCOMMON_LINE}", encoding="utf-8")
-
-    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
-    toml_content: dict[str, Any] = tomllib.loads(pyproject_toml.read_text(encoding="utf-8"))
-
-    toml_expected_content: dict[str, Any] = tomllib.loads(TOML_CONTENT_WITH_LOCAL_DEPS)
-    assert toml_content["project"] == toml_expected_content["project"]
-    assert toml_content["tool"]["uv"]["index"] == DEFAULT_INDEX_SECTION
-    for basic_dev_dep in DEFAULT_DEV_DEPENDENCIES:
-        assert any(
-            dep.startswith(basic_dev_dep) for dep in toml_content["dependency-groups"]["dev"]
-        )
-    assert LOCAL_DEPS_NAMES.issubset(toml_content["tool"]["uv"]["sources"].keys())
+        # Other dev dependencies
+        dev_deps_call_args = calls[2].args[0]
+        assert "--group" in dev_deps_call_args
+        assert "dev" in dev_deps_call_args
+        assert set(resolved_dev_deps).issubset(dev_deps_call_args)
 
 
 def test_init_python_project(tmp_path: Path) -> None:
