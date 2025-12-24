@@ -43,11 +43,14 @@ import extract_msg
 import ioc_fanger
 import magic
 import olefile
+import requests
 from html2text import HTML2Text
 from msg_parser import MsOxMessage
 from soar_sdk.SiemplifyDataModel import Attachment, EntityTypes
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
 from soar_sdk.SiemplifyUtils import dict_to_flat
+from TIPCommon.data_models import CreateEntity
+from TIPCommon.rest.soar_api import add_attachment_to_case_wall, create_entity
 from tld import get_fld
 from urlextract import URLExtract
 
@@ -136,7 +139,6 @@ ENTITY_REGEXS = {
 }
 
 
-EXTEND_GRAPH_URL = "{}/external/v1/investigator/ExtendCaseGraph"
 INVALID_URL_PATTERN = r"https://[^\s]+https://[^\s]+"
 
 
@@ -1711,18 +1713,16 @@ class EmailManager:
                     False,
                     {},
                 )
-            # self.siemplify.load_case_data()
-
-        json_payload = {
-            "caseId": self.siemplify.case_id,
-            "alertIdentifier": self.siemplify.alert_id,
-            "entityType": entity_type,
-            "isPrimaryLink": is_primary,
-            "isDirectional": is_directional,
-            "typesToConnect": [],
-            "entityToConnectRegEx": f"{re.escape(linked_entity)}$",
-            "entityIdentifier": new_entity,
-        }
+        entity_to_create = CreateEntity(
+            case_id=self.siemplify.case_id,
+            alert_identifier=self.siemplify.alert_id,
+            entity_type=entity_type,
+            entity_identifier=new_entity,
+            entity_to_connect_regex=f"{re.escape(linked_entity)}$",
+            types_to_connect=[],
+            is_primary_link=is_primary,
+            is_directional=is_directional,
+        )
         if exclude_regex and re.search(exclude_regex, new_entity):
             self.logger.info(
                 f"Exclude pattern found. skipping entity {new_entity} creation.",
@@ -1731,11 +1731,7 @@ class EmailManager:
             self.siemplify.LOGGER.info(
                 f"Creating {new_entity}:{entity_type} and linking it to {linked_entity}.",
             )
-            created_entity = self.siemplify.session.post(
-                EXTEND_GRAPH_URL.format(self.siemplify.API_ROOT),
-                json=json_payload,
-            )
-            created_entity.raise_for_status()
+            create_entity(self.siemplify, entity_to_create)
 
     def build_entity_list(self, email, entity_type, exclude_regex=None):
         entities_list = []
@@ -2118,19 +2114,16 @@ class EmailManager:
         )
         attachment.case_identifier = case_id
         attachment.alert_identifier = alert_identifier
-        address = (
-            f"{self.siemplify.API_ROOT}/{'external/v1/sdk/AddAttachment?format=snake'}"
-        )
-        response = self.siemplify.session.post(address, json=attachment.__dict__)
         try:
-            self.siemplify.validate_siemplify_error(response)
-        except Exception as e:
-            if "Attachment size" in e:
+            add_attachment_to_case_wall(self.siemplify, attachment)
+
+        except requests.HTTPError as e:
+            if "Attachment size" in str(e):
                 error_message = (
                     "Attachment size should be < 5MB. "
                     f"Original file size: {attachment.orig_size}. "
                     f"Size after encoding: {attachment.size}."
                 )
-                raise Exception(
+                raise ValueError(
                     error_message,
-                )
+                ) from e
