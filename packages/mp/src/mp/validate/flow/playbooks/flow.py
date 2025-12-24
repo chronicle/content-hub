@@ -17,13 +17,10 @@ from __future__ import annotations
 import multiprocessing
 from typing import TYPE_CHECKING
 
-import rich
-
 import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
-from mp.core.custom_types import RepositoryType
 from mp.validate.data_models import (
     PRE_BUILD,
     Configurations,
@@ -38,6 +35,8 @@ from mp.validate.utils import combine_results, should_fail_program
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
+
+    from mp.core.custom_types import RepositoryType
 
 
 def validate_playbooks(
