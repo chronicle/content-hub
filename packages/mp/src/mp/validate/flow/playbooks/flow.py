@@ -87,9 +87,10 @@ def validate_playbooks(
 
 
 def _validate_repo(playbook_repo: PlaybooksRepo, run_configurations: Configurations) -> FullReport:
-    all_playbooks_in_repo: Iterable[str] = []
+    all_playbooks_in_repo: list[str] = []
     for folder in playbook_repo.repository_base_folders:
-        all_playbooks_in_repo += [p.name for p in folder.iterdir()]
+        if folder.exists():
+            all_playbooks_in_repo.extend(p.name for p in folder.iterdir())
     return _validate_playbooks(all_playbooks_in_repo, playbook_repo, run_configurations)
 
 
@@ -145,12 +146,9 @@ def _run_pre_build_validations(playbook_path: Path) -> ValidationResults:
 def _get_playbooks_paths_from_repository(
     playbooks_names: Iterable[str], repository_folders: list[Path]
 ) -> set[Path]:
-    result: set[Path] = set()
-    for path in repository_folders:
-        result.update({
-            p
-            for n in playbooks_names
-            if (p := path / n).exists() and mp.core.file_utils.is_non_built_playbook(p)
-        })
-
-    return result
+    return {
+        p
+        for path in repository_folders
+        for n in playbooks_names
+        if (p := path / n).exists() and mp.core.file_utils.is_non_built_playbook(p)
+    }

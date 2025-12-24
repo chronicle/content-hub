@@ -72,8 +72,9 @@ def _build_playbooks_repositories(
 
 def _build_single_repo_folder(repository: PlaybooksRepo) -> None:
     for folder in repository.repository_base_folders:
-        playbooks_paths: list[Path] = list(folder.iterdir())
-        repository.build_playbooks(playbooks_paths)
+        if folder.exists():
+            playbooks_paths: list[Path] = list(folder.iterdir())
+            repository.build_playbooks(playbooks_paths)
 
 
 def _build_playbooks(
@@ -113,12 +114,11 @@ def _get_playbooks_paths_from_repository(
     playbooks_names: Iterable[str], repositories_paths: list[Path], *, deconstruct: bool = False
 ) -> set[Path]:
     result: set[Path] = set()
+    normalized_names = [
+        _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
+    ]
     for path in repositories_paths:
-        normalized_names = (
-            _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
-        )
         result.update({p for n in normalized_names if (p := path / n).exists()})
-
     return result
 
 
