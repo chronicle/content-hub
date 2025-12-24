@@ -512,7 +512,7 @@ def get_playbooks_dir_path() -> Path:
     """
     content_dir: Path = mp.core.file_utils.common.utils.create_or_get_content_dir()
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        content_dir / constants.PLAYBOOKS_DIR_NAME
+        content_dir / constants.PLAYBOOKS_REPO_NAME
     )
 
 
@@ -525,6 +525,6 @@ def create_or_get_playbook_out_dir() -> Path:
     """
     out_content_dir: Path = mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
     playbooks_out_dir: Path = mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        out_content_dir / constants.PLAYBOOKS_DIR_NAME
+        out_content_dir / constants.PLAYBOOKS_REPO_NAME
     )
     return playbooks_out_dir

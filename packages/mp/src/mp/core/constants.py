@@ -481,7 +481,7 @@ RECONFIGURE_MP_MSG: str = (
     "--root-path <your_path>[/bold]."
 )
 
-PLAYBOOKS_DIR_NAME: str = "playbooks"
+PLAYBOOKS_REPO_NAME: str = "playbooks"
 PLAYBOOK_BASE_OUT_DIR_NAME: str = "Playbooks"
 PLAYBOOK_OUT_DIR_NAME: str = "playbook_definitions"
 TRIGGER_FILE_NAME: str = f"trigger{DEF_FILE_SUFFIX}"

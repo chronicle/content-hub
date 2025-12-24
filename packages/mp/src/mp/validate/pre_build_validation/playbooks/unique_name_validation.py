@@ -49,7 +49,7 @@ class UniqueNameValidation:
 
         duplicate_paths: set[Path] = set()
         for repo in mp.core.constants.PLAYBOOK_REPOSITORY_TYPE:
-            repo_path: Path = mp.core.file_utils.get_playbook_repository_base_path(repo)
+            repo_path: Path = mp.core.file_utils.get_playbook_repo_base_path(repo)
             duplicate_paths.update(_search_duplicate_names(display_name, repo_path))
 
         duplicate_paths.discard(playbook_path)
