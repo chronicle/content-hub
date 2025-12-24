@@ -74,10 +74,12 @@ def test_save_values_while_deconstruct_and_build_playbook(
 
         playbook_repo = PlaybooksRepo(mocked_repo)
         playbook_repo.deconstruct_playbook(playbook_to_deconstruct)
-        deconstructed_playbook_path: Path = playbook_repo.out_dir / playbook_to_deconstruct.stem
+        deconstructed_playbook_path: Path = (
+            playbook_repo.out_dir / playbook_to_deconstruct.stem.lower()
+        )
 
         playbook_repo.build_playbook(deconstructed_playbook_path)
-        rebuilt_playbook_path: Path = playbook_repo.out_dir / "mock_non_built_playbook.json"
+        rebuilt_playbook_path: Path = playbook_repo.out_dir / playbook_to_deconstruct.name
 
         expected, actual = test_mp.common.get_json_content(
             expected=built_playbook_path, actual=rebuilt_playbook_path
