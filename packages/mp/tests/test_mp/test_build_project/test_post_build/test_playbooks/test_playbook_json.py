@@ -23,6 +23,7 @@ import mp.build_project.post_build.playbooks.playbooks_json
 import mp.core.constants
 import test_mp.common
 from mp.build_project.playbooks_repo import PlaybooksRepo
+from mp.core.utils import to_snake_case
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,7 +39,7 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
     non_built_block_path: Path,
     playbooks_json_path: Path,
 ) -> None:
-    commercial = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+    commercial = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
     commercial.mkdir(parents=True, exist_ok=True)
 
     shutil.copytree(
@@ -52,19 +53,28 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
 
     commercial_playbooks = PlaybooksRepo(commercial)
 
-    commercial_playbooks.out_dir = commercial_playbooks.repository_base_path / "out"
+    commercial_playbooks.out_dir = commercial / "out"
     commercial_playbooks.out_dir.mkdir(parents=True, exist_ok=True)
 
     shutil.copy(
-        built_playbook_path, commercial_playbooks.out_dir / f"{non_built_playbook_path.name}.json"
+        built_playbook_path,
+        commercial_playbooks.out_dir
+        / f"{to_snake_case(non_built_playbook_path.name)}{mp.core.constants.JSON_SUFFIX}",
     )
     shutil.copy(
-        built_block_path, commercial_playbooks.out_dir / f"{non_built_block_path.name}.json"
+        built_block_path,
+        commercial_playbooks.out_dir
+        / f"{to_snake_case(non_built_block_path.name)}{mp.core.constants.JSON_SUFFIX}",
     )
 
-    community: Path = tmp_path / mp.core.constants.COMMUNITY_DIR_NAME
-    community_playbooks = PlaybooksRepo(community)
-    community_playbooks.repository_base_path.mkdir(parents=True, exist_ok=True)
+    community_repo: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
+    (community_repo / "community").mkdir(parents=True, exist_ok=True)
+    (community_repo / "custom").mkdir(parents=True, exist_ok=True)
+    (community_repo / "partner").mkdir(parents=True, exist_ok=True)
+
+    community_playbooks = PlaybooksRepo(community_repo)
+    community_playbooks.out_dir = community_repo / "out"
+    community_playbooks.out_dir.mkdir(parents=True, exist_ok=True)
 
     mp.build_project.post_build.playbooks.playbooks_json.write_playbooks_json(
         commercial_playbooks, community_playbooks

@@ -21,20 +21,25 @@ REPO_NAME: str = "marketplace"
 PROJECT_FILE: str = "pyproject.toml"
 CONTENT_DIR_NAME: str = "content"
 INTEGRATIONS_DIR_NAME: str = "response_integrations"
-COMMUNITY_DIR_NAME: str = "third_party"
-COMMERCIAL_DIR_NAME: str = "commercial"
+COMMERCIAL_REPO_NAME: str = "google"
+THIRD_PARTY_REPO_NAME: str = "third_party"
+COMMUNITY_DIR_NAME: str = "community"
+PARTNER_DIR_NAME: str = "partner"
 POWERUPS_DIR_NAME: str = "power_ups"
 INTEGRATIONS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
-    COMMUNITY_DIR_NAME: (
+    THIRD_PARTY_REPO_NAME: (
         COMMUNITY_DIR_NAME,
+        PARTNER_DIR_NAME,
         POWERUPS_DIR_NAME,
     ),
-    COMMERCIAL_DIR_NAME: (COMMERCIAL_DIR_NAME,),
+    COMMERCIAL_REPO_NAME: (COMMERCIAL_REPO_NAME,),
 }
 
 INTEGRATIONS_TYPES: tuple[str, ...] = (
+    COMMERCIAL_REPO_NAME,
+    THIRD_PARTY_REPO_NAME,
     COMMUNITY_DIR_NAME,
-    COMMERCIAL_DIR_NAME,
+    PARTNER_DIR_NAME,
     POWERUPS_DIR_NAME,
 )
 OUT_INTEGRATIONS_DIR_NAME: str = "response_integrations"
@@ -477,20 +482,17 @@ RECONFIGURE_MP_MSG: str = (
     "--root-path <your_path>[/bold]."
 )
 
-PLAYBOOKS_DIR_NAME: str = "playbooks"
+PLAYBOOKS_REPO_NAME: str = "playbooks"
 PLAYBOOK_BASE_OUT_DIR_NAME: str = "Playbooks"
 PLAYBOOK_OUT_DIR_NAME: str = "playbook_definitions"
 TRIGGER_FILE_NAME: str = f"trigger{DEF_FILE_SUFFIX}"
-DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
-OVERVIEWS_FILE_NAME: str = "overviews.yaml"
-STEPS_DIR: str = "steps"
 PLAYBOOKS_JSON_NAME: str = "playbooks.json"
 
 MAX_STEP_PARALLEL_ACTIONS: int = 5
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
 HTML_SUFFIX: str = "html"
 
-PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_DIR_NAME, COMMUNITY_DIR_NAME)
+PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_REPO_NAME, THIRD_PARTY_REPO_NAME)
 ALL_ENV: str = "*"
 DEFAULT_ENV: str = "Default Environment"
 VALID_ENVIRONMENTS: set[str] = {ALL_ENV, DEFAULT_ENV}
