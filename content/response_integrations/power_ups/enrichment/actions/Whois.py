@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date, datetime
 
 import whois_alt
 from ipwhois import IPWhois
@@ -27,32 +28,23 @@ from soar_sdk.SiemplifyUtils import (
     dict_to_flat,
     output_handler,
 )
+from TIPCommon.data_models import CreateEntity
+from TIPCommon.rest.soar_api import create_entity
 from tldextract import extract
 
 from ..core.IpLocation import DbIpCity
 
-EXTEND_GRAPH_URL = "{}/external/v1/investigator/ExtendCaseGraph"
-
-from datetime import date, datetime
-
 
 def create_entity_with_relation(siemplify, new_entity, linked_entity):
-    json_payload = {
-        "caseId": siemplify.case_id,
-        "alertIdentifier": siemplify.alert_id,
-        "entityType": "DOMAIN",
-        "isPrimaryLink": False,
-        "isDirectional": False,
-        "typesToConnect": [],
-        "entityToConnectRegEx": f"{re.escape(linked_entity.upper())}$",
-        "entityIdentifier": new_entity.upper(),
-    }
-    payload = json_payload.copy()
-    created_entity = siemplify.session.post(
-        EXTEND_GRAPH_URL.format(siemplify.API_ROOT),
-        json=json_payload,
-    )
-    created_entity.raise_for_status()
+    entity_to_create = CreateEntity(
+            case_id=siemplify.case_id,
+            alert_identifier=siemplify.alert_id,
+            entity_type="DOMAIN",
+            entity_identifier=new_entity.upper(),
+            entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
+            types_to_connect=[],
+        )
+    create_entity(siemplify, entity_to_create)
 
 
 def get_alert_entities(siemplify):
@@ -75,10 +67,10 @@ def json_serial(obj):
 def main():
     siemplify = SiemplifyAction()
 
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = ""  # human readable message, showed in UI as the action result
+    status = EXECUTION_STATE_COMPLETED
+    output_message = ""
     result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
+        None
     )
     siemplify.script_name = "Whois"
     create_entities = (
