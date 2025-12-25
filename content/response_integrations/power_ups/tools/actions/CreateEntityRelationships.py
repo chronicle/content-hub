@@ -21,8 +21,9 @@ import time
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
+from TIPCommon.data_models import CreateEntity
+from TIPCommon.rest.soar_api import create_entity
 
-EXTEND_GRAPH_URL = "{}/external/v1/investigator/ExtendCaseGraph"
 ACTION_NAME = "Create Entity Relationships"
 
 
@@ -44,11 +45,17 @@ def create_entity_relationship_by_type(
     payload = json_payload.copy()
     payload["typesToConnect"].append(entity_type)
     payload["entityIdentifier"] = new_entity
-    created_entity = siemplify.session.post(
-        EXTEND_GRAPH_URL.format(siemplify.API_ROOT),
-        json=payload,
+    entity_to_create = CreateEntity(
+        case_id=payload["caseId"],
+        alert_identifier=payload["alertIdentifier"],
+        entity_type=payload["entityType"],
+        entity_identifier=new_entity,
+        entity_to_connect_regex=None,
+        types_to_connect=payload["typesToConnect"].append(entity_type),
+        is_primary_link=payload["isPrimaryLink"],
+        is_directional=payload["isDirectional"],
     )
-    created_entity.raise_for_status()
+    create_entity(siemplify, entity_to_create)
 
 
 def create_entity_relationship_by_entity(
@@ -60,11 +67,17 @@ def create_entity_relationship_by_entity(
     payload = json_payload.copy()
     payload["entityToConnectRegEx"] = f"{re.escape(linked_entity)}$"
     payload["entityIdentifier"] = new_entity
-    created_entity = siemplify.session.post(
-        EXTEND_GRAPH_URL.format(siemplify.API_ROOT),
-        json=payload,
+    entity_to_create = CreateEntity(
+        case_id=payload["caseId"],
+        alert_identifier=payload["alertIdentifier"],
+        entity_type=payload["entityType"],
+        entity_identifier=new_entity,
+        entity_to_connect_regex=f"{re.escape(linked_entity)}$",
+        types_to_connect=[],
+        is_primary_link=payload["isPrimaryLink"],
+        is_directional=payload["isDirectional"],
     )
-    created_entity.raise_for_status()
+    create_entity(siemplify, entity_to_create)
 
 
 @output_handler
@@ -125,11 +138,9 @@ def main():
     if rel_direction == "Linked":
         is_relation_type = False
 
-    enrich_dict = {}
     updated_entities = []
 
     json_results = {}
-    entities_to_enrich = []
     case_id = siemplify.case_id
     alert_identifier = siemplify.current_alert.identifier
     output_message = ""
@@ -148,7 +159,6 @@ def main():
     for entity in entity_identifiers:
         json_results[entity] = {}
 
-    enrichment_entities = {}
     siemplify.LOGGER.info(f"Entities to create:{entity_identifiers}")
     alert_entities = get_alert_entities(siemplify)
 
@@ -184,7 +194,10 @@ def main():
                 )
                 result_value = True
                 linked_entities_arr.append(linked_entity)
-                output_message += f"The Entity {new_entity_identifier} was created and linked to {linked_entity} : {linked_entity_type} successfully\n"
+                output_message += (
+                    f"The Entity {new_entity_identifier} was created and linked to {linked_entity}"
+                    f" : {linked_entity_type} successfully\n"
+                )
             except Exception as e:
                 siemplify.LOGGER.error(
                     f"Error creating entity:{linked_entity}, error: {e}",
@@ -192,7 +205,8 @@ def main():
                 status = EXECUTION_STATE_FAILED
 
             siemplify.LOGGER.info(
-                f"The Entity {new_entity_identifier} was created and linked to {linked_entity} : {linked_entity_type} successfully\n",
+                f"The Entity {new_entity_identifier} was created and linked to {linked_entity}"
+                f" : {linked_entity_type} successfully\n",
             )
 
             json_results[new_entity_identifier]["status"] = "created"
@@ -224,10 +238,14 @@ def main():
                     f"Error creating entity:{target_entity}, error: {e}",
                 )
                 status = EXECUTION_STATE_FAILED
-            output_message += f"The Entity {entity_identifiers[0]} was created and linked to {target_entity} : {linked_entity_type} successfully\n"
+            output_message += (
+                f"The Entity {entity_identifiers[0]} was created and linked to {target_entity}"
+                f" : {linked_entity_type} successfully\n"
+            )
 
             siemplify.LOGGER.info(
-                f"The Entity {entity_identifiers[0]} was created and linked to {target_entity} : {linked_entity_type} successfully\n",
+                f"The Entity {entity_identifiers[0]} was created and linked to {target_entity} "
+                f": {linked_entity_type} successfully\n",
             )
 
         json_results[entity_identifiers[0]]["status"] = "created"
@@ -258,10 +276,14 @@ def main():
                     f"Error creating entity:{linked_entity}, error: {e}",
                 )
                 status = EXECUTION_STATE_FAILED
-            output_message += f"The Entity {new_entity_identifier} was created and linked to {linked_entity} : {linked_entity_type} successfully\n"
+            output_message += (
+                f"The Entity {new_entity_identifier} was created and linked to {linked_entity}"
+                f" : {linked_entity_type} successfully\n"
+            )
 
             siemplify.LOGGER.info(
-                f"The Entity {new_entity_identifier} was created and linked to {linked_entity} : {linked_entity_type} successfully\n",
+                f"The Entity {new_entity_identifier} was created and linked to {linked_entity}"
+                f" : {linked_entity_type} successfully\n",
             )
 
             json_results[new_entity_identifier]["status"] = "created"
@@ -289,9 +311,13 @@ def main():
             result_value = True
             target_entities_str = ",".join(target_entities)
             siemplify.LOGGER.info(
-                f"The Entity {new_entity_identifier} was created and linked to {target_entities_str} successfully\n",
+                f"The Entity {new_entity_identifier} was created and linked to "
+                f"{target_entities_str} successfully\n",
             )
-            output_message += f"The Entity {new_entity_identifier} was created and linked to {target_entities_str} successfully\n"
+            output_message += (
+                f"The Entity {new_entity_identifier} was created and linked to "
+                f"{target_entities_str} successfully\n"
+            )
             json_results[new_entity_identifier]["status"] = "created"
 
             linked_entity_obj = {}

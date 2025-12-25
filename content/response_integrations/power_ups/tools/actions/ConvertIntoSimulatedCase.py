@@ -20,22 +20,18 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.rest.soar_api import import_simulator_custom_case
 
 
 # The output_handler decorator manages output for Siemplify actions.
 @output_handler
 def main():
     try:
-        # SiemplifyAction encapsulates the context of the action being run, including alert and entity data.
-        # get_source_file=True indicates that the action requires the original file that triggered the alert.
         siemplify = SiemplifyAction(get_source_file=True)
+
     except TypeError:
-        # If get_source_file is not a valid parameter, default to a simple SiemplifyAction.
         siemplify = SiemplifyAction()
 
-    # Extract parameters from the action context. These parameters can be set by the user in the Siemplify platform.
-    # "Push to Simulated Cases" and "Save JSON as Case Wall File" are boolean parameters, while
-    # "Override Alert Name" and "Full path name" are string parameters.
     pushToSimulated = siemplify.extract_action_param(
         "Push to Simulated Cases",
         input_type=bool,
@@ -108,11 +104,7 @@ def main():
 
     # Push the data to the simulator or save it as a JSON file, depending on the parameters.
     if pushToSimulated:
-        address = (
-            f"{siemplify.API_ROOT}/{'external/v1/attackssimulator/ImportCustomCase'}"
-        )
-        response = siemplify.session.post(address, json=myJson)
-        siemplify.validate_siemplify_error(response)
+        import_simulator_custom_case(siemplify, myJson)
         output_message += " Pushed to Simulated "
 
     if saveToCaseWall:
