@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def get_playbook_repo_base_path(playbooks_classification: str) -> Path:
+def get_or_create_playbook_repo_base_path(playbooks_classification: str) -> Path:
     """Get a content-hub playbook-specific repository path.
 
     Args:
@@ -53,15 +53,26 @@ def get_playbook_base_folders_paths(
     Returns:
         the root folder for the playbooks' repository.
 
+    Raises:
+            ValueError: If the repository_classification is not valid.
+
     """
     match repository_classification:
         case mp.core.constants.COMMERCIAL_REPO_NAME:
-            return [repo_base_path]
+            return [mp.core.file_utils.common.create_dir_if_not_exists(repo_base_path)]
         case mp.core.constants.THIRD_PARTY_REPO_NAME:
             return [
-                repo_base_path / mp.core.constants.COMMUNITY_DIR_NAME,
-                repo_base_path / mp.core.constants.PARTNER_DIR_NAME,
+                mp.core.file_utils.common.create_dir_if_not_exists(
+                    repo_base_path / mp.core.constants.COMMUNITY_DIR_NAME
+                ),
+                mp.core.file_utils.common.create_dir_if_not_exists(
+                    repo_base_path / mp.core.constants.PARTNER_DIR_NAME
+                ),
             ]
+
+        case _:
+            msg: str = f"Received unknown playbook classification: {repository_classification}"
+            raise ValueError(msg)
 
 
 def get_playbook_out_dir() -> Path:

@@ -38,10 +38,14 @@ def build_playbooks(
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
     commercial_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repo_base_path(mp.core.constants.COMMERCIAL_REPO_NAME)
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.COMMERCIAL_REPO_NAME
+        )
     )
     community_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repo_base_path(mp.core.constants.THIRD_PARTY_REPO_NAME)
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.THIRD_PARTY_REPO_NAME
+        )
     )
 
     if playbooks:
@@ -71,10 +75,12 @@ def _build_playbooks_repositories(
 
 
 def _build_single_repo_folder(repository: PlaybooksRepo) -> None:
-    for folder in repository.repository_base_folders:
-        if folder.exists():
+    for folder in repository.base_folders:
+        try:
             playbooks_paths: list[Path] = list(folder.iterdir())
             repository.build_playbooks(playbooks_paths)
+        except FileNotFoundError:
+            continue
 
 
 def _build_playbooks(
@@ -84,7 +90,7 @@ def _build_playbooks(
     deconstruct: bool,
 ) -> set[str]:
     valid_playbooks_paths: set[Path] = _get_playbooks_paths_from_repository(
-        playbooks, repository.repository_base_folders, deconstruct=deconstruct
+        playbooks, repository.base_folders, deconstruct=deconstruct
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
     normalized_playbooks: set[str] = {
@@ -93,7 +99,7 @@ def _build_playbooks(
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
         rich.print(
-            f"The following playbooks could not be found in the {repository.repository_name} "
+            f"The following playbooks could not be found in the {repository.name} "
             f"repository: {', '.join(not_found_playbooks)}"
         )
 

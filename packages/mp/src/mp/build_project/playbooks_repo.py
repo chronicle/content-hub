@@ -34,11 +34,9 @@ if TYPE_CHECKING:
 
 class PlaybooksRepo:
     def __init__(self, playbook_repository_path: Path) -> None:
-        self.repository_name: str = playbook_repository_path.name
-        self.repository_base_folders: list[Path] = (
-            mp.core.file_utils.get_playbook_base_folders_paths(
-                playbook_repository_path.name, playbook_repository_path
-            )
+        self.name: str = playbook_repository_path.name
+        self.base_folders: list[Path] = mp.core.file_utils.get_playbook_base_folders_paths(
+            playbook_repository_path.name, playbook_repository_path
         )
         self.out_dir: Path = mp.core.file_utils.get_playbook_out_dir()
 

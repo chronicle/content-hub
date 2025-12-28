@@ -57,10 +57,14 @@ def validate_playbooks(
 
     """
     commercial_playbooks_repo: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repo_base_path(mp.core.constants.COMMERCIAL_REPO_NAME)
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.COMMERCIAL_REPO_NAME
+        )
     )
     community_playbooks_repo: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repo_base_path(mp.core.constants.THIRD_PARTY_REPO_NAME)
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.THIRD_PARTY_REPO_NAME
+        )
     )
 
     run_configurations: Configurations = Configurations(only_pre_build=only_pre_build)
@@ -88,7 +92,7 @@ def validate_playbooks(
 
 def _validate_repo(playbook_repo: PlaybooksRepo, run_configurations: Configurations) -> FullReport:
     all_playbooks_in_repo: list[str] = []
-    for folder in playbook_repo.repository_base_folders:
+    for folder in playbook_repo.base_folders:
         if folder.exists():
             all_playbooks_in_repo.extend(p.name for p in folder.iterdir())
     return _validate_playbooks(all_playbooks_in_repo, playbook_repo, run_configurations)
@@ -101,7 +105,7 @@ def _validate_playbooks(
 ) -> FullReport:
     validation_outputs: FullReport = {}
     playbooks_paths: Iterable[Path] = _get_playbooks_paths_from_repository(
-        playbooks_names, content_repo.repository_base_folders
+        playbooks_names, content_repo.base_folders
     )
 
     if not playbooks_paths:

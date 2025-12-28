@@ -59,22 +59,39 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
         integrations_classification: the name of the marketplace
 
     Returns:
-        The marketplace's integrations' directories paths
+        The marketplace's integrations' directories paths.
+
+    Raises:
+        ValueError: If the integrations_classification is not valid.
 
     """
     base_path: Path = create_or_get_integrations_path()
     match integrations_classification:
         case constants.COMMERCIAL_REPO_NAME:
-            return [base_path / constants.COMMERCIAL_REPO_NAME]
+            return [
+                mp.core.file_utils.common.create_dir_if_not_exists(
+                    base_path / constants.COMMERCIAL_REPO_NAME
+                )
+            ]
 
         case constants.THIRD_PARTY_REPO_NAME:
             third_party = base_path / constants.THIRD_PARTY_REPO_NAME
 
             return [
-                base_path / constants.POWERUPS_DIR_NAME,
-                third_party / constants.COMMUNITY_DIR_NAME,
-                third_party / constants.PARTNER_DIR_NAME,
+                mp.core.file_utils.common.create_dir_if_not_exists(
+                    base_path / constants.POWERUPS_DIR_NAME
+                ),
+                mp.core.file_utils.common.create_dir_if_not_exists(
+                    third_party / constants.COMMUNITY_DIR_NAME
+                ),
+                mp.core.file_utils.common.create_dir_if_not_exists(
+                    third_party / constants.PARTNER_DIR_NAME
+                ),
             ]
+
+        case _:
+            msg: str = f"Received unknown integration classification: {integrations_classification}"
+            raise ValueError(msg)
 
 
 def create_or_get_integrations_path() -> Path:
@@ -501,30 +518,3 @@ def load_yaml_file(path: Path) -> dict[str, Any]:
     except FileNotFoundError as e:
         msg = f"File {path} does not exist"
         raise ValueError(msg) from e
-
-
-def get_playbooks_dir_path() -> Path:
-    """Get the content/playbooks path, creating it if it doesn't exist.
-
-    Returns:
-        The content/playbooks directory path.
-
-    """
-    content_dir: Path = mp.core.file_utils.common.utils.create_or_get_content_dir()
-    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        content_dir / constants.PLAYBOOKS_REPO_NAME
-    )
-
-
-def create_or_get_playbook_out_dir() -> Path:
-    """Get the out/content/playbooks path, creating it if it doesn't exist.
-
-    Returns:
-        The out/content/playbooks directory path.
-
-    """
-    out_content_dir: Path = mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
-    playbooks_out_dir: Path = mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        out_content_dir / constants.PLAYBOOKS_REPO_NAME
-    )
-    return playbooks_out_dir

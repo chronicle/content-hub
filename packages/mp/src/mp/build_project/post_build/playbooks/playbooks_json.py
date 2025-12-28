@@ -54,10 +54,10 @@ def write_playbooks_json(
 ) -> None:
     """Generate and writes the playbooks.json file."""
     commercial_playbooks_json: list[BuiltPlaybookDisplayInfo] = _generate_playbooks_display_info(
-        commercial_playbooks.repository_base_folders, commercial_playbooks.out_dir
+        commercial_playbooks.base_folders, commercial_playbooks.out_dir
     )
     community_playbooks_json: list[BuiltPlaybookDisplayInfo] = _generate_playbooks_display_info(
-        community_playbooks.repository_base_folders, community_playbooks.out_dir
+        community_playbooks.base_folders, community_playbooks.out_dir
     )
     out_path: Path = commercial_playbooks.out_dir.parent / mp.core.constants.PLAYBOOKS_JSON_NAME
     playbooks_json: list[BuiltPlaybookDisplayInfo] = (
