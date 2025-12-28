@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.core.custom_types import RepositoryType  # noqa: TC001
+from mp.core.custom_types import RepositoryType
 from mp.core.utils import (
     ensure_valid_list,
     should_preform_integration_logic,
