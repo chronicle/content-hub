@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from mp.core.custom_types import RepositoryType
 
 
-def get_integrations_path(integrations_classification: RepositoryType) -> Path:
+def get_integrations_repo_base_path(integrations_classification: RepositoryType) -> Path:
     """Get a marketplace integrations' path.
 
     Args:
@@ -50,6 +50,40 @@ def get_integrations_path(integrations_classification: RepositoryType) -> Path:
 
     """
     return create_or_get_integrations_path() / integrations_classification.value
+
+
+def get_integration_base_folders_paths(integrations_classification: str) -> list[Path]:
+    """Get all marketplace integrations sub-dirs paths.
+
+    Args:
+        integrations_classification: the name of the marketplace
+
+    Returns:
+        The marketplace's integrations' directories paths.
+
+    Raises:
+        ValueError: If the integrations_classification is not valid.
+
+    """
+    base_path: Path = create_or_get_integrations_path()
+    match integrations_classification:
+        case constants.COMMERCIAL_REPO_NAME:
+            return mp.core.file_utils.common.create_dirs_if_not_exists(
+                base_path / constants.COMMERCIAL_REPO_NAME
+            )
+
+        case constants.THIRD_PARTY_REPO_NAME:
+            third_party = base_path / constants.THIRD_PARTY_REPO_NAME
+
+            return mp.core.file_utils.common.create_dirs_if_not_exists(
+                base_path / constants.POWERUPS_DIR_NAME,
+                third_party / constants.COMMUNITY_DIR_NAME,
+                third_party / constants.PARTNER_DIR_NAME,
+            )
+
+        case _:
+            msg: str = f"Received unknown integration classification: {integrations_classification}"
+            raise ValueError(msg)
 
 
 def create_or_get_integrations_path() -> Path:
@@ -63,22 +97,6 @@ def create_or_get_integrations_path() -> Path:
         mp.core.file_utils.common.utils.create_or_get_content_dir()
         / constants.INTEGRATIONS_DIR_NAME
     )
-
-
-def get_all_integrations_paths(integrations_classification: str) -> list[Path]:
-    """Get all marketplace integrations sub-dirs paths.
-
-    Args:
-        integrations_classification: the name of the marketplace
-
-    Returns:
-        The marketplace's integrations' directories paths
-
-    """
-    marketplace_dir_names: tuple[str, ...] = constants.INTEGRATIONS_DIRS_NAMES_DICT[
-        integrations_classification
-    ]
-    return [create_or_get_integrations_path() / dir_name for dir_name in marketplace_dir_names]
 
 
 def create_or_get_integrations_dir() -> Path:
@@ -381,7 +399,7 @@ def is_commercial_integration(path: Path) -> bool:
     return (
         is_integration(path)
         and path.parent.name
-        in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_DIR_NAME]
+        in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_REPO_NAME]
     )
 
 
@@ -492,30 +510,3 @@ def load_yaml_file(path: Path) -> dict[str, Any]:
     except FileNotFoundError as e:
         msg = f"File {path} does not exist"
         raise ValueError(msg) from e
-
-
-def get_playbooks_dir_path() -> Path:
-    """Get the content/playbooks path, creating it if it doesn't exist.
-
-    Returns:
-        The content/playbooks directory path.
-
-    """
-    content_dir: Path = mp.core.file_utils.common.utils.create_or_get_content_dir()
-    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        content_dir / constants.PLAYBOOKS_DIR_NAME
-    )
-
-
-def create_or_get_playbook_out_dir() -> Path:
-    """Get the out/content/playbooks path, creating it if it doesn't exist.
-
-    Returns:
-        The out/content/playbooks directory path.
-
-    """
-    out_content_dir: Path = mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
-    playbooks_out_dir: Path = mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        out_content_dir / constants.PLAYBOOKS_DIR_NAME
-    )
-    return playbooks_out_dir
