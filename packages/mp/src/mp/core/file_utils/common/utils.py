@@ -16,11 +16,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import anyio
+
 import mp.core.config
 import mp.core.constants
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from anyio import Path
 
 
 def create_or_get_content_dir() -> Path:
@@ -33,7 +35,7 @@ def create_or_get_content_dir() -> Path:
 
     """
     return create_dir_if_not_exists(
-        mp.core.config.get_marketplace_path() / mp.core.constants.CONTENT_DIR_NAME
+        anyio.Path(mp.core.config.get_marketplace_path() / mp.core.constants.CONTENT_DIR_NAME)
     )
 
 
@@ -59,7 +61,7 @@ def create_or_get_out_dir() -> Path:
 
     """
     return create_dir_if_not_exists(
-        mp.core.config.get_marketplace_path() / mp.core.constants.OUT_DIR_NAME
+        anyio.Path(mp.core.config.get_marketplace_path() / mp.core.constants.OUT_DIR_NAME)
     )
 
 

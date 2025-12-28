@@ -26,5 +26,5 @@ import abc
 
 class Restructurable(abc.ABC):
     @abc.abstractmethod
-    def restructure(self) -> None:
+    async def restructure(self) -> None:
         """Restructure the component."""

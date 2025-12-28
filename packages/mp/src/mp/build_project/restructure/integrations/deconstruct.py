@@ -27,6 +27,7 @@ import shutil
 import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
 
+import anyio
 import rich
 import toml
 
@@ -78,17 +79,17 @@ def _update_pyproject_from_integration_meta(
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class DeconstructIntegration:
-    path: Path
-    out_path: Path
+    path: anyio.Path
+    out_path: anyio.Path
     integration: Integration
 
     @property
-    def core_module_names(self) -> set[str]:
+    async def core_module_names(self) -> set[str]:
         """Extract the names of manager modules from the built integration path."""
         managers_path = self.path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
-        return {f.stem for f in managers_path.glob("*.py") if f.stem != "__init__"}
+        return {f.stem async for f in managers_path.glob("*.py") if f.stem != "__init__"}
 
-    def initiate_project(self) -> None:
+    async def initiate_project(self) -> None:
         """Initialize a new python project.
 
         Initializes a project by setting up a Python environment, updating the
@@ -98,7 +99,7 @@ class DeconstructIntegration:
         """
         mp.core.unix.init_python_project_if_not_exists(self.out_path)
         self.update_pyproject()
-        requirements: Path = self.path / mp.core.constants.REQUIREMENTS_FILE
+        requirements: anyio.Path = anyio.Path(self.path / mp.core.constants.REQUIREMENTS_FILE)
         if requirements.exists():
             try:
                 rich.print(f"Adding requirements to {mp.core.constants.PROJECT_FILE}")

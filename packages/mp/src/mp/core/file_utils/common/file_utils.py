@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import shutil
 from typing import TYPE_CHECKING
 
@@ -22,28 +23,29 @@ import yaml
 import mp.core.config
 
 if TYPE_CHECKING:
+    import pathlib
     from collections.abc import Mapping, Sequence
-    from pathlib import Path
     from typing import Any
+
+    import anyio
 
 
 VALID_REPEATED_FILES: set[str] = {"__init__.py"}
 
 
-def recreate_dir(path: Path) -> None:
+async def recreate_dir(path: anyio.Path) -> None:
     """Remove the provided directory and create a new one."""
-    if path.exists() and is_path_in_marketplace(path):
+    if await path.exists() and is_path_in_marketplace(path):
         shutil.rmtree(path)
-        path.mkdir()
+        await path.mkdir()
 
 
-def remove_paths_if_exists(*paths: Path) -> None:
+async def remove_paths_if_exists(*paths: anyio.Path) -> None:
     """Remove all the provided paths."""
-    for path in paths:
-        _remove_path_if_exists(path)
+    await asyncio.gather(*[_remove_path_if_exists(path) for path in paths])
 
 
-def remove_rglobs_if_exists(*patterns: str, root: Path) -> None:
+async def remove_rglobs_if_exists(*patterns: str, root: anyio.Path) -> None:
     """Remove all files and directories matching the given glob patterns.
 
     Args:
@@ -52,19 +54,18 @@ def remove_rglobs_if_exists(*patterns: str, root: Path) -> None:
 
     """
     for pattern in patterns:
-        for path in root.rglob(pattern):
-            _remove_path_if_exists(path)
+        await asyncio.gather(*[_remove_path_if_exists(path) async for path in root.rglob(pattern)])
 
 
-def _remove_path_if_exists(path: Path) -> None:
-    if path.is_file() and is_path_in_marketplace(path):
+async def _remove_path_if_exists(path: anyio.Path) -> None:
+    if await path.is_file() and is_path_in_marketplace(path):
         path.unlink(missing_ok=True)
 
-    elif path.is_dir() and path.exists() and is_path_in_marketplace(path):
+    elif await path.is_dir() and await path.exists() and is_path_in_marketplace(path):
         shutil.rmtree(path)
 
 
-def is_path_in_marketplace(path: Path) -> bool:
+def is_path_in_marketplace(path: anyio.Path) -> bool:
     """Check whether a path is in the marketplace.
 
     This is mostly used to ensure any file deletion will not occur outside the
@@ -77,7 +78,7 @@ def is_path_in_marketplace(path: Path) -> bool:
     return mp.core.config.get_marketplace_path() in path.parents
 
 
-def flatten_dir(path: Path, dest: Path) -> None:
+async def flatten_dir(path: anyio.Path, dest: anyio.Path) -> None:
     """Flatten a nested directory.
 
     Args:
@@ -89,7 +90,7 @@ def flatten_dir(path: Path, dest: Path) -> None:
 
     """
     if path.is_file() and is_path_in_marketplace(path):
-        new_path: Path = dest / path.name
+        new_path: anyio.Path = dest / path.name
         if new_path.exists():
             if new_path.name in VALID_REPEATED_FILES:
                 return
@@ -100,18 +101,18 @@ def flatten_dir(path: Path, dest: Path) -> None:
         shutil.copyfile(path, new_path)
 
     elif path.is_dir() and is_path_in_marketplace(path):
-        for child in path.iterdir():
+        async for child in path.iterdir():
             flatten_dir(child, dest)
 
 
-def remove_files_by_suffix_from_dir(dir_: Path, suffix: str) -> None:
+async def remove_files_by_suffix_from_dir(dir_: anyio.Path, suffix: str) -> None:
     """Remove all files with a specific suffix from a directory."""
-    for file in dir_.rglob(f"*{suffix}"):
+    async for file in dir_.rglob(f"*{suffix}"):
         if file.is_file() and is_path_in_marketplace(file):
             file.unlink(missing_ok=True)
 
 
-def save_yaml(data: Mapping[str, Any] | Sequence[Mapping[str, Any]], path: Path) -> None:
+def save_yaml(data: Mapping[str, Any] | Sequence[Mapping[str, Any]], path: pathlib.Path) -> None:
     """Create or overwrites a YAML file at the specified path with the provided data.
 
     Args:

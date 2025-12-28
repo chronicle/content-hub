@@ -19,6 +19,7 @@ import tomllib
 import unittest.mock
 from typing import TYPE_CHECKING
 
+import anyio
 import pytest
 
 import mp.core.constants
@@ -120,11 +121,12 @@ def test_get_flags_to_command(flags: Mapping[str, str | bool], expected: list[st
     assert mp.core.unix.get_flags_to_command(**flags) == expected
 
 
-def test_compile_integration_dependencies(tmp_path: Path) -> None:
-    pyproject_toml_path: Path = tmp_path / mp.core.constants.PROJECT_FILE
-    pyproject_toml_path.write_text(TOML_CONTENT_WITH_DEV_DEPENDENCIES, encoding="utf-8")
-    requirements_path: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
-    assert not requirements_path.exists()
+@pytest.mark.anyio
+async def test_compile_integration_dependencies(tmp_path: Path) -> None:
+    pyproject_toml_path: anyio.Path = anyio.Path(tmp_path / mp.core.constants.PROJECT_FILE)
+    await pyproject_toml_path.write_text(TOML_CONTENT_WITH_DEV_DEPENDENCIES, encoding="utf-8")
+    requirements_path: anyio.Path = anyio.Path(tmp_path / mp.core.constants.REQUIREMENTS_FILE)
+    assert not await requirements_path.exists()
 
     mp.core.unix.compile_core_integration_dependencies(
         pyproject_toml_path.parent,
@@ -136,6 +138,7 @@ def test_compile_integration_dependencies(tmp_path: Path) -> None:
     assert DEV_DEPENDENCY_NAME not in requirements
 
 
+@pytest.mark.anyio
 def test_compile_core_integration_dependencies_with_no_dev_does_not_fail(
     tmp_path: Path,
 ) -> None:
@@ -144,7 +147,7 @@ def test_compile_core_integration_dependencies_with_no_dev_does_not_fail(
         TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES,
         encoding="utf-8",
     )
-    requirements_path: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements_path: anyio.Path = anyio.Path(tmp_path / mp.core.constants.REQUIREMENTS_FILE)
     assert not requirements_path.exists()
 
     mp.core.unix.compile_core_integration_dependencies(
@@ -157,11 +160,12 @@ def test_compile_core_integration_dependencies_with_no_dev_does_not_fail(
     assert DEV_DEPENDENCY_NAME not in requirements
 
 
+@pytest.mark.anyio
 def test_download_wheels_from_requirements(tmp_path: Path) -> None:
     pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
     pyproject_toml.write_text(TOML_CONTENT_WITH_DEV_DEPENDENCIES, encoding="utf-8")
 
-    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
+    requirements: anyio.Path = anyio.Path(tmp_path / mp.core.constants.REQUIREMENTS_FILE)
     mp.core.unix.compile_core_integration_dependencies(
         pyproject_toml.parent,
         requirements,

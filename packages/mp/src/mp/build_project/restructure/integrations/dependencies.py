@@ -23,26 +23,23 @@ and then copies the resolved dependencies to the integration's output path.
 from __future__ import annotations
 
 import dataclasses
-import pathlib
 import shutil
 import tempfile
-from typing import TYPE_CHECKING
+
+import anyio
 
 import mp.core.constants
 import mp.core.unix
 
 from .restructurable import Restructurable
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Dependencies(Restructurable):
-    path: Path
-    out_path: Path
+    path: anyio.Path
+    out_path: anyio.Path
 
-    def restructure(self) -> None:
+    async def restructure(self) -> None:
         """Restructure an integration's dependencies, downloading them to `out_path`."""
         with (
             tempfile.NamedTemporaryFile(
@@ -53,21 +50,21 @@ class Dependencies(Restructurable):
                 delete=False,
             ) as f,
         ):
-            requirements: Path = pathlib.Path(f.name)
+            requirements: anyio.Path = anyio.Path(f.name)
         try:
-            mp.core.unix.compile_core_integration_dependencies(
+            await mp.core.unix.compile_core_integration_dependencies(
                 project_path=self.path,
                 requirements_path=requirements,
             )
 
             with tempfile.TemporaryDirectory(prefix="dependencies_") as d:
-                deps: Path = pathlib.Path(d)
-                mp.core.unix.download_wheels_from_requirements(
+                deps: anyio.Path = anyio.Path(d)
+                await mp.core.unix.download_wheels_from_requirements(
                     project_path=self.path,
                     requirements_path=requirements,
                     dst_path=deps,
                 )
-                out_deps: Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+                out_deps: anyio.Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
                 shutil.copytree(deps, out_deps)
         finally:
-            requirements.unlink()
+            await requirements.unlink()

@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
-import multiprocessing
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Annotated
@@ -26,6 +26,7 @@ import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
+import mp.core.utils
 from mp.core.code_manipulation import TestWarning
 from mp.core.custom_types import Products, RepositoryType
 from mp.core.utils import ensure_valid_list, is_windows
@@ -238,19 +239,12 @@ def _get_tests_script_paths() -> Path:
 
 
 def _run_script_on_paths(script_path: Path, paths: Iterable[Path]) -> list[IntegrationTestResults]:
-    paths = [p for p in paths if p.is_dir()]
-    all_integration_results: list[IntegrationTestResults] = []
-
-    processes: int = mp.core.config.get_processes_number()
-    tasks_arguments = [(script_path, p) for p in paths]
-    with multiprocessing.Pool(processes=processes) as pool:
-        results_iterator = pool.starmap(_run_tests_for_single_integration, tasks_arguments)
-
-        for result in results_iterator:
-            if result is not None:
-                all_integration_results.append(result)  # noqa: PERF401
-
-    return all_integration_results
+    paths: list[Path] = [p for p in paths if p.is_dir()]
+    tasks_arguments: list[tuple[Path, Path]] = [(script_path, p) for p in paths]
+    results: Iterable[IntegrationTestResults | None] = asyncio.run(
+        mp.core.utils.threaded_test_items(_run_tests_for_single_integration, tasks_arguments)
+    )
+    return [r for r in results if r is not None]
 
 
 def _run_tests_for_single_integration(

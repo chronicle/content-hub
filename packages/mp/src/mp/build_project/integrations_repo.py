@@ -24,13 +24,12 @@ built integrations back into their source structure.
 
 from __future__ import annotations
 
-import multiprocessing
+import asyncio
 import shutil
 from typing import TYPE_CHECKING
 
 import rich
 
-import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
@@ -89,9 +88,10 @@ class IntegrationsRepo:
             group_paths: The paths of integrations to build
 
         """
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_group, group_paths)
+        paths: Iterator[Path] = (
+            p for p in group_paths if p.exists() and mp.core.file_utils.is_group(p)
+        )
+        asyncio.run(mp.core.utils.threaded_build_items(self.build_group, paths))
 
     def build_group(self, group_dir: Path) -> None:
         """Build a single group provided by `group_path`.
@@ -119,9 +119,7 @@ class IntegrationsRepo:
         paths: Iterator[Path] = (
             p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)
         )
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_integration, paths)
+        asyncio.run(mp.core.utils.threaded_build_items(self.build_integration, paths))
 
     def build_integration(self, integration_path: Path) -> None:
         """Build a single integration provided by `integration_path`.
@@ -205,9 +203,7 @@ class IntegrationsRepo:
         paths: Iterator[Path] = (
             p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)
         )
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.deconstruct_integration, paths)
+        asyncio.run(mp.core.utils.threaded_build_items(self.deconstruct_integration, paths))
 
     def deconstruct_integration(self, integration_path: Path) -> None:
         """Deconstruct a single integration provided by `integration_path`.

@@ -16,11 +16,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import pathlib
 import subprocess as sp  # noqa: S404
 import sys
 from typing import IO, TYPE_CHECKING
 
+import anyio
 import rich
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
@@ -31,6 +33,7 @@ from . import config, constants, file_utils
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
+
 
 COMMAND_ERR_MSG: str = "Error happened while executing a command: {0}"
 
@@ -43,7 +46,10 @@ class NonFatalCommandError(NonFatalValidationError):
     """Non-fatal error that happens during shell commands."""
 
 
-def compile_core_integration_dependencies(project_path: Path, requirements_path: Path) -> None:
+async def compile_core_integration_dependencies(
+    project_path: anyio.Path,
+    requirements_path: anyio.Path,
+) -> None:
     """Compile/Export all project dependencies into a requirements' file.
 
     Args:
@@ -76,7 +82,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
     command.extend(runtime_config)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        await _run_async_command(command, cwd=project_path, check=True)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
@@ -94,31 +100,10 @@ def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
     return []
 
 
-def run_pip_command(command: list[str], cwd: Path) -> None:
-    """Run a pip command and ignore safe-to-ignore errors.
-
-    Raises:
-        FatalCommandError: if a pip command fails.
-
-    """
-    try:
-        sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
-    except sp.CalledProcessError as e:
-        # Check if this is a safe-to-ignore error / marker issue
-        if ignored_packages := _get_safe_to_ignore_packages(e):
-            message = (
-                f"[INFO] Ignored safe-to-ignore packages due to Python version "
-                f"incompatibility: {', '.join(ignored_packages)}\n"
-            )
-            rich.print(message)
-            return
-        raise FatalCommandError from e
-
-
-def download_wheels_from_requirements(
-    project_path: Path,
-    requirements_path: Path,
-    dst_path: Path,
+async def download_wheels_from_requirements(
+    project_path: anyio.Path,
+    requirements_path: anyio.Path,
+    dst_path: anyio.Path,
 ) -> None:
     """Download `.whl` files from a requirements' file.
 
@@ -162,12 +147,33 @@ def download_wheels_from_requirements(
                 "--platform",
                 "manylinux_2_17_x86_64",
             ])
-        run_pip_command(command, cwd=project_path)
+        await run_pip_command(command, cwd=project_path)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def add_dependencies_to_toml(project_path: Path, requirements_path: Path) -> None:
+async def run_pip_command(command: list[str], cwd: anyio.Path) -> None:
+    """Run a pip command and ignore safe-to-ignore errors.
+
+    Raises:
+        FatalCommandError: if a pip command fails.
+
+    """
+    try:
+        await _run_async_command(command, cwd=cwd, check=True)
+    except sp.CalledProcessError as e:
+        # Check if this is a safe-to-ignore error / marker issue
+        if ignored_packages := _get_safe_to_ignore_packages(e):
+            message = (
+                f"[INFO] Ignored safe-to-ignore packages due to Python version "
+                f"incompatibility: {', '.join(ignored_packages)}\n"
+            )
+            rich.print(message)
+            return
+        raise FatalCommandError from e
+
+
+async def add_dependencies_to_toml(project_path: anyio.Path, requirements_path: anyio.Path) -> None:
     """Add dependencies from requirements to a python project's TOML file.
 
     Args:
@@ -193,12 +199,12 @@ def add_dependencies_to_toml(project_path: Path, requirements_path: Path) -> Non
     command.extend(runtime_config)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        await _run_async_command(command, cwd=project_path, check=True)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def init_python_project_if_not_exists(project_path: Path) -> None:
+async def init_python_project_if_not_exists(project_path: anyio.Path) -> None:
     """Initialize a python project in a folder.
 
     If a project is already initialized in there, nothing will happen.
@@ -207,24 +213,24 @@ def init_python_project_if_not_exists(project_path: Path) -> None:
         project_path: the path to initialize the project
 
     """
-    pyproject: Path = project_path / constants.PROJECT_FILE
-    if pyproject.exists():
+    pyproject: anyio.Path = project_path / constants.PROJECT_FILE
+    if await pyproject.exists():
         return
 
-    initials: set[Path] = set(project_path.iterdir())
-    keep: set[Path] = {
+    initials: set[anyio.Path] = {p async for p in project_path.iterdir()}
+    keep: set[anyio.Path] = {
         project_path / constants.PROJECT_FILE,
         project_path / constants.LOCK_FILE,
     }
 
-    init_python_project(project_path)
+    await init_python_project(anyio.Path(project_path))
 
-    paths: set[Path] = set(project_path.iterdir())
-    paths_to_remove: set[Path] = paths.difference(initials).difference(keep)
+    paths: set[anyio.Path] = {p async for p in project_path.iterdir()}
+    paths_to_remove: set[anyio.Path] = paths.difference(initials).difference(keep)
     file_utils.remove_paths_if_exists(*paths_to_remove)
 
 
-def init_python_project(project_path: Path) -> None:
+async def init_python_project(project_path: anyio.Path) -> None:
     """Initialize a python project in a folder.
 
     Args:
@@ -250,7 +256,7 @@ def init_python_project(project_path: Path) -> None:
     command.extend(runtime_config)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        await _run_async_command(command, cwd=project_path, check=True)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
@@ -314,7 +320,9 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
 
 
 def execute_command_and_get_output(
-    command: list[str], paths: Iterable[Path], **flags: bool | str
+    command: list[str],
+    paths: Iterable[Path],
+    **flags: bool | str,
 ) -> int:
     """Execute a command and capture its output and status code.
 
@@ -555,3 +563,32 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
 
 def _get_python_version() -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+
+async def _run_async_command(
+    command: list[str],
+    cwd: anyio.Path | pathlib.Path | None = None,
+    *,
+    check: bool = False,
+) -> tuple[str, str, int]:
+    proc: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
+        *command,
+        cwd=cwd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    stdout_b, stderr_b = await proc.communicate()
+
+    if proc.returncode is None:
+        msg: str = "Process finished but returncode is unexpectedly None."
+        raise RuntimeError(msg)
+
+    rc: int = proc.returncode
+    stdout: str = stdout_b.decode()
+    stderr: str = stderr_b.decode()
+
+    if check and rc != 0:
+        raise sp.CalledProcessError(rc, command, output=stdout, stderr=stderr)
+
+    return stdout, stderr, rc

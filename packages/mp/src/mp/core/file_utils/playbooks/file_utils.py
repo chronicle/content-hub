@@ -25,7 +25,7 @@ import mp.core.file_utils.common.utils
 from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from anyio import Path
 
 
 def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
