@@ -46,6 +46,7 @@ class RepositoryType(enum.Enum):
     THIRD_PARTY = constants.THIRD_PARTY_REPO_NAME
     COMMERCIAL = constants.COMMERCIAL_REPO_NAME
     PLAYBOOKS = constants.PLAYBOOKS_REPO_NAME
+    ALL_CONTENT = "all_content"
 
 
 class CheckOutputFormat(enum.Enum):

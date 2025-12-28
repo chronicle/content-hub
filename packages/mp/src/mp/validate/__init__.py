@@ -182,12 +182,16 @@ def validate(  # noqa: PLR0913
 
     full_report: dict[ContentType, FullReport] = {}
     f1, f2 = False, False
-    if should_preform_integration_logic(integrations, repositories):
+    if RepositoryType.ALL_CONTENT in repositories or should_preform_integration_logic(
+        integrations, repositories
+    ):
         full_report[ContentType.INTEGRATION], f1 = validate_integrations(
             integrations, groups, repositories, only_pre_build=only_pre_build
         )
 
-    if should_preform_playbook_logic(playbooks, repositories):
+    if RepositoryType.ALL_CONTENT in repositories or should_preform_playbook_logic(
+        playbooks, repositories
+    ):
         full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(
             playbooks, repositories, only_pre_build=only_pre_build
         )

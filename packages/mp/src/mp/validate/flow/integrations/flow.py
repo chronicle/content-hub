@@ -104,10 +104,10 @@ def validate_integrations(
         repos: set[RepositoryType] = set(repositories)
         commercial_output = {}
         community_output = {}
-        if RepositoryType.COMMERCIAL in repos:
+        if RepositoryType.ALL_CONTENT or RepositoryType.COMMERCIAL in repos:
             commercial_output = _validate_repo(commercial_mp, run_configurations)
 
-        if RepositoryType.THIRD_PARTY in repos:
+        if RepositoryType.ALL_CONTENT or RepositoryType.THIRD_PARTY in repos:
             community_output = _validate_repo(community_mp, run_configurations)
 
     validations_output: FullReport = combine_results(commercial_output, community_output)
