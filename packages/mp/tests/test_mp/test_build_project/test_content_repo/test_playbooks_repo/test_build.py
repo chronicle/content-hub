@@ -72,7 +72,12 @@ def test_save_values_while_deconstruct_and_build_playbook(
         shutil.copytree(built_playbook_path.parent, mocked_repo)
         playbook_to_deconstruct: Path = mocked_repo / built_playbook_path.name
 
-        playbook_repo = PlaybooksRepo(mocked_repo)
+        with unittest.mock.patch(
+            "mp.build_project.playbooks_repo.mp.core.file_utils.get_playbook_base_folders_paths",
+            return_value=[mocked_repo],
+        ):
+            playbook_repo: PlaybooksRepo = PlaybooksRepo(mocked_repo)
+
         playbook_repo.deconstruct_playbook(playbook_to_deconstruct)
         deconstructed_playbook_path: Path = (
             playbook_repo.out_dir / playbook_to_deconstruct.stem.lower()
@@ -97,7 +102,11 @@ def assert_build_playbook(
         mocked_repo: Path = tmp_path / playbook_path.parent.name
         shutil.copytree(playbook_path.parent, mocked_repo)
 
-        playbook_repo: PlaybooksRepo = PlaybooksRepo(mocked_repo)
+        with unittest.mock.patch(
+            "mp.build_project.playbooks_repo.mp.core.file_utils.get_playbook_base_folders_paths",
+            return_value=[mocked_repo],
+        ):
+            playbook_repo: PlaybooksRepo = PlaybooksRepo(mocked_repo)
 
         playbook: Path = mocked_repo / playbook_path.name
         playbook_repo.build_playbook(playbook)

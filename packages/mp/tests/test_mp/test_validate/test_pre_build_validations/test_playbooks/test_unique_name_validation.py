@@ -36,7 +36,7 @@ def _setup(temp_non_built_playbook: Path) -> None:
 class TestUniqueNameValidation:
     validator_runner: UniqueNameValidation = UniqueNameValidation()
 
-    @patch("mp.core.file_utils.get_playbook_repo_base_path")
+    @patch("mp.core.file_utils.get_or_create_playbook_repo_base_path")
     def test_unique_name_validation_success(
         self,
         mock_get_playbook_repository_base_path: MagicMock,
@@ -51,7 +51,7 @@ class TestUniqueNameValidation:
 
         self.validator_runner.run(temp_non_built_playbook)
 
-    @patch("mp.core.file_utils.get_playbook_repo_base_path")
+    @patch("mp.core.file_utils.get_or_create_playbook_repo_base_path")
     def test_duplicate_name_validation_fail(
         self,
         mock_get_playbook_repository_base_path: MagicMock,
