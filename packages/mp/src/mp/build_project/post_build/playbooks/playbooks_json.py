@@ -54,10 +54,10 @@ def write_playbooks_json(
 ) -> None:
     """Generate and writes the playbooks.json file."""
     commercial_playbooks_json: list[BuiltPlaybookDisplayInfo] = _generate_playbooks_display_info(
-        commercial_playbooks.repository_base_path, commercial_playbooks.out_dir
+        commercial_playbooks.base_folders, commercial_playbooks.out_dir
     )
     community_playbooks_json: list[BuiltPlaybookDisplayInfo] = _generate_playbooks_display_info(
-        community_playbooks.repository_base_path, community_playbooks.out_dir
+        community_playbooks.base_folders, community_playbooks.out_dir
     )
     out_path: Path = commercial_playbooks.out_dir.parent / mp.core.constants.PLAYBOOKS_JSON_NAME
     playbooks_json: list[BuiltPlaybookDisplayInfo] = (
@@ -68,34 +68,39 @@ def write_playbooks_json(
 
 
 def _generate_playbooks_display_info(
-    repo_path: Path, out_path: Path
+    repo_paths: list[Path], out_path: Path
 ) -> list[BuiltPlaybookDisplayInfo]:
     res: list[BuiltPlaybookDisplayInfo] = []
-    for non_built_playbook_path in repo_path.iterdir():
-        if not non_built_playbook_path.is_dir():
-            continue
+    for path in repo_paths:
+        for non_built_playbook_path in path.iterdir():
+            if not non_built_playbook_path.is_dir():
+                continue
 
-        display_info_path: Path = non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
-        if not display_info_path.exists():
-            continue
-
-        built_playbook_path: Path | None = _find_built_playbook_in_out_folder(
-            non_built_playbook_path.name, out_path
-        )
-        if not built_playbook_path:
-            rich.print(
-                f"{non_built_playbook_path.stem} could not be found in the out folder. Skipping..."
+            display_info_path: Path = (
+                non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
             )
-            continue
+            if not display_info_path.exists():
+                continue
 
-        built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
-            yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-        ).to_built()
+            built_playbook_path: Path | None = _find_built_playbook_in_out_folder(
+                non_built_playbook_path.name, out_path
+            )
+            if not built_playbook_path:
+                rich.print(f"{non_built_playbook_path.stem} could not be found in the out folder.")
+                continue
 
-        built_playbook: BuiltPlaybook = json.loads(built_playbook_path.read_text(encoding="utf-8"))
-        _update_display_info(built_playbook, built_display_info, non_built_playbook_path, out_path)
-        built_display_info["FileName"] = built_playbook_path.name
-        res.append(built_display_info)
+            built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
+                yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
+            ).to_built()
+
+            built_playbook: BuiltPlaybook = json.loads(
+                built_playbook_path.read_text(encoding="utf-8")
+            )
+            _update_display_info(
+                built_playbook, built_display_info, non_built_playbook_path, out_path
+            )
+            built_display_info["FileName"] = built_playbook_path.name
+            res.append(built_display_info)
 
     return res
 

@@ -60,8 +60,12 @@ def validate_integrations(
         Both the Report and the fail status of the validations.
 
     """
-    commercial_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMERCIAL)
-    community_path: Path = mp.core.file_utils.get_integrations_path(RepositoryType.COMMUNITY)
+    commercial_path: Path = mp.core.file_utils.get_integrations_repo_base_path(
+        RepositoryType.COMMERCIAL
+    )
+    community_path: Path = mp.core.file_utils.get_integrations_repo_base_path(
+        RepositoryType.THIRD_PARTY
+    )
     commercial_mp: IntegrationsRepo = IntegrationsRepo(commercial_path)
     community_mp: IntegrationsRepo = IntegrationsRepo(community_path)
 
@@ -100,10 +104,10 @@ def validate_integrations(
         repos: set[RepositoryType] = set(repositories)
         commercial_output = {}
         community_output = {}
-        if RepositoryType.COMMERCIAL in repos:
+        if RepositoryType.ALL_CONTENT in repos or RepositoryType.COMMERCIAL in repos:
             commercial_output = _validate_repo(commercial_mp, run_configurations)
 
-        if RepositoryType.COMMUNITY in repos:
+        if RepositoryType.ALL_CONTENT in repos or RepositoryType.THIRD_PARTY in repos:
             community_output = _validate_repo(community_mp, run_configurations)
 
     validations_output: FullReport = combine_results(commercial_output, community_output)

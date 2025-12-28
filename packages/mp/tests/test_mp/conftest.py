@@ -24,8 +24,8 @@ from mp.core.config import RuntimeParams
 MOCK_CONTENT_HUB_DIR_NAME: str = "mock_content_hub"
 INTEGRATION_NAME: str = "mock_integration"
 BUILT_INTEGRATION_DIR_NAME: str = "mock_built_integration"
-NON_BUILT_PLAYBOOK: str = "mock_non_built_playbook"
-MOCK_NON_BUILT_BLOCK: str = "mock_non_built_block"
+NON_BUILT_PLAYBOOK: str = "third_party/community/mock_non_built_playbook"
+MOCK_NON_BUILT_BLOCK: str = "third_party/community/mock_non_built_block"
 BUILT_PLAYBOOK: str = "mock_built_playbook/mock_built_playbook.json"
 BUILT_BLOCK: str = "mock_built_block/mock_built_block.json"
 
@@ -57,13 +57,13 @@ def mock_response_integrations(mock_content_hub: Path) -> Path:
 @pytest.fixture
 def mock_community(mock_response_integrations: Path) -> Path:
     """Path of mocked third_party community integrations."""
-    return mock_response_integrations / mp.core.constants.COMMUNITY_DIR_NAME
+    return mock_response_integrations / mp.core.constants.THIRD_PARTY_REPO_NAME
 
 
 @pytest.fixture
 def mock_commercial(mock_response_integrations: Path) -> Path:
     """Path of mocked commercial integrations."""
-    return mock_response_integrations / mp.core.constants.COMMERCIAL_DIR_NAME
+    return mock_response_integrations / mp.core.constants.COMMERCIAL_REPO_NAME
 
 
 @pytest.fixture
@@ -105,7 +105,7 @@ def marketplace_json(mock_response_integrations: Path) -> Path:
 @pytest.fixture
 def mock_playbook_path(mock_content_hub: Path) -> Path:
     """Path to the mocked playbook folder."""
-    return mock_content_hub / mp.core.constants.PLAYBOOKS_DIR_NAME
+    return mock_content_hub / mp.core.constants.PLAYBOOKS_REPO_NAME
 
 
 @pytest.fixture

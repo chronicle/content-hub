@@ -3,12 +3,17 @@
 ## Integration Structure Guide
 
 This document outlines the standard folder structure and file contents for creating a new
-integration in the `content/response_integrations/third_party` directory of the Google SecOps Content Hub
-Repository.
+integration. Integrations are located in one of two directories:
+- `content/response_integrations/third_party/community` for community-contributed integrations.
+- `content/response_integrations/third_party/partner` for partner-supported integrations.
+
+All integrations, whether community or partner, follow the same internal structure described below.
 
 **Note:** All file names must be in snake_case
 
 ## Folder Structure
+
+An integration is placed inside either the `community` or `partner` directory. The `integration_name` folder itself has the following structure:
 
 ```
 integration_name/
@@ -110,19 +115,20 @@ integration_name/
     - New features
     - Optional boolean flags can be added and will default to false if omitted.
 
-    #### Boolean Flags Explained
-    **new** : Set to true for a new component or for the initial 1.0 release. In the latter case, it will be displayed as new integration in the Content Hub.
+  #### Boolean Flags Explained
+  **new** : Set to true for a new component or for the initial 1.0 release. In the latter case, it
+  will be displayed as new integration in the Content Hub.
 
-    **deprecated** : Set to true if a feature is being phased out but is still functional.
-    
-    **removed** : Set to true when a feature has been completely removed.
-    
-    **regressive** : Set to true if the change is breaking existing functionalities.
+  **deprecated** : Set to true if a feature is being phased out but is still functional.
+
+  **removed** : Set to true when a feature has been completely removed.
+
+  **regressive** : Set to true if the change is breaking existing functionalities.
 
     ```yaml
     # Example: Adding a new action to an existing integration.
     - description: Added a new action 'action example'.
-      integration_version: 1.1
+      integration_version: 2.0
       item_name: action example
       item_type: Action
       new: true
@@ -221,7 +227,8 @@ When creating a new integration:
 
 1. Start by setting up the basic folder structure
 2. Define the configuration schema in `definition.yaml`
-3. Create a new pyproject.toml file using `uv init` and add dependencies like requests and tip-common
+3. Create a new pyproject.toml file using `uv init` and add dependencies like requests and
+   tip-common
    using `uv add`.
 4. Implement the core client with authentication
 5. Create the Ping action for basic connectivity testing
