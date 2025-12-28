@@ -68,26 +68,18 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
     base_path: Path = create_or_get_integrations_path()
     match integrations_classification:
         case constants.COMMERCIAL_REPO_NAME:
-            return [
-                mp.core.file_utils.common.create_dir_if_not_exists(
-                    base_path / constants.COMMERCIAL_REPO_NAME
-                )
-            ]
+            return mp.core.file_utils.common.create_dirs_if_not_exists(
+                base_path / constants.COMMERCIAL_REPO_NAME
+            )
 
         case constants.THIRD_PARTY_REPO_NAME:
             third_party = base_path / constants.THIRD_PARTY_REPO_NAME
 
-            return [
-                mp.core.file_utils.common.create_dir_if_not_exists(
-                    base_path / constants.POWERUPS_DIR_NAME
-                ),
-                mp.core.file_utils.common.create_dir_if_not_exists(
-                    third_party / constants.COMMUNITY_DIR_NAME
-                ),
-                mp.core.file_utils.common.create_dir_if_not_exists(
-                    third_party / constants.PARTNER_DIR_NAME
-                ),
-            ]
+            return mp.core.file_utils.common.create_dirs_if_not_exists(
+                base_path / constants.POWERUPS_DIR_NAME,
+                third_party / constants.COMMUNITY_DIR_NAME,
+                third_party / constants.PARTNER_DIR_NAME,
+            )
 
         case _:
             msg: str = f"Received unknown integration classification: {integrations_classification}"

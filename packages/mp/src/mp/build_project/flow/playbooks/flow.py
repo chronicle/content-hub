@@ -124,7 +124,7 @@ def _get_playbooks_paths_from_repository(
         _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
     ]
     for path in repositories_paths:
-        result.update({p for n in normalized_names if (p := path / n).exists()})
+        result.update(p for n in normalized_names if (p := path / n).exists())
     return result
 
 
