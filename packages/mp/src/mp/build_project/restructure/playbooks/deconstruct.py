@@ -104,9 +104,7 @@ class PlaybookDeconstructor:
             "- Boolean value",
             "should_display_in_content_hub",
         )
-        data.yaml_add_eol_comment(
-            "Options: google, partner, or third_party - Boolean value", "contribution_type"
-        )
+        data.yaml_add_eol_comment("Options: google, partner, or third_party", "contribution_type")
         data.yaml_add_eol_comment(
             "I acknowledge that this playbook contains debug data and authorize its"
             " publication. - Boolean value",
