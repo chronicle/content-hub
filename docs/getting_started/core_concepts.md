@@ -11,9 +11,9 @@ In the Platform Response Integrations are available under Content Hub → Respon
 
 Response Integration consists of the following script types:
 
-- [Actions](/docs/response_integrations/content_deep_dive/actions.md)
-- [Connectors](/docs/response_integrations/content_deep_dive/connectors.md)
-- [Jobs](/docs/response_integrations/content_deep_dive/jobs.md)
+- [Actions](/docs/content_deep_dive/response_integrations/actions.md)
+- [Connectors](/docs/content_deep_dive/response_integrations/connectors.md)
+- [Jobs](/docs/content_deep_dive/response_integrations/jobs.md)
 
 **Action**—a Python script that is used to perform a simple activity. These scripts are then used
 in playbooks to build an automated response. Key use cases are enrichment of Assets and IOCs,
@@ -47,26 +47,11 @@ a specific trigger is met, such as a new alert.
 
 Core concepts of Google SecOps Playbooks:
 
-**Triggers and Actions:** A playbook is initiated by a trigger, which can be a new alert, a change
-in an entity's risk score, or a manual action by an analyst. Once triggered, the playbook executes a
-series of actions, which are the individual steps in the workflow.
+- [Triggers](/docs/content_deep_dive/playbooks/triggers.md)
+- [Steps](/docs/content_deep_dive/playbooks/steps.md)
+- [Widgets](/docs/content_deep_dive/playbooks/widgets.md)
+- [Overviews](/docs/content_deep_dive/playbooks/overviews.md)
 
-**Conditional Logic:** Playbooks can include conditional logic to make decisions based on the data
-in an alert or the output of a previous action. This allows for the creation of dynamic and flexible
-workflows that can adapt to different types of incidents.
-
-**Blocks:** A playbook can include a series of blocks. Each block represents a single step in the
-playbook's
-workflow.
-
-**Integration with Security Tools:** Playbooks integrate with a wide range of security tools and
-technologies, including SIEMs, endpoint detection and response (EDR) solutions, and threat
-intelligence platforms. This allows for the orchestration of a coordinated response across the
-entire security infrastructure.
-
-**Customization and Extensibility:** Playbooks can be customized to meet the specific needs of an
-organization. They can also be extended with custom scripts and integrations to support new tools
-and workflows.
 
 By using playbooks, security teams can standardize their incident response processes, reduce
 response times, and improve the overall effectiveness of their security operations.
