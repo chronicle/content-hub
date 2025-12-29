@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING
 from soar_sdk.SiemplifyUtils import unix_now
 
 from .constants import (
+    BLACKLIST_FILTER,
     DEFAULT_ASSET_LIMIT,
     DEFAULT_MAX_LIMIT,
     DEFAULT_OFFSET,
     DEFAULT_RESULTS_LIMIT,
     HIGHEST_POSSIBLE_SCORE,
     POSSIBLE_SEVERITIES,
-    BLACKLIST_FILTER,
     WHITELIST_FILTER,
 )
 

@@ -1,18 +1,20 @@
 from __future__ import annotations
+
 import copy
 import html
 
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
-from TIPCommon import dict_to_flat, add_prefix_to_dict
+from TIPCommon import add_prefix_to_dict, dict_to_flat
+
 from .constants import (
-    DEVICE_VENDOR,
     DEVICE_PRODUCT,
-    SEVERITY_MAPPING,
-    KEY_PREFIX,
-    SCORE_MAPPING,
-    SCORE_COLORS,
+    DEVICE_VENDOR,
     FALLBACK_ALERT_NAME,
+    KEY_PREFIX,
+    SCORE_COLORS,
+    SCORE_MAPPING,
     SEVERITY_COLOR_MAPPER,
+    SEVERITY_MAPPING,
 )
 
 
@@ -210,7 +212,7 @@ class CVE(BaseModel):
         insight_html += f"<p><strong>Description: </strong> {description} <br /><strong>Fix Available: </strong> {fix_available} <br />"
         insight_html += f"<strong>Affected Assets: </strong> {asset_names}<br /><strong>Labels: </strong> {labels} <br /><strong>Publish Date: </strong> {published} <br /></p>"
         insight_html += f"<p>For more details visit the following link: <a href='{source_link}' target='_blank'>{source_link}&nbsp;</a></p>"
-        insight_html += f"<p>&nbsp;</p>"
+        insight_html += "<p>&nbsp;</p>"
         return insight_html
 
 

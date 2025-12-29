@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 INTEGRATION_NAME = "Orca Security"
 INTEGRATION_DISPLAY_NAME = "Orca Security"
 

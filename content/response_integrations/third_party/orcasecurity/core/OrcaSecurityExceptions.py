@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+
 class OrcaSecurityException(Exception):
     """
     General exception for Orca Security

@@ -1,17 +1,20 @@
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from urllib.parse import urljoin
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
-from ..core.OrcaSecurityManager import OrcaSecurityManager
 from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
 from ..core.constants import (
-    INTEGRATION_NAME,
-    GET_ASSET_DETAILS_SCRIPT_NAME,
     ASSETS_TABLE_NAME,
     DEFAULT_MAX_LIMIT,
+    GET_ASSET_DETAILS_SCRIPT_NAME,
+    INTEGRATION_NAME,
 )
+from ..core.OrcaSecurityManager import OrcaSecurityManager
 from ..core.UtilsManager import string_to_multi_value, validate_positive_integer
 
 

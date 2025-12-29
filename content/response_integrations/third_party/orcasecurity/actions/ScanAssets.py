@@ -1,29 +1,32 @@
 from __future__ import annotations
+
 import json
 import sys
-from soar_sdk.SiemplifyUtils import output_handler, unix_now
+
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_INPROGRESS,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from TIPCommon import extract_configuration_param, extract_action_param
-from ..core.OrcaSecurityManager import OrcaSecurityManager
+from soar_sdk.SiemplifyUtils import output_handler, unix_now
+from TIPCommon import extract_action_param, extract_configuration_param
+
 from ..core.constants import (
-    INTEGRATION_NAME,
-    INTEGRATION_DISPLAY_NAME,
-    SCAN_ASSETS_SCRIPT_NAME,
     COMPLETED_STATUS,
     DEFAULT_TIMEOUT,
+    INTEGRATION_DISPLAY_NAME,
+    INTEGRATION_NAME,
+    SCAN_ASSETS_SCRIPT_NAME,
 )
+from ..core.OrcaSecurityExceptions import OrcaSecurityExistingProcessException
+from ..core.OrcaSecurityManager import OrcaSecurityManager
 from ..core.UtilsManager import (
     convert_comma_separated_to_list,
     convert_list_to_comma_string,
-    is_async_action_global_timeout_approaching,
     is_approaching_process_timeout,
+    is_async_action_global_timeout_approaching,
 )
-from ..core.OrcaSecurityExceptions import OrcaSecurityExistingProcessException
 
 
 def start_scans(siemplify, manager, action_start_time, asset_ids):

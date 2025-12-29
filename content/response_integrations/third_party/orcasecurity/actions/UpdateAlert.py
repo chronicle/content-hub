@@ -1,18 +1,20 @@
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from TIPCommon import extract_configuration_param, extract_action_param
-from ..core.OrcaSecurityManager import OrcaSecurityManager
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
 from ..core.constants import (
-    INTEGRATION_NAME,
+    DEFAULT_SNOOZE_DAYS,
     INTEGRATION_DISPLAY_NAME,
-    UPDATE_ALERT_SCRIPT_NAME,
+    INTEGRATION_NAME,
     SNOOZE_STATE_MAPPING,
     STATUS_MAPPING,
-    DEFAULT_SNOOZE_DAYS,
+    UPDATE_ALERT_SCRIPT_NAME,
 )
 from ..core.OrcaSecurityExceptions import OrcaSecurityDuplicatedDataException
+from ..core.OrcaSecurityManager import OrcaSecurityManager
 
 
 @output_handler

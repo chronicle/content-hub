@@ -1,32 +1,34 @@
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler, unix_now
+
+import sys
+
+from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
+from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon import (
+    UNIX_FORMAT,
     extract_connector_param,
-    read_ids,
-    write_ids,
     filter_old_alerts,
     get_last_success_time,
     is_approaching_timeout,
-    save_timestamp,
     is_overflowed,
-    UNIX_FORMAT,
+    read_ids,
+    save_timestamp,
+    write_ids,
 )
+
 from ..core.constants import (
+    BLACKLIST_FILTER,
     CONNECTOR_NAME,
     DEFAULT_LIMIT,
     DEFAULT_TIME_FRAME,
     POSSIBLE_SEVERITIES,
     WHITELIST_FILTER,
-    BLACKLIST_FILTER,
 )
-from ..core.UtilsManager import convert_list_to_comma_string, convert_comma_separated_to_list
-from ..core.OrcaSecurityManager import OrcaSecurityManager
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
-import sys
-from EnvironmentCommon import GetEnvironmentCommonFactory
 from ..core.OrcaSecurityExceptions import OrcaSecurityInvalidParameterException
-
+from ..core.OrcaSecurityManager import OrcaSecurityManager
+from ..core.UtilsManager import convert_comma_separated_to_list, convert_list_to_comma_string
 
 connector_starting_time = unix_now()
 
