@@ -37,6 +37,7 @@ def build_integrations(
     repositories: Iterable[RepositoryType],
     *,
     deconstruct: bool = False,
+    custom_integration: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct integration operation."""
     commercial_path: Path = mp.core.file_utils.get_integrations_repo_base_path(
@@ -45,26 +46,41 @@ def build_integrations(
     community_path: Path = mp.core.file_utils.get_integrations_repo_base_path(
         RepositoryType.THIRD_PARTY
     )
+    custom_path: Path = mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)
     commercial_mp: IntegrationsRepo = IntegrationsRepo(commercial_path)
     community_mp: IntegrationsRepo = IntegrationsRepo(community_path)
+    custom_mp: IntegrationsRepo = IntegrationsRepo(custom_path)
     if integrations:
-        rich.print("Building integrations...")
-        commercial_not_found: set[str] = _build_integrations(
-            set(integrations), commercial_mp, deconstruct=deconstruct
-        )
-        community_not_found: set[str] = _build_integrations(
-            set(integrations), community_mp, deconstruct=deconstruct
-        )
-        if commercial_not_found.intersection(community_not_found):
-            rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+        if custom_integration:
+            rich.print("Building custom integrations...")
+            custom_not_found: set[str] = _build_integrations(
+                set(integrations), custom_mp, deconstruct=deconstruct
+            )
+            rich.print("Done building custom integrations.")
+            if custom_not_found:
+                rich.print(
+                    "The following integrations could not be found in the custom repo: "
+                    f"{', '.join(custom_not_found)}"
+                )
 
-        rich.print("Done building integrations.")
+        else:
+            rich.print("Building integrations...")
+            commercial_not_found: set[str] = _build_integrations(
+                set(integrations), commercial_mp, deconstruct=deconstruct
+            )
+            community_not_found: set[str] = _build_integrations(
+                set(integrations), community_mp, deconstruct=deconstruct
+            )
+            if commercial_not_found.intersection(community_not_found):
+                rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+
+            rich.print("Done building integrations.")
 
     elif integration_groups:
         build_integration_groups(integration_groups, commercial_mp, community_mp)
 
     elif repositories:
-        _build_integration_repositories(repositories, commercial_mp, community_mp)
+        _build_integration_repositories(repositories, commercial_mp, community_mp, custom_mp)
 
 
 def build_integration_groups(
@@ -95,6 +111,7 @@ def _build_integration_repositories(
     repositories: Iterable[RepositoryType],
     commercial_mp: IntegrationsRepo,
     community_mp: IntegrationsRepo,
+    custom_mp: IntegrationsRepo,
 ) -> None:
     repos: set[RepositoryType] = set(repositories)
     if _is_commercial_repo(repos):
@@ -108,6 +125,11 @@ def _build_integration_repositories(
         community_mp.build()
         community_mp.write_marketplace_json()
         rich.print("Done third party integrations build.")
+
+    if _is_custom_repo(repos):
+        rich.print("Building all integrations and groups in custom repo...")
+        custom_mp.build()
+        rich.print("Done custom integrations build.")
 
     if _is_full_repo_build(repos):
         rich.print("Checking for duplicate integrations...")
@@ -128,6 +150,10 @@ def _is_third_party_repo(repos: Iterable[RepositoryType]) -> bool:
 
 def _is_full_repo_build(repos: Iterable[RepositoryType]) -> bool:
     return RepositoryType.COMMERCIAL in repos and RepositoryType.THIRD_PARTY in repos
+
+
+def _is_custom_repo(repos: Iterable[RepositoryType]) -> bool:
+    return RepositoryType.CUSTOM in repos
 
 
 def _build_integrations(
