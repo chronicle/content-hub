@@ -19,7 +19,7 @@ from pathlib import Path
 from mp.core.data_models.playbooks.playbook import Playbook
 
 MOCK_BUILT_PLAYBOOK_PATH: Path = Path("mock_built_playbook/mock_built_playbook.json")
-MOCK_NON_BUILT_PLAYBOOK_PATH: Path = Path("mock_non_built_playbook")
+MOCK_NON_BUILT_PLAYBOOK_PATH: Path = Path("third_party/community/mock_non_built_playbook")
 
 
 class TestPlaybookDataModel:

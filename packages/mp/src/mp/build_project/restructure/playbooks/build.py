@@ -44,7 +44,10 @@ class PlaybookBuilder:
         self._load_widgets_html_content()
         self._load_widgets_html_content_to_overviews()
         built_playbook: BuiltPlaybook = self.playbook.to_built()
-        built_playbook_path = self.out_path / f"{to_snake_case(self.playbook.meta_data.name)}.json"
+        built_playbook_path = (
+            self.out_path
+            / f"{to_snake_case(self.playbook_path.stem)}{mp.core.constants.JSON_SUFFIX}"
+        )
         built_playbook_path.write_text(json.dumps(built_playbook, indent=4))
 
     def _load_widgets_html_content(self) -> None:

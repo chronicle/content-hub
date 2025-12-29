@@ -38,10 +38,14 @@ def build_playbooks(
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
     commercial_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMERCIAL_DIR_NAME)
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.COMMERCIAL_REPO_NAME
+        )
     )
     community_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_playbook_repository_base_path(mp.core.constants.COMMUNITY_DIR_NAME)
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.THIRD_PARTY_REPO_NAME
+        )
     )
 
     if playbooks:
@@ -65,9 +69,18 @@ def _build_playbooks_repositories(
     community_playbooks: PlaybooksRepo,
 ) -> None:
     rich.print("[blue]Building all playbooks in repository...[/blue]")
-    commercial_playbooks.build_playbooks(commercial_playbooks.repository_base_path.iterdir())
-    community_playbooks.build_playbooks(community_playbooks.repository_base_path.iterdir())
+    _build_single_repo_folder(commercial_playbooks)
+    _build_single_repo_folder(community_playbooks)
     rich.print("[blue]Done repository playbook build.[/blue]")
+
+
+def _build_single_repo_folder(repository: PlaybooksRepo) -> None:
+    for folder in repository.base_folders:
+        try:
+            playbooks_paths: list[Path] = list(folder.iterdir())
+            repository.build_playbooks(playbooks_paths)
+        except FileNotFoundError:
+            continue
 
 
 def _build_playbooks(
@@ -77,7 +90,7 @@ def _build_playbooks(
     deconstruct: bool,
 ) -> set[str]:
     valid_playbooks_paths: set[Path] = _get_playbooks_paths_from_repository(
-        playbooks, repository.repository_base_path, deconstruct=deconstruct
+        playbooks, repository.base_folders, deconstruct=deconstruct
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
     normalized_playbooks: set[str] = {
@@ -86,7 +99,7 @@ def _build_playbooks(
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
         rich.print(
-            f"The following playbooks could not be found in the {repository.repository_name} "
+            f"The following playbooks could not be found in the {repository.name} "
             f"repository: {', '.join(not_found_playbooks)}"
         )
 
@@ -104,12 +117,15 @@ def _build_playbooks(
 
 
 def _get_playbooks_paths_from_repository(
-    playbooks_names: Iterable[str], repository_path: Path, *, deconstruct: bool = False
+    playbooks_names: Iterable[str], repositories_paths: list[Path], *, deconstruct: bool = False
 ) -> set[Path]:
-    normalized_names = (
+    result: set[Path] = set()
+    normalized_names = [
         _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
-    )
-    return {p for n in normalized_names if (p := repository_path / n).exists()}
+    ]
+    for path in repositories_paths:
+        result.update(p for n in normalized_names if (p := path / n).exists())
+    return result
 
 
 def _normalize_name_to_json(name: str, *, deconstruct: bool = False) -> str:

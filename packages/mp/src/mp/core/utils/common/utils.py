@@ -248,7 +248,7 @@ def should_preform_integration_logic(
 
     """
     return bool(
-        integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.COMMUNITY in repos
+        integrations or RepositoryType.COMMERCIAL in repos or RepositoryType.THIRD_PARTY in repos
     )
 
 
