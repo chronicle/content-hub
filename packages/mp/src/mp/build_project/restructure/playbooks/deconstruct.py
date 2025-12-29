@@ -78,7 +78,7 @@ class PlaybookDeconstructor:
     def _create_display_info_file(
         self, non_built_display_info: NonBuiltPlaybookDisplayInfo
     ) -> None:
-        rich.print("[bold blue]Creating display info file[/bold blue]")
+        rich.print("Creating display info file")
 
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
@@ -100,12 +100,16 @@ class PlaybookDeconstructor:
             "The name that will appear in the Content Hub", "content_hub_display_name"
         )
         data.yaml_add_eol_comment(
-            "Defines whether this item should have its own card in the Content Hub.",
+            "Defines whether this item should have its own card in the Content Hub. "
+            "- Boolean value",
             "should_display_in_content_hub",
         )
-        data.yaml_add_eol_comment("Options: google, partner, or third_party", "contribution_type")
         data.yaml_add_eol_comment(
-            "I acknowledge that this playbook contains debug data and authorize its publication.",
+            "Options: google, partner, or third_party - Boolean value", "contribution_type"
+        )
+        data.yaml_add_eol_comment(
+            "I acknowledge that this playbook contains debug data and authorize its"
+            " publication. - Boolean value",
             "allowed_debug_data",
         )
 

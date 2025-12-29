@@ -80,10 +80,10 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
 
 class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo]):
     type: PlaybookType = PlaybookType.PLAYBOOK
-    content_hub_display_name: str = "Please Fill"
-    description: str = "Please Fill"
-    author: str = "Please Fill"
-    contact_email: str = "Please Fill"
+    content_hub_display_name: str = "String value"
+    description: str = "String value"
+    author: str = "String value"
+    contact_email: str = "String value"
     tags: Annotated[list[str], pydantic.Field(default_factory=list)]
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
