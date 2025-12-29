@@ -1,14 +1,21 @@
 # mp: The Google SecOps Content Hub CLI
 
-**`mp`**, short for **`marketplace`**, is a command-line interface (CLI) tool designed to streamline the development and maintenance of content for the Google SecOps Content Hub. It provides a unified set of commands for building, deconstructing, testing, and validating response integrations and playbooks.
+**`mp`**, short for **`marketplace`**, is a command-line interface (CLI) tool designed to streamline
+the development and maintenance of content for the Google SecOps Content Hub. It provides a unified
+set of commands for building, deconstructing, testing, and validating response integrations and
+playbooks.
 
 ## Key Features
 
-- **Build Content**: Package response integrations and playbooks into the format required by the Google SecOps platform.
-- **Deconstruct Content**: Convert integrations and playbooks exported from Google SecOps back into the source-controlled, human-readable format used in this repository.
-- **Validation & Testing**: Run validation checks and integration tests to ensure content quality and correctness.
+- **Build Content**: Package response integrations and playbooks into the format required by the
+  Google SecOps platform.
+- **Deconstruct Content**: Convert integrations and playbooks exported from Google SecOps back into
+  the source-controlled, human-readable format used in this repository.
+- **Validation & Testing**: Run validation checks and integration tests to ensure content quality
+  and correctness.
 - **Code Quality**: Format, lint, and statically type-check Python code using `ruff` and `mypy`.
-- **Developer Workflow**: Simplify the development lifecycle with fast dependency management via `uv` and commands for interacting with a development environment.
+- **Developer Workflow**: Simplify the development lifecycle with fast dependency management via
+  `uv` and commands for interacting with a development environment.
 
 ## Installation
 
@@ -42,10 +49,12 @@ mp build --playbook my_playbook
 
 ### Deconstructing Content
 
-The `deconstruct` process converts a single content item exported from Google SecOps into the more readable and developer-friendly format used in this repository.
+The `deconstruct` process converts a single content item exported from Google SecOps into the more
+readable and developer-friendly format used in this repository.
 
-1.  Place the exported JSON file inside its new directory (e.g., `content/playbooks/third_party/community/my_new_playbook.json`).
-2.  Run the `build` command with the `--deconstruct` flag.
+1. Place the exported content (e.g., `my_new_playbook.json`) into the appropriate directory (e.g.,
+   `content/playbooks/third_party/community/`).
+2. Run the `build` command with the `--deconstruct` flag.
 
 ```bash
 # Deconstruct a playbook
@@ -55,7 +64,8 @@ mp build --playbook my_new_playbook --deconstruct
 mp build --integration my_new_integration --deconstruct
 ```
 
-**Note:** The `deconstruct` command operates on a single content item by name and cannot be run on an entire repository at once.
+**Note:** The `deconstruct` command operates on a single content item by name and cannot be run on
+an entire repository at once.
 
 ### Validating Individual Content
 

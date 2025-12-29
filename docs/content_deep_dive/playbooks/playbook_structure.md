@@ -57,7 +57,7 @@ repository
 
 The `steps/` directory contains all the steps that are part of the playbook:
 
-- **`step_name*.yaml`**: YAML definition files for each step, including.
+- **`step_name*.yaml`**: YAML definition files for each step, including their parameters and logic.
 
 ### widgets/ Directory
 

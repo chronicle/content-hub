@@ -21,7 +21,7 @@ Here are the steps to contribute a new playbook to the Content Hub repository:
       ```bash
       mp build -p <playbook_name> --deconstruct
       ```
-      Replace `<playbook_name>` with the name of your playbook folder.
+      Replace `<playbook_name>` with the name of your playbook.
 
 5. **Move the deconstructed playbook files.**
     - After the command runs, an `out` folder will be created. Navigate into the `out` folder and
