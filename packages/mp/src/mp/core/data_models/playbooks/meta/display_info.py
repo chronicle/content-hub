@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Self, TypedDict
+from typing import Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -73,9 +73,9 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
     contact_email: str
     tags: list[str]
     contribution_type: str
-    is_google_verified: bool
     should_display_in_content_hub: bool
     allowed_debug_data: bool
+    is_google_verified: NotRequired[bool]
 
 
 class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo]):
@@ -106,7 +106,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             contribution_type=PlaybookContributionType.from_string(
                 non_built["contribution_type"].upper()
             ),
-            is_google_verified=non_built["is_google_verified"],
+            is_google_verified=non_built.get("is_google_verified", False),
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
             allowed_debug_data=non_built["allowed_debug_data"],
         )
@@ -154,7 +154,6 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             tags=self.tags,
             should_display_in_content_hub=self.should_display_in_content_hub,
             contribution_type=self.contribution_type.to_string(),
-            is_google_verified=self.is_google_verified,
             allowed_debug_data=self.allowed_debug_data,
         )
         return non_built
