@@ -8,8 +8,8 @@ defined in its own YAML file within the `steps/` directory of a playbook.
 
 A step can be one of several types of actions:
 
-* **Integration Action:** A call to an action from a response integration (e.g.,
-  `VirusTotal_Enrich_IP`). This is the most common type of step and allows playbooks to interact
+* **Integration Action:** A call to an action from a response integration. This is the most common
+  type of step and allows playbooks to interact
   with third-party tools.
 * **Function:** A built-in playbook function to perform a specific task, such as setting a variable,
   adding a comment, or changing the case severity.
