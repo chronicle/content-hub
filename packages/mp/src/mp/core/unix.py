@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import pathlib
 import subprocess as sp  # noqa: S404
 import sys
@@ -94,28 +95,44 @@ def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
     return []
 
 
-def run_pip_command(command: list[str], cwd: Path) -> None:
+async def run_pip_command(command: list[str], cwd: Path) -> None:
     """Run a pip command and ignore safe-to-ignore errors.
 
     Raises:
         FatalCommandError: if a pip command fails.
+        RuntimeError: if the process return code is None.
 
     """
-    try:
-        sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
-    except sp.CalledProcessError as e:
-        # Check if this is a safe-to-ignore error / marker issue
-        if ignored_packages := _get_safe_to_ignore_packages(e):
-            message = (
+    process: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
+        *command,
+        cwd=str(cwd),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate()
+    if process.returncode is None:
+        msg: str = "Process finished but returncode is unexpectedly None."
+        raise RuntimeError(msg)
+
+    if process.returncode != 0:
+        error: sp.CalledProcessError = sp.CalledProcessError(
+            returncode=process.returncode,
+            cmd=command,
+            output=stdout.decode(),
+            stderr=stderr.decode(),
+        )
+        if ignored_packages := _get_safe_to_ignore_packages(error):
+            message: str = (
                 f"[INFO] Ignored safe-to-ignore packages due to Python version "
                 f"incompatibility: {', '.join(ignored_packages)}\n"
             )
             rich.print(message)
             return
-        raise FatalCommandError from e
+
+        raise FatalCommandError from error
 
 
-def download_wheels_from_requirements(
+async def download_wheels_from_requirements(
     project_path: Path,
     requirements_path: Path,
     dst_path: Path,
@@ -126,9 +143,6 @@ def download_wheels_from_requirements(
         project_path: the path of the project repository
         requirements_path: the path of the 'requirements.txt' file
         dst_path: the path to install the `.whl` files into
-
-    Raises:
-        FatalCommandError: if a project is already initialized
 
     """
     python_version: str = _get_python_version()
@@ -152,19 +166,16 @@ def download_wheels_from_requirements(
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
 
-    try:
-        if is_windows():
-            command.extend(["--platform", "win_amd64"])
-        else:
-            command.extend([
-                "--platform",
-                "manylinux1_x86_64",
-                "--platform",
-                "manylinux_2_17_x86_64",
-            ])
-        run_pip_command(command, cwd=project_path)
-    except sp.CalledProcessError as e:
-        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+    if is_windows():
+        command.extend(["--platform", "win_amd64"])
+    else:
+        command.extend([
+            "--platform",
+            "manylinux1_x86_64",
+            "--platform",
+            "manylinux_2_17_x86_64",
+        ])
+    await run_pip_command(command, cwd=project_path)
 
 
 def add_dependencies_to_toml(project_path: Path, requirements_path: Path) -> None:
@@ -512,9 +523,9 @@ def get_files_unmerged_to_main_branch(
             command, check=True, text=True, capture_output=True
         )
         return [
-            p
-            for path in results.stdout.strip().splitlines()
-            if path and (p := pathlib.Path(path)).exists()
+            path
+            for path_str in results.stdout.strip().splitlines()
+            if path_str and (path := pathlib.Path(path_str)).exists()
         ]
 
     except sp.CalledProcessError as error:

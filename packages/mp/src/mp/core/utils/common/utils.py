@@ -28,7 +28,7 @@ from mp.core.constants import WINDOWS_PLATFORM
 from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Coroutine, Iterable
 
     from mp.core.custom_types import YamlFileContent
 
@@ -46,6 +46,13 @@ _R = TypeVar("_R")
 async def threaded_build_items(builder: Callable[[_T], None], items: Iterable[_T]) -> None:
     """Run builder functions in parallel threads."""
     await asyncio.gather(*[run_threaded(builder, i) for i in items])
+
+
+async def async_build_items(
+    builder: Callable[[_T], Coroutine[Any, Any, None]], items: Iterable[_T]
+) -> None:
+    """Run builder functions in parallel."""
+    await asyncio.gather(*[builder(i) for i in items])
 
 
 async def threaded_test_items(

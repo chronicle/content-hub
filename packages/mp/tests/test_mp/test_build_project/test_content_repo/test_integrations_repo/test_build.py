@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import shutil
 import unittest.mock
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import anyio
 import pytest
 
 import mp.build_project.integrations_repo
@@ -25,73 +27,76 @@ import mp.core.constants
 import test_mp.common
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
+    from collections.abc import Callable, Coroutine
 
     from mp.build_project.integrations_repo import IntegrationsRepo
 
 
-def test_build_half_built_integration(
+@pytest.mark.anyio
+async def test_build_half_built_integration(
     tmp_path: Path,
     half_built_integration: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[Path], None],
+    assert_build_integration: Callable[[Path], Coroutine[Any, Any, None]],
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
-        assert_build_integration(half_built_integration)
+        await assert_build_integration(half_built_integration)
 
 
-def test_build_non_built_integration(
+@pytest.mark.anyio
+async def test_build_non_built_integration(
     tmp_path: Path,
     non_built_integration: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[Path], None],
+    assert_build_integration: Callable[[Path], Coroutine[Any, Any, None]],
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
-        assert_build_integration(non_built_integration)
+        await assert_build_integration(non_built_integration)
 
 
-def test_build_built_integration(
+@pytest.mark.anyio
+async def test_build_built_integration(
     tmp_path: Path,
     built_integration: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[Path], None],
+    assert_build_integration: Callable[[Path], Coroutine[Any, Any, None]],
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
-        assert_build_integration(built_integration)
+        await assert_build_integration(built_integration)
 
 
-def test_non_existing_integration_raises_file_not_found_error(
+@pytest.mark.anyio
+async def test_non_existing_integration_raises_file_not_found_error(
     tmp_path: Path,
     mock_get_marketplace_path: str,
-    assert_build_integration: Callable[[Path], None],
+    assert_build_integration: Callable[[Path], Coroutine[Any, Any, None]],
 ) -> None:
-    p: Path = tmp_path / "fake_integration"
-    p.mkdir()
+    p: anyio.Path = anyio.Path(tmp_path / "fake_integration")
+    await p.mkdir()
     with (
         unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path),
         pytest.raises(FileNotFoundError, match=r"Invalid integration .*"),
     ):
-        assert_build_integration(p)
+        await assert_build_integration(Path(p))
 
 
 @pytest.fixture
 def assert_build_integration(
     tmp_path: Path,
     built_integration: Path,
-) -> Callable[[Path], None]:
-    def wrapper(integration_path: Path) -> None:
-        community: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
-        shutil.copytree(integration_path.parent, community)
-        integration: Path = community / built_integration.name
-        py_version: Path = integration / mp.core.constants.PYTHON_VERSION_FILE
-        if integration.exists():
-            py_version.write_text("3.11", encoding="utf-8")
+) -> Callable[[anyio.Path], Coroutine[Any, Any, None]]:
+    async def wrapper(integration_path: anyio.Path) -> None:
+        community: anyio.Path = anyio.Path(tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME)
+        shutil.copytree(integration_path.parent, community, dirs_exist_ok=True)
+        integration: anyio.Path = community / built_integration.name
+        py_version: anyio.Path = integration / mp.core.constants.PYTHON_VERSION_FILE
+        if await integration.exists():
+            await py_version.write_text("3.11", encoding="utf-8")
 
         marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(
-            community
+            Path(community)
         )
-        marketplace.build_integration(integration)
+        await marketplace.build_integration(Path(integration))
 
         out_integration: Path = marketplace.out_dir / integration.name
 

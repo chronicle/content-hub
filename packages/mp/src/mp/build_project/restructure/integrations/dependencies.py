@@ -28,46 +28,54 @@ import shutil
 import tempfile
 from typing import TYPE_CHECKING
 
+import anyio
+
 import mp.core.constants
 import mp.core.unix
+import mp.core.utils
 
-from .restructurable import Restructurable
+from .restructurable import AsyncRestructurable
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Dependencies(Restructurable):
+class Dependencies(AsyncRestructurable):
     path: Path
     out_path: Path
 
-    def restructure(self) -> None:
+    async def restructure(self) -> None:
         """Restructure an integration's dependencies, downloading them to `out_path`."""
-        with (
-            tempfile.NamedTemporaryFile(
-                mode="r",
-                suffix=".txt",
-                prefix="requirements_",
-                encoding="utf8",
-                delete=False,
-            ) as f,
-        ):
-            requirements: Path = pathlib.Path(f.name)
+        requirements: anyio.Path = await mp.core.utils.run_threaded(self._prepare_requirements)
         try:
-            mp.core.unix.compile_core_integration_dependencies(
-                project_path=self.path,
-                requirements_path=requirements,
-            )
-
             with tempfile.TemporaryDirectory(prefix="dependencies_") as d:
                 deps: Path = pathlib.Path(d)
-                mp.core.unix.download_wheels_from_requirements(
+                await mp.core.unix.download_wheels_from_requirements(
                     project_path=self.path,
-                    requirements_path=requirements,
+                    requirements_path=pathlib.Path(requirements),
                     dst_path=deps,
                 )
-                out_deps: Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
-                shutil.copytree(deps, out_deps)
+                await mp.core.utils.run_threaded(self._copy_dependencies, deps)
         finally:
-            requirements.unlink()
+            await requirements.unlink()
+
+    def _prepare_requirements(self) -> anyio.Path:
+        with tempfile.NamedTemporaryFile(
+            mode="r",
+            suffix=".txt",
+            prefix="requirements_",
+            encoding="utf8",
+            delete=False,
+        ) as f:
+            requirements: anyio.Path = anyio.Path(f.name)
+
+        mp.core.unix.compile_core_integration_dependencies(
+            project_path=self.path,
+            requirements_path=pathlib.Path(requirements),
+        )
+        return requirements
+
+    def _copy_dependencies(self, deps: Path) -> None:
+        out_deps: Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+        shutil.copytree(deps, out_deps)
