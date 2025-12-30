@@ -134,7 +134,7 @@ def _run_validations(
     results: Iterable[ValidationResults] = asyncio.run(
         mp.core.utils.threaded_validate_items(validation_function, playbooks)
     )
-    return [r for r in results if r.is_success]
+    return [r for r in results if not r.is_success]
 
 
 def _run_pre_build_validations(playbook_path: Path) -> ValidationResults:

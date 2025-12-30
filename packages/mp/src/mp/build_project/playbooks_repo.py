@@ -14,14 +14,14 @@
 
 from __future__ import annotations
 
-import multiprocessing
+import asyncio
 import shutil
 from typing import TYPE_CHECKING
 
 import rich
 
-import mp.core.config
 import mp.core.file_utils
+import mp.core.utils
 from mp.core.data_models.playbooks.playbook import Playbook
 
 from .restructure.playbooks.build import PlaybookBuilder
@@ -48,9 +48,7 @@ class PlaybooksRepo:
 
         """
         paths: Iterator[Path] = (p for p in playbook_paths if p.exists())
-        processes: int = mp.core.config.get_threads_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_playbook, paths)
+        asyncio.run(mp.core.utils.threaded_build_items(self.build_playbook, paths))
 
     def build_playbook(self, playbook_path: Path) -> None:
         """Build a single playbook provided by `playbook_path`.
@@ -92,9 +90,7 @@ class PlaybooksRepo:
 
         """
         paths: Iterator[Path] = (p for p in playbooks_paths if p.exists())
-        processes: int = mp.core.config.get_threads_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.deconstruct_playbook, paths)
+        asyncio.run(mp.core.utils.threaded_build_items(self.deconstruct_playbook, paths))
 
     def deconstruct_playbook(self, playbook_path: Path) -> None:
         """Deconstruct a single playbook provided by `playbook_path`.

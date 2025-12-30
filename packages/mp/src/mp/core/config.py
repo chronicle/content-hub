@@ -81,10 +81,10 @@ def set_marketplace_path(p: Path, /) -> None:
 
 
 def get_threads_number() -> int:
-    """Get the number of processes configured for the project.
+    """Get the number of threads configured for the project.
 
     Returns:
-        The number of processes configured for the project.
+        The number of threads configured for the project.
 
     """
     p: int | None = _get_config_key(DEFAULT_SECTION_NAME, THREADS_NUMBER_KEY, int)
@@ -92,7 +92,7 @@ def get_threads_number() -> int:
 
 
 def set_threads_number(n: int, /) -> None:
-    """Set the number of processes for the project."""
+    """Set the number of threads for the project."""
     _set_config_key(DEFAULT_SECTION_NAME, THREADS_NUMBER_KEY, value=n)
 
 
