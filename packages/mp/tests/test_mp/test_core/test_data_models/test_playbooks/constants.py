@@ -818,11 +818,11 @@ NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
     "description": "description",
     "author": "author",
     "contact_email": "email",
-    "dependent_playbook_ids": [],
     "tags": [],
     "contribution_type": "THIRD_PARTY",
     "is_google_verified": False,
     "should_display_in_content_hub": False,
+    "allowed_debug_data": False,
 }
 
 DISPLAY_INFO = PlaybookDisplayInfo(
@@ -831,11 +831,11 @@ DISPLAY_INFO = PlaybookDisplayInfo(
     description="description",
     author="author",
     contact_email="email",
-    dependent_playbook_ids=[],
     tags=[],
     contribution_type=PlaybookContributionType.THIRD_PARTY,
     is_google_verified=False,
     should_display_in_content_hub=False,
+    allowed_debug_data=False,
 )
 
 
