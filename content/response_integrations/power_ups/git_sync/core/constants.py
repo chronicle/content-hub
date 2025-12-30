@@ -149,7 +149,7 @@ PLAYBOOKS_ROOT_README = """# Playbooks
 |Name|Folder|Description|
 |----|------|-----------|
 {% for playbook in playbooks -%}
-|{{ playbook.name }}|{{ playbook.categoryName }}|{{ playbook.description }}|
+|{{ playbook.name }}|{{ playbook.categoryName }}|{{ (playbook.description or '')|replace('\n', ' ') }}|
 {% endfor -%}
 
 """
