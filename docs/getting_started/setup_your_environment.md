@@ -1,16 +1,24 @@
 # Set Up Your Environment!
 
+## Tooling
+
+This repository uses specific tools to streamline development and ensure code quality.
+
+* [**mp CLI**](/docs/tools_and_sdk/mp.md): A command-line tool for building, testing, and managing
+  response integrations and playbooks.
+* [**Google SecOps SOAR SDK**](/docs/tools_and_sdk/soar_sdk.md): A library providing the necessary
+  types and classes for developing integrations.
+
 ## JetBrains IDEs Setup Guide
 
 This guide will help you configure JetBrains IDEs (like PyCharm, IntelliJ IDEA with Python plugin)
 for development in the Google SecOps Content Hub Repository. Proper IDE configuration will
 enhance your development experience with features like code completion, linting, and type checking.
 
-## Initial Setup
-
 ### Project Setup
 
-You have two options, to open the mono repo as a project or to open individual response integrations as
+You have two options, to open the mono repo as a project or to open individual response integrations
+as
 projects. When opening a single integration as a project, you can set the python interpreter of the
 project to be the interpreter found in the virtual environment of the integration.
 
@@ -23,8 +31,10 @@ project to be the interpreter found in the virtual environment of the integratio
 2. Configure Python Interpreter:
 
     * Make sure to have uv installed in your system by running pip install uv
-    * Go to `PyCharm > Settings > Python > Interpreter` (on macOS) or `File > Settings > Python > Interpreter` (on Windows/Linux).
-    * **Tip:** You can also use the search feature in the Settings/Preferences dialog to find "Python Interpreter" quickly.
+    * Go to `PyCharm > Settings > Python > Interpreter` (on macOS) or
+      `File > Settings > Python > Interpreter` (on Windows/Linux).
+    * **Tip:** You can also use the search feature in the Settings/Preferences dialog to find "
+      Python Interpreter" quickly.
     * Click the gear icon and select Add
     * Choose python and select whether to generate a new one or select an existing environment if
       one exists. The venv’s name should be `.venv`. You can create it at the base of the project if
@@ -39,9 +49,9 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Installation:**
 
-1.  Go to `PyCharm > Settings > Plugins` (macOS) or `File > Settings > Plugins` (Windows/Linux).
-2.  Select the "Marketplace" tab.
-3.  Search for the plugin name and click **Install**.
+1. Go to `PyCharm > Settings > Plugins` (macOS) or `File > Settings > Plugins` (Windows/Linux).
+2. Select the "Marketplace" tab.
+3. Search for the plugin name and click **Install**.
 
 ### Ruff
 
@@ -58,8 +68,6 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Purpose:** Type checking integration
 
-
-
 **Configuration:**
 
 * Go to `Settings > Tools > Mypy`
@@ -70,12 +78,9 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Purpose:** Enhanced support for Pydantic models
 
-
 ### PyVenv Manage 2
 
 **Purpose:** Change the IDE's python interpreter
-
-
 
 **Setting the project’s interpreter using this plugin**
 
@@ -95,12 +100,10 @@ You can repeat the process with every “.venv” in the project for every folde
 
 **Purpose:** Colorizes matching brackets to improve code readability
 
-
 ### Key Promoter X
 
 **Purpose:** Learn keyboard shortcuts by showing notifications when you use the mouse for actions
 that have shortcuts
-
 
 ## Code Style Configuration
 
@@ -156,11 +159,5 @@ You can set up mp commands as run configurations
     * Python interpreter: Select the uv interpreter that was configured earlier
     * Click OK to save
 
-## Tooling
-
-This repository uses specific tools to streamline development and ensure code quality.
-
-*   [**mp CLI**](/docs/response_integrations/tools_and_sdk/mp.md): A command-line tool for building, testing, and managing response integrations.
-*   [**Google SecOps SOAR SDK**](/docs/response_integrations/tools_and_sdk/soar_sdk.md): A library providing the necessary types and classes for developing integrations.
-
-It is highly recommended to read the documentation for these tools to understand the full development workflow.
+It is highly recommended to read the documentation for these tools to understand the full
+development workflow.
