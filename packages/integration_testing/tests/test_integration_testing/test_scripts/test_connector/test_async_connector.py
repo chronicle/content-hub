@@ -46,9 +46,9 @@ def test_mock_connector_output(connector_output: MockConnectorOutput) -> None:
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.ensure_future(connector.start()))
 
-    assert connector_output.results is not None
+    assert connector_output.report is not None
 
-    alerts: list[AlertInfo] = connector_output.results.json_output.alerts
+    alerts: list[AlertInfo] = connector_output.report.json_output.alerts
     assert len(alerts) == 1
 
     alert: AlertInfo = alerts[0]
@@ -69,10 +69,10 @@ def test_mock_connector_overflow_output(connector_output: MockConnectorOutput) -
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.ensure_future(connector.start()))
 
-    assert connector_output.results is not None
+    assert connector_output.report is not None
 
     overflow_alerts: list[OverflowAlertDetails] = (
-        connector_output.results.json_output.overflow_alerts
+        connector_output.report.json_output.overflow_alerts
     )
     assert len(overflow_alerts) == 1
 

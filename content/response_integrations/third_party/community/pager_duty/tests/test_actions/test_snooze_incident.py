@@ -40,9 +40,9 @@ def test_snooze_incident_success(
     SnoozeIncident.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value is True
-    assert action_output.results.output_message == success_output_msg
+    assert action_output.report.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert action_output.report.result_value is True
+    assert action_output.report.output_message == success_output_msg
 
 
 @set_metadata(
@@ -66,6 +66,6 @@ def test_snooze_incident_not_found(
     SnoozeIncident.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.execution_state.value == EXECUTION_STATE_FAILED
-    assert action_output.results.result_value is False
-    assert expected_output_msg in action_output.results.output_message
+    assert action_output.report.execution_state.value == EXECUTION_STATE_FAILED
+    assert action_output.report.result_value is False
+    assert expected_output_msg in action_output.report.output_message

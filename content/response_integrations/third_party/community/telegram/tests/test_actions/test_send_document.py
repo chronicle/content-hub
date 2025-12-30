@@ -44,10 +44,6 @@ class TestSendDocument:
             "document": self.DOCUMENT_URL,
         }
 
-        assert (
-            action_output.results.output_message == "The document was sent successfully"
-        )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert (
-            action_output.results.json_output.json_result == expected_send_doc_response
-        )
+        assert action_output.report.output_message == "The document was sent successfully"
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.json_output.json_result == expected_send_doc_response

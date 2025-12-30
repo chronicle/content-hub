@@ -35,11 +35,11 @@ def test_string_function_replace(
 ) -> None:
     StringFunctions.main()
 
-    assert action_output.results.output_message == (
+    assert action_output.report.output_message == (
         "Underscore_to_space successfully converted to Underscore to space with replace function"
     )
-    assert action_output.results.result_value == "Underscore to space"
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.result_value == "Underscore to space"
+    assert action_output.report.execution_state == ExecutionState.COMPLETED
 
 
 @set_metadata(
@@ -56,12 +56,12 @@ def test_string_function_regex_replace(
 ) -> None:
     StringFunctions.main()
 
-    assert action_output.results.output_message == (
+    assert action_output.report.output_message == (
         "Underscore_to_space successfully converted to "
         "Underscore to space with regex replace function"
     )
-    assert action_output.results.result_value == "Underscore to space"
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.result_value == "Underscore to space"
+    assert action_output.report.execution_state == ExecutionState.COMPLETED
 
 
 @set_metadata(
@@ -78,8 +78,8 @@ def test_string_function_regex_replace_regex_param(
 ) -> None:
     StringFunctions.main()
 
-    assert action_output.results.output_message == (
+    assert action_output.report.output_message == (
         "CamelCaseToWords successfully converted to Camel Case To Words with regex replace function"
     )
-    assert action_output.results.result_value == "Camel Case To Words"
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.result_value == "Camel Case To Words"
+    assert action_output.report.execution_state == ExecutionState.COMPLETED

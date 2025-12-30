@@ -55,7 +55,7 @@ class TestActionScriptOutput:
         assert isinstance(err_io, io.StringIO)
 
     def test_no_results_return_none(self, action_output: MockActionOutput) -> None:
-        assert action_output.results is None
+        assert action_output.report is None
 
     def test_flush_flushes_both_outputs(self, action_output: MockActionOutput) -> None:
         out_io: io.StringIO = action_output.get_out_io()
@@ -81,7 +81,7 @@ class TestActionScriptOutput:
         )
 
         out_io.write(json.dumps(output.to_json()))
-        results: ActionOutput = action_output.results
+        results: ActionOutput = action_output.report
 
         assert results == output
 
@@ -112,7 +112,7 @@ class TestConnectorScriptOutput:
         self,
         connector_output: MockConnectorOutput,
     ) -> None:
-        assert connector_output.results is None
+        assert connector_output.report is None
 
     def test_flush_flushes_both_outputs(
         self,
@@ -140,7 +140,7 @@ class TestConnectorScriptOutput:
         )
 
         out_io.write(json.dumps(output.to_json()))
-        results: ConnectorOutput = connector_output.results
+        results: ConnectorOutput = connector_output.report
 
         assert isinstance(results, ConnectorOutput)
         assert results.json_output.to_json() == output.json_output.to_json()

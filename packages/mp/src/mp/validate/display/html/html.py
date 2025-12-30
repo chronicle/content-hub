@@ -38,7 +38,7 @@ class ReportStatistics(NamedTuple):
 
 class HtmlFormat:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
-        self.validation_results: dict[ContentType, FullReport] = validation_results
+        self.results: dict[ContentType, FullReport] = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
@@ -88,7 +88,7 @@ class HtmlFormat:
         groups_data = {}
         total_items = total_fatal = total_warn = 0
 
-        for content_type, full_report in self.validation_results.items():
+        for content_type, full_report in self.results.items():
             all_reports = [
                 report for reports in full_report.values() if reports for report in reports
             ]

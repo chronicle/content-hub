@@ -61,9 +61,7 @@ class TestSetUserPermissions:
                 "can_promote_members": self.CAN_PROMOTE_MEMBERS,
             },
         }
-        telegram.set_set_user_permissions_response(
-            expected_set_user_permissions_response
-        )
+        telegram.set_set_user_permissions_response(expected_set_user_permissions_response)
 
         SetUserPermissions.main()
 
@@ -85,13 +83,12 @@ class TestSetUserPermissions:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == f"The permissions of the user {self.USER_ID} were set successfully"
         )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
         assert (
-            action_output.results.json_output.json_result
-            == expected_set_user_permissions_response
+            action_output.report.json_output.json_result == expected_set_user_permissions_response
         )
 
     @set_metadata(
@@ -137,8 +134,8 @@ class TestSetUserPermissions:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "Could not set user permissions. Error: b'Simulated API failure for"
             " SetUserPermissions'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

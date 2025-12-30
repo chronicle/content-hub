@@ -36,8 +36,6 @@ try:
     import nacl.signing
 except ImportError:
     pass
-from netaddr import valid_ipv4, valid_ipv6
-
 import eml_parser
 from dkim.crypto import (
     DigestTooLargeError,
@@ -47,6 +45,7 @@ from dkim.crypto import (
     parse_pem_private_key,
     parse_public_key,
 )
+from netaddr import valid_ipv4, valid_ipv6
 
 __all__ = [
     "ARC",
@@ -1425,7 +1424,7 @@ class ARC(DomainSigner):
             "Authentication-Results: " + auth_results.decode("utf-8"),
         )
         arc_results = [
-            res for res in parsed_auth_results.results if res.method == "arc"
+            res for res in parsed_auth_results.report if res.method == "arc"
         ]
         if len(arc_results) == 0:
             chain_validation_status = CV_None

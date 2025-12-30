@@ -35,9 +35,9 @@ class TestGetBotDetails:
         request = script_session.request_history[0].request
         assert request.url.path.endswith("/getMe")
 
-        assert action_output.results.output_message == "The Bot was found successfully"
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.json_output.json_result == expected_bot_details
+        assert action_output.report.output_message == "The Bot was found successfully"
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.json_output.json_result == expected_bot_details
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     def test_get_bot_details_failure(
@@ -54,8 +54,8 @@ class TestGetBotDetails:
         assert request.url.path.endswith("/getMe")
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "The Bot details could not be fetched. Error: b'Simulated API failure"
             " for GetBotDetails'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

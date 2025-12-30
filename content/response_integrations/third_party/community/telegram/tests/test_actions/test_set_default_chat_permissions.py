@@ -68,12 +68,12 @@ class TestSetDefaultChatPermissions:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == f"The permissions of the chat {self.CHAT_ID} were changed successfully"
         )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
         assert (
-            action_output.results.json_output.json_result
+            action_output.report.json_output.json_result
             == expected_set_default_chat_permissions_response
         )
 
@@ -110,8 +110,8 @@ class TestSetDefaultChatPermissions:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "Could not change the chat permissions. Error: b'Simulated API failure"
             " for SetDefaultChatPermissions'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

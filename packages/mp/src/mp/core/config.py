@@ -33,14 +33,12 @@ CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
 
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
-PROCESSES_NUMBER_KEY: str = "processes"
+THREADS_NUMBER_KEY: str = "threads"
 VERBOSE_LOG_KEY: str = "is_verbose"
 QUIET_LOG_KEY: str = "is_quiet"
 DEFAULT_SECTION_NAME: str = "DEFAULT"
 RUNTIME_SECTION_NAME: str = "RUNTIME"
-PROCESSES_MIN_VALUE: int = 1
-PROCESSES_MAX_VALUE: int = 10
-DEFAULT_PROCESSES_NUMBER: int = 5
+MAX_THREADS_SENTINEL: int = -1
 DEFAULT_QUIET_VALUE: str = "no"
 DEFAULT_VERBOSE_VALUE: str = "no"
 DEFAULT_MARKETPLACE_PATH: Path = Path.home() / mp.core.constants.REPO_NAME
@@ -82,27 +80,20 @@ def set_marketplace_path(p: Path, /) -> None:
     )
 
 
-def get_processes_number() -> int:
+def get_threads_number() -> int:
     """Get the number of processes configured for the project.
 
     Returns:
         The number of processes configured for the project.
 
-    Raises:
-        ValueError: when `None` is the configured value
-
     """
-    p: int | None = _get_config_key(DEFAULT_SECTION_NAME, PROCESSES_NUMBER_KEY, int)
-    if p is None:
-        msg: str = "Got 'None' for processes number"
-        raise ValueError(msg)
-
-    return p
+    p: int | None = _get_config_key(DEFAULT_SECTION_NAME, THREADS_NUMBER_KEY, int)
+    return MAX_THREADS_SENTINEL if p is None else p
 
 
-def set_processes_number(n: int, /) -> None:
+def set_threads_number(n: int, /) -> None:
     """Set the number of processes for the project."""
-    _set_config_key(DEFAULT_SECTION_NAME, PROCESSES_NUMBER_KEY, value=n)
+    _set_config_key(DEFAULT_SECTION_NAME, THREADS_NUMBER_KEY, value=n)
 
 
 def is_verbose() -> bool:
@@ -209,7 +200,7 @@ def _create_default_config(config: configparser.ConfigParser) -> None:
     mp_path: Path = DEFAULT_MARKETPLACE_PATH.expanduser().resolve().absolute()
     config[DEFAULT_SECTION_NAME] = {
         MARKETPLACE_PATH_KEY: str(mp_path),
-        PROCESSES_NUMBER_KEY: str(DEFAULT_PROCESSES_NUMBER),
+        THREADS_NUMBER_KEY: str(MAX_THREADS_SENTINEL),
     }
 
 

@@ -26,15 +26,15 @@ if TYPE_CHECKING:
 
 class CliDisplay:
     def __init__(self, tests_report: list[IntegrationTestResults]) -> None:
-        self.tests_report: list[IntegrationTestResults] = tests_report
+        self.report: list[IntegrationTestResults] = tests_report
         self.console: Console = Console()
 
     def display(self) -> None:
         """Display the test results in the cli."""
-        if not self.tests_report:
+        if not self.report:
             self.console.print("[bold green]All Tests Passed\n[/bold green]")
 
-        for integration_report in self.tests_report:
+        for integration_report in self.report:
             self.console.print(_build_table(integration_report), "\n")
 
 

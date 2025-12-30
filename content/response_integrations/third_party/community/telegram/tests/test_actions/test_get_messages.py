@@ -56,12 +56,9 @@ class TestGetMessages:
             "allowed_updates": self.ALLOWED_UPDATES,
         }
 
-        assert (
-            action_output.results.output_message
-            == "The messages were pulled successfully."
-        )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.json_output.json_result == expected_messages
+        assert action_output.report.output_message == "The messages were pulled successfully."
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.json_output.json_result == expected_messages
 
     @set_metadata(
         parameters={"Offset Param": OFFSET_PARAM, "Allowed Updates": ALLOWED_UPDATES},
@@ -85,7 +82,7 @@ class TestGetMessages:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "Could not get messages. Error: b'Simulated API failure for GetMessages'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

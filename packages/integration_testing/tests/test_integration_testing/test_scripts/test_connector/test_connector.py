@@ -44,9 +44,9 @@ def test_mock_connector_output(connector_output: MockConnectorOutput) -> None:
     connector.set_alert_to_ingest(expected_alert)
     connector.start()
 
-    assert connector_output.results is not None
+    assert connector_output.report is not None
 
-    alerts: list[AlertInfo] = connector_output.results.json_output.alerts
+    alerts: list[AlertInfo] = connector_output.report.json_output.alerts
     assert len(alerts) == 1
 
     alert: AlertInfo = alerts[0]
@@ -66,10 +66,10 @@ def test_mock_connector_overflow_output(connector_output: MockConnectorOutput) -
     connector.set_alert_to_ingest(alert)
     connector.start()
 
-    assert connector_output.results is not None
+    assert connector_output.report is not None
 
     overflow_alerts: list[OverflowAlertDetails] = (
-        connector_output.results.json_output.overflow_alerts
+        connector_output.report.json_output.overflow_alerts
     )
     assert len(overflow_alerts) == 1
 

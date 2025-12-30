@@ -42,11 +42,10 @@ class TestGetChatDetails:
         assert request.url.path.endswith("/getChat")
 
         assert (
-            action_output.results.output_message
-            == f"The chat {self.CHAT_ID} was found successfully"
+            action_output.report.output_message == f"The chat {self.CHAT_ID} was found successfully"
         )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.json_output.json_result == expected_chat_details
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.json_output.json_result == expected_chat_details
 
     @set_metadata(
         parameters={"Chat ID": CHAT_ID},
@@ -67,8 +66,8 @@ class TestGetChatDetails:
         assert request.kwargs["params"] == {"chat_id": self.CHAT_ID}
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == f"Could not find The chat {self.CHAT_ID}. Error: b'Simulated API"
             " failure'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

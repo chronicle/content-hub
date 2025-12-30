@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
-import multiprocessing
+import asyncio
 from typing import TYPE_CHECKING
 
-import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
+import mp.core.utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
 from mp.validate.data_models import (
     PRE_BUILD,
@@ -131,12 +131,10 @@ def _run_validations(
         list[ValidationResults]: List contains the Validation results object
 
     """
-    processes: int = mp.core.config.get_processes_number()
-    with multiprocessing.Pool(processes=processes) as pool:
-        results = pool.imap_unordered(validation_function, playbooks)
-        validation_outputs: list[ValidationResults] = [r for r in results if not r.is_success]
-
-    return validation_outputs
+    results: Iterable[ValidationResults] = asyncio.run(
+        mp.core.utils.threaded_validate_items(validation_function, playbooks)
+    )
+    return [r for r in results if r.is_success]
 
 
 def _run_pre_build_validations(playbook_path: Path) -> ValidationResults:
