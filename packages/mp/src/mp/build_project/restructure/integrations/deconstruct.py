@@ -34,6 +34,7 @@ import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
 import mp.core.utils
+from mp.build_project.restructure.integrations import deconstruct_dependencies
 from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
@@ -98,15 +99,19 @@ class DeconstructIntegration:
         """
         mp.core.unix.init_python_project_if_not_exists(self.out_path)
         self.update_pyproject()
-        requirements: Path = self.path / mp.core.constants.REQUIREMENTS_FILE
-        if requirements.exists():
-            try:
-                rich.print(f"Adding requirements to {mp.core.constants.PROJECT_FILE}")
-                mp.core.unix.add_dependencies_to_toml(
-                    project_path=self.out_path, requirements_path=requirements
-                )
-            except mp.core.unix.FatalCommandError as e:
-                rich.print(f"Failed to install dependencies from requirements: {e}")
+        try:
+            rich.print(f"Adding dependencies to {mp.core.constants.PROJECT_FILE}")
+            (
+                dependencies,
+                dev_dependencies,
+            ) = deconstruct_dependencies.get_dependencies(self.path)
+            mp.core.unix.add_dependencies_to_toml(
+                project_path=self.out_path,
+                deps_to_add=dependencies,
+                dev_deps_to_add=dev_dependencies,
+            )
+        except mp.core.unix.FatalCommandError as e:
+            rich.print(f"Failed to install dependencies: {e}")
 
     def update_pyproject(self) -> None:
         """Update an integration's pyproject.toml file from its definition file."""
@@ -157,7 +162,10 @@ class DeconstructIntegration:
 
     def _create_actions_json_example_files(self) -> None:
         resources_dir: Path = self.out_path / RESOURCES_DIR
-        for action_name, action_metadata in self.integration.actions_metadata.items():
+        for (
+            action_name,
+            action_metadata,
+        ) in self.integration.actions_metadata.items():
             drms: list[DynamicResultsMetadata] = action_metadata.dynamic_results_metadata
             for drm in drms:
                 if not drm.result_example:
