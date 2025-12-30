@@ -28,12 +28,12 @@ from ...actions import DefangText
 def test_defang_http(action_output: MockActionOutput) -> None:
     DefangText.main()
 
-    assert action_output.results.json_output.json_result == {
+    assert action_output.report.json_output.json_result == {
         "converted_text": "hxxp://example[.]com"
     }
-    assert action_output.results.output_message == "Successfully defanged the input."
-    assert action_output.results.result_value
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.output_message == "Successfully defanged the input."
+    assert action_output.report.result_value
+    assert action_output.report.execution_state == ExecutionState.COMPLETED
 
 
 @set_metadata(
@@ -42,7 +42,7 @@ def test_defang_http(action_output: MockActionOutput) -> None:
 )
 def test_defang_https(action_output: MockActionOutput) -> None:
     DefangText.main()
-    assert action_output.results.json_output.json_result == {
+    assert action_output.report.json_output.json_result == {
         "converted_text": "hxxps://example[.]com"
     }
 
@@ -53,7 +53,7 @@ def test_defang_https(action_output: MockActionOutput) -> None:
 )
 def test_defang_ip(action_output: MockActionOutput) -> None:
     DefangText.main()
-    assert action_output.results.json_output.json_result == {"converted_text": "1[.]1[.]1[.]1"}
+    assert action_output.report.json_output.json_result == {"converted_text": "1[.]1[.]1[.]1"}
 
 
 @set_metadata(
@@ -63,7 +63,7 @@ def test_defang_ip(action_output: MockActionOutput) -> None:
 def test_defang_email(action_output: MockActionOutput) -> None:
     DefangText.main()
     # Note: Our regex defangs domain too if it matches the pattern
-    assert action_output.results.json_output.json_result == {
+    assert action_output.report.json_output.json_result == {
         "converted_text": "user[at]example[.]com"
     }
 
@@ -81,7 +81,7 @@ def test_defang_mixed(action_output: MockActionOutput) -> None:
         "Check hxxps://example[.]com/path?query=1 and 192[.]168[.]1[.]1 or "
         "user.name+tag[at]sub[.]example[.]co[.]uk"
     )
-    assert action_output.results.json_output.json_result == {"converted_text": expected}
+    assert action_output.report.json_output.json_result == {"converted_text": expected}
 
 
 @set_metadata(
@@ -103,7 +103,7 @@ def test_defang_complex(action_output: MockActionOutput) -> None:
         "192[.]168[.]1[.]1 and 10[.]0[.]0[.]1. This is some benign text that should "
         "not be affected. Here is another sentence with no IOCs."
     )
-    assert action_output.results.json_output.json_result == {"converted_text": expected}
+    assert action_output.report.json_output.json_result == {"converted_text": expected}
 
 
 @set_metadata(
@@ -112,7 +112,7 @@ def test_defang_complex(action_output: MockActionOutput) -> None:
 )
 def test_empty_input(action_output: MockActionOutput) -> None:
     DefangText.main()
-    assert action_output.results.output_message == "Input text is empty."
-    assert action_output.results.result_value
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
-    assert action_output.results.json_output.json_result == {"converted_text": ""}
+    assert action_output.report.output_message == "Input text is empty."
+    assert action_output.report.result_value
+    assert action_output.report.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.json_output.json_result == {"converted_text": ""}

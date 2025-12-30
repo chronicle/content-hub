@@ -25,7 +25,7 @@ def test_filtered_incident_list_success(
     action_output: MockActionOutput,
     pagerduty: PagerDuty,
 ) -> None:
-    
+
     mock_incidents = json.loads(MOCK_INCIDENTS_FILE.read_text())
     pagerduty.set_incidents(mock_incidents)
     success_output_msg = "Successfully retrieved Incidents\n"
@@ -33,9 +33,9 @@ def test_filtered_incident_list_success(
     FilteredIncidentList.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.output_message == success_output_msg
-    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value is True
+    assert action_output.report.output_message == success_output_msg
+    assert action_output.report.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert action_output.report.result_value is True
 
 
 @set_metadata(
@@ -57,6 +57,6 @@ def test_filtered_incident_list_no_incidents_found(
     FilteredIncidentList.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value is True
-    assert action_output.results.output_message == expected_output_msg
+    assert action_output.report.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert action_output.report.result_value is True
+    assert action_output.report.output_message == expected_output_msg

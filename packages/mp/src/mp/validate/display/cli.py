@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 class CliDisplay:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
-        self.validation_results: dict[ContentType, FullReport] = validation_results
+        self.results: dict[ContentType, FullReport] = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
@@ -40,7 +40,7 @@ class CliDisplay:
 
         display_categories: list[str] = ["Pre-Build", "Build", "Post-Build"]
 
-        for content_type, full_report in self.validation_results.items():
+        for content_type, full_report in self.results.items():
             if not any(full_report.values()):
                 continue
 
@@ -60,10 +60,7 @@ class CliDisplay:
             self.console.print("\n")
 
     def _is_all_empty(self) -> bool:
-        for full_report in self.validation_results.values():
-            if any(full_report.values()):
-                return False
-        return True
+        return all(not any(full_report.values()) for full_report in self.results.values())
 
 
 def _build_table(integration_result: ValidationResults) -> Table:

@@ -14,20 +14,19 @@
 
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING
 
-import copy
-
-from TIPCommon.base.action import ExecutionState
-from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
-
-from wiz.actions import add_comment_to_issue
-from wiz.core import constants, data_parser
 from tests import common
 from tests.core.product import Wiz
 from tests.core.session import WizSession
+from TIPCommon.base.action import ExecutionState
+from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
+
+from wiz.actions import add_comment_to_issue
+from wiz.core import constants, data_parser
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -77,7 +76,7 @@ def test_add_comment_to_issue_action_success(
 
     assert comment.is_comment is True
     assert len(script_session.request_history) == 2
-    assert action_output.results == ActionOutput(
+    assert action_output.report == ActionOutput(
         output_message=SUCCESS_OUTPUT_MESSAGE,
         result_value=True,
         execution_state=ExecutionState.COMPLETED,
@@ -98,7 +97,7 @@ def test_add_comment_to_issue_action_failure(
     add_comment_to_issue.main()
 
     assert len(script_session.request_history) == 2
-    assert action_output.results == ActionOutput(
+    assert action_output.report == ActionOutput(
         output_message=FAILED_OUTPUT_MESSAGE,
         result_value=False,
         execution_state=ExecutionState.FAILED,

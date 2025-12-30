@@ -30,8 +30,8 @@ from ...actions import IpToInteger
 def test_ip_to_integer_json_result(action_output: MockActionOutput) -> None:
     IpToInteger.main()
 
-    assert action_output.results.json_output.json_result == {
+    assert action_output.report.json_output.json_result == {
         "192.168.1.1": 3232235777,
         "192.168.1.2": 3232235778,
     }
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.execution_state == ExecutionState.COMPLETED

@@ -75,12 +75,16 @@ def config(
         _set_marketplace_path(root_path)
 
     if processes is not None:
-        _set_processes_number(processes)
+        _set_threads_number(processes)
 
     if display_config:
         p: Path = mp.core.config.get_marketplace_path()
-        n: int = mp.core.config.get_processes_number()
-        rich.print(f"Marketplace path: {p}\nNumber of processes: {n}")
+        n: int = mp.core.config.get_threads_number()
+        rich.print(
+            f"Marketplace path: {p}"
+            f"\nNumber of threads:"
+            f" {n if n != mp.core.config.MAX_THREADS_SENTINEL else 'Max Available'}"
+        )
 
 
 def _set_marketplace_path(marketplace_path: str) -> None:
@@ -96,13 +100,13 @@ def _set_marketplace_path(marketplace_path: str) -> None:
     mp.core.config.set_marketplace_path(mp_path)
 
 
-def _set_processes_number(processes: int) -> None:
+def _set_threads_number(processes: int) -> None:
     if not isinstance(processes, int) or not _is_processes_in_range(processes):
         msg: str = "Processes must be an integer between 1 and 10"
         raise ValueError(msg)
 
-    mp.core.config.set_processes_number(processes)
+    mp.core.config.set_threads_number(processes)
 
 
 def _is_processes_in_range(processes: int) -> bool:
-    return mp.core.config.PROCESSES_MIN_VALUE <= processes <= mp.core.config.PROCESSES_MAX_VALUE
+    return processes > 0 or processes == mp.core.config.MAX_THREADS_SENTINEL

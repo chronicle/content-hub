@@ -33,5 +33,5 @@ class TestPing:
         request = script_session.request_history[0].request
         assert request.url.path.endswith("/rates")
 
-        assert action_output.results.output_message == success_output_msg
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.output_message == success_output_msg
+        assert action_output.report.execution_state == ExecutionState.COMPLETED

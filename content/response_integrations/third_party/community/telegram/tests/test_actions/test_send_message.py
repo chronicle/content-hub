@@ -39,13 +39,9 @@ class TestSendMessage:
             "text": self.MESSAGE_CONTENT,
         }
 
-        assert (
-            action_output.results.output_message == "The message was sent successfully"
-        )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert (
-            action_output.results.json_output.json_result == expected_message_response
-        )
+        assert action_output.report.output_message == "The message was sent successfully"
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.json_output.json_result == expected_message_response
 
     @set_metadata(
         parameters={"Message": MESSAGE_CONTENT, "Chat ID": CHAT_ID},
@@ -69,7 +65,7 @@ class TestSendMessage:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "Could not send message. Error: b'Simulated API failure for SendMessage'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

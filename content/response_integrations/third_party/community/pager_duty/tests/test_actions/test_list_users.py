@@ -35,9 +35,9 @@ def test_list_users_success(
     assert len(script_session.request_history) == 1
     request = script_session.request_history[0].request
     assert request.url.path.endswith("/users")
-    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value is True
-    assert action_output.results.output_message == success_output_msg
+    assert action_output.report.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert action_output.report.result_value is True
+    assert action_output.report.output_message == success_output_msg
 
 
 @set_metadata(
@@ -59,6 +59,6 @@ def test_list_users_no_users_found(
     assert len(script_session.request_history) == 1
     request = script_session.request_history[0].request
     assert request.url.path.endswith("/users")
-    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value is True
-    assert action_output.results.output_message == expected_output_msg
+    assert action_output.report.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert action_output.report.result_value is True
+    assert action_output.report.output_message == expected_output_msg

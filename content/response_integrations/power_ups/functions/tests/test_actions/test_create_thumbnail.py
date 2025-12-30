@@ -36,10 +36,10 @@ from ...actions import CreateThumbnail
 def test_create_thumbnail_json_result(action_output: MockActionOutput) -> None:
     CreateThumbnail.main()
 
-    assert action_output.results.json_output.json_result == {
+    assert action_output.report.json_output.json_result == {
         "thumbnail": (
             "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAC0lEQVR4nGNggAEAAAoAAX"
             "+AdF4AAAAASUVORK5CYII="
         )
     }
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.execution_state == ExecutionState.COMPLETED

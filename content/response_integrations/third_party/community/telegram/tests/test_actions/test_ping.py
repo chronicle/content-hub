@@ -35,8 +35,8 @@ class TestPing:
         request = script_session.request_history[0].request
         assert request.url.path.endswith("/getMe")
 
-        assert action_output.results.output_message == "Connected successfully"
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.output_message == "Connected successfully"
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     def test_ping_failure(
@@ -53,5 +53,5 @@ class TestPing:
         request = script_session.request_history[0].request
         assert request.url.path.endswith("/getMe")
 
-        assert action_output.results.output_message == "The Connection failed"
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.output_message == "The Connection failed"
+        assert action_output.report.execution_state == ExecutionState.FAILED

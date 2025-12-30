@@ -20,10 +20,12 @@ from TIPCommon.base.action import ExecutionState
 
 from ...actions import CalculateTimestamp
 
-Failed_message = ('Error executing action "Calculate Timestamp"\n'
-                  'Reason: input provided in “Custom Timestamp” and '
-                  '“Custom Timestamp Format” is not aligned. Please check '
-                  'the spelling.')
+Failed_message = (
+    'Error executing action "Calculate Timestamp"\n'
+    "Reason: input provided in “Custom Timestamp” and "
+    "“Custom Timestamp Format” is not aligned. Please check "
+    "the spelling."
+)
 
 
 @set_metadata(
@@ -40,9 +42,9 @@ def test_calculate_timestamp_current_time_with_deltas(
     """Test calculating timestamp from current time with deltas and epoch output."""
     CalculateTimestamp.main()
 
-    assert action_output.results.output_message
-    assert action_output.results.result_value is True
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.output_message
+    assert action_output.report.result_value is True
+    assert action_output.report.execution_state == ExecutionState.COMPLETED
 
 
 @set_metadata(
@@ -61,13 +63,12 @@ def test_calculate_timestamp_custom_with_format(
     """Test using a custom timestamp with a specific format and string output."""
     CalculateTimestamp.main()
 
-    assert action_output.results.output_message
-    assert action_output.results.result_value is True
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.output_message
+    assert action_output.report.result_value is True
+    assert action_output.report.execution_state == ExecutionState.COMPLETED
 
 
 @set_metadata(
-    
     integration_config={},
     parameters={
         "Input Type": "Custom Timestamp",
@@ -80,5 +81,5 @@ def test_calculate_timestamp_misaligned_format_fails(
 ) -> None:
     """Test that validation fails for misaligned custom timestamp and format."""
     CalculateTimestamp.main()
-    assert action_output.results.output_message == Failed_message
-    assert action_output.results.execution_state == ExecutionState.FAILED
+    assert action_output.report.output_message == Failed_message
+    assert action_output.report.execution_state == ExecutionState.FAILED

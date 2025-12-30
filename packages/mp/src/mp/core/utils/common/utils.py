@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import platform
 import re
 import sys
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, ParamSpec, TypedDict, TypeVar
 
+import mp.core.config
 from mp.core.constants import WINDOWS_PLATFORM
 from mp.core.custom_types import RepositoryType
 
@@ -37,6 +39,57 @@ ERR_MSG_STRING_LIMIT: int = 256
 TRIM_CHARS: str = " ... "
 
 _T = TypeVar("_T")
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+async def threaded_build_items(builder: Callable[[_T], None], items: Iterable[_T]) -> None:
+    """Run builder functions in parallel threads."""
+    await asyncio.gather(*[run_threaded(builder, i) for i in items])
+
+
+async def threaded_test_items(
+    builder: Callable[[_T, _T], _R],
+    items: Iterable[tuple[_T, _T]],
+) -> Iterable[_R]:
+    """Run builder functions in parallel threads.
+
+    Returns:
+        An iterable of all the return values of the builder functions.
+
+    """
+    return await asyncio.gather(*[run_threaded(builder, p1, p2) for p1, p2 in items])
+
+
+async def threaded_validate_items(
+    validator: Callable[[_T], _R],
+    items: Iterable[_T],
+) -> Iterable[_R]:
+    """Run builder functions in parallel threads.
+
+    Returns:
+        An iterable of all the return values of the validator functions.
+
+    """
+    return await asyncio.gather(*[run_threaded(validator, i) for i in items])
+
+
+async def run_threaded(fn: Callable[_P, _R], *args: _P.args, **kwargs: _P.kwargs) -> _R:
+    """Run a function in a separate thread.
+
+    If any processes are configured in mp, it will use them. If not, it will use the maximum
+    available.
+
+    Returns:
+        The fn return value.
+
+    """
+    processes: int = mp.core.config.get_threads_number()
+    if processes == mp.core.config.MAX_THREADS_SENTINEL:
+        return await asyncio.to_thread(fn, *args, **kwargs)
+
+    async with asyncio.Semaphore(processes):
+        return await asyncio.to_thread(fn, *args, **kwargs)
 
 
 def get_python_version_from_version_string(version: str) -> str:

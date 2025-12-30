@@ -54,8 +54,8 @@ def test_async_action_example_first_run_success(
 
         # Assert
         assert len(script_session.request_history) == 1
-        assert action_output.results.output_message == success_output_msg
-        assert action_output.results.execution_state == ExecutionState.IN_PROGRESS
+        assert action_output.report.output_message == success_output_msg
+        assert action_output.report.execution_state == ExecutionState.IN_PROGRESS
 
 
 @set_metadata(
@@ -87,9 +87,9 @@ def test_async_action_example_second_run_success(
 
         # Assert
         assert len(script_session.request_history) == 1
-        assert action_output.results.output_message == success_output_msg
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.result_value is True
-        assert action_output.results.json_output.json_result == [
+        assert action_output.report.output_message == success_output_msg
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.result_value is True
+        assert action_output.report.json_output.json_result == [
             {"case_id": str(CASE_ID), "tags": [TAG]}
         ]

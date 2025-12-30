@@ -14,20 +14,20 @@
 
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING
 
-import copy
-
-from TIPCommon.base.action import ExecutionState
-from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
+from tests.core.product import Wiz
+from tests.core.session import WizSession
+from TIPCommon.base.action import ExecutionState
+from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
 
 from wiz.actions import ignore_issue
 from wiz.core import constants, data_parser
+
 from .. import common
-from tests.core.product import Wiz
-from tests.core.session import WizSession
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -69,7 +69,7 @@ def test_ignore_issue_action_success(
 
     assert issue.status == constants.STATUS_REJECTED
     assert len(script_session.request_history) == 2
-    assert action_output.results == ActionOutput(
+    assert action_output.report == ActionOutput(
         output_message=SUCCESS_OUTPUT_MESSAGE,
         result_value=True,
         execution_state=ExecutionState.COMPLETED,
@@ -90,7 +90,7 @@ def test_ignore_issue_action_failure(
 
     assert issue.status is None
     assert len(script_session.request_history) == 2
-    assert action_output.results == ActionOutput(
+    assert action_output.report == ActionOutput(
         output_message=FAILED_OUTPUT_MESSAGE,
         result_value=False,
         execution_state=ExecutionState.FAILED,

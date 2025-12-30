@@ -40,12 +40,9 @@ class TestSendPhoto:
             "photo": self.PHOTO_URL,
         }
 
-        assert action_output.results.output_message == "The photo was sent successfully"
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert (
-            action_output.results.json_output.json_result
-            == expected_send_photo_response
-        )
+        assert action_output.report.output_message == "The photo was sent successfully"
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.json_output.json_result == expected_send_photo_response
 
     @set_metadata(
         parameters={"Chat ID": CHAT_ID, "Photo URL": PHOTO_URL},
@@ -69,7 +66,7 @@ class TestSendPhoto:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "Could not send photo. Error: b'Simulated API failure for SendPhoto'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

@@ -33,7 +33,7 @@ from ...actions import TimeDurationCalculator
 def test_time_duration_calculator_json_result(action_output: MockActionOutput) -> None:
     TimeDurationCalculator.main()
 
-    assert action_output.results.json_output.json_result == {
+    assert action_output.report.json_output.json_result == {
         "years": 0,
         "days": 31,
         "hours": 744,
@@ -41,4 +41,4 @@ def test_time_duration_calculator_json_result(action_output: MockActionOutput) -
         "seconds": 2678400,
         "duration": "Time between dates: 0 years, 31 days, 0 hours, 0 minutes and 0 seconds",
     }
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.execution_state == ExecutionState.COMPLETED

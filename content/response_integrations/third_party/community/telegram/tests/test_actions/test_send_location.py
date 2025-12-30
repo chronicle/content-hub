@@ -46,14 +46,9 @@ class TestSendLocation:
             "longitude": self.LONGITUDE,
         }
 
-        assert (
-            action_output.results.output_message == "The location was sent successfully"
-        )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert (
-            action_output.results.json_output.json_result
-            == expected_send_location_response
-        )
+        assert action_output.report.output_message == "The location was sent successfully"
+        assert action_output.report.execution_state == ExecutionState.COMPLETED
+        assert action_output.report.json_output.json_result == expected_send_location_response
 
     @set_metadata(
         parameters={"Chat ID": CHAT_ID, "Latitude": LATITUDE, "Longitude": LONGITUDE},
@@ -78,7 +73,7 @@ class TestSendLocation:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "Could not sent location. Error: b'Mock API failure'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

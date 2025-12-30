@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 class HtmlFormat:
     def __init__(self, integration_results_list: list[IntegrationTestResults]) -> None:
-        self.integration_results_list: list[IntegrationTestResults] = integration_results_list
+        self.results: list[IntegrationTestResults] = integration_results_list
         self.console: Console = Console()
 
     def display(self) -> None:
@@ -71,16 +71,12 @@ class HtmlFormat:
         css_content: str = css_file_path.read_text(encoding="utf-8-sig")
         js_content: str = js_file_path.read_text(encoding="utf-8-sig")
 
-        all_results: list[IntegrationTestResults] = self.integration_results_list
-
-        total_integrations: int = len(all_results)
-        total_failed_tests: int = sum(r.failed_tests for r in all_results)
-        total_skipped_tests: int = sum(r.skipped_tests for r in all_results)
-
+        total_integrations: int = len(self.results)
+        total_failed_tests: int = sum(r.failed_tests for r in self.results)
+        total_skipped_tests: int = sum(r.skipped_tests for r in self.results)
         current_time_aware: datetime.datetime = datetime.datetime.now().astimezone()
-
         context = {
-            "integration_results_list": all_results,
+            "integration_results_list": self.results,
             "total_integrations": total_integrations,
             "total_skipped_tests": total_skipped_tests,
             "total_failed_tests": total_failed_tests,

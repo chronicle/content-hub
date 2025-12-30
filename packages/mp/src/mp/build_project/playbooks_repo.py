@@ -48,7 +48,7 @@ class PlaybooksRepo:
 
         """
         paths: Iterator[Path] = (p for p in playbook_paths if p.exists())
-        processes: int = mp.core.config.get_processes_number()
+        processes: int = mp.core.config.get_threads_number()
         with multiprocessing.Pool(processes=processes) as pool:
             pool.map(self.build_playbook, paths)
 
@@ -92,7 +92,7 @@ class PlaybooksRepo:
 
         """
         paths: Iterator[Path] = (p for p in playbooks_paths if p.exists())
-        processes: int = mp.core.config.get_processes_number()
+        processes: int = mp.core.config.get_threads_number()
         with multiprocessing.Pool(processes=processes) as pool:
             pool.map(self.deconstruct_playbook, paths)
 

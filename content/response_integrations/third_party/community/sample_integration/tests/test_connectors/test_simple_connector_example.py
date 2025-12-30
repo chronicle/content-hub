@@ -64,7 +64,7 @@ def test_sample_connector_example_connector(
     connector.start()
 
     assert len(script_session.request_history) == 1
-    assert connector_output.results.json_output.alerts[0].name == ALERT_NAME
+    assert connector_output.report.json_output.alerts[0].name == ALERT_NAME
 
 
 @set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
@@ -83,8 +83,8 @@ def test_sample_connector_example_with_no_external_context(
     connector.start()
 
     assert len(script_session.request_history) == 1
-    assert connector_output.results.json_output.alerts[0].name == ALERT_NAME
-    assert len(connector_output.results.json_output.alerts) == 1
+    assert connector_output.report.json_output.alerts[0].name == ALERT_NAME
+    assert len(connector_output.report.json_output.alerts) == 1
 
     row_key: ExternalContextRowKey = ExternalContextRowKey(
         context_type=DatabaseContextType.CONNECTOR,

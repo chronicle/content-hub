@@ -35,10 +35,10 @@ from ...actions import ExtractIocs
 def test_extract_iocs_json_result(action_output: MockActionOutput) -> None:
     ExtractIocs.main()
 
-    assert action_output.results.json_output.json_result == {
+    assert action_output.report.json_output.json_result == {
         "domains": ["micr0soft.com"],
         "emails": ["security.alert@micr0soft.com"],
         "ips": ["1.2.3.4"],
-        "urls": ["https://micr0soft.com/me/keep-data"]
+        "urls": ["https://micr0soft.com/me/keep-data"],
     }
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.execution_state == ExecutionState.COMPLETED

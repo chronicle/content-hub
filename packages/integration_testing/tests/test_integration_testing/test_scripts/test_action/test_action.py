@@ -33,10 +33,10 @@ def test_action_output(action_output: MockActionOutput) -> None:
 
     action.run()
 
-    assert action_output.results is not None
-    assert action_output.results.output_message
-    assert action_output.results.result_value
-    assert action_output.results.execution_state is ExecutionState.COMPLETED
+    assert action_output.report is not None
+    assert action_output.report.output_message
+    assert action_output.report.result_value
+    assert action_output.report.execution_state is ExecutionState.COMPLETED
 
 
 @set_metadata

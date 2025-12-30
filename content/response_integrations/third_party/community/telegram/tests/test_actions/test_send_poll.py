@@ -56,12 +56,10 @@ class TestSendPoll:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == f'The poll "{self.QUESTION}" was sent successfully.'
         )
-        assert (
-            action_output.results.json_output.json_result == expected_send_poll_response
-        )
+        assert action_output.report.json_output.json_result == expected_send_poll_response
 
     @set_metadata(
         parameters={
@@ -92,7 +90,7 @@ class TestSendPoll:
         }
 
         assert (
-            action_output.results.output_message
+            action_output.report.output_message
             == "Could not send poll. Error: b'Simulated API failure for SendPoll'"
         )
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.report.execution_state == ExecutionState.FAILED

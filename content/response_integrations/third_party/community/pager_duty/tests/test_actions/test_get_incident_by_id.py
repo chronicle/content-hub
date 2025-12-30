@@ -36,9 +36,9 @@ def test_get_incident_by_id_success(
     GetIncidentById.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value is True
-    assert "Successfully retrieved Incident" in action_output.results.output_message
+    assert action_output.report.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert action_output.report.result_value is True
+    assert "Successfully retrieved Incident" in action_output.report.output_message
 
 
 @set_metadata(
@@ -61,6 +61,6 @@ def test_get_incident_by_id_not_found(
     GetIncidentById.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
-    assert action_output.results.result_value is True
-    assert "No Incident Found" in action_output.results.output_message
+    assert action_output.report.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert action_output.report.result_value is True
+    assert "No Incident Found" in action_output.report.output_message

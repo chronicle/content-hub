@@ -50,5 +50,5 @@ def test_enrich_entity_action_example_success(
 
     # Assert
     assert len(script_session.request_history) == 1
-    assert action_output.results.output_message == success_output_msg
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.report.output_message == success_output_msg
+    assert action_output.report.execution_state == ExecutionState.COMPLETED
