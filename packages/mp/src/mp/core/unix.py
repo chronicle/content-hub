@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import pathlib
-import re
 import subprocess as sp  # noqa: S404
 import sys
 from typing import IO, TYPE_CHECKING
@@ -34,9 +33,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 COMMAND_ERR_MSG: str = "Error happened while executing a command: {0}"
-PACKAGE_PATTERN: str = r"([^=<>~]+)==(.*)"
-PY3_WHEEL_FILE_SUFFIX: str = "-py3-none-any.whl"
-MIN_RELEVANT_TIP_COMMON_VERSION: int = 2
 
 
 class FatalCommandError(FatalValidationError):
@@ -173,108 +169,14 @@ def download_wheels_from_requirements(
 
 def _get_base_dev_dependencies() -> list[str]:
     return [
+        "git+https://github.com/chronicle/soar-sdk.git",
         "pytest",
         "pytest-json-report",
     ]
 
 
-def _get_base_dev_vcs_dependencies() -> list[str]:
-    return ["git+https://github.com/chronicle/soar-sdk.git"]
-
-
-def _resolve_local_dependency(
-    local_packages_base_path: Path, name: str, version: str, integration_path: Path
-) -> list[str]:
-    """Resolve a single local dependency.
-
-    Returns:
-        A list of local dependency paths.
-
-    Raises:
-        FileNotFoundError: If a local dependency's directory or wheel is not found.
-
-    """
-    local_deps_to_add: list[str] = []
-
-    version_dir: Path = local_packages_base_path / _resolve_version_dir(name, version)
-    if not version_dir.is_dir():
-        msg: str = f"Could not find local dependency directory: {version_dir}"
-        raise FileNotFoundError(msg)
-
-    try:
-        wheel_file: Path = next(version_dir.glob("*.whl"))
-        local_deps_to_add.append(str(wheel_file))
-        if _should_add_integration_testing(name, version, integration_path):
-            integration_testing_wheel_file_name: str = (
-                f"{_resolve_version_dir('integration-testing', version)}{PY3_WHEEL_FILE_SUFFIX}"
-            )
-            integration_testing_wheel: Path = (
-                local_packages_base_path / integration_testing_wheel_file_name
-            )
-            local_deps_to_add.append(str(integration_testing_wheel))
-    except StopIteration:
-        msg: str = f"No wheel file found in {version_dir}"
-        raise FileNotFoundError(msg) from None
-    return local_deps_to_add
-
-
-def _resolve_dependencies(requirements_path: Path) -> tuple[list[str], list[str]]:
-    """Resolve dependencies from a requirements file, handling local packages.
-
-    Args:
-        requirements_path: The path to the requirements.txt file.
-
-    Returns:
-        A list of dependency specifiers for `uv add`.
-
-    """
-    local_packages_base_path: Path = config.get_local_packages_path()
-    integration_path: Path = requirements_path.parent
-    deps_to_add: list[str] = []
-    dev_deps_to_add: list[str] = []
-
-    with requirements_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            stripped_line: str = line.strip()
-            if not stripped_line or stripped_line.startswith("#"):
-                continue
-
-            match = re.match(PACKAGE_PATTERN, stripped_line)
-            if not match:
-                continue
-            name, version = match.groups()
-            if name in constants.LOCAL_PACKAGES_CONFIG:
-                resolved_deps: list[str] = _resolve_local_dependency(
-                    local_packages_base_path, name, version, integration_path
-                )
-                deps_to_add.append(resolved_deps[0])
-                # Check if integration-testing is added
-                if len(resolved_deps) > 1:
-                    dev_deps_to_add.append(resolved_deps[1])
-            else:
-                deps_to_add.append(stripped_line)
-
-    return deps_to_add, dev_deps_to_add
-
-
-def _should_add_integration_testing(name: str, version: str, integration_path: Path) -> bool:
-    is_relevant_tip_common_version: bool = (
-        name == "tipcommon" and int(version[0]) >= MIN_RELEVANT_TIP_COMMON_VERSION
-    )
-    has_testing_dir: bool = (integration_path / constants.TESTING_DIR).is_dir()
-    return is_relevant_tip_common_version and has_testing_dir
-
-
-def _resolve_version_dir(name: str, version: str) -> str:
-    package_config: dict[str, str] = constants.LOCAL_PACKAGES_CONFIG[name]
-    package_wheel_prefix: str = package_config["wheel_prefix"]
-    package_dir_name: str = package_config["dir_name"]
-    version_dir_name: str = f"{package_wheel_prefix}-{version}"
-    return f"{package_dir_name}/{version_dir_name}"
-
-
 def _add_dev_dependencies_to_toml(
-    base_command: list[str], project_path: Path, dev_deps_to_add: list[str]
+    dev_deps_to_add: list[str], base_command: list[str], project_path: Path
 ) -> None:
     """Add development dependencies to the pyproject.toml file.
 
@@ -282,25 +184,14 @@ def _add_dev_dependencies_to_toml(
         FatalCommandError: if uv add fails.
 
     """
-    vcs_deps_to_add = _get_base_dev_vcs_dependencies()
     dev_base_command = base_command.copy()
     dev_base_command.extend(["--group", "dev"])
 
-    if vcs_deps_to_add:
-        vcs_command = dev_base_command.copy()
-        vcs_command.extend(vcs_deps_to_add)
-        try:
-            sp.run(vcs_command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
-        except sp.CalledProcessError as e:
-            raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
-
-    base_dependencies_command = dev_base_command.copy()
-    base_dependencies_command.extend(_get_base_dev_dependencies())
-    if dev_deps_to_add:
-        base_dependencies_command.extend(dev_deps_to_add)
+    dev_base_command.extend(_get_base_dev_dependencies())
+    dev_base_command.extend(dev_deps_to_add)
     try:
         sp.run(  # noqa: S603
-            base_dependencies_command, cwd=project_path, check=True, text=True, capture_output=True
+            dev_base_command, cwd=project_path, check=True, text=True, capture_output=True
         )
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
@@ -309,7 +200,7 @@ def _add_dev_dependencies_to_toml(
 def _add_regular_dependencies_to_toml(
     deps_to_add: list[str], base_command: list[str], project_path: Path
 ) -> None:
-    """Add regular dependencies to the pyproject.toml file.
+    """Add regular dependencies to the pyproject.toml file using pypi index.
 
     Raises:
         FatalCommandError: if uv add fails.
@@ -329,15 +220,20 @@ def _add_regular_dependencies_to_toml(
             raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def add_dependencies_to_toml(project_path: Path, requirements_path: Path) -> None:
-    """Add dependencies from requirements to a python project's TOML file.
+def add_dependencies_to_toml(
+    project_path: Path,
+    deps_to_add: list[str],
+    dev_deps_to_add: list[str],
+) -> None:
+    """Add dependencies to a python project's TOML file.
 
     This function distinguishes between remote dependencies (fetched from PyPI)
     and local dependencies (found in the path specified in the config).
 
     Args:
-        project_path: the path to the project
-        requirements_path: the path to the requirements to add
+        project_path: the path to the project.
+        deps_to_add: A list of dependency specifiers for `uv add`.
+        dev_deps_to_add: A list of dev dependency specifiers for `uv add`.
 
     """
     python_version: str = _get_python_version()
@@ -351,9 +247,8 @@ def add_dependencies_to_toml(project_path: Path, requirements_path: Path) -> Non
     ]
     runtime_config: list[str] = _get_runtime_config()
     base_command.extend(runtime_config)
-    deps_to_add, dev_deps_to_add = _resolve_dependencies(requirements_path)
     _add_regular_dependencies_to_toml(deps_to_add, base_command, project_path)
-    _add_dev_dependencies_to_toml(base_command, project_path, dev_deps_to_add)
+    _add_dev_dependencies_to_toml(dev_deps_to_add, base_command, project_path)
 
 
 def init_python_project_if_not_exists(project_path: Path) -> None:
