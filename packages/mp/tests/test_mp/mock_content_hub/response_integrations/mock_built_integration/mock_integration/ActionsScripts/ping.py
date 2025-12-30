@@ -14,7 +14,8 @@
 # limitations under the License.
 
 import manager  # type: ignore[import-not-found]
-from data_models import DataModel  # type: ignore[import-not-found]
+import requests  # noqa: F401
+from data_model import DataModel  # type: ignore[import-not-found]
 
 
 def main() -> None:

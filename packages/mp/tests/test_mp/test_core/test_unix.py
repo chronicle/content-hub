@@ -30,12 +30,6 @@ if TYPE_CHECKING:
 
 DEV_DEPENDENCY_NAME: str = "beautifulsoup4"
 REQUIREMENT_LINE: str = "black>=24.10.0"
-TIPCOMMON_NAME: str = "tipcommon"
-ENVCOMMON_NAME: str = "environmentcommon"
-NEW_TIPCOMMON_VERSION: str = "2.0.2"
-OLD_TIPCOMMON_VERSION: str = "1.0.10"
-PACKAGE_PATH: str = "path/to/{0}.whl"
-DEFAULT_DEV_DEPENDENCIES: list[str] = ["pytest", "pytest-json-report", "soar-sdk"]
 
 TOML_TEMPLATE: str = f"""
 [project]
@@ -174,69 +168,6 @@ def test_download_wheels_from_requirements(tmp_path: Path) -> None:
     assert DEV_DEPENDENCY_NAME not in wheels
 
 
-@pytest.mark.parametrize(
-    ("name", "version", "has_testing_dir", "expected"),
-    [
-        (TIPCOMMON_NAME, NEW_TIPCOMMON_VERSION, True, True),
-        (TIPCOMMON_NAME, NEW_TIPCOMMON_VERSION, False, False),
-        (TIPCOMMON_NAME, OLD_TIPCOMMON_VERSION, True, False),
-        (ENVCOMMON_NAME, "1.0.0", True, False),
-    ],
-)
-def test_should_add_integration_testing(
-    tmp_path: Path, name: str, version: str, has_testing_dir: bool, expected: bool
-) -> None:
-    integration_path = tmp_path
-    if has_testing_dir:
-        (integration_path / mp.core.constants.TESTING_DIR).mkdir()
-
-    result = mp.core.unix._should_add_integration_testing(name, version, integration_path)  # noqa: SLF001
-    assert result is expected
-
-
-def test_add_dependencies_to_toml(
-    tmp_path: Path,
-    mock_subprocess_run: MagicMock,
-) -> None:
-    """Test add_dependencies_to_toml with mocked dependencies."""
-    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
-
-    resolved_deps = [REQUIREMENT_LINE]
-    resolved_dev_deps = [
-        *DEFAULT_DEV_DEPENDENCIES,
-        PACKAGE_PATH.format(TIPCOMMON_NAME),
-        PACKAGE_PATH.format(ENVCOMMON_NAME),
-    ]
-
-    with unittest.mock.patch(
-        "mp.core.unix._resolve_dependencies",
-        return_value=(resolved_deps, resolved_dev_deps),
-    ):
-        mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
-
-        assert mock_subprocess_run.call_count == 3
-
-        calls = mock_subprocess_run.call_args_list
-
-        # Regular dependencies
-        regular_deps_call_args = calls[0].args[0]
-        assert REQUIREMENT_LINE in regular_deps_call_args
-        assert "--group" not in regular_deps_call_args
-        assert "--default-index" in regular_deps_call_args
-
-        # VCS dev dependencies
-        vcs_dev_deps_call_args = calls[1].args[0]
-        assert "--group" in vcs_dev_deps_call_args
-        assert "dev" in vcs_dev_deps_call_args
-        assert any("git+" in arg for arg in vcs_dev_deps_call_args)
-
-        # Other dev dependencies
-        dev_deps_call_args = calls[2].args[0]
-        assert "--group" in dev_deps_call_args
-        assert "dev" in dev_deps_call_args
-        assert set(resolved_dev_deps).issubset(dev_deps_call_args)
-
-
 def test_init_python_project(tmp_path: Path) -> None:
     pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
     assert not pyproject_toml.exists()
@@ -261,3 +192,35 @@ def test_init_python_project_if_not_exists(
 
         mp.core.unix.init_python_project_if_not_exists(tmp_path)
         assert pyproject_toml.exists()
+
+
+def test_add_dependencies_to_toml_empty(mock_subprocess_run: MagicMock, tmp_path: Path) -> None:
+    """Test add_dependencies_to_toml with empty dependency lists."""
+    mp.core.unix.add_dependencies_to_toml(tmp_path, [], [])
+    assert mock_subprocess_run.call_count == 1
+    call_args = mock_subprocess_run.call_args[0][0]
+
+    assert "--group" in call_args
+    assert "dev" in call_args
+    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(call_args)  # noqa: SLF001
+
+
+def test_add_dependencies_to_toml_with_deps(mock_subprocess_run: MagicMock, tmp_path: Path) -> None:
+    """Test add_dependencies_to_toml with non-empty dependency lists."""
+    deps_to_add = ["requests==2.25.1"]
+    dev_deps_to_add = ["black"]
+    mp.core.unix.add_dependencies_to_toml(tmp_path, deps_to_add, dev_deps_to_add)
+    assert mock_subprocess_run.call_count == 2
+
+    # Check regular dependencies call
+    reg_call_args = mock_subprocess_run.call_args_list[0][0][0]
+    assert "add" in reg_call_args
+    assert deps_to_add[0] in reg_call_args
+    assert "https://pypi.org/simple" in reg_call_args
+
+    # Check dev dependencies call
+    dev_call_args = mock_subprocess_run.call_args_list[1][0][0]
+    assert "--group" in dev_call_args
+    assert "dev" in dev_call_args
+    assert "black" in dev_call_args
+    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(dev_call_args)  # noqa: SLF001
