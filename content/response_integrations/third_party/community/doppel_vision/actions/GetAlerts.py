@@ -17,6 +17,14 @@ def main():
         provider_name="Doppel",
         param_name="API_Key",
     )
+    user_api_key = siemplify.extract_configuration_param(
+        provider_name="Doppel",
+        param_name="User_API_Key",
+    )
+    org_code = siemplify.extract_configuration_param(
+        provider_name="Doppel",
+        param_name="Organization_Code",
+    )
 
     # Extract optional action parameters
     search_key = siemplify.extract_action_param(
@@ -71,7 +79,11 @@ def main():
     filters = {key: value for key, value in filters.items() if value is not None}
 
     # Instantiate the manager
-    manager = DoppelManager(api_key)
+    manager = DoppelManager(
+        api_key=api_key,
+        user_api_key=user_api_key,
+        org_code=org_code
+    )
 
     # Initialize action result values
     status = EXECUTION_STATE_COMPLETED

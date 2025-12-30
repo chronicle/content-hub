@@ -4,10 +4,12 @@ import requests
 
 
 class DoppelManager:
-    def __init__(self, api_key):
+    def __init__(self, api_key, user_api_key, org_code):
         """Initialize the manager with the API key and base URL."""
-        self.api_key = api_key
         self.base_url = "https://api.doppel.com/v1"
+        self.api_key = api_key
+        self.user_api_key = user_api_key
+        self.org_code = org_code
 
     def get_alert(self, entity=None, alert_id=None):
         """Fetches an alert using either the entity or the alert ID, but not both.
@@ -145,6 +147,10 @@ class DoppelManager:
         :return: (dict) Headers including the API key and content type.
         """
         headers = {"accept": "application/json", "x-api-key": self.api_key}
+        if self.user_api_key:
+            headers["x-user-api-key"] = self.user_api_key
+        if self.org_code:
+            headers["x-organization-code"] = self.org_code
         if content_type:
             headers["content-type"] = content_type
         return headers
