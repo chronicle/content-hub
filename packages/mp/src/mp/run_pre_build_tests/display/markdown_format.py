@@ -25,13 +25,13 @@ if TYPE_CHECKING:
 
 class MarkdownFormat:
     def __init__(self, test_results: list[IntegrationTestResults]) -> None:
-        self.test_results: list[IntegrationTestResults] = test_results
+        self.results: list[IntegrationTestResults] = test_results
         self._report_lines: list[str] = []
 
     def display(self) -> None:
         """Generate and saves the test report in Markdown format."""
         self._report_lines.append("")
-        for integration_result in self.test_results:
+        for integration_result in self.results:
             self._report_lines.append(f"<h2>🧩   {integration_result.integration_name}</h2>")
             self._report_lines.append("")
             self._format_summary_table(integration_result)
