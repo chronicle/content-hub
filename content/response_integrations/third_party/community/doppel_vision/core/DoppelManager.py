@@ -4,8 +4,14 @@ import requests
 
 
 class DoppelManager:
-    def __init__(self, api_key, user_api_key, org_code):
-        """Initialize the manager with the API key and base URL."""
+    def __init__(self, api_key: str, user_api_key: str | None, org_code: str | None) -> None:
+        """Initializes the DoppelManager with API credentials.
+
+        Args:
+            api_key: The API key for authentication.
+            user_api_key: The User API key for authentication.
+            org_code: The organization code for multi-tenant setups.
+        """
         self.base_url = "https://api.doppel.com/v1"
         self.api_key = api_key
         self.user_api_key = user_api_key

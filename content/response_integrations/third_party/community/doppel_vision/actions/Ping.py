@@ -18,11 +18,11 @@ def main():
         param_name="API_Key",
     )
     user_api_key = siemplify.extract_configuration_param(
-        provider_name="Doppel",
+        provider_name="DoppelVision",
         param_name="User_API_Key",
     )
     org_code = siemplify.extract_configuration_param(
-        provider_name="Doppel",
+        provider_name="DoppelVision",
         param_name="Organization_Code",
     )
 
