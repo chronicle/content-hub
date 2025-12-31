@@ -59,18 +59,22 @@ def load_dev_env_config() -> dict[str, str]:
         return json.load(f)
 
 
-def build_integration(integration: str) -> None:
+def build_integration(integration: str, custom_integration: bool = False) -> None:
     """Invoke the build command for a single integration.
 
     Args:
         integration: The name of the integration to build.
+        custom_integration: build integration from the custom repository.
 
     Raises:
         typer.Exit: If the build fails.
 
     """
+    command: list[str] = ["mp", "build", "--integration", integration, "--quiet"]
+    if custom_integration:
+        command.append("--custom_integration")
     result = subprocess.run(  # noqa: S603
-        ["mp", "build", "--integration", integration, "--quiet"],  # noqa: S607
+        command,  # noqa: S607
         capture_output=True,
         check=False,
         text=True,
@@ -104,11 +108,13 @@ def get_integration_identifier(source_path: Path) -> str:
         return integration_obj.identifier
 
 
-def find_built_integration_dir(identifier: str) -> Path:
+def find_built_integration_dir(identifier: str, *, custom_integration: bool = False) -> Path:
     """Find the built integration directory.
 
     Args:
         identifier: The integration identifier.
+        custom_integration: search integration in out folder of custom repository.
+
 
     Returns:
         Path: The path to the built integration directory.
@@ -118,10 +124,24 @@ def find_built_integration_dir(identifier: str) -> Path:
 
     """
     root: Path = mp.core.file_utils.create_or_get_out_integrations_dir()
-    for repo in mp.core.constants.INTEGRATIONS_TYPES:
-        candidate = root / repo / identifier
+    if custom_integration:
+        candidate = root / mp.core.constants.CUSTOM_REPO_NAME / identifier
         if candidate.exists():
             return candidate
+
+    for repo, folders in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT.items():
+        if repo == mp.core.constants.THIRD_PARTY_REPO_NAME:
+            for folder in folders:
+                if folder == mp.core.constants.POWERUPS_DIR_NAME:
+                    candidate: Path = root / folder / identifier
+                else:
+                    candidate: Path = root / repo / folder / identifier
+                if candidate.exists():
+                    return candidate
+        else:
+            candidate: Path = root / repo / identifier
+            if candidate.exists():
+                return candidate
 
     rich.print(
         f"[red]Built integration not found for identifier '{identifier}'"

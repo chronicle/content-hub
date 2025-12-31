@@ -185,23 +185,30 @@ def push(
         bool,
         typer.Option("--staging", help="Add this option to deploy integration in to staging mode."),
     ] = False,
+    custom_integration: Annotated[
+        bool,
+        typer.Option(help="Add this option to deploy custom integration."),
+    ] = False,
 ) -> None:
     """Build and deploy an integration to the dev environment (playground).
 
     Args:
         integration: The integration to build and deploy.
         is_staging: Add this option to deploy integration in to staging mode.
+        custom_integration: Deploy integration from the `custom` repository.
 
     Raises:
         typer.Exit: If the integration is not found.
 
     """
     config: dict[str, str] = utils.load_dev_env_config()
-    source_path: Path = _get_integration_path(integration)
+    source_path: Path = _get_integration_path(integration, custom_integration=custom_integration)
     identifier: str = utils.get_integration_identifier(source_path)
 
     utils.build_integration(integration)
-    built_dir: Path = utils.find_built_integration_dir(identifier)
+    built_dir: Path = utils.find_built_integration_dir(
+        identifier, custom_integration=custom_integration
+    )
     minor_version_bump(built_dir, source_path, identifier)
 
     zip_path: Path = utils.zip_integration_dir(built_dir)
@@ -228,26 +235,35 @@ def push(
         raise typer.Exit(1) from e
 
 
-def _get_integration_path(integration: str) -> Path:
-    source_path: Path | None = None
+def _get_integration_path(integration: str, *, custom_integration: bool = False) -> Path:
     integrations_root: Path = mp.core.file_utils.create_or_get_integrations_dir()
-    for repo in mp.core.constants.INTEGRATIONS_TYPES:
-        candidate: Path = integrations_root / repo / integration
-        if candidate.exists():
-            source_path = candidate
-            break
+    if custom_integration:
+        source_path = integrations_root / mp.core.constants.CUSTOM_REPO_NAME / integration
+        if source_path.exists():
+            return source_path
 
-    if not source_path or not source_path.exists():
-        rich.print(
-            f"[red]Could not find source integration "
-            f"at {integrations_root}/{'|'.join(mp.core.constants.INTEGRATIONS_TYPES)}/{integration}"
-            f"[/red]"
-            "\nPlease ensure the content-hub path is properly configured."
-            "\nYou can verify your configuration by running [bold]mp config"
-            " --display-config[/bold]."
-            "\nIf the path is incorrect, re-configure it by running [bold]mp config"
-            " --root-path <your_path>[/bold]."
-        )
-        raise typer.Exit(1)
+    for repo, folders in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT.items():
+        if repo == mp.core.constants.THIRD_PARTY_REPO_NAME:
+            for folder in folders:
+                if folder == mp.core.constants.POWERUPS_DIR_NAME:
+                    candidate: Path = integrations_root / folder / integration
+                else:
+                    candidate: Path = integrations_root / repo / folder / integration
+                if candidate.exists():
+                    return candidate
+        else:
+            candidate: Path = integrations_root / repo / integration
+            if candidate.exists():
+                return candidate
 
-    return source_path
+    rich.print(
+        f"[red]Could not find source integration "
+        f"at {integrations_root}/{'|'.join(mp.core.constants.INTEGRATIONS_TYPES)}/{integration}"
+        f"[/red]"
+        "\nPlease ensure the content-hub path is properly configured."
+        "\nYou can verify your configuration by running [bold]mp config"
+        " --display-config[/bold]."
+        "\nIf the path is incorrect, re-configure it by running [bold]mp config"
+        " --root-path <your_path>[/bold]."
+    )
+    raise typer.Exit(1)
