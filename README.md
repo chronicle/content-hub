@@ -25,10 +25,10 @@ experience lives here.
 Looking to build? We've designed a straightforward path to get you from setup to a finished
 integration. Follow the steps below.
 
-1. [**Set Up Your Environment
-   **](/docs/response_integrations/getting_started/setup_your_environment.md)—Install the necessary
+1. [**Set Up Your Environment**](/docs/getting_started/setup_your_environment.md)—Install the
+   necessary
    tools and configure the local environment for your development.
-2. [**Understand the Core Concepts**](/docs/response_integrations/getting_started/core_concepts.md)
+2. [**Understand the Core Concepts**](/docs/getting_started/core_concepts.md)
    —Learn about the different content types you can build.
 3. [**Contribute to the Project**](/docs/contributing.md)—Understand the requirements for
    contributing to our repository.
