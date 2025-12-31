@@ -101,7 +101,7 @@ class BuildParams:
             raise typer.BadParameter(msg)
 
         if self.custom_integration and self.deconstruct:
-            msg = "--cant use --deconstruct and --custom_integration."
+            msg = "Cannot use --deconstruct and --custom_integration."
             raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:

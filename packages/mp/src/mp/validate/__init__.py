@@ -92,6 +92,7 @@ def validate(  # noqa: PLR0913
     repository: Annotated[
         list[RepositoryType],
         typer.Option(
+            "--repository",
             "-r",
             help="Run validations on all integrations in specified integration repositories",
             default_factory=list,
@@ -100,6 +101,7 @@ def validate(  # noqa: PLR0913
     integration: Annotated[
         list[str],
         typer.Option(
+            "--integration",
             "-i",
             help="Run validations on a specified integrations.",
             default_factory=list,
@@ -117,6 +119,7 @@ def validate(  # noqa: PLR0913
     playbook: Annotated[
         list[str],
         typer.Option(
+            "--playbook",
             "-p",
             help="Build a specified playbook",
             default_factory=list,
