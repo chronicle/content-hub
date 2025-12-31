@@ -56,6 +56,7 @@ def validate_playbooks(
         Both the Report and the fail status of the validations.
 
     """
+    print("playbook logic")
     commercial_playbooks_repo: PlaybooksRepo = PlaybooksRepo(
         mp.core.file_utils.get_or_create_playbook_repo_base_path(
             mp.core.constants.COMMERCIAL_REPO_NAME
@@ -81,6 +82,7 @@ def validate_playbooks(
         )
 
     elif repositories:
+        print("playbooks repo")
         commercial_output = _validate_repo(commercial_playbooks_repo, run_configurations)
         community_output = _validate_repo(community_playbooks_repo, run_configurations)
 
@@ -91,10 +93,11 @@ def validate_playbooks(
 
 
 def _validate_repo(playbook_repo: PlaybooksRepo, run_configurations: Configurations) -> FullReport:
+    print("validate repo")
     all_playbooks_in_repo: list[str] = []
     for folder in playbook_repo.base_folders:
-        if folder.exists():
-            all_playbooks_in_repo.extend(p.name for p in folder.iterdir())
+        folder.mkdir(exist_ok=True)
+        all_playbooks_in_repo.extend(p.name for p in folder.iterdir())
     return _validate_playbooks(all_playbooks_in_repo, playbook_repo, run_configurations)
 
 
@@ -103,6 +106,7 @@ def _validate_playbooks(
     content_repo: PlaybooksRepo,
     configurations: Configurations,
 ) -> FullReport:
+    print("validate playbook function")
     validation_outputs: FullReport = {}
     playbooks_paths: Iterable[Path] = _get_playbooks_paths_from_repository(
         playbooks_names, content_repo.base_folders
@@ -131,6 +135,7 @@ def _run_validations(
         list[ValidationResults]: List contains the Validation results object
 
     """
+    print("running validations")
     processes: int = mp.core.config.get_processes_number()
     with multiprocessing.Pool(processes=processes) as pool:
         results = pool.imap_unordered(validation_function, playbooks)
@@ -140,6 +145,7 @@ def _run_validations(
 
 
 def _run_pre_build_validations(playbook_path: Path) -> ValidationResults:
+    print("_run_pre_build_validations")
     validation_object: PreBuildValidations = PreBuildValidations(
         playbook_path, ContentType.PLAYBOOK
     )
