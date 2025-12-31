@@ -111,6 +111,7 @@ def _validate_playbooks(
     if not playbooks_paths:
         return validation_outputs
 
+    print(playbooks_paths)
     pre_build_output: list[ValidationResults] = _run_validations(
         playbooks_paths, _run_pre_build_validations
     )
@@ -131,10 +132,6 @@ def _run_validations(
         list[ValidationResults]: List contains the Validation results object
 
     """
-    print(playbooks, flush=True)
-    print(
-        f"Running validations on {len(playbooks)} playbooks using {mp.core.config.get_processes_number()} processes"
-    )
     processes: int = mp.core.config.get_processes_number()
     with multiprocessing.Pool(processes=processes) as pool:
         results = pool.imap_unordered(validation_function, playbooks)
