@@ -168,9 +168,9 @@ def push_integration(
         raise typer.Exit(1) from e
 
 
-@push_app.command(name="custom-repository")
+@push_app.command(name="custom-integration-repository")
 @track_command
-def push_custom_repository() -> None:
+def push_custom_integration_repository() -> None:
     """Build, zip, and upload the entire custom integration repository.
 
     Raises:

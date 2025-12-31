@@ -89,19 +89,17 @@ class ValidateParams:
 @app.command(help="Validate the marketplace")
 @track_command
 def validate(  # noqa: PLR0913
-    repositories: Annotated[
+    repository: Annotated[
         list[RepositoryType],
         typer.Option(
-            "--repository",
             "-r",
             help="Run validations on all integrations in specified integration repositories",
             default_factory=list,
         ),
     ],
-    integrations: Annotated[
+    integration: Annotated[
         list[str],
         typer.Option(
-            "--integration",
             "-i",
             help="Run validations on a specified integrations.",
             default_factory=list,
@@ -116,10 +114,9 @@ def validate(  # noqa: PLR0913
             default_factory=list,
         ),
     ],
-    playbooks: Annotated[
+    playbook: Annotated[
         list[str],
         typer.Option(
-            "--playbook",
             "-p",
             help="Build a specified playbook",
             default_factory=list,
@@ -153,13 +150,13 @@ def validate(  # noqa: PLR0913
     Validate integrations within the marketplace based on specified criteria.
 
     Args:
-        repositories: A list of repository types on which to run validation.
+        repository: A list of repository types on which to run validation.
                     Validation will be performed on all integrations found
                     within these repositories.
-        integrations: A list of specific integrations to validate.
+        integration: A list of specific integrations to validate.
         groups: A list of integration groups. Validation will apply to all
                integrations associated with these groups.
-        playbooks: A list of specific playbooks to validate.
+        playbook: A list of specific playbooks to validate.
         only_pre_build: If set to True, only pre-build validation checks are
                         performed.
         quiet: quiet log options
@@ -169,10 +166,10 @@ def validate(  # noqa: PLR0913
         typer.Exit: If validation fails, the program will exit with code 1.
 
     """
-    repositories = ensure_valid_list(repositories)
-    integrations = ensure_valid_list(integrations)
+    repositories = ensure_valid_list(repository)
+    integrations = ensure_valid_list(integration)
     groups = ensure_valid_list(groups)
-    playbooks = ensure_valid_list(playbooks)
+    playbooks = ensure_valid_list(playbook)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
