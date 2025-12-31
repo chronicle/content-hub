@@ -15,20 +15,16 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Annotated, NamedTuple
+from typing import Annotated, NamedTuple
 
 import rich
 import typer
 
-import mp.core.constants
-import mp.core.file_utils
 from mp.telemetry import track_command
 
-from . import api, utils
-from .minor_version_bump import minor_version_bump
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from . import utils
+from .commands.integrations.integrations_command import push_integration
+from .commands.push import push_app
 
 __all__: list[str] = ["app", "deploy", "login"]
 
@@ -36,9 +32,6 @@ app: typer.Typer = typer.Typer(
     help="Commands for interacting with the development environment (playground)"
 )
 
-push_app: typer.Typer = typer.Typer(
-    help="Push integrations or repositories to the SOAR environment."
-)
 app.add_typer(push_app, name="push")
 
 
@@ -100,7 +93,7 @@ def login(
     rich.print(f"Credentials saved to {utils.CONFIG_PATH}")
 
     if not no_verify:
-        _get_backend_api(config)
+        utils.get_backend_api(config)
         rich.print("[green]✅ Credentials verified successfully.[/green]")
 
 
@@ -117,130 +110,3 @@ def deploy(
     """Deprecated."""  # noqa: D401
     rich.print("[yellow]Note: 'deploy' is deprecated. Use 'push integration' instead.[/yellow]")
     push_integration(integration, is_staging=is_staging)
-
-
-@push_app.command(name="integration")
-@track_command
-def push_integration(
-    integration: str = typer.Argument(help="Integration to build and deploy."),
-    *,
-    is_staging: Annotated[
-        bool,
-        typer.Option("--staging", help="Deploy integration in to staging mode."),
-    ] = False,
-    custom_integration: Annotated[
-        bool,
-        typer.Option(help="Deploy integration from the custom repository."),
-    ] = False,
-) -> None:
-    """Build and deploy an integration to the dev environment (playground).
-
-    Args:
-        integration: The integration to build and deploy.
-        is_staging: Add this option to deploy integration in to staging mode.
-        custom_integration: Add this option to deploy integration from the custom repository.
-
-    Raises:
-        typer.Exit: If the integration is not found.
-
-    """
-    config = utils.load_dev_env_config()
-    source_path = _get_integration_path(integration, custom_integration=custom_integration)
-    identifier = utils.get_integration_identifier(source_path)
-
-    utils.build_integration(integration, custom_integration=custom_integration)
-    built_dir = utils.find_built_integration_dir(identifier, custom_integration=custom_integration)
-    minor_version_bump(built_dir, source_path, identifier)
-
-    zip_path = utils.zip_integration_dir(built_dir)
-    rich.print(f"Zipped built integration at {zip_path}")
-
-    backend_api = _get_backend_api(config)
-    try:
-        details = backend_api.get_integration_details(zip_path, is_staging=is_staging)
-        result = backend_api.upload_integration(
-            zip_path, details["identifier"], is_staging=is_staging
-        )
-        rich.print(f"Upload result: {result}")
-        rich.print("[green]✅ Integration deployed successfully.[/green]")
-    except Exception as e:
-        rich.print(f"[red]Upload failed: {e}[/red]")
-        raise typer.Exit(1) from e
-
-
-@push_app.command(name="custom-integration-repository")
-@track_command
-def push_custom_integration_repository() -> None:
-    """Build, zip, and upload the entire custom integration repository.
-
-    Raises:
-        typer.Exit: If authentication fails or any individual uploads fail.
-
-    """
-    config = utils.load_dev_env_config()
-    utils.build_integrations_custom_repository()
-    zipped_paths = utils.zip_integration_custom_repository()
-
-    backend_api = _get_backend_api(config)
-    results: list[str] = []
-
-    for zip_path in zipped_paths:
-        try:
-            details = backend_api.get_integration_details(zip_path)
-            backend_api.upload_integration(zip_path, details["identifier"])
-            rich.print(f"[green]Successfully pushed: {zip_path.name}[/green]")
-
-        except Exception as e:  # noqa: BLE001
-            results.append(f"{zip_path.name}: {e}")
-
-    if results:
-        rich.print("\n[bold red]Upload errors detected:[/bold red]")
-        for error in results:
-            rich.print(f"  - {error}")
-        raise typer.Exit(1)
-
-
-def _get_backend_api(config: dict[str, str]) -> api.BackendAPI:
-    try:
-        if config.get("api_key"):
-            backend_api = api.BackendAPI(api_root=config["api_root"], api_key=config["api_key"])
-        else:
-            backend_api = api.BackendAPI(
-                api_root=config["api_root"],
-                username=config["username"],
-                password=config["password"],
-            )
-            backend_api.login()
-
-        return backend_api  # noqa: TRY300
-
-    except Exception as e:
-        rich.print(f"[red]Authentication failed: {e}[/red]")
-        raise typer.Exit(1) from e
-
-
-def _get_integration_path(integration: str, *, custom_integration: bool = False) -> Path:
-    integrations_root: Path = mp.core.file_utils.create_or_get_integrations_dir()
-    if custom_integration:
-        source_path = integrations_root / mp.core.constants.CUSTOM_REPO_NAME / integration
-        if source_path.exists():
-            return source_path
-
-    for repo, folders in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT.items():
-        if repo == mp.core.constants.THIRD_PARTY_REPO_NAME:
-            for folder in folders:
-                if folder == mp.core.constants.POWERUPS_DIR_NAME:
-                    candidate: Path = integrations_root / folder / integration
-                else:
-                    candidate: Path = integrations_root / repo / folder / integration
-                if candidate.exists():
-                    return candidate
-        else:
-            candidate: Path = integrations_root / repo / integration
-            if candidate.exists():
-                return candidate
-
-    rich.print(
-        f"[red]Could not find source integration at {integrations_root}/.../{integration}[/red]"
-    )
-    raise typer.Exit(1)
