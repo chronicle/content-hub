@@ -116,7 +116,6 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
 
     return (
         steps_dir.exists()
-        and widgets_dir.exists()
         and def_file.exists()
         and display_info.exists()
         and overviews_file.exists()

@@ -111,7 +111,6 @@ def _validate_playbooks(
     if not playbooks_paths:
         return validation_outputs
 
-    print(playbooks_paths)
     pre_build_output: list[ValidationResults] = _run_validations(
         playbooks_paths, _run_pre_build_validations
     )
