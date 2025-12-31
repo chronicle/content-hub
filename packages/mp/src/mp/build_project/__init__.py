@@ -160,7 +160,6 @@ def build(  # noqa: PLR0913
     custom_integration: Annotated[
         bool,
         typer.Option(
-            "--custom_integration",
             help="Build a single specific integration rather than the full custom repository.",
         ),
     ] = False,

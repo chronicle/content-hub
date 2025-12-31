@@ -42,6 +42,23 @@ def zip_integration_dir(integration_dir: Path) -> Path:
     return Path(shutil.make_archive(str(integration_dir), "zip", integration_dir))
 
 
+def zip_integration_custom_repository() -> list[Path]:
+    """Zip the contents of the custom repository for upload.
+
+    Returns:
+        list[Path]: List of paths to the created zip file.
+
+    """
+    custom_repo_out_dir: Path = (
+        mp.core.file_utils.create_or_get_out_integrations_dir() / mp.core.constants.CUSTOM_REPO_NAME
+    )
+    return [
+        zip_integration_dir(integration_path)
+        for integration_path in custom_repo_out_dir.iterdir()
+        if integration_path.is_dir()
+    ]
+
+
 def load_dev_env_config() -> dict[str, str]:
     """Load the dev environment configuration from the config file.
 
@@ -59,7 +76,7 @@ def load_dev_env_config() -> dict[str, str]:
         return json.load(f)
 
 
-def build_integration(integration: str, custom_integration: bool = False) -> None:
+def build_integration(integration: str, *, custom_integration: bool = False) -> None:
     """Invoke the build command for a single integration.
 
     Args:
@@ -72,9 +89,9 @@ def build_integration(integration: str, custom_integration: bool = False) -> Non
     """
     command: list[str] = ["mp", "build", "--integration", integration, "--quiet"]
     if custom_integration:
-        command.append("--custom_integration")
+        command.append("--custom-integration")
     result = subprocess.run(  # noqa: S603
-        command,  # noqa: S607
+        command,
         capture_output=True,
         check=False,
         text=True,
@@ -84,6 +101,25 @@ def build_integration(integration: str, custom_integration: bool = False) -> Non
         raise typer.Exit(result.returncode)
 
     rich.print(f"Build output:\n{result.stdout}")
+
+
+def build_integrations_custom_repository() -> None:
+    """Build command for all integrations in the custom repository.
+
+    Raises:
+        typer.Exit: If the build fails.
+
+    """
+    command: list[str] = ["mp", "build", "-r", "custom"]
+    result = subprocess.run(  # noqa: S603
+        command,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    if result.returncode != 0:
+        rich.print(f"[red]Build failed:\n{result.stderr}[/red]")
+        raise typer.Exit(result.returncode)
 
 
 def get_integration_identifier(source_path: Path) -> str:
@@ -129,19 +165,10 @@ def find_built_integration_dir(identifier: str, *, custom_integration: bool = Fa
         if candidate.exists():
             return candidate
 
-    for repo, folders in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT.items():
-        if repo == mp.core.constants.THIRD_PARTY_REPO_NAME:
-            for folder in folders:
-                if folder == mp.core.constants.POWERUPS_DIR_NAME:
-                    candidate: Path = root / folder / identifier
-                else:
-                    candidate: Path = root / repo / folder / identifier
-                if candidate.exists():
-                    return candidate
-        else:
-            candidate: Path = root / repo / identifier
-            if candidate.exists():
-                return candidate
+    for repo in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT:
+        candidate: Path = root / repo / identifier
+        if candidate.exists():
+            return candidate
 
     rich.print(
         f"[red]Built integration not found for identifier '{identifier}'"
