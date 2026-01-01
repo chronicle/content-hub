@@ -155,7 +155,8 @@ mp dev-env push integration <integration_name>
 
 Options:
 
-- `--staging`: push integration to staging environment.
+- `--is-staging`: push integration to staging environment.
+- `--custom`: push integration from custom repository.`
 
 ## Code Quality Commands
 

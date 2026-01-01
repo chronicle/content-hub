@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess  # noqa: S404
 from pathlib import Path
@@ -26,16 +27,20 @@ import mp.core.file_utils
 from mp.core.data_models.integrations.integration import Integration
 
 
-def zip_integration_dir(integration_dir: Path) -> Path:
+def zip_integration_dir(integration_dir: Path, *, custom: bool = False) -> Path:
     """Zip the contents of a built integration directory for upload.
 
     Args:
         integration_dir: Path to the built integration directory.
+        custom: Whether the integration is from the custom repository.
 
     Returns:
         Path: The path to the created zip file.
 
     """
+    if custom:
+        _change_integration_to_custom(integration_dir)
+
     return Path(shutil.make_archive(str(integration_dir), "zip", integration_dir))
 
 
@@ -49,6 +54,10 @@ def zip_integration_custom_repository() -> list[Path]:
     custom_repo_out_dir: Path = (
         mp.core.file_utils.create_or_get_out_integrations_dir() / mp.core.constants.CUSTOM_REPO_NAME
     )
+
+    for integration in custom_repo_out_dir.iterdir():
+        _change_integration_to_custom(integration)
+
     return [
         zip_integration_dir(integration_path)
         for integration_path in custom_repo_out_dir.iterdir()
@@ -56,19 +65,61 @@ def zip_integration_custom_repository() -> list[Path]:
     ]
 
 
-def build_integration(integration: str, *, custom_integration: bool = False) -> None:
+def _change_integration_to_custom(built_path: Path) -> None:
+    for file in built_path.iterdir():
+        if file.name == mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name):
+            _modify_def_file_to_custom(
+                built_path / mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name)
+            )
+    if (built_path / mp.core.constants.OUT_ACTIONS_META_DIR).exists():
+        _modify_def_files_to_custom(
+            built_path / mp.core.constants.OUT_ACTIONS_META_DIR,
+            mp.core.constants.ACTIONS_META_SUFFIX,
+        )
+    if (built_path / mp.core.constants.OUT_CONNECTORS_META_DIR).exists():
+        _modify_def_files_to_custom(
+            built_path / mp.core.constants.OUT_CONNECTORS_META_DIR,
+            mp.core.constants.CONNECTORS_META_SUFFIX,
+        )
+    if (built_path / mp.core.constants.OUT_JOBS_META_DIR).exists():
+        _modify_def_files_to_custom(
+            built_path / mp.core.constants.OUT_JOBS_META_DIR, mp.core.constants.JOBS_META_SUFFIX
+        )
+
+
+def _modify_def_files_to_custom(def_files_dir: Path, suffix: str) -> None:
+    for file in def_files_dir.iterdir():
+        if file.suffix == suffix:
+            _modify_def_file_to_custom(file)
+
+
+def _modify_def_file_to_custom(file: Path) -> None:
+    try:
+        with Path.open(file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        data["IsCustom"] = True
+
+        with Path.open(file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, sort_keys=True)
+
+    except (OSError, json.JSONDecodeError) as e:
+        rich.print(f"Failed to process {file}: {e}")
+
+
+def build_integration(integration: str, *, custom: bool = False) -> None:
     """Invoke the build command for a single integration.
 
     Args:
         integration: The name of the integration to build.
-        custom_integration: build integration from the custom repository.
+        custom: build integration from the custom repository.
 
     Raises:
         typer.Exit: If the build fails.
 
     """
     command: list[str] = ["mp", "build", "--integration", integration, "--quiet"]
-    if custom_integration:
+    if custom:
         command.append("--custom-integration")
     result = subprocess.run(  # noqa: S603
         command,
@@ -124,12 +175,12 @@ def get_integration_identifier(source_path: Path) -> str:
         return integration_obj.identifier
 
 
-def find_built_integration_dir(identifier: str, *, custom_integration: bool = False) -> Path:
+def find_built_integration_dir(identifier: str, *, custom: bool = False) -> Path:
     """Find the built integration directory.
 
     Args:
         identifier: The integration identifier.
-        custom_integration: search integration in out folder of custom repository.
+        custom: search integration in out folder of custom repository.
 
 
     Returns:
@@ -140,7 +191,7 @@ def find_built_integration_dir(identifier: str, *, custom_integration: bool = Fa
 
     """
     root: Path = mp.core.file_utils.create_or_get_out_integrations_dir()
-    if custom_integration:
+    if custom:
         candidate = root / mp.core.constants.CUSTOM_REPO_NAME / identifier
         if candidate.exists():
             return candidate
@@ -157,12 +208,12 @@ def find_built_integration_dir(identifier: str, *, custom_integration: bool = Fa
     raise typer.Exit(1)
 
 
-def get_integration_path(integration: str, *, custom_integration: bool = False) -> Path:
+def get_integration_path(integration: str, *, custom: bool = False) -> Path:
     """Find the source path for a given integration.
 
     Args:
         integration: The name of the integration to find.
-        custom_integration: Whether to search in the custom repository.
+        custom: Whether to search in the custom repository.
 
     Returns:
         The path to the integration's source directory.
@@ -172,7 +223,7 @@ def get_integration_path(integration: str, *, custom_integration: bool = False) 
 
     """
     integrations_root: Path = mp.core.file_utils.create_or_get_integrations_dir()
-    if custom_integration:
+    if custom:
         source_path = integrations_root / mp.core.constants.CUSTOM_REPO_NAME / integration
         if source_path.exists():
             return source_path

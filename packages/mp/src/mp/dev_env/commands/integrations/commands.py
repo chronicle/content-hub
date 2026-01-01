@@ -36,7 +36,7 @@ def push_integration(
         bool,
         typer.Option("--staging", help="Deploy integration in to staging mode."),
     ] = False,
-    custom_integration: Annotated[
+    custom: Annotated[
         bool,
         typer.Option(help="Deploy integration from the custom repository."),
     ] = False,
@@ -46,21 +46,21 @@ def push_integration(
     Args:
         integration: The integration to build and deploy.
         is_staging: Add this option to deploy integration in to staging mode.
-        custom_integration: Add this option to deploy integration from the custom repository.
+        custom: Add this option to deploy integration from the custom repository.
 
     Raises:
         typer.Exit: If the integration is not found.
 
     """
     config = load_dev_env_config()
-    source_path = utils.get_integration_path(integration, custom_integration=custom_integration)
+    source_path = utils.get_integration_path(integration, custom=custom)
     identifier = utils.get_integration_identifier(source_path)
 
-    utils.build_integration(integration, custom_integration=custom_integration)
-    built_dir = utils.find_built_integration_dir(identifier, custom_integration=custom_integration)
+    utils.build_integration(integration, custom=custom)
+    built_dir = utils.find_built_integration_dir(identifier, custom=custom)
     minor_version_bump(built_dir, source_path, identifier)
 
-    zip_path = utils.zip_integration_dir(built_dir)
+    zip_path = utils.zip_integration_dir(built_dir, custom=custom)
     rich.print(f"Zipped built integration at {zip_path}")
 
     backend_api = get_backend_api(config)

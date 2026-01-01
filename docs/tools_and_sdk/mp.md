@@ -154,7 +154,8 @@ mp dev-env push integration my_integration
 
 ### Command Flags
 
-- is-staging: push integration to staging environment.
+- --is-staging: push integration to staging environment.
+- --custom: push integration from custom repository.
 
 ## Further Documentation
 
