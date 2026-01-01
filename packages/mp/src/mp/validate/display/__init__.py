@@ -24,18 +24,15 @@ from .html.html import HtmlFormat
 from .markdown_format import MarkdownFormat
 
 if TYPE_CHECKING:
-    from mp.validate.data_models import FullReport
+    from mp.validate.data_models import ContentType, FullReport
 
 
-def display_validation_reports(validation_results: FullReport) -> None:
-    """Display integrations validation results in various formats.
-
-    This function determines the appropriate display formats (CLI, Markdown, or HTML)
-    based on the environment (e.g., GitHub Actions) and then renders the validation reports.
+def display_validation_reports(validation_results: dict[ContentType, FullReport]) -> None:
+    """Display validation results for multiple content types.
 
     Args:
-        validation_results: A dict that contains the pre-build, build and post-build
-        validation results.
+        validation_results: A dictionary where keys are ContentType enums (INTEGRATION, PLAYBOOK)
+        and values are the FullReport (dict of stages) for that type.
 
     """
     display_types_list: list[DisplayReport] = [CliDisplay(validation_results)]

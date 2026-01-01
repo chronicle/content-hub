@@ -19,11 +19,12 @@ from __future__ import annotations
 import dataclasses
 import enum
 from collections.abc import Iterable, Mapping
-from typing import Any, Generic, NamedTuple, TypeAlias, TypeVar
+from typing import Any, Generic, NamedTuple, ParamSpec, TypeAlias, TypeVar
 
 from . import constants
 
 _T = TypeVar("_T", bound=Iterable[Any])
+P = ParamSpec("P")
 
 
 @dataclasses.dataclass(slots=True)
@@ -42,9 +43,10 @@ YamlFileContent: TypeAlias = Mapping[str, Any]
 
 
 class RepositoryType(enum.Enum):
-    COMMUNITY = constants.COMMUNITY_DIR_NAME
-    COMMERCIAL = constants.COMMERCIAL_DIR_NAME
-    PLAYBOOKS = constants.PLAYBOOKS_DIR_NAME
+    THIRD_PARTY = constants.THIRD_PARTY_REPO_NAME
+    COMMERCIAL = constants.COMMERCIAL_REPO_NAME
+    PLAYBOOKS = constants.PLAYBOOKS_REPO_NAME
+    ALL_CONTENT = "all_content"
 
 
 class CheckOutputFormat(enum.Enum):

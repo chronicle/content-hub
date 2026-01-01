@@ -15,54 +15,23 @@
 from __future__ import annotations
 
 import json
-from urllib.parse import urljoin
 
-import requests
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.rest.soar_api import execute_bulk_close_case
+from TIPCommon.rest.soar_api import execute_bulk_close_case, search_cases_by_everything
 
 SCRIPT_NAME = "CloseCasesBasedOnSearch"
-
-
-def get_bearer_token(siemplify, username, password):
-    address = urljoin(siemplify.API_ROOT, "api/external/v1/accounts/Login?format=camel")
-    response = siemplify.session.post(
-        address,
-        json={"Username": username, "Password": password},
-        verify=False,
-    )
-    response.raise_for_status()
-    return response.json()["token"]
-
-
-SEARCH_URL = "api/external/v1/search/CaseSearchEverything"
 
 
 @output_handler
 def main():
     siemplify = SiemplifyJob()
     siemplify.script_name = SCRIPT_NAME
-    username = siemplify.parameters["Siemplify Username"]
-    password = siemplify.parameters["Siemplify Password"]
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        bearer_token = get_bearer_token(siemplify, username, password)
-
-        session = requests.Session()
-        session.headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {bearer_token}",
-        }
-        session.verify = False
-
         payload = json.loads(siemplify.parameters.get("Search Payload"))
         payload["isCaseClosed"] = False
-        res_search = session.post(urljoin(siemplify.API_ROOT, SEARCH_URL), json=payload)
-        res_search.raise_for_status()
-
-        results = res_search.json().get("results")
+        results = search_cases_by_everything(siemplify, payload).get("results")
         case_ids = [item.get("id") for item in results]
 
         if case_ids:

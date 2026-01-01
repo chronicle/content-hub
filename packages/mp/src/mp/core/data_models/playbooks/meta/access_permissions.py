@@ -16,10 +16,10 @@ from __future__ import annotations
 
 from typing import Self, TypedDict
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
-class PlaybookAccessLevel(mp.core.data_models.abc.RepresentableEnum):
+class PlaybookAccessLevel(RepresentableEnum):
     """Represents the access level for a playbook."""
 
     NO_ACCESS = 0
@@ -39,9 +39,7 @@ class NonBuiltAccessPermission(TypedDict):
     access_level: str
 
 
-class AccessPermission(
-    mp.core.data_models.abc.Buildable[BuiltAccessPermission, NonBuiltAccessPermission]
-):
+class AccessPermission(Buildable[BuiltAccessPermission, NonBuiltAccessPermission]):
     playbook_id: str
     user: str
     access_level: PlaybookAccessLevel

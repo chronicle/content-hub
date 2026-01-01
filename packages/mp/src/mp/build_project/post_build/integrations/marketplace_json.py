@@ -29,8 +29,8 @@ from typing import TYPE_CHECKING, NamedTuple
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
+from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
-from mp.core.data_models.release_notes.metadata import ReleaseNote
 
 from .data_models import FullDetailsExtraAttrs
 

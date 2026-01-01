@@ -33,6 +33,8 @@ import toml
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
+import mp.core.utils
+from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
@@ -46,6 +48,8 @@ from mp.core.data_models.integrations.job.metadata import JobMetadata
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping
     from pathlib import Path
+
+    import libcst as cst
 
     from mp.core.data_models.integrations.action.dynamic_results_metadata import (
         DynamicResultsMetadata,
@@ -77,6 +81,12 @@ class DeconstructIntegration:
     path: Path
     out_path: Path
     integration: Integration
+
+    @property
+    def core_module_names(self) -> set[str]:
+        """Extract the names of manager modules from the built integration path."""
+        managers_path = self.path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
+        return {f.stem for f in managers_path.glob("*.py") if f.stem != "__init__"}
 
     def initiate_project(self) -> None:
         """Initialize a new python project.
@@ -124,6 +134,7 @@ class DeconstructIntegration:
         self._create_mapping_rules()
         self._create_scripts_dirs()
         self._create_package_file()
+        self._create_python_version_file()
 
     def _create_resource_files(self) -> None:
         """Create the image files in the resources directory."""
@@ -153,7 +164,9 @@ class DeconstructIntegration:
                 if not drm.result_example:
                     continue
 
-                json_file_name: str = f"{action_name}_{drm.result_name}_example.json"
+                json_file_name: str = (
+                    f"{mp.core.utils.str_to_snake_case(action_name)}_{drm.result_name}_example.json"
+                )
                 json_file_path: Path = resources_dir / json_file_name
                 mp.core.file_utils.write_str_to_json_file(json_file_path, drm.result_example)
 
@@ -163,6 +176,18 @@ class DeconstructIntegration:
             content=self.integration.metadata.to_non_built(),
             path=def_file,
         )
+
+    def _create_python_version_file(self) -> None:
+        out_python_version_file: Path = self.out_path / mp.core.constants.PYTHON_VERSION_FILE
+        python_version_file: Path = self.path / mp.core.constants.PYTHON_VERSION_FILE
+
+        python_version: str = ""
+        if python_version_file.is_file():
+            python_version = python_version_file.read_text(encoding="utf-8")
+        if not python_version:
+            python_version = self.integration.metadata.python_version.to_string()
+
+        out_python_version_file.write_text(python_version, encoding="utf-8")
 
     def _create_release_notes(self) -> None:
         rn: Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
@@ -231,15 +256,43 @@ class DeconstructIntegration:
         new_path: Path = self.out_path / out_dir
         new_path.mkdir(exist_ok=True)
         for file in old_path.iterdir():
-            shutil.copy(file, new_path)
-            copied_file: Path = new_path / file.name
-            copied_file.rename(copied_file.parent / copied_file.name)
+            if file.is_file():
+                shutil.copy(file, new_path)
+                copied_file: Path = new_path / file.name
+                copied_file.rename(copied_file.parent / copied_file.name)
+                self._transform_imports(copied_file, out_dir)
 
         if metadata is not None:
             _write_definitions(new_path, metadata)
 
         if is_python_dir:
             (new_path / mp.core.constants.PACKAGE_FILE).touch()
+
+    def _transform_imports(self, file_path: Path, out_dir: str) -> None:
+        if file_path.suffix != ".py":
+            return
+
+        transformers: list[cst.CSTTransformer] = [
+            code_manipulation.FutureAnnotationsTransformer(),
+            code_manipulation.SdkImportTransformer(),
+        ]
+
+        if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
+            transformers.append(
+                code_manipulation.CorePackageImportTransformer(self.core_module_names)
+            )
+        else:
+            transformers.append(
+                code_manipulation.CorePackageInternalImportTransformer(
+                    self.core_module_names, file_path.stem
+                )
+            )
+
+        original_content: str = file_path.read_text(encoding="utf-8")
+        transformed_content: str = code_manipulation.apply_transformers(
+            original_content, transformers
+        )
+        file_path.write_text(transformed_content, encoding="utf-8")
 
     def _create_package_file(self) -> None:
         (self.out_path / mp.core.constants.PACKAGE_FILE).touch()

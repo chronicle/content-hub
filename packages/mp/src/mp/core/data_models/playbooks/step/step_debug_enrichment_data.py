@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Self, TypedDict
 
-import mp.core.data_models.abc
+from mp.core.data_models.abc import Buildable
 
 
 class BuiltStepDebugEnrichmentData(TypedDict):
@@ -34,7 +34,7 @@ class NonBuiltStepDebugEnrichmentData(TypedDict):
 
 
 class DebugStepEnrichmentData(
-    mp.core.data_models.abc.Buildable[BuiltStepDebugEnrichmentData, NonBuiltStepDebugEnrichmentData]
+    Buildable[BuiltStepDebugEnrichmentData, NonBuiltStepDebugEnrichmentData]
 ):
     field: str
     value: str

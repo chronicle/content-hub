@@ -18,7 +18,10 @@ import psycopg2
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.rest.soar_api import get_integration_instance_details_by_name
+from TIPCommon.rest.soar_api import (
+    attach_playbook_to_the_case,
+    get_integration_instance_details_by_name,
+)
 
 INSTANCE_NAME = "Siemplify"
 SHARED_ENV = "*"
@@ -39,7 +42,6 @@ DELETE_AR_QUERY = (
     "and \"WorkflowId\" = '{}' "
     "and \"IndicatorIdentifier\" = '{}';"
 )
-ADD_PLAYBOOK_URL = "{}/external/v1/playbooks/AttacheWorkflowToCase?format=camel"
 
 
 class ConnectToDb:
@@ -178,18 +180,15 @@ def main():
                     case["cyber_alerts"],
                 ),
             )[0]
-            payload = {
-                "cyberCaseId": siemplify.case_id,
-                "alertGroupIdetifier": attached_wf["IndicatorIdentifier"],
-                "alertIdentifier": alert["identifier"],
-                "shouldRunAutomatic": True,
-                "wfName": playbook_name,
-            }
-            res2 = siemplify.session.post(
-                ADD_PLAYBOOK_URL.format(siemplify.API_ROOT),
-                json=payload,
+            attach_playbook_to_the_case(
+                chronicle_soar=siemplify,
+                case_id=siemplify.case_id,
+                alert_group_identifier=attached_wf["IndicatorIdentifier"],
+                alert_identifier=alert["identifier"],
+                playbook_name=playbook_name,
+                should_run_automatic=True,
             )
-            res2.raise_for_status()
+
     except Exception as err:
         siemplify.LOGGER.error("Error re-running the playbook.")
         siemplify.LOGGER.exception(err)

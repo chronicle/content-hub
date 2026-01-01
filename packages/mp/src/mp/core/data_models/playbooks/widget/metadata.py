@@ -20,14 +20,15 @@ from typing import TYPE_CHECKING, Any, Self, TypedDict
 import pydantic  # noqa: TC002
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
-from mp.core.data_models.condition.condition_group import (
+from mp.core.data_models.abc import ComponentMetadata
+from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
     ConditionGroup,
     NonBuiltConditionGroup,
 )
-from mp.core.data_models.widget.data import (
+from mp.core.data_models.common.widget.data import (
+    BuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
     NonBuiltWidgetDataDefinition,
     WidgetSize,
@@ -64,7 +65,7 @@ class NonBuiltPlaybookWidgetMetadata(TypedDict):
     order: int
     template_identifier: str
     type: str
-    data_definition: NonBuiltWidgetDataDefinition
+    data_definition: NonBuiltWidgetDataDefinition | pydantic.Json[Any]
     widget_size: str
     action_widget_template_id: str | None
     step_id: str | None
@@ -77,9 +78,7 @@ class NonBuiltPlaybookWidgetMetadata(TypedDict):
 
 
 class PlaybookWidgetMetadata(
-    mp.core.data_models.abc.ComponentMetadata[
-        BuiltPlaybookWidgetMetadata, NonBuiltPlaybookWidgetMetadata
-    ]
+    ComponentMetadata[BuiltPlaybookWidgetMetadata, NonBuiltPlaybookWidgetMetadata]
 ):
     title: str
     description: str
@@ -148,7 +147,9 @@ class PlaybookWidgetMetadata(
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
-        data_json: pydantic.Json = json.loads(built["DataDefinitionJson"])
+        data_json: pydantic.Json | BuiltWidgetDataDefinition = json.loads(
+            built["DataDefinitionJson"]
+        )
         return cls(
             title=built["Title"],
             description=built["Description"],
@@ -211,7 +212,6 @@ class PlaybookWidgetMetadata(
             Order=self.order,
             TemplateIdentifier=self.template_identifier,
             Type=self.type.value,
-            BlockStepInstanceName=self.block_step_instance_name,
             DataDefinitionJson=json.dumps(
                 self.data_definition.to_built()
                 if self.type == WidgetType.HTML
@@ -220,9 +220,10 @@ class PlaybookWidgetMetadata(
             GridColumns=self.widget_size.value,
             ActionWidgetTemplateIdentifier=self.action_widget_template_id,
             StepIdentifier=self.step_id,
-            BlockStepIdentifier=self.block_step_id,
-            PresentIfEmpty=self.present_if_empty,
             StepIntegration=self.step_integration,
+            BlockStepIdentifier=self.block_step_id,
+            BlockStepInstanceName=self.block_step_instance_name,
+            PresentIfEmpty=self.present_if_empty,
             ConditionsGroup=self.conditions_group.to_built(),
             IntegrationName=self.integration_name,
         )

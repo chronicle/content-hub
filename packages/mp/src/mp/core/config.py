@@ -31,6 +31,7 @@ import mp.core.constants
 CONFIG_FILE_NAME: str = ".mp_config"
 CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
 
+
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
 PROCESSES_NUMBER_KEY: str = "processes"
 VERBOSE_LOG_KEY: str = "is_verbose"

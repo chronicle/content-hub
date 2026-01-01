@@ -21,23 +21,28 @@ REPO_NAME: str = "marketplace"
 PROJECT_FILE: str = "pyproject.toml"
 CONTENT_DIR_NAME: str = "content"
 INTEGRATIONS_DIR_NAME: str = "response_integrations"
-COMMUNITY_DIR_NAME: str = "third_party"
-COMMERCIAL_DIR_NAME: str = "commercial"
+COMMERCIAL_REPO_NAME: str = "google"
+THIRD_PARTY_REPO_NAME: str = "third_party"
+COMMUNITY_DIR_NAME: str = "community"
+PARTNER_DIR_NAME: str = "partner"
 POWERUPS_DIR_NAME: str = "power_ups"
 INTEGRATIONS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
-    COMMUNITY_DIR_NAME: (
+    THIRD_PARTY_REPO_NAME: (
         COMMUNITY_DIR_NAME,
+        PARTNER_DIR_NAME,
         POWERUPS_DIR_NAME,
     ),
-    COMMERCIAL_DIR_NAME: (COMMERCIAL_DIR_NAME,),
+    COMMERCIAL_REPO_NAME: (COMMERCIAL_REPO_NAME,),
 }
 
 INTEGRATIONS_TYPES: tuple[str, ...] = (
+    COMMERCIAL_REPO_NAME,
+    THIRD_PARTY_REPO_NAME,
     COMMUNITY_DIR_NAME,
-    COMMERCIAL_DIR_NAME,
+    PARTNER_DIR_NAME,
     POWERUPS_DIR_NAME,
 )
-OUT_INTEGRATIONS_DIR_NAME: str = "integrations"
+OUT_INTEGRATIONS_DIR_NAME: str = "response_integrations"
 OUT_DIR_NAME: str = "out"
 REQUIREMENTS_FILE: str = "requirements.txt"
 INTEGRATION_DEF_FILE: str = "Integration-{0}.def"
@@ -55,7 +60,7 @@ OUT_WIDGETS_META_DIR: str = "Widgets"
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"
 JOBS_META_SUFFIX: str = ".jobdef"
-WIDGETS_META_SUFFIX: str = ".json"
+JSON_SUFFIX: str = ".json"
 DEF_FILE_SUFFIX: str = ".yaml"
 IMAGE_FILE_SUFFIX: str = ".png"
 SVG_FILE_SUFFIX: str = ".svg"
@@ -86,6 +91,10 @@ RELEASE_NOTES_FILE: str = f"release_notes{DEF_FILE_SUFFIX}"
 IMAGE_FILE: str = f"image{IMAGE_FILE_SUFFIX}"
 LOGO_FILE: str = f"logo{SVG_FILE_SUFFIX}"
 SDK_PACKAGE_NAME: str = "soar_sdk"
+TRIGGERS_FILE_NAME: str = f"triggers{DEF_FILE_SUFFIX}"
+DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
+OVERVIEWS_FILE_NAME: str = "overviews.yaml"
+STEPS_DIR: str = "steps"
 
 SAFE_TO_IGNORE_PACKAGES: tuple[str, ...] = ("win-unicode-console",)
 SAFE_TO_IGNORE_ERROR_MESSAGES: tuple[str, ...] = (
@@ -98,6 +107,40 @@ LOCK_FILE: str = "uv.lock"
 PYTHON_VERSION_FILE: str = ".python-version"
 
 MS_IN_SEC: int = 1_000
+
+SDK_MODULES: frozenset[str] = frozenset({
+    "SiemplifyVaultCyberArkPam",
+    "CaseAlertsProvider",
+    "FileRetentionManager",
+    "GcpTokenProvider",
+    "MockConnector",
+    "MockRunner",
+    "OtelLoggingUtils",
+    "OverflowManager",
+    "PersistentFileStorageMixin",
+    "ScriptResult",
+    "Siemplify",
+    "SiemplifyAction",
+    "SiemplifyAddressProvider",
+    "SiemplifyBase",
+    "SiemplifyCaseWallDataModel",
+    "SiemplifyConnectors",
+    "SiemplifyConnectorsDataModel",
+    "SiemplifyConstants",
+    "SiemplifyDataModel",
+    "SiemplifyExtensionTypesBase",
+    "SiemplifyJob",
+    "SiemplifyLogger",
+    "SiemplifyLogicalOperator",
+    "SiemplifyPublisherUtils",
+    "SiemplifySdkConfig",
+    "SiemplifyTransformer",
+    "SiemplifyUtils",
+    "SiemplifyVault",
+    "SiemplifyVaultUtils",
+    "SimulatedCasesCreator",
+    "VaultProviderFactory",
+})
 
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",
@@ -132,8 +175,117 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
     "connectors",
     "lacework",
 }
+
+EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK: set[str] = {
+    "full_contact",
+    "workflow_tools",
+    "docker_hub",
+    "hibob",
+    "google_drive",
+    "vorlon",
+    "aws_ec2",
+    "google_sheets",
+    "stairwell",
+    "microsoft_graph_security_tools",
+    "ipqs_fraud_and_risk_scoring",
+    "telegram",
+    "tools",
+    "lacework",
+    "spell_checker",
+    "data_dog",
+    "superna_zero_trust",
+    "insights",
+    "cybersixgill_darkfeed",
+    "anyrun_ti_lookup",
+    "bitdefender_gravity_zone",
+    "arcanna_ai",
+    "file_utilities",
+    "cybersixgill_dve_feed",
+    "anyrun_ti_feeds",
+    "cybersixgill_dve_enrichment",
+    "pager_duty",
+    "houdin_io",
+    "grey_noise",
+    "cybersixgill_darkfeed_enrichment",
+    "luminar_iocs_and_leaked_credentials",
+    "cylusone",
+    "google_safe_browsing",
+    "imgbb",
+    "netenrich_connect",
+    "eclectic_iq",
+    "nucleon_cyber",
+    "cybersixgill_actionable_alerts",
+    "chronicle_support_tools",
+    "whois_xml_api",
+    "azure_devops",
+    "doppel_vision",
+    "phish_tank",
+    "perimeter_x",
+    "philips_hue",
+    "functions",
+    "abuse_ipdb",
+    "clarotyxdome",
+    "torq",
+    "group_ib_ti",
+    "pulsedive",
+    "git_sync",
+    "lists",
+    "zoom",
+    "flashpoint",
+    "google_docs",
+    "be_secure",
+    "jamf",
+    "asana",
+    "air_table",
+    "country_flags",
+    "duo",
+    "thinkst_canary",
+    "bandura_cyber",
+    "webhook",
+    "vanilla_forums",
+    "anyrun_sandbox",
+    "template_engine",
+    "send_grid",
+    "connectors",
+    "marketo",
+    "enrichment",
+    "email_utilities",
+}
+EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK: set[str] = {
+    "Vectra RUX - Entities Connector",
+    "Lacework Connector",
+    "Cybersixgill - DVE Connector",
+    "EclecticIQ - Feed Connector",
+    "Thinkst - Alert Connector",
+    "Cybersixgill - Darkfeed Connector",
+    "Pull reports",
+    "Cybersixgill Actionable Alerts",
+    "LOGZIO fetch-security-events",
+    "Sheet Connector",
+    "Generate Alert from GreyNoise GNQL",
+    "DUO - Trust Monitor Connector",
+    "Slack Connector For Code Defender",
+    "Luminar IOCs and Leaked Credentials  Connector",
+    "TI IoC Hash Connector",
+    "TI IoC IP Connector",
+    "Telegram Connector",
+    "Infoblox - DNS Security Events Connector",
+    "Infoblox - SOC Insights Connector",
+    "DataDog Connector",
+    "PagerDutyConnector",
+    "AirTable Connector",
+    "Flashpoint - Compromised Credential Connector",
+    "Sample Integration - Simple Connector Example",
+    "MS365 MFA Alert",
+    "MS SecureScore Alert",
+    "Vorlon Connector",
+    "Vectra QUX - Entities Connector",
+    "Cron Scheduled Connector",
+    "Scheduled Connector",
+}
 EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Docker Hub",
+    "Darktrace",
     "Lacework Connector",
     "PagerDuty",
     "PagerDutyConnector",
@@ -158,6 +310,17 @@ EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Azure DevOps",
     "Asana",
     "Full Contact",
+    "Functions",
+    "Lists",
+    "CountryFlags",
+    "TemplateEngine",
+    "ChronicleSupportTools",
+    "Tools",
+    "Spell Checker",
+    "Lacework",
+    "Insights",
+    "Connectors",
+    "EmailUtilities",
     "DataDog",
     "DataDog Connector",
     "Logzio",
@@ -194,6 +357,7 @@ EXCLUDED_NAMES_WITHOUT_VERIFY_SSL: set[str] = {
     "Generate Alert from GreyNoise GNQL",
     "beSECURE",
     "Pull reports",
+    "Image Utilities",
 }
 EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE: set[str] = {
     "Bitdefender GravityZone",
@@ -225,11 +389,11 @@ EXCLUDED_PARAM_NAMES_WITH_TOO_MANY_WORDS: set[str] = {
     "Use document ID as ID in Arcanna",
 }
 LONG_DESCRIPTION_MAX_LENGTH: int = 2_200
-SHORT_DESCRIPTION_MAX_LENGTH: int = 400
+SHORT_DESCRIPTION_MAX_LENGTH: int = 2050
 DISPLAY_NAME_MAX_LENGTH: int = 150
 MAX_PARAMETERS_LENGTH: int = 50
-PARAM_NAME_MAX_LENGTH: int = 63
-PARAM_NAME_MAX_WORDS: int = 5
+PARAM_NAME_MAX_LENGTH: int = 150
+PARAM_NAME_MAX_WORDS: int = 7
 MINIMUM_SCRIPT_VERSION: float = 1.0
 # language=regexp
 SCRIPT_DISPLAY_NAME_REGEX: str = (
@@ -310,15 +474,33 @@ PARAM_DISPLAY_NAME_REGEX: str = (
 
 WINDOWS_PLATFORM: str = "win32"
 
+RECONFIGURE_MP_MSG: str = (
+    "Please ensure the content-hub path is properly configured.\n"
+    "You can verify your configuration by running [bold]mp config "
+    "--display-config[/bold].\n"
+    "If the path is incorrect, re-configure it by running [bold]mp config "
+    "--root-path <your_path>[/bold]."
+)
 
-PLAYBOOKS_DIR_NAME: str = "playbooks"
-
+PLAYBOOKS_REPO_NAME: str = "playbooks"
+PLAYBOOK_BASE_OUT_DIR_NAME: str = "Playbooks"
+PLAYBOOK_OUT_DIR_NAME: str = "playbook_definitions"
 TRIGGER_FILE_NAME: str = f"trigger{DEF_FILE_SUFFIX}"
-DISPLAY_INFO_FILE_MAME: str = f"display_info{DEF_FILE_SUFFIX}"
-OVERVIEWS_FILE_NAME: str = "overviews.yaml"
-STEPS_DIR: str = "steps"
-
+PLAYBOOKS_JSON_NAME: str = "playbooks.json"
 
 MAX_STEP_PARALLEL_ACTIONS: int = 5
-CONDITION_FIELD_NAME_MIN_LENGTH: int = 1
 NAME_VALIDATION_REGEX: str = r"^[^!@#$%^&*()+=\[\]{};'\\\":~`|,.<>/?]*$"
+HTML_SUFFIX: str = "html"
+
+PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_REPO_NAME, THIRD_PARTY_REPO_NAME)
+ALL_ENV: str = "*"
+DEFAULT_ENV: str = "Default Environment"
+VALID_ENVIRONMENTS: set[str] = {ALL_ENV, DEFAULT_ENV}
+
+
+PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
+    "CategoryName",
+    "OverviewTemplatesDetails",
+    "WidgetTemplates",
+    "Definition",
+}

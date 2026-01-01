@@ -17,8 +17,8 @@ from __future__ import annotations
 import json
 from typing import NotRequired, Self, TypedDict
 
-import mp.core.data_models.abc
 from mp.core.custom_types import JsonString  # noqa: TC001
+from mp.core.data_models.abc import Buildable
 
 from .step_debug_enrichment_data import (
     BuiltStepDebugEnrichmentData,
@@ -28,14 +28,14 @@ from .step_debug_enrichment_data import (
 
 
 class BuiltStepDebugData(TypedDict):
-    OriginalStepIdentifier: str
-    OriginalWorkflowIdentifier: str
-    ModificationTimeUnixTimeInMs: int
     CreationTimeUnixTimeInMs: int
-    ResultValue: str
-    ResultJson: JsonString
-    ScopeEntitiesEnrichmentDataJson: str
+    ModificationTimeUnixTimeInMs: int
+    OriginalWorkflowIdentifier: str
+    OriginalStepIdentifier: str
+    ResultValue: str | None
+    ResultJson: JsonString | None
     ScopeEntitiesEnrichmentData: list[BuiltStepDebugEnrichmentData]
+    ScopeEntitiesEnrichmentDataJson: str
     TenantId: NotRequired[str | None]
 
 
@@ -44,21 +44,19 @@ class NonBuiltStepDebugData(TypedDict):
     playbook_id: str
     creation_time: int
     modification_time: int
-    result_value: str
-    result_json: str
+    result_value: str | None
+    result_json: str | None
     scope_entities_enrichment_data: list[NonBuiltStepDebugEnrichmentData]
     tenant_id: NotRequired[str | None]
 
 
-class StepDebugData(
-    mp.core.data_models.abc.Buildable[BuiltStepDebugData, NonBuiltStepDebugData],
-):
+class StepDebugData(Buildable[BuiltStepDebugData, NonBuiltStepDebugData]):
     step_id: str
     playbook_id: str
     creation_time: int
     modification_time: int
-    result_value: str
-    result_json: JsonString
+    result_value: str | None
+    result_json: JsonString | None
     scope_entities_enrichment_data: list[DebugStepEnrichmentData]
     tenant_id: str | None = None
 
@@ -126,17 +124,19 @@ class StepDebugData(
         enrichment_data: list[BuiltStepDebugEnrichmentData] = [
             e.to_built() for e in self.scope_entities_enrichment_data
         ]
-        return BuiltStepDebugData(
-            OriginalStepIdentifier=self.step_id,
-            OriginalWorkflowIdentifier=self.playbook_id,
-            ModificationTimeUnixTimeInMs=self.modification_time,
+        res: BuiltStepDebugData = BuiltStepDebugData(
             CreationTimeUnixTimeInMs=self.creation_time,
+            ModificationTimeUnixTimeInMs=self.modification_time,
+            OriginalWorkflowIdentifier=self.playbook_id,
+            OriginalStepIdentifier=self.step_id,
             ResultValue=self.result_value,
             ResultJson=self.result_json,
             ScopeEntitiesEnrichmentData=enrichment_data,
             ScopeEntitiesEnrichmentDataJson=json.dumps(enrichment_data),
-            TenantId=self.tenant_id,
         )
+        if self.tenant_id is not None:
+            res["TenantId"] = self.tenant_id
+        return res
 
     def to_non_built(self) -> NonBuiltStepDebugData:
         """Convert the StepDebugData to its "non-built" representation.
@@ -155,6 +155,7 @@ class StepDebugData(
             scope_entities_enrichment_data=[
                 e.to_non_built() for e in self.scope_entities_enrichment_data
             ],
-            tenant_id=self.tenant_id,
         )
+        if self.tenant_id is not None:
+            non_built["tenant_id"] = self.tenant_id
         return non_built

@@ -19,9 +19,9 @@ from typing import Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
 import mp.core.validators
+from mp.core.data_models.abc import Buildable
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
 
@@ -29,7 +29,7 @@ class BuiltIntegrationParameter(TypedDict):
     PropertyName: str
     PropertyDisplayName: str
     Value: str | bool | float | int | None
-    PropertyDescription: str
+    PropertyDescription: NotRequired[str]
     IsMandatory: bool
     PropertyType: int
     IntegrationIdentifier: str
@@ -44,9 +44,7 @@ class NonBuiltIntegrationParameter(TypedDict):
     integration_identifier: str
 
 
-class IntegrationParameter(
-    mp.core.data_models.abc.Buildable[BuiltIntegrationParameter, NonBuiltIntegrationParameter]
-):
+class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrationParameter]):
     name: Annotated[
         str,
         pydantic.Field(
@@ -74,8 +72,8 @@ class IntegrationParameter(
         return cls(
             name=built["PropertyName"],
             default_value=built["Value"],
-            description=built["PropertyDescription"],
-            is_mandatory=built["IsMandatory"],
+            description=built.get("PropertyDescription", ""),
+            is_mandatory=built.get("IsMandatory", False),
             type_=ScriptParamType(int(built["PropertyType"])),
             integration_identifier=built["IntegrationIdentifier"],
         )

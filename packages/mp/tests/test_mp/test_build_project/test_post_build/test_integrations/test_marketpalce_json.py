@@ -30,7 +30,7 @@ def test_write_marketplace_json(
     built_integration: Path,
     marketplace_json: Path,
 ) -> None:
-    commercial: Path = tmp_path / mp.core.constants.COMMERCIAL_DIR_NAME
+    commercial: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
     shutil.copytree(built_integration.parent, commercial, dirs_exist_ok=True)
 
     mp.build_project.post_build.integrations.marketplace_json.write_marketplace_json(commercial)

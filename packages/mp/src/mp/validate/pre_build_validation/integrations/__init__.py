@@ -14,75 +14,36 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
-from mp.core.exceptions import FatalValidationError, NonFatalValidationError
-from mp.validate.data_models import ValidationResults, ValidationTypes
-
+from .connectors_documentation_link_validation import ConnectorsHasDocumentationLinkValidation
+from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
+from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
+from .integration_ssl_validation import SslParameterExistsInIntegrationValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
 from .ping_validation import IntegrationHasPingActionValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
 from .structure_validation import IntegrationFileStructureValidation
-from .uv_lock_validation import UvLockValidation as UvLockValidation
-from .version_bump_validation import VersionBumpValidation as VersionBumpValidation
+from .uv_lock_validation import UvLockValidation
+from .version_bump_validation import VersionBumpValidation
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from mp.validate.pre_build_validation import Validator
 
 
-class Validator(Protocol):
-    name: str
-
-    def run(self, validation_path: Path) -> None:
-        """Execute the validation process on the specified path.
-
-        Args:
-            validation_path: A `Path` object pointing to the directory
-                or file that needs to be validated.
-
-        """
-
-
-class PreBuildValidations:
-    def __init__(self, validation_path: Path) -> None:
-        self.validation_path: Path = validation_path
-        self.results: ValidationResults = ValidationResults(
-            validation_path.name, ValidationTypes.PRE_BUILD
-        )
-
-    def run_pre_build_validation(self) -> None:
-        """Run all the pre-build validations."""
-        validations: list[Validator] = get_priority_validations() + get_validations()
-
-        for validator in validations:
-            try:
-                validator.run(self.validation_path)
-
-            except NonFatalValidationError as e:
-                self._handle_non_fatal_error(validator.name, str(e))
-
-            except FatalValidationError as e:
-                self._handle_fatal_error(validator.name, str(e))
-                return
-
-    def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:
-        self.results.validation_report.add_fatal_validation(validation_name, error_msg)
-        self.results.is_success = False
-
-    def _handle_non_fatal_error(self, validation_name: str, error_msg: str) -> None:
-        self.results.validation_report.add_non_fatal_validation(validation_name, error_msg)
-        self.results.is_success = False
-
-
-def get_validations() -> list[Validator]:
-    """Get a list of all available pre-build validations, that are not priority.
+def get_integration_pre_build_validations() -> list[Validator]:
+    """Get a list of all available pre-build validations.
 
     Returns:
         A list of all `Validator` instances.
 
     """
+    return _get_non_priority_validations() + _get_priority_validations()
+
+
+def _get_non_priority_validations() -> list[Validator]:
     return [
         UvLockValidation(),
         VersionBumpValidation(),
@@ -91,16 +52,14 @@ def get_validations() -> list[Validator]:
         NoDisabledComponentsInIntegrationValidation(),
         IntegrationHasPingActionValidation(),
         IntegrationHasMappingRulesIfHasConnectorValidation(),
+        SslParameterExistsInIntegrationValidation(),
+        SslParameterExistsInConnectorsValidation(),
+        IntegrationHasDocumentationLinkValidation(),
+        ConnectorsHasDocumentationLinkValidation(),
     ]
 
 
-def get_priority_validations() -> list[Validator]:
-    """Get a list of the available pre-build validations, that should run first.
-
-    Returns:
-        A list of all priority `Validator` instances.
-
-    """
+def _get_priority_validations() -> list[Validator]:
     return [
         IntegrationFileStructureValidation(),
     ]

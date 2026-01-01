@@ -20,9 +20,8 @@ from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
 import yaml
 
 import mp.core.constants
-import mp.core.data_models.abc
 import mp.core.utils
-from mp.core.data_models.abc import RepresentableEnum
+from mp.core.data_models.abc import RepresentableEnum, SequentialMetadata
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 
 if TYPE_CHECKING:
@@ -74,7 +73,7 @@ class NonBuiltOverview(TypedDict):
     role_names: list[str]
 
 
-class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuiltOverview]):
+class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
     identifier: str
     name: str
     creator: str | None
@@ -126,11 +125,15 @@ class Overview(mp.core.data_models.abc.SequentialMetadata[BuiltOverview, NonBuil
             return []
 
         all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
-
         res: list[Self] = []
 
         for non_built_overview in yaml.safe_load(meta_path.read_text(encoding="utf-8")):
-            widget_names: frozenset[WidgetName] = frozenset(non_built_overview.get("widgets", []))
+            widget_details: list[OverviewWidgetDetails] = non_built_overview.get(
+                "widgets_details", []
+            )
+            widget_names: frozenset[WidgetName] = frozenset([
+                w_d["title"] for w_d in widget_details
+            ])
             widgets: list[PlaybookWidgetMetadata] = [
                 w for w in all_widget if w.title in widget_names
             ]

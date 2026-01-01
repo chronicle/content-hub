@@ -14,13 +14,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
 import mp.core.constants
-import mp.core.data_models.abc
-import mp.core.validators
+from mp.core.data_models.abc import ComponentMetadata
 
 from .parameter import (
     BuiltConnectorParameter,
@@ -64,9 +63,7 @@ class NonBuiltConnectorMetadata(TypedDict):
     version: NotRequired[float]
 
 
-class ConnectorMetadata(
-    mp.core.data_models.abc.ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]
-):
+class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnectorMetadata]):
     file_name: str
     creator: str
     description: Annotated[
@@ -91,16 +88,6 @@ class ConnectorMetadata(
     ]
     rules: list[ConnectorRule]
     version: float
-
-    def model_post_init(self, context: Any) -> None:  # noqa: ANN401, ARG002
-        """Validate SSL parameter after model initialization.
-
-        Args:
-            context: The pydantic model context (unused).
-
-        """
-        if self.parameters:
-            mp.core.validators.validate_ssl_parameter(self.name, self.parameters)
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -148,15 +135,15 @@ class ConnectorMetadata(
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
-            documentation_link=built["DocumentationLink"],
+            documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
             integration=built["Integration"],
             is_connector_rules_supported=built["IsConnectorRulesSupported"],
             is_custom=built["IsCustom"],
             is_enabled=built["IsEnabled"],
             name=built["Name"],
             parameters=[ConnectorParameter.from_built(param) for param in built["Parameters"]],
-            rules=[ConnectorRule.from_built(rule) for rule in built["Rules"]],
-            version=built.get("Version", 1.0),
+            rules=[ConnectorRule.from_built(rule) for rule in built.get("Rules", [])],
+            version=built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
         )
 
     @classmethod
@@ -165,7 +152,7 @@ class ConnectorMetadata(
             file_name=file_name,
             creator=non_built["creator"],
             description=non_built["description"],
-            documentation_link=non_built.get("documentation_link"),
+            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             integration=non_built["integration"],
             is_connector_rules_supported=non_built["is_connector_rules_supported"],
             is_custom=non_built.get("is_custom", False),
@@ -175,7 +162,7 @@ class ConnectorMetadata(
                 ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
             ],
             rules=[ConnectorRule.from_non_built(rule) for rule in non_built["rules"]],
-            version=non_built.get("version", 1.0),
+            version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
         )
 
     def to_built(self) -> BuiltConnectorMetadata:
