@@ -1,8 +1,3 @@
-# Guide: Deploying Custom Integrations
-
-This guide explains how to use the "Deploy Custom Integrations" GitHub Action to automatically
-synchronize your custom integrations with your SOAR environment.
-
 ## Overview
 
 The action monitors the `content/response_integrations/custom/` directory for changes. When a push
@@ -36,6 +31,22 @@ To create an API key for authentication:
 3. Click **Create**
 4. Set **Permission Groups** to `Admins`
 5. Copy the generated API key
+
+#### Configuring GitHub Secrets
+
+Once you have your credentials, store them as secrets in your GitHub repository so the Action can
+access them securely:
+
+1. In your repository, navigate to **Settings** → **Secrets and variables** → **Actions**.
+2. Click **New repository secret**.
+3. Create the following secrets based on your chosen authentication method:
+
+| Secret Name     | Value                                       | Required For             |
+|:----------------|:--------------------------------------------|:-------------------------|
+| `SOAR_API_URL`  | Your API URL (retrieved in the step above). | All methods              |
+| `SOAR_API_KEY`  | Your API Key.                               | API Key method           |
+| `SOAR_USER`     | Your SOAR username.                         | Username/Password method |
+| `SOAR_PASSWORD` | Your SOAR password.                         | Username/Password method |
 
 ## Usage
 
@@ -106,6 +117,10 @@ jobs:
 | `soar_username` | The username for SOAR authentication. Used if `soar_api_key` is not provided. | `false`  |
 | `soar_password` | The password for SOAR authentication. Used if `soar_api_key` is not provided. | `false`  |
 
-**Note:** You must provide either `soar_api_key` or both `soar_username
-` and `soar_password` for the
+**Note:** You must provide either `soar_api_key` or both `soar_username` and `soar_password` for the
 action to work.
+
+# Guide: Deploying Custom Integrations
+
+This guide explains how to use the "Deploy Custom Integrations" GitHub Action to automatically
+synchronize your custom integrations with your SOAR environment.
