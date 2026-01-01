@@ -148,14 +148,14 @@ mp dev-env login
 Build and deploy an integration to the development environment.
 
 ```bash
-mp dev-env push <integration_name>
+mp dev-env push integration <integration_name>
 ```
 
 - `<integration_name>`: The name of the integration directory. `mp` will find it in the project.
 
 Options:
 
-- `--is-staging`: push integration to staging environment.
+- `--staging`: push integration to staging environment.
 
 ## Code Quality Commands
 

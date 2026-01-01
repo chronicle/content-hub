@@ -132,7 +132,7 @@ def build(  # noqa: PLR0913
     integration_group: Annotated[
         list[str],
         typer.Option(
-            "--integration-group",
+            "--group",
             "-g",
             help="Build all integrations of a specified integration group",
             default_factory=list,

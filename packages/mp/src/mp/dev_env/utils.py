@@ -65,8 +65,8 @@ def get_backend_api(config: dict[str, str]) -> api.BackendAPI:
                 username=config["username"],
                 password=config["password"],
             )
-            backend_api.login()
 
+        backend_api.login()
         return backend_api  # noqa: TRY300
 
     except Exception as e:
