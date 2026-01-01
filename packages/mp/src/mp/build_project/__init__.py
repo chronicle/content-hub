@@ -133,6 +133,7 @@ def build(  # noqa: PLR0913
         list[str],
         typer.Option(
             "--integration-group",
+            "-g",
             help="Build all integrations of a specified integration group",
             default_factory=list,
         ),
@@ -151,6 +152,7 @@ def build(  # noqa: PLR0913
         bool,
         typer.Option(
             "--deconstruct",
+            "-d",
             help=(
                 "Deconstruct built integrations or playbooks instead of building them."
                 " Does work only with --integration."

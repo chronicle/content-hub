@@ -23,7 +23,7 @@ import typer
 from mp.telemetry import track_command
 
 from . import utils
-from .commands.integrations.integrations_command import push_integration
+from .commands.integrations.commands import push_integration
 from .commands.push import push_app
 
 __all__: list[str] = ["app", "deploy", "login"]
@@ -83,6 +83,15 @@ def login(
 
     if api_root is None:
         rich.print("[red]API root is required.[/red]")
+        raise typer.Exit(1)
+
+    if api_key is None and (username is None or password is None):
+        rich.print(
+            "Either API key or both username and password are required. "
+            "Please provide them using the --api-key option or "
+            "--username and --password options. "
+            "Or run 'mp dev-env login' to be prompted for them."
+        )
         raise typer.Exit(1)
 
     params = DevEnvParams(username=username, password=password, api_key=api_key, api_root=api_root)
