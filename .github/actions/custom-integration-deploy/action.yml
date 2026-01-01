@@ -1,0 +1,63 @@
+name: 'Deploy Custom Integrations'
+description: 'Deploys custom integrations to a SOAR environment when changes are detected in the content/response_integrations/custom/ path.'
+author: 'Google SecOps Content-Hub Team'
+
+branding:
+  icon: 'upload-cloud'
+  color: 'red'
+
+inputs:
+  soar_api_url:
+    description: 'The API root URL of the SOAR environment.'
+    required: true
+  soar_api_key:
+    description: 'The API key for SOAR authentication. (Recommended)'
+    required: false
+  soar_username:
+    description: 'The username for SOAR authentication. Used if soar_api_key is not provided.'
+    required: false
+  soar_password:
+    description: 'The password for SOAR authentication. Used if soar_api_key is not provided.'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+  - name: 'Check for changes in custom integrations'
+    id: changed-files
+    uses: tj-actions/changed-files@v44
+    with:
+      files: content/response_integrations/custom/**
+
+  - name: 'Set up Python'
+    if: steps.changed-files.outputs.any_changed == 'true'
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.11'
+
+  - name: 'Install mp package'
+    if: steps.changed-files.outputs.any_changed == 'true'
+    run: |
+      python -m pip install --upgrade pip
+      python -m pip install ./packages/mp
+    shell: bash
+
+  - name: 'Login to SOAR'
+    id: login
+    if: steps.changed-files.outputs.any_changed == 'true'
+    run: |
+      if [ -n "${{ inputs.soar_api_key }}" ]; then
+        mp dev-env login --api-root ${{ inputs.soar_api_url }} --api-key ${{ inputs.soar_api_key }}
+      elif [ -n "${{ inputs.soar_username }}" ] && [ -n "${{ inputs.soar_password }}" ]; then
+        mp dev-env login --api-root ${{ inputs.soar_api_url }} --username ${{ inputs.soar_username }} --password ${{ inputs.soar_password }}
+      else
+        echo "Error: Missing credentials. Please provide either soar_api_key or both soar_username and soar_password."
+        exit 1
+      fi
+    shell: bash
+
+  - name: 'Deploy custom integrations'
+    if: steps.changed-files.outputs.any_changed == 'true' && steps.login.outcome == 'success'
+    run: |
+      mp dev-env push custom-integration-repository
+    shell: bash
