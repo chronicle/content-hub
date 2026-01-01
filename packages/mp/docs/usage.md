@@ -1,19 +1,29 @@
 # Usage Guide
 
-`mp` is a command-line tool for working with Google SecOps Marketplace integrations.
-Below are the main commands and their usage.
+**`mp`**, short for **`marketplace`**, is a command-line interface (CLI) tool designed to streamline
+the development and maintenance of content for the Google SecOps Content Hub. It provides a unified
+set of commands for building, deconstructing, testing, and validating response integrations and
+playbooks.
+
 The commands can be run using the following:
+
 - `mp` – primary command-line interface.
 - `wmp` – alternative alias to avoid default alias conflicts that may appear (on Windows only).
 
-## Basic Commands
+## Installation
 
-### Getting Help
-
-To see all available commands and general help:
+From the repository's root directory, run:
 
 ```bash
-mp --help # or use 'wmp' on Windows
+pip install packages/mp
+```
+
+## General Help
+
+To see a full list of commands and options, run:
+
+```bash
+mp --help
 ```
 
 To get help for a specific command:
@@ -21,6 +31,131 @@ To get help for a specific command:
 ```bash
 mp <command> --help
 ```
+
+## Building Content
+
+To build a single integration or playbook, use the `build` command.
+
+```bash
+# Build a single integration
+mp build --integration my_integration
+
+# Build a single playbook
+mp build --playbook my_playbook
+```
+
+You can use the following shorthand flags:
+
+- `--integration` -> `-i`
+- `--playbook` -> `-p`
+
+## Deconstructing Content
+
+The `deconstruct` process converts a single content item exported from Google SecOps into the more
+readable and developer-friendly format used in this repository.
+
+1. Place the exported content (e.g., `my_new_playbook.json`) into the appropriate directory (e.g.,
+   `content/playbooks/third_party/community/`).
+2. Run the `build` command with the `--deconstruct` flag.
+
+```bash
+# Deconstruct a playbook
+mp build --playbook my_new_playbook --deconstruct
+
+# Deconstruct an integration
+mp build --integration my_new_integration --deconstruct
+```
+
+You can use the following shorthand flags:
+
+- `--deconstruct` -> `-d`
+
+**Note:** The `deconstruct` command operates on a single content item by name and cannot be run on
+an entire repository at once.
+
+## Validating Content
+
+The `validate` command checks a specific content item for errors.
+
+```bash
+# Validate a single integration
+mp validate --integration my_integration --only-pre-build
+
+# Validate a single playbook
+mp validate --playbook my_playbook --only-pre-build
+```
+
+Additional options:
+
+- `--only-pre-build`: Run only pre-build validation checks, skipping the full build process
+- `--quiet`: Reduce output verbosity
+- `--verbose`: Increase output verbosity
+
+## Testing Integrations
+
+Run integration tests for a specific integration.
+
+```bash
+mp test --integration my_integration --verbose
+```
+
+## Repository-Level Commands
+
+You can run `build`, `validate`, and `test` on entire repositories using the `--repository` or `-r`
+flag.
+
+The available repositories are:
+
+- `google`: Response integrations developed by Google teams.
+- `third_party`: Response integrations developed by partners or the community.
+- `playbook`: All playbooks in the repository.
+
+### Build or Validate a Repository
+
+The `build` and `validate` commands work with all repository types.
+
+```bash
+# Build all third-party integrations
+mp build --repository third_party
+
+# Validate all playbooks
+mp validate --repository playbook --only-pre-build
+```
+
+### Test a Repository
+
+The `test` command can only be used with the `google` and `third_party` integration repositories.
+
+```bash
+# Test all Google-developed integrations
+mp test --repository google
+```
+
+## Development Environment (`dev-env`)
+
+The `dev-env` subcommands help you interact with a development playground environment.
+
+### Login
+
+Authenticate and verify your credentials.
+
+```bash
+mp dev-env login
+```
+
+### Push an Integration
+
+Build and deploy an integration to the development environment.
+
+```bash
+mp dev-env push <integration_name>
+```
+
+- `<integration_name>`: The name of the integration directory. `mp` will find it in the project.
+
+Options:
+
+- `--is-staging`: push integration to staging environment.
 
 ## Code Quality Commands
 
@@ -52,113 +187,5 @@ Options:
 - `--changed-files`: Check only files changed in Git
 - `--static-type-check`: Run static type checking with mypy
 - `--raise-error-on-violations`: Raise error if violations are found
-- `--quiet`: Reduce output verbosity
-- `--verbose`: Increase output verbosity
-
-## Integration Build Commands
-
-### Building Integrations
-
-To build integrations for Google SecOps Marketplace:
-
-```bash
-mp build
-```
-
-You must specify one of the following options:
-
-- `--repository [REPOSITORY_TYPES...]`: Build all integrations in specified repositories
-- `--integration [INTEGRATION_NAMES...]`: Build specific integration(s)
-- `--group [GROUP_NAMES...]`: Build all integrations in specified group(s)
-
-Additional options:
-
-- `--deconstruct`: Deconstruct built integrations instead of building them (works only
-  with `--integration`)
-- `--quiet`: Reduce output verbosity
-- `--verbose`: Increase output verbosity
-
-## Examples
-
-### Format Changed Files
-
-```bash
-mp format --changed-files
-```
-
-### Check and Fix a Specific File
-
-```bash
-mp check src/mp/core/utils.py --fix
-```
-
-### Build a Specific Integration
-
-```bash
-mp build --integration my_integration
-```
-
-### Build All Integrations in Commercial Repository
-
-```bash
-mp build --repository COMMERCIAL
-```
-
-### Deconstruct a Built Integration
-
-```bash
-mp build --integration my_integration --deconstruct
-```
-
-## Development Environment Commands
-
-### Login to Dev Environment
-
-Authenticate and verify credentials (default):
-
-```bash
-mp dev-env login
-```
-
-Skip credential verification:
-
-```bash
-mp dev-env login --no-verify
-```
-
-### Push an Integration to Dev Environment
-
-Build and push an integration to the dev environment:
-
-```bash
-mp dev-env push <integration_name>
-```
-
-- `<integration_name>`: The name of the integration directory under `integrations/commercial` or `integrations/third_party`.
-
-Options:
-
-- `--staging`: Uploads the integrations into the staging environment in the playground system.
-
-
-## Integration Validation Command
-
-### Validate Integrations
-
-Run pre-build and post-build validation on the integrations:
-
-```bash
-mp validate
-```
-
-You must specify one of the following options:
-
-- `--repository [REPOSITORY_TYPES...]`: Validate all integrations in specified repositories
-- `--integration [INTEGRATION_NAMES...]`: Validate specific integration(s)
-- `--group [GROUP_NAMES...]`: Validate all integrations in specified group(s)
-
-Additional options:
-
-- `--only-pre-build`: Run only pre-build validation checks, skipping the full build process
 - `--quiet`: Reduce output verbosity
 - `--verbose`: Increase output verbosity
