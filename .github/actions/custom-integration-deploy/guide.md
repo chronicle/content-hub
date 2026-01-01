@@ -75,7 +75,7 @@ jobs:
         fetch-depth: 0
 
     - name: 'Deploy Custom Integrations'
-      uses: chronicle/conent-hub/actions/custom-integration-deploy@main
+      uses: chronicle/content-hub/actions/custom-integration-deploy@main
       with:
         soar_api_url: ${{ secrets.SOAR_API_URL }}
         soar_api_key: ${{ secrets.SOAR_API_KEY }}
@@ -101,7 +101,7 @@ jobs:
         fetch-depth: 0
 
     - name: 'Deploy Custom Integrations'
-      uses: chronicle/conent-hub/actions/custom-integration-deploy@main
+      uses: chronicle/content-hub/actions/custom-integration-deploy@main
       with:
         soar_api_url: ${{ secrets.SOAR_API_URL }}
         soar_username: ${{ secrets.SOAR_USER }}
