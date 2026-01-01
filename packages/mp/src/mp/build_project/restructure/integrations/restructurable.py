@@ -28,3 +28,9 @@ class Restructurable(abc.ABC):
     @abc.abstractmethod
     def restructure(self) -> None:
         """Restructure the component."""
+
+
+class AsyncRestructurable(abc.ABC):
+    @abc.abstractmethod
+    async def restructure(self) -> None:
+        """Restructure the component."""

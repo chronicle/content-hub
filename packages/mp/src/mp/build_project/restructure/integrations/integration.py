@@ -22,21 +22,27 @@ whether the integration is fully built or partially built.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 import rich
 
 import mp.core.file_utils
+import mp.core.utils
 
-from . import code, dependencies, metadata, scripts
+from .code import Code
+from .dependencies import Dependencies
+from .metadata import Metadata
+from .scripts import Scripts
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
 
     from mp.core.data_models.integrations.integration import BuiltIntegration
 
 
-def restructure_integration(
+async def restructure_integration(
     integration_metadata: BuiltIntegration,
     integration_path: Path,
     integration_out_path: Path,
@@ -52,16 +58,20 @@ def restructure_integration(
 
     """
     rich.print(f"Restructuring {integration_metadata['metadata']['Identifier']}")
+    tasks: list[Coroutine[None, None, None]] = []
     if mp.core.file_utils.is_non_built_integration(integration_path):
-        rich.print("Restructuring metadata")
-        metadata.Metadata(integration_out_path, integration_metadata).restructure()
-
-        rich.print("Restructuring scripts")
-        scripts.Scripts(integration_path, integration_out_path).restructure()
-
-        rich.print("Restructuring code")
-        code.Code(integration_out_path).restructure()
+        metadata: Metadata = Metadata(integration_out_path, integration_metadata)
+        scripts: Scripts = Scripts(integration_path, integration_out_path)
+        code: Code = Code(integration_out_path)
+        tasks.extend([
+            mp.core.utils.run_threaded(metadata.restructure),
+            mp.core.utils.run_threaded(scripts.restructure),
+            mp.core.utils.run_threaded(code.restructure),
+        ])
 
     if not mp.core.file_utils.is_built(integration_path):
         rich.print("Restructuring dependencies")
-        dependencies.Dependencies(integration_path, integration_out_path).restructure()
+        dependencies: Dependencies = Dependencies(integration_path, integration_out_path)
+        tasks.append(dependencies.restructure())
+
+    await asyncio.gather(*tasks)

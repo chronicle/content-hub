@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 class MarkdownFormat:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
-        self.validation_results = validation_results
+        self.results: dict[ContentType, FullReport] = validation_results
         self.console: Console = Console()
 
     def display(self) -> None:
@@ -38,7 +38,7 @@ class MarkdownFormat:
         try:
             markdown_content_list: list[str] = ["# Validation Report\n\n"]
 
-            for content_type, full_report in self.validation_results.items():
+            for content_type, full_report in self.results.items():
                 if not _has_issues_to_display(full_report):
                     continue
 

@@ -16,8 +16,6 @@ from typing import Protocol
 
 
 class DisplayReport(Protocol):
-    def __init__(self, validation_results: dict | list) -> None: ...
-
     def display(self) -> None:
         """Start point of the report creation and displaying."""
 

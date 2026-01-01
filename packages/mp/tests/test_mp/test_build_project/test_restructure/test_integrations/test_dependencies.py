@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 import mp.build_project.restructure.integrations.dependencies
 import mp.core.constants
 
@@ -39,9 +41,10 @@ dependencies = ["black>=24.10.0"]
 """
 
 
-def test_restructure(tmp_path: Path) -> None:
+@pytest.mark.anyio
+async def test_restructure(tmp_path: Path) -> None:
     integration_path: Path = tmp_path / "integration"
-    integration_path.mkdir()
+    integration_path.mkdir()  # noqa: ASYNC240
     integration_out_path = tmp_path / "integration_out"
     integration_out_path.mkdir()
     dependencies: Dependencies = (
@@ -52,9 +55,9 @@ def test_restructure(tmp_path: Path) -> None:
     )
 
     pyproject_path: Path = dependencies.path / mp.core.constants.PROJECT_FILE
-    pyproject_path.write_text(TOML_CONTENT, encoding="utf-8")
+    pyproject_path.write_text(TOML_CONTENT, encoding="utf-8")  # noqa: ASYNC240
 
-    dependencies.restructure()
+    await dependencies.restructure()
 
     deps_path: Path = dependencies.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
-    assert list(deps_path.iterdir())
+    assert list(deps_path.iterdir())  # noqa: ASYNC240

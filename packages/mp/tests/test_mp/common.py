@@ -95,8 +95,13 @@ def compare_files(expected: Path, actual: Path) -> tuple[set[str], set[str]]:
         msg = f"Actual path is not a directory or does not exist: {actual}"
         raise ValueError(msg)
 
-    expected_files: set[str] = {p.name for p in expected.rglob("*.*") if ".venv" not in p.parts}
-    actual_files: set[str] = {p.name for p in actual.rglob("*.*") if ".venv" not in p.parts}
+    excluded_parts: set[str] = {".venv", ".ruff_cache", ".gitignore", "CACHEDIR.TAG"}
+    expected_files: set[str] = {
+        p.name for p in expected.rglob("*.*") if not excluded_parts.intersection(p.parts)
+    }
+    actual_files: set[str] = {
+        p.name for p in actual.rglob("*.*") if not excluded_parts.intersection(p.parts)
+    }
 
     if is_windows():
         expected_files = _normalize_wheel_names(expected_files)

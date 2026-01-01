@@ -24,13 +24,13 @@ built integrations back into their source structure.
 
 from __future__ import annotations
 
-import multiprocessing
+import asyncio
 import shutil
 from typing import TYPE_CHECKING
 
+import anyio
 import rich
 
-import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
@@ -79,8 +79,11 @@ class IntegrationsRepo:
         products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
             *self.paths
         )
-        self.build_groups(products.groups)
-        self.build_integrations(products.integrations)
+        asyncio.run(self._build(products))
+
+    async def _build(self, products: Products[set[Path]]) -> None:
+        await self._build_groups(products.groups)
+        await self._build_integrations(products.integrations)
 
     def build_groups(self, group_paths: Iterable[Path]) -> None:
         """Build all groups provided by `group_paths`.
@@ -89,11 +92,15 @@ class IntegrationsRepo:
             group_paths: The paths of integrations to build
 
         """
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_group, group_paths)
+        asyncio.run(self._build_groups(group_paths))
 
-    def build_group(self, group_dir: Path) -> None:
+    async def _build_groups(self, group_paths: Iterable[Path]) -> None:
+        paths: Iterator[Path] = (
+            p for p in group_paths if p.exists() and mp.core.file_utils.is_group(p)
+        )
+        await mp.core.utils.async_build_items(self.build_group, paths)
+
+    async def build_group(self, group_dir: Path) -> None:
         """Build a single group provided by `group_path`.
 
         Args:
@@ -103,11 +110,11 @@ class IntegrationsRepo:
             FileNotFoundError: when `group_dir` does not exist
 
         """
-        if not group_dir.exists():
+        if not await anyio.Path(group_dir).exists():
             msg: str = f"Invalid integration {group_dir}"
             raise FileNotFoundError(msg)
 
-        self.build_integrations(group_dir.iterdir())
+        await self._build_integrations(group_dir.iterdir())  # noqa: ASYNC240
 
     def build_integrations(self, integration_paths: Iterable[Path]) -> None:
         """Build all integrations provided by `integration_paths`.
@@ -116,14 +123,15 @@ class IntegrationsRepo:
             integration_paths: The paths of integrations to build
 
         """
+        asyncio.run(self._build_integrations(integration_paths))
+
+    async def _build_integrations(self, integration_paths: Iterable[Path]) -> None:
         paths: Iterator[Path] = (
             p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)
         )
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_integration, paths)
+        await mp.core.utils.async_build_items(self.build_integration, paths)
 
-    def build_integration(self, integration_path: Path) -> None:
+    async def build_integration(self, integration_path: Path) -> None:
         """Build a single integration provided by `integration_path`.
 
         Args:
@@ -133,13 +141,17 @@ class IntegrationsRepo:
             FileNotFoundError: when `integration_path` does not exist
 
         """
-        if not integration_path.exists():
+        if not await anyio.Path(integration_path).exists():
             msg: str = f"Invalid integration {integration_path}"
             raise FileNotFoundError(msg)
 
-        integration: Integration = self._get_integration_to_build(integration_path)
-        self._build_integration(integration, integration_path)
-        self._remove_project_files_from_built_out_path(integration.identifier)
+        integration: Integration = await mp.core.utils.run_threaded(
+            self._get_integration_to_build, integration_path
+        )
+        await self._build_integration(integration, integration_path)
+        await mp.core.utils.run_threaded(
+            self._remove_project_files_from_built_out_path, integration.identifier
+        )
 
     def _get_integration_to_build(self, integration_path: Path) -> Integration:
         if not mp.core.file_utils.is_non_built_integration(integration_path):
@@ -157,21 +169,23 @@ class IntegrationsRepo:
         mp.core.file_utils.recreate_dir(integration_out_path)
         shutil.copytree(integration_path, integration_out_path, dirs_exist_ok=True)
 
-    def _build_integration(
+    async def _build_integration(
         self,
         integration: Integration,
         integration_path: Path,
     ) -> None:
         rich.print(f"---------- Building {integration_path.stem} ----------")
         integration_out_path: Path = self.out_dir / integration.identifier
-        integration_out_path.mkdir(exist_ok=True)
+        await anyio.Path(integration_out_path).mkdir(exist_ok=True)
 
         built: BuiltIntegration = integration.to_built()
-        restructure_integration(built, integration_path, integration_out_path)
-        _copy_python_version_file(integration_path, integration_out_path)
+        await restructure_integration(built, integration_path, integration_out_path)
+        await mp.core.utils.run_threaded(
+            _copy_python_version_file, integration_path, integration_out_path
+        )
 
         full_details: BuiltFullDetails = integration.to_built_full_details()
-        write_full_details(full_details, integration_out_path)
+        await mp.core.utils.run_threaded(write_full_details, full_details, integration_out_path)
 
     def _remove_project_files_from_built_out_path(self, integration_id: str) -> None:
         rich.print("Removing unneeded files from out path")
@@ -205,9 +219,7 @@ class IntegrationsRepo:
         paths: Iterator[Path] = (
             p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)
         )
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.deconstruct_integration, paths)
+        asyncio.run(mp.core.utils.threaded_build_items(self.deconstruct_integration, paths))
 
     def deconstruct_integration(self, integration_path: Path) -> None:
         """Deconstruct a single integration provided by `integration_path`.

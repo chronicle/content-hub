@@ -94,8 +94,9 @@ def assert_deconstruct_integration(
         marketplace.deconstruct_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
-        actual_files: set[str] = {p.name for p in out_integration.rglob("*.*")}
-        expected_files: set[str] = {p.name for p in non_built_integration.rglob("*.*")}
+        actual_files, expected_files = test_mp.common.compare_files(
+            expected=non_built_integration, actual=out_integration
+        )
         assert actual_files == expected_files
 
         actual: dict[str, Any]
