@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
-    """Get content-hub playbook specific repository path.
+def get_or_create_playbook_repo_base_path(playbooks_classification: str) -> Path:
+    """Get a content-hub playbook-specific repository path.
 
     Args:
         playbooks_classification: the name of the repository.
@@ -39,21 +39,37 @@ def get_playbook_repository_base_path(playbooks_classification: str) -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        get_playbook_base_dir() / playbooks_classification
+        mp.core.file_utils.common.utils.create_or_get_content_dir()
+        / mp.core.constants.PLAYBOOKS_REPO_NAME
+        / playbooks_classification
     )
 
 
-def get_playbook_base_dir() -> Path:
+def get_playbook_base_folders_paths(
+    repository_classification: str, repo_base_path: Path
+) -> list[Path]:
     """Get the root folder for the playbooks' repositories.
 
     Returns:
         the root folder for the playbooks' repository.
 
+    Raises:
+            ValueError: If the repository_classification is not valid.
+
     """
-    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / mp.core.constants.PLAYBOOKS_DIR_NAME
-    )
+    match repository_classification:
+        case mp.core.constants.COMMERCIAL_REPO_NAME:
+            return mp.core.file_utils.common.create_dirs_if_not_exists(repo_base_path)
+
+        case mp.core.constants.THIRD_PARTY_REPO_NAME:
+            return mp.core.file_utils.common.create_dirs_if_not_exists(
+                repo_base_path / mp.core.constants.COMMUNITY_DIR_NAME,
+                repo_base_path / mp.core.constants.PARTNER_DIR_NAME,
+            )
+
+        case _:
+            msg: str = f"Received unknown playbook classification: {repository_classification}"
+            raise ValueError(msg)
 
 
 def get_playbook_out_dir() -> Path:
@@ -92,7 +108,6 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
         return False
 
     steps_dir: Path = playbook_path / mp.core.constants.STEPS_DIR
-    widgets_dir: Path = playbook_path / mp.core.constants.WIDGETS_DIR
     def_file: Path = playbook_path / mp.core.constants.DEFINITION_FILE
     display_info: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
     overviews_file: Path = playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME
@@ -100,7 +115,6 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
 
     return (
         steps_dir.exists()
-        and widgets_dir.exists()
         and def_file.exists()
         and display_info.exists()
         and overviews_file.exists()

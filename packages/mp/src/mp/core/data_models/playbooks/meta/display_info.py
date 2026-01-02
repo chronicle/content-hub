@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Self, TypedDict
+from typing import Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -71,21 +71,19 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
     description: str
     author: str
     contact_email: str
-    dependent_playbook_ids: list[str]
     tags: list[str]
     contribution_type: str
-    is_google_verified: bool
     should_display_in_content_hub: bool
     allowed_debug_data: bool
+    is_google_verified: NotRequired[bool]
 
 
 class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo]):
     type: PlaybookType = PlaybookType.PLAYBOOK
-    content_hub_display_name: str = "The name that will appear in the Content Hub"
-    description: str = "The description that will appear in the Content Hub"
-    author: str = "Please Fill"
-    contact_email: str = "Please Fill"
-    dependent_playbook_ids: Annotated[list[str], pydantic.Field(default_factory=list)]
+    content_hub_display_name: str = "String value"
+    description: str = "String value"
+    author: str = "String value"
+    contact_email: str = "String value"
     tags: Annotated[list[str], pydantic.Field(default_factory=list)]
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
@@ -108,9 +106,8 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             contribution_type=PlaybookContributionType.from_string(
                 non_built["contribution_type"].upper()
             ),
-            is_google_verified=non_built["is_google_verified"],
+            is_google_verified=non_built.get("is_google_verified", False),
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
-            dependent_playbook_ids=[],
             allowed_debug_data=non_built["allowed_debug_data"],
         )
 
@@ -133,7 +130,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             UpdateTime=0,
             Version=0.0,
             Integrations=[],
-            DependentPlaybookIds=self.dependent_playbook_ids,
+            DependentPlaybookIds=[],
             Tags=self.tags,
             Source=self.contribution_type.value,
             Verified=self.is_google_verified,
@@ -154,11 +151,9 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             description=self.description,
             author=self.author,
             contact_email=self.contact_email,
-            dependent_playbook_ids=self.dependent_playbook_ids,
             tags=self.tags,
             should_display_in_content_hub=self.should_display_in_content_hub,
             contribution_type=self.contribution_type.to_string(),
-            is_google_verified=self.is_google_verified,
             allowed_debug_data=self.allowed_debug_data,
         )
         return non_built

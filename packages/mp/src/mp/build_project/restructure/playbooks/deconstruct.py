@@ -16,17 +16,18 @@ from __future__ import annotations
 
 import dataclasses
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import rich
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap
 
 import mp.core.constants
 import mp.core.file_utils
 from mp.core.data_models.common.widget.data import WidgetType
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote
     from mp.core.data_models.playbooks.meta.display_info import NonBuiltPlaybookDisplayInfo
     from mp.core.data_models.playbooks.meta.metadata import NonBuiltPlaybookMetadata
@@ -78,8 +79,42 @@ class PlaybookDeconstructor:
         self, non_built_display_info: NonBuiltPlaybookDisplayInfo
     ) -> None:
         rich.print("Creating display info file")
+
+        yaml = YAML()
+        yaml.indent(mapping=2, sequence=4, offset=2)
+
+        data = CommentedMap(non_built_display_info)
+        data.yaml_add_eol_comment("The content type playbook or block", "type")
+        data.yaml_add_eol_comment(
+            "The description that will appear in the Content Hub", "description"
+        )
+        data.yaml_add_eol_comment(
+            "Author name, appearing on the playbook / block card in the Content Hub", "author"
+        )
+        data.yaml_add_eol_comment(
+            "In case support is needed, this email will be used by secops customers to "
+            "open support queries (required for partner contributed content)",
+            "contact_email",
+        )
+        data.yaml_add_eol_comment(
+            "The name that will appear in the Content Hub", "content_hub_display_name"
+        )
+        data.yaml_add_eol_comment(
+            "Defines whether this item should have its own card in the Content Hub. "
+            "- Boolean value",
+            "should_display_in_content_hub",
+        )
+        data.yaml_add_eol_comment("Options: google, partner, or third_party", "contribution_type")
+        data.yaml_add_eol_comment(
+            "I acknowledge that this playbook contains debug data and authorize its"
+            " publication. - Boolean value",
+            "allowed_debug_data",
+        )
+
         display_info_path: Path = self.out_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
-        mp.core.file_utils.save_yaml(non_built_display_info, display_info_path)
+
+        with Path.open(display_info_path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f)
 
     def _create_definition_file(self, non_built_meta_data: NonBuiltPlaybookMetadata) -> None:
         rich.print("Creating definition file")
