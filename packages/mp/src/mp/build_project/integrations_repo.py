@@ -62,7 +62,7 @@ class IntegrationsRepo:
 
         """
         self.name: str = integrations_dir.name
-        self.paths: list[Path] = mp.core.file_utils.get_all_integrations_paths(self.name)
+        self.paths: list[Path] = mp.core.file_utils.get_integration_base_folders_paths(self.name)
 
         for dir_name in self.paths:
             dir_name.mkdir(exist_ok=True, parents=True)

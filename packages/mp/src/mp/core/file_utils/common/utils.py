@@ -63,6 +63,20 @@ def create_or_get_out_dir() -> Path:
     )
 
 
+def create_dirs_if_not_exists(*paths: Path) -> list[Path]:
+    """Create directories if they do not exist.
+
+    Args:
+        *paths: The paths to create.
+
+    Returns:
+        A list of the created paths.
+
+    """
+    result: list[Path] = [create_dir_if_not_exists(p) for p in paths]
+    return result
+
+
 def create_dir_if_not_exists(p: Path, /) -> Path:
     """Create the provided path as a directory if it doesn't exist.
 
