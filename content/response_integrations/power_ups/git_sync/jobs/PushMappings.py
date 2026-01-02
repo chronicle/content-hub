@@ -37,7 +37,7 @@ def main():
         siemplify.LOGGER.info(f"Pushing mappings of {source}")
         records = [
             x
-            for x in gitsync.api.get_ontology_records()
+            for x in gitsync.api.get_ontology_records(chronicle_soar=siemplify)
             if x.get("source").lower() == source.lower()
         ]
         rules = []
