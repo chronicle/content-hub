@@ -74,7 +74,7 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
     tags: list[str]
     contribution_type: str
     should_display_in_content_hub: bool
-    allowed_debug_data: bool
+    acknowledge_debug_data_included: bool
     is_google_verified: NotRequired[bool]
 
 
@@ -108,7 +108,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             ),
             is_google_verified=non_built.get("is_google_verified", False),
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
-            allowed_debug_data=non_built["allowed_debug_data"],
+            allowed_debug_data=non_built["acknowledge_debug_data_included"],
         )
 
     def to_built(self) -> BuiltPlaybookDisplayInfo:
@@ -154,6 +154,6 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             tags=self.tags,
             should_display_in_content_hub=self.should_display_in_content_hub,
             contribution_type=self.contribution_type.to_string(),
-            allowed_debug_data=self.allowed_debug_data,
+            acknowledge_debug_data_included=self.allowed_debug_data,
         )
         return non_built
