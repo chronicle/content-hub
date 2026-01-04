@@ -81,6 +81,11 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
                 third_party / constants.PARTNER_DIR_NAME,
             )
 
+        case constants.CUSTOM_REPO_NAME:
+            return mp.core.file_utils.common.create_dirs_if_not_exists(
+                base_path / constants.CUSTOM_REPO_NAME
+            )
+
         case _:
             msg: str = f"Received unknown integration classification: {integrations_classification}"
             raise ValueError(msg)
