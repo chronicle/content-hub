@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 INTEGRATION_NAME = "SpyCloud"
 INTEGRATION_DISPLAY_NAME = "SpyCloud"
 
