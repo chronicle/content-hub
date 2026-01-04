@@ -1,5 +1,5 @@
-name: 'Deploy Custom Integrations'
-description: 'Deploys custom integrations to a SOAR environment when changes are detected in the content/response_integrations/custom/ path.'
+name: 'Push Custom Integrations'
+description: 'Push custom integrations to a SOAR environment when changes are detected in the content/response_integrations/custom/ path.'
 author: 'Google SecOps Content-Hub Team'
 
 branding:
@@ -37,13 +37,15 @@ runs:
 
   - name: 'Install mp package'
     if: steps.changed-files.outputs.any_changed == 'true'
+    # language=bash
     run: |
       python -m pip install --upgrade pip
       python -m pip install ./packages/mp
     shell: bash
 
-  - name: 'Configure MP and Cleanup'
+  - name: 'Configure MP'
     if: steps.changed-files.outputs.any_changed == 'true'
+    # language=bash
     run: |
       mp config --root-path . --processes 10 --display-config
     shell: bash
@@ -51,6 +53,7 @@ runs:
   - name: 'Login to SOAR'
     id: login
     if: steps.changed-files.outputs.any_changed == 'true'
+    # language=bash
     run: |
       if [ -n "${{ inputs.soar_api_key }}" ]; then
         mp dev-env login --api-root ${{ inputs.soar_api_url }} --api-key ${{ inputs.soar_api_key }}
@@ -62,8 +65,9 @@ runs:
       fi
     shell: bash
 
-  - name: 'Deploy custom integrations'
+  - name: 'Push custom integrations'
     if: steps.changed-files.outputs.any_changed == 'true' && steps.login.outcome == 'success'
+    # language=bash
     run: |
       mp dev-env push custom-integration-repository
     shell: bash

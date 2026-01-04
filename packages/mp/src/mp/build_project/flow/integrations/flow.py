@@ -14,8 +14,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import rich
 
@@ -32,8 +31,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@dataclass(frozen=True)
-class Repos:
+class Repos(NamedTuple):
     commercial: IntegrationsRepo
     community: IntegrationsRepo
     custom: IntegrationsRepo

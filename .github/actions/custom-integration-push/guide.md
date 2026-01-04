@@ -1,8 +1,13 @@
+# Guide: Pushing Custom Integrations
+
+This guide explains how to use the "Push Custom Integrations" GitHub Action to automatically
+synchronize your custom integrations with a configured SOAR environment.
+
 ## Overview
 
 The action monitors the `content/response_integrations/custom/` directory for changes. When a push
-to your repository's `main` branch includes modifications in this path, the action will
-automatically deploy those integrations to your SOAR instance.
+to your configured target branch (e.g., `main`) includes modifications in this path, the action will
+automatically push those integrations to your single SOAR instance.
 
 ## Authentication
 
@@ -20,7 +25,7 @@ To get your SecOps environment API url:
 1. Open your SecOps environment in a web browser
 2. Open the browser's Developer Console (F12)
 3. Execute: `localStorage['soar_server-addr']`
-4. Copy the returned URL - this is your API URL
+4. Copy the returned URL: this is your API URL
 
 #### API Key Creation
 
@@ -45,28 +50,29 @@ access them securely:
 |:----------------|:--------------------------------------------|:-------------------------|
 | `SOAR_API_URL`  | Your API URL (retrieved in the step above). | All methods              |
 | `SOAR_API_KEY`  | Your API Key.                               | API Key method           |
-| `SOAR_USER`     | Your SOAR username.                         | Username/Password method |
+| `SOAR_USERNAME` | Your SOAR username.                         | Username/Password method |
 | `SOAR_PASSWORD` | Your SOAR password.                         | Username/Password method |
 
 ## Usage
 
 To use this action, create a new workflow file in your repository under `.github/workflows/`. For
-example, you can create `.github/workflows/deploy_custom_integrations.yml`.
+example, you can create `.github/workflows/push_custom_integrations.yml`.
 
 ### Example Workflow: Using API Key
 
 This is the recommended method.
 
 ```yaml
-name: 'Deploy Custom Integrations on Push'
+name: 'Push Custom Integrations on Push'
 
 on:
   push:
+    # You can change 'main' to any branch you want to monitor (e.g., 'env1', 'prod')
     branches:
     - main
 
 jobs:
-  deploy:
+  push_integrations:
     runs-on: ubuntu-latest
     steps:
     - name: 'Checkout repository'
@@ -74,25 +80,26 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Deploy Custom Integrations'
-      uses: chronicle/content-hub/actions/custom-integration-deploy@main
+    - name: 'Push Custom Integrations'
+      uses: chronicle/content-hub/actions/custom-integration-push@main
       with:
         soar_api_url: ${{ secrets.SOAR_API_URL }}
         soar_api_key: ${{ secrets.SOAR_API_KEY }}
 ```
 
-### Example Workflow: Using Username and Password
+### Example Workflow: Using Username/Password
 
 ```yaml
-name: 'Deploy Custom Integrations on Push'
+name: 'Push Custom Integrations on Push'
 
 on:
   push:
+    # You can change 'main' to any branch you want to monitor (e.g., 'env1', 'prod')
     branches:
     - main
 
 jobs:
-  deploy:
+  push_integrations:
     runs-on: ubuntu-latest
     steps:
     - name: 'Checkout repository'
@@ -100,11 +107,11 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Deploy Custom Integrations'
-      uses: chronicle/content-hub/actions/custom-integration-deploy@main
+    - name: 'Push Custom Integrations'
+      uses: chronicle/content-hub/actions/custom-integration-push@main
       with:
         soar_api_url: ${{ secrets.SOAR_API_URL }}
-        soar_username: ${{ secrets.SOAR_USER }}
+        soar_username: ${{ secrets.SOAR_USERNAME }}
         soar_password: ${{ secrets.SOAR_PASSWORD }}
 ```
 
@@ -119,8 +126,3 @@ jobs:
 
 **Note:** You must provide either `soar_api_key` or both `soar_username` and `soar_password` for the
 action to work.
-
-# Guide: Deploying Custom Integrations
-
-This guide explains how to use the "Deploy Custom Integrations" GitHub Action to automatically
-synchronize your custom integrations with your SOAR environment.
