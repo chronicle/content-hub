@@ -11,6 +11,7 @@ from ..core.DarktraceManager import DarktraceManager
 
 @output_handler
 def main():
+    X = "custom"
     siemplify = SiemplifyAction()
     siemplify.script_name = PING_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")

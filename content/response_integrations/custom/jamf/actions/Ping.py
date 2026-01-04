@@ -26,6 +26,7 @@ def main() -> NoReturn:
     If Jamf Protect configuration is provided, it will also test connectivity
     to Jamf Protect's GraphQL API.
     """
+    X = "custom"
     siemplify = SiemplifyAction()
     siemplify.script_name = PING_SCRIPT_NAME
     logger = siemplify.LOGGER

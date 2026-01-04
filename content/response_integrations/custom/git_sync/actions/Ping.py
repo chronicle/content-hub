@@ -29,6 +29,7 @@ INTEGRATION_NAME = "GitSync"
 
 @output_handler
 def main():
+    X = "custom"
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
     smp_credentials = {}

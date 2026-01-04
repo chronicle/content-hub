@@ -10,6 +10,7 @@ IDENTIFIER = "AWS - EC2"
 
 @output_handler
 def main():
+    X = "custom"
     siemplify = SiemplifyAction()
 
     access_key_id = siemplify.extract_configuration_param(IDENTIFIER, "Access Key ID")

@@ -20,6 +20,7 @@ INTEGRATION_NAME = "Insights"
 
 
 def main():
+    X = "custom"
     siemplify = SiemplifyAction()
 
     siemplify.end("Siemplify is connected", True)
