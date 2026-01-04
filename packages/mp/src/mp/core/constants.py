@@ -26,6 +26,7 @@ THIRD_PARTY_REPO_NAME: str = "third_party"
 COMMUNITY_DIR_NAME: str = "community"
 PARTNER_DIR_NAME: str = "partner"
 POWERUPS_DIR_NAME: str = "power_ups"
+CUSTOM_REPO_NAME: str = "custom"
 INTEGRATIONS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
     THIRD_PARTY_REPO_NAME: (
         COMMUNITY_DIR_NAME,
@@ -41,6 +42,7 @@ INTEGRATIONS_TYPES: tuple[str, ...] = (
     COMMUNITY_DIR_NAME,
     PARTNER_DIR_NAME,
     POWERUPS_DIR_NAME,
+    CUSTOM_REPO_NAME,
 )
 OUT_INTEGRATIONS_DIR_NAME: str = "response_integrations"
 OUT_DIR_NAME: str = "out"

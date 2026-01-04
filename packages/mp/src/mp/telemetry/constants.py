@@ -35,28 +35,28 @@ class ConfigYaml(TypedDict):
 
 
 NAME_MAPPER: dict[str, str] = {
+    "build": "build",
     "validate": "validate",
     "run_pre_build_tests": "test",
     "format_files": "format",
     "login": "dev-env login",
     "deploy": "dev-env deploy",
-    "push": "dev-env push",
-    "build": "build",
+    "push_integration": "dev-env push integration",
+    "push_custom_integration_repository": "dev-env push custom integration repository",
 }
 
 ALLOWED_COMMAND_ARGUMENTS: set[str] = {
-    "repositories",
-    "integrations",
+    "repository",
     "integration",
-    "playbooks",
     "playbook",
     "group",
+    "custom_integration",
+    "deconstruct",
     "only_pre_build",
+    "raise_error_on_violations",
+    "changed_files",
     "quiet",
     "verbose",
-    "raise_error_on_violations",
-    "deconstruct",
-    "changed_files",
     "-r",
     "-i",
     "-p",
