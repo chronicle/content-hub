@@ -122,15 +122,6 @@ def _update_display_info(
 ) -> None:
     rn_values: ReleaseNotesDisplayInfo = _extract_display_info_from_rn(non_built_playbook_path)
 
-    built_display_info["Author"] = (
-        "" if built_display_info["Author"] == "String value" else built_display_info["Author"]
-    )
-    built_display_info["ContactEmail"] = (
-        ""
-        if built_display_info["ContactEmail"] == "String value"
-        else built_display_info["ContactEmail"]
-    )
-
     built_display_info["Identifier"] = built_playbook["Definition"]["Identifier"]
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
