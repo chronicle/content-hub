@@ -26,6 +26,8 @@ DEFAULT_AUTHOR = "GitSync <gitsync@siemplify.co>"
 COMMIT_AUTHOR_REGEX = (
     r"[A-Za-z ,.'-]+ <[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}>"
 )
+BITBUCKET_HOST = "bitbucket.org"
+SUB_BITBUCKET_HOST = ".bitbucket.org"
 
 IGNORED_INTEGRATIONS = ["GitSync", "Siemplify", "SiemplifyUtilities"]
 IGNORED_JOBS = [
