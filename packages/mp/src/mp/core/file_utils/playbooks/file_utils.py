@@ -108,7 +108,6 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
         return False
 
     steps_dir: Path = playbook_path / mp.core.constants.STEPS_DIR
-    widgets_dir: Path = playbook_path / mp.core.constants.WIDGETS_DIR
     def_file: Path = playbook_path / mp.core.constants.DEFINITION_FILE
     display_info: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
     overviews_file: Path = playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME
@@ -116,7 +115,6 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
 
     return (
         steps_dir.exists()
-        and widgets_dir.exists()
         and def_file.exists()
         and display_info.exists()
         and overviews_file.exists()
