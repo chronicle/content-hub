@@ -10,6 +10,9 @@
 
 The `mp` tool sits at the center of your integration development workflow:
 
+> [!NOTE]
+> **Windows Users**: Please use `wmp` instead of `mp` for all commands to avoid conflicts with system aliases.
+
 ## Key Features
 
 - **Build & Package**: transforming source code into deployable artifacts.
@@ -25,7 +28,7 @@ The `mp` tool sits at the center of your integration development workflow:
 | `config` | Configure `mp` settings. | [Docs](docs/commands/config.md) |
 | `format` | Auto-format Python files. | [Docs](docs/commands/format.md) |
 | `test` | Run pre-build integration tests. | [Docs](docs/commands/test.md) |
-| `validate` | VALIDATE integration structure and metadata. | [Docs](docs/commands/validate.md) |
+| `validate` | Validate integration structure and metadata. | [Docs](docs/commands/validate.md) |
 | `dev-env` | Interact with dev environment (login, push). | [Docs](docs/commands/dev_env.md) |
 
 ## Documentation

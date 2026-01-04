@@ -21,3 +21,6 @@ To see a full list of commands and options at any time, run:
 ```bash
 mp --help
 ```
+
+> [!NOTE]
+> **Windows Users**: Please use the `wmp` command (e.g., `wmp --help`) instead of `mp` to avoid conflicts with default system aliases.

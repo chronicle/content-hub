@@ -12,7 +12,7 @@ mp validate [OPTIONS]
 
 | Option | Shorthand | Description | Type | Default |
 | :--- | :--- | :--- | :--- | :--- |
-| `--repository` | `-r` | Run validations on all integrations in specified repositories. Available types: `google` , `third_party`, `playbook`.  | `[RepositoryType]` | `[]` |
+| `--repository` | `-r` | Run validations on all integrations in specified repositories. Available types: `google`, `third_party`, `playbook`.  | `[RepositoryType]` | `[]` |
 | `--integration` | `-i` | Run validations on a specified integrations | `[str]` | `[]` |
 | `--playbook` | `-p` | Run validations on a specified playbook | `[str]` | `[]` |
 | `--only-pre-build` | | Execute only pre-build validations checks on the integrations, skipping the full build process. | `bool` | `False` |

@@ -18,7 +18,7 @@ mp format [OPTIONS] [FILE_PATHS]...
 
 | Option | Description | Type | Default |
 | :--- | :--- | :--- | :--- |
-| `--changed-files` | Format all changed files based on a diff with the origin/develop branch instead of `FILE_PATHS`. | `bool` | `False` |
+| `--changed-files` | Format all changed files based on a diff with the origin. | `bool` | `False` |
 | `--quiet` | Log less on runtime. | `bool` | `False` |
 | `--verbose` | Log more on runtime. | `bool` | `False` |
 
