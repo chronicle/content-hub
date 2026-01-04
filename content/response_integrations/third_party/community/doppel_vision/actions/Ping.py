@@ -17,6 +17,14 @@ def main():
         provider_name="DoppelVision",
         param_name="API_Key",
     )
+    user_api_key = siemplify.extract_configuration_param(
+        provider_name="DoppelVision",
+        param_name="User_API_Key",
+    )
+    org_code = siemplify.extract_configuration_param(
+        provider_name="DoppelVision",
+        param_name="Organization_Code",
+    )
 
     # Debugging: Log the retrieved API key
     siemplify.LOGGER.info(f"Extracted API Key: {api_key}")
@@ -26,7 +34,11 @@ def main():
         return
 
     # Create an instance of the DoppelManager
-    doppel_manager = DoppelManager(api_key)
+    doppel_manager = DoppelManager(
+        api_key=api_key,
+        user_api_key=user_api_key,
+        org_code=org_code
+    )
 
     # Perform Ping
     try:
