@@ -143,20 +143,48 @@ Authenticate and verify your credentials.
 mp dev-env login
 ```
 
+#### Command Parameters
+
+#### API URL
+
+To get your SecOps environment API url:
+
+1. Open your SecOps environment in a web browser
+2. Open the browser's Developer Console (F12)
+3. Execute: `localStorage['soar_server-addr']`
+4. Copy the returned URL: this is your API URL
+
+#### API Key Creation
+
+To create an API key for authentication:
+
+1. Log into your SecOps environment
+2. Navigate to **Settings** → **SOAR Settings** → **Advanced** → **API Keys**
+3. Click **Create**
+4. Set **Permission Groups** to `Admins`
+5. Copy the generated API key
+
+| Name            | Value                                       | Required For             |
+|:----------------|:--------------------------------------------|:-------------------------|
+| `SOAR_API_URL`  | Your API URL (retrieved in the step above). | All methods              |
+| `SOAR_API_KEY`  | Your API Key.                               | API Key method           |
+| `SOAR_USERNAME` | Your SOAR username.                         | Username/Password method |
+| `SOAR_PASSWORD` | Your SOAR password.                         | Username/Password method |
+
 ### Push an Integration
 
-Build and deploy an integration to the development environment.
+Build and push an integration to the development environment.
 
 ```bash
-mp dev-env push integration <integration_name>
+mp dev-env push integration my_integration
 ```
 
-- `<integration_name>`: The name of the integration directory. `mp` will find it in the project.
+- `my_integration`: The name of the integration directory. `mp` will find it in the project.
 
-Options:
+#### Command Flags
 
-- `--is-staging`: push integration to staging environment.
-- `--custom`: push integration from custom repository.`
+- --is-staging: push integration to staging environment.
+- --custom: push integration from custom repository.
 
 ## Code Quality Commands
 
