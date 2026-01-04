@@ -55,3 +55,12 @@ Core concepts of Google SecOps Playbooks:
 
 By using playbooks, security teams can standardize their incident response processes, reduce
 response times, and improve the overall effectiveness of their security operations.
+
+```mermaid
+flowchart LR
+    T[Trigger] -->|Starts| P[Playbook]
+    P -->|Executes| S1[Step 1: Action]
+    S1 -->|Result| S2[Step 2: Condition]
+    S2 -->|True| S3[Step 3: Action]
+    S2 -->|False| S4[Step 4: Action]
+```

@@ -9,13 +9,20 @@
 > **Disclaimer:** This documentation is actively under development. Its content and structure are
 > subject to ongoing updates and revisions
 
-> **Note:** At this time, only response integration content is supported via this contribution
+> **Note:** At this time, only response integration and playbook content is supported via this contribution
 > workflow. We expect to expand support to other critical content types in the near future.
 
 👋 Hello and welcome!
 
 This repository is the central hub for a wide array of community-contributed content intended to
-enhance the Google SecOps platform. From normalizing and transforming telemetry for ingestion, to
+enhance the Google SecOps platform.
+
+## How it Works
+
+The Content Hub operates on a principle of collaborative development. Integrations and playbooks are developed here, verified, and then published to the Google SecOps Content-Hub.
+
+
+From normalizing and transforming telemetry for ingestion, to
 connecting Google SecOps with other security tools, to exploring practical use-cases and leveraging
 powerful development packages -- anything needed to enhance the Google Security Operations
 experience lives here.
