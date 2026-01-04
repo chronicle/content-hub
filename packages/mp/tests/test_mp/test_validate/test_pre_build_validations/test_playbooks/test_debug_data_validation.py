@@ -63,8 +63,8 @@ class TestDebugDataValidation:
             self.validator_runner.run(temp_non_built_playbook)
 
         assert (
-            "The playbook contains debug data, but 'acknowledge_debug_data_included' is set to False"
-            " in the display info file. Set 'acknowledge_debug_data_included' to True to allow this data."
+            "playbook contains debug data, but 'acknowledge_debug_data_included' is set to False"
+            " in the display info file. Set 'acknowledge_debug_data_included' to True"
         ) in str(excinfo.value)
 
     def test_is_debug_mode_true_fail(self, temp_non_built_playbook: Path) -> None:
@@ -95,8 +95,9 @@ class TestDebugDataValidation:
         error_msg = str(excinfo.value)
         assert "debug mode cannot be enabled. Please disable it." in error_msg
         assert (
-            "The playbook contains debug data, but 'acknowledge_debug_data_included' is set to False"
-            " in the display info file. Set 'acknowledge_debug_data_included' to True to allow this data."
+            "The playbook contains debug data, but 'acknowledge_debug_data_included' "
+            "is set to False in the display info file. "
+            "Set 'acknowledge_debug_data_included' to True to allow this data."
         ) in error_msg
         assert (
             "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be "
