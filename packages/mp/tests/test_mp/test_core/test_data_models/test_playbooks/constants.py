@@ -822,7 +822,7 @@ NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
     "contribution_type": "THIRD_PARTY",
     "is_google_verified": False,
     "should_display_in_content_hub": False,
-    "allowed_debug_data": False,
+    "acknowledge_debug_data_included": False,
 }
 
 DISPLAY_INFO = PlaybookDisplayInfo(

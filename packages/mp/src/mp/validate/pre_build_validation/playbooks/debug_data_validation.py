@@ -55,8 +55,9 @@ class DebugDataValidation:
 
         if not display_info.allowed_debug_data:
             error_messages.append(
-                "The playbook contains debug data, but 'allowed_debug_data' is set to False"
-                " in the display info file. Set 'allowed_debug_data' to True to allow this data."
+                "The playbook contains debug data, but 'acknowledge_debug_data_included' "
+                "is set to False in the display info file. "
+                "Set 'acknowledge_debug_data_included' to True to allow this data."
             )
             for step in steps_with_debug_data:
                 error_messages.append(f"Step <{step.instance_name}> contains debug data.")  # noqa: PERF401

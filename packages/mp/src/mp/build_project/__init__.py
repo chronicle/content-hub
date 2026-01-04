@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.core.custom_types import RepositoryType  # noqa: TC001
+from mp.core.custom_types import RepositoryType
 from mp.core.utils import (
     ensure_valid_list,
     should_preform_integration_logic,
@@ -58,6 +58,7 @@ class BuildParams:
     group: Iterable[str]
     playbooks: Iterable[str]
     deconstruct: bool
+    custom_integration: bool
 
     def validate(self) -> None:
         """Validate the parameters.
@@ -93,6 +94,16 @@ class BuildParams:
             msg = "--deconstruct works only with --integration or --playbook."
             raise typer.BadParameter(msg)
 
+        if self.custom_integration and (
+            self.group or self.repository or RepositoryType.PLAYBOOKS in self.repository
+        ):
+            msg = "--custom_integration works only with --integration."
+            raise typer.BadParameter(msg)
+
+        if self.custom_integration and self.deconstruct:
+            msg = "Cannot use --deconstruct and --custom_integration."
+            raise typer.BadParameter(msg)
+
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
         return [self.repository, self.integrations, self.group, self.playbooks]
 
@@ -121,6 +132,8 @@ def build(  # noqa: PLR0913
     integration_group: Annotated[
         list[str],
         typer.Option(
+            "--group",
+            "-g",
             help="Build all integrations of a specified integration group",
             default_factory=list,
         ),
@@ -138,10 +151,18 @@ def build(  # noqa: PLR0913
     deconstruct: Annotated[
         bool,
         typer.Option(
+            "--deconstruct",
+            "-d",
             help=(
                 "Deconstruct built integrations or playbooks instead of building them."
                 " Does work only with --integration."
             ),
+        ),
+    ] = False,
+    custom_integration: Annotated[
+        bool,
+        typer.Option(
+            help="Build a single specific integration rather than the full custom repository.",
         ),
     ] = False,
     quiet: Annotated[
@@ -165,6 +186,7 @@ def build(  # noqa: PLR0913
         integration_group: the integration groups to build
         playbooks: the playbooks to build
         deconstruct: whether to deconstruct instead of build
+        custom_integration: if need to build specific integration from the custom repo.
         quiet: quiet log options
         verbose: Verbose log options
 
@@ -183,11 +205,18 @@ def build(  # noqa: PLR0913
         group=integration_group,
         playbooks=playbooks,
         deconstruct=deconstruct,
+        custom_integration=custom_integration,
     )
     params.validate()
 
     if should_preform_integration_logic(integrations, repositories):
-        build_integrations(integrations, integration_group, repositories, deconstruct=deconstruct)
+        build_integrations(
+            integrations,
+            integration_group,
+            repositories,
+            deconstruct=deconstruct,
+            custom_integration=custom_integration,
+        )
 
     if should_preform_playbook_logic(playbooks, repositories):
         build_playbooks(playbooks, repositories, deconstruct=deconstruct)

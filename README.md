@@ -46,3 +46,4 @@ For more detailed information, use the following guides as a reference while you
     * [CLI Tool (mp)](docs/tools_and_sdk/mp.md)
     * [Google SecOps SOAR SDK Reference](/docs/tools_and_sdk/soar_sdk.md)
     * [TIPCommon Reference](/docs/tools_and_sdk/tipcommon_and_envcommon.md)
+    * [GitHub Actions](/docs/github_actions.md)

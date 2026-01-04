@@ -65,14 +65,17 @@ class UniqueNameValidation:
 
 def _search_duplicate_names(display_name: str, playbook_repo: Path) -> set[Path]:
     res: set[Path] = set()
-    for playbook_dir in playbook_repo.iterdir():
-        if not playbook_dir.is_dir():
-            continue
-        try:
-            display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_dir)
-            if display_name == display_info.content_hub_display_name:
-                res.add(playbook_dir)
-        except FileNotFoundError:
-            continue
+    for playbook_dir in mp.core.file_utils.get_playbook_base_folders_paths(
+        playbook_repo.name, playbook_repo
+    ):
+        for playbook in playbook_dir.iterdir():
+            if not playbook.is_dir():
+                continue
+            try:
+                display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook)
+                if display_name == display_info.content_hub_display_name:
+                    res.add(playbook)
+            except FileNotFoundError:
+                continue
 
     return res

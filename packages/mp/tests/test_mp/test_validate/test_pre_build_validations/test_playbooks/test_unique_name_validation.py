@@ -30,16 +30,20 @@ from .common import update_display_info
 
 def _setup(temp_non_built_playbook: Path) -> None:
     duplicate_path: Path = temp_non_built_playbook.parent / f"{temp_non_built_playbook.name}2"
+    if duplicate_path.exists():
+        shutil.rmtree(duplicate_path)
     shutil.copytree(temp_non_built_playbook, duplicate_path)
 
 
 class TestUniqueNameValidation:
     validator_runner: UniqueNameValidation = UniqueNameValidation()
 
+    @patch("mp.core.file_utils.get_playbook_base_folders_paths")
     @patch("mp.core.file_utils.get_or_create_playbook_repo_base_path")
     def test_unique_name_validation_success(
         self,
         mock_get_playbook_repository_base_path: MagicMock,
+        mock_get_playbook_base_folders_paths: MagicMock,
         temp_non_built_playbook: Path,
     ) -> None:
         _setup(temp_non_built_playbook)
@@ -48,17 +52,21 @@ class TestUniqueNameValidation:
             Path(f"{temp_non_built_playbook}2"), {"content_hub_display_name": "test2"}
         )
         mock_get_playbook_repository_base_path.return_value = temp_non_built_playbook.parent
+        mock_get_playbook_base_folders_paths.return_value = [temp_non_built_playbook.parent]
 
         self.validator_runner.run(temp_non_built_playbook)
 
+    @patch("mp.core.file_utils.get_playbook_base_folders_paths")
     @patch("mp.core.file_utils.get_or_create_playbook_repo_base_path")
     def test_duplicate_name_validation_fail(
         self,
         mock_get_playbook_repository_base_path: MagicMock,
+        mock_get_playbook_base_folders_paths: MagicMock,
         temp_non_built_playbook: Path,
     ) -> None:
         _setup(temp_non_built_playbook)
         mock_get_playbook_repository_base_path.return_value = temp_non_built_playbook.parent
+        mock_get_playbook_base_folders_paths.return_value = [temp_non_built_playbook.parent]
         update_display_info(temp_non_built_playbook, {"content_hub_display_name": "test"})
         update_display_info(
             Path(f"{temp_non_built_playbook}2"), {"content_hub_display_name": "test"}
