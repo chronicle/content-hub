@@ -81,7 +81,7 @@ jobs:
         fetch-depth: 0
 
     - name: 'Push Custom Integrations'
-      uses: chronicle/content-hub/actions/custom-integration-push@main
+      uses: chronicle/content-hub/.github/actions/custom-integration-push@main
       with:
         soar_api_url: ${{ secrets.SOAR_API_URL }}
         soar_api_key: ${{ secrets.SOAR_API_KEY }}
@@ -108,7 +108,7 @@ jobs:
         fetch-depth: 0
 
     - name: 'Push Custom Integrations'
-      uses: chronicle/content-hub/actions/custom-integration-push@main
+      uses: chronicle/content-hub/.github/actions/custom-integration-push@main
       with:
         soar_api_url: ${{ secrets.SOAR_API_URL }}
         soar_username: ${{ secrets.SOAR_USERNAME }}
