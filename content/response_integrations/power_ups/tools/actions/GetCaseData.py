@@ -161,6 +161,7 @@ def main() -> None:
         case_data = get_all_case_overview_details(siemplify, case_id)
 
         case_json = case_data.to_json()
+        case_json["alerts"] = case_json.pop("alertCards", [])
         result, not_found_fields = filter_json_by_fields(
             json_=case_json,
             filter_fields=fields_list,
