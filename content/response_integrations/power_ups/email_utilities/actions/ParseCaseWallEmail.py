@@ -31,7 +31,8 @@ ORIG_EMAIL_DESCRIPTION = [
     "This is the original message as EML",
     "Original email attachment",
 ]
-CASE_EVIDENCE_ID = "evidenceId"
+CASE_EVIDENCE_ID: str = "evidenceId"
+
 
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
