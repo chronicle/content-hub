@@ -21,8 +21,9 @@ import pytest
 
 import mp.core.constants
 from mp.build_project.restructure.integrations.deconstruct_dependencies import (
+    Dependencies,
+    DependencyDeconstructor,
     _should_add_integration_testing,  # noqa: PLC2701
-    get_dependencies,
 )
 
 if TYPE_CHECKING:
@@ -44,36 +45,40 @@ def test_get_dependencies_with_local_and_remote(tmp_path: Path) -> None:
 
     # Mock local package resolution
     with unittest.mock.patch(
-        "mp.build_project.restructure.integrations.deconstruct_dependencies._resolve_local_dependency"
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
     ) as mock_resolve:
-        mock_resolve.side_effect = [
-            (["path/to/TIPCommon.whl"], ["path/to/integration-testing.whl"]),
-            (["path/to/enironmentvcommon.whl"], []),
-        ]
 
         def mock_resolver(
-            local_path: Path, name: str, version: str, integration_p: Path
-        ) -> tuple[list[str], list[str]]:
+            name: str,
+            version: str,
+        ) -> Dependencies:
             if name == "TIPCommon":
-                return ["path/to/TIPCommon.whl"], ["path/to/integration-testing.whl"]
+                return Dependencies(
+                    dependencies=["path/to/TIPCommon.whl"],
+                    dev_dependencies=["path/to/integration-testing.whl"],
+                )
             if name == "EnvironmentCommon":
-                return ["path/to/EnvironmentCommon.whl"], []
-            return [], []
+                return Dependencies(
+                    dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[]
+                )
+            return Dependencies(dependencies=[], dev_dependencies=[])
 
         mock_resolve.side_effect = mock_resolver
 
-        deps, dev_deps = get_dependencies(tmp_path)
+        dependencies: Dependencies = DependencyDeconstructor(tmp_path).get_dependencies()
 
-        assert "requests==2.25.1" in deps
-        assert "path/to/TIPCommon.whl" in deps
-        assert "path/to/EnvironmentCommon.whl" in deps
-        assert "path/to/integration-testing.whl" in dev_deps
+        assert "requests==2.25.1" in dependencies.dependencies
+        assert "path/to/TIPCommon.whl" in dependencies.dependencies
+        assert "path/to/EnvironmentCommon.whl" in dependencies.dependencies
+        assert "path/to/integration-testing.whl" in dependencies.dev_dependencies
 
 
 def test_get_dependencies_with_no_dependencies(tmp_path: Path) -> None:
     """Test get_dependencies when there are no dependencies."""
     (tmp_path / "main.py").write_text("print('hello')")
-    deps, dev_deps = get_dependencies(tmp_path)
+    dependencies_dir = tmp_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+    dependencies_dir.mkdir()
+    deps, dev_deps = DependencyDeconstructor(tmp_path).get_dependencies()
     assert not deps
     assert not dev_deps
 
@@ -88,27 +93,68 @@ def test_get_dependencies_ignores_sdk_and_core_modules(tmp_path: Path) -> None:
     core_modules_dir.mkdir()
     (core_modules_dir / "core_module.py").touch()
 
-    deps, dev_deps = get_dependencies(tmp_path)
+    deps, dev_deps = DependencyDeconstructor(tmp_path).get_dependencies()
 
     assert not deps
     assert not dev_deps
 
 
+def test_get_dependencies_ignores_builtin_modules(tmp_path: Path) -> None:
+    """Test that get_dependencies ignores builtin modules."""
+    # Create dummy python files with imports
+    (tmp_path / "main.py").write_text("import sys\nimport os")
+    dependencies_dir = tmp_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+    dependencies_dir.mkdir()
+
+    deps, dev_deps = DependencyDeconstructor(tmp_path).get_dependencies()
+
+    assert not deps
+    assert not dev_deps
+
+
+def test_get_dependencies_includes_envcommon_when_tipcommon_exists(tmp_path: Path) -> None:
+    """Test that all wheels in the dependencies dir are added, even if not imported."""
+    # Create a dummy python file that only imports tipcommon.
+    (tmp_path / "main.py").write_text("import TIPCommon")
+
+    # Create dummy wheel files
+    dependencies_dir = tmp_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+    dependencies_dir.mkdir()
+    (dependencies_dir / "TIPCommon-2.0.2-py3-none-any.whl").touch()
+    (dependencies_dir / "EnvironmentCommon-1.0.0-py3-none-any.whl").touch()
+
+    with unittest.mock.patch(
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+    ) as mock_resolve:
+
+        def mock_resolver(name: str, version: str) -> Dependencies:
+            if name == "TIPCommon":
+                return Dependencies(
+                    dependencies=["path/to/TIPCommon.whl"],
+                    dev_dependencies=["path/to/integration-testing.whl"],
+                )
+            if name == "EnvironmentCommon":
+                return Dependencies(
+                    dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[]
+                )
+            return Dependencies(dependencies=[], dev_dependencies=[])
+
+        mock_resolve.side_effect = mock_resolver
+        dependencies = DependencyDeconstructor(tmp_path).get_dependencies()
+        assert "path/to/EnvironmentCommon.whl" in dependencies.dependencies
+
+
 @pytest.mark.parametrize(
-    ("name", "version", "has_testing_dir", "expected"),
+    ("name", "version", "expected"),
     [
-        ("TIPCommon", "2.0.2", True, True),
-        ("TIPCommon", "2.0.2", False, False),
-        ("TIPCommon", "1.0.10", True, False),
-        ("EnvironmentCommon", "1.0.0", True, False),
+        ("TIPCommon", "2.0.2", True),
+        ("TIPCommon", "1.0.10", False),
     ],
 )
 def test_should_add_integration_testing(
-    tmp_path: Path, name: str, version: str, has_testing_dir: bool, expected: bool
+    tmp_path: Path, name: str, version: str, expected: bool
 ) -> None:
     """Test the logic for when to add the integration-testing wheel."""
-    if has_testing_dir:
-        (tmp_path / mp.core.constants.TESTING_DIR).mkdir()
 
-    result = _should_add_integration_testing(name, version, tmp_path)
+    result = _should_add_integration_testing(name, version)
     assert result is expected
