@@ -48,5 +48,7 @@ class TestDependencyProviderValidation:
     def test_invalid_dependency_provider_fail(self, temp_integration: Path) -> None:
         _setup_invalid_dependency_provider(temp_integration)
 
-        with pytest.raises(FatalValidationError, match="Unsupported dependency provider"):
+        with pytest.raises(FatalValidationError) as excinfo:
             self.validation_runner.run(temp_integration)
+
+        assert "has an unsupported dependency provider" in str(excinfo.value)

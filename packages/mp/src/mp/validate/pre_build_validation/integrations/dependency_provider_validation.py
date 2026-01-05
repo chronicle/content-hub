@@ -38,8 +38,8 @@ class DependencyProviderValidation:
             integration_path: The path to the integration directory.
 
         Raises:
-            FatalValidationError: If there are any SSL parameter validation errors
-                in the integration's connectors.
+            FatalValidationError: If the `uv.lock` file is not found, or if an
+                unsupported dependency provider is found in `uv.lock`.
 
         """
         uv_lock_path: Path = integration_path / "uv.lock"
@@ -51,19 +51,24 @@ class DependencyProviderValidation:
         with Path.open(uv_lock_path, "rb") as uv_lock_file:
             uv_lock_data: dict[str, dict[str, str]] = tomllib.load(uv_lock_file)
 
-        packages: list[Any] = uv_lock_data.get("package", [])
+        packages: list[dict[str, Any]] = uv_lock_data.get("package", [])
         for pkg in packages:
-            pkg_source: str = pkg.get("source")
+            pkg_source: dict[str, str] = pkg.get("source")
             if not pkg_source:
                 continue
-            pkg_registry: dict[str, str] = pkg_source.get("registry")
-            if not pkg_registry:
+
+            registry_url: str | None = pkg_source.get("registry")
+            if not registry_url:
                 continue
-            is_valid = any(provider in pkg_registry for provider in ALLOWED_DEPENDENCY_PROVIDER)
+            is_valid = any(provider in registry_url for provider in ALLOWED_DEPENDENCY_PROVIDER)
             if not is_valid:
+                pkg_name: str = pkg.get("name", "Unknown package")
                 msg: str = (
-                    f"Unsupported dependency provider: {pkg_registry}, "
-                    f"Only {ALLOWED_DEPENDENCY_PROVIDER} are allowed. Please add {UV_INDEX}"
-                    "to the integration pyproject.toml file"
+                    f"Package '{pkg_name}' has an unsupported dependency provider "
+                    f"from registry: {registry_url}. "
+                    f"Only registries containing one of {list(ALLOWED_DEPENDENCY_PROVIDER)} "
+                    "are allowed. "
+                    "Please add the following to the integration's "
+                    f"pyproject.toml file:\n{UV_INDEX}"
                 )
                 raise FatalValidationError(msg)
