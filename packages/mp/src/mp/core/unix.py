@@ -167,59 +167,6 @@ def download_wheels_from_requirements(
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def _get_base_dev_dependencies() -> list[str]:
-    return [
-        "git+https://github.com/chronicle/soar-sdk.git",
-        "pytest",
-        "pytest-json-report",
-    ]
-
-
-def _add_dev_dependencies_to_toml(
-    dev_deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
-    """Add development dependencies to the pyproject.toml file.
-
-    Raises:
-        FatalCommandError: if uv add fails.
-
-    """
-    dev_base_command = base_command.copy()
-    dev_base_command.extend(["--group", "dev"])
-
-    dev_base_command.extend(_get_base_dev_dependencies())
-    dev_base_command.extend(dev_deps_to_add)
-    try:
-        sp.run(  # noqa: S603
-            dev_base_command, cwd=project_path, check=True, text=True, capture_output=True
-        )
-    except sp.CalledProcessError as e:
-        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
-
-
-def _add_regular_dependencies_to_toml(
-    deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
-    """Add regular dependencies to the pyproject.toml file using pypi index.
-
-    Raises:
-        FatalCommandError: if uv add fails.
-
-    """
-    if deps_to_add:
-        deps_command: list[str] = base_command.copy()
-        deps_command.extend(deps_to_add)
-        deps_command.extend([
-            "--default-index",
-            "https://pypi.org/simple",
-        ])
-        try:
-            sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
-
-        except sp.CalledProcessError as e:
-            raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
-
-
 def add_dependencies_to_toml(
     project_path: Path,
     deps_to_add: list[str],
@@ -249,6 +196,60 @@ def add_dependencies_to_toml(
     base_command.extend(runtime_config)
     _add_regular_dependencies_to_toml(deps_to_add, base_command, project_path)
     _add_dev_dependencies_to_toml(dev_deps_to_add, base_command, project_path)
+
+
+def _add_regular_dependencies_to_toml(
+    deps_to_add: list[str], base_command: list[str], project_path: Path
+) -> None:
+    """Add regular dependencies to the pyproject.toml file using pypi index.
+
+    Raises:
+        FatalCommandError: if uv add fails.
+
+    """
+    if not deps_to_add:
+        return
+    deps_command: list[str] = base_command.copy()
+    deps_command.extend(deps_to_add)
+    deps_command.extend([
+        "--default-index",
+        "https://pypi.org/simple",
+    ])
+    try:
+        sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
+
+    except sp.CalledProcessError as e:
+        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+
+
+def _add_dev_dependencies_to_toml(
+    dev_deps_to_add: list[str], base_command: list[str], project_path: Path
+) -> None:
+    """Add development dependencies to the pyproject.toml file.
+
+    Raises:
+        FatalCommandError: if uv add fails.
+
+    """
+    dev_base_command = base_command.copy()
+    dev_base_command.extend(["--group", "dev"])
+
+    dev_base_command.extend(_get_base_dev_dependencies())
+    dev_base_command.extend(dev_deps_to_add)
+    try:
+        sp.run(  # noqa: S603
+            dev_base_command, cwd=project_path, check=True, text=True
+        )
+    except sp.CalledProcessError as e:
+        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+
+
+def _get_base_dev_dependencies() -> list[str]:
+    return [
+        "git+https://github.com/chronicle/soar-sdk.git",
+        "pytest",
+        "pytest-json-report",
+    ]
 
 
 def init_python_project_if_not_exists(project_path: Path) -> None:

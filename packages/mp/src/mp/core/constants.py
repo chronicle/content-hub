@@ -105,7 +105,7 @@ SAFE_TO_IGNORE_ERROR_MESSAGES: tuple[str, ...] = (
     "Could not find a version that satisfies the requirement",
     "No matching distribution found",
 )
-LOCAL_PACKAGES_CONFIG: dict[str, str] = {
+REPO_PACKAGES_CONFIG: dict[str, str] = {
     "TIPCommon": "tipcommon",
     "EnvironmentCommon": "envcommon",
     "integration_testing": "integration_testing_whls",
