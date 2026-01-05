@@ -135,3 +135,22 @@ class BackendAPI:
         resp = self.session.post(upload_url, json=upload_payload)
         resp.raise_for_status()
         return resp.json()
+
+    def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
+        """Upload a zipped playbook package to the backend.
+
+        Args:
+            zip_path: Path to the zipped integration package.
+
+        Returns:
+            dict: The backend response after uploading the playbook.
+
+        """
+        upload_url: str = (
+            f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
+        )
+        data = base64.b64encode(zip_path.read_bytes()).decode()
+        upload_payload = {"blob": data, "fileName": zip_path.name}
+        resp = self.session.post(upload_url, json=upload_payload)
+        resp.raise_for_status()
+        return resp.json()

@@ -499,6 +499,10 @@ ALL_ENV: str = "*"
 DEFAULT_ENV: str = "Default Environment"
 VALID_ENVIRONMENTS: set[str] = {ALL_ENV, DEFAULT_ENV}
 
+PLAYBOOKS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
+    COMMERCIAL_REPO_NAME: (COMMERCIAL_REPO_NAME,),
+    THIRD_PARTY_REPO_NAME: (COMMUNITY_DIR_NAME, PARTNER_DIR_NAME),
+}
 
 PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
     "CategoryName",
