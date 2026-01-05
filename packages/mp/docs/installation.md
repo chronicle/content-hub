@@ -60,6 +60,9 @@ mp --help
 
 You should see the help menu displaying the available commands.
 
+> [!NOTE]
+> **Windows Users**: if you are running on Windows, please use `wmp` instead of `mp` (e.g., `wmp --help`).
+
 ### Alternative: Direct Installation
 
 You can also install the package directly to your base Python interpreter:
