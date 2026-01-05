@@ -15,12 +15,15 @@
 from __future__ import annotations
 
 import tomllib
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import dataclasses
 
 from mp.core.exceptions import FatalValidationError
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 ALLOWED_DEPENDENCY_PROVIDER: set[str] = {"pypi"}
 UV_INDEX: str = "[[tool.uv.index]] \n url = 'https://pypi.org/simple'\n default = true\n"
@@ -48,8 +51,9 @@ class DependencyProviderValidation:
             msg: str = f"uv.lock file not found at {uv_lock_path}"
             raise FatalValidationError(msg)
 
-        with Path.open(uv_lock_path, "rb") as uv_lock_file:
-            uv_lock_data: dict[str, dict[str, str]] = tomllib.load(uv_lock_file)
+        uv_lock_data: dict[str, dict[str, str]] = tomllib.loads(
+            uv_lock_path.read_text(encoding="utf-8")
+        )
 
         packages: list[dict[str, Any]] = uv_lock_data.get("package", [])
         for pkg in packages:
