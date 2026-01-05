@@ -31,7 +31,7 @@ ORIG_EMAIL_DESCRIPTION = [
     "This is the original message as EML",
     "Original email attachment",
 ]
-
+CASE_EVIDENCE_ID = "evidenceId"
 
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
@@ -131,14 +131,14 @@ def main():
         else:
             attachment = orig_email_attachment
 
-    if not attachment or "id" not in attachment:
+    if not attachment or CASE_EVIDENCE_ID not in attachment:
         output_message += "No EML attachments found on the case."
         siemplify.LOGGER.info(
             f"\n  status: {status}\n result_value: False\n output_message: {output_message}"
         )
         siemplify.end(output_message, False, status)
 
-    attachment_record = siemplify.get_attachment(attachment["id"])
+    attachment_record = siemplify.get_attachment(attachment[CASE_EVIDENCE_ID])
     attachment_name = f"{attachment['evidenceName']}{attachment['fileType']}"
     attachment_content = attachment_record.getvalue()
     siemplify.LOGGER.info(f"Extracting from Case Wall Attachment: {attachment_name}")
@@ -146,7 +146,7 @@ def main():
     parsed_email["attachment_name"] = (
         f"{attachment['evidenceName']}{attachment['fileType']}"
     )
-    parsed_email["attachment_id"] = attachment["id"]
+    parsed_email["attachment_id"] = attachment[CASE_EVIDENCE_ID]
     parsed_emails.append(parsed_email)
 
     if create_observed_entity_types != "None" or create_base_entities:
