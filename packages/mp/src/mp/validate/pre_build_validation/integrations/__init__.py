@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from .connectors_documentation_link_validation import ConnectorsHasDocumentationLinkValidation
 from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
+from .dependency_provider_validation import DependencyProviderValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
 from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
 from .integration_ssl_validation import SslParameterExistsInIntegrationValidation
@@ -60,6 +61,4 @@ def _get_non_priority_validations() -> list[Validator]:
 
 
 def _get_priority_validations() -> list[Validator]:
-    return [
-        IntegrationFileStructureValidation(),
-    ]
+    return [IntegrationFileStructureValidation(), DependencyProviderValidation()]
