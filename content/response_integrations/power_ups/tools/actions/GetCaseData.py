@@ -19,15 +19,15 @@ import json
 import re
 from typing import TYPE_CHECKING, Any
 
+import requests
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.rest.soar_api import get_all_case_overview_details, get_case_insights
+from TIPCommon.utils import get_sdk_api_uri
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-CASE_MIN_URL = "{0}/external/v1/cases/GetCaseFullDetails/{1}"
-ENTITY_INSIGHT_URL = "{0}/external/v1/{1}"
 
 # language=regexp
 INSIGHT_CONTENT_RE = r"<%\s(.*?)\s%>$"
@@ -57,14 +57,23 @@ def get_insight_content(
     siemplify: SiemplifyAction,
     insight: dict[str, Any],
 ) -> dict | list:
-    content_uri = re.match(INSIGHT_CONTENT_RE, insight["content"]).group(1)
+    content_uri = re.match(INSIGHT_CONTENT_RE, insight["content"])
+    if content_uri is None:
+        siemplify.LOGGER.info(
+            f"Not passed insight regex to retrieve data: {insight['content']}"
+        )
+        return insight
+
+    content_uri = content_uri.group(1)
+
+    url = f"{get_sdk_api_uri(siemplify)}/{content_uri}"
     insight_content_res = siemplify.session.get(
-        ENTITY_INSIGHT_URL.format(siemplify.API_ROOT, content_uri),
+        url
     )
     insight_content_res.raise_for_status()
 
     return lowercase(
-        json.loads(base64.b64decode(insight_content_res.json().get("blob"))),
+        json.loads(base64.b64decode(insight_content_res.json().get("blob", "e30K"))),
     )
 
 
@@ -149,12 +158,10 @@ def main() -> None:
         )
 
         siemplify.LOGGER.info("Fetching case data")
-        case_data = siemplify.session.get(
-            CASE_MIN_URL.format(siemplify.API_ROOT, case_id),
-        )
-        case_data.raise_for_status()
+        case_data = get_all_case_overview_details(siemplify, case_id)
 
-        case_json = case_data.json()
+        case_json = case_data.to_json()
+        case_json["alerts"] = case_json.pop("alertCards", [])
         result, not_found_fields = filter_json_by_fields(
             json_=case_json,
             filter_fields=fields_list,
@@ -165,14 +172,22 @@ def main() -> None:
         if not result:
             raise ValueError("None of the provided fields were found in the response.")
 
-        insights = result.get("insights", [])
+        insights = get_case_insights(siemplify, case_id)
         if len(insights) > 0:
             siemplify.LOGGER.info("Fetching insights contents")
             parsed_insights = []
             for insight in insights:
                 content_to_add = insight
                 if is_insight_content(insight["content"]):
-                    content_to_add = get_insight_content(siemplify, insight)
+                    try:
+                        content_to_add = get_insight_content(siemplify, insight)
+
+                    except (requests.exceptions.HTTPError, json.JSONDecodeError) as e:
+                        siemplify.LOGGER.error(
+                            "Failed to get the insight content for the insight: "
+                            f'{insight.get("title")}'
+                        )
+                        siemplify.LOGGER.error(e)
 
                 parsed_insights.append(content_to_add)
 
