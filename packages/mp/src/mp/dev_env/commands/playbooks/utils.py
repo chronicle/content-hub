@@ -23,13 +23,15 @@ import typer
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.core.data_models.playbooks.meta.display_info import PlaybookType
+from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.utils.common.utils import to_snake_case
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-def get_playbook_path(playbook: str, *, custom: bool = False) -> Path:
+def get_playbook_path_by_name(playbook: str, *, custom: bool = False) -> Path:
     """Find the source path for a given playbook.
 
     Args:
@@ -62,6 +64,51 @@ def get_playbook_path(playbook: str, *, custom: bool = False) -> Path:
 
     rich.print(f"[red]Could not find source playbook at {playbooks_root}/.../{playbook}[/red]")
     raise typer.Exit(1)
+
+
+def get_blocks_by_id(ids_to_find: set[str], *, custom: bool = False) -> set[str]:  # noqa: C901
+    """Find blocks paths for a list of block identifiers.
+
+    Args:
+        ids_to_find: A list of unique string identifiers for the blocks to find.
+        custom: Whether to search in the custom repository.
+
+    Returns:
+        A list of Path objects pointing to the source directories of the found blocks.
+
+    """
+    playbooks_root = mp.core.file_utils.create_or_get_playbooks_root_dir()
+    result: set[str] = set()
+
+    if custom:
+        pass
+
+    for repo, folders in mp.core.constants.PLAYBOOKS_DIRS_NAMES_DICT.items():
+        for folder in folders:
+            if repo == mp.core.constants.COMMERCIAL_REPO_NAME:
+                source_folder = playbooks_root / folder
+            else:
+                source_folder = playbooks_root / repo / folder
+
+            if not source_folder.exists():
+                continue
+
+            for block_path in source_folder.iterdir():
+                if block_path.is_dir():
+                    meta = PlaybookMetadata.from_non_built_path(block_path)
+
+                    if meta.type_ == PlaybookType.BLOCK and meta.identifier in ids_to_find:
+                        result.add(block_path.name)
+                        ids_to_find.remove(meta.identifier)
+
+            if not ids_to_find:
+                return result
+
+    if ids_to_find:
+        missing_str = ", ".join(ids_to_find)
+        rich.print(f"[red]Could not find the following blocks: {missing_str}[/red]")
+
+    return result
 
 
 def build_playbook(playbook_name: str) -> None:

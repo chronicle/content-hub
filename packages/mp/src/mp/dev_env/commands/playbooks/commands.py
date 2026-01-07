@@ -19,14 +19,13 @@ from typing import TYPE_CHECKING, Annotated
 import rich
 import typer
 
+import mp.core.utils
 from mp.dev_env.commands.playbooks import utils
 from mp.dev_env.commands.push import push_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from mp.dev_env.api import BackendAPI
 
 
@@ -49,22 +48,39 @@ def push_playbook(
     Args:
         playbook: The integration to build and deploy.
         custom: Add this option to push playbook from the custom repository.
+        include_blocks: Push all playbook-dependent blocks.
 
     Raises:
         typer.Exit: If the integration is not found.
 
     """
     config = load_dev_env_config()
-    utils.build_playbook(playbook)
-    built_playbook: Path = utils.find_built_playbook(playbook, custom=custom)
-    zip_path: Path = utils.zip_built_playbook(built_playbook)
-    rich.print(f"Zipped built playbook at {zip_path}")
-
     backend_api: BackendAPI = get_backend_api(config)
-    try:
-        result = backend_api.upload_playbook(zip_path)
-        rich.print(f"Upload result: {result}")
-        rich.print("[green]✅ Playbook deployed successfully.[/green]")
-    except Exception as e:
-        rich.print(f"[red]Upload failed: {e}[/red]")
-        raise typer.Exit(1) from e
+
+    contents_to_push = {playbook}
+    if include_blocks:
+        playbook_path = utils.get_playbook_path_by_name(playbook, custom=custom)
+        block_ids = mp.core.utils.get_playbook_dependent_blocks_ids(playbook_path)
+        contents_to_push.update(utils.get_blocks_by_id(block_ids, custom=custom))
+
+    for content in contents_to_push:
+        utils.build_playbook(content)
+
+    built_paths = [utils.find_built_playbook(p, custom=custom) for p in contents_to_push]
+    zip_paths = [utils.zip_built_playbook(p) for p in built_paths]
+    rich.print(f"Zipped built playbooks at {zip_paths}")
+
+    errors = []
+    for zip_path in zip_paths:
+        try:
+            result = backend_api.upload_playbook(zip_path)
+            rich.print(f"Upload result for {zip_path.stem}: {result}")
+            rich.print(f"[green]✅ Playbook {zip_path.stem} deployed successfully.[/green]")
+
+        except Exception as e:  # noqa: BLE001
+            error_message = f"Upload failed for {zip_path.stem}: {e}"
+            rich.print(f"[red]{error_message}[/red]")
+            errors.append(error_message)
+
+    if errors:
+        raise typer.Exit(1)
