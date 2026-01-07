@@ -39,6 +39,10 @@ def push_playbook(
         bool,
         typer.Option(help="Push playbook from the custom repository."),
     ] = False,
+    include_blocks: Annotated[
+        bool,
+        typer.Option(help="Push all playbook dependent blocks."),
+    ] = False,
 ) -> None:
     """Build and deploy playbook to the dev environment.
 
