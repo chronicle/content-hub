@@ -162,19 +162,28 @@ def find_built_playbook(playbook_name: str, *, custom: bool = False) -> Path:
     raise typer.Exit(1)
 
 
-def zip_built_playbook(built_playbook: Path) -> Path:
-    """Zip built playbook for upload.
+def zip_built_playbook(playbook_name: str, built_paths: list[Path]) -> Path:
+    """Zips multiple built playbook components into a single archive.
 
     Args:
-        built_playbook: Path to the built playbook json.
+        playbook_name: The name to use for the resulting zip file.
+        built_paths: A list of Path objects representing the files to be included in the zip.
 
     Returns:
         Path: The path to the created zip file.
 
+    Raises:
+        ValueError: If built_paths is empty.
+
     """
-    zip_path = built_playbook.with_name(f"{built_playbook.stem}.zip")
+    if not built_paths:
+        msg: str = "The list of paths to zip cannot be empty."
+        raise ValueError(msg)
+
+    zip_path = built_paths[0].parent / f"{playbook_name}.zip"
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.write(built_playbook, arcname=built_playbook.name)
+        for path in built_paths:
+            zf.write(path, arcname=path.name)
 
     return zip_path

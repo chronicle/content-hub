@@ -67,20 +67,15 @@ def push_playbook(
         utils.build_playbook(content)
 
     built_paths = [utils.find_built_playbook(p, custom=custom) for p in contents_to_push]
-    zip_paths = [utils.zip_built_playbook(p) for p in built_paths]
-    rich.print(f"Zipped built playbooks at {zip_paths}")
+    zip_path = utils.zip_built_playbook(playbook, built_paths)
+    rich.print(f"Zipped built playbooks at {zip_path}")
 
-    errors = []
-    for zip_path in zip_paths:
-        try:
-            result = backend_api.upload_playbook(zip_path)
-            rich.print(f"Upload result for {zip_path.stem}: {result}")
-            rich.print(f"[green]✅ Playbook {zip_path.stem} deployed successfully.[/green]")
+    try:
+        result = backend_api.upload_playbook(zip_path)
+        rich.print(f"Upload result for {zip_path.stem}: {result}")
+        rich.print(f"[green]✅ Playbook {zip_path.stem} deployed successfully.[/green]")
 
-        except Exception as e:  # noqa: BLE001
-            error_message = f"Upload failed for {zip_path.stem}: {e}"
-            rich.print(f"[red]{error_message}[/red]")
-            errors.append(error_message)
-
-    if errors:
-        raise typer.Exit(1)
+    except Exception as e:
+        error_message = f"Upload failed for {zip_path.stem}: {e}"
+        rich.print(f"[red]{error_message}[/red]")
+        raise typer.Exit(1) from e

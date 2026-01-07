@@ -14,5 +14,10 @@
 
 from __future__ import annotations
 
-from mp.dev_env.commands.integrations.commands import push_integration as push_integration
-from mp.dev_env.commands.playbooks.commands import push_playbook as push_playbook
+import mp.dev_env.commands.integrations.commands as integrations_commands
+import mp.dev_env.commands.playbooks.commands as playbooks_commands
+
+__all__ = [
+    "integrations_commands",
+    "playbooks_commands",
+]
