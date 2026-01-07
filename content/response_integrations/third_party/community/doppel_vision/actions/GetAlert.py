@@ -29,11 +29,7 @@ def main():
     alert_id = siemplify.extract_action_param(param_name="Alert_ID", default_value=None)
 
     # Instantiate the manager
-    manager = DoppelManager(
-        api_key=api_key,
-        user_api_key=user_api_key,
-        org_code=org_code
-    )
+    manager = DoppelManager(api_key=api_key, user_api_key=user_api_key, org_code=org_code)
 
     # Initialize action result values
     status = EXECUTION_STATE_COMPLETED

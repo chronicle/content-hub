@@ -58,7 +58,8 @@ class DoppelManager:
     def get_alerts(self, filters=None):
         """Fetches multiple alerts from Doppel, optionally filtered by criteria.
 
-        :param filters: (dict) A dictionary of filter parameters (e.g., {"search_key": "example", "tags": ["tag1", "tag2"]}).
+        :param filters: (dict) A dictionary of filter parameters
+        (e.g., {"search_key": "example", "tags": ["tag1", "tag2"]}).
         :return: (list) A list of alerts if successful, otherwise None.
         """
         url = f"{self.base_url}/alerts"
@@ -100,7 +101,8 @@ class DoppelManager:
         :param entity_state: (str) The entity state to update to.
         :param entity: (str) The entity for which to update the alert (optional).
         :param alert_id: (str) The alert ID to update the alert (optional).
-        :return: (dict) The JSON response containing the updated alert if successful, otherwise None.
+        :return: (dict) The JSON response containing the updated alert if successful,
+        otherwise None.
         """
         if entity and alert_id:
             raise ValueError(

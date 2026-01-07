@@ -34,11 +34,7 @@ def main():
         return
 
     # Create an instance of the DoppelManager
-    doppel_manager = DoppelManager(
-        api_key=api_key,
-        user_api_key=user_api_key,
-        org_code=org_code
-    )
+    doppel_manager = DoppelManager(api_key=api_key, user_api_key=user_api_key, org_code=org_code)
 
     # Perform Ping
     try:
