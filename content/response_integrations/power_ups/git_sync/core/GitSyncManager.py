@@ -88,6 +88,7 @@ class GitSyncManager:
             smp_credentials.get("username") if smp_credentials else None,
             smp_credentials.get("password") if smp_credentials else None,
             smp_verify,
+            siemplify_soar=siemplify,
         )
         self.git_server_fingerprint = git_server_fingerprint
         self.git_client = Git(
@@ -669,6 +670,9 @@ class WorkflowInstaller:
         self._define_workflow_as_new(workflow)
         self._process_steps(workflow)
         self.api.save_playbook(workflow.raw_data)
+
+        self.refresh_cache_item("playbooks")
+
         self._save_workflow_mod_time_to_context(workflow)
         self.logger.info(f"New workflow '{workflow.name}' was installed successfully")
 
@@ -791,7 +795,9 @@ class WorkflowInstaller:
         default: int | None = None,
         /,
     ) -> int:
-        playbook: dict[str, Any] = self._installed_playbooks[__workflow_name]
+        playbook = self._installed_playbooks.get(__workflow_name)
+        if not playbook:
+            return default
         return playbook.get("modificationTimeUnixTimeInMs", default)
 
     @property
@@ -888,14 +894,14 @@ class WorkflowInstaller:
                 instance_id = self.api.get_integration_instance_id_by_name(
                     self.chronicle_soar,
                     step.get("integration"),
-                    environments=environments,
+                    environments=environments, # type: ignore
                     display_name=instance_display_name,
                     consider_404_to_none=True,
                 )
                 self._set_step_parameter_by_name(
                     step,
                     "IntegrationInstance",
-                    instance_id or integration_instances[0].get("identifier"),
+                    instance_id or integration_instances[0].identifier,
                 )
                 self._set_step_parameter_by_name(
                     step,
@@ -916,7 +922,7 @@ class WorkflowInstaller:
                 self._set_step_parameter_by_name(
                     step,
                     "FallbackIntegrationInstance",
-                    fallback_instance_id or integration_instances[0].get("identifier"),
+                    fallback_instance_id or integration_instances[0].identifier,
                 )
             else:
                 self._set_step_parameter_by_name(
@@ -962,7 +968,7 @@ class WorkflowInstaller:
             )
 
         instances = self._cache.get(cache_key)
-        instances.sort(key=lambda x: x.get("instanceName"))
+        instances.sort(key=lambda x: x.instance_name)
 
         return [
             x
