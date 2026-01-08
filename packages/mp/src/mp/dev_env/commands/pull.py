@@ -17,4 +17,4 @@ from __future__ import annotations
 
 import typer
 
-pull_app = typer.Typer(help="Push content to the SOAR environment.")
+pull_app = typer.Typer(help="Pull content to the SOAR environment.")

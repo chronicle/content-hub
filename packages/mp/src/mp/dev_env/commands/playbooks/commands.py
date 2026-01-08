@@ -85,16 +85,18 @@ def pull_playbook(
     playbook: str = typer.Argument(help="Playbook to pull."),
     dest: Annotated[
         Path | None,
-        typer.Option("--dest", help="Destination folder. Defaults to your desktop path."),
+        typer.Option(
+            "--dest", help="Destination folder. the 'download' directory in content-hub repo."
+        ),
     ] = None,
     *,
     include_blocks: Annotated[
         bool,
-        typer.Option(help="Push all playbook dependent blocks."),
+        typer.Option(help="Pull all playbook dependent blocks."),
     ] = False,
     keep_zip: Annotated[
         bool,
-        typer.Option(help="keep the zip file after pulling."),
+        typer.Option(help="Keep the zip file after pulling."),
     ] = False,
 ) -> None:
     """Pull a playbook from the SOAR environment.

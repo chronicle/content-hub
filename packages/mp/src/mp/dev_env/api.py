@@ -182,11 +182,11 @@ class BackendAPI:
 
         Args:
             playbook: Name for the saved ZIP file.
-            playbook_identifier: A dictionary mapping playbook IDs to their desired filenames.
+            playbook_identifier: The identifier of the playbook to download.
             dest_folder: Path to the directory where files will be saved.
 
         Returns:
-            Path: A list of paths to the saved ZIP files.
+            Path: The path to the saved ZIP file.
 
         """
         url: str = f"{self.api_root}/api/external/v1/playbooks/ExportDefinitions?format=camel"

@@ -94,12 +94,12 @@ def create_dir_if_not_exists(p: Path, /) -> Path:
 
 
 def create_or_get_download_dir() -> Path:
-    """Get the content path.
+    """Get the download path.
 
     If the directory doesn't exist, it creates it
 
     Returns:
-        The root/content/integrations directory path
+        The root/download directory path
 
     """
     return create_dir_if_not_exists(
