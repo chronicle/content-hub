@@ -120,17 +120,21 @@ def main():
 
         if features["Integration Instances"]:
             siemplify.LOGGER.info("========== Integration instances ==========")
+
             current_instances = gitsync.api.get_integrations_instances(
                 chronicle_soar=siemplify, environment=ALL_ENVIRONMENTS_IDENTIFIER
             )
+
             for env in gitsync.api.get_environment_names(chronicle_soar=siemplify):
                 current_instances.extend(
                     gitsync.api.get_integrations_instances(
                         chronicle_soar=siemplify, environment=env
                     )
                 )
+
             for instance in gitsync.content.get_integration_instances():
                 if instance["integrationIdentifier"] not in IGNORED_INTEGRATIONS:
+
                     current = next(
                         (
                             x
@@ -141,11 +145,12 @@ def main():
                         ),
                         None,
                     )
+
                     if current:
                         siemplify.LOGGER.info(
                             f"Updating {instance['settings']['instanceName']}",
                         )
-                        instance_to_update = current
+                        instance_to_update = current.to_json()
                     else:
                         siemplify.LOGGER.info(
                             f"Installing {instance['settings']['instanceName']}",
@@ -155,14 +160,18 @@ def main():
                             instance["integrationIdentifier"],
                             instance["environment"],
                         )
-                    for i in instance["settings"]["settings"]:
-                        i["integrationInstance"] = instance_to_update.get("integrationIdentifier")
+
+                    instance_identifier = instance_to_update.get("identifier")
+
+                    for setting in instance["settings"]["settings"]:
+                        setting["integrationInstance"] = instance_identifier
+
+                    instance["settings"]["instanceIdentifier"] = instance_identifier
 
                     gitsync.api.save_integration_instance_settings(
-                        siemplify,
-                        instance_to_update.get("integrationIdentifier"),
-                        instance["settings"],
-                        instance["environment"],
+                        instance_identifier=instance_identifier,
+                        env=instance["environment"],
+                        settings=instance["settings"],
                     )
 
         if features["Playbooks"]:

@@ -280,9 +280,9 @@ class SiemplifyApiClient:
             environment=env,
         )
 
-    def save_integration_instance_settings(self, siemplify, instance_identifier, env, settings):
+    def save_integration_instance_settings(self, instance_identifier, env, settings):
         return save_integration_instance_settings(
-            chronicle_soar=siemplify,
+            chronicle_soar=self.siemplify_soar,
             identifier=instance_identifier,
             environment=env,
             integration_data=settings,
