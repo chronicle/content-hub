@@ -55,6 +55,10 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "custom_integration",
     "deconstruct",
     "only_pre_build",
+    "is_staging",
+    "custom",
+    "include_blocks",
+    "keep_zip",
     "raise_error_on_violations",
     "changed_files",
     "quiet",
@@ -62,4 +66,5 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "-r",
     "-i",
     "-p",
+    "-d",
 }
