@@ -65,6 +65,7 @@ from TIPCommon.rest.soar_api import (
     get_visual_families,
     get_visual_family_by_id,
     import_environment,
+    install_integration,
     import_package,
     import_playbooks,
     import_simulated_case,
@@ -213,18 +214,12 @@ class SiemplifyApiClient:
         integration_version,
         is_certified=True,
     ):
-        payload = {
-            "name": integration_id,
-            "identifier": integration_id,
-            "version": integration_version,
-            "isCertified": is_certified,
-        }
-        res = self.session.post(
-            "store/DownloadAndInstallIntegrationFromLocalStore",
-            json=payload,
+        return install_integration(
+            integration_identifier=integration_id,
+            integration_name=integration_id,
+            version=integration_version,
+            is_certified=is_certified
         )
-        self.validate_response(res)
-        return True
 
     def export_package(self, integration):
         res = self.session.get(f"ide/ExportPackage/{integration}")
