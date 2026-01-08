@@ -93,23 +93,24 @@ def main():
                 env_name = environment.get("name")
 
                 existing_env = next(
-                    (x for x in all_envs if x.display_name == environment.get("displayName")),
-                    None
+                    (x for x in all_envs if x.name == env_name),
+                    None,
                 )
 
                 if existing_env:
                     environment["id"] = existing_env.identifier
+                    environment["name"] = existing_env.name  # 🔒 preserve immutable name
                     siemplify.LOGGER.info(f"Updating environment {env_name}")
                 else:
                     siemplify.LOGGER.info(f"Adding environment {env_name}")
 
-                environment = (
+                payload = (
                     Environment.from_json(environment).to_1p()
                     if platform_supports_1p_api()
                     else Environment.from_json(environment).to_legacy()
                 )
 
-                gitsync.api.import_environment(siemplify, environment)
+                gitsync.api.import_environment(siemplify, payload)
 
         if features["Integrations"]:
             siemplify.LOGGER.info("========== Integrations ==========")
