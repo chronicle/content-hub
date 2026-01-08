@@ -21,6 +21,8 @@ import requests
 import rich
 import typer
 
+from mp.core.utils.common.utils import to_snake_case
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -154,3 +156,52 @@ class BackendAPI:
         resp = self.session.post(upload_url, json=upload_payload)
         resp.raise_for_status()
         return resp.json()
+
+    def get_playbooks_list_from_platform(self) -> list[dict[str, Any]]:
+        """Get all installed playbook's meta-data from the SOAR platform.
+
+        Returns:
+            list: Contains all playbooks meta-data.
+
+        """
+        url: str = (
+            f"{self.api_root}"
+            "/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
+        )
+        resp = self.session.post(url, json=[1, 0])
+        resp.raise_for_status()
+        return resp.json()
+
+    def download_playbook(
+        self,
+        playbook: str,
+        playbook_identifier: str,
+        dest_folder: Path,
+    ) -> Path:
+        """Download a playbook from the SOAR platform.
+
+        Args:
+            playbook: Name for the saved ZIP file.
+            playbook_identifier: A dictionary mapping playbook IDs to their desired filenames.
+            dest_folder: Path to the directory where files will be saved.
+
+        Returns:
+            Path: A list of paths to the saved ZIP files.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/playbooks/ExportDefinitions?format=camel"
+        payload = {"identifiers": [playbook_identifier]}
+
+        resp = self.session.post(url, json=payload)
+        resp.raise_for_status()
+
+        dest_folder.mkdir(parents=True, exist_ok=True)
+
+        data = resp.json()
+        zip_bytes = base64.b64decode(data["blob"])
+        zip_path = dest_folder / f"{to_snake_case(playbook)}.zip"
+
+        zip_path.write_bytes(zip_bytes)
+        rich.print(f"Downloaded playbook file saved as: {zip_path}")
+
+        return zip_path

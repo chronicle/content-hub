@@ -46,6 +46,7 @@ INTEGRATIONS_TYPES: tuple[str, ...] = (
 )
 OUT_INTEGRATIONS_DIR_NAME: str = "response_integrations"
 OUT_DIR_NAME: str = "out"
+DOWNLOAD_DIR: str = "download"
 REQUIREMENTS_FILE: str = "requirements.txt"
 INTEGRATION_DEF_FILE: str = "Integration-{0}.def"
 INTEGRATION_FULL_DETAILS_FILE: str = "{0}.fulldetails"
