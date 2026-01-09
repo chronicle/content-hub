@@ -64,6 +64,7 @@ from TIPCommon.rest.soar_api import (
     get_store_data,
     get_visual_families,
     get_visual_family_by_id,
+    get_case_title_settings,
     import_environment,
     install_integration,
     import_package,
@@ -477,9 +478,8 @@ class SiemplifyApiClient:
         return True
 
     def get_case_title_settings(self):
-        res = self.session.get("settings/GetCaseTitleSettings")
-        self.validate_response(res)
-        return res.json()
+        return get_case_title_settings(self.siemplify_soar)
+
 
     def save_case_title_settings(self, settings):
         res = self.session.post("settings/SaveCaseTitleSettings", json=settings)

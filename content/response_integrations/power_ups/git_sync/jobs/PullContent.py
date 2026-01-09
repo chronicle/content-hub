@@ -26,6 +26,7 @@ from TIPCommon.data_models import (
     CaseCloseReasons,
     SlaDefinition,
     Environment,
+    SimulatedCases,
 )
 
 from TIPCommon.utils import platform_supports_1p_api
@@ -192,8 +193,18 @@ def main():
 
         if features["Simulated Cases"]:
             siemplify.LOGGER.info("Installing Simulated Cases")
-            for case in gitsync.content.get_simulated_cases():
-                gitsync.api.import_simulated_case(siemplify, case)
+
+            for raw_payload in gitsync.content.get_simulated_cases():
+                normalized_payload = (
+                    SimulatedCases
+                    .from_legacy_or_1p(raw_payload)
+                    .to_1p()
+                )
+
+                gitsync.api.import_simulated_case(
+                    siemplify,
+                    normalized_payload,
+                )
 
         if features["Case Tags"]:
             siemplify.LOGGER.info("Installing tags")
