@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import base64
 import shutil
 import subprocess  # noqa: S404
 import zipfile
@@ -301,3 +302,24 @@ def unzip_playbooks(
                 result.append(target_path)
 
     return result
+
+
+def save_playbook_into_zip(playbook_name: str, data: dict[str, Any], dest: Path) -> Path:
+    """Save raw playbook data into a ZIP file.
+
+    Args:
+        playbook_name: The name of the playbook to save.
+        data: The raw playbook data to save.
+        dest: The directory where the ZIP file should be saved.
+
+    Returns:
+        Path: The path to the saved ZIP file.
+
+    """
+    zip_bytes = base64.b64decode(data["blob"])
+    zip_path = dest / f"{to_snake_case(playbook_name)}.zip"
+
+    zip_path.write_bytes(zip_bytes)
+    rich.print(f"Downloaded playbook file saved as: {zip_path}")
+
+    return zip_path

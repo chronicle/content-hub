@@ -21,8 +21,6 @@ import requests
 import rich
 import typer
 
-from mp.core.utils.common.utils import to_snake_case
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -174,19 +172,15 @@ class BackendAPI:
 
     def download_playbook(
         self,
-        playbook: str,
         playbook_identifier: str,
-        dest_folder: Path,
-    ) -> Path:
+    ) -> dict[str, Any]:
         """Download a playbook from the SOAR platform.
 
         Args:
-            playbook: Name for the saved ZIP file.
             playbook_identifier: The identifier of the playbook to download.
-            dest_folder: Path to the directory where files will be saved.
 
         Returns:
-            Path: The path to the saved ZIP file.
+            The response JSON containing playbook data.
 
         """
         url: str = f"{self.api_root}/api/external/v1/playbooks/ExportDefinitions?format=camel"
@@ -194,14 +188,4 @@ class BackendAPI:
 
         resp = self.session.post(url, json=payload)
         resp.raise_for_status()
-
-        dest_folder.mkdir(parents=True, exist_ok=True)
-
-        data = resp.json()
-        zip_bytes = base64.b64decode(data["blob"])
-        zip_path = dest_folder / f"{to_snake_case(playbook)}.zip"
-
-        zip_path.write_bytes(zip_bytes)
-        rich.print(f"Downloaded playbook file saved as: {zip_path}")
-
-        return zip_path
+        return resp.json()

@@ -90,7 +90,8 @@ def _pull_zip_from_soar(playbook: str, dest: Path) -> Path:
     backend_api: BackendAPI = get_backend_api(config)
     installed_playbook: list[dict[str, Any]] = backend_api.list_playbooks()
     playbook_identifier = utils.find_playbook_identifier(playbook, installed_playbook)
-    return backend_api.download_playbook(playbook, playbook_identifier, dest)
+    data_json: dict[str, Any] = backend_api.download_playbook(playbook_identifier)
+    return utils.save_playbook_into_zip(playbook, data_json, dest)
 
 
 def _deconstruct_playbook(zip_path: Path, dest: Path, playbook: str) -> None:
