@@ -157,7 +157,7 @@ class BackendAPI:
         resp.raise_for_status()
         return resp.json()
 
-    def get_playbooks_list_from_platform(self) -> list[dict[str, Any]]:
+    def list_playbooks(self) -> list[dict[str, Any]]:
         """Get all installed playbook's meta-data from the SOAR platform.
 
         Returns:

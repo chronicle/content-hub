@@ -62,6 +62,7 @@ def pull_playbook(
         typer.Exit: If the playbook is not found.
 
     """
+    zip_path: Path | None = None
     if dest is None:
         dest = mp.core.file_utils.common.utils.create_or_get_download_dir()
 
@@ -72,9 +73,6 @@ def pull_playbook(
         if include_blocks:
             _deconstruct_blocks(zip_path, dest, playbook)
 
-        if not keep_zip:
-            zip_path.unlink()
-
         rich.print(f"[green]✅ Playbook {playbook} pulled successfully.[/green]")
 
     except Exception as e:
@@ -82,11 +80,15 @@ def pull_playbook(
         rich.print(f"[red]{error_message}[/red]")
         raise typer.Exit(1) from e
 
+    finally:
+        if not keep_zip and zip_path is not None:
+            zip_path.unlink()
+
 
 def _pull_zip_from_soar(playbook: str, dest: Path) -> Path:
     config = load_dev_env_config()
     backend_api: BackendAPI = get_backend_api(config)
-    installed_playbook: list[dict[str, Any]] = backend_api.get_playbooks_list_from_platform()
+    installed_playbook: list[dict[str, Any]] = backend_api.list_playbooks()
     playbook_identifier = utils.find_playbook_identifier(playbook, installed_playbook)
     return backend_api.download_playbook(playbook, playbook_identifier, dest)
 

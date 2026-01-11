@@ -84,12 +84,14 @@ def get_block_names_by_ids(ids_to_find: set[str]) -> set[str]:
                 continue
 
             for block_path in source_folder.iterdir():
-                if block_path.is_dir():
-                    meta = PlaybookMetadata.from_non_built_path(block_path)
+                if not block_path.is_dir():
+                    continue
 
-                    if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
-                        result.add(block_path.name)
-                        remaining_ids.remove(meta.identifier)
+                meta = PlaybookMetadata.from_non_built_path(block_path)
+
+                if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
+                    result.add(block_path.name)
+                    remaining_ids.remove(meta.identifier)
 
             if not remaining_ids:
                 return result
