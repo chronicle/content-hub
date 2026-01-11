@@ -169,7 +169,7 @@ def _extract_integrations_from_nested_block(
 ) -> set[str]:
     result: set[str] = set()
     for file in base_folder.iterdir():
-        if file.is_dir():
+        if file.is_dir() or file.suffix == ".zip":
             continue
 
         with Path.open(file) as block_file:
