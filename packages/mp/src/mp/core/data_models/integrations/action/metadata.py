@@ -312,11 +312,11 @@ def _load_json_examples(
 
         if not example_path:
             drm["result_example_path"] = "{}"
-            continue
 
-        json_filepath: Path = actions_dir_path.parent / example_path
-        json_content: JsonString = mp.core.file_utils.read_and_validate_json_file(json_filepath)
-        drm["result_example_path"] = json_content
+        else:
+            json_filepath: Path = actions_dir_path.parent / example_path
+            json_content: JsonString = mp.core.file_utils.read_and_validate_json_file(json_filepath)
+            drm["result_example_path"] = json_content
 
         loaded_drms.append(drm)
 
