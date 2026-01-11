@@ -78,3 +78,53 @@ Build, zip, and upload the entire custom integration repository.
 ```bash
 mp dev-env push custom-integration-repository
 ```
+
+### `push playbook`
+
+Build and deploy a playbook to the dev environment (playground).
+
+#### Usage
+```bash
+mp dev-env push playbook PLAYBOOK [OPTIONS]
+```
+
+#### Arguments
+| Argument | Description | Type |
+| :--- | :--- | :--- |
+| `PLAYBOOK` | The name of the playbook to build and push. | `str` |
+
+#### Options
+| Option | Description | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `--include-blocks` | Push all playbook dependent blocks. | `bool` | `False` |
+
+#### Examples
+```bash
+mp dev-env push playbook my_playbook --include-blocks
+```
+
+### `pull playbook`
+
+Pull a playbook from the dev environment (playground).
+
+#### Usage
+```bash
+mp dev-env pull playbook PLAYBOOK [OPTIONS]
+```
+
+#### Arguments
+| Argument | Description | Type |
+| :--- | :--- | :--- |
+| `PLAYBOOK` | The name of the playbook to pull. | `str` |
+
+#### Options
+| Option | Description | Type | Default |
+| :--- | :--- | :--- | :--- |
+| `--dest` | Destination folder. | `Path` | `None` |
+| `--include-blocks` | Pull all playbook dependent blocks. | `bool` | `False` |
+| `--keep-zip` | Keep the zip file after pulling. | `bool` | `False` |
+
+#### Examples
+```bash
+mp dev-env pull playbook soar_playbook --include-blocks --dest ./downloads
+```
