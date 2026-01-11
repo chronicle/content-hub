@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING, Annotated
 
 import rich
 import typer
@@ -26,11 +27,17 @@ from mp.telemetry import track_command
 
 from . import utils
 
+if TYPE_CHECKING:
+    from mp.dev_env.api import BackendAPI
+
 
 @push_app.command(name="integration")
 @track_command
 def push_integration(
-    integration: str = typer.Argument(help="Integration to build and deploy."),
+    integration: Annotated[
+        str,
+        typer.Argument(help="Integration to build and deploy."),
+    ],
     *,
     is_staging: Annotated[
         bool,
@@ -48,47 +55,54 @@ def push_integration(
         is_staging: Add this option to deploy integration in to staging mode.
         custom: Add this option to deploy integration from the custom repository.
 
-    Raises:
-        typer.Exit: If the integration is not found.
-
     """
-    config = load_dev_env_config()
-    source_path = utils.get_integration_path(integration, custom=custom)
-    identifier = utils.get_integration_identifier(source_path)
-
     utils.build_integration(integration, custom=custom)
-    built_dir = utils.find_built_integration_dir(identifier, custom=custom)
+
+    zip_path: Path = _zip_integration(integration, custom=custom)
+
+    _push_zip_to_soar(zip_path, is_staging=is_staging)
+
+
+def _zip_integration(integration: str, *, custom: bool) -> Path:
+    source_path: Path = utils.get_integration_path(integration, custom=custom)
+    identifier: str = utils.get_integration_identifier(source_path)
+    built_dir: Path = utils.find_built_integration_dir(identifier, custom=custom)
     minor_version_bump(built_dir, source_path, identifier)
-
-    zip_path = utils.zip_integration_dir(built_dir, custom=custom)
+    zip_path: Path = utils.zip_integration_dir(built_dir, custom=custom)
     rich.print(f"Zipped built integration at {zip_path}")
+    return zip_path
 
-    backend_api = get_backend_api(config)
+
+def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> None:
+    config = load_dev_env_config()
+    backend_api: BackendAPI = get_backend_api(config)
+
     try:
         details = backend_api.get_integration_details(zip_path, is_staging=is_staging)
         result = backend_api.upload_integration(
             zip_path, details["identifier"], is_staging=is_staging
         )
+        zip_path.unlink()
         rich.print(f"Upload result: {result}")
         rich.print("[green]✅ Integration deployed successfully.[/green]")
+
     except Exception as e:
-        rich.print(f"[red]Upload failed: {e}[/red]")
+        error_message = f"Upload failed for {zip_path.stem}: {e}"
+        rich.print(f"[red]{error_message}[/red]")
         raise typer.Exit(1) from e
 
 
 @push_app.command(name="custom-integration-repository")
 @track_command
 def push_custom_integration_repository() -> None:
-    """Build, zip, and upload the entire custom integration repository.
-
-    Raises:
-        typer.Exit: If authentication fails or any individual uploads fail.
-
-    """
-    config = load_dev_env_config()
+    """Build, zip, and upload the entire custom integration repository."""
     utils.build_integrations_custom_repository()
     zipped_paths = utils.zip_integration_custom_repository()
+    _push_custom_integrations(zipped_paths)
 
+
+def _push_custom_integrations(zipped_paths: list[Path]) -> None:
+    config = load_dev_env_config()
     backend_api = get_backend_api(config)
     results: list[str] = []
 
