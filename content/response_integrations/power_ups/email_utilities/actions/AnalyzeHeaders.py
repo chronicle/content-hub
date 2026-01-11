@@ -357,10 +357,17 @@ def buildResult(header, siemplify):
             result["SPFDomain"] = res.group(1)
     except:
         pass
-    domain_check = checkdmarc.check_domains(
-        [result["FromDomain"]],
-        include_tag_descriptions=True,
-    )
+    try:
+        domain_check = checkdmarc.check_domains(
+            [result["FromDomain"]],
+            include_tag_descriptions=True,
+        )
+    except ValueError:
+        domain_check = checkdmarc.check_domains(
+            [result["FromDomain"]],
+            include_tag_descriptions=True,
+            skip_tls=True,
+        )
     result["SPF"] = domain_check.get("spf")
     result["DMARC"] = domain_check.get("dmarc")
     result["MX"] = domain_check.get("mx")
