@@ -14,8 +14,16 @@ def main():
 
     # Extract configuration parameters
     api_key = siemplify.extract_configuration_param(
-        provider_name="Doppel",
+        provider_name="DoppelVision",
         param_name="API_Key",
+    )
+    user_api_key = siemplify.extract_configuration_param(
+        provider_name="DoppelVision",
+        param_name="User_API_Key",
+    )
+    org_code = siemplify.extract_configuration_param(
+        provider_name="DoppelVision",
+        param_name="Organization_Code",
     )
 
     # Extract optional action parameters
@@ -71,7 +79,7 @@ def main():
     filters = {key: value for key, value in filters.items() if value is not None}
 
     # Instantiate the manager
-    manager = DoppelManager(api_key)
+    manager = DoppelManager(api_key=api_key, user_api_key=user_api_key, org_code=org_code)
 
     # Initialize action result values
     status = EXECUTION_STATE_COMPLETED
@@ -98,7 +106,7 @@ def main():
 
     # Log results and complete the action
     siemplify.LOGGER.info(
-        f"Action Completed: Status: {status}, Result Value: {result_value}, Output: {output_message}",
+        f"Action Completed: Status: {status}, Result : {result_value}, Output: {output_message}",
     )
     siemplify.end(output_message, result_value, status)
 
