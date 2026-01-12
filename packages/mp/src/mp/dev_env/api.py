@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import base64
+from ctypes.wintypes import BYTE
 from typing import TYPE_CHECKING, Any
 
 import requests
 import rich
 import typer
+from requests.models import Response
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -135,6 +137,23 @@ class BackendAPI:
         resp = self.session.post(upload_url, json=upload_payload)
         resp.raise_for_status()
         return resp.json()
+
+    def download_integration(self, integration_name: str) -> Response:
+        """Download an integration package from the SOAR backend.
+
+        Args:
+            integration_name: The name of the integration to download.
+
+        Returns:
+            Response object containing the integration package.
+
+        """
+        url: str = (
+            f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
+        )
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp
 
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload a zipped playbook package to the backend.
