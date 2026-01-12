@@ -15,16 +15,16 @@
 from __future__ import annotations
 
 import base64
-from ctypes.wintypes import BYTE
 from typing import TYPE_CHECKING, Any
 
 import requests
 import rich
 import typer
-from requests.models import Response
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from requests.models import Response
 
 
 class BackendAPI:
