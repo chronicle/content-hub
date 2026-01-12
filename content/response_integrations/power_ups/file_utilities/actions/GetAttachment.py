@@ -22,6 +22,9 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_attachments_metadata
 
 
+CASE_EVIDENCE_ID: str = "evidenceId"
+
+
 @output_handler
 def main():
     siemplify = SiemplifyAction()
@@ -40,7 +43,7 @@ def main():
                 attachments.append(wall_item)
 
     for attachment in attachments:
-        attachment_record = siemplify.get_attachment(attachment["evidenceId"])
+        attachment_record = siemplify.get_attachment(attachment[CASE_EVIDENCE_ID])
         attachment_content = attachment_record.getvalue()
         b64 = base64.b64encode(attachment_content)
         attachment["base64_blob"] = b64.decode("ascii")
