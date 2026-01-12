@@ -170,7 +170,7 @@ class Step(ComponentMetadata[BuiltStep, NonBuiltStep]):
 
         return [
             cls._from_non_built_path(step_path)
-            for step_path in step_folder_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
+            for step_path in step_folder_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")
         ]
 
     @classmethod

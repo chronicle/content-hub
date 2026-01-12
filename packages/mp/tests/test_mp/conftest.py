@@ -105,7 +105,7 @@ def marketplace_json(mock_response_integrations: Path) -> Path:
 @pytest.fixture
 def mock_playbook_path(mock_content_hub: Path) -> Path:
     """Path to the mocked playbook folder."""
-    return mock_content_hub / mp.core.constants.PLAYBOOKS_REPO_NAME
+    return mock_content_hub / mp.core.constants.PLAYBOOKS_DIR_NAME
 
 
 @pytest.fixture

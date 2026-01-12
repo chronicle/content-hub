@@ -45,7 +45,7 @@ YamlFileContent: TypeAlias = Mapping[str, Any]
 class RepositoryType(enum.Enum):
     THIRD_PARTY = constants.THIRD_PARTY_REPO_NAME
     COMMERCIAL = constants.COMMERCIAL_REPO_NAME
-    PLAYBOOKS = constants.PLAYBOOKS_REPO_NAME
+    PLAYBOOKS = constants.PLAYBOOKS_DIR_NAME
     ALL_CONTENT = "all_content"
     CUSTOM = "custom"
 

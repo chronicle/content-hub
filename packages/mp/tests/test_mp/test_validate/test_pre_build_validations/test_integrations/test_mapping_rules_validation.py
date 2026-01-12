@@ -46,7 +46,7 @@ class TestMappingRulesValidation:
         connector_def_file = (
             temp_integration
             / mp.core.constants.ACTIONS_DIR
-            / f"connector{mp.core.constants.DEF_FILE_SUFFIX}"
+            / f"connector{mp.core.constants.YAML_SUFFIX}"
         )
         _remove_file(connector_def_file)
 

@@ -37,7 +37,7 @@ def create_or_get_playbooks_root_dir() -> Path:
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
         mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / mp.core.constants.PLAYBOOKS_REPO_NAME
+        / mp.core.constants.PLAYBOOKS_DIR_NAME
     )
 
 

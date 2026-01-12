@@ -122,7 +122,7 @@ def load_components_defs(
             if component_dir.is_dir():
                 component_defs[component_dir_name] = [
                     file_utils.load_yaml_file(p)
-                    for p in component_dir.glob(f"*{constants.DEF_FILE_SUFFIX}")
+                    for p in component_dir.glob(f"*{constants.YAML_SUFFIX}")
                 ]
     except Exception as e:
         msg: str = f"Failed to load components def files: {e}"

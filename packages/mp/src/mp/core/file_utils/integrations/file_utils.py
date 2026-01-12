@@ -338,7 +338,7 @@ class IntegrationParityValidator:
     def _validate_actions(self) -> None:
         actions: Path = self.path / constants.ACTIONS_DIR
         if actions.exists():
-            _validate_script_metadata_parity(actions, ".py", constants.DEF_FILE_SUFFIX)
+            _validate_script_metadata_parity(actions, ".py", constants.YAML_SUFFIX)
 
     def _validate_connectors(self) -> None:
         connectors: Path = self.path / constants.CONNECTORS_DIR
@@ -346,13 +346,13 @@ class IntegrationParityValidator:
             _validate_script_metadata_parity(
                 directory=connectors,
                 script_suffix=".py",
-                metadata_suffix=constants.DEF_FILE_SUFFIX,
+                metadata_suffix=constants.YAML_SUFFIX,
             )
 
     def _validate_jobs(self) -> None:
         jobs: Path = self.path / constants.JOBS_DIR
         if jobs.exists():
-            _validate_script_metadata_parity(jobs, ".py", constants.DEF_FILE_SUFFIX)
+            _validate_script_metadata_parity(jobs, ".py", constants.YAML_SUFFIX)
 
     def _validate_widgets(self) -> None:
         widgets: Path = self.path / constants.WIDGETS_DIR
@@ -360,7 +360,7 @@ class IntegrationParityValidator:
             _validate_script_metadata_parity(
                 directory=widgets,
                 script_suffix=".html",
-                metadata_suffix=constants.DEF_FILE_SUFFIX,
+                metadata_suffix=constants.YAML_SUFFIX,
             )
 
 

@@ -129,7 +129,7 @@ class ActionWidgetMetadata(
 
         return [
             cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
+            for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")
         ]
 
     @classmethod
