@@ -21,11 +21,11 @@ import rich
 import typer
 
 from mp.dev_env.commands.push import push_app
-from mp.dev_env.minor_version_bump import minor_version_bump
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 
 from . import utils
+from .minor_version_bump import minor_version_bump
 
 if TYPE_CHECKING:
     from mp.dev_env.api import BackendAPI
@@ -36,24 +36,24 @@ if TYPE_CHECKING:
 def push_integration(
     integration: Annotated[
         str,
-        typer.Argument(help="Integration to build and deploy."),
+        typer.Argument(help="Integration to build and push."),
     ],
     *,
     is_staging: Annotated[
         bool,
-        typer.Option("--staging", help="Deploy integration in to staging mode."),
+        typer.Option("--staging", help="Push integration in to staging mode."),
     ] = False,
     custom: Annotated[
         bool,
-        typer.Option(help="Deploy integration from the custom repository."),
+        typer.Option(help="Push integration from the custom repository."),
     ] = False,
 ) -> None:
-    """Build and deploy an integration to the dev environment (playground).
+    """Build and push an integration to the dev environment (playground).
 
     Args:
-        integration: The integration to build and deploy.
-        is_staging: Add this option to deploy integration in to staging mode.
-        custom: Add this option to deploy integration from the custom repository.
+        integration: The integration to build and push.
+        is_staging: Add this option to push integration in to staging mode.
+        custom: Add this option to push integration from the custom repository.
 
     """
     utils.build_integration(integration, custom=custom)
@@ -84,7 +84,7 @@ def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> None:
         )
         zip_path.unlink()
         rich.print(f"Upload result: {result}")
-        rich.print("[green]✅ Integration deployed successfully.[/green]")
+        rich.print("[green]✅ Integration pushed successfully.[/green]")
 
     except Exception as e:
         error_message = f"Upload failed for {zip_path.stem}: {e}"

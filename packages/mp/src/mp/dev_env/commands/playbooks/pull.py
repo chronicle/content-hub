@@ -65,9 +65,11 @@ def pull_playbook(
     zip_path: Path | None = None
     if dest is None:
         dest = mp.core.file_utils.common.utils.create_or_get_download_dir()
+    else:
+        dest.mkdir(parents=True, exist_ok=True)
 
     try:
-        zip_path = _pull_zip_from_soar(playbook, dest)
+        zip_path = _pull_playbook_zip_from_soar(playbook, dest)
         _deconstruct_playbook(zip_path, dest, playbook)
 
         if include_blocks:
@@ -85,13 +87,13 @@ def pull_playbook(
             zip_path.unlink()
 
 
-def _pull_zip_from_soar(playbook: str, dest: Path) -> Path:
+def _pull_playbook_zip_from_soar(playbook: str, dest: Path) -> Path:
     config = load_dev_env_config()
     backend_api: BackendAPI = get_backend_api(config)
     installed_playbook: list[dict[str, Any]] = backend_api.list_playbooks()
     playbook_identifier = utils.find_playbook_identifier(playbook, installed_playbook)
     data_json: dict[str, Any] = backend_api.download_playbook(playbook_identifier)
-    return utils.save_playbook_into_zip(playbook, data_json, dest)
+    return utils.save_playbook_as_zip(playbook, data_json, dest)
 
 
 def _deconstruct_playbook(zip_path: Path, dest: Path, playbook: str) -> None:
