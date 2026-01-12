@@ -4,10 +4,18 @@ import requests
 
 
 class DoppelManager:
-    def __init__(self, api_key):
-        """Initialize the manager with the API key and base URL."""
-        self.api_key = api_key
+    def __init__(self, api_key: str, user_api_key: str | None, org_code: str | None) -> None:
+        """Initializes the DoppelManager with API credentials.
+
+        Args:
+            api_key: The API key for authentication.
+            user_api_key: The User API key for authentication.
+            org_code: The organization code for multi-tenant setups.
+        """
         self.base_url = "https://api.doppel.com/v1"
+        self.api_key = api_key
+        self.user_api_key = user_api_key
+        self.org_code = org_code
 
     def get_alert(self, entity=None, alert_id=None):
         """Fetches an alert using either the entity or the alert ID, but not both.
@@ -50,7 +58,8 @@ class DoppelManager:
     def get_alerts(self, filters=None):
         """Fetches multiple alerts from Doppel, optionally filtered by criteria.
 
-        :param filters: (dict) A dictionary of filter parameters (e.g., {"search_key": "example", "tags": ["tag1", "tag2"]}).
+        :param filters: (dict) A dictionary of filter parameters
+        (e.g., {"search_key": "example", "tags": ["tag1", "tag2"]}).
         :return: (list) A list of alerts if successful, otherwise None.
         """
         url = f"{self.base_url}/alerts"
@@ -92,7 +101,8 @@ class DoppelManager:
         :param entity_state: (str) The entity state to update to.
         :param entity: (str) The entity for which to update the alert (optional).
         :param alert_id: (str) The alert ID to update the alert (optional).
-        :return: (dict) The JSON response containing the updated alert if successful, otherwise None.
+        :return: (dict) The JSON response containing the updated alert if successful,
+        otherwise None.
         """
         if entity and alert_id:
             raise ValueError(
@@ -145,6 +155,10 @@ class DoppelManager:
         :return: (dict) Headers including the API key and content type.
         """
         headers = {"accept": "application/json", "x-api-key": self.api_key}
+        if self.user_api_key:
+            headers["x-user-api-key"] = self.user_api_key
+        if self.org_code:
+            headers["x-organization-code"] = self.org_code
         if content_type:
             headers["content-type"] = content_type
         return headers

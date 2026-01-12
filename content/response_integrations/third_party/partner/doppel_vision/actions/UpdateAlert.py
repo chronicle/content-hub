@@ -10,22 +10,38 @@ from ..core.DoppelManager import DoppelManager
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    siemplify.script_name = "Get Alert Action"
+    siemplify.script_name = "Update Alert Action"
 
     # Extract parameters
     api_key = siemplify.extract_configuration_param(
-        provider_name="Doppel",
+        provider_name="DoppelVision",
         param_name="API_Key",
+    )
+    user_api_key = siemplify.extract_configuration_param(
+        provider_name="DoppelVision",
+        param_name="User_API_Key",
+    )
+    org_code = siemplify.extract_configuration_param(
+        provider_name="DoppelVision",
+        param_name="Organization_Code",
     )
     entity = siemplify.extract_action_param(param_name="Entity", default_value=None)
     alert_id = siemplify.extract_action_param(param_name="Alert_ID", default_value=None)
+    queue_state = siemplify.extract_action_param(
+        param_name="Queue_State",
+        is_mandatory=True,
+    )
+    entity_state = siemplify.extract_action_param(
+        param_name="Entity_State",
+        is_mandatory=True,
+    )
 
     # Instantiate the manager
-    manager = DoppelManager(api_key)
+    manager = DoppelManager(api_key=api_key, user_api_key=user_api_key, org_code=org_code)
 
     # Initialize action result values
     status = EXECUTION_STATE_COMPLETED
-    output_message = "Alert retrieved successfully."
+    output_message = "Alert updated successfully."
     result_value = True
 
     try:
@@ -37,16 +53,21 @@ def main():
         if not entity and not alert_id:
             raise ValueError("Either 'Entity' or 'Alert_ID' must be provided.")
 
-        # Perform the get_alert action
-        alert = manager.get_alert(entity=entity, alert_id=alert_id)
-        if alert:
+        # Perform the update_alert action
+        updated_alert = manager.update_alert(
+            queue_state=queue_state,
+            entity_state=entity_state,
+            entity=entity,
+            alert_id=alert_id,
+        )
+        if updated_alert:
             siemplify.result.add_result_json(
-                alert,
-            )  # Store alert in the action result JSON
+                updated_alert,
+            )  # Store updated alert in the action result JSON
         else:
-            raise Exception("Empty response or alert not found.")
+            raise Exception("Empty response or update failed.")
     except Exception as e:
-        output_message = f"Failed to retrieve alert: {e!s}"
+        output_message = f"Failed to update alert: {e!s}"
         status = EXECUTION_STATE_FAILED
         result_value = False
 
