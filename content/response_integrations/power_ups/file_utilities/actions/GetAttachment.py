@@ -21,7 +21,6 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_attachments_metadata
 
-
 CASE_EVIDENCE_ID: str = "evidenceId"
 
 
