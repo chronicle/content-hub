@@ -77,7 +77,7 @@ def _generate_playbooks_display_info(
                 continue
 
             display_info_path: Path = (
-                non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+                non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
             )
             if not display_info_path.exists():
                 continue

@@ -512,7 +512,7 @@ PLAYBOOKS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
 PLAYBOOK_OUT_DIR_NAME: str = "playbook_definitions"
 
 TRIGGERS_FILE_NAME: str = f"triggers{YAML_SUFFIX}"
-DISPLAY_INFO_FILE_MAME: str = f"display_info{YAML_SUFFIX}"
+DISPLAY_INFO_FILE_NAME: str = f"display_info{YAML_SUFFIX}"
 OVERVIEWS_FILE_NAME: str = "overviews.yaml"
 STEPS_DIR: str = "steps"
 TRIGGER_FILE_NAME: str = f"trigger{YAML_SUFFIX}"

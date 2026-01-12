@@ -120,7 +120,7 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
 
     steps_dir: Path = playbook_path / mp.core.constants.STEPS_DIR
     def_file: Path = playbook_path / mp.core.constants.DEFINITION_FILE
-    display_info: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+    display_info: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
     overviews_file: Path = playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME
     trigger_file: Path = playbook_path / mp.core.constants.TRIGGER_FILE_NAME
 
@@ -174,7 +174,7 @@ def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
         A PlaybookDisplayInfo object.
 
     """
-    display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+    display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
     return PlaybookDisplayInfo.from_non_built(
         yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
     )

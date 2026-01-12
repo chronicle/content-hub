@@ -118,8 +118,8 @@ def assert_deconstruct_playbook(
         assert actual == expected
 
         expected, actual = test_mp.common.get_yaml_content(
-            expected=non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME,
-            actual=out_playbook / mp.core.constants.DISPLAY_INFO_FILE_MAME,
+            expected=non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME,
+            actual=out_playbook / mp.core.constants.DISPLAY_INFO_FILE_NAME,
         )
         assert actual == expected
 

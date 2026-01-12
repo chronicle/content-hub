@@ -111,7 +111,7 @@ class PlaybookDeconstructor:
             "allowed_debug_data",
         )
 
-        display_info_path: Path = self.out_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+        display_info_path: Path = self.out_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
 
         with Path.open(display_info_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f)
