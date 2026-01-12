@@ -208,11 +208,29 @@ def test_sdk_import_transformer(sdk_module: str) -> None:
     transformed_import_content = apply_transformers(import_content, [transformer])
     assert transformed_import_content == expected_import_content
 
+    # Test `import <sdk_module> as alias`
+    import_as_content = f"import {sdk_module} as sm"
+    expected_import_as_content = f"import {SDK_PREFIX}{sdk_module} as sm"
+    transformed_import_as_content = apply_transformers(import_as_content, [transformer])
+    assert transformed_import_as_content == expected_import_as_content
+
     # Test `from <sdk_module> import something`
     from_import_content = f"from {sdk_module} import something"
     expected_from_import_content = f"from {SDK_PACKAGE_NAME}.{sdk_module} import something"
     transformed_from_import_content = apply_transformers(from_import_content, [transformer])
     assert transformed_from_import_content == expected_from_import_content
+
+    # Test `from <sdk_module> import something as s`
+    from_import_as_content = f"from {sdk_module} import something as s"
+    expected_from_import_as_content = f"from {SDK_PACKAGE_NAME}.{sdk_module} import something as s"
+    transformed_from_import_as_content = apply_transformers(from_import_as_content, [transformer])
+    assert transformed_from_import_as_content == expected_from_import_as_content
+
+    # Test `import <sdk_module>.func as alias`
+    import_content = f"import {sdk_module}.func as alias"
+    expected_import_content = f"import {SDK_PREFIX}{sdk_module}.func as alias"
+    transformed_import_content = apply_transformers(import_content, [transformer])
+    assert transformed_import_content == expected_import_content
 
 
 def test_sdk_import_transformer_unrelated_import() -> None:
@@ -227,10 +245,21 @@ def test_sdk_import_transformer_unrelated_import() -> None:
     ("test_name", "initial_content", "expected_content"),
     [
         ("manager_import", "import manager", "from ..core import manager"),
+        ("manager_import_as", "import manager as m", "from ..core import manager as m"),
         (
             "manager_from_import",
             "from manager import some_func",
             f"from ..{CORE_PREFIX}manager import some_func",
+        ),
+        (
+            "manager_from_import_as",
+            "from manager import some_func as sf",
+            f"from ..{CORE_PREFIX}manager import some_func as sf",
+        ),
+        (
+            "manager_submodule_import_as",
+            "import manager.submodule as alias",
+            f"from ..{CORE_PREFIX}manager import submodule as alias",
         ),
     ],
 )
@@ -253,6 +282,16 @@ def test_core_package_import_transformer(
             "from .constants import MY_CONST",
         ),
         ("import_self", "import api_client", "import api_client"),
+        (
+            "core_internal_import_as_alias",
+            "import constants as const",
+            "from . import constants as const",
+        ),
+        (
+            "core_internal_import_func_as_alias",
+            "import constants.func as alias",
+            "from .constants import func as alias",
+        ),
     ],
 )
 def test_core_package_internal_import_transformer(

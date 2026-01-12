@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import libcst as cst
 from libcst.helpers import get_full_name_for_node
@@ -181,7 +181,11 @@ class SdkImportTransformer(cst.CSTTransformer):
             The updated `Import` node with SDK modules prefixed.
 
         """
-        full_module_name: str | None = get_full_name_for_node(original_node.names[0].name)
+        if not original_node.names:
+            return updated_node
+
+        alias: cst.ImportAlias = original_node.names[0]
+        full_module_name: str | None = get_full_name_for_node(alias.name)
         if not full_module_name:
             return updated_node
 
@@ -189,7 +193,8 @@ class SdkImportTransformer(cst.CSTTransformer):
 
         if first_module_part in SDK_MODULES and not full_module_name.startswith(SDK_PREFIX):
             prefixed_module = _create_prefixed_module(full_module_name, SDK_PREFIX)
-            return updated_node.with_changes(names=[cst.ImportAlias(name=prefixed_module)])
+            new_alias = alias.with_changes(name=prefixed_module)
+            return updated_node.with_changes(names=(new_alias,))
 
         return updated_node
 
@@ -234,16 +239,44 @@ class CorePackageImportTransformer(cst.CSTTransformer):
             The updated `Import` or a new `ImportFrom` node for manager modules.
 
         """
-        full_module_name: str | None = get_full_name_for_node(original_node.names[0].name)
+        if not original_node.names:
+            return updated_node
+
+        alias: cst.ImportAlias = original_node.names[0]
+        full_module_name: str | None = get_full_name_for_node(alias.name)
         if not full_module_name:
             return updated_node
 
-        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
+        parts: list[str] = full_module_name.split(".")
+        first_module_part: str = parts[0]
 
         if first_module_part in self.core_module_names:
+            if len(parts) > 1:
+                # Handles `import manager.submodule.func as alias` ->
+                # `from ..core.manager.submodule import func as alias`
+                module_path: str = ".".join(parts[:-1])
+                imported_name: str = parts[-1]
+
+                prefixed_module = _create_prefixed_module(module_path, CORE_PREFIX)
+
+                new_alias: cst.ImportAlias = cst.ImportAlias(
+                    name=cst.Name(value=imported_name),
+                    asname=alias.asname,
+                )
+
+                return cst.ImportFrom(
+                    module=prefixed_module,
+                    names=[new_alias],
+                    relative=(cst.Dot(), cst.Dot()),
+                )
+
+            # Handles `import manager` and `import manager as m`
+            new_alias: cst.ImportAlias = cst.ImportAlias(
+                name=cst.Name(value=first_module_part), asname=alias.asname
+            )
             return cst.ImportFrom(
                 module=cst.Name(value="core"),
-                names=[cst.ImportAlias(name=cst.Name(value=first_module_part))],
+                names=[new_alias],
                 relative=(cst.Dot(), cst.Dot()),
             )
 
@@ -291,20 +324,45 @@ class CorePackageInternalImportTransformer(cst.CSTTransformer):
 
         """
         if len(original_node.names) != 1:
-            # Assuming one module per import, as per ruff formatting.
+            # Assuming one module per import.
             return updated_node
 
-        full_module_name: str | None = get_full_name_for_node(original_node.names[0].name)
+        alias: cst.ImportAlias = original_node.names[0]
+        full_module_name: str | None = get_full_name_for_node(alias.name)
         if not full_module_name:
             return updated_node
 
+        parts: list[str] = full_module_name.split(".")
+        first_module_part: str = parts[0]
+
         if (
-            full_module_name in self.core_module_names
-            and full_module_name != self.current_module_name
+            first_module_part in self.core_module_names
+            and first_module_part != self.current_module_name
         ):
+            if len(parts) > 1:
+                # Handles `import constants.func as alias` -> `from .constants import func as alias`
+                module_path: str = ".".join(parts[:-1])
+                imported_name: str = parts[-1]
+
+                new_alias: cst.ImportAlias = cst.ImportAlias(
+                    name=cst.Name(value=imported_name),
+                    asname=alias.asname,
+                )
+
+                module_expr = cst.parse_expression(module_path)
+                return cst.ImportFrom(
+                    module=cast("cst.Attribute | cst.Name", module_expr),
+                    names=[new_alias],
+                    relative=(cst.Dot(),),
+                )
+
+            # Handles `import constants` and `import constants as const`
+            new_alias: cst.ImportAlias = cst.ImportAlias(
+                name=cst.Name(value=full_module_name), asname=alias.asname
+            )
             return cst.ImportFrom(
                 module=None,
-                names=[cst.ImportAlias(name=cst.Name(value=full_module_name))],
+                names=[new_alias],
                 relative=(cst.Dot(),),
             )
 
