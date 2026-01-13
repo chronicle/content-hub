@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_models import DataModel  # type: ignore[import-not-found]
+from data_model import DataModel  # type: ignore[import-not-found]
 
 
 def main() -> None:

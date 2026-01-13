@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 [![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-![Maintenance](https://img.shields.io/maintenance/yes/2025)
+![Maintenance](https://img.shields.io/maintenance/yes/2026)
 
 **`mp`**, short for **`marketplace`**, is the official command-line interface (CLI) for developing, maintaining, and deploying Google SecOps marketplace integrations. It streamlines the entire lifecycle from coding to deployment.
 

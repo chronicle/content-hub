@@ -34,6 +34,9 @@ import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
 import mp.core.utils
+from mp.build_project.restructure.integrations.deconstruct_dependencies import (
+    DependencyDeconstructor,
+)
 from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
@@ -51,6 +54,9 @@ if TYPE_CHECKING:
 
     import libcst as cst
 
+    from mp.build_project.restructure.integrations.deconstruct_dependencies import (
+        Dependencies,
+    )
     from mp.core.data_models.integrations.action.dynamic_results_metadata import (
         DynamicResultsMetadata,
     )
@@ -98,16 +104,16 @@ class DeconstructIntegration:
         """
         mp.core.unix.init_python_project_if_not_exists(self.out_path)
         self.update_pyproject()
-        requirements: Path = self.path / mp.core.constants.REQUIREMENTS_FILE
-        if requirements.exists():
-            try:
-                rich.print(f"Adding requirements to {mp.core.constants.PROJECT_FILE}")
-                mp.core.unix.add_dependencies_to_toml(
-                    project_path=self.out_path,
-                    requirements_path=requirements,
-                )
-            except mp.core.unix.FatalCommandError as e:
-                rich.print(f"Failed to install dependencies from requirements: {e}")
+        rich.print(f"Adding dependencies to {mp.core.constants.PROJECT_FILE}")
+        dependencies: Dependencies = DependencyDeconstructor(self.path).get_dependencies()
+        try:
+            mp.core.unix.add_dependencies_to_toml(
+                project_path=self.out_path,
+                deps_to_add=dependencies.dependencies,
+                dev_deps_to_add=dependencies.dev_dependencies,
+            )
+        except mp.core.unix.FatalCommandError as e:
+            rich.print(f"Failed to install dependencies: {e}")
 
     def update_pyproject(self) -> None:
         """Update an integration's pyproject.toml file from its definition file."""

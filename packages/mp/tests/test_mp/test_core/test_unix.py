@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import sys
-import tomllib
 import unittest.mock
 from typing import TYPE_CHECKING
 
@@ -27,48 +26,39 @@ import mp.core.unix
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
+    from unittest.mock import MagicMock
 
 DEV_DEPENDENCY_NAME: str = "beautifulsoup4"
 REQUIREMENT_LINE: str = "black>=24.10.0"
-TOML_CONTENT_WITH_DEV_DEPENDENCIES: str = f"""
+
+TOML_TEMPLATE: str = f"""
 [project]
 name = "mock"
 version = "1.0.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    {{ name = "me", email = "me@google.com" }}
+    {{ "name" = "me", "email" = "me@google.com" }}
 ]
 requires-python = ">={sys.version_info.major}.{sys.version_info.minor}"
+"""
+
+TOML_CONTENT_WITH_DEV_DEPENDENCIES: str = (
+    TOML_TEMPLATE
+    + f"""
 dependencies = ["{REQUIREMENT_LINE}"]
 
 [dependency-groups]
 dev = ["{DEV_DEPENDENCY_NAME}>=4.13.3"]
 """
-TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES: str = f"""
-[project]
-name = "mock"
-version = "1.0.0"
-description = "Add your description here"
-readme = "README.md"
-authors = [
-    {{ name = "me", email = "me@google.com" }}
-]
-requires-python = ">={sys.version_info.major}.{sys.version_info.minor}"
+)
+
+TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES: str = (
+    TOML_TEMPLATE
+    + f"""
 dependencies = ["{REQUIREMENT_LINE}"]
 """
-TOML_CONTENT_WITHOUT_DEPENDENCIES: str = f"""
-[project]
-name = "mock"
-version = "1.0.0"
-description = "Add your description here"
-readme = "README.md"
-authors = [
-    {{ name = "me", email = "me@google.com" }}
-]
-requires-python = ">={sys.version_info.major}.{sys.version_info.minor}"
-dependencies = []
-"""
+)
 
 
 @pytest.mark.parametrize(
@@ -178,20 +168,6 @@ def test_download_wheels_from_requirements(tmp_path: Path) -> None:
     assert DEV_DEPENDENCY_NAME not in wheels
 
 
-def test_add_dependencies_to_toml(tmp_path: Path) -> None:
-    pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
-    pyproject_toml.write_text(TOML_CONTENT_WITHOUT_DEPENDENCIES, encoding="utf-8")
-    requirements: Path = tmp_path / mp.core.constants.REQUIREMENTS_FILE
-    requirements.write_text(REQUIREMENT_LINE, encoding="utf-8")
-
-    mp.core.unix.add_dependencies_to_toml(tmp_path, requirements)
-    toml_content: str = pyproject_toml.read_text(encoding="utf-8")
-
-    assert tomllib.loads(toml_content) == tomllib.loads(
-        TOML_CONTENT_WITHOUT_DEV_DEPENDENCIES,
-    )
-
-
 def test_init_python_project(tmp_path: Path) -> None:
     pyproject_toml: Path = tmp_path / mp.core.constants.PROJECT_FILE
     assert not pyproject_toml.exists()
@@ -216,3 +192,35 @@ def test_init_python_project_if_not_exists(
 
         mp.core.unix.init_python_project_if_not_exists(tmp_path)
         assert pyproject_toml.exists()
+
+
+def test_add_dependencies_to_toml_empty(mock_subprocess_run: MagicMock, tmp_path: Path) -> None:
+    """Test add_dependencies_to_toml with empty dependency lists."""
+    mp.core.unix.add_dependencies_to_toml(tmp_path, [], [])
+    assert mock_subprocess_run.call_count == 1
+    call_args = mock_subprocess_run.call_args[0][0]
+
+    assert "--group" in call_args
+    assert "dev" in call_args
+    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(call_args)  # noqa: SLF001
+
+
+def test_add_dependencies_to_toml_with_deps(mock_subprocess_run: MagicMock, tmp_path: Path) -> None:
+    """Test add_dependencies_to_toml with non-empty dependency lists."""
+    deps_to_add = ["requests==2.25.1"]
+    dev_deps_to_add = ["black"]
+    mp.core.unix.add_dependencies_to_toml(tmp_path, deps_to_add, dev_deps_to_add)
+    assert mock_subprocess_run.call_count == 2
+
+    # Check regular dependencies call
+    reg_call_args = mock_subprocess_run.call_args_list[0][0][0]
+    assert "add" in reg_call_args
+    assert deps_to_add[0] in reg_call_args
+    assert "https://pypi.org/simple" in reg_call_args
+
+    # Check dev dependencies call
+    dev_call_args = mock_subprocess_run.call_args_list[1][0][0]
+    assert "--group" in dev_call_args
+    assert "dev" in dev_call_args
+    assert "black" in dev_call_args
+    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(dev_call_args)  # noqa: SLF001
