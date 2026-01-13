@@ -815,7 +815,6 @@ PLAYBOOK_WIDGET_METADATA_WITH_NONE = PlaybookWidgetMetadata(
 NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
     "type": "PLAYBOOK",
     "content_hub_display_name": "display_name",
-    "description": "description",
     "author": "author",
     "contact_email": "email",
     "tags": [],
@@ -828,7 +827,6 @@ NON_BUILT_DISPLAY_INFO: NonBuiltPlaybookDisplayInfo = {
 DISPLAY_INFO = PlaybookDisplayInfo(
     type=PlaybookType.PLAYBOOK,
     content_hub_display_name="display_name",
-    description="description",
     author="author",
     contact_email="email",
     tags=[],

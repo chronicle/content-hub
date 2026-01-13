@@ -25,6 +25,7 @@ from .documentation_link_validation import IntegrationHasDocumentationLinkValida
 from .integration_ssl_validation import SslParameterExistsInIntegrationValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
 from .ping_validation import IntegrationHasPingActionValidation
+from .python_version_validation import PythonVersionValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
 from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation
@@ -57,6 +58,7 @@ def _get_non_priority_validations() -> list[Validator]:
         SslParameterExistsInConnectorsValidation(),
         IntegrationHasDocumentationLinkValidation(),
         ConnectorsHasDocumentationLinkValidation(),
+        PythonVersionValidation(),
     ]
 
 

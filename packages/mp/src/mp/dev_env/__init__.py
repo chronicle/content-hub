@@ -24,6 +24,7 @@ from mp.telemetry import track_command
 
 from . import utils
 from .commands.integrations.commands import push_integration
+from .commands.pull import pull_app
 from .commands.push import push_app
 
 __all__: list[str] = ["app", "deploy", "login"]
@@ -33,6 +34,7 @@ app: typer.Typer = typer.Typer(
 )
 
 app.add_typer(push_app, name="push")
+app.add_typer(pull_app, name="pull")
 
 
 class DevEnvParams(NamedTuple):

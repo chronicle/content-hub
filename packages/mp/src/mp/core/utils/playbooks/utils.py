@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 def get_playbook_dependent_blocks_ids(non_built_playbook_path: Path) -> set[str]:
-    """Get all dependent block identifiers from a playbook.
+    """Get all dependent block identifiers from a non-built playbook.
 
     Args:
         non_built_playbook_path: The path to the non-built playbook directory.
