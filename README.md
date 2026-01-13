@@ -3,7 +3,7 @@
 # Welcome to the Google SecOps Content Hub Repository
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-![Maintenance](https://img.shields.io/maintenance/yes/2025)
+![Maintenance](https://img.shields.io/maintenance/yes/2026)
 
 > [!WARNING]
 > **Disclaimer:** This documentation is actively under development. Its content and structure are
