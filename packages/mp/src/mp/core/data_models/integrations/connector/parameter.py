@@ -63,7 +63,7 @@ class ConnectorParameter(
     ]
     description: Annotated[
         str,
-        pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH),
+        pydantic.AfterValidator(mp.core.validators.validate_param_description),
     ]
     is_mandatory: bool
     is_advanced: bool

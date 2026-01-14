@@ -21,6 +21,7 @@ import pydantic
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
+import mp.core.validators
 from mp.core.data_models.abc import ComponentMetadata
 
 from .dynamic_results_metadata import (
@@ -79,7 +80,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     file_name: str
     description: Annotated[
         str,
-        pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
+        pydantic.AfterValidator(mp.core.validators.validate_param_description),
     ]
     dynamic_results_metadata: list[DynamicResultsMetadata]
     integration_identifier: Annotated[
