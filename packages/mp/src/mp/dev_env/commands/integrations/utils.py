@@ -50,10 +50,10 @@ def get_integration_path(integration: str, *, custom: bool = False) -> Path:
     for repo, folders in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT.items():
         if repo == mp.core.constants.THIRD_PARTY_REPO_NAME:
             for folder in folders:
+                candidate: Path = integrations_root / repo / folder / integration
                 if folder == mp.core.constants.POWERUPS_DIR_NAME:
                     candidate: Path = integrations_root / folder / integration
-                else:
-                    candidate: Path = integrations_root / repo / folder / integration
+
                 if candidate.exists():
                     return candidate
         else:
