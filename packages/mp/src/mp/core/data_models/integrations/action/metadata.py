@@ -80,7 +80,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     file_name: str
     description: Annotated[
         str,
-        pydantic.AfterValidator(mp.core.validators.validate_param_description),
+        pydantic.AfterValidator(mp.core.validators.validate_param_long_description),
     ]
     dynamic_results_metadata: list[DynamicResultsMetadata]
     integration_identifier: Annotated[

@@ -63,7 +63,7 @@ class ConnectorParameter(
     ]
     description: Annotated[
         str,
-        pydantic.AfterValidator(mp.core.validators.validate_param_description),
+        pydantic.AfterValidator(mp.core.validators.validate_param_short_description),
     ]
     is_mandatory: bool
     is_advanced: bool

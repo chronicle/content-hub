@@ -52,8 +52,8 @@ def validate_param_name(name: str) -> str:
     return name
 
 
-def validate_param_description(description: str) -> str:
-    """Validate a parameter's description.
+def validate_param_short_description(description: str) -> str:
+    """Validate a parameter's short description.
 
     Ensure it adheres to the maximum allowed length as specified by
     SHORT_DESCRIPTION_MAX_LENGTH. If it exceeds this limit, a ValueError is raised.
@@ -75,6 +75,35 @@ def validate_param_description(description: str) -> str:
         msg: str = (
             f"Parameter description '{description}' exceeds maximum length of "
             f"{mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH}"
+        )
+        raise ValueError(msg)
+
+    return description
+
+
+def validate_param_long_description(description: str) -> str:
+    """Validate a parameter's long description.
+
+    Ensure it adheres to the maximum allowed length as specified by
+    LONG_DESCRIPTION_MAX_LENGTH. If it exceeds this limit, a ValueError is raised.
+
+    Args:
+        description: The parameter description to validate.
+
+    Returns:
+        The description of the parameter after the validation
+
+    Raises:
+        ValueError: If the parameter name exceeds the maximum allowed length.
+
+    """
+    if description.startswith(tuple(mp.core.constants.EXCLUDED_LONG_PARAM_DESCRIPTION_PREFIXES)):
+        return description
+
+    if len(description) > mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH:
+        msg: str = (
+            f"Parameter description '{description}' exceeds maximum length of "
+            f"{mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH}"
         )
         raise ValueError(msg)
 

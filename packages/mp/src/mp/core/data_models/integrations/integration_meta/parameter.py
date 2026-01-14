@@ -55,7 +55,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
     ]
     description: Annotated[
         str,
-        pydantic.AfterValidator(mp.core.validators.validate_param_description),
+        pydantic.AfterValidator(mp.core.validators.validate_param_short_description),
     ]
     is_mandatory: bool
     type_: ScriptParamType
