@@ -12,6 +12,7 @@ SCRIPT_NAME = "Ping"
 
 @output_handler
 def main():
+    X = "THIS IS FROM THE COMMUNITY BUCKET"
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
