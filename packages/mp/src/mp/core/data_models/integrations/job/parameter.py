@@ -52,7 +52,8 @@ class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
     description: Annotated[
-        str, pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH)
+        str,
+        pydantic.AfterValidator(mp.core.validators.validate_param_description),
     ]
     is_mandatory: bool
     type_: ScriptParamType
