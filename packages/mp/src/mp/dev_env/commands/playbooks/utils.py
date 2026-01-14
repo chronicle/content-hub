@@ -304,7 +304,7 @@ def unzip_playbooks(
     return result
 
 
-def save_playbook_into_zip(playbook_name: str, data: dict[str, Any], dest: Path) -> Path:
+def save_playbook_as_zip(playbook_name: str, data: dict[str, Any], dest: Path) -> Path:
     """Save raw playbook data into a ZIP file.
 
     Args:

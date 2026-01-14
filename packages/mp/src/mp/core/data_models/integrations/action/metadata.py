@@ -148,7 +148,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             return []
 
         metadata_objects: list[Self] = []
-        for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}"):
+        for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}"):
             action_metadata_json: dict[str, Any] = mp.core.file_utils.load_yaml_file(p)
             drms_with_json_contents: list[NonBuiltDynamicResultsMetadata] = _load_json_examples(
                 action_metadata_json["dynamic_results_metadata"], meta_path

@@ -53,7 +53,7 @@ class TestDisabledValidation:
         ping_def_file = (
             temp_integration
             / mp.core.constants.ACTIONS_DIR
-            / f"ping{mp.core.constants.DEF_FILE_SUFFIX}"
+            / f"ping{mp.core.constants.YAML_SUFFIX}"
         )
         _update_yaml_file(ping_def_file, {"is_enabled": False})
 
@@ -65,7 +65,7 @@ class TestDisabledValidation:
         connector_def_file = (
             temp_integration
             / mp.core.constants.CONNECTORS_DIR
-            / f"connector{mp.core.constants.DEF_FILE_SUFFIX}"
+            / f"connector{mp.core.constants.YAML_SUFFIX}"
         )
         _update_yaml_file(connector_def_file, {"is_enabled": False})
 
@@ -77,9 +77,7 @@ class TestDisabledValidation:
     def test_failure_on_disabled_job_flag(self, temp_integration: pathlib.Path) -> None:
         """Test failure when a job's 'is_enable' flag is false."""
         job_def_file = (
-            temp_integration
-            / mp.core.constants.JOBS_DIR
-            / f"job{mp.core.constants.DEF_FILE_SUFFIX}"
+            temp_integration / mp.core.constants.JOBS_DIR / f"job{mp.core.constants.YAML_SUFFIX}"
         )
         _update_yaml_file(job_def_file, {"is_enabled": False})
 

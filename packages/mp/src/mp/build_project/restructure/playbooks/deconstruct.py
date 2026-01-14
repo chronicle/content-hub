@@ -62,7 +62,7 @@ class PlaybookDeconstructor:
 
         for step in non_built_steps:
             sanitized_file_name: str = _sanitize_yaml_filename(step["instance_name"])
-            step_path: Path = step_dir / f"{sanitized_file_name}{mp.core.constants.DEF_FILE_SUFFIX}"
+            step_path: Path = step_dir / f"{sanitized_file_name}{mp.core.constants.YAML_SUFFIX}"
             mp.core.file_utils.save_yaml(step, step_path)
 
     def _create_trigger_file(self, non_built_trigger: NonBuiltTrigger) -> None:
@@ -111,7 +111,7 @@ class PlaybookDeconstructor:
             "allowed_debug_data",
         )
 
-        display_info_path: Path = self.out_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+        display_info_path: Path = self.out_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
 
         with Path.open(display_info_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f)
@@ -138,7 +138,7 @@ class PlaybookDeconstructor:
         for w in non_built_widgets:
             widget_path: Path = (
                 widgets_path
-                / f"{_sanitize_yaml_filename(w['title'])}{mp.core.constants.DEF_FILE_SUFFIX}"
+                / f"{_sanitize_yaml_filename(w['title'])}{mp.core.constants.YAML_SUFFIX}"
             )
             mp.core.file_utils.save_yaml(w, widget_path)
 

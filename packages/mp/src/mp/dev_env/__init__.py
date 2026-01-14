@@ -23,7 +23,7 @@ import typer
 from mp.telemetry import track_command
 
 from . import utils
-from .commands.integrations.commands import push_integration
+from .commands.integrations.push import push_integration
 from .commands.pull import pull_app
 from .commands.push import push_app
 

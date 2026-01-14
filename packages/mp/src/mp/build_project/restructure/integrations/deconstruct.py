@@ -306,5 +306,5 @@ class DeconstructIntegration:
 
 def _write_definitions(path: Path, component: Mapping[str, _ValidMetadata]) -> None:
     for file_name, metadata in component.items():
-        name: str = f"{file_name}{mp.core.constants.DEF_FILE_SUFFIX}"
+        name: str = f"{file_name}{mp.core.constants.YAML_SUFFIX}"
         mp.core.file_utils.write_yaml_to_file(metadata.to_non_built(), path / name)

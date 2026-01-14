@@ -43,7 +43,7 @@ def push_playbook(
         typer.Option(help="Push all playbook dependent blocks."),
     ] = False,
 ) -> None:
-    """Build and deploy playbook to the SOAR environment.
+    """Build and push playbook to the SOAR environment.
 
     Args:
         playbook: The playbook to build and push.
@@ -58,7 +58,7 @@ def push_playbook(
 
     zip_path: Path = _zip_playbooks(playbook, contents_to_push)
 
-    _push_zip_to_soar(zip_path)
+    _push_playbook_zip_to_soar(zip_path)
 
 
 def _get_dependent_blocks_names(playbook: str) -> set[str]:
@@ -74,7 +74,7 @@ def _zip_playbooks(main_playbook: str, content_names: set[str]) -> Path:
     return zip_path
 
 
-def _push_zip_to_soar(zip_path: Path) -> None:
+def _push_playbook_zip_to_soar(zip_path: Path) -> None:
     config = load_dev_env_config()
     backend_api: BackendAPI = get_backend_api(config)
 

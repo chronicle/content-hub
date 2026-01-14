@@ -106,7 +106,7 @@ def update_display_info(playbook_path: Path, updates: dict) -> None:
         setattr(display_info, key, value)
     mp.core.file_utils.save_yaml(
         display_info.to_non_built(),
-        playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME,
+        playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME,
     )
 
 
