@@ -158,12 +158,16 @@ def build(  # noqa: PLR0913
     quiet: Annotated[
         bool,
         typer.Option(
+            "--quiet",
+            "-q",
             help="Log less on runtime.",
         ),
     ] = False,
     verbose: Annotated[
         bool,
         typer.Option(
+            "--verbose",
+            "-v",
             help="Log more on runtime.",
         ),
     ] = False,

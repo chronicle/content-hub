@@ -44,7 +44,7 @@ WINDOWS_SCRIPT_NAME: str = "run_pre_build_tests.bat"
 UNIX_SCRIPT_NAME: str = "run_pre_build_tests.sh"
 SUCCESS_STATUS_CODES: set[int] = {0, 2}
 
-__all__: list[str] = ["Products", "TestIssue", "TestWarning", "app", "run_pre_build_tests"]
+__all__: list[str] = ["TestIssue", "TestWarning", "app", "run_pre_build_tests"]
 app: typer.Typer = typer.Typer()
 
 
@@ -88,6 +88,8 @@ def run_pre_build_tests(
     repository: Annotated[
         list[RepositoryType],
         typer.Option(
+            "--repository",
+            "-r",
             help="Build all integrations in specified integration repositories",
             default_factory=list,
         ),
@@ -95,6 +97,8 @@ def run_pre_build_tests(
     integration: Annotated[
         list[str],
         typer.Option(
+            "--integration",
+            "-i",
             help="Build a specified integration",
             default_factory=list,
         ),
@@ -109,12 +113,16 @@ def run_pre_build_tests(
     quiet: Annotated[
         bool,
         typer.Option(
+            "--quiet",
+            "-q",
             help="Log less on runtime.",
         ),
     ] = False,
     verbose: Annotated[
         bool,
         typer.Option(
+            "--verbose",
+            "-v",
             help="Log more on runtime.",
         ),
     ] = False,

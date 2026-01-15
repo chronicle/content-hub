@@ -127,12 +127,16 @@ def validate(  # noqa: PLR0913
     quiet: Annotated[
         bool,
         typer.Option(
+            "--quiet",
+            "-q",
             help="Suppress most logging output during runtime, showing only essential information.",
         ),
     ] = False,
     verbose: Annotated[
         bool,
         typer.Option(
+            "--verbose",
+            "-v",
             help="Enable verbose logging output during runtime for detailed debugging information.",
         ),
     ] = False,
