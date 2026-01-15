@@ -44,7 +44,7 @@ WINDOWS_SCRIPT_NAME: str = "run_pre_build_tests.bat"
 UNIX_SCRIPT_NAME: str = "run_pre_build_tests.sh"
 SUCCESS_STATUS_CODES: set[int] = {0, 2}
 
-__all__: list[str] = ["TestIssue", "TestWarning", "app", "run_pre_build_tests"]
+__all__: list[str] = ["Products", "TestIssue", "TestWarning", "app", "run_pre_build_tests"]
 app: typer.Typer = typer.Typer()
 
 
@@ -52,40 +52,39 @@ app: typer.Typer = typer.Typer()
 class TestParams:
     repository: Iterable[RepositoryType]
     integrations: Iterable[str]
-    groups: Iterable[str]
 
     def validate(self) -> None:
         """Validate the parameters.
 
         Validates input parameters to ensure that only one parameter among
-        `--repository`, `--groups`,
+        `--repository`,
          or `--integration` is used during execution.
 
         Raises appropriate error messages if none or more than one of these
         parameters is specified.
 
         Raises:
-            typer.BadParameter: If none of `--repository`, `--groups`, or
+            typer.BadParameter: If none of `--repository`, or
                 `--integration` is provided or more than one of them is used.
 
         """
         params: list[Iterable[str] | Iterable[RepositoryType]] = self._as_list()
         msg: str
         if not any(params):
-            msg = "At least one of --repository, --groups, or --integration must be used."
+            msg = "At least one of --repository, or --integration must be used."
             raise typer.BadParameter(msg)
 
         if sum(map(bool, params)) != 1:
-            msg = "Only one of --repository, --groups, or --integration shall be used."
+            msg = "Only one of --repository, or --integration shall be used."
             raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
-        return [self.repository, self.integrations, self.groups]
+        return [self.repository, self.integrations]
 
 
 @app.command(name="test", help="Run integration pre_build tests")
 @track_command
-def run_pre_build_tests(  # noqa: PLR0913
+def run_pre_build_tests(
     repository: Annotated[
         list[RepositoryType],
         typer.Option(
@@ -97,13 +96,6 @@ def run_pre_build_tests(  # noqa: PLR0913
         list[str],
         typer.Option(
             help="Build a specified integration",
-            default_factory=list,
-        ),
-    ],
-    group: Annotated[
-        list[str],
-        typer.Option(
-            help="Build all integrations of a specified integration group",
             default_factory=list,
         ),
     ],
@@ -132,7 +124,6 @@ def run_pre_build_tests(  # noqa: PLR0913
     Args:
         repository: the repository to build
         integration: the integrations to build
-        group: the groups to build
         raise_error_on_violations: whether to raise error if any violations are found
         quiet: quiet log options
         verbose: Verbose log options
@@ -146,12 +137,11 @@ def run_pre_build_tests(  # noqa: PLR0913
 
     repository = ensure_valid_list(repository)
     integration = ensure_valid_list(integration)
-    group = ensure_valid_list(group)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    params: TestParams = TestParams(repository, integration, group)
+    params: TestParams = TestParams(repository, integration)
     params.validate()
 
     commercial_paths: Iterable[Path] = mp.core.file_utils.get_integration_base_folders_paths(
@@ -176,19 +166,6 @@ def run_pre_build_tests(  # noqa: PLR0913
         )
         all_integration_results.extend(_test_integrations(community_integrations))
 
-    elif group:
-        commercial_groups: set[Path] = _get_mp_paths_from_names(
-            names=group,
-            marketplace_paths=commercial_paths,
-        )
-        all_integration_results.extend(_test_groups(commercial_groups))
-
-        community_groups: set[Path] = _get_mp_paths_from_names(
-            names=group,
-            marketplace_paths=community_paths,
-        )
-        all_integration_results.extend(_test_groups(community_groups))
-
     elif repository:
         repos: set[RepositoryType] = set(repository)
         if RepositoryType.COMMERCIAL in repos:
@@ -203,23 +180,11 @@ def run_pre_build_tests(  # noqa: PLR0913
 
 
 def _test_repository(repo_paths: Iterable[Path]) -> list[IntegrationTestResults]:
-    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
-        *repo_paths
-    )
+    integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(*repo_paths)
     all_integration_results: list[IntegrationTestResults] = []
-    if products.integrations:
-        all_integration_results.extend(_test_integrations(products.integrations))
+    if integrations:
+        all_integration_results.extend(_test_integrations(integrations))
 
-    if products.groups:
-        all_integration_results.extend(_test_groups(products.groups))
-
-    return all_integration_results
-
-
-def _test_groups(groups: Iterable[Path]) -> list[IntegrationTestResults]:
-    all_integration_results: list[IntegrationTestResults] = []
-    for group in groups:
-        all_integration_results.extend(_test_integrations(group.iterdir()))
     return all_integration_results
 
 

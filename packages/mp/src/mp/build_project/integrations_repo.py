@@ -1,7 +1,7 @@
 """Core logic for building and deconstructing integration marketplaces.
 
 This module defines the `Marketplace` class, which provides the functionality
-to build and deconstruct integrations and groups of integrations within a
+to build and deconstruct integrations of integrations within a
 marketplace directory. It orchestrates the process of reading integration
 definitions, restructuring their components, and generating the final
 marketplace JSON file. It also handles the reverse process of deconstructing
@@ -49,16 +49,13 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
 
-    from mp.core.custom_types import Products
-
 
 class IntegrationsRepo:
     def __init__(self, integrations_dir: Path) -> None:
         """Class constructor.
 
         Args:
-            integrations_dir: The path to a Content-Hub integrations folders
-                and groups exist
+            integrations_dir: The path to a Content-Hub integrations folder.
 
         """
         self.name: str = integrations_dir.name
@@ -75,39 +72,9 @@ class IntegrationsRepo:
         write_marketplace_json(self.out_dir)
 
     def build(self) -> None:
-        """Build all integrations and groups in the marketplace."""
-        products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
-            *self.paths
-        )
-        self.build_groups(products.groups)
-        self.build_integrations(products.integrations)
-
-    def build_groups(self, group_paths: Iterable[Path]) -> None:
-        """Build all groups provided by `group_paths`.
-
-        Args:
-            group_paths: The paths of integrations to build
-
-        """
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_group, group_paths)
-
-    def build_group(self, group_dir: Path) -> None:
-        """Build a single group provided by `group_path`.
-
-        Args:
-            group_dir: The paths of the integration to build
-
-        Raises:
-            FileNotFoundError: when `group_dir` does not exist
-
-        """
-        if not group_dir.exists():
-            msg: str = f"Invalid integration {group_dir}"
-            raise FileNotFoundError(msg)
-
-        self.build_integrations(group_dir.iterdir())
+        """Build all integrations in the marketplace."""
+        integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(*self.paths)
+        self.build_integrations(integrations)
 
     def build_integrations(self, integration_paths: Iterable[Path]) -> None:
         """Build all integrations provided by `integration_paths`.
