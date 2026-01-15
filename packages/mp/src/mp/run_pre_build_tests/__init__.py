@@ -44,7 +44,7 @@ WINDOWS_SCRIPT_NAME: str = "run_pre_build_tests.bat"
 UNIX_SCRIPT_NAME: str = "run_pre_build_tests.sh"
 SUCCESS_STATUS_CODES: set[int] = {0, 2}
 
-__all__: list[str] = ["TestIssue", "TestWarning", "app", "run_pre_build_tests"]
+__all__: list[str] = ["Products", "TestIssue", "TestWarning", "app", "run_pre_build_tests"]
 app: typer.Typer = typer.Typer()
 
 
