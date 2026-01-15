@@ -27,7 +27,7 @@ import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
 from mp.core.code_manipulation import TestWarning
-from mp.core.custom_types import Products, RepositoryType
+from mp.core.custom_types import RepositoryType
 from mp.core.utils import ensure_valid_list, is_windows
 from mp.telemetry import track_command
 
@@ -44,7 +44,7 @@ WINDOWS_SCRIPT_NAME: str = "run_pre_build_tests.bat"
 UNIX_SCRIPT_NAME: str = "run_pre_build_tests.sh"
 SUCCESS_STATUS_CODES: set[int] = {0, 2}
 
-__all__: list[str] = ["Products", "TestIssue", "TestWarning", "app", "run_pre_build_tests"]
+__all__: list[str] = ["TestIssue", "TestWarning", "app", "run_pre_build_tests"]
 app: typer.Typer = typer.Typer()
 
 
