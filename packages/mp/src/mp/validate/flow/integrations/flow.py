@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import mp.core.config
 import mp.core.file_utils
 from mp.build_project.integrations_repo import IntegrationsRepo
-from mp.core.custom_types import Products, RepositoryType
+from mp.core.custom_types import RepositoryType
 from mp.validate.data_models import (
     PRE_BUILD,
     Configurations,
@@ -43,7 +43,6 @@ if TYPE_CHECKING:
 
 def validate_integrations(
     integrations: Iterable[str],
-    groups: Iterable[str],
     repositories: Iterable[RepositoryType],
     *,
     only_pre_build: bool = False,
@@ -52,7 +51,6 @@ def validate_integrations(
 
     Args:
         integrations: An iterable of playbook names to validate.
-        groups: A list of integration groups.
         repositories: An iterable of repository to validate.
         only_pre_build: If True, only pre-build validations will run.
 
@@ -87,19 +85,6 @@ def validate_integrations(
             run_configurations,
         )
 
-    elif groups:
-        commercial_output = _validate_groups(
-            get_marketplace_paths_from_names(groups, commercial_mp.paths),
-            commercial_mp,
-            run_configurations,
-        )
-
-        community_output = _validate_groups(
-            get_marketplace_paths_from_names(groups, community_mp.paths),
-            community_mp,
-            run_configurations,
-        )
-
     else:
         repos: set[RepositoryType] = set(repositories)
         commercial_output = {}
@@ -117,65 +102,9 @@ def validate_integrations(
 
 
 def _validate_repo(marketplace: IntegrationsRepo, configurations: Configurations) -> FullReport:
-    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
-        *marketplace.paths
-    )
+    integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(*marketplace.paths)
 
-    integrations_outputs: FullReport = _validate_integrations(
-        products.integrations, marketplace, configurations
-    )
-    groups_output: FullReport = _validate_groups(products.groups, marketplace, configurations)
-
-    validation_outputs: FullReport = combine_results(integrations_outputs, groups_output)
-
-    return validation_outputs
-
-
-def _validate_groups(
-    groups: Iterable[Path],
-    marketplace: IntegrationsRepo,
-    configurations: Configurations,
-) -> FullReport:
-    """Validate a list of integration group names within a specific marketplace scope.
-
-    Returns:
-        list[ValidationResults]: List contains the Validation results object
-
-    """
-    validation_outputs: FullReport = {}
-    if not groups:
-        return validation_outputs
-
-    pre_build_output: list[ValidationResults] = _process_groups_for_validation(
-        groups, _run_pre_build_validations
-    )
-    validation_outputs[PRE_BUILD] = pre_build_output
-
-    if not configurations.only_pre_build:
-        marketplace.build_groups(groups)
-
-    return validation_outputs
-
-
-def _process_groups_for_validation(
-    groups: Iterable[Path],
-    validation_function: ValidationFn,
-) -> list[ValidationResults]:
-    """Iterate through groups and perform pre-build validation on their integrations.
-
-    Returns:
-        list[ValidationResults]: List contains the Validation results object
-
-    """
-    validation_outputs: list[ValidationResults] = []
-    for group_dir in groups:
-        if group_dir.is_dir() and group_dir.exists():
-            group_output: list[ValidationResults] = _run_validations(
-                group_dir.iterdir(), validation_function
-            )
-            validation_outputs.extend(group_output)
-
-    return validation_outputs
+    return _validate_integrations(integrations, marketplace, configurations)
 
 
 def _validate_integrations(

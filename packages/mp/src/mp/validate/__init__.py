@@ -49,7 +49,6 @@ app: typer.Typer = typer.Typer()
 class ValidateParams:
     repository: Iterable[RepositoryType]
     integrations: Iterable[str]
-    groups: Iterable[str]
     playbooks: Iterable[str]
 
     def validate(self) -> None:
@@ -62,27 +61,26 @@ class ValidateParams:
 
         Raises:
             typer.BadParameter:
-                If none of the required options (--repository, --groups, or
+                If none of the required options (--repository or
                 --integration) are provided.
             typer.BadParameter:
-                If more than one of the options (--repository, --groups,
+                If more than one of the options (--repository,
                 or --integration) is used at the same time.
 
         """
         mutually_exclusive_options = [
             self.repository,
             self.integrations,
-            self.groups,
             self.playbooks,
         ]
         msg: str
 
         if not any(mutually_exclusive_options):
-            msg = "At least one of --repository, --groups, or --integration must be used."
+            msg = "At least one of --repository, or --integration must be used."
             raise typer.BadParameter(msg)
 
         if sum(map(bool, mutually_exclusive_options)) != 1:
-            msg = "Only one of --repository, --groups, --integration or --playbooks shall be used."
+            msg = "Only one of --repository, --integration or --playbooks shall be used."
             raise typer.BadParameter(msg)
 
 
@@ -104,15 +102,6 @@ def validate(  # noqa: PLR0913
             "--integration",
             "-i",
             help="Run validations on a specified integrations.",
-            default_factory=list,
-        ),
-    ],
-    groups: Annotated[
-        list[str],
-        typer.Option(
-            "--group",
-            "-g",
-            help="Run validations on all integrations belonging to a specified integration group.",
             default_factory=list,
         ),
     ],
@@ -138,12 +127,16 @@ def validate(  # noqa: PLR0913
     quiet: Annotated[
         bool,
         typer.Option(
+            "--quiet",
+            "-q",
             help="Suppress most logging output during runtime, showing only essential information.",
         ),
     ] = False,
     verbose: Annotated[
         bool,
         typer.Option(
+            "--verbose",
+            "-v",
             help="Enable verbose logging output during runtime for detailed debugging information.",
         ),
     ] = False,
@@ -157,8 +150,6 @@ def validate(  # noqa: PLR0913
                     Validation will be performed on all integrations found
                     within these repositories.
         integration: A list of specific integrations to validate.
-        groups: A list of integration groups. Validation will apply to all
-               integrations associated with these groups.
         playbook: A list of specific playbooks to validate.
         only_pre_build: If set to True, only pre-build validation checks are
                         performed.
@@ -171,13 +162,12 @@ def validate(  # noqa: PLR0913
     """
     repositories = ensure_valid_list(repository)
     integrations = ensure_valid_list(integration)
-    groups = ensure_valid_list(groups)
     playbooks = ensure_valid_list(playbook)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    params: ValidateParams = ValidateParams(repositories, integrations, groups, playbooks)
+    params: ValidateParams = ValidateParams(repositories, integrations, playbooks)
     params.validate()
 
     full_report: dict[ContentType, FullReport] = {}
@@ -186,7 +176,7 @@ def validate(  # noqa: PLR0913
         integrations, repositories
     ):
         full_report[ContentType.INTEGRATION], f1 = validate_integrations(
-            integrations, groups, repositories, only_pre_build=only_pre_build
+            integrations, repositories, only_pre_build=only_pre_build
         )
 
     if RepositoryType.ALL_CONTENT in repositories or should_preform_playbook_logic(

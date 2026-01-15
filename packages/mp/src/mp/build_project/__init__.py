@@ -1,7 +1,7 @@
 """Package for building and deconstructing integration projects.
 
 This package provides the `build` CLI command for processing integration
-repositories, groups, or individual integrations. It handles both building
+repositories, or individual integrations. It handles both building
 integrations into a deployable format and deconstructing built integrations
 back into their source structure. The package also includes modules for
 managing the marketplace JSON, restructuring integration components (metadata,
@@ -55,7 +55,6 @@ app: typer.Typer = typer.Typer()
 class BuildParams:
     repository: Iterable[RepositoryType]
     integrations: Iterable[str]
-    group: Iterable[str]
     playbooks: Iterable[str]
     deconstruct: bool
     custom_integration: bool
@@ -70,10 +69,10 @@ class BuildParams:
 
         Raises:
             typer.BadParameter:
-                If none of the required options (--repository, --groups, or
-                --integration) are provided.
+                If none of the required options (--repository,
+                or --integration) are provided.
             typer.BadParameter:
-                If more than one of the options (--repository, --groups,
+                If more than one of the options (--repository,
                 or --integration) is used at the same time.
             typer.BadParameter:
                 If the --deconstruct option is used with any option
@@ -83,19 +82,19 @@ class BuildParams:
         params: list[Iterable[str] | Iterable[RepositoryType]] = self._as_list()
         msg: str
         if not any(params):
-            msg = "At least one of --repository, --groups, --integration, --playbook must be used."
+            msg = "At least one of --repository, --integration, --playbook must be used."
             raise typer.BadParameter(msg)
 
         if sum(map(bool, params)) != 1:
-            msg = "Only one of --repository, --groups, --integration, --playbook shall be used."
+            msg = "Only one of --repository, --integration, --playbook shall be used."
             raise typer.BadParameter(msg)
 
-        if self.deconstruct and (self.group or self.repository):
+        if self.deconstruct and self.repository:
             msg = "--deconstruct works only with --integration or --playbook."
             raise typer.BadParameter(msg)
 
         if self.custom_integration and (
-            self.group or self.repository or RepositoryType.PLAYBOOKS in self.repository
+            self.repository or RepositoryType.PLAYBOOKS in self.repository
         ):
             msg = "--custom_integration works only with --integration."
             raise typer.BadParameter(msg)
@@ -105,7 +104,7 @@ class BuildParams:
             raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
-        return [self.repository, self.integrations, self.group, self.playbooks]
+        return [self.repository, self.integrations, self.playbooks]
 
 
 @app.command(name="build", help="Build the marketplace")
@@ -126,15 +125,6 @@ def build(  # noqa: PLR0913
             "--integration",
             "-i",
             help="Build a specified integration",
-            default_factory=list,
-        ),
-    ],
-    integration_group: Annotated[
-        list[str],
-        typer.Option(
-            "--group",
-            "-g",
-            help="Build all integrations of a specified integration group",
             default_factory=list,
         ),
     ],
@@ -168,12 +158,16 @@ def build(  # noqa: PLR0913
     quiet: Annotated[
         bool,
         typer.Option(
+            "--quiet",
+            "-q",
             help="Log less on runtime.",
         ),
     ] = False,
     verbose: Annotated[
         bool,
         typer.Option(
+            "--verbose",
+            "-v",
             help="Log more on runtime.",
         ),
     ] = False,
@@ -183,7 +177,6 @@ def build(  # noqa: PLR0913
     Args:
         repositories: the repositories to build
         integrations: the integrations to build
-        integration_group: the integration groups to build
         playbooks: the playbooks to build
         deconstruct: whether to deconstruct instead of build
         custom_integration: if need to build specific integration from the custom repo.
@@ -193,7 +186,6 @@ def build(  # noqa: PLR0913
     """
     repositories = ensure_valid_list(repositories)
     integrations = ensure_valid_list(integrations)
-    integration_group = ensure_valid_list(integration_group)
     playbooks = ensure_valid_list(playbooks)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
@@ -202,7 +194,6 @@ def build(  # noqa: PLR0913
     params: BuildParams = BuildParams(
         repository=repositories,
         integrations=integrations,
-        group=integration_group,
         playbooks=playbooks,
         deconstruct=deconstruct,
         custom_integration=custom_integration,
@@ -212,7 +203,6 @@ def build(  # noqa: PLR0913
     if should_preform_integration_logic(integrations, repositories):
         build_integrations(
             integrations,
-            integration_group,
             repositories,
             deconstruct=deconstruct,
             custom_integration=custom_integration,
