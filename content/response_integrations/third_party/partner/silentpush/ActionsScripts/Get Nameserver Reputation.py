@@ -1,0 +1,66 @@
+from SiemplifyAction import SiemplifyAction
+from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
+
+from datetime import datetime
+
+from constants import (INTEGRATION_NAME, GET_NAMESERVER_REPUTATION_SCRIPT_NAME )
+from SilentPushManager import SilentPushManager
+
+@output_handler
+def main():
+    siemplify = SiemplifyAction()
+    siemplify.script_name = GET_NAMESERVER_REPUTATION_SCRIPT_NAME 
+    
+    # Extract Integration config
+    server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
+    api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
+
+    nameserver = siemplify.extract_action_param("nameserver", print_value=True)
+    explain = siemplify.extract_action_param("explain", print_value=True)
+    limit = siemplify.extract_action_param("limit", print_value=True)
+
+    try:
+        sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
+        reputation_data = sp_manager.get_nameserver_reputation(nameserver,explain,limit)
+        
+        if not isinstance(reputation_data, list):
+            demisto.error(f"Expected list, got: {type(reputation_data)}")
+            reputation_data = []
+
+        for item in reputation_data:
+            date_val = item.get("date")
+            if isinstance(date_val, int):
+                try:
+                    parsed_date = datetime.strptime(str(date_val), "%Y%m%d").date()
+                    item["date"] = parsed_date.isoformat()
+                except ValueError as e:
+                    demisto.error(f"Failed to parse date {date_val}: {e}")
+
+        if not reputation_data:
+            error_message = f"No valid reputation history found for nameserver: {nameserver}"
+            siemplify.LOGGER.error(error_message)
+            status = EXECUTION_STATE_FAILED
+            siemplify.end(error_message, "false", status)            
+
+        output_message = f"nameserver: {nameserver}, reputation_data: {reputation_data}"
+        status = EXECUTION_STATE_COMPLETED
+        result_value = True
+    except Exception as error:
+        result_value = False
+        status = EXECUTION_STATE_FAILED
+        output_message = f"Failed to retrieve nameserver reputation :{nameserver} for {INTEGRATION_NAME} server! Error: {error}"
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(error)
+
+    for entity in siemplify.target_entities:
+        print(entity.identifier)
+
+
+
+    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.end(output_message, result_value, status)
+
+
+if __name__ == "__main__":
+    main()
