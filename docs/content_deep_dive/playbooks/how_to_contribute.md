@@ -44,8 +44,8 @@ If you prefer to contribute manually, follow these steps:
 
 - ### 2.1. Export the playbook
     - In your Google SecOps instance, navigate to the playbook and export it.
-    -
-    ![Export Playbook](/docs/resources/playbooks/export_playbook.png)
+  
+  ![Export Playbook](/docs/resources/playbooks/export_playbook.png)
 
 - ### 2.2. Unzip the playbook
     - The exported file is a zip archive. Unzip it to extract the playbook JSON file.
