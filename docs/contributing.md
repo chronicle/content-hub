@@ -45,6 +45,8 @@ with your changes to the main repository's main branch.
 
 ### How To Contribute
 
+### Detailed Contribution Guides
+
 - [Playbooks](/docs/content_deep_dive/playbooks/how_to_contribute.md)
 
 ### Code Reviews
@@ -58,8 +60,8 @@ for this purpose.
 * **Validations**: Ensure all automated checks pass.
 * **Ready for Review**: If you opened your PR as a "Draft", please mark it as "Ready for Review"
   once all validations pass. This signals to maintainers that the code is ready for inspection.
-* **Version Bump**: If you are modifying an existing integration, remember to bump the version in
-  the `pyproject.toml` file. This is required for the changes to be released.
+* **Version Bump**: If you are modifying an existing content, remember to increase the version of
+  that content. This is required for the changes to be released.
 
 ### Pre-Submission Checklist
 
