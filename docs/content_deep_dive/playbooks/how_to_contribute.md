@@ -15,11 +15,10 @@ The `mp` tool helps automate the process of pulling, validating, and structuring
     - [Use the
       'dev-env' commands to login and pull the playbook](/packages/mp/docs/commands/dev_env.md).
   ```bash
-      mp dev-env login --api-root <soar_url> --api-key <api_key>
-   ```
-    ```bash
-      mp dev-env pull playbook <playbook_name>
-   ```
+  mp dev-env login --api-root <soar_url> --api-key <api_key>
+  
+  mp dev-env pull playbook <playbook_name>
+  ```
 
 - ### 1.3. Move the pulled playbook
     - Move the playbook to the correct directory:

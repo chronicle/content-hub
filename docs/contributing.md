@@ -26,16 +26,12 @@ everything is resolved, you will receive a Development License and access to Goo
 If you already have access to Google SecOps through mutual customers/partners, then you can skip
 this step and start contributing.
 
-### How To Contribute
-
-- [Playbooks](/docs/content_deep_dive/playbooks/how_to_contribute.md)
-
 ### Review our Community Guidelines
 
 This project follows [Google's Open Source Community
 Guidelines](https://opensource.google/conduct/).
 
-## Contribution process
+## Contribution Process
 
 ### Cloning
 
@@ -46,6 +42,10 @@ with your changes to the main repository's main branch.
   about [forking](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo)
 * Read about
   the [Fork & Pull Request Workflow](https://gist.github.com/Chaser324/ce0505fbed06b947d962)
+
+### How To Contribute
+
+- [Playbooks](/docs/content_deep_dive/playbooks/how_to_contribute.md)
 
 ### Code Reviews
 
