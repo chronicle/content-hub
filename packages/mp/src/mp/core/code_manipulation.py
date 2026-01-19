@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import libcst as cst
@@ -198,21 +199,21 @@ class SdkImportTransformer(cst.CSTTransformer):
         return updated_node.with_changes(names=tuple(new_aliases)) if changed else updated_node
 
 
-class BaseCoreImportTransformer(cst.CSTTransformer):
+class BaseCoreImportTransformer(cst.CSTTransformer, ABC):
     """Base transformer for handling core package imports."""
 
     def __init__(self, core_module_names: set[str]) -> None:
         super().__init__()
         self.core_module_names = core_module_names
 
+    @abstractmethod
     def _is_core_alias(self, full_module_name: str) -> bool:
         """Determine if a module name is a core module."""
-        raise NotImplementedError
 
     @staticmethod
+    @abstractmethod
     def _create_core_import_from(aliases: tuple[cst.ImportAlias, ...]) -> cst.ImportFrom:
         """Create the specific 'from ... import' node for core aliases."""
-        raise NotImplementedError
 
     def leave_SimpleStatementLine(  # noqa: N802
         self,
@@ -261,6 +262,9 @@ class BaseCoreImportTransformer(cst.CSTTransformer):
         self, aliases: Iterable[cst.ImportAlias]
     ) -> tuple[list[cst.ImportAlias], list[cst.ImportAlias]]:
         """Split import aliases into core and non-core lists.
+
+        Args:
+            aliases: An iterable of import aliases to partition.
 
         Returns:
             A tuple containing two lists: core aliases and non-core aliases.
