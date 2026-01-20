@@ -1,15 +1,15 @@
+from constants import GET_IPV4_REPUTATION_SCRIPT_NAME, INTEGRATION_NAME
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
-
-from constants import (INTEGRATION_NAME, GET_IPV4_REPUTATION_SCRIPT_NAME )
+from SiemplifyUtils import output_handler
 from SilentPushManager import SilentPushManager
+
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
 
-    siemplify.script_name = GET_IPV4_REPUTATION_SCRIPT_NAME 
+    siemplify.script_name = GET_IPV4_REPUTATION_SCRIPT_NAME
 
     # Extract Integration config
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
@@ -19,17 +19,17 @@ def main():
     explain = siemplify.extract_action_param("explain", print_value=True)
     limit = siemplify.extract_action_param("limit", print_value=True)
     if explain == "false":
-        explaination:bool = False
+        explaination: bool = False
     else:
-        explaination:bool = True
+        explaination: bool = True
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
         raw_response = sp_manager.get_ipv4_reputation(nameserver, explaination, limit)
-        
+
         history = raw_response.get("ip_reputation_history", {})
-        
+
         if not history:
-            error_message = f"No reputation data found for IPv4: {ipv4}"
+            error_message = f"No reputation data found for IPv4: {nameserver}"
             siemplify.LOGGER.error(error_message)
             status = EXECUTION_STATE_FAILED
             siemplify.end(error_message, "false", status)
@@ -40,13 +40,20 @@ def main():
     except Exception as error:
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"Failed to retrieve reputation data found for IPv4: {ipv4} for {INTEGRATION_NAME} server! Error: {error}"
+        output_message = (
+            f"Failed to retrieve reputation data found for IPv4: {nameserver} "
+            f"for {INTEGRATION_NAME} server! Error: {error}"
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
     for entity in siemplify.target_entities:
         print(entity.identifier)
 
-    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(
+        "\n  status: {}\n  result_value: {}\n  output_message: {}".format(
+            status, result_value, output_message
+        )
+    )
     siemplify.end(output_message, result_value, status)
 
 

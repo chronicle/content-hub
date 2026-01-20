@@ -1,9 +1,9 @@
+from constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
-
-from constants import (INTEGRATION_NAME, PING_SCRIPT_NAME)
+from SiemplifyUtils import output_handler
 from SilentPushManager import SilentPushManager
+
 
 @output_handler
 def main():
@@ -32,7 +32,10 @@ def main():
 
         siemplify.LOGGER.info(f"Connecting to {INTEGRATION_NAME}...\n")
         sp_manager.test_connection()
-        output_message = f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
+        output_message = (
+            f"Successfully connected to the {INTEGRATION_NAME} "
+            f"server with the provided connection parameters!"
+        )
 
     except Exception as error:
         result_value = False
@@ -49,8 +52,5 @@ def main():
     siemplify.end(output_message, result_value, status)
 
 
-
 if __name__ == "__main__":
     main()
-
-

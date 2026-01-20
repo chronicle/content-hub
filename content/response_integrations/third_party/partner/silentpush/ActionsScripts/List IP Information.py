@@ -1,15 +1,14 @@
-import ipaddress
+from constants import INTEGRATION_NAME, LIST_IP_INFORMATION_SCRIPT_NAME
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
-
-from constants import (INTEGRATION_NAME, LIST_IP_INFORMATION_SCRIPT_NAME )
+from SiemplifyUtils import output_handler
 from SilentPushManager import SilentPushManager
+
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    siemplify.script_name = LIST_IP_INFORMATION_SCRIPT_NAME 
+    siemplify.script_name = LIST_IP_INFORMATION_SCRIPT_NAME
 
     # Extract Integration config
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
@@ -17,24 +16,23 @@ def main():
 
     ips = siemplify.extract_action_param("ips", print_value=True)
     ips = ips.split(",")
-    
+
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
         ipv4_addresses, ipv6_addresses = validate_ips(ips, sp_manager)
-        
+
         results = []
         if ipv4_addresses:
             results.extend(gather_ip_information(sp_manager, ipv4_addresses, resource="ipv4"))
 
         if ipv6_addresses:
             results.extend(gather_ip_information(sp_manager, ipv6_addresses, resource="ipv6"))
-        
+
         if not results:
             error_message = f"No information found for IPs: {', '.join(ips)}"
             siemplify.LOGGER.error(error_message)
             status = EXECUTION_STATE_FAILED
             siemplify.end(error_message, "false", status)
-            
 
         output_message = f"Comprehensive IP Information : {results}"
         status = EXECUTION_STATE_COMPLETED
@@ -42,37 +40,24 @@ def main():
     except Exception as error:
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"Failed to retrieve Comprehensive IP Information of IP's :{ips} for {INTEGRATION_NAME} server! Error: {error}"
+        output_message = (
+            f"Failed to retrieve Comprehensive IP Information "
+            f"of IP's :{ips} for {INTEGRATION_NAME} server! Error: {error}"
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
-
 
     for entity in siemplify.target_entities:
         print(entity.identifier)
 
-    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(
+        "\n  status: {}\n  result_value: {}\n  output_message: {}".format(
+            status, result_value, output_message
+        )
+    )
     siemplify.end(output_message, result_value, status)
 
-def validate_ip_address(self, ip: str, allow_ipv6: bool = True) -> bool:
-        """
-        Validate an IP address.
 
-        Args:
-            self: The instance of the class.
-            ip (str): IP address to validate.
-            allow_ipv6 (bool, optional): Whether to allow IPv6 addresses. Defaults to True.
-
-        Returns:
-            bool: True if valid IP address, False otherwise.
-        """
-        try:
-            ip = ip.strip()
-            ip_obj = ipaddress.ip_address(ip)
-
-            return not (not allow_ipv6 and ip_obj.version == 6)
-        except ValueError:
-            return False
-        
 def validate_ips(ips: list, client: SilentPushManager) -> tuple:
     """
     Validates and categorizes the IPs into IPv4 and IPv6 addresses.
@@ -110,6 +95,7 @@ def gather_ip_information(client: SilentPushManager, ip_addresses: list, resourc
     """
     ip_info = client.list_ip_information(ip_addresses, resource=resource)
     return ip_info.get("response", {}).get("ip2asn", [])
+
 
 if __name__ == "__main__":
     main()

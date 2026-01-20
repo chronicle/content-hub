@@ -1,15 +1,14 @@
+from constants import GET_ASN_REPUTATION_SCRIPT_NAME, INTEGRATION_NAME
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
-
-from constants import (INTEGRATION_NAME, GET_ASN_REPUTATION_SCRIPT_NAME )
+from SiemplifyUtils import output_handler
 from SilentPushManager import SilentPushManager
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    siemplify.script_name = GET_ASN_REPUTATION_SCRIPT_NAME 
+    siemplify.script_name = GET_ASN_REPUTATION_SCRIPT_NAME
 
     # Extract Integration config
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
@@ -22,15 +21,15 @@ def main():
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
         raw_response = sp_manager.get_asn_reputation(asn, limit, explain)
-        
+
         asn_reputation = extract_and_sort_asn_reputation(raw_response)
-        
+
         if not asn_reputation:
             error_message = f"No reputation data found for ASN {asn}."
             siemplify.LOGGER.error(error_message)
             status = EXECUTION_STATE_FAILED
             siemplify.end(error_message, "false", status)
-        
+
         status = EXECUTION_STATE_COMPLETED
         result_value = True
         data_for_table = prepare_asn_reputation_table(asn_reputation, explain)
@@ -39,16 +38,23 @@ def main():
     except Exception as error:
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"Failed to retrieve reputation data found for ASN {asn} for {INTEGRATION_NAME} server! Error: {error}"
+        output_message = (
+            f"Failed to retrieve reputation data found for ASN {asn} "
+            f"for {INTEGRATION_NAME} server! Error: {error}"
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
-
 
     for entity in siemplify.target_entities:
         print(entity.identifier)
 
-    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(
+        "\n  status: {}\n  result_value: {}\n  output_message: {}".format(
+            status, result_value, output_message
+        )
+    )
     siemplify.end(output_message, result_value, status)
+
 
 def prepare_asn_reputation_table(asn_reputation: list, explain: bool) -> list:
     """
@@ -62,7 +68,7 @@ def prepare_asn_reputation_table(asn_reputation: list, explain: bool) -> list:
         list: Data formatted for the table.
     """
     data_for_table = []
-    
+
     for entry in asn_reputation:
         row = {
             "ASN": entry.get("asn"),
@@ -70,11 +76,11 @@ def prepare_asn_reputation_table(asn_reputation: list, explain: bool) -> list:
             "ASName": entry.get("asname"),
             "Date": entry.get("date"),
         }
-        if explain and entry.get("asn_reputation_explain") :
-            print("On line 73", explain)
+        if explain and entry.get("asn_reputation_explain"):
             row["Explanation"] = entry.get("asn_reputation_explain")
         data_for_table.append(row)
     return data_for_table
+
 
 def extract_and_sort_asn_reputation(raw_response: dict) -> list:
     """
@@ -91,7 +97,9 @@ def extract_and_sort_asn_reputation(raw_response: dict) -> list:
     if not isinstance(response_data, dict):
         response_data = {"asn_reputation": response_data}
 
-    asn_reputation = response_data.get("asn_reputation") or response_data.get("asn_reputation_history", [])
+    asn_reputation = response_data.get("asn_reputation") or response_data.get(
+        "asn_reputation_history", []
+    )
 
     if isinstance(asn_reputation, dict):
         asn_reputation = [asn_reputation]

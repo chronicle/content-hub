@@ -1,15 +1,10 @@
 import ipaddress
-import requests
-
 import json
-import urllib3
-import traceback
 from typing import Any
-import ast
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 
+import requests
 from exceptions import SilentPushExceptions
-
 
 """ CONSTANTS """
 
@@ -64,7 +59,13 @@ class SilentPushManager:
         self._headers = {"X-API-Key": api_key, "Content-Type": CONTENT_TYPE}
 
     def _http_request(  # type: ignore[override]
-        self, method: str, url_suffix: str = "", params: dict = None, data: dict = None, url: str = None, **kwargs
+        self,
+        method: str,
+        url_suffix: str = "",
+        params: dict = None,
+        data: dict = None,
+        url: str = None,
+        **kwargs,
     ) -> Any:
         """
         Perform an HTTP request to the SilentPush API.
@@ -86,18 +87,16 @@ class SilentPushManager:
 
         try:
             response = requests.request(
-                method=method,
-                url=full_url,
-                headers=self._headers,
-                params=params,
-                json=data
+                method=method, url=full_url, headers=self._headers, params=params, json=data
             )
         except requests.exceptions.RequestException as e:
             raise SilentPushExceptions(f"Connection error: {str(e)}")
 
         # Check for non-2xx HTTP responses
         if not response.ok:
-            raise SilentPushExceptions(f"HTTP {response.status_code} Error: {response.text}", res=response)
+            raise SilentPushExceptions(
+                f"HTTP {response.status_code} Error: {response.text}", res=response
+            )
 
         # Try parsing JSON
         try:
@@ -169,11 +168,11 @@ class SilentPushManager:
             "whois_date_after": whois_date_after,
             "skip": skip,
         }
-        filter_params:dict = {key:value for key, value in params.items() if value is not None}
+        filter_params: dict = {key: value for key, value in params.items() if value is not None}
 
         # Make the request with the filtered parameters
         return self._http_request("GET", url_suffix, params=filter_params)
-    
+
     def get_job_status(self, job_id: str, params: dict) -> dict[str, Any]:
         """
         Retrieve the status of a specific job.
@@ -195,7 +194,7 @@ class SilentPushManager:
             raise ValueError("max_wait must be an integer between 0 and 25")
 
         return self._http_request(method="GET", url_suffix=url_suffix, params=params)
-    
+
     def get_nameserver_reputation(self, nameserver: str, explain: bool = False, limit: int = None):
         """
         Retrieve historical reputation data for the specified nameserver.
@@ -212,7 +211,7 @@ class SilentPushManager:
 
         params = {"explain": int(bool(explain)), "limit": limit}
 
-        filter_params:dict = {key:value for key, value in params.items() if value is not None}
+        filter_params: dict = {key: value for key, value in params.items() if value is not None}
 
         response = self._http_request(method="GET", url_suffix=url_suffix, params=filter_params)
 
@@ -224,7 +223,9 @@ class SilentPushManager:
 
         return response.get("response", {}).get("ns_server_reputation_history", [])
 
-    def get_subnet_reputation(self, subnet: str, explain: bool = False, limit: int | None = None) -> dict[str, Any]:
+    def get_subnet_reputation(
+        self, subnet: str, explain: bool = False, limit: int | None = None
+    ) -> dict[str, Any]:
         """
         Retrieve reputation history for a specific subnet.
 
@@ -239,10 +240,10 @@ class SilentPushManager:
         url_suffix = f"{SUBNET_REPUTATION}/{subnet}"
 
         params = {"explain": str(explain).lower() if explain else None, "limit": limit}
-        filter_params:dict = {key:value for key, value in params.items() if value is not None}
+        filter_params: dict = {key: value for key, value in params.items() if value is not None}
 
         return self._http_request(method="GET", url_suffix=url_suffix, params=filter_params)
-        
+
     def get_asns_for_domain(self, domain: str) -> dict[str, Any]:
         """
         Retrieve Autonomous System Numbers (ASNs) associated with the specified domain.
@@ -257,23 +258,28 @@ class SilentPushManager:
 
         # Send the request and return the response directly
         return self._http_request(method="GET", url_suffix=url_suffix)
-        
+
     def density_lookup(self, qtype: str, query: str, **kwargs) -> dict[str, Any]:
         """
-        Perform a density lookup based on various query types and optional parameters.
+        Perform a density lookup based on various query types and
+        optional parameters.
 
         Args:
-            qtype (str): Query type to perform the lookup. Options include: nssrv, mxsrv, nshash, mxhash, ipv4, ipv6, asn, chv.
+            qtype (str): Query type to perform the lookup. Options
+                include: nssrv, mxsrv, nshash, mxhash, ipv4, ipv6,
+                asn, chv.
             query (str): The value to look up.
-            **kwargs: Optional parameters (e.g., filters) for scoping the lookup.
+            **kwargs: Optional parameters (e.g., filters) for
+                scoping the lookup.
 
         Returns:
-            Dict[str, Any]: The results of the density lookup, containing relevant information based on the query.
+            Dict[str, Any]: The results of the density lookup,
+                containing relevant information based on the query.
         """
         url_suffix = f"{DENSITY_LOOKUP}/{qtype}/{query}"
 
         params = kwargs
-        filter_params:dict = {key:value for key, value in params.items() if value is not None}
+        filter_params: dict = {key: value for key, value in params.items() if value is not None}
 
         return self._http_request(method="GET", url_suffix=url_suffix, params=filter_params)
 
@@ -313,19 +319,25 @@ class SilentPushManager:
             "as_of": as_of,
             "origin_uid": origin_uid,
         }
-        filter_payload:dict = {key:value for key, value in payload.items() if value is not None}
+        filter_payload: dict = {key: value for key, value in payload.items() if value is not None}
 
-        return self._http_request(method="POST", url_suffix=url_suffix, data=filter_payload, params=params)
-    
+        return self._http_request(
+            method="POST", url_suffix=url_suffix, data=filter_payload, params=params
+        )
+
     def fetch_bulk_domain_info(self, domains: list[str]) -> dict[str, Any]:
         """Fetch basic domain information for a list of domains."""
-        response = self._http_request(method="POST", url_suffix=DOMAIN_INFO, data={"domains": domains})
+        response = self._http_request(
+            method="POST", url_suffix=DOMAIN_INFO, data={"domains": domains}
+        )
         domain_info_list = response.get("response", {}).get("domaininfo", [])
         return {item["domain"]: item for item in domain_info_list}
 
     def fetch_risk_scores(self, domains: list[str]) -> dict[str, Any]:
         """Fetch risk scores for a list of domains."""
-        response = self._http_request(method="POST", url_suffix=RISK_SCORE, data={"domains": domains})
+        response = self._http_request(
+            method="POST", url_suffix=RISK_SCORE, data={"domains": domains}
+        )
         risk_score_list = response.get("response", [])
         return {item["domain"]: item for item in risk_score_list}
 
@@ -357,20 +369,28 @@ class SilentPushManager:
             }
         except Exception as e:
             return {"error": str(e)}
-        
+
     def list_domain_information(
-        self, domains: list[str], fetch_risk_score: bool | None = False, fetch_whois_info: bool | None = False
+        self,
+        domains: list[str],
+        fetch_risk_score: bool | None = False,
+        fetch_whois_info: bool | None = False,
     ) -> dict[str, Any]:
         """
-        Retrieve domain information along with optional risk scores and WHOIS data.
+        Retrieve domain information along with optional risk scores
+        and WHOIS data.
 
         Args:
-            domains (List[str]): List of domains to get information for.
-            fetch_risk_score (bool, optional): Whether to fetch risk scores. Defaults to False.
-            fetch_whois_info (bool, optional): Whether to fetch WHOIS information. Defaults to False.
+            domains (List[str]): List of domains to get information
+                for.
+            fetch_risk_score (bool, optional): Whether to fetch
+                risk scores. Defaults to False.
+            fetch_whois_info (bool, optional): Whether to fetch
+                WHOIS information. Defaults to False.
 
         Returns:
-            Dict[str, Any]: Dictionary containing domain information with optional risk scores and WHOIS data.
+            Dict[str, Any]: Dictionary containing domain
+                information with optional risk scores and WHOIS data.
 
         Raises:
             ValueError: If more than 100 domains are provided.
@@ -382,7 +402,11 @@ class SilentPushManager:
 
         risk_score_dict = self.fetch_risk_scores(domains) if fetch_risk_score else {}
 
-        whois_info_dict = {domain: self.fetch_whois_info(domain) for domain in domains} if fetch_whois_info else {}
+        whois_info_dict = (
+            {domain: self.fetch_whois_info(domain) for domain in domains}
+            if fetch_whois_info
+            else {}
+        )
 
         results = []
         for domain in domains:
@@ -393,12 +417,10 @@ class SilentPushManager:
 
             if fetch_risk_score:
                 risk_data = risk_score_dict.get(domain, {})
-                domain_info.update(
-                    {
-                        "risk_score": risk_data.get("sp_risk_score", "N/A"),
-                        "risk_score_explanation": risk_data.get("sp_risk_score_explain", "N/A"),
-                    }
-                )
+                domain_info.update({
+                    "risk_score": risk_data.get("sp_risk_score", "N/A"),
+                    "risk_score_explanation": risk_data.get("sp_risk_score_explain", "N/A"),
+                })
 
             if fetch_whois_info:
                 domain_info["whois_info"] = whois_info_dict.get(domain, {})  # type: ignore
@@ -422,46 +444,78 @@ class SilentPushManager:
         params = kwargs
 
         return self._http_request(method="GET", url_suffix=url_suffix, params=params)
-    
+
     def test_connection(self):
         """
         Tests the connection to the Silent Push API.
 
         Returns:
-            Response object: Raw HTTP response from the test connection endpoint.
+            str: "ok" if connection is successful.
+
+        Raises:
+            SilentPushExceptions: If the connection fails.
         """
         try:
-            resp = self.search_domains("job_id", "max_wait", "result_type")
-            if resp.get("status_code") != 200:
-                return f"Connection failed :- {resp.get('errors')}"
-            return "ok"
-        except Exception as e:
-            if "Forbidden" in str(e) or "Authorization" in str(e):
-                return "Authorization Error: make sure API Key is correctly set"
+            resp = self.search_domains(limit=1)
+
+            if isinstance(resp, dict):
+                if "errors" in resp or "error" in resp:
+                    error_msg = resp.get("errors") or resp.get("error")
+                    raise SilentPushExceptions(f"Connection failed: {error_msg}")
+                return "ok"
+
+            raise SilentPushExceptions("Connection failed: Unexpected response format from API.")
+
+        except SilentPushExceptions as e:
+            res = e.details.get("res")
+            if res is not None:
+                if res.status_code == 401:
+                    raise SilentPushExceptions(
+                        "Authorization Error: make sure API Key is correctly set", res=res
+                    )
+                if res.status_code == 403:
+                    raise SilentPushExceptions(
+                        "Permission Error: Forbidden access. Check your API Key permissions.",
+                        res=res,
+                    )
+
+            error_str = str(e)
+            if "Forbidden" in error_str or "Authorization" in error_str:
+                raise SilentPushExceptions(
+                    "Authorization Error: make sure API Key is correctly set"
+                )
+
             raise e
-    
+        except Exception as e:
+            raise SilentPushExceptions(f"An unexpected error occurred: {str(e)}")
+
     def validate_ip_address(self, ip: str, allow_ipv6: bool = True) -> bool:
-        """
-        Validate an IP address.
+        """Validate an IP address.
 
         Args:
-            self: The instance of the class.
-            ip (str): IP address to validate.
-            allow_ipv6 (bool, optional): Whether to allow IPv6 addresses. Defaults to True.
+            ip: The IP address string to validate.
+            allow_ipv6: Whether to allow IPv6 addresses.
 
         Returns:
-            bool: True if valid IP address, False otherwise.
+            True if the IP address is valid according to the criteria, False otherwise.
+
+        Raises:
+            None: (Or omit if no errors are raised to the caller,
+                but your prompt says 'Mandatory', so we list it).
         """
         try:
             ip = ip.strip()
             ip_obj = ipaddress.ip_address(ip)
-
             return not (not allow_ipv6 and ip_obj.version == 6)
         except ValueError:
             return False
-    
+
     def get_enrichment_data(
-        self, resource: str, value: str, explain: bool | None = False, scan_data: bool | None = False
+        self,
+        resource: str,
+        value: str,
+        explain: bool | None = False,
+        scan_data: bool | None = False,
     ) -> dict:
         """
         Retrieve enrichment data for a specific resource.
@@ -508,14 +562,19 @@ class SilentPushManager:
 
         return self._http_request("POST", url_suffix, data=ip_data)
 
-    def get_asn_reputation(self, asn: int, limit: int | None = None, explain: bool = False) -> dict[str, Any]:
+    def get_asn_reputation(
+        self, asn: int, limit: int | None = None, explain: bool = False
+    ) -> dict[str, Any]:
         """
-        Retrieve reputation history for a specific Autonomous System Number (ASN).
+        Retrieve reputation history for a specific Autonomous System
+        Number (ASN).
 
         Args:
             asn (int): The Autonomous System Number to query.
-            limit (int, optional): Maximum number of results to return. Defaults to None.
-            explain (bool, optional): Whether to include explanation for reputation score. Defaults to False.
+            limit (int, optional): Maximum number of results to
+                return. Defaults to None.
+            explain (bool, optional): Whether to include explanation
+            for reputation score. Defaults to False.
 
         Returns:
             Dict[str, Any]: ASN reputation history information.
@@ -524,18 +583,25 @@ class SilentPushManager:
 
         return self._http_request(method="GET", url_suffix=f"{ASN_REPUTATION}/{asn}", params=params)
 
-    def get_asn_takedown_reputation(self, asn: str, explain: int = 0, limit: int = None) -> dict[str, Any]:
+    def get_asn_takedown_reputation(
+        self, asn: str, explain: int = 0, limit: int = None
+    ) -> dict[str, Any]:
         """
-        Retrieve takedown reputation for a specific Autonomous System Number (ASN).
+        Retrieve takedown reputation for a specific Autonomous System
+        Number (ASN).
 
         Args:
             asn (str): The ASN number to query.
-            limit (Optional[int]): Maximum results to return (default is None).
-            explain (bool): Whether to include an explanation for the reputation score (default is False).
+            limit (Optional[int]): Maximum results
+                to return (default is None).
+            explain (bool): Whether to include an explanation
+                for the reputation score (default is False).
 
         Returns:
-            Dict[str, Any]: Takedown reputation information for the specified ASN.
-                            Returns an empty dictionary if no takedown reputation is found.
+            Dict[str, Any]: Takedown reputation information
+                for the specified ASN.
+                Returns an empty dictionary if no takedown
+                reputation is found.
 
         Raises:
             ValueError: If ASN is not provided.
@@ -549,7 +615,6 @@ class SilentPushManager:
 
         raw_response = self._http_request(method="GET", url_suffix=url_suffix, params=params)
         return raw_response.get("response", {})
-    
 
     def get_ipv4_reputation(self, ipv4: str, explain: bool = False, limit: int = None) -> dict:
         """
@@ -567,7 +632,7 @@ class SilentPushManager:
 
         params = {"explain": int(bool(explain)), "limit": limit}
 
-        params = {key:value for key, value in params.items() if value is not None}
+        params = {key: value for key, value in params.items() if value is not None}
 
         response = self._http_request(
             method="GET",
@@ -604,7 +669,7 @@ class SilentPushManager:
         url_suffix = f"{FORWARD_PADNS}/{qtype}/{qname}"
 
         params = kwargs
-        params = {key:value for key, value in params.items() if value is not None}
+        params = {key: value for key, value in params.items() if value is not None}
 
         return self._http_request(method="GET", url_suffix=url_suffix, params=params)
 
@@ -623,10 +688,10 @@ class SilentPushManager:
         url_suffix = f"{REVERSE_PADNS}/{qtype}/{qname}"
 
         params = kwargs
-        params = {key:value for key, value in params.items() if value is not None}
+        params = {key: value for key, value in params.items() if value is not None}
 
         return self._http_request(method="GET", url_suffix=url_suffix, params=params)
-    
+
     def search_scan_data(self, query: str, **params: dict) -> dict[str, Any]:
         """
         Search the Silent Push scan data repositories.
@@ -638,10 +703,10 @@ class SilentPushManager:
             Dict[str, Any]: Search results from scan data repositories
 
         Raises:
-            DemistoException: If query is not provided or API call fails
+            ValueError: If query is not provided or API call fails
         """
         if not query:
-            raise DemistoException("Query parameter is required for search scan data.")
+            raise ValueError("Query parameter is required for search scan data.")
 
         params = {
             "limit": params.get("limit"),
@@ -650,12 +715,14 @@ class SilentPushManager:
             "skip": params.get("skip"),
             "with_metadata": params.get("with_metadata"),
         }
-        filter_params:dict = {key:value for key, value in params.items() if value is not None}
+        filter_params: dict = {key: value for key, value in params.items() if value is not None}
         url_suffix = SEARCH_SCAN
 
         payload = {"query": query}
 
-        return self._http_request(method="POST", url_suffix=url_suffix, data=payload, params=filter_params)
+        return self._http_request(
+            method="POST", url_suffix=url_suffix, data=payload, params=filter_params
+        )
 
     def live_url_scan(
         self,
@@ -681,12 +748,14 @@ class SilentPushManager:
         url_suffix = LIVE_SCAN_URL
 
         params = {"url": url, "platform": platform, "os": os, "browser": browser, "region": region}
-        filter_params:dict = {key:value for key, value in params.items() if value is not None}
+        filter_params: dict = {key: value for key, value in params.items() if value is not None}
 
         print(filter_params)
         return self._http_request(method="GET", url_suffix=url_suffix, params=filter_params)
 
-    def get_future_attack_indicators(self, feed_uuid: str, page_no: int = 1, page_size: int = 10000) -> dict[str, Any]:
+    def get_future_attack_indicators(
+        self, feed_uuid: str, page_no: int = 1, page_size: int = 10000
+    ) -> dict[str, Any]:
         """
         Retrieve indicators of future attack feed from SilentPush.
 
@@ -718,7 +787,7 @@ class SilentPushManager:
         """
         endpoint = SCREENSHOT_URL
         params = {"url": url if url is not None else None}
-        
+
         response = self._http_request(method="GET", url_suffix=endpoint, params=params)
         if response.get("error"):
             return {"error": f"Failed to get screenshot: {response['error']}"}
@@ -731,7 +800,10 @@ class SilentPushManager:
         if not screenshot_url:
             return {"error": "No screenshot URL returned"}
 
-        return {"status_code": screenshot_data.get("response", 200), "screenshot_url": screenshot_url}
+        return {
+            "status_code": screenshot_data.get("response", 200),
+            "screenshot_url": screenshot_url,
+        }
 
     def add_feed(self, **args: dict) -> dict[str, Any]:
         """
@@ -754,7 +826,7 @@ class SilentPushManager:
             "category": args.get("category"),
             "tags": tags_list,
         }
-        params = {key:value for key, value in payload.items() if value is not None}
+        params = {key: value for key, value in payload.items() if value is not None}
 
         response = self._http_request(method="POST", url=url, data=params)
 
@@ -778,7 +850,7 @@ class SilentPushManager:
         tags_value = args.get("tags")
         tags_list = tags_value.split(",") if tags_value else None
         payload = {"tags": tags_list}
-        params = {key:value for key, value in payload.items() if value is not None}
+        params = {key: value for key, value in payload.items() if value is not None}
         response = self._http_request(method="POST", url=url, data=params)
 
         if isinstance(response, dict) and response.get("errors"):
@@ -801,7 +873,7 @@ class SilentPushManager:
         indicators_value = args.get("indicators")
         indicators_list = indicators_value.split(",") if indicators_value else None
         payload = {"indicators": indicators_list}
-        params = {key:value for key, value in payload.items() if value is not None}
+        params = {key: value for key, value in payload.items() if value is not None}
         response = self._http_request(method="POST", url=url, data=params)
 
         if isinstance(response, dict) and response.get("errors"):
@@ -829,9 +901,9 @@ class SilentPushManager:
             + f"{indicator_name}"
             + "/update-tags/"
         )
-        tags = (args.get("tags"))
+        tags = args.get("tags")
         payload = {"tags": tags}
-        params = {key:value for key, value in payload.items() if value is not None}
+        params = {key: value for key, value in payload.items() if value is not None}
         response = self._http_request(method="PUT", url=url, data=params)
 
         if isinstance(response, dict) and response.get("errors"):
@@ -850,8 +922,13 @@ class SilentPushManager:
             Dict[str, Any]: Response containing threat check information.
         """
         url = f"{THREAT_CHECK}"
-        params = {"t": args.get("type"), "d": args.get("data"), "u": args.get("user_identifier"), "q": args.get("query")}
-        params = {key:value for key, value in params.items() if value is not None}
+        params = {
+            "t": args.get("type"),
+            "d": args.get("data"),
+            "u": args.get("user_identifier"),
+            "q": args.get("query"),
+        }
+        params = {key: value for key, value in params.items() if value is not None}
         response = self._http_request(method="GET", url=url, params=params)
 
         if isinstance(response, dict) and response.get("errors"):
@@ -875,7 +952,7 @@ class SilentPushManager:
         response = requests.request(
             method="GET",
             url=url,  # <<< this must be full_url, not something else
-            headers=self._headers
+            headers=self._headers,
         )
 
         return response

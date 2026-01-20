@@ -1,34 +1,35 @@
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
-
 from typing import Any, Dict
-from constants import (INTEGRATION_NAME, LIST_DOMAIN_INFORMATION_SCRIPT_NAME )
+
+from constants import INTEGRATION_NAME, LIST_DOMAIN_INFORMATION_SCRIPT_NAME
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from SiemplifyAction import SiemplifyAction
+from SiemplifyUtils import output_handler
 from SilentPushManager import SilentPushManager
+
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    siemplify.script_name = LIST_DOMAIN_INFORMATION_SCRIPT_NAME 
+    siemplify.script_name = LIST_DOMAIN_INFORMATION_SCRIPT_NAME
 
     # Extract Integration config
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
     domain = siemplify.extract_action_param("domains", print_value=True)
-    domains:list = domain.split(',')
+    domains: list = domain.split(",")
     fetch_risk_score = siemplify.extract_action_param("fetch_risk_score", print_value=True)
     fetch_whois_info = siemplify.extract_action_param("fetch_whois_info", print_value=True)
 
     if fetch_risk_score == "false":
-        fetch_risk_score:bool = False
+        fetch_risk_score: bool = False
     else:
-        fetch_risk_score:bool = True
+        fetch_risk_score: bool = True
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
         response = sp_manager.list_domain_information(domains, fetch_risk_score, fetch_whois_info)
-        
+
         records = response.get("domains", [])
         markdown_response = format_domain_information(response, fetch_risk_score, fetch_whois_info)
         json_response = format_domain_information_json(response, fetch_risk_score, fetch_whois_info)
@@ -37,25 +38,34 @@ def main():
             siemplify.LOGGER.error(error_message)
             status = EXECUTION_STATE_FAILED
             siemplify.end(error_message, "false", status)
-        
+
         output_message = f"Result: {markdown_response}"
-        siemplify.result.add_result_json({"domain_information_results":json_response})
+        siemplify.result.add_result_json({"domain_information_results": json_response})
         status = EXECUTION_STATE_COMPLETED
         result_value = True
     except Exception as error:
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"Failed to domain info for {domains} for {INTEGRATION_NAME} server! Error: {error}"
+        output_message = (
+            f"Failed to domain info for {domains} for {INTEGRATION_NAME} server! Error: {error}"
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     for entity in siemplify.target_entities:
         print(entity.identifier)
 
-    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(
+        "\n  status: {}\n  result_value: {}\n  output_message: {}".format(
+            status, result_value, output_message
+        )
+    )
     siemplify.end(output_message, result_value, status)
 
-def format_domain_information(response: Dict[str, Any], fetch_risk_score: bool, fetch_whois_info: bool) -> str:
+
+def format_domain_information(
+    response: Dict[str, Any], fetch_risk_score: bool, fetch_whois_info: bool
+) -> str:
     """
     Format the response data into markdown-style text for Google SecOps.
 
@@ -105,10 +115,9 @@ def format_domain_information(response: Dict[str, Any], fetch_risk_score: bool, 
 
     return "\n".join(markdown)
 
+
 def format_domain_information_json(
-    response: Dict[str, Any],
-    fetch_risk_score: bool,
-    fetch_whois_info: bool
+    response: Dict[str, Any], fetch_risk_score: bool, fetch_whois_info: bool
 ):
     """
     Format the response data into JSON format for Google SecOps action.
@@ -126,14 +135,14 @@ def format_domain_information_json(
     for domain_data in response.get("domains", []):
         domain_result = {
             "domain": domain_data.get("domain", "N/A"),
-            "domain_information": {k: v for k, v in domain_data.items() if not isinstance(v, dict)}
+            "domain_information": {k: v for k, v in domain_data.items() if not isinstance(v, dict)},
         }
 
         # Risk score
         if fetch_risk_score:
             domain_result["risk_assessment"] = {
                 "risk_score": domain_data.get("risk_score", "N/A"),
-                "risk_score_explanation": domain_data.get("risk_score_explanation", "N/A")
+                "risk_score_explanation": domain_data.get("risk_score_explanation", "N/A"),
             }
 
         # WHOIS info
@@ -150,6 +159,7 @@ def format_domain_information_json(
         results.append(domain_result)
 
     return results
-    
+
+
 if __name__ == "__main__":
     main()

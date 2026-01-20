@@ -1,17 +1,17 @@
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
+from typing import Any, Dict
 
-from constants import (INTEGRATION_NAME, LIVE_URL_SCAN_SCRIPT_NAME )
+from constants import INTEGRATION_NAME, LIVE_URL_SCAN_SCRIPT_NAME
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from SiemplifyAction import SiemplifyAction
+from SiemplifyUtils import output_handler
 from SilentPushManager import SilentPushManager
 
-from typing import Dict, Tuple, Any
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
 
-    siemplify.script_name = LIVE_URL_SCAN_SCRIPT_NAME 
+    siemplify.script_name = LIVE_URL_SCAN_SCRIPT_NAME
 
     # Extract Integration config
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
@@ -32,35 +32,42 @@ def main():
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
         raw_response = sp_manager.live_url_scan(url, platform, os, browser, region)
         scan_results = raw_response.get("response", {}).get("scan", {})
-        
+
         readable_output = format_scan_results(scan_results, url)
         siemplify.result.add_result_json({
             "message": readable_output.get("message"),
             "url": readable_output.get("url"),
-            "scan_results": readable_output.get("scan_results")
+            "scan_results": readable_output.get("scan_results"),
         })
         if not scan_results:
             error_message = f"No Scan data found for URL {url}."
             siemplify.LOGGER.error(error_message)
             status = EXECUTION_STATE_FAILED
             siemplify.end(error_message, "false", status)
-        
+
         output_message = f"url: {url}, scan_results: {scan_results}"
         status = EXECUTION_STATE_COMPLETED
         result_value = True
     except Exception as error:
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"Failed to retrieve scan data found for URL {url} for {INTEGRATION_NAME} server! Error: {error}"
+        output_message = (
+            f"Failed to retrieve scan data found for URL {url} "
+            f"for {INTEGRATION_NAME} server! Error: {error}"
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     for entity in siemplify.target_entities:
         print(entity.identifier)
 
-
-    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(
+        "\n  status: {}\n  result_value: {}\n  output_message: {}".format(
+            status, result_value, output_message
+        )
+    )
     siemplify.end(output_message, result_value, status)
+
 
 def validate_parameters(platform: str, os: str, browser: str, region: str) -> str:
     """Validate the platform, os, browser, and region values."""
@@ -81,10 +88,11 @@ def validate_parameters(platform: str, os: str, browser: str, region: str) -> st
 
     return "\n".join(errors)
 
+
 def format_scan_results(scan_results: Dict[str, Any], url: str) -> Dict[str, Any]:
     """
     Format the scan results for Google SecOps integration.
-    
+
     Args:
         scan_results (dict): API response data from a URL scan
         url (str): The scanned URL
@@ -96,22 +104,19 @@ def format_scan_results(scan_results: Dict[str, Any], url: str) -> Dict[str, Any
         return {
             "message": f"Unexpected response format for URL scan. Response: {scan_results}",
             "raw_results": scan_results,
-            "url": url
+            "url": url,
         }
 
     if not scan_results:
         return {
             "message": f"No scan results found for URL: {url}",
             "raw_results": scan_results,
-            "url": url
+            "url": url,
         }
 
     # Instead of tableToMarkdown, just return results as JSON
-    return {
-        "message": f"URL Scan Results for {url}",
-        "scan_results": scan_results,
-        "url": url
-    }
+    return {"message": f"URL Scan Results for {url}", "scan_results": scan_results, "url": url}
+
 
 if __name__ == "__main__":
     main()

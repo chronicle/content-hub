@@ -1,23 +1,25 @@
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
-from urllib.parse import urlencode, urlparse
-from constants import (INTEGRATION_NAME, SCREENSHOT_URL_SCRIPT_NAME )
-from SilentPushManager import SilentPushManager
+from urllib.parse import urlparse
+
 import requests
+from constants import INTEGRATION_NAME, SCREENSHOT_URL_SCRIPT_NAME
+from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from SiemplifyAction import SiemplifyAction
+from SiemplifyUtils import output_handler
+from SilentPushManager import SilentPushManager
+
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
 
-    siemplify.script_name = SCREENSHOT_URL_SCRIPT_NAME 
+    siemplify.script_name = SCREENSHOT_URL_SCRIPT_NAME
 
     # Extract Integration config
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
     url = siemplify.extract_action_param("url", print_value=True)
-    
+
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
         result = sp_manager.screenshot_url(url)
@@ -40,18 +42,24 @@ def main():
             url_suffix += f"?{parsed_url.query}"
 
         full_url = server_url + url_suffix
-        image_response = requests.get(full_url,  stream=True)
-        
+        image_response = requests.get(full_url, stream=True)
+
         if not image_response or image_response.status_code != 200:
-            error_message = f"Failed to download screenshot image: HTTP {getattr(image_response, 'status_code', 'No response')}"
+            error_message = (
+                f"Failed to download screenshot image: "
+                f"HTTP {getattr(image_response, 'status_code', 'No response')}"
+            )
             siemplify.LOGGER.error(error_message)
             status = EXECUTION_STATE_FAILED
             siemplify.end(error_message, "false", status)
-        
+
         output_message = f"screenshot_url : {result.get('screenshot_url')}"
         status = EXECUTION_STATE_COMPLETED
         result_value = True
-        siemplify.result.add_result_json({"url": url, "screenshot_url":result.get('screenshot_url')})
+        siemplify.result.add_result_json({
+            "url": url,
+            "screenshot_url": result.get("screenshot_url"),
+        })
     except Exception as error:
         result_value = False
         status = EXECUTION_STATE_FAILED
@@ -62,7 +70,11 @@ def main():
     for entity in siemplify.target_entities:
         print(entity.identifier)
 
-    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(
+        "\n  status: {}\n  result_value: {}\n  output_message: {}".format(
+            status, result_value, output_message
+        )
+    )
     siemplify.end(output_message, result_value, status)
 
 
