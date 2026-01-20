@@ -21,6 +21,7 @@ import pydantic
 import mp.core.constants
 import mp.core.utils
 import mp.core.validators
+from mp.core import exclusions
 from mp.core.data_models.abc import Buildable
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
@@ -49,7 +50,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.PARAM_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_param_display_name_regex(),
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
@@ -63,7 +64,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX,
+            pattern=exclusions.get_script_identifier_regex(),
         ),
     ]
     default_value: str | bool | float | int | None
