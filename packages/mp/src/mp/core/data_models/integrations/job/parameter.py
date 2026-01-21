@@ -22,6 +22,7 @@ import pydantic
 import mp.core.constants
 import mp.core.utils
 import mp.core.validators
+from mp.core import exclusions
 from mp.core.data_models.abc import Buildable
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
@@ -47,12 +48,13 @@ class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.PARAM_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_param_display_name_regex(),
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
     description: Annotated[
-        str, pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH)
+        str,
+        pydantic.AfterValidator(mp.core.validators.validate_param_short_description),
     ]
     is_mandatory: bool
     type_: ScriptParamType

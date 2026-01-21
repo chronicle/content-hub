@@ -20,6 +20,7 @@ import defusedxml.ElementTree as SafeElementTree
 from PIL import Image, UnidentifiedImageError
 
 import mp.core.constants
+from mp.core import exclusions
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -42,7 +43,7 @@ def validate_param_name(name: str) -> str:
         ValueError: If the parameter name exceeds the maximum number of allowed words.
 
     """
-    if name in mp.core.constants.EXCLUDED_PARAM_NAMES_WITH_TOO_MANY_WORDS:
+    if name in exclusions.get_excluded_param_names_with_too_many_words():
         return name
 
     if len(name.split()) > mp.core.constants.PARAM_NAME_MAX_WORDS:
@@ -50,6 +51,64 @@ def validate_param_name(name: str) -> str:
         raise ValueError(msg)
 
     return name
+
+
+def validate_param_short_description(description: str) -> str:
+    """Validate a parameter's short description.
+
+    Ensure it adheres to the maximum allowed length as specified by
+    SHORT_DESCRIPTION_MAX_LENGTH. If it exceeds this limit, a ValueError is raised.
+
+    Args:
+        description: The parameter description to validate.
+
+    Returns:
+        The description of the parameter after the validation
+
+    Raises:
+        ValueError: If the parameter name exceeds the maximum allowed length.
+
+    """
+    if description.startswith(tuple(exclusions.get_excluded_long_param_description_prefixes())):
+        return description
+
+    if len(description) > mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH:
+        msg: str = (
+            f"Parameter description '{description}' exceeds maximum length of "
+            f"{mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH}"
+        )
+        raise ValueError(msg)
+
+    return description
+
+
+def validate_param_long_description(description: str) -> str:
+    """Validate a parameter's long description.
+
+    Ensure it adheres to the maximum allowed length as specified by
+    LONG_DESCRIPTION_MAX_LENGTH. If it exceeds this limit, a ValueError is raised.
+
+    Args:
+        description: The parameter description to validate.
+
+    Returns:
+        The description of the parameter after the validation
+
+    Raises:
+        ValueError: If the parameter name exceeds the maximum allowed length.
+
+    """
+    if description.startswith(tuple(exclusions.get_excluded_long_param_description_prefixes())):
+        return description
+
+    if len(description) > mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH:
+        msg: str = (
+            f"Parameter description '{description}' exceeds maximum length of "
+            f"{mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH}"
+        )
+        raise ValueError(msg)
+
+    return description
 
 
 def validate_svg_content(path: Path) -> str:
@@ -69,7 +128,7 @@ def validate_svg_content(path: Path) -> str:
         # Read content
         content = path.read_text(encoding="utf-8")
     except Exception as e:
-        msg = f"Failed to read or validate SVG file: {path}"
+        msg: str = f"Failed to read or validate SVG file: {path}"
         raise ValueError(msg) from e
 
     if not content.strip():
