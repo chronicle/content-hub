@@ -11,7 +11,6 @@ def main():
 
     siemplify.script_name = ADD_FEED_TAGS_SCRIPT_NAME
 
-    # Extract Integration config
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
