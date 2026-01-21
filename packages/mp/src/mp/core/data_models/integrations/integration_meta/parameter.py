@@ -74,7 +74,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         return cls(
             name=built["PropertyName"],
             default_value=built["Value"],
-            description=built.get("PropertyDescription", ""),
+            description=built.get("PropertyDescription", "") or "",
             is_mandatory=built.get("IsMandatory", False),
             type_=ScriptParamType(int(built["PropertyType"])),
             integration_identifier=built["IntegrationIdentifier"],

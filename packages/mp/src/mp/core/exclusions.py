@@ -68,7 +68,7 @@ def get_script_display_name_regex() -> str:
     """
     data: dict[str, Any] = _load_exclusions_data()
     excluded_names: list[str] = data.get("excluded_script_display_names_for_regex", [])
-    return _build_regex_from_list(excluded_names, r"^[a-zA-Z0-9-\s]+$")
+    return _build_regex_from_list(excluded_names, r"^[A-Za-z0-9-_,\s]+$")
 
 
 def get_param_display_name_regex() -> str:
