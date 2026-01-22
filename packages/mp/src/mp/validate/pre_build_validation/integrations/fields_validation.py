@@ -30,9 +30,9 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
     from mp.core.data_models.integrations.connector.parameter import ConnectorParameter
     from mp.core.data_models.integrations.integration_meta.metadata import IntegrationMetadata
+    from mp.core.data_models.integrations.integration_meta.parameter import IntegrationParameter
     from mp.core.data_models.integrations.job.metadata import JobMetadata
     from mp.core.data_models.integrations.job.parameter import JobParameter
-
 
 METADATA_NAME_REGEX: str = get_strict_script_display_name_regex()
 PARAM_NAME_REGEX: str = get_param_display_name_regex()
@@ -133,5 +133,15 @@ def _integration_metadata(integration_metadata: IntegrationMetadata) -> list[str
             f"Integration name: {integration_metadata.name} "
             f"does not match the regex: {METADATA_NAME_REGEX}\n"
         )
+    result.extend(_integration_parameters(integration_metadata.parameters))
 
+    return result
+
+
+def _integration_parameters(integration_parameters: list[IntegrationParameter]) -> list[str]:
+    result: list[str] = [
+        f"Integration Parameter name: {parameter.name} does not match the regex: {PARAM_NAME_REGEX}"
+        for parameter in integration_parameters
+        if not re.match(PARAM_NAME_REGEX, parameter.name)
+    ]
     return result

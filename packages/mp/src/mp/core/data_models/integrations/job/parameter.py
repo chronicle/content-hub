@@ -62,7 +62,7 @@ class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
     def _from_built(cls, built: BuiltJobParameter) -> Self:
         return cls(
             name=built["Name"],
-            description=built.get("Description", "") or "",
+            description=v if (v := built.get("Description")) is not None else "",
             is_mandatory=built["IsMandatory"],
             type_=ScriptParamType(int(built["Type"])),
             default_value=built.get("DefaultValue"),
