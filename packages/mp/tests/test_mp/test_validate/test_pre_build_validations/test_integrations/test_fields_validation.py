@@ -47,9 +47,6 @@ def test_fields_validation_invalid_integration_name(temp_integration: Path) -> N
     assert invalid_name in str(excinfo.value)
 
 
-
-
-
 def test_fields_validation_invalid_action_name(temp_integration: Path) -> None:
     action_path = temp_integration / "actions" / "ping.yaml"
     with Path(action_path).open(encoding="utf-8") as f:
@@ -177,16 +174,14 @@ def test_fields_validation_invalid_integration_parameter_name(temp_integration: 
     if "parameters" not in definition:
         definition["parameters"] = []
 
-    definition["parameters"].append(
-        {
-            "name": invalid_name,
-            "description": "A parameter with an invalid name",
-            "type": "string",
-            "is_mandatory": False,
-            "default_value": "",
-            "integration_identifier": definition["identifier"],
-        }
-    )
+    definition["parameters"].append({
+        "name": invalid_name,
+        "description": "A parameter with an invalid name",
+        "type": "string",
+        "is_mandatory": False,
+        "default_value": "",
+        "integration_identifier": definition["identifier"],
+    })
 
     with Path(definition_path).open("w", encoding="utf-8") as f:
         yaml.dump(definition, f)
