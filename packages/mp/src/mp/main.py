@@ -7,7 +7,7 @@ the `build_project`, `check`, `config`, and `format` modules and mounts
 them onto the main Typer instance.
 """
 
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ them onto the main Typer instance.
 
 from __future__ import annotations
 
+import typer
+
 from . import build_project, check, config, describe, dev_env, run_pre_build_tests, validate
 from . import format as format_app
 
@@ -30,9 +32,27 @@ __all__: list[str] = [
     "build_project",
     "check",
     "config",
-    "describe",
     "dev_env",
     "format_app",
+    "main",
     "run_pre_build_tests",
     "validate",
 ]
+
+
+def main() -> None:
+    """Entry point for the `mp` CLI tool, initializing all sub-applications."""
+    app: typer.Typer = typer.Typer()
+    app.add_typer(build_project.app, name="build")
+    app.add_typer(check.app, name="check")
+    app.add_typer(config.app, name="config")
+    app.add_typer(format_app.app, name="format")
+    app.add_typer(run_pre_build_tests.app, name="test")
+    app.add_typer(dev_env.app, name="dev-env")
+    app.add_typer(validate.app, name="validate")
+    app.add_typer(describe.app, name="describe")
+    app()
+
+
+if __name__ == "__main__":
+    main()

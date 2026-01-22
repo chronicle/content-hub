@@ -1,4 +1,4 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .main import main
+from __future__ import annotations
 
-if __name__ == "__main__":
-    main()
+from pydantic import BaseModel
+
+from mp.describe.action.data_models.action_fields import ActionFields  # noqa: TC001
+from mp.describe.action.data_models.action_tags import ActionTags  # noqa: TC001
+
+
+class ActionDescription(BaseModel):
+    fields: ActionFields
+    tags: ActionTags
