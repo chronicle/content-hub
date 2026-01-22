@@ -42,6 +42,8 @@ NAME_MAPPER: dict[str, str] = {
     "login": "dev-env login",
     "deploy": "dev-env deploy",
     "push_integration": "dev-env push integration",
+    "push_playbook": "dev-env push playbook",
+    "pull_playbook": "dev-env pull playbook",
     "push_custom_integration_repository": "dev-env push custom integration repository",
 }
 
@@ -53,6 +55,10 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "custom_integration",
     "deconstruct",
     "only_pre_build",
+    "is_staging",
+    "custom",
+    "include_blocks",
+    "keep_zip",
     "raise_error_on_violations",
     "changed_files",
     "quiet",
@@ -60,4 +66,5 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "-r",
     "-i",
     "-p",
+    "-d",
 }

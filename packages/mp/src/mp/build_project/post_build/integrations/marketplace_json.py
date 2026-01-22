@@ -136,7 +136,7 @@ class MarketplaceJsonDefinition:
             UpdateNotificationExpired=release_times.update_notification,
             NewNotificationExpired=release_times.new_notification,
         )
-        metadata.update(extra_attrs)  # type: ignore[typeddict-item]
+        metadata.update(extra_attrs)
         mp.core.utils.remove_none_entries_from_mapping(metadata)
 
     def _get_integration_release_time(self) -> ReleaseTimes:
