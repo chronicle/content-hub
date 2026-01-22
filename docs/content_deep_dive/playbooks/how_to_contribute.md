@@ -25,9 +25,7 @@ The `mp` tool helps automate the process of pulling, validating, and structuring
 - ### 1.4 Fill the `release_notes.yaml` file
 
 - ### Note: If your playbook uses blocks that already exist in the
-  `content-hub` repository, you don't need to include them in your pull request. Instead, you should
-  reference the existing blocks. For detailed instructions, see the section
-  on [How to Sync a Playbook with Existing Blocks in the Repo](#how-to-sync-a-playbook-with-existing-blocks-in-the-repo).
+  `content-hub` repository, you don't need to include them in your pull request. Instead, you should reference the existing blocks. For detailed instructions, see the section on [How to Sync a Playbook with Existing Blocks in the Repo](#how-to-sync-a-playbook-with-existing-blocks-in-the-repo).
 
 - ### 1.5. Move the pulled playbook
     - Move the playbook to the correct directory:
@@ -72,12 +70,10 @@ If you prefer to contribute manually, follow these steps:
     - In your new playbook directory, open `display_info.yaml` and provide the required metadata (
       e.g., display name, author, description).
 
-- ### 2.6 Fill the `release_notes.yaml` file
+- ### 2.6. Fill the `release_notes.yaml` file
 
 - ### Note: If your playbook uses blocks that already exist in the
-  `content-hub` repository, you don't need to include them in your pull request. Instead, you should
-  reference the existing blocks. For detailed instructions, see the section
-  on [How to Sync a Playbook with Existing Blocks in the Repo](#how-to-sync-a-playbook-with-existing-blocks-in-the-repo).
+  `content-hub` repository, you don't need to include them in your pull request. Instead, you should reference the existing blocks. For detailed instructions, see the section on [How to Sync a Playbook with Existing Blocks in the Repo](#how-to-sync-a-playbook-with-existing-blocks-in-the-repo).
 
 - ### 2.7. Move the deconstructed playbook files
     - The previous command creates an `out` folder. Move the deconstructed playbook directory from
