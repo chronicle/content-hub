@@ -25,6 +25,7 @@ from TIPCommon.rest.soar_api import (
     add_case_tag,
     add_close_reason,
     add_custom_family,
+    add_dynamic_env_param,
     add_email_template,
     add_job,
     add_mapping_rules,
@@ -193,9 +194,7 @@ class SiemplifyApiClient:
         return get_env_dynamic_parameters(chronicle_soar=chronicle_soar)
 
     def add_dynamic_env_param(self, param):
-        res = self.session.post("settings/AddOrUpdateDynamicParameters", json=param)
-        self.validate_response(res)
-        return res.content
+        return add_dynamic_env_param(self.siemplify_soar, param)
 
     def get_store_data(self):
         return get_store_data(self.siemplify_soar)

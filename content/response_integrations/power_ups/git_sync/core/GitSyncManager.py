@@ -237,7 +237,7 @@ class GitSyncManager:
                     return
             integration_cards = next(
                 x
-                for x in self.api.get_ide_cards()
+                for x in self.api.get_ide_cards(integration.identifier)
                 if x["identifier"] == integration.identifier
             )["cards"]
             for script in integration.get_all_items():
@@ -402,7 +402,10 @@ class GitSyncManager:
             return
         # Try to find and fix the jobDefinitionId field
         integration_cards = next(
-            (x for x in self.api.get_ide_cards() if x["identifier"] == job.integration),
+            (
+                x for x in self.api.get_ide_cards(job.integration)
+                if x["identifier"] == job.integration
+            ),
             {},
         ).get("cards", None)
         if integration_cards:

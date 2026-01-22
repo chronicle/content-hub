@@ -66,38 +66,30 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        if features["Dynamic Parameters"]:
+        if features["Dynamic Parameters"]: # 20 jan
             siemplify.LOGGER.info("======== Environment Dynamic Parameters ========")
 
-            current_parameters = gitsync.api.get_env_dynamic_parameters(
-                chronicle_soar=siemplify
-            )
+            # current_parameters = gitsync.api.get_env_dynamic_parameters(chronicle_soar=siemplify)
 
-            current_by_name = {
-                p.get("name"): p for p in current_parameters
-            }
+            # current_by_name = {p.get("name"): p for p in current_parameters}
 
             for dyn_param in gitsync.content.get_dynamic_parameters():
                 name = dyn_param.get("name")
                 siemplify.LOGGER.info(f"Adding dynamic parameter {name}")
 
-                existing = current_by_name.get(name, {})
+                # existing = current_by_name.get(name, {})
 
-                payload = {
-                    "id": existing.get("id", dyn_param.get("id", 0)),
-                    "name": name,
-                    "type": dyn_param.get("type", existing.get("type")),
-                    "defaultValue": dyn_param.get(
-                        "defaultValue",
-                        existing.get("defaultValue", "")
-                    ),
-                    "optionalValues": dyn_param.get(
-                        "optionalValues",
-                        existing.get("optionalValues", [])
-                    ),
-                }
+                # payload = {
+                #     "id": existing.get("id", dyn_param.get("id", 0)),
+                #     "name": name,
+                #     "type": dyn_param.get("type", existing.get("type")),
+                #     "defaultValue": dyn_param.get("defaultValue", existing.get("defaultValue", "")),
+                #     "optionalValues": dyn_param.get(
+                #         "optionalValues", existing.get("optionalValues", [])
+                #     ),
+                # }
 
-                gitsync.api.add_dynamic_env_param(payload)
+                gitsync.api.add_dynamic_env_param(dyn_param)
 
         if features["Environments"]:
             siemplify.LOGGER.info("========== Environments ==========")
