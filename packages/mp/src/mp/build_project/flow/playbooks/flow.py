@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import rich
 
@@ -30,47 +30,58 @@ if TYPE_CHECKING:
     from mp.core.custom_types import RepositoryType
 
 
+class Repos(NamedTuple):
+    commercial: PlaybooksRepo
+    community: PlaybooksRepo
+    custom: PlaybooksRepo | None = None
+
+
 def build_playbooks(
     playbooks: Iterable[str],
     repositories: Iterable[RepositoryType],
+    src: Path | None = None,
     *,
     deconstruct: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
-    commercial_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_or_create_playbook_repo_base_path(
-            mp.core.constants.COMMERCIAL_REPO_NAME
-        )
-    )
-    community_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_or_create_playbook_repo_base_path(
-            mp.core.constants.THIRD_PARTY_REPO_NAME
-        )
+    repos = Repos(
+        commercial=PlaybooksRepo(
+            mp.core.file_utils.get_or_create_playbook_repo_base_path(
+                mp.core.constants.COMMERCIAL_REPO_NAME
+            )
+        ),
+        community=PlaybooksRepo(
+            mp.core.file_utils.get_or_create_playbook_repo_base_path(
+                mp.core.constants.THIRD_PARTY_REPO_NAME
+            )
+        ),
+        custom=None if not src else PlaybooksRepo(src, default_source=False),
     )
 
     if playbooks:
-        commercial_not_found: set[str] = _build_playbooks(
-            set(playbooks), commercial_playbooks, deconstruct=deconstruct
-        )
-        community_not_found: set[str] = _build_playbooks(
-            set(playbooks), community_playbooks, deconstruct=deconstruct
-        )
+        if repos.custom is not None:
+            _build_playbooks(set(playbooks), repos.custom, deconstruct=deconstruct)
 
-        if commercial_not_found.intersection(community_not_found):
-            rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+        else:
+            commercial_not_found: set[str] = _build_playbooks(
+                set(playbooks), repos.commercial, deconstruct=deconstruct
+            )
+            community_not_found: set[str] = _build_playbooks(
+                set(playbooks), repos.community, deconstruct=deconstruct
+            )
+
+            if commercial_not_found.intersection(community_not_found):
+                rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
 
     elif repositories:
-        _build_playbooks_repositories(commercial_playbooks, community_playbooks)
-        write_playbooks_json(commercial_playbooks, community_playbooks)
+        _build_playbooks_repositories([repos.commercial, repos.community])
+        write_playbooks_json(repos.commercial, repos.community)
 
 
-def _build_playbooks_repositories(
-    commercial_playbooks: PlaybooksRepo,
-    community_playbooks: PlaybooksRepo,
-) -> None:
+def _build_playbooks_repositories(repos: list[PlaybooksRepo]) -> None:
     rich.print("[blue]Building all playbooks in repository...[/blue]")
-    _build_single_repo_folder(commercial_playbooks)
-    _build_single_repo_folder(community_playbooks)
+    for repository in repos:
+        _build_single_repo_folder(repository)
     rich.print("[blue]Done repository playbook build.[/blue]")
 
 

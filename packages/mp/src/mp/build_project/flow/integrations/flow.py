@@ -40,6 +40,7 @@ class Repos(NamedTuple):
 def build_integrations(
     integrations: Iterable[str],
     repositories: Iterable[RepositoryType],
+    src: Path | None = None,
     *,
     deconstruct: bool = False,
     custom_integration: bool = False,
@@ -54,11 +55,13 @@ def build_integrations(
         ),
         custom=IntegrationsRepo(
             mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)
-        ),
+        )
+        if not src
+        else IntegrationsRepo(src, default_source=False),
     )
 
     if integrations:
-        if custom_integration:
+        if custom_integration or src:
             not_founds = _build_integrations_from_repos(
                 integrations,
                 [repos.custom],

@@ -194,20 +194,14 @@ def is_python_file(path: Path) -> bool:
     return path.exists() and path.is_file() and path.suffix == ".py"
 
 
-def is_integration(path: Path, *, group: str = "") -> bool:
+def is_integration(path: Path) -> bool:
     """Check whether a path is an integration.
 
     Returns:
         Whether the provided path is an integration
 
     """
-    parents: set[str] = {p.name for p in (path, *path.parents)}
-    valid_base_dirs: set[str] = set(mp.core.constants.INTEGRATIONS_TYPES)
-
-    if group:
-        valid_base_dirs.add(group)
-
-    return bool(parents.intersection(valid_base_dirs) and _is_integration(path))
+    return _is_integration(path)
 
 
 def _is_integration(path: Path) -> bool:

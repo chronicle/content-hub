@@ -51,15 +51,21 @@ if TYPE_CHECKING:
 
 
 class IntegrationsRepo:
-    def __init__(self, integrations_dir: Path) -> None:
+    def __init__(self, integrations_dir: Path, *, default_source: bool = True) -> None:
         """Class constructor.
 
         Args:
             integrations_dir: The path to a Content-Hub integrations folder.
+            default_source: Indicates if the integrations_dir is the default Content-Hub integrations folder.
 
         """
         self.name: str = integrations_dir.name
-        self.paths: list[Path] = mp.core.file_utils.get_integration_base_folders_paths(self.name)
+        if default_source:
+            self.paths: list[Path] = mp.core.file_utils.get_integration_base_folders_paths(
+                self.name
+            )
+        else:
+            self.paths: list[Path] = [integrations_dir]
 
         for dir_name in self.paths:
             dir_name.mkdir(exist_ok=True, parents=True)
