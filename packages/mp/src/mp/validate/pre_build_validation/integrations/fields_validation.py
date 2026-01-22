@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.exceptions import NonFatalValidationError
+from mp.core.exclusions import get_param_display_name_regex
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,8 +34,8 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.job.parameter import JobParameter
 
 
-METADATA_REGEX: str = r"^[a-zA-Z0-9-\s]+$"
-PARAM_REGEX: str = r"^[a-zA-Z0-9-'\s]+$"
+METADATA_NAME_REGEX: str = r"^[a-zA-Z0-9-\s]+$"
+PARAM_NAME_REGEX: str = get_param_display_name_regex()
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -58,6 +59,7 @@ class FieldsValidation:
         result.extend(_validate_action_metadata(list(integration.actions_metadata.values())))
         result.extend(_validate_connector_metadata(list(integration.connectors_metadata.values())))
         result.extend(_validate_job_metadata(list(integration.jobs_metadata.values())))
+        result.extend(_integration_metadata(integration.metadata))
 
         if result:
             raise NonFatalValidationError("\n".join(result))
@@ -66,20 +68,20 @@ class FieldsValidation:
 def _validate_action_metadata(all_actions_metadata: list[ActionMetadata]) -> list[str]:
     result: list[str] = []
     for metadata in all_actions_metadata:
-        if not re.match(METADATA_REGEX, metadata.name):
+        if not re.match(METADATA_NAME_REGEX, metadata.name):
             result.append(
-                f"Action name: {metadata.name} does not match the regex: {METADATA_REGEX}"
+                f"Action name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}"
             )
-            result.extend(_validate_action_parameters(metadata.parameters))
+        result.extend(_validate_action_parameters(metadata.parameters))
 
     return result
 
 
 def _validate_action_parameters(action_parameters: list[ActionParameter]) -> list[str]:
     result: list[str] = [
-        f"Action Parameter name: {parameter.name} does not match the regex: {PARAM_REGEX}"
+        f"Action Parameter name: {parameter.name} does not match the regex: {PARAM_NAME_REGEX}"
         for parameter in action_parameters
-        if not re.match(PARAM_REGEX, parameter.name)
+        if not re.match(PARAM_NAME_REGEX, parameter.name)
     ]
     return result
 
@@ -87,19 +89,19 @@ def _validate_action_parameters(action_parameters: list[ActionParameter]) -> lis
 def _validate_connector_metadata(all_connectors_metadata: list[ConnectorMetadata]) -> list[str]:
     result: list[str] = []
     for metadata in all_connectors_metadata:
-        if not re.match(METADATA_REGEX, metadata.name):
+        if not re.match(METADATA_NAME_REGEX, metadata.name):
             result.append(
-                f"Connector name: {metadata.name} does not match the regex: {METADATA_REGEX}"
+                f"Connector name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}"
             )
-            result.extend(_validate_connector_parameters(metadata.parameters))
+        result.extend(_validate_connector_parameters(metadata.parameters))
     return result
 
 
 def _validate_connector_parameters(connector_parameters: list[ConnectorParameter]) -> list[str]:
     result: list[str] = [
-        f"Connector Parameter name: {parameter.name} does not match the regex: {PARAM_REGEX}"
+        f"Connector Parameter name: {parameter.name} does not match the regex: {PARAM_NAME_REGEX}"
         for parameter in connector_parameters
-        if not re.match(PARAM_REGEX, parameter.name)
+        if not re.match(PARAM_NAME_REGEX, parameter.name)
     ]
     return result
 
@@ -107,27 +109,29 @@ def _validate_connector_parameters(connector_parameters: list[ConnectorParameter
 def _validate_job_metadata(all_jobs_metadata: list[JobMetadata]) -> list[str]:
     result: list[str] = []
     for metadata in all_jobs_metadata:
-        if not re.match(METADATA_REGEX, metadata.name):
-            result.append(f"Job name: {metadata.name} does not match the regex: {METADATA_REGEX}")
-            result.extend(_validate_job_parameters(metadata.parameters))
+        if not re.match(METADATA_NAME_REGEX, metadata.name):
+            result.append(
+                f"Job name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}"
+            )
+        result.extend(_validate_job_parameters(metadata.parameters))
     return result
 
 
 def _validate_job_parameters(job_parameters: list[JobParameter]) -> list[str]:
     result: list[str] = [
-        f"Job Parameter name: {parameter.name} does not match the regex: {PARAM_REGEX}"
+        f"Job Parameter name: {parameter.name} does not match the regex: {PARAM_NAME_REGEX}"
         for parameter in job_parameters
-        if not re.match(PARAM_REGEX, parameter.name)
+        if not re.match(PARAM_NAME_REGEX, parameter.name)
     ]
     return result
 
 
 def _integration_metadata(integration_metadata: IntegrationMetadata) -> list[str]:
     result: list[str] = []
-    if not re.match(PARAM_REGEX, integration_metadata.name):
+    if not re.match(PARAM_NAME_REGEX, integration_metadata.name):
         result.append(
             f"Integration name: {integration_metadata.name} "
-            f"does not match the regex: {PARAM_REGEX}\n"
+            f"does not match the regex: {METADATA_NAME_REGEX}\n"
         )
 
     return result
