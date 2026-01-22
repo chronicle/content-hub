@@ -30,6 +30,8 @@ Usage Example::
     print(validated_value)  # 3 as integer
 """
 
+from __future__ import annotations
+
 import json
 
 from .exceptions import ParameterValidationError

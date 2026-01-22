@@ -13,14 +13,16 @@
 # limitations under the License.
 
 import arrow
+from mp.validate.pre_build_validation.playbooks.overview_roles_validation import ALLOWED_ROLES
 
 from .consts import (
-    BLACKLIST_FILTER,
+    ALLOWLIST_FILTER,
+    BLOCKLIST_FILTER,
     NUM_OF_HOURS_IN_DAY,
     NUM_OF_MILLI_IN_SEC,
     NUM_OF_SEC_IN_SEC,
-    WHITELIST_FILTER,
 )
+from .encryption import BLOCK_SIZE
 
 
 def filter_list_by_type(array, inner_type):
@@ -121,36 +123,36 @@ def filter_old_alerts(siemplify, alerts, existing_ids, id_key="alert_id"):
 
 
 def pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, model, model_key, whitelist=None):
-    """Determines whether a values from a key in a model pass the whitelist filter.
+    """Determines whether a values from a key in a model pass the allowlist filter.
 
     Args:
         siemplify: (obj) An instance of the SDK `SiemplifyConnectorExecution` class.
-        whitelist_as_a_blacklist: (bool) The value of the Connector's input checkbox `Use whitelist as blacklist`.
+        whitelist_as_a_blacklist: (bool) The value of the Connector's input checkbox `Use allowlist as blocklist`.
         model: (obj) An alert object of some type from which to extract the specific type/id that will be matched
-                    against the whitelist.
+                    against the allowlist.
         model_key: (str) The key (attribute) whose value is the specific type/id that will be matched against
-                    the whitelist.
+                    the allowlist.
         whitelist: (Iterable) The list from which to search if a value is in order to determine whether it passes
-                    the filter. If no value is provided the default will be the full connector's whitelist
+                    the filter. If no value is provided the default will be the full connector's allowlist
                     (as can be seen in Siemplify's UI).
 
     Returns:
         (bool) True if the model passed the filter successfully else False.
 
     """
-    # whitelist filter
-    whitelist = whitelist or siemplify.whitelist
-    whitelist_filter_type = BLACKLIST_FILTER if whitelist_as_a_blacklist else WHITELIST_FILTER
+    # allowlist filter
+    allowlist = whitelist or siemplify.whitelist
+    allowlist_filter_type = BLOCKLIST_FILTER if whitelist_as_a_blacklist else ALLOWLIST_FILTER
     model_value = getattr(model, model_key)
     model_values = model_value if isinstance(model_value, list) else [model_value]
 
-    if whitelist:
+    if allowlist:
         for value in model_values:
-            if whitelist_filter_type == BLACKLIST_FILTER and value in whitelist:
+            if allowlist_filter_type == BLOCKLIST_FILTER and value in allowlist:
                 siemplify.LOGGER.info(f"'{value}' did not pass blocklist filter.")
                 return False
 
-            if whitelist_filter_type == WHITELIST_FILTER and value not in whitelist:
+            if allowlist_filter_type == ALLOWLIST_FILTER and value not in allowlist:
                 siemplify.LOGGER.info(f"'{value}' did not pass allowlist filter.")
                 return False
 
