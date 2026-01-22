@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.exceptions import NonFatalValidationError
-from mp.core.exclusions import get_param_display_name_regex
+from mp.core.exclusions import get_param_display_name_regex, get_strict_script_display_name_regex
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.job.parameter import JobParameter
 
 
-METADATA_NAME_REGEX: str = r"^[a-zA-Z0-9-\s]+$"
+METADATA_NAME_REGEX: str = get_strict_script_display_name_regex()
 PARAM_NAME_REGEX: str = get_param_display_name_regex()
 
 
