@@ -57,7 +57,7 @@ def get_unique_items_by_difference(item_pool, items_to_remove):
     return list(set(item_pool).difference(items_to_remove))
 
 
-def get_entity_original_identifier(entity):
+def get_entity_original_identifier(entity) -> str:
     """Helper function for getting entity original identifier
 
     Args:
@@ -70,7 +70,7 @@ def get_entity_original_identifier(entity):
     return entity.additional_properties.get(ENTITY_OG_ID_KEY, entity.identifier)
 
 
-def is_test_run(sys_argv):
+def is_test_run(sys_argv: list[str]) -> bool:
     """Return a boolean value that indicates whether the connector's execution state.
 
     Args:
@@ -83,7 +83,7 @@ def is_test_run(sys_argv):
     return not (len(sys_argv) < 2 or sys_argv[1] == "True")
 
 
-def is_first_run(sys_argv):
+def is_first_run(sys_argv: list[str]) -> bool:
     """Return a boolean value that indicates whether the action is being
     executed asynchronously.
 
@@ -97,7 +97,7 @@ def is_first_run(sys_argv):
     return len(sys_argv) < 3 or sys_argv[2] == "True"
 
 
-def clean_result(value):
+def clean_result(value: str) -> str:
     """Strip the value from unnecessary spaces before or after the value.
 
     Args:
@@ -113,7 +113,7 @@ def clean_result(value):
         return value
 
 
-def is_python_37():
+def is_python_37() -> bool:
     """Check if the python version of the system is 3.7 or above.
 
     Args:
@@ -126,7 +126,7 @@ def is_python_37():
     return sys.version_info >= (3, 7)
 
 
-def platform_supports_db(siemplify):
+def platform_supports_db(siemplify: ChronicleSOAR) -> bool:
     """Check if the platform supports database usage.
 
     Args:
@@ -142,23 +142,21 @@ def platform_supports_db(siemplify):
     )
 
 
-def is_empty_string_or_none(data):
+def is_empty_string_or_none(data: Any) -> bool:
     """Check if the data is an 'empty string' or 'None'.
 
     Args:
-        data (str): The data to check.
+        data: The data to check.
 
     Returns:
         bool: True if the supplied data is 'None', or if it only contains an
         empty string "".
 
     """
-    if data is None or data == "":
-        return True
-    return False
+    return bool(data is None or data == "")  # noqa: PLC1901
 
 
-def cast_keys_to_int(data):
+def cast_keys_to_int(data: dict[Any, Any]) -> dict[int, Any]:
     """Cast the keys of a dictionary to integers.
 
     Args:
@@ -315,7 +313,7 @@ def safe_cast_int_value_from_str(default_value):
     return default_value
 
 
-def is_valid_email(email_addr):
+def is_valid_email(email_addr: str) -> bool:
     """Check if a provided value is a valid email address.
 
     Args:
