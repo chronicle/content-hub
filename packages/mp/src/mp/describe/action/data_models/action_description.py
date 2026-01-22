@@ -14,12 +14,50 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Annotated
 
-from mp.describe.action.data_models.action_fields import ActionFields  # noqa: TC001
-from mp.describe.action.data_models.action_tags import ActionTags  # noqa: TC001
+from pydantic import BaseModel, Field
+
+from .action_fields import ActionFields  # noqa: TC001
+from .action_tags import ActionTags  # noqa: TC001
+from .entity_usage import EntityUsage  # noqa: TC001
 
 
 class ActionDescription(BaseModel):
-    fields: ActionFields
-    tags: ActionTags
+    fields: Annotated[
+        ActionFields,
+        Field(
+            description=(
+                "Fields that describe how the action operates. Determine these fields based on the"
+                "metadata json and the code itself."
+            )
+        ),
+    ]
+    tags: Annotated[
+        ActionTags,
+        Field(
+            description=(
+                "Tags that describe the action's capabilities."
+                " These tags are inferred based on the fields."
+            )
+        ),
+    ]
+    entity_usage: Annotated[
+        EntityUsage,
+        Field(
+            description=(
+                "A detailed set of properties that describe how the action uses entities."
+                " Determine each of the fields by going over the code."
+            ),
+        ),
+    ]
+
+
+def main() -> None:
+    import json
+
+    print(json.dumps(ActionDescription.model_json_schema()))
+
+
+if __name__ == "__main__":
+    main()
