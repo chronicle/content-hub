@@ -28,14 +28,17 @@ The `mp` tool helps automate the process of pulling, validating, and structuring
 - ### 1.4. Fill the `display_info.yaml` file
     - Provide the required metadata (e.g., display name, author, description).
 
-- ### 1.5. Validate the playbook
-    - [Run `mp validate`](/packages/mp/docs/commands/validate.md) to ensure the playbook passes all
+- ### 1.5. Fill the `release_notes.yaml` file.
+
+- ### 1.6. Validate the playbook
+    - [Run `mp validate -r playbooks  --only-pre-build`](/packages/mp/docs/commands/validate.md) to
+      ensure the playbook passes all
       checks.
 
-- ### 1.6. Create a Pull Request
+- ### 1.7. Create a Pull Request
     - Create a Pull Request on the `content-hub` GitHub repository.
 
-- ### 1.7. Await review and approval
+- ### 1.8. Await review and approval
     - The Content Hub team will review your submission and may request changes before merging.
 
 ## 2. Manual Process
@@ -44,7 +47,7 @@ If you prefer to contribute manually, follow these steps:
 
 - ### 2.1. Export the playbook
     - In your Google SecOps instance, navigate to the playbook and export it.
-  
+
   ![Export Playbook](/docs/resources/playbooks/export_playbook.png)
 
 - ### 2.2. Unzip the playbook
@@ -71,9 +74,11 @@ If you prefer to contribute manually, follow these steps:
     - In your new playbook directory, open `display_info.yaml` and provide the required metadata (
       e.g., display name, author, description).
 
-- ### 2.7. Create a Pull Request
+- ### 2.7. Fill the `release_notes.yaml` file.
+
+- ### 2.8. Create a Pull Request
     - Commit your changes and push them to your fork.
     - Open a pull request against the main `content-hub` repository.
 
-- ### 2.8. Await review and approval
+- ### 2.9. Await review and approval
     - The Content Hub team will review your submission and may request changes before merging.
