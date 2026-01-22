@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-validation
+"""validation
 ==========
 
 This module contains the ``Validator`` class for validating various types of parameters.
@@ -32,22 +31,20 @@ Usage Example::
 """
 
 import json
-import re
-
 
 empty = object()
 
+from .exceptions import ParameterValidationError
 from .transformation import (
     convert_comma_separated_to_list,
     convert_list_to_comma_string,
 )
-
-from .exceptions import ParameterValidationError
 from .utils import is_valid_email
 
 
 class ParameterValidator:
-    '''Class that contains parameters validation functions'''
+    """Class that contains parameters validation functions"""
+
     _WARN_MSG_WITH_VALUE = (
         "Invalid parameter: {param_name}, "
         "value provided: {value}, "
@@ -64,15 +61,8 @@ class ParameterValidator:
         self.logger = siemplify.LOGGER
 
     @classmethod
-    def _get_warning(
-        cls,
-        param_name,
-        value,
-        error_msg,
-        default_value,
-        print_value=True
-    ):
-        '''Gets a formatted warning message for failed validation check
+    def _get_warning(cls, param_name, value, error_msg, default_value, print_value=True):
+        """Gets a formatted warning message for failed validation check
 
         Args:
             param_name: The name of the parameter
@@ -83,55 +73,44 @@ class ParameterValidator:
 
         Returns:
             formatted warning string
-        '''
+
+        """
         if print_value:
             return cls._WARN_MSG_WITH_VALUE.format(
-                param_name=param_name,
-                value=value,
-                msg=error_msg,
-                default_value=default_value
+                param_name=param_name, value=value, msg=error_msg, default_value=default_value
             )
-        else:
-            return cls._WARN_MSG_WITHOUT_VALUE.format(
-                param_name=param_name,
-                msg=error_msg,
-                default_value=default_value
-            )
+        return cls._WARN_MSG_WITHOUT_VALUE.format(
+            param_name=param_name, msg=error_msg, default_value=default_value
+        )
 
-    def _log_warning(
-        self,
-        param_name,
-        value,
-        error_msg,
-        default_value,
-        print_value=True
-    ):
-        '''Logs a formatted warning message for failed validation check
+    def _log_warning(self, param_name, value, error_msg, default_value, print_value=True):
+        """Logs a formatted warning message for failed validation check
 
         Args:
             param_name: The name of the parameter
             value: The value of the parameter
             error_msg: The error message
             default_value: The default value to use instead of the original value
-        '''
-        self.logger.warn(
+
+        """
+        self.logger.warning(
             self._get_warning(
                 param_name=param_name,
                 value=value,
                 error_msg=error_msg,
                 default_value=default_value,
-                print_value=print_value
+                print_value=print_value,
             )
         )
 
     def validate_json(
-            self,
-            param_name,
-            json_string,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
-            **kwargs
+        self,
+        param_name,
+        json_string,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
+        **kwargs,
     ):
         """Validate a JSON string.
 
@@ -148,6 +127,7 @@ class ParameterValidator:
 
         Raises:
             ParameterValidationError: If the JSON string is invalid.
+
         """
         try:
             res = json.loads(json_string, **kwargs)
@@ -160,7 +140,7 @@ class ParameterValidator:
                     value=json_string,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -173,14 +153,14 @@ class ParameterValidator:
             ) from err
 
     def validate_ddl(
-            self,
-            param_name,
-            value,
-            ddl_values,
-            case_sensitive=False,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        ddl_values,
+        case_sensitive=False,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validate a DDL string.
 
@@ -199,6 +179,7 @@ class ParameterValidator:
 
         Raises:
             ParameterValidationError: If the DDL string is invalid.
+
         """
         _value = value
         if not case_sensitive:
@@ -215,7 +196,7 @@ class ParameterValidator:
                     value=value,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -228,14 +209,14 @@ class ParameterValidator:
         return value
 
     def validate_csv(
-            self,
-            param_name,
-            csv_string,
-            delimiter=',',
-            possible_values=None,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        csv_string,
+        delimiter=",",
+        possible_values=None,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a comma-separated value (CSV) string.
 
@@ -253,12 +234,10 @@ class ParameterValidator:
 
         Returns:
             list: The list of values in the CSV string.
+
         """
         try:
-            res = convert_comma_separated_to_list(
-                csv_string,
-                delimiter=delimiter
-            )
+            res = convert_comma_separated_to_list(csv_string, delimiter=delimiter)
             if possible_values is not None:
                 assert all(val in possible_values for val in res)
             return res
@@ -278,7 +257,7 @@ class ParameterValidator:
                     value=csv_string,
                     error_msg=str(err),
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -291,12 +270,12 @@ class ParameterValidator:
             ) from err
 
     def validate_float(
-            self,
-            param_name,
-            value,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a float string.
 
@@ -312,6 +291,7 @@ class ParameterValidator:
 
         Returns:
             float: The validated value.
+
         """
         try:
             _value = float(value)
@@ -324,7 +304,7 @@ class ParameterValidator:
                     value=value,
                     error_msg=str(err),
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -337,12 +317,12 @@ class ParameterValidator:
             ) from err
 
     def validate_integer(
-            self,
-            param_name,
-            value,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates an integer string.
 
@@ -358,8 +338,8 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
-        """
 
+        """
         try:
             _value = int(value)
             return _value
@@ -371,7 +351,7 @@ class ParameterValidator:
                     value=value,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -384,13 +364,13 @@ class ParameterValidator:
             ) from err
 
     def validate_upper_limit(
-            self,
-            param_name,
-            value,
-            limit,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        limit,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates an upper limit string.
 
@@ -407,8 +387,8 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
-        """
 
+        """
         _value = self.validate_integer(param_name, value, default_value)
         if _value > limit:
             err_msg = f"The value can't be greater then {limit}"
@@ -418,7 +398,7 @@ class ParameterValidator:
                     value=value,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -431,13 +411,13 @@ class ParameterValidator:
         return _value
 
     def validate_lower_limit(
-            self,
-            param_name,
-            value,
-            limit,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        limit,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a lower limit string.
 
@@ -454,8 +434,8 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
-        """
 
+        """
         _value = self.validate_integer(param_name, value, default_value)
         if _value < limit:
             err_msg = f"The value can't be lower then {limit}"
@@ -465,7 +445,7 @@ class ParameterValidator:
                     value=value,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -478,12 +458,12 @@ class ParameterValidator:
         return _value
 
     def validate_positive(
-            self,
-            param_name,
-            value,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a positive integer string.
 
@@ -499,6 +479,7 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
+
         """
         return self.validate_lower_limit(
             param_name,
@@ -510,12 +491,12 @@ class ParameterValidator:
         )
 
     def validate_non_negative(
-            self,
-            param_name,
-            value,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a non-negative integer string.
 
@@ -531,6 +512,7 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
+
         """
         return self.validate_lower_limit(
             param_name,
@@ -542,12 +524,12 @@ class ParameterValidator:
         )
 
     def validate_non_zero(
-            self,
-            param_name,
-            value,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a non-zero integer string.
 
@@ -563,6 +545,7 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
+
         """
         _value = self.validate_integer(param_name, value, default_value)
         if _value == 0:
@@ -573,7 +556,7 @@ class ParameterValidator:
                     value=value,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -586,12 +569,12 @@ class ParameterValidator:
         return _value
 
     def validate_percentage(
-            self,
-            param_name,
-            value,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a percentage string.
 
@@ -607,6 +590,7 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
+
         """
         return self.validate_range(
             param_name,
@@ -619,14 +603,14 @@ class ParameterValidator:
         )
 
     def validate_range(
-            self,
-            param_name,
-            value,
-            min_limit,
-            max_limit,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        value,
+        min_limit,
+        max_limit,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a range string.
 
@@ -644,20 +628,11 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
+
         """
         try:
-            self.validate_lower_limit(
-                param_name,
-                value,
-                min_limit,
-                default_value
-            )
-            return self.validate_upper_limit(
-                param_name,
-                value,
-                max_limit,
-                default_value
-            )
+            self.validate_lower_limit(param_name, value, min_limit, default_value)
+            return self.validate_upper_limit(param_name, value, max_limit, default_value)
         except ParameterValidationError as err:
             err_msg = f"The value must be between {min_limit} and {max_limit}"
             if default_value is not empty:
@@ -666,7 +641,7 @@ class ParameterValidator:
                     value=value,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(
@@ -678,15 +653,15 @@ class ParameterValidator:
             ) from err
 
     def validate_severity(
-            self,
-            param_name,
-            severity,
-            min_limit=None,
-            max_limit=None,
-            possible_values=None,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        severity,
+        min_limit=None,
+        max_limit=None,
+        possible_values=None,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates a severity string.
 
@@ -705,8 +680,8 @@ class ParameterValidator:
 
         Returns:
             int: The validated value.
-        """
 
+        """
         try:
             _severity = int(severity)
             if max_limit and min_limit:
@@ -749,12 +724,12 @@ class ParameterValidator:
         return _severity
 
     def validate_email(
-            self,
-            param_name,
-            email,
-            default_value=empty,
-            print_value=True,
-            print_error=False,
+        self,
+        param_name,
+        email,
+        default_value=empty,
+        print_value=True,
+        print_error=False,
     ):
         """Validates an email string.
 
@@ -770,8 +745,8 @@ class ParameterValidator:
 
         Returns:
             str: The email address string.
-        """
 
+        """
         _email = email.lower()
         if not is_valid_email(_email):
             err_msg = "Invalid email address"
@@ -781,7 +756,7 @@ class ParameterValidator:
                     value=email,
                     error_msg=err_msg,
                     default_value=default_value,
-                    print_value=print_value
+                    print_value=print_value,
                 )
                 return default_value
             raise ParameterValidationError(

@@ -28,6 +28,7 @@ class Logger(abc.ABC):
         - warn()
         - error()
         - exception()
+
     """
 
     @abc.abstractmethod

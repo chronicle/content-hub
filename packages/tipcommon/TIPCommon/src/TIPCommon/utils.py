@@ -12,32 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, Any
+import argparse
 import functools
 import inspect
 import os
-from pathlib import Path
 import re
-import argparse
 import sys
 import tempfile
 import uuid
+from pathlib import Path
+from typing import Any
 
 import requests
-
 from SiemplifyAddressProvider import BASE_1P_SDK_CONTROLLER_VERSION
 
 from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from .consts import (
+    _CAMEL_TO_SNAKE_PATTERN1,
+    _CAMEL_TO_SNAKE_PATTERN2,
     ENTITY_OG_ID_KEY,
     FALSE_VAL_LOWER_STRINGS,
     NO_CONTENT_STATUS_CODE,
     ONE_PLATFORM_ARG,
     SIEM_ID_ATTR_KEY,
     TRUE_VAL_LOWER_STRINGS,
-    _CAMEL_TO_SNAKE_PATTERN1,
-    _CAMEL_TO_SNAKE_PATTERN2,
 )
 
 
@@ -53,6 +52,7 @@ def get_unique_items_by_difference(item_pool, items_to_remove):
         list:
             A list containing unique items from item_pool that were not part of
             items_to_remove
+
     """
     return list(set(item_pool).difference(items_to_remove))
 
@@ -65,26 +65,26 @@ def get_entity_original_identifier(entity):
 
     Returns:
         str: The original identifier
+
     """
     return entity.additional_properties.get(ENTITY_OG_ID_KEY, entity.identifier)
 
 
 def is_test_run(sys_argv):
-    """
-    Return a boolean value that indicates whether the connector's execution state.
+    """Return a boolean value that indicates whether the connector's execution state.
 
     Args:
         sys_argv (_type_): _description_
 
     Returns:
         _type_: _description_
+
     """
     return not (len(sys_argv) < 2 or sys_argv[1] == "True")
 
 
 def is_first_run(sys_argv):
-    """
-    Return a boolean value that indicates whether the action is being
+    """Return a boolean value that indicates whether the action is being
     executed asynchronously.
 
     Args:
@@ -92,13 +92,13 @@ def is_first_run(sys_argv):
 
     Returns:
         True if the action is being executed asynchronously else False.
+
     """
     return len(sys_argv) < 3 or sys_argv[2] == "True"
 
 
 def clean_result(value):
-    """
-    Strip the value from unnecessary spaces before or after the value.
+    """Strip the value from unnecessary spaces before or after the value.
 
     Args:
         value (str): The value to clean.
@@ -114,8 +114,7 @@ def clean_result(value):
 
 
 def is_python_37():
-    """
-    Check if the python version of the system is 3.7 or above.
+    """Check if the python version of the system is 3.7 or above.
 
     Args:
         None.
@@ -128,8 +127,7 @@ def is_python_37():
 
 
 def platform_supports_db(siemplify):
-    """
-    Check if the platform supports database usage.
+    """Check if the platform supports database usage.
 
     Args:
         siemplify (object): The siemplify SDK object.
@@ -145,8 +143,7 @@ def platform_supports_db(siemplify):
 
 
 def is_empty_string_or_none(data):
-    """
-    Check if the data is an 'empty string' or 'None'.
+    """Check if the data is an 'empty string' or 'None'.
 
     Args:
         data (str): The data to check.
@@ -156,15 +153,13 @@ def is_empty_string_or_none(data):
         empty string "".
 
     """
-
     if data is None or data == "":
         return True
     return False
 
 
 def cast_keys_to_int(data):
-    """
-    Cast the keys of a dictionary to integers.
+    """Cast the keys of a dictionary to integers.
 
     Args:
         data (dict): The data whose keys will be cast to ints.
@@ -177,8 +172,7 @@ def cast_keys_to_int(data):
 
 
 def none_to_default_value(value_to_check, value_to_return_if_none):
-    """
-    Check if the current value is None. If it is, replace it with another value. If not,
+    """Check if the current value is None. If it is, replace it with another value. If not,
     return the original value.
 
     Args:
@@ -197,8 +191,7 @@ def none_to_default_value(value_to_check, value_to_return_if_none):
 
 
 def camel_to_snake_case(string):
-    """
-    Convert a camel case string to snake case
+    """Convert a camel case string to snake case
     :param string: (str) the string to convert
     :return: (str) the converted string
     """
@@ -208,8 +201,7 @@ def camel_to_snake_case(string):
 
 
 def is_overflowed(siemplify, alert_info, is_test_run):
-    """
-    Checks if overflowed.
+    """Checks if overflowed.
 
     Args:
         siemplify: (obj) An instance of the SDK `SiemplifyConnectorExecution` class
@@ -218,6 +210,7 @@ def is_overflowed(siemplify, alert_info, is_test_run):
 
     Returns:
         `True` if the alert is overflowed, `False` otherwise.
+
     """
     params = {
         "environment": alert_info.environment,
@@ -260,6 +253,7 @@ def get_function_arg_names(func):
 
     Returns:
         list: All of the argument keys defined in the given fucntion
+
     """
     if is_python_37():
         method_args = inspect.getfullargspec(func)[0]
@@ -281,6 +275,7 @@ def safe_cast_bool_value_from_str(default_value):
 
     Returns:
         The casted value or the default value
+
     """
     if not isinstance(default_value, str):
         return default_value
@@ -305,6 +300,7 @@ def safe_cast_int_value_from_str(default_value):
 
     Returns:
         The casted value or the default value
+
     """
     if not isinstance(default_value, str):
         return default_value
@@ -327,11 +323,9 @@ def is_valid_email(email_addr):
 
     Returns:
         bool: True if email is valid else False
+
     """
-    return (
-        re.match(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}$", email_addr)
-        is not None
-    )
+    return re.match(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}$", email_addr) is not None
 
 
 @functools.singledispatch
@@ -367,6 +361,7 @@ def _create_and_write_to_tempfile(
 
     Returns:
         Path: Path object of temporary file.
+
     """
     temp_path: Path | None = None
     try:
@@ -378,7 +373,7 @@ def _create_and_write_to_tempfile(
 
         return temp_path
 
-    except (OSError, IOError, PermissionError) as error:
+    except (OSError, PermissionError) as error:
         if temp_path.exists():
             try:
                 temp_path.unlink()
@@ -390,11 +385,11 @@ def _create_and_write_to_tempfile(
 
 
 def platform_supports_1p_api() -> bool:
-    """
-    Check whether the platform is 1p or not.
+    """Check whether the platform is 1p or not.
 
     Returns:
         bool: True if platform is 1p, False otherwise.
+
     """
     parser = argparse.ArgumentParser()
 
@@ -405,8 +400,7 @@ def platform_supports_1p_api() -> bool:
 
 
 def get_value_from_json(data: SingleJson, *keys: str, default: Any = None) -> Any:
-    """
-    Get a value from a JSON/dictionary using fallback keys.
+    """Get a value from a JSON/dictionary using fallback keys.
 
     Tries keys in order and returns the value for the first key found.
     If none of the keys exist, returns the default value.
@@ -427,6 +421,7 @@ def get_value_from_json(data: SingleJson, *keys: str, default: Any = None) -> An
         'value2'
         >>> get_value_from_json(d, "missing1", "missing2", default="not_found")
         'not_found'
+
     """
     if not keys:
         raise TypeError("get_value_from_json() expected at least 1 key argument")
@@ -446,6 +441,7 @@ def is_valid_uuid(string: str) -> bool:
 
     Returns:
         True if the string is a valid UUID v4, False otherwise.
+
     """
     try:
         val = uuid.UUID(string, version=4)
@@ -464,6 +460,7 @@ def get_sdk_api_uri(chronicle_soar: ChronicleSOAR) -> str:
 
     Returns:
         str: Google SecOps URI.
+
     """
     if platform_supports_1p_api():
         return chronicle_soar.sdk_config.one_platform_api_root_uri_format.format(
@@ -474,8 +471,7 @@ def get_sdk_api_uri(chronicle_soar: ChronicleSOAR) -> str:
 
 
 def escape_odata_literal(value: Any) -> Any:
-    """
-    Escapes single quotes in a string for OData literal usage by doubling them.
+    """Escapes single quotes in a string for OData literal usage by doubling them.
 
     This is necessary to ensure that single quotes within string literals
     are properly escaped when constructing OData queries with $filter expressions.
@@ -487,6 +483,7 @@ def escape_odata_literal(value: Any) -> Any:
     Returns:
         Any: The escaped string with single quotes doubled if str else return without
         processing.
+
     """
     if not isinstance(value, str):
         return value
@@ -511,6 +508,7 @@ def safe_json_for_204(
 
     Returns: list[SingleJson] | SingleJson: The JSON content of the response or the
             default value for 204 responses.
+
     """
     if response.status_code == NO_CONTENT_STATUS_CODE:
         return {} if default_for_204 is None else default_for_204
@@ -531,7 +529,9 @@ def temporarily_remove_header(header_name: str):
 
     Returns:
         callable: A decorator function.
+
     """
+
     def decorator(method):
         @functools.wraps(method)
         def wrapper(self, *args, **kwargs):
@@ -543,6 +543,7 @@ def temporarily_remove_header(header_name: str):
             finally:
                 if old is not None:
                     session.headers[header_name] = old
+
         return wrapper
 
     return decorator

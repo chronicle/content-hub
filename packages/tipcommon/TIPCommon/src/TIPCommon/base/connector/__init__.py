@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .async_connector import AsyncConnector
-from .base_connector import BaseConnector
-from .connector import Connector
+from .async_connector import AsyncConnector as AsyncConnector
+from .base_connector import BaseConnector as BaseConnector
+from .connector import Connector as Connector

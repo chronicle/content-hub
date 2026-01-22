@@ -14,6 +14,6 @@
 
 from .action_parser import *
 from .base_action import *
+from .base_enrich_action import *
 from .consts import *
 from .data_models import *
-from .base_enrich_action import *

@@ -19,14 +19,14 @@ from abc import ABC, abstractmethod
 from SiemplifyConnectorsDataModel import AlertInfo
 from SiemplifyUtils import output_handler
 
-from .base_connector import BaseConnector
-from ..utils import nativemethod, is_native
 from ...consts import (
     TIMEOUT_THRESHOLD,
 )
 from ...data_models import BaseAlert
 from ...exceptions import ConnectorSetupError
 from ...smp_time import is_approaching_timeout, save_timestamp
+from ..utils import is_native, nativemethod
+from .base_connector import BaseConnector
 
 
 class Connector(BaseConnector, ABC):
@@ -115,18 +115,18 @@ class Connector(BaseConnector, ABC):
         from TIPCommon.data_models import BaseAlert
         from SiemplifyConnectorsDataModel import AlertInfo
 
+
         class FakeAlert(BaseAlert):
             def __init__(self, raw_data):
-                super().__init__(raw_data, raw_data.get('Id'))
-                start_time = raw_data.get('StartTime')
-                end_time = raw_data.get('EndTime')
+                super().__init__(raw_data, raw_data.get("Id"))
+                start_time = raw_data.get("StartTime")
+                end_time = raw_data.get("EndTime")
 
 
         class FakeConnector(Connector):
             def validate_params(self):
                 self.params.user_email = self.param_validator.validate_email(
-                    'User Email',
-                    self.params.user_email
+                    "User Email", self.params.user_email
                 )
 
             def read_context_data(self):
@@ -167,10 +167,11 @@ class Connector(BaseConnector, ABC):
                     max_backwards_param_name="max_days_backwards",
                     metric="days",
                     padding_period_param_name="padding_period",
-                    padding_period_metric="hours"
+                    padding_period_metric="hours",
                 )
 
-        if __name__ == '__main__':
+
+        if __name__ == "__main__":
             script_name = "MyFakeConnector"
             is_test = TIPCommon.is_test_run(sys.argv)
             connector = FakeConnector(script_name, is_test)
@@ -180,16 +181,16 @@ class Connector(BaseConnector, ABC):
 
     @abstractmethod
     def get_alerts(self) -> list[BaseAlert]:
-        """
-        Get alerts from the manager and return a list of alerts.
+        """Get alerts from the manager and return a list of alerts.
 
         Raises:
             ConnectorSetupError: If there is an error getting the alerts.
+
         """
 
     @nativemethod
     def write_context_data(self, all_alerts: list[BaseAlert]) -> None:
-        """save updated context data to platform data storage (DB/LFS).
+        """Save updated context data to platform data storage (DB/LFS).
 
         Args:
             all_alerts: All alerts that were fetched during this connector run.
@@ -205,6 +206,7 @@ class Connector(BaseConnector, ABC):
 
         Raises:
             ConnectorSetupError: If there is an error saving the context data.
+
         """
 
     @nativemethod
@@ -212,9 +214,7 @@ class Connector(BaseConnector, ABC):
         """Wrapper for write_context_data method."""
         self.set_last_success_time(alerts)
         if not is_native(self.write_context_data):
-            self.logger.info(
-                    f'Saving context data to {self.context._location}...'
-                )
+            self.logger.info(f"Saving context data to {self.context._location}...")
             self.write_context_data(alerts)
 
     @nativemethod
@@ -225,7 +225,7 @@ class Connector(BaseConnector, ABC):
         incrementation_value=0,
         log_timestamp=True,
         convert_timestamp_to_micro_time=False,
-        convert_a_string_timestamp_to_unix=False
+        convert_a_string_timestamp_to_unix=False,
     ):
         """Gets the timestamp of the most recent alert from `alerts` using
         `timestamp_key` where `alerts` is a list of all alerts the connector has tried
@@ -264,6 +264,7 @@ class Connector(BaseConnector, ABC):
                         alerts=alerts,
                         timestamp_key='timestamp'
                     )
+
         """
         if timestamp_key is not None:
             save_timestamp(
@@ -273,7 +274,7 @@ class Connector(BaseConnector, ABC):
                 incrementation_value=incrementation_value,
                 log_timestamp=log_timestamp,
                 convert_timestamp_to_micro_time=convert_timestamp_to_micro_time,
-                convert_a_string_timestamp_to_unix=convert_a_string_timestamp_to_unix
+                convert_a_string_timestamp_to_unix=convert_a_string_timestamp_to_unix,
             )
 
     @nativemethod
@@ -285,14 +286,13 @@ class Connector(BaseConnector, ABC):
 
         Returns:
             The processed alert.
+
         """
         return alert
 
     @nativemethod
     def process_alerts(
-        self,
-        filtered_alerts: list[BaseAlert],
-        timeout_threshold: float = TIMEOUT_THRESHOLD
+        self, filtered_alerts: list[BaseAlert], timeout_threshold: float = TIMEOUT_THRESHOLD
     ) -> tuple[list[AlertInfo], list[BaseAlert]]:
         """Main alert processing loop.
         Steps for each alert object:
@@ -316,12 +316,15 @@ class Connector(BaseConnector, ABC):
             you can override this method as follows::
 
                 my_threshold = 0.9
+
+
                 def process_alerts(self, filtered_alerts, timeout_threshold):
                     return super().process_alerts(filtered_alerts, my_threshold)
 
         Returns:
             tuple containing a list of AlertInfo objects,
             and a list of BaseAlert objects
+
         """
         all_alerts = []
         processed_alerts = []
@@ -331,66 +334,51 @@ class Connector(BaseConnector, ABC):
                 if is_approaching_timeout(
                     connector_starting_time=self.connector_start_time,
                     python_process_timeout=self.params.python_process_timeout,
-                    timeout_threshold=timeout_threshold
+                    timeout_threshold=timeout_threshold,
                 ):
-                    self.logger.info(
-                        'Timeout is approaching. Connector will gracefully exit'
-                    )
+                    self.logger.info("Timeout is approaching. Connector will gracefully exit")
                     break
 
                 if self.is_test_run and processed_alerts:
-                    self.logger.info(
-                        'Maximum alert count (1) for test run reached!'
-                    )
+                    self.logger.info("Maximum alert count (1) for test run reached!")
                     break
 
                 if self.max_alerts_processed(processed_alerts):
                     self.logger.info(
-                        f'Maximum alert count {len(processed_alerts)} '
-                        f'for connector execution reached!.'
+                        f"Maximum alert count {len(processed_alerts)} "
+                        f"for connector execution reached!."
                     )
                     break
 
                 all_alerts.append(alert)
 
-                self.logger.info(f'Starting to process alert {alert.alert_id}')
+                self.logger.info(f"Starting to process alert {alert.alert_id}")
                 if not self.pass_filters(alert):
-                    self.logger.info(
-                        f'Alert {alert.alert_id} did not pass filters. '
-                        'Skipping...'
-                    )
+                    self.logger.info(f"Alert {alert.alert_id} did not pass filters. Skipping...")
                     continue
 
                 processed_alert = self.process_alert(alert)
-                self.logger.info(
-                    f'Alert {alert.alert_id} processed successfully'
-                )
+                self.logger.info(f"Alert {alert.alert_id} processed successfully")
 
                 self.store_alert_in_cache(processed_alert)
 
                 alert_info = self.create_alert_info(processed_alert)
-                self.logger.info(
-                    f'Created AlertInfo object for alert {alert.alert_id}'
-                )
+                self.logger.info(f"Created AlertInfo object for alert {alert.alert_id}")
 
                 if self.is_overflow_alert(alert_info):
                     self.logger.info(
-                        f'{alert_info.rule_generator}-{alert_info.ticket_id}-'
-                        f'{alert_info.environment}-{alert_info.device_product} '
-                        'found as overflow alert. Skipping.'
+                        f"{alert_info.rule_generator}-{alert_info.ticket_id}-"
+                        f"{alert_info.environment}-{alert_info.device_product} "
+                        "found as overflow alert. Skipping."
                     )
                     # If is overflowed we should skip
                     continue
 
                 processed_alerts.append(alert_info)
-                self.logger.info(
-                    f'Finished processing {alert.alert_id}'
-                )
+                self.logger.info(f"Finished processing {alert.alert_id}")
 
             except Exception as e:
-                self.logger.error(
-                    f'Failed to process alert with id {alert.alert_id}'
-                )
+                self.logger.error(f"Failed to process alert with id {alert.alert_id}")
                 self.logger.exception(e)
 
                 if self.is_test_run:
@@ -400,8 +388,7 @@ class Connector(BaseConnector, ABC):
 
     @nativemethod
     def finalize(self) -> None:
-        """
-        Method is used to handle all post-processing logic before ending
+        """Method is used to handle all post-processing logic before ending
         connector's current iteration
 
         Examples::
@@ -413,11 +400,10 @@ class Connector(BaseConnector, ABC):
                     self.manager.logout()
         """
 
-    ###################### Connector Execution ######################
+    # Connector Execution ######################
     @output_handler
     def start(self) -> None:
-        """
-        Executes the connector logic.
+        """Executes the connector logic.
 
         Execution steps:
 
@@ -433,58 +419,48 @@ class Connector(BaseConnector, ABC):
 
         Raises:
             ConnectorSetupError: if any of the pre-processing phases fail
+
         """
         self.logger.info(
-            f'---------------- Starting connector {self.script_name} '
-            'execution ----------------'
+            f"---------------- Starting connector {self.script_name} execution ----------------"
         )
         if self.is_test_run:
             self.logger.info(
-                '****** This is an \"IDE Play Button\"\\\"Run Connector once\" '
-                'test run ******'
+                '****** This is an "IDE Play Button"\\"Run Connector once" test run ******'
             )
 
-        self.logger.info(
-            '------------------- Main - Param Init -------------------'
-        )
+        self.logger.info("------------------- Main - Param Init -------------------")
         self.extract_params()
-        self.logger.info(
-            '------------------- Main - Started -------------------'
-        )
+        self.logger.info("------------------- Main - Started -------------------")
         processed_alerts = []
 
         try:
             try:
                 self.validate_params_wrapper()
                 self.read_context_wrapper()
-                self.logger.info('Initializing managers...')
+                self.logger.info("Initializing managers...")
                 self.init_managers()
             except Exception as e:
                 raise ConnectorSetupError(e) from e
 
-            self.logger.info(
-                'Fetching data from manager and starting case ingestion...'
-            )
+            self.logger.info("Fetching data from manager and starting case ingestion...")
             fetched_alerts = self.get_alerts()
-            self.logger.info(
-                f'Fetched {len(fetched_alerts)} alerts from the manager'
-            )
+            self.logger.info(f"Fetched {len(fetched_alerts)} alerts from the manager")
 
             filtered_alerts = self.filter_alerts(fetched_alerts)
             if not is_native(self.filter_alerts):
                 self.logger.info(
-                    f'Successfully filtered alerts. '
-                    f'Filtered alerts count: {len(filtered_alerts)}'
+                    f"Successfully filtered alerts. Filtered alerts count: {len(filtered_alerts)}"
                 )
 
-            self.logger.info('Starting to process alerts...')
+            self.logger.info("Starting to process alerts...")
             processed_alerts, all_alerts = self.process_alerts(filtered_alerts)
             if not self.is_test_run:
                 self.write_context_wrapper(all_alerts)
 
         except Exception as e:
-            self.logger.error(f'{self.error_msg}')
-            self.logger.error(f'Error: {e}')
+            self.logger.error(f"{self.error_msg}")
+            self.logger.error(f"Error: {e}")
             self.logger.exception(e)
 
             if self.is_test_run:
@@ -493,21 +469,16 @@ class Connector(BaseConnector, ABC):
         try:
             self.finalize()
         except Exception as e:
-            self.logger.error(f'{self.error_msg}')
-            self.logger.error(f'Error: {e}')
+            self.logger.error(f"{self.error_msg}")
+            self.logger.error(f"Error: {e}")
             self.logger.exception(e)
 
             if self.is_test_run:
                 raise
 
-        self.logger.info(
-            '------------------- Main - Finished -------------------'
-        )
-        self.logger.info(
-            f'Sending {len(processed_alerts)} new alerts back to SOAR platform.'
-        )
+        self.logger.info("------------------- Main - Finished -------------------")
+        self.logger.info(f"Sending {len(processed_alerts)} new alerts back to SOAR platform.")
         self.siemplify.return_package(processed_alerts)
         self.logger.info(
-            f'---------------- Finished connector {self.script_name} '
-            f'execution ----------------'
+            f"---------------- Finished connector {self.script_name} execution ----------------"
         )

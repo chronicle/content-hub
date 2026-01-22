@@ -21,8 +21,6 @@ from abc import abstractmethod
 from io import StringIO
 from typing import Generic
 
-from .base_job import Job
-from ..interfaces import ApiClient
 from ...data_models import ConnectorCard, InstalledIntegrationInstance
 from ...exceptions import RefreshTokenRenewalJobException
 from ...rest.soar_api import (
@@ -30,7 +28,8 @@ from ...rest.soar_api import (
     get_installed_integrations_of_environment,
 )
 from ...types import Contains
-
+from ..interfaces import ApiClient
+from .base_job import Job
 
 INTEGRATION_KEY = "integration"
 SUPPORTED_PLATFORM_VERSION = "6.2.35.0"
@@ -42,7 +41,6 @@ SuccessFailureTuple = collections.namedtuple(
 
 
 class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
-
     def __init__(self, name: str, integration_identifier: str) -> None:
         super().__init__(name)
         self.integration_identifier = integration_identifier
@@ -72,6 +70,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
 
         Returns:
             str: Environment names.
+
         """
         raise NotImplementedError
 
@@ -92,6 +91,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
 
         Returns:
             str: Connector names.
+
         """
         raise NotImplementedError
 
@@ -108,6 +108,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
 
         Returns:
             None
+
         """
         raise NotImplementedError
 
@@ -124,6 +125,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
 
         Returns:
             None
+
         """
         raise NotImplementedError
 
@@ -145,20 +147,23 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
                     instance_settings
                 ) -> IntegrationManager:
                     return MyManager(...)
+
         Returns:
             The integration's manager
 
         Raises:
             NotImplementedError: If not overridden
+
         """
         raise NotImplementedError
 
     def _perform_job(self) -> None:
-        """main method to get the instance settings and set the renewed refresh
+        """Main method to get the instance settings and set the renewed refresh
         token in the configuration.
 
         Raises:
             Exception: exception to be raised if anything fails during execution
+
         """
         self._verify_platform_version()
         self.logger.info("Platform version validated.")
@@ -185,6 +190,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         Raises:
             RefreshTokenRenewalJobException: exception to be raised in case of
                 version not supported.
+
         """
         supported_version_tuple = _version_string_to_tuple(SUPPORTED_PLATFORM_VERSION)
         current_version_str = self.soar_job.get_system_version()
@@ -213,6 +219,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
                     integration instances.
                 failure_list - A list of environment names for which integrations
                     were not found.
+
         """
         fetched_integrations = []
         failed_to_find_environments = []
@@ -228,13 +235,11 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
                 failed_to_find_environments.append(environment)
                 continue
 
-            fetched_integrations.extend(
-                [
-                    instance
-                    for instance in env_instances
-                    if instance.integration_identifier == integration_identifier
-                ]
-            )
+            fetched_integrations.extend([
+                instance
+                for instance in env_instances
+                if instance.integration_identifier == integration_identifier
+            ])
 
         return SuccessFailureTuple(
             success_list=fetched_integrations,
@@ -258,6 +263,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
                     names.
                 failure_list - List of connector names not found in the fetched
                     connector cards.
+
         """
         if not connector_names:
             return SuccessFailureTuple(
@@ -307,12 +313,13 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         Raises:
             RefreshTokenRenewalJobException: If any instance (environment or connector)
                 is not found.
+
         """
         if failed_to_find_environments or failed_to_find_connectors:
             failed_instances = failed_to_find_environments + failed_to_find_connectors
             error_msg = (
                 f"{self.error_msg} the specified instances "
-                f'were not found: {", ".join(failed_instances)}'
+                f"were not found: {', '.join(failed_instances)}"
             )
             raise RefreshTokenRenewalJobException(error_msg)
 
@@ -330,13 +337,12 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         Returns:
             None: This function does not return anything. It updates the tokens for
                 integration instances.
+
         """
         for integration_payload in integrations:
             instance_name = integration_payload.instance_name
             identifier = integration_payload.identifier
-            self.logger.info(
-                f'Processing integration instance "{instance_name}" - "{identifier}"'
-            )
+            self.logger.info(f'Processing integration instance "{instance_name}" - "{identifier}"')
 
             parameters = self._get_integration_configuration_params(identifier)
             self.api_client = self._build_manager_for_instance(parameters)
@@ -357,13 +363,12 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         Returns:
             None: This function does not return anything. It updates the tokens for
                 connector instances.
+
         """
         for connector_card in connector_cards:
             connector_name = connector_card.display_name
             identifier = connector_card.identifier
-            self.logger.info(
-                f'Processing connector "{connector_name}" instance - "{identifier}"'
-            )
+            self.logger.info(f'Processing connector "{connector_name}" instance - "{identifier}"')
 
             parameters = self._get_connector_configuration_params(identifier)
             self.api_client = self._build_manager_for_instance(parameters)
@@ -393,12 +398,10 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
 
         Returns:
             dict: dict of configuration details for connector instance.
+
         """
         params_list = self.soar_job.get_connector_parameters(connector_identifier)
-        return {
-            param_dict["paramName"]: param_dict["paramValue"]
-            for param_dict in params_list
-        }
+        return {param_dict["paramName"]: param_dict["paramValue"] for param_dict in params_list}
 
     def _log_refresh_token_result(
         self,
@@ -411,11 +414,9 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
             instance_name (str): The name of the instance.
             instance_key (str): The key indicating the type of instance
                 (e.g., 'integration' or 'connector').
+
         """
-        self.logger.info(
-            f"New refresh token is set for {instance_key} instance "
-            f'"{instance_name}".'
-        )
+        self.logger.info(f'New refresh token is set for {instance_key} instance "{instance_name}".')
 
     def _init_api_clients(self) -> None:
         return
@@ -446,6 +447,7 @@ def validate_param_csv_to_multi_value(
     Returns:
         list[str]: A list of unique values provided in the job parameters.
             If no valid values are found, an empty list is returned.
+
     """
     if not param_csv_value:
         return []
@@ -471,8 +473,7 @@ def validate_param_csv_to_multi_value(
 def _validate_double_quotes_count(param_name: str, param_value: str) -> None:
     if param_value.count('"') % 2 == 1:
         raise ValueError(
-            "Invalid input values: Unmatched double quotes for parameter "
-            f'"{param_name}".'
+            f'Invalid input values: Unmatched double quotes for parameter "{param_name}".'
         )
 
 
@@ -500,6 +501,7 @@ def _validate_values(
 
     Raises:
         ValueError: If some values are invalid or have mismatched double quotes.
+
     """
     valid_values = []
     invalid_values = []

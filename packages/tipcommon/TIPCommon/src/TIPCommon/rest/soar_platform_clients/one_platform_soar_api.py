@@ -19,15 +19,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from TIPCommon.rest.custom_types import HttpMethod
+
+from ...consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
+from ...utils import escape_odata_literal, safe_json_for_204, temporarily_remove_header
 from .base_soar_api import BaseSoarApi
-
-from ...consts import DEFAULT_1P_PAGE_SIZE, DATAPLANE_1P_HEADER
-from ...utils import escape_odata_literal, temporarily_remove_header, safe_json_for_204
-
 
 if TYPE_CHECKING:
     import requests
-    from TIPCommon.types import ChronicleSOAR, SingleJson
+
+    from TIPCommon.types import SingleJson
 
 
 _PAGE_SIZE = 1000
@@ -68,8 +68,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_full_case_details(self) -> requests.Response:
-        """
-        Get full case details using explicit expand parameters.
+        """Get full case details using explicit expand parameters.
 
         Expand behavior:
             - case_expand controls /cases endpoint
@@ -79,14 +78,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         case_id = self.params.case_id
 
         if case_type == "alert":
-            params = self._build_expand_params(
-                getattr(self.params, "alert_expand", None)
-            )
+            params = self._build_expand_params(getattr(self.params, "alert_expand", None))
             endpoint = f"/cases/{case_id}/caseAlerts"
         else:
-            params = self._build_expand_params(
-                getattr(self.params, "case_expand", None)
-            )
+            params = self._build_expand_params(getattr(self.params, "case_expand", None))
             endpoint = f"/cases/{case_id}"
 
         return self._make_request(HttpMethod.GET, endpoint, params=params)
@@ -102,23 +97,14 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_installed_integrations_of_environment(self) -> requests.Response:
         """Get installed integrations of environment using legacy API."""
-        endpoint = (
-            f"/integrations/{self.params.integration_identifier}/integrationInstances"
-        )
-        name = (
-            "*"
-            if self.params.environment == "Shared Instances"
-            else self.params.environment
-        )
+        endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances"
+        name = "*" if self.params.environment == "Shared Instances" else self.params.environment
         params = {"$filter": f"environment eq '{escape_odata_literal(name)}'"}
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def get_connector_cards(self) -> requests.Response:
         """Get connector cards using legacy API"""
-        endpoint = (
-            f"/integrations/{self.params.integration_name}"
-            "/connectors/-/connectorInstances"
-        )
+        endpoint = f"/integrations/{self.params.integration_name}/connectors/-/connectorInstances"
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_federation_cases(self) -> requests.Response:
@@ -142,9 +128,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_workflow_instance_card(self) -> requests.Response:
         """Get workflow instance card using legacy API"""
-        endpoint = (
-            "/legacyPlaybooks:legacyGetWorkflowInstancesCards?format=camel"
-        )
+        endpoint = "/legacyPlaybooks:legacyGetWorkflowInstancesCards?format=camel"
         payload = {
             "caseId": self.params.case_id,
             "alertIdentifier": self.params.alert_identifier,
@@ -155,9 +139,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Pause alert sla"""
         alert = self.get_case_alerts().json()
         alert_id = alert.get("items")[0].get("id")
-        endpoint = (
-            f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:pauseSla"
-        )
+        endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:pauseSla"
         payload = {
             "message": self.params.message,
         }
@@ -167,20 +149,15 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Resume alert sla"""
         alert = self.get_case_alerts().json()
         alert_id = alert.get("items")[0].get("id")
-        endpoint = (
-            f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:resumeSla"
-        )
+        endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:resumeSla"
         payload = {
             "message": self.params.message,
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-
     def _get_case_details(self) -> SingleJson:
         """Fetch case details using explicit case_expand."""
-        params = self._build_expand_params(
-            getattr(self.params, "case_expand", None)
-        )
+        params = self._build_expand_params(getattr(self.params, "case_expand", None))
         case_id = self.params.case_id
         endpoint = f"/cases/{case_id}"
         return self._make_request(
@@ -189,12 +166,9 @@ class OnePlatformSoarApi(BaseSoarApi):
             params=params,
         ).json()
 
-
     def _get_case_alerts(self) -> list:
         """Fetch case alert cards using explicit alert_expand."""
-        params = self._build_expand_params(
-            getattr(self.params, "alert_expand", None)
-        )
+        params = self._build_expand_params(getattr(self.params, "alert_expand", None))
         case_id = self.params.case_id
         endpoint = f"/cases/{case_id}/caseAlerts"
         response = self._make_request(
@@ -206,8 +180,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return response.get("caseAlerts", [])
 
     def get_case_overview_details(self) -> SingleJson:
-        """
-        Get full case overview including case details and alert cards.
+        """Get full case overview including case details and alert cards.
 
         Expand is explicitly controlled by:
             - self.params.case_expand
@@ -259,9 +232,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_integration_full_details(self) -> requests.Response:
         """Get integration full details"""
-        endpoint = (
-            f"/marketplaceIntegrations/{self.params.integration_identifier}"
-        )
+        endpoint = f"/marketplaceIntegrations/{self.params.integration_identifier}"
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_integration_instance_details_by_id(self) -> requests.Response:
@@ -275,13 +246,9 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_integration_instance_details_by_name(self) -> SingleJson:
         """Get integration instance details by instance name"""
-        endpoint = (
-            f"/integrations/{self.params.integration_identifier}/integrationInstances"
-        )
+        endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances"
         instance_name = escape_odata_literal(self.params.instance_display_name)
-        query_params = {
-            "$filter": f"displayName eq '{instance_name}'"
-        }
+        query_params = {"$filter": f"displayName eq '{instance_name}'"}
 
         return self._make_request(HttpMethod.GET, endpoint, params=query_params)
 
@@ -294,7 +261,6 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_case_alerts(self) -> requests.Response:
         """Get case alerts"""
-
         endpoint = f"/cases/{self.params.case_id}/caseAlerts"
         query_params: dict[str, str] = {}
         if self.params.alert_identifier is not None:
@@ -308,22 +274,18 @@ class OnePlatformSoarApi(BaseSoarApi):
         case_id = self.params.case_id
         alert_data = self.get_alert_id_by_alert_identifier()
         if alert_data.status_code == 204:
-            setattr(alert_data, "_content", b"{}")
+            alert_data._content = b"{}"
             return alert_data
 
         alert_id = alert_data.json()["items"][0].get("id")
-        endpoint = (
-            f"/cases/{case_id}/caseAlerts/{alert_id}/involvedEvents:formatted"
-        )
+        endpoint = f"/cases/{case_id}/caseAlerts/{alert_id}/involvedEvents:formatted"
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_alert_id_by_alert_identifier(self) -> requests.Response:
         """Get alert id by alert identifier"""
         endpoint = f"/cases/{self.params.case_id}/caseAlerts"
         alert_identifier = escape_odata_literal(self.params.alert_identifier)
-        query_params = {
-            "$filter": f"identifier eq '{alert_identifier}'"
-        }
+        query_params = {"$filter": f"identifier eq '{alert_identifier}'"}
         return self._make_request(HttpMethod.GET, endpoint, params=query_params)
 
     # TODO : Not avialable in 1p so we will implement when api avialble
@@ -341,8 +303,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def _paginate_results(self, initial_endpoint: str) -> list:
-        """
-        Handles paginated API requests, managing tokens and aggregating results.
+        """Handles paginated API requests, managing tokens and aggregating results.
         Avoids infinite loops by using a controlled loop condition.
         """
         all_records = []
@@ -351,9 +312,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         while True if next_token is None else bool(next_token):
             endpoint_with_token = (
-                f"{current_endpoint}&pageToken={next_token}"
-                if next_token
-                else current_endpoint
+                f"{current_endpoint}&pageToken={next_token}" if next_token else current_endpoint
             )
 
             response_data = {}
@@ -365,12 +324,10 @@ class OnePlatformSoarApi(BaseSoarApi):
                 print(f"Error fetching page: {e}")
                 break
 
-            current_records = response_data.get(
-                'custom_lists', response_data.get('items', [])
-            )
+            current_records = response_data.get("custom_lists", response_data.get("items", []))
             all_records.extend(current_records)
 
-            next_token = response_data.get('nextPageToken')
+            next_token = response_data.get("nextPageToken")
             if not next_token:
                 break
 
@@ -380,10 +337,9 @@ class OnePlatformSoarApi(BaseSoarApi):
         self,
         category_names: str | list[str] | None,
         entity_id: str | None,
-        environment: str | None = None
+        environment: str | None = None,
     ) -> str:
-        """
-        Builds the OData filter string for tracking list records.
+        """Builds the OData filter string for tracking list records.
 
         The filter structure is: [environment AND] [category OR block AND]
         [entityIdentifier].
@@ -395,7 +351,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         if category_names:
             if isinstance(category_names, str):
-                category_names = [name.strip() for name in category_names.split(',')]
+                category_names = [name.strip() for name in category_names.split(",")]
 
             if category_names:
                 category_filters = [f"category eq '{name}'" for name in category_names]
@@ -414,60 +370,43 @@ class OnePlatformSoarApi(BaseSoarApi):
         return " and ".join(filter_parts)
 
     def get_traking_list_record(self) -> SingleJson:
-        """
-        Get traking list record and handles pagination with combined filters.
+        """Get traking list record and handles pagination with combined filters.
 
         The filter combines environment (AND) with category (OR, grouped)
         and entityIdentifier (AND).
         """
-
         category_names = self.params.category_name
         entity_id = self.params.entity_id
 
-        filter_string = self._build_tracking_list_filter_string(
-            category_names, entity_id
-        )
+        filter_string = self._build_tracking_list_filter_string(category_names, entity_id)
 
         base_endpoint = "/system/settings/customLists"
 
         if filter_string:
-            initial_endpoint = (
-                f"{base_endpoint}?$filter={filter_string}"
-                f"&pageSize={_PAGE_SIZE}"
-            )
+            initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
         return self._paginate_results(initial_endpoint)
 
     def get_traking_list_records_filtered(self) -> SingleJson:
-        """
-        Get all tracking list records, filtering by environment AND optional
+        """Get all tracking list records, filtering by environment AND optional
         category/entity
         filters, and handles pagination.
         """
-        environment = (
-            self.params.environment
-            if self.params.environment
-            else self.chronicle_soar.environment
-        )
+        environment = self.params.environment or self.chronicle_soar.environment
 
         category_names = self.params.category_name
         entity_id = self.params.entity_id
 
         filter_string = self._build_tracking_list_filter_string(
-            category_names,
-            entity_id,
-            environment=environment
+            category_names, entity_id, environment=environment
         )
 
         base_endpoint = "/system/settings/customLists"
 
         if filter_string:
-            initial_endpoint = (
-                f"{base_endpoint}?$filter={filter_string}"
-                f"&pageSize={_PAGE_SIZE}"
-            )
+            initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
@@ -476,10 +415,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def execute_bulk_assign(self) -> requests.Response:
         """Execute bulk assign"""
         endpoint = "/cases:executeBulkAssign"
-        payload = {
-            "casesIds": self.params.case_ids,
-            "userName": self.params.user_name
-        }
+        payload = {"casesIds": self.params.case_ids, "userName": self.params.user_name}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
@@ -490,7 +426,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             "casesIds": self.params.case_ids,
             "closeReason": self.params.close_reason,
             "rootCause": self.params.root_cause,
-            "closeComment": self.params.close_comment
+            "closeComment": self.params.close_comment,
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
@@ -510,33 +446,23 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_entity_cards(self) -> requests.Response:
         """Get entity cards"""
-        endpoint = (
-            f"/cases/{self.params.case_id}/caseAlerts/-/involvedEntities:fetchCards"
-        )
+        endpoint = f"/cases/{self.params.case_id}/caseAlerts/-/involvedEntities:fetchCards"
         return self._make_request(HttpMethod.GET, endpoint)
 
-    def pause_case_sla(
-        self, case_id: int, message: str | None = None
-    ) -> requests.Response:
+    def pause_case_sla(self, case_id: int, message: str | None = None) -> requests.Response:
         """Send an api request to pause case sla for a given case"""
-
         endpoint = f"/cases/{case_id}:pauseSla"
         request_payload = {"caseId": case_id}
         if message:
             request_payload["message"] = message
 
-        return self._make_request(
-            HttpMethod.POST, endpoint, json_payload=request_payload
-        )
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=request_payload)
 
     def resume_case_sla(self, case_id: int) -> requests.Response:
         """Send an api request to resume case sla for a given case"""
-
         endpoint = f"/cases/{case_id}:resumeSla"
         request_payload = {"caseId": case_id}
-        return self._make_request(
-            HttpMethod.POST, endpoint, json_payload=request_payload
-        )
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=request_payload)
 
     def rename_case(self) -> requests.Response:
         """Rename case"""
@@ -552,17 +478,14 @@ class OnePlatformSoarApi(BaseSoarApi):
             "content": self.params.content,
             "entityIdentifier": self.params.entity_identifier,
             "entityType": self.params.entity_type,
-            "entityEnvironment": self.params.entity_environment
+            "entityEnvironment": self.params.entity_environment,
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def assign_case_to_user(self) -> requests.Response:
         """Assign case to user"""
         endpoint = "/cases:executeBulkAssign"
-        payload = {
-            "casesIds": [self.params.case_id],
-            "userName": self.params.assign_to
-        }
+        payload = {"casesIds": [self.params.case_id], "userName": self.params.assign_to}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_email_template(self) -> requests.Response:
@@ -583,10 +506,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def add_tags_to_case_in_bulk(self) -> requests.Response:
         """Add tags to case in bulk"""
         endpoint = "/cases:executeBulkAddTag"
-        payload = {
-            "casesIds": self.params.case_ids,
-            "tags": self.params.tags
-        }
+        payload = {"casesIds": self.params.case_ids, "tags": self.params.tags}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
@@ -598,8 +518,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_case_wall_records(self) -> requests.Response:
-        """
-        Get case wall records using 1P API.
+        """Get case wall records using 1P API.
 
         Expand behavior:
             - self.params.wall_expand controls expand query.
@@ -616,8 +535,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def get_entity_expand_cards(self) -> requests.Response:
-        """
-        Get entity expand cards using 1P API.
+        """Get entity expand cards using 1P API.
 
         Expand behavior:
             - self.params.entity_expand controls "expand" query.
@@ -630,8 +548,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def get_all_case_overview_details(self) -> SingleJson:
-        """
-        Get full case overview including:
+        """Get full case overview including:
             - Case details
             - Alert cards
             - Security events
@@ -649,8 +566,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         case_data = self.get_case_overview_details()
 
         security_events = self._make_request(
-            HttpMethod.GET,
-            f"/cases/{self.params.case_id}/caseAlerts/-/involvedEvents:formatted"
+            HttpMethod.GET, f"/cases/{self.params.case_id}/caseAlerts/-/involvedEvents:formatted"
         ).json()
 
         events_by_alert: SingleJson = {}
@@ -660,10 +576,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 events_by_alert.setdefault(alert_id, []).append(event)
 
         for alert in case_data.get("alertCards", []):
-            alert["securityEventCards"] = events_by_alert.get(
-                alert.get("identifier"),
-                []
-            )
+            alert["securityEventCards"] = events_by_alert.get(alert.get("identifier"), [])
 
         wall_response = self.get_case_wall_records()
         wall_data = safe_json_for_204(wall_response, default_for_204={})
@@ -680,8 +593,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return case_data
 
     def _build_expand_params(self, expand: list[str] | None) -> dict | None:
-        """
-        Build explicit expand query parameters.
+        """Build explicit expand query parameters.
 
         Rules:
             - None or empty list → no expand query.
@@ -690,6 +602,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         Returns:
             dict | None: {"expand": "a,b"} or None
+
         """
         if not expand:
             return None
@@ -807,13 +720,11 @@ class OnePlatformSoarApi(BaseSoarApi):
     def get_cases_by_timestamp_filter(self) -> list[SingleJson]:
         """Get cases by timestamp filter"""
         environment = "".join(self.params.environment)
-        filter_string = (
-            f"updateTime gt {self.params.start_time} and environment eq '{environment}'"
-        )
+        filter_string = f"updateTime gt {self.params.start_time} and environment eq '{environment}'"
         if getattr(self.params, "case_ids", []) and self.params.case_ids:
             ids_filter: str
             ids_filter = ", ".join([str(case_id) for case_id in self.params.case_ids])
-            case_ids_filter: str = f'id in ({ids_filter})'
+            case_ids_filter: str = f"id in ({ids_filter})"
             filter_string += f" and ({case_ids_filter})"
 
         base_endpoint = "/cases"

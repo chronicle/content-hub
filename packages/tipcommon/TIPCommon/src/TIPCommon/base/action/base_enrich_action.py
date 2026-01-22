@@ -17,10 +17,10 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any
 
-from .base_action import Action
-from .data_models import EntityTypesEnum
 from ...exceptions import EnrichActionError
 from ...types import Entity
+from .base_action import Action
+from .data_models import EntityTypesEnum
 
 
 class EnrichAction(Action):
@@ -51,6 +51,7 @@ class EnrichAction(Action):
         - _perform_action(): Do not override this method! This method combines
             The other abstract methods with more OOtB enrichment logic and
             passes it to the parent class to use in start()
+
     """
 
     def __init__(self, name: str) -> None:
@@ -100,29 +101,22 @@ class EnrichAction(Action):
 
         Args:
             current_entity: _description_. Defaults to None.
+
         """
         try:
             self._perform_enrich_action(current_entity)
 
             if self.enrichment_data:
-                self.logger.info(
-                    'Setting enrichment data and adding it to the entity\n'
-                )
-                current_entity.additional_properties.update(
-                    self.enrichment_data
-                )
+                self.logger.info("Setting enrichment data and adding it to the entity\n")
+                current_entity.additional_properties.update(self.enrichment_data)
 
-            self.logger.info(
-                'Setting the enriched property of the entity to true\n'
-            )
+            self.logger.info("Setting the enriched property of the entity to true\n")
             current_entity.is_enriched = True
             self.entities_to_update.append(current_entity)
 
             if self.entity_results:
-                self.logger.info('Setting enrichment results in JSON results\n')
-                self.json_results[current_entity.original_identifier] = (
-                    self.entity_results
-                )
+                self.logger.info("Setting enrichment results in JSON results\n")
+                self.json_results[current_entity.original_identifier] = self.entity_results
 
         except Exception as e:
             raise EnrichActionError from e

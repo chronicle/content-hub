@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 def main(class_: Callable[[], Any]) -> Callable[[], Any]:

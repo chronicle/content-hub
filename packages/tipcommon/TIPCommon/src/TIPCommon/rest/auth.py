@@ -12,31 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 import json
-# typings used in python2 type-hints which unrecognized by the linter
-from typing import Any, Sequence, Tuple # pylint: disable=unused-import
+import time
 
+# typings used in python2 type-hints which unrecognized by the linter
+import google.auth
+import google.auth.transport.requests
 import requests
 import requests.adapters
-
-import google.auth
-import google.oauth2
-import google.auth.transport.requests
-from google.auth import crypt, jwt, impersonated_credentials
-from google.auth.credentials import Credentials
-from google.oauth2 import service_account, credentials
+from google.auth import crypt, impersonated_credentials, jwt
+from google.oauth2 import service_account
 
 from ..exceptions import EmptyMandatoryValues, NotFoundError
+
 # typings used in python2 type-hints which unrecognized by the linter
-from ..types import ChronicleSOAR, SingleJson   # pylint: disable=unused-import
 from ..utils import is_empty_string_or_none
 
-
 # OOTB Auth Constants
-DEFAULT_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
-OOTB_AUTH_ID_SECOPS = 'gcp_ootb_auth'
-OOTB_AUTH_KEY_SECOPS = 'siem_sa_email'
+DEFAULT_SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+OOTB_AUTH_ID_SECOPS = "gcp_ootb_auth"
+OOTB_AUTH_KEY_SECOPS = "siem_sa_email"
 DEFAULT_CONTEXT_SCOPE = 0
 
 
@@ -55,23 +50,23 @@ def generate_jwt_from_sa(service_account_, expiry_length=3600, audience=None):
 
     Returns:
         bytes: JWT token to use in Authorization header
-    """
 
+    """
     if isinstance(service_account_, str):
         service_account_ = json.loads(service_account_)
 
     if audience is None:
-        audience = 'https://www.googleapis.com/auth/cloud-platform'
+        audience = "https://www.googleapis.com/auth/cloud-platform"
 
-    sa_email = service_account_.get('client_email')
+    sa_email = service_account_.get("client_email")
     now = int(time.time())
     payload = {
-        'iat': now,
-        'exp': now + expiry_length,
-        'iss': sa_email,
-        'aud': audience,
-        'sub': sa_email,
-        'email': sa_email
+        "iat": now,
+        "exp": now + expiry_length,
+        "iss": sa_email,
+        "aud": audience,
+        "sub": sa_email,
+        "email": sa_email,
     }
 
     signer = crypt.RSASigner.from_service_account_info(service_account_)
@@ -92,6 +87,7 @@ def generate_jwt_from_credentials(credentials, verify_ssl=True):
 
     Returns:
         bytes: JWT token to use in Authorization header
+
     """
     auth_req = google.auth.transport.requests.Request()
     auth_req.session.verify = verify_ssl
@@ -101,14 +97,14 @@ def generate_jwt_from_credentials(credentials, verify_ssl=True):
 
 def get_auth_request(verify_ssl=True):
     # type: (bool) -> google.auth.transport.requests.Request
-    """
-    Creates an Authorized HTTP request to a GCP resource API.
+    """Creates an Authorized HTTP request to a GCP resource API.
 
     Args:
         verify_ssl (bool, optional): Verify SSL certificate. Defaults to True.
 
     Returns:
         google.auth.transport.requests.Request: An authorized request object
+
     """
     auth_request_session = requests.Session()
     auth_request_session.verify = verify_ssl
@@ -117,7 +113,7 @@ def get_auth_request(verify_ssl=True):
     # This adapter retries HTTP requests when network errors occur
     # and the requests seems safely retryable.
     retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
-    auth_request_session.mount('https://', retry_adapter)
+    auth_request_session.mount("https://", retry_adapter)
     return google.auth.transport.requests.Request(auth_request_session)
 
 
@@ -154,19 +150,20 @@ def get_adc(scopes=None, request=None, quota_project_id=None):
         google.auth.exceptions.DefaultCredentialsError:
             If no credentials were found,
             or if the credentials found were invalid.
+
     """
     return google.auth.default(scopes, request, quota_project_id)
 
 
 def build_credentials_from_sa(
-        user_service_account=None,
-        target_principal=None,
-        source_credentials=None,
-        quota_project_id=None,
-        scopes=None,
-        verify_ssl=True,
-        **service_account_attr
-    ):
+    user_service_account=None,
+    target_principal=None,
+    source_credentials=None,
+    quota_project_id=None,
+    scopes=None,
+    verify_ssl=True,
+    **service_account_attr,
+):
     # type: (SingleJson | None, str | None, google.auth.credentials.Credentials | None, str | None, list[str] | None , bool | None, Any) -> service_account.Credentials
     """Build credentials object from service account, workload identity email
         or service account attributes
@@ -195,62 +192,59 @@ def build_credentials_from_sa(
 
     Raises:
         EmptyMandatoryValues:
-            No service account, workload identity email or Missing mandatory 
+            No service account, workload identity email or Missing mandatory
             fields for service account
         google.auth.exceptions.RefreshError:
             If the credentials could not be refreshed.
 
     Returns:
         service_account.Credentials: Credentials object
+
     """
     if (
-            user_service_account is None and
-            is_empty_string_or_none(target_principal) and
-            service_account_attr in [{}, None]
+        user_service_account is None
+        and is_empty_string_or_none(target_principal)
+        and service_account_attr in [{}, None]
     ):
         raise EmptyMandatoryValues(
-            'No service account, workload identity email were provided, or '
-            'missing mandatory fields for service account'
+            "No service account, workload identity email were provided, or "
+            "missing mandatory fields for service account"
         )
 
     scopes = scopes if scopes is not None else DEFAULT_SCOPES
     if user_service_account is not None:
         return service_account.Credentials.from_service_account_info(
-            user_service_account,
-            scopes=scopes,
-            quota_project_id=quota_project_id
+            user_service_account, scopes=scopes, quota_project_id=quota_project_id
         )
     if not is_empty_string_or_none(target_principal):
         creds = get_impersonated_credentials(
             target_principal=target_principal,
             source_credentials=source_credentials,
             target_scopes=scopes,
-            quota_project_id=quota_project_id
+            quota_project_id=quota_project_id,
         )
         creds.refresh(get_auth_request(verify_ssl=verify_ssl))
         return creds
 
     return build_credentials_from_sa_attr(
-        **service_account_attr,
-        scopes=scopes,
-        quota_project_id=quota_project_id
+        **service_account_attr, scopes=scopes, quota_project_id=quota_project_id
     )
 
 
 def build_credentials_from_sa_attr(
-        account_type,
-        project_id,
-        private_key_id,
-        private_key,
-        client_email,
-        client_id,
-        auth_uri,
-        token_uri,
-        auth_provider_x509_url,
-        client_x509_cert_url,
-        scopes=None,
-        quota_project_id=None
-    ):
+    account_type,
+    project_id,
+    private_key_id,
+    private_key,
+    client_email,
+    client_id,
+    auth_uri,
+    token_uri,
+    auth_provider_x509_url,
+    client_x509_cert_url,
+    scopes=None,
+    quota_project_id=None,
+):
     # type: (str, str, str, str, str, str, str, str, str, str, list[str] | None, str | None) -> service_account.Credentials
     """Build credentials object from service account attributes
 
@@ -275,39 +269,30 @@ def build_credentials_from_sa_attr(
 
     Returns:
         service_account.Credentials: Credentials object
+
     """
     scopes = scopes if scopes is not None else DEFAULT_SCOPES
     sa_dict = {
-        'type': account_type,
-        'project_id': project_id,
-        'private_key_id': private_key_id,
-        'private_key': (
-            private_key.replace('\\n', '\n')
-            if private_key is not None else None
-        ),
-        'client_email': client_email,
-        'client_id': client_id,
-        'auth_uri': auth_uri,
-        'token_uri': token_uri,
-        'auth_provider_x509_cert_url': auth_provider_x509_url,
-        'client_x509_cert_url': client_x509_cert_url
+        "type": account_type,
+        "project_id": project_id,
+        "private_key_id": private_key_id,
+        "private_key": (private_key.replace("\\n", "\n") if private_key is not None else None),
+        "client_email": client_email,
+        "client_id": client_id,
+        "auth_uri": auth_uri,
+        "token_uri": token_uri,
+        "auth_provider_x509_cert_url": auth_provider_x509_url,
+        "client_x509_cert_url": client_x509_cert_url,
     }
     if all(not is_empty_string_or_none(param) for param in sa_dict.values()):
         return service_account.Credentials.from_service_account_info(
-            info=sa_dict,
-            scopes=scopes,
-            quota_project_id=quota_project_id
+            info=sa_dict, scopes=scopes, quota_project_id=quota_project_id
         )
 
     raise EmptyMandatoryValues(
         # pylint:  disable=consider-using-f-string
-        'Missing mandatory fields for service account creation: {}'.format(
-            ', '.join(
-                {
-                    param for param, value in sa_dict.items()
-                    if is_empty_string_or_none(value)
-                }
-            )
+        "Missing mandatory fields for service account creation: {}".format(
+            ", ".join({param for param, value in sa_dict.items() if is_empty_string_or_none(value)})
         )
     )
 
@@ -317,7 +302,7 @@ def get_impersonated_credentials(
     source_credentials=None,
     target_scopes=None,
     delegates=None,
-    quota_project_id=None
+    quota_project_id=None,
 ):
     # type: (str, google.auth.Credentials | None, Sequence[str] | None, Sequence[str] | None, str | None) -> impersonated_credentials.Credentials
     """Get a short-lived Credentials object using GCP
@@ -353,6 +338,7 @@ def get_impersonated_credentials(
     Returns:
         impersonated_credentials.Credentials:
             A short-lived Credentials object of the target principal
+
     """
     if target_scopes is None:
         target_scopes = DEFAULT_SCOPES
@@ -365,15 +351,11 @@ def get_impersonated_credentials(
         target_principal=target_principal,
         target_scopes=target_scopes,
         delegates=delegates,
-        quota_project_id=quota_project_id
+        quota_project_id=quota_project_id,
     )
 
 
-def get_secops_siem_tenant_credentials(
-    chronicle_soar,
-    target_scopes=None,
-    quota_project_id=None
-):
+def get_secops_siem_tenant_credentials(chronicle_soar, target_scopes=None, quota_project_id=None):
     # type: (ChronicleSOAR, Sequence[str] | None, str | None) -> impersonated_credentials.Credentials
     """Get the SIEM tenant short-lived service account credentials
     of the SecOps instance
@@ -391,20 +373,20 @@ def get_secops_siem_tenant_credentials(
     Returns:
         impersonated_credentials.Credentials:
             SIEM tenant short-lived service account credentials
+
     """
     siem_sa_email = chronicle_soar.get_context_property(
         context_type=DEFAULT_CONTEXT_SCOPE,
         identifier=OOTB_AUTH_ID_SECOPS,
-        property_key=OOTB_AUTH_KEY_SECOPS
+        property_key=OOTB_AUTH_KEY_SECOPS,
     )
     if is_empty_string_or_none(siem_sa_email):
         raise NotFoundError(
-            'SIEM tenant short-lived service account email not found in '
-            'SOAR context'
+            "SIEM tenant short-lived service account email not found in SOAR context"
         )
 
     return get_impersonated_credentials(
         target_principal=siem_sa_email,
         target_scopes=target_scopes,
-        quota_project_id=quota_project_id
+        quota_project_id=quota_project_id,
     )

@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Coroutine, Iterable
-
 import asyncio
 import sys
-import requests
+from collections.abc import Coroutine, Iterable
+from typing import Any
 
+import requests
 import SiemplifyVaultUtils
 from SiemplifyAction import SiemplifyAction
 from SiemplifyConnectors import SiemplifyConnectorExecution
@@ -27,10 +27,10 @@ from SiemplifyJob import SiemplifyJob
 from SiemplifyLogger import SiemplifyLogger
 from SiemplifyUtils import my_stdout
 
-from .interfaces.logger import Logger, ScriptLogger
 from ..data_models import Container
 from ..exceptions import ActionSetupError
 from ..types import ChronicleSOAR, Entity, GeneralFunction, SingleJson
+from .interfaces.logger import Logger, ScriptLogger
 
 
 class CreateSession:
@@ -67,6 +67,7 @@ def nativemethod(method: GeneralFunction) -> GeneralFunction:
 
     Returns:
         function: The decorated method.
+
     """
     method.is_native = True
     return method
@@ -80,6 +81,7 @@ def is_native(method: GeneralFunction) -> bool:
 
     Returns:
         bool: True if the method is marked as native, False otherwise.
+
     """
     if hasattr(method, "is_native"):
         return method.is_native
@@ -88,16 +90,12 @@ def is_native(method: GeneralFunction) -> bool:
 
 def validate_manager(manager: Any) -> None:
     if manager is None:
-        raise ActionSetupError(
-            "Cannot run this action without a manager! (manager is None)\n"
-        )
+        raise ActionSetupError("Cannot run this action without a manager! (manager is None)\n")
 
 
 def validate_entity(entity: Entity) -> None:
     if entity is None:
-        raise ActionSetupError(
-            "Cannot run this action on null entity! (entity is None\n"
-        )
+        raise ActionSetupError("Cannot run this action on null entity! (entity is None\n")
 
 
 class NewLineLogger(Logger):
@@ -111,7 +109,7 @@ class NewLineLogger(Logger):
         self.logger.info(f"{msg}\n", *args, **kwargs)
 
     def warn(self, warning_msg: str, *args, **kwargs) -> None:
-        self.logger.warn(f"{warning_msg}\n", *args, **kwargs)
+        self.logger.warning(f"{warning_msg}\n", *args, **kwargs)
 
     def error(self, error_msg: str, *args, **kwargs) -> None:
         self.logger.error(f"{error_msg}\n", *args, **kwargs)
@@ -120,10 +118,7 @@ class NewLineLogger(Logger):
         self.logger.exception(ex, *args, **kwargs)
 
 
-def coros_to_tasks_with_limit(
-        coros: Iterable[Coroutine],
-        limit: int
-) -> list[asyncio.Task]:
+def coros_to_tasks_with_limit(coros: Iterable[Coroutine], limit: int) -> list[asyncio.Task]:
     """Rate limit number of coroutines that can be executed simultaneously.
 
     Wrap all coroutines in tasks for easy scheduling / dismissing.
@@ -134,6 +129,7 @@ def coros_to_tasks_with_limit(
 
     Returns:
         list[asyncio.Task]: list of wrapped coroutines enclosed into asyncio.Semaphore
+
     """
     sem = asyncio.Semaphore(limit)
 
@@ -141,13 +137,12 @@ def coros_to_tasks_with_limit(
         async with sem:
             return await coro
 
-    return [
-        asyncio.create_task(await_coro(coro)) for coro in coros
-    ]
+    return [asyncio.create_task(await_coro(coro)) for coro in coros]
 
 
 def async_output_handler(func):
     """Wrap script execution coroutine to catch exceptions and provide proper output."""
+
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
@@ -169,5 +164,6 @@ def get_param_value_from_vault(vault_settings: SingleJson, param_value: str) -> 
 
     Returns:
         str: Parameter value retrieved from vault.
+
     """
     return SiemplifyVaultUtils.extract_vault_param(param_value, vault_settings)

@@ -97,9 +97,7 @@ class CloseCaseOrAlertMaliciousRootCauses(Enum):
     IRRELEVANT_TCP_UDP_PORT = "Irrelevant TCP/UDP port"
     MISCONFIGURED_SYSTEM = "Misconfigured system"
     OTHER = "Other"
-    SIMILAR_CASE_IS_ALREADY_UNDER_INVESTIGATION = (
-        "Similar case is already under investigation"
-    )
+    SIMILAR_CASE_IS_ALREADY_UNDER_INVESTIGATION = "Similar case is already under investigation"
     SYSTEM_CLOCKED_THE_ATTACK = "System blocked the attack"
     SYSTEM_APPLICATION_MALFUNCTION = "System/application malfunction"
     UNFORESEEN_EFFECTS_OF_CHANGE = "Unforeseen effects of change"
@@ -117,9 +115,7 @@ class CloseCaseOrAlertNotMaliciousRootCauses(Enum):
     OTHER = "Other"
     PENETRATION_TEST = "Penetration test"
     RULE_UNDER_CONSTRUCTION = "Rule under construction"
-    SIMILAR_CASE_IS_ALREADY_UNDER_INVESTIGATION = (
-        "Similar case is already under investigation"
-    )
+    SIMILAR_CASE_IS_ALREADY_UNDER_INVESTIGATION = "Similar case is already under investigation"
     UNKNOWN = "Unknown"
     USER_MISTAKE = "User mistake"
 
@@ -188,6 +184,7 @@ class ScriptParameter:
             (prioritized over 'default_value' in manual actions).
         type (ActionParamType): The type of the parameter.
         optional_values (list): DDL of optional values for type DDL.
+
     """
 
     def __init__(self, input_dict: dict[str, Any]) -> None:
@@ -222,6 +219,7 @@ class FullDetailsConfigurationParameter:
         value (Any): The default value of the parameter.
         type (IntegrationParamType): The type of the parameter.
         optional_values (list): DDL of optional values for type DDL.
+
     """
 
     def __init__(self, input_dict: dict[str, Any]) -> None:
@@ -233,9 +231,7 @@ class FullDetailsConfigurationParameter:
         self.is_mandatory: bool = input_dict.get("isMandatory", False)
         self.description: str | None = input_dict.get("propertyDescription")
         self.name: str = input_dict.get("propertyName", "No name found!")
-        self.display_name: str = input_dict.get(
-            "propertyDisplayName", "No display name found!"
-        )
+        self.display_name: str = input_dict.get("propertyDisplayName", "No display name found!")
         self.value: Any = input_dict.get("value")
         self.type = IntegrationParamType(input_dict.get("propertyType", -1))
         self.optional_values: list | None = input_dict.get("optionalValues")
@@ -253,6 +249,7 @@ class DataTable:
     Attributes:
         title (str | None): The table's title.
         data_table (list[str)]): A list of csv rows that construct the table.
+
     """
 
     data_table: list[str]
@@ -273,6 +270,7 @@ class Attachment:
         filename (str): The attachment's file name.
         file_contents (bytes): The attachment's file content.
         additional_data (dict | None): Additional data(?)
+
     """
 
     filename: str
@@ -293,6 +291,7 @@ class Content:
     Attributes:
         title (str | None): The content's title.
         content (str): The content to add to the script results.
+
     """
 
     content: str
@@ -311,6 +310,7 @@ class Link:
     Attributes:
         title (str | None): The link's title.
         link (str): The link.
+
     """
 
     link: str
@@ -330,6 +330,7 @@ class HTMLReport:
         title (str | None): The link's title.
         report_name (str): The report's name.
         report_contents (str): The report's HTML content.
+
     """
 
     report_name: str
@@ -350,6 +351,7 @@ class Markdown:
         title (str | None): The markdown's title.
         markdown_content (str): The markdown's content.
         markdown_name (str): The markdown's name.
+
     """
 
     markdown_name: str
@@ -371,6 +373,7 @@ class EntityInsight:
         message (str): The insight's message.
         triggered_by (str | None): The integration's name.
         original_requesting_user (str | None): The original user.
+
     """
 
     entity: Entity
@@ -398,6 +401,7 @@ class CaseInsight:
         additional_data (Any | None): Additional data
         additional_data_type (Any | None): The additional data's type
         additional_data_title (str | None): The additional data's title
+
     """
 
     triggered_by: str
@@ -425,6 +429,7 @@ class CaseAttachment:
         attachment_type (str): The attachment's type (e.g. `.txt`).
         description (str): The attachment's description.
         is_favorite (bool): Whether the attachment is marked as favorite.
+
     """
 
     attachment_id: int
@@ -467,6 +472,7 @@ class CaseComment:
         alert_identifier (str):
             The alert's identifier (e.g.
             `SUSPICIOUS PHISHING EMAIL_83765943-9437-4771-96F6-BD0FB291384E`)
+
     """
 
     comment: str

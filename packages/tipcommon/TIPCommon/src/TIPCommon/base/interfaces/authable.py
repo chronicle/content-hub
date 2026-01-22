@@ -17,9 +17,9 @@ from __future__ import annotations
 import abc
 from typing import Generic, TypeVar
 
-from .session import AuthenticatedSession
-from ..utils import CreateSession
 from ...types import AuthParams
+from ..utils import CreateSession
+from .session import AuthenticatedSession
 
 
 class Authable(abc.ABC, Generic[AuthParams]):
@@ -39,6 +39,7 @@ class Authable(abc.ABC, Generic[AuthParams]):
             params:
                 Authentication parameters. Can be an object, dataclass, TypedDict,
                 namedtuple or anything that holds all the authentication parameters.
+
         """
 
 

@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import auth, gcp, httplib, soar_api
+from . import auth as auth
+from . import gcp as gcp
+from . import httplib as httplib
+from . import soar_api as soar_api

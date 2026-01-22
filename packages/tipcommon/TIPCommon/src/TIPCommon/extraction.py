@@ -26,7 +26,7 @@ def extract_script_param(
     input_type=str,
     is_mandatory=False,
     print_value=False,
-    remove_whitespaces=True
+    remove_whitespaces=True,
 ):
     """Extracts a script parameter from an input dictionary.
 
@@ -42,6 +42,7 @@ def extract_script_param(
 
     Returns:
         The extracted value.
+
     """
     # internal param validation:
     if not siemplify:
@@ -52,10 +53,7 @@ def extract_script_param(
 
     if default_value and not (type(default_value) == input_type):
         raise Exception(
-            "Given default_value of '{0}' doesn't match expected type {1}".format(
-                default_value,
-                input_type.__name__
-            )
+            f"Given default_value of '{default_value}' doesn't match expected type {input_type.__name__}"
         )
 
     #  =========== start validation logic =====================
@@ -63,19 +61,15 @@ def extract_script_param(
 
     if not value:
         if is_mandatory:
-            raise Exception(
-                "Missing mandatory parameter {0}".format(param_name)
-            )
-        else:
-            value = default_value
-            siemplify.LOGGER.info(
-                "Parameter {0} was not found or was empty, used default_value"
-                " {1} instead".format(param_name, default_value)
-            )
-            return value
+            raise Exception(f"Missing mandatory parameter {param_name}")
+        value = default_value
+        siemplify.LOGGER.info(
+            f"Parameter {param_name} was not found or was empty, used default_value {default_value} instead"
+        )
+        return value
 
     if print_value:
-        siemplify.LOGGER.info(u"{}: {}".format(param_name, value))
+        siemplify.LOGGER.info("{}: {}".format(param_name, value))
 
     # None values should not be converted.
     if value is None:
@@ -86,23 +80,16 @@ def extract_script_param(
         valid_lowered_bool_values = [
             str(True).lower(),
             str(False).lower(),
-            str(bool(None)).lower()
-        ] # In Python - None and bool False are the same logicly
+            str(bool(None)).lower(),
+        ]  # In Python - None and bool False are the same logicly
 
         if lowered not in valid_lowered_bool_values:
-            raise Exception(
-                "Paramater named {0}, with value {1} isn't a valid BOOL".format(
-                    param_name,
-                    value
-                )
-            )
+            raise Exception(f"Paramater named {param_name}, with value {value} isn't a valid BOOL")
         result = lowered == str(True).lower()
     elif input_type == int:
         validator = ParameterValidator(siemplify)
         result = validator.validate_integer(
-            param_name=param_name,
-            value=value,
-            print_value=print_value
+            param_name=param_name, value=value, print_value=print_value
         )
     elif input_type == float:
         result = float(value)
@@ -111,11 +98,7 @@ def extract_script_param(
     elif input_type == unicode:
         result = value
     else:
-        raise Exception(
-            "input_type {0} isn't not supported for conversion".format(
-                input_type.__name__
-            )
-        )
+        raise Exception(f"input_type {input_type.__name__} isn't not supported for conversion")
 
     if remove_whitespaces:
         return clean_result(result)
@@ -124,8 +107,14 @@ def extract_script_param(
 
 
 def extract_configuration_param(
-    siemplify, provider_name, param_name, default_value=None, input_type=str,
-    is_mandatory=False, print_value=False, remove_whitespaces=True
+    siemplify,
+    provider_name,
+    param_name,
+    default_value=None,
+    input_type=str,
+    is_mandatory=False,
+    print_value=False,
+    remove_whitespaces=True,
 ):
     """Extracts a configuration parameter value from the Integrations's configuration.
 
@@ -141,6 +130,7 @@ def extract_configuration_param(
 
     Returns:
         The extracted value.
+
     """
     if not provider_name:
         raise Exception("provider_name cannot be None/empty")
@@ -154,7 +144,7 @@ def extract_configuration_param(
         input_type=input_type,
         is_mandatory=is_mandatory,
         print_value=print_value,
-        remove_whitespaces=remove_whitespaces
+        remove_whitespaces=remove_whitespaces,
     )
 
 
@@ -165,7 +155,7 @@ def extract_action_param(
     input_type=str,
     is_mandatory=False,
     print_value=False,
-    remove_whitespaces=True
+    remove_whitespaces=True,
 ):
     """Extracts an action parameter from the Siemplify object.
 
@@ -182,6 +172,7 @@ def extract_action_param(
 
     Returns:
         Any: The value of the parameter.
+
     """
     return extract_script_param(
         siemplify=siemplify,
@@ -191,7 +182,7 @@ def extract_action_param(
         input_type=input_type,
         is_mandatory=is_mandatory,
         print_value=print_value,
-        remove_whitespaces=remove_whitespaces
+        remove_whitespaces=remove_whitespaces,
     )
 
 
@@ -202,7 +193,7 @@ def extract_connector_param(
     input_type=str,
     is_mandatory=False,
     print_value=False,
-    remove_whitespaces=True
+    remove_whitespaces=True,
 ):
     """Extracts a connector parameter from the Siemplify object.
 
@@ -218,6 +209,7 @@ def extract_connector_param(
 
     Returns:
         Any: The value of the parameter.
+
     """
     return extract_script_param(
         siemplify=siemplify,
@@ -227,7 +219,7 @@ def extract_connector_param(
         input_type=input_type,
         is_mandatory=is_mandatory,
         print_value=print_value,
-        remove_whitespaces=remove_whitespaces
+        remove_whitespaces=remove_whitespaces,
     )
 
 
@@ -238,7 +230,7 @@ def extract_job_param(
     input_type=str,
     is_mandatory=False,
     print_value=False,
-    remove_whitespaces=True
+    remove_whitespaces=True,
 ):
     """Extracts a connector parameter from the Siemplify object.
 
@@ -255,6 +247,7 @@ def extract_job_param(
 
     Returns:
         Any: The value of the parameter.
+
     """
     return extract_script_param(
         siemplify=siemplify,
@@ -264,7 +257,7 @@ def extract_job_param(
         input_type=input_type,
         is_mandatory=is_mandatory,
         print_value=print_value,
-        remove_whitespaces=remove_whitespaces
+        remove_whitespaces=remove_whitespaces,
     )
 
 
@@ -277,6 +270,7 @@ def get_connector_detailed_params(siemplify):
 
     Returns:
         list: A list of ConnectorParameter objects.
+
     """
     if not siemplify:
         raise Exception("Parameter 'siemplify' cannot be None")
@@ -290,11 +284,8 @@ def get_connector_detailed_params(siemplify):
         # This is workaround for SDK legacy code and should be removed when fixed
         detailed_params = [p for p in detailed_params if p.type != ConnectorParamTypes.SCRIPT]
 
-
         return detailed_params
 
     except AttributeError as e:
-        siemplify.LOGGER.error(
-            "could not fetch connector detailed parameters: {}".format(e)
-        )
+        siemplify.LOGGER.error("could not fetch connector detailed parameters: {}".format(e))
         raise

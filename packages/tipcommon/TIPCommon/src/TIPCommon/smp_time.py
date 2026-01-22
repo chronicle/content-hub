@@ -14,21 +14,9 @@
 
 
 import datetime
-import dateutil.parser
 import time
 
-from .consts import (
-    ACTION_TIMEOUT_THRESHOLD_IN_SEC,
-    DATETIME_FORMAT,
-    NUM_OF_HOURS_IN_DAY,
-    NUM_OF_MILLI_IN_SEC,
-    RFC_3339_TIME_FORMAT,
-    _TIMEFRAME_MAPPING,
-    TIMEOUT_THRESHOLD,
-    UNIX_FORMAT,
-)
-from .exceptions import InvalidTimeException
-
+import dateutil.parser
 from SiemplifyUtils import (
     convert_datetime_to_unix_time,
     convert_string_to_unix_time,
@@ -36,6 +24,18 @@ from SiemplifyUtils import (
     unix_now,
     utc_now,
 )
+
+from .consts import (
+    _TIMEFRAME_MAPPING,
+    ACTION_TIMEOUT_THRESHOLD_IN_SEC,
+    DATETIME_FORMAT,
+    NUM_OF_HOURS_IN_DAY,
+    NUM_OF_MILLI_IN_SEC,
+    RFC_3339_TIME_FORMAT,
+    TIMEOUT_THRESHOLD,
+    UNIX_FORMAT,
+)
+from .exceptions import InvalidTimeException
 
 
 def change_timezone(dtime, current_tz, new_tz):
@@ -52,19 +52,20 @@ def change_timezone(dtime, current_tz, new_tz):
 
     Returns:
         datetime.datetime: A new datetime object with a new timezone
+
     """
     if current_tz not in pytz.all_timezones_set:
         raise ValueError(
-            'The provided current time zone is not listed in '
-            'pytz.all_timezones. Please check if it was parsed correctly.\n'
-            'Current time zone: "{0}"'.format(current_tz)
+            "The provided current time zone is not listed in "
+            "pytz.all_timezones. Please check if it was parsed correctly.\n"
+            f'Current time zone: "{current_tz}"'
         )
 
     if new_tz not in pytz.all_timezones_set:
         raise ValueError(
-            'The provided new time zone is not listed in '
-            'pytz.all_timezones. Please check if it was parsed correctly.\n'
-            'New time zone: "{0}"'.format(new_tz)
+            "The provided new time zone is not listed in "
+            "pytz.all_timezones. Please check if it was parsed correctly.\n"
+            f'New time zone: "{new_tz}"'
         )
 
     ctz = pytz.timezone(current_tz)
@@ -76,11 +77,7 @@ def change_timezone(dtime, current_tz, new_tz):
     return dtime.astimezone(ntz)
 
 
-def validate_timestamp(
-    last_run_timestamp,
-    offset_in_hours,
-    offset_is_in_days=False
-):
+def validate_timestamp(last_run_timestamp, offset_in_hours, offset_is_in_days=False):
     """Validates timestamp in range.
 
     Args:
@@ -93,29 +90,26 @@ def validate_timestamp(
 
     Returns:
         datetime: The validated timestamp.
-    """
 
+    """
     current_time = utc_now()
 
     if offset_is_in_days:
         offset_in_hours = offset_in_hours * NUM_OF_HOURS_IN_DAY
 
-    if current_time - last_run_timestamp > datetime.timedelta(
-        hours=offset_in_hours
-    ):
+    if current_time - last_run_timestamp > datetime.timedelta(hours=offset_in_hours):
         return current_time - datetime.timedelta(hours=offset_in_hours)
-    else:
-        return last_run_timestamp
+    return last_run_timestamp
 
 
 def save_timestamp(
     siemplify,
     alerts,
-    timestamp_key='timestamp',
+    timestamp_key="timestamp",
     incrementation_value=0,
     log_timestamp=True,
     convert_timestamp_to_micro_time=False,
-    convert_a_string_timestamp_to_unix=False
+    convert_a_string_timestamp_to_unix=False,
 ):
     """Saves last timestamp for given alerts.
 
@@ -130,47 +124,35 @@ def save_timestamp(
 
     Returns:
         bool: Whether the timestamp is updated.
-    """
 
+    """
     if not alerts:
-        siemplify.LOGGER.info(
-            'Timestamp is not updated since no alerts fetched'
-        )
+        siemplify.LOGGER.info("Timestamp is not updated since no alerts fetched")
         return False
 
     if convert_a_string_timestamp_to_unix:
         alerts = sorted(
-            alerts,
-            key=lambda alert: convert_string_to_unix_time(
-                getattr(alert, timestamp_key)
-            )
+            alerts, key=lambda alert: convert_string_to_unix_time(getattr(alert, timestamp_key))
         )
-        last_timestamp = convert_string_to_unix_time(
-            getattr(alerts[-1], timestamp_key)
-        ) + incrementation_value
+        last_timestamp = (
+            convert_string_to_unix_time(getattr(alerts[-1], timestamp_key)) + incrementation_value
+        )
     else:
-        alerts = sorted(
-            alerts,
-            key=lambda alert: int(getattr(alert, timestamp_key))
-        )
-        last_timestamp = int(
-            getattr(alerts[-1], timestamp_key)
-        ) + incrementation_value
+        alerts = sorted(alerts, key=lambda alert: int(getattr(alert, timestamp_key)))
+        last_timestamp = int(getattr(alerts[-1], timestamp_key)) + incrementation_value
 
-    last_timestamp = last_timestamp * NUM_OF_MILLI_IN_SEC if convert_timestamp_to_micro_time else last_timestamp
+    last_timestamp = (
+        last_timestamp * NUM_OF_MILLI_IN_SEC if convert_timestamp_to_micro_time else last_timestamp
+    )
     if log_timestamp:
-        siemplify.LOGGER.info('Last timestamp is :{}'.format(last_timestamp))
+        siemplify.LOGGER.info(f"Last timestamp is: {last_timestamp}")
 
     siemplify.save_timestamp(new_timestamp=last_timestamp)
     return True
 
 
 def get_last_success_time(
-    siemplify,
-    offset_with_metric,
-    time_format=DATETIME_FORMAT,
-    print_value=True,
-    microtime=False
+    siemplify, offset_with_metric, time_format=DATETIME_FORMAT, print_value=True, microtime=False
 ):
     """Get last success time datetime.
 
@@ -183,24 +165,21 @@ def get_last_success_time(
 
     Returns:
         time: The last success time.
-    """
 
+    """
     last_run_timestamp = siemplify.fetch_timestamp(datetime_format=True)
     offset = datetime.timedelta(**offset_with_metric)
     current_time = utc_now()
     # Check if first run
-    datetime_result = current_time - offset if current_time - last_run_timestamp > offset else last_run_timestamp
+    datetime_result = (
+        current_time - offset if current_time - last_run_timestamp > offset else last_run_timestamp
+    )
     unix_result = convert_datetime_to_unix_time(datetime_result)
-    unix_result = unix_result if not microtime else int(
-        unix_result / NUM_OF_MILLI_IN_SEC
-        )
+    unix_result = unix_result if not microtime else int(unix_result / NUM_OF_MILLI_IN_SEC)
 
     if print_value:
         siemplify.LOGGER.info(
-            'Last success time. Date time:{}. Unix:{}'.format(
-                datetime_result,
-                unix_result
-            )
+            f"Last success time. Date time: {datetime_result}. Unix: {unix_result}"
         )
     return unix_result if time_format == UNIX_FORMAT else datetime_result
 
@@ -215,23 +194,18 @@ def siemplify_fetch_timestamp(siemplify, datetime_format=False, timezone=False):
 
     Returns:
         The timestamp.
+
     """
-    last_time = siemplify.fetch_timestamp(
-        datetime_format=datetime_format,
-        timezone=timezone
-    )
+    last_time = siemplify.fetch_timestamp(datetime_format=datetime_format, timezone=timezone)
     if last_time == 0:
         siemplify.LOGGER.info(
-            'Timestamp key does not exist in the database. Initiating with value: 0.'
+            "Timestamp key does not exist in the database. Initiating with value: 0."
         )
     return last_time
 
 
 def siemplify_save_timestamp(
-    siemplify,
-    datetime_format=False,
-    timezone=False,
-    new_timestamp=unix_now()
+    siemplify, datetime_format=False, timezone=False, new_timestamp=unix_now()
 ):
     """Saves timestamp to Siemplify.
 
@@ -243,18 +217,15 @@ def siemplify_save_timestamp(
 
     Returns:
         None
- """
+
+    """
     siemplify.save_timestamp(
-        datetime_format=datetime_format,
-        timezone=timezone,
-        new_timestamp=new_timestamp
+        datetime_format=datetime_format, timezone=timezone, new_timestamp=new_timestamp
     )
 
 
 def is_approaching_timeout(
-    connector_starting_time,
-    python_process_timeout,
-    timeout_threshold=TIMEOUT_THRESHOLD
+    connector_starting_time, python_process_timeout, timeout_threshold=TIMEOUT_THRESHOLD
 ):
     """Checks if a timeout is approaching.
 
@@ -265,14 +236,14 @@ def is_approaching_timeout(
 
     Returns:
         `True` if the connector is approaching a timeout, `False` otherwise.
+
     """
     processing_time_ms = unix_now() - connector_starting_time
     return processing_time_ms > python_process_timeout * NUM_OF_MILLI_IN_SEC * timeout_threshold
 
 
 def is_approaching_action_timeout(
-    action_execution_deadline_in_unix,
-    timeout_threshold_in_sec=ACTION_TIMEOUT_THRESHOLD_IN_SEC
+    action_execution_deadline_in_unix, timeout_threshold_in_sec=ACTION_TIMEOUT_THRESHOLD_IN_SEC
 ):
     """Check if action script is approaching its dedicated script deadline.
 
@@ -289,6 +260,7 @@ def is_approaching_action_timeout(
 
     Returns:
         True - if timeout approaching, False - otherwise.
+
     """
     seconds_until_timeout = action_execution_deadline_in_unix - unix_now()
     return seconds_until_timeout <= timeout_threshold_in_sec
@@ -303,6 +275,7 @@ def datetime_to_rfc3339(datetime_obj):
 
     Returns:
         str: The RFC 3339 representation of the datetime.
+
     """
     return datetime_obj.strftime(RFC_3339_TIME_FORMAT)
 
@@ -316,6 +289,7 @@ def convert_string_to_timestamp(datetime_string):
 
     Returns:
         int: The timestamp.
+
     """
     datetime_object = dateutil.parser.parse(datetime_string)
     return datetime.datetime.timestamp(datetime_object)
@@ -332,61 +306,41 @@ def get_timestamps_from_range(range_string, include_timezone=False):
 
     Returns:
         tuple: Start and end time timestamps.
+
     """
     now = datetime.datetime.utcnow()
     today_datetime = datetime.datetime(
-        year=now.year,
-        month=now.month,
-        day=now.day,
-        hour=0,
-        second=0
+        year=now.year, month=now.month, day=now.day, hour=0, second=0
     )
     timeframe = _TIMEFRAME_MAPPING.get(range_string)
 
     if isinstance(timeframe, dict):
         start_time, end_time = now - datetime.timedelta(**timeframe), now
     elif timeframe == _TIMEFRAME_MAPPING.get("Last Week"):
-        start_time = today_datetime + datetime.timedelta(
-            -today_datetime.weekday(),
-            weeks=-1
-        )
-        end_time = today_datetime + datetime.timedelta(
-            -today_datetime.weekday()
-        )
+        start_time = today_datetime + datetime.timedelta(-today_datetime.weekday(), weeks=-1)
+        end_time = today_datetime + datetime.timedelta(-today_datetime.weekday())
 
     elif timeframe == _TIMEFRAME_MAPPING.get("Last Month"):
         end_time = today_datetime.today().replace(
-            day=1,
-            hour=0,
-            minute=0,
-            second=0
+            day=1, hour=0, minute=0, second=0
         ) - datetime.timedelta(days=1)
         start_time = today_datetime.today().replace(
-            day=1,
-            hour=0,
-            minute=0,
-            second=0
+            day=1, hour=0, minute=0, second=0
         ) - datetime.timedelta(days=end_time.day)
         end_time = end_time + datetime.timedelta(days=1)
     else:
         return None, None
 
     if include_timezone:
-        return start_time.replace(
-            tzinfo=datetime.timezone.utc
-        ).timestamp(), end_time.replace(
-            tzinfo=datetime.timezone.utc
+        return start_time.replace(tzinfo=datetime.UTC).timestamp(), end_time.replace(
+            tzinfo=datetime.UTC
         ).timestamp()
 
     return start_time, end_time
 
 
 def get_timestamps(
-    range_string,
-    start_time_string,
-    end_time_string,
-    error_message=None,
-    time_in_milliseconds=False
+    range_string, start_time_string, end_time_string, error_message=None, time_in_milliseconds=False
 ):
     # type: (str, str, str, str, bool) -> tuple[int, int]
     """Get start and end time timestamps.
@@ -401,11 +355,9 @@ def get_timestamps(
 
     Return:
         tuple: start and end time timestamps
+
     """
-    start_time, end_time = get_timestamps_from_range(
-        range_string,
-        include_timezone=True
-    )
+    start_time, end_time = get_timestamps_from_range(range_string, include_timezone=True)
 
     if not start_time and start_time_string:
         start_time = convert_string_to_timestamp(start_time_string)

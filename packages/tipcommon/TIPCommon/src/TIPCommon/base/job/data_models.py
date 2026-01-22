@@ -34,6 +34,7 @@ class JobParameter:
         value (Any):
             The default value of the parameter
             (prioritized over 'default_value' in manual actions).
+
     """
 
     def __init__(self, input_dict: SingleJson) -> None:
@@ -60,7 +61,7 @@ class JobParameter:
                 return JobParamType[normalized]
             return JobParamType.NULL
 
-        elif isinstance(type_value, int):
+        if isinstance(type_value, int):
             try:
                 return JobParamType(type_value)
             except ValueError:

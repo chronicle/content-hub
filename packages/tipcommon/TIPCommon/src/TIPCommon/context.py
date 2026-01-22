@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-context
+"""context
 ==========
 
 Module that provides a common interface to read / write context values using any of
@@ -41,7 +40,6 @@ from abc import ABC, abstractmethod
 from .base.action import Action
 from .base.connector import BaseConnector
 from .base.job import Job
-
 from .consts import GLOBAL_CONTEXT_SCOPE
 from .types import JsonString
 
@@ -71,9 +69,7 @@ def get_context_factory(chronicle_soar: Action | BaseConnector | Job) -> Context
     if isinstance(chronicle_soar, BaseConnector):
         return SiemplifyConnectorContext(chronicle_soar)
 
-    raise RuntimeError(
-        f"Unsupported SDK object {chronicle_soar} of type {type(chronicle_soar)}"
-    )
+    raise RuntimeError(f"Unsupported SDK object {chronicle_soar} of type {type(chronicle_soar)}")
 
 
 class SiemplifyJobContext(Context):

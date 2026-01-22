@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-JOB_ID_KEY = 'uniqueIdentifier'
+JOB_ID_KEY = "uniqueIdentifier"
 
 PARAMETER_EXTRACTION_ERR_MSG = (
-    'Failed to all installed job instances via API!\n'
-    'HTTPError stacktrace: {error}\n'
+    "Failed to all installed job instances via API!\nHTTPError stacktrace: {error}\n"
 )
 JOB_INSTANCES_PARSE_ERROR_MSG = (
     'Failed to parse the "get installed job instances" response Json\n'
-    'JSONDecoder stacktrace: {error}\n'
+    "JSONDecoder stacktrace: {error}\n"
 )

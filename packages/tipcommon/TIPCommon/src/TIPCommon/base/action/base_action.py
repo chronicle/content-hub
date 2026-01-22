@@ -16,11 +16,34 @@ from __future__ import annotations
 
 import sys
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, NoReturn, Union
+from collections.abc import Callable
+from typing import Generic
 
 from SiemplifyAction import SiemplifyAction
 from SiemplifyDataModel import CustomList
 from SiemplifyUtils import output_handler, unix_now
+
+from ...data_models import Container
+from ...exceptions import (
+    ActionSetupError,
+    CaseResultError,
+    GeneralActionException,
+    ParameterExtractionError,
+    SDKWrapperError,
+)
+from ...filters import filter_list_by_type
+from ...smp_time import is_approaching_action_timeout
+from ...transformation import convert_dict_to_json_result_dict
+from ...types import JSON, Contains, Entity, SingleJson
+from ...utils import get_entity_original_identifier, is_first_run
+from ..interfaces import ApiClient, ScriptLogger
+from ..utils import (
+    create_logger,
+    create_params_container,
+    create_soar_action,
+    is_native,
+    nativemethod,
+)
 from . import consts
 from .action_parser import parse_case_attachment, parse_case_comment
 from .data_models import (
@@ -35,33 +58,11 @@ from .data_models import (
     EntityTypesEnum,
     ExecutionState,
     HTMLReport,
-    Markdown,
     Link,
+    Markdown,
 )
-from ..interfaces import ApiClient, ScriptLogger
-from ..utils import (
-    create_logger,
-    create_params_container,
-    create_soar_action,
-    is_native,
-    nativemethod,
-)
-from ...data_models import Container
-from ...exceptions import (
-    ActionSetupError,
-    CaseResultError,
-    GeneralActionException,
-    ParameterExtractionError,
-    SDKWrapperError,
-)
-from ...filters import filter_list_by_type
-from ...smp_time import is_approaching_action_timeout
-from ...transformation import convert_dict_to_json_result_dict
-from ...types import Contains, Entity, JSON, SingleJson
-from ...utils import get_entity_original_identifier, is_first_run
 
-
-PerformAction = Callable[[Union[Entity, None]], None]
+PerformAction = Callable[[Entity | None], None]
 
 
 class Action(ABC, Generic[ApiClient]):
@@ -219,33 +220,33 @@ class Action(ABC, Generic[ApiClient]):
 
         if __name__ == '__main__':
             main()
+
     """
 
     __slots__ = (
-        "_name",
-        "_soar_action",
-        "_logger",
-        "_params",
-        "_api_client",
         "_action_start_time",
-        "global_context",
-        "_entity_types",
-        "_entities_to_update",
-        "_json_results",
+        "_api_client",
         "_attachments",
+        "_case_insights",
         "_contents",
         "_data_tables",
-        "_html_reports",
-        "_links",
-        "_markdowns",
-
+        "_entities_to_update",
         "_entity_insights",
-        "_case_insights",
-        "_execution_state",
-        "_result_value",
-        "_output_message",
+        "_entity_types",
         "_error_output_message",
+        "_execution_state",
+        "_html_reports",
         "_is_first_run",
+        "_json_results",
+        "_links",
+        "_logger",
+        "_markdowns",
+        "_name",
+        "_output_message",
+        "_params",
+        "_result_value",
+        "_soar_action",
+        "global_context",
     )
 
     def __init__(self, name: str) -> None:
@@ -299,6 +300,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             ActionSetupError: If any of the parameters are invalid.
+
         """
 
     @nativemethod
@@ -326,6 +328,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             error: The last exception that was caught
+
         """
 
     @nativemethod
@@ -336,6 +339,7 @@ class Action(ABC, Generic[ApiClient]):
         Args:
             current_entity: the current entity that failed
             error: The last exception that was caught
+
         """
 
     @nativemethod
@@ -344,6 +348,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             current_entity: the current entity that failed
+
         """
 
     @nativemethod
@@ -353,8 +358,8 @@ class Action(ABC, Generic[ApiClient]):
     # ==================== Action Methods ==================== #
 
     @output_handler
-    def run(self) -> NoReturn:
-        """run the action script.
+    def run(self) -> None:
+        """Run the action script.
 
         Use the run() method on instance of this class
         (after overriding the abstract methods) in the main function
@@ -392,8 +397,7 @@ class Action(ABC, Generic[ApiClient]):
         """
         self._start_action_clock()
         self.logger.info(
-            f"==================== Starting Action - {self.name} - "
-            "Execution ===================="
+            f"==================== Starting Action - {self.name} - Execution ===================="
         )
 
         self.logger.info("-------------------- Main - Param Init --------------------")
@@ -475,6 +479,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             The adjusted JSON result.
+
         """
         if self.entity_types and isinstance(self.json_results, dict):
             return convert_dict_to_json_result_dict(self.json_results)
@@ -488,6 +493,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             entity: the current entity if there is one. Defaults to None.
+
         """
         self.__send_data_tables(entity)
         self.__send_attachments(entity)
@@ -502,6 +508,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             perform_action_fn: The function that performs the action.
+
         """
         self.logger.info("No supported entity types detected for this action")
         self.logger.info("Starting to perform the action")
@@ -516,14 +523,13 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             perform_action_fn: The function that performs the action.
+
         """
         action_name = self.soar_action.action_definition_name
 
         registered_entities = ", ".join(str(et) for et in self.entity_types)
         self.logger.info(
-            f"Detected {len(self.entity_types)} supported entity "
-            "types:\n"
-            f"{registered_entities}"
+            f"Detected {len(self.entity_types)} supported entity types:\n{registered_entities}"
         )
 
         entities = self.soar_action.target_entities
@@ -537,8 +543,7 @@ class Action(ABC, Generic[ApiClient]):
             )
             if approaching_timeout:
                 self.logger.info(
-                    f"Action {action_name} is approaching time out. "
-                    "Stopping execution gracefully"
+                    f"Action {action_name} is approaching time out. Stopping execution gracefully"
                 )
                 if not is_native(self._handle_entity_loop_timeout):
                     self.logger.info("Handling time out")
@@ -553,10 +558,11 @@ class Action(ABC, Generic[ApiClient]):
 
             entity_type = next(
                 (
-                    et for et in EntityTypesEnum
+                    et
+                    for et in EntityTypesEnum
                     if et.value.casefold() == entity.entity_type.casefold()
                 ),
-                EntityTypesEnum.GENERIC
+                EntityTypesEnum.GENERIC,
             )
             if entity_type not in self.entity_types:
                 self.logger.info(
@@ -565,14 +571,10 @@ class Action(ABC, Generic[ApiClient]):
                     f"for this action as mentioned above.\n"
                     "Continuing to the next entity."
                 )
-                self.logger.info(
-                    f"Finished processing {i} out of {len(entities)} entities <=="
-                )
+                self.logger.info(f"Finished processing {i} out of {len(entities)} entities <==")
                 continue
 
-            setattr(
-                entity, consts.ENTITY_OG_ID_ATTR, get_entity_original_identifier(entity)
-            )
+            setattr(entity, consts.ENTITY_OG_ID_ATTR, get_entity_original_identifier(entity))
             self.logger.info(
                 "Added the entity original identifier attribute, "
                 f"original identifier: {entity.original_identifier}"
@@ -587,17 +589,13 @@ class Action(ABC, Generic[ApiClient]):
                 self.logger.info(f"---- Error with entity {entity.identifier} ----")
 
                 self.logger.error(
-                    "An error occurred on entity "
-                    f"{entity.original_identifier}\n"
-                    f"Error: {e}"
+                    f"An error occurred on entity {entity.original_identifier}\nError: {e}"
                 )
 
                 self.logger.exception(e)
 
                 self.logger.info("\nAdding error message to json result")
-                self.json_results[entity.original_identifier] = {
-                    "execution_status": str(e)
-                }
+                self.json_results[entity.original_identifier] = {"execution_status": str(e)}
 
                 if not is_native(self._on_entity_failure):
                     self.logger.info("Calling on entity failure method")
@@ -608,11 +606,9 @@ class Action(ABC, Generic[ApiClient]):
             self.logger.info(f"Sending script result items for entity {entity}")
             self.__send_case_wall_results(entity)
 
-            self.logger.info(
-                f"Finished processing {i} out of {len(entities)} entities <=="
-            )
+            self.logger.info(f"Finished processing {i} out of {len(entities)} entities <==")
         self.__update_entities()
-        self.logger.info(f"Finished iterating over all {len(entities)} " "entities")
+        self.logger.info(f"Finished iterating over all {len(entities)} entities")
 
     def __set_action_to_failure_state(self, error: Exception) -> None:
         """Set the action's properties into a 'failure state'.
@@ -626,6 +622,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             error: The exception object which is caught in the exception
+
         """
         self.logger.error(f"{self.error_output_message}")
         self.logger.exception(error)
@@ -666,6 +663,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If the JSON results could not be sent
                 to the case result.
+
         """
         action_type = "json results"
         try:
@@ -676,9 +674,7 @@ class Action(ABC, Generic[ApiClient]):
             self.json_results = self._get_adjusted_json_results()
 
             if entity is None:
-                self.logger.info(
-                    consts.ADD_TO_CASE_RESULT_MSG.format(action_type=f"{action_type}")
-                )
+                self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=f"{action_type}"))
                 self.soar_action.result.add_result_json(self.json_results)
 
             else:
@@ -711,6 +707,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If the data tables could not be sent
                 to the case result.
+
         """
         action_type = "data tables"
 
@@ -718,9 +715,7 @@ class Action(ABC, Generic[ApiClient]):
             if not self.data_tables:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for data_table in self.data_tables:
                 self.soar_action.result.add_entity_table(
                     entity_identifier=(
@@ -750,6 +745,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If the attachments could not be sent
                 to the case result.
+
         """
         action_type = "attachments"
 
@@ -757,9 +753,7 @@ class Action(ABC, Generic[ApiClient]):
             if not self.attachments:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for attachment in self.attachments:
                 if entity is None:
                     self.soar_action.result.add_attachment(
@@ -771,9 +765,7 @@ class Action(ABC, Generic[ApiClient]):
 
                 else:
                     self.soar_action.result.add_entity_attachment(
-                        entity_identifier=(
-                            attachment.title if attachment.title else entity.identifier
-                        ),
+                        entity_identifier=(attachment.title or entity.identifier),
                         filename=attachment.filename,
                         file_contents=attachment.file_contents,
                         additional_data=attachment.additional_data,
@@ -798,6 +790,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If the content could not be sent
                 to the case result.
+
         """
         action_type = "content"
 
@@ -805,15 +798,11 @@ class Action(ABC, Generic[ApiClient]):
             if not self.contents:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for content in self.contents:
                 self.soar_action.result.add_content(
                     entity_identifier=(
-                        content.title
-                        if content.title or entity is None
-                        else entity.identifier
+                        content.title if content.title or entity is None else entity.identifier
                     ),
                     content=content.content,
                     entity_type=None if entity is None else entity.entity_type,
@@ -837,6 +826,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If the HTML reports could not be sent
                 to the case result.
+
         """
         action_type = "HTML reports"
 
@@ -844,9 +834,7 @@ class Action(ABC, Generic[ApiClient]):
             if not self.html_reports:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for html_report in self.html_reports:
                 self.soar_action.result.add_entity_html_report(
                     entity_identifier=(
@@ -877,23 +865,19 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If the markdowns could not be sent
                 to the case result.
-        """
 
+        """
         action_type = "markdowns"
 
         try:
             if not self.markdowns:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for markdown in self.markdowns:
                 self.soar_action.result.add_entity_markdown(
                     entity_identifier=(
-                        markdown.title
-                        if markdown.title or entity is None
-                        else entity.identifier
+                        markdown.title if markdown.title or entity is None else entity.identifier
                     ),
                     markdown_name=markdown.markdown_name,
                     markdown_content=markdown.markdown_content,
@@ -918,6 +902,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If the links could not be sent
                 to the case result.
+
         """
         action_type = "links"
 
@@ -925,16 +910,10 @@ class Action(ABC, Generic[ApiClient]):
             if not self.links:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for link in self.links:
                 self.soar_action.result.add_link(
-                    title=(
-                        link.title
-                        if link.title or entity is None
-                        else entity.identifier
-                    ),
+                    title=(link.title if link.title or entity is None else entity.identifier),
                     link=link.link,
                     entity_type=None if entity is None else entity.entity_type,
                 )
@@ -958,6 +937,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             GeneralActionException: If an error occurs while
                 updating the entities.
+
         """
         try:
             if not self.entities_to_update:
@@ -967,9 +947,7 @@ class Action(ABC, Generic[ApiClient]):
             self.soar_action.update_entities(self.entities_to_update)
 
         except Exception as e:
-            raise GeneralActionException(
-                f"Failed to update entities, Error: {e}"
-            ) from e
+            raise GeneralActionException(f"Failed to update entities, Error: {e}") from e
 
     def __create_entity_insights(self) -> None:
         """Creates entity insights.
@@ -977,6 +955,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             CaseResultError: If there is an error while creating
                 entity insights.
+
         """
         action_type = "entity insights"
 
@@ -984,9 +963,7 @@ class Action(ABC, Generic[ApiClient]):
             if not self.entity_insights:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for entity_insight in self.entity_insights:
                 self.soar_action.add_entity_insight(
                     domain_entity_info=entity_insight.entity,
@@ -1008,6 +985,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             CaseResultError: If there is an error while creating case insights.
+
         """
         action_type = "case insights"
 
@@ -1015,9 +993,7 @@ class Action(ABC, Generic[ApiClient]):
             if not self.case_insights:
                 return
 
-            self.logger.info(
-                consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type)
-            )
+            self.logger.info(consts.ADD_TO_CASE_RESULT_MSG.format(action_type=action_type))
             for case_insight in self.case_insights:
                 self.soar_action.create_case_insight(
                     triggered_by=case_insight.triggered_by,
@@ -1052,6 +1028,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info(f"Adding an attachment from {file_path}")
@@ -1069,6 +1046,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             SDKWrapperError: if the file does not exist or if the
                 file's size is bigger than 5MB after encoding
+
         """
         try:
             self.logger.info("Getting attachments")
@@ -1098,6 +1076,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             SDKWrapperError: if the comment is an empty string or
                 if the alert id wasn't found in the case with ID case_id
+
         """
         try:
             self.logger.info(f'Adding a comment "{comment}" to case {case_id}')
@@ -1114,6 +1093,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info("Getting case comments")
@@ -1173,6 +1153,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             SDKWrapperError: if the tag has less than 2 characters or
                 if the alert id wasn't found in the case with ID case_id
+
         """
         try:
             self.logger.info(f'Adding a tag "{tag}" to case {case_id}')
@@ -1193,6 +1174,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if the provided playbook_name does not exist
+
         """
         try:
             self.logger.info(f"Attaching playbook {playbook_name} to alert")
@@ -1232,6 +1214,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info("Getting similar cases")
@@ -1271,14 +1254,12 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info("Getting alerts' ticket IDs from closed cases")
-            return (
-                self.soar_action
-                .get_alerts_ticket_ids_from_cases_closed_since_timestamp(
-                    timestamp_unix_ms, rule_generator
-                )
+            return self.soar_action.get_alerts_ticket_ids_from_cases_closed_since_timestamp(
+                timestamp_unix_ms, rule_generator
             )
 
         except Exception as e:
@@ -1295,6 +1276,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if the stage wasn't found
+
         """
         try:
             self.logger.info(f"Changing the case's stage to {stage}")
@@ -1312,6 +1294,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info(f"Changing the case priority to {priority}")
@@ -1345,6 +1328,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             SDKWrapperError: if root_case does not correspond to its particular
                 reason, or if the case is already closed
+
         """
         try:
             self.logger.info("Closing the current case")
@@ -1387,6 +1371,7 @@ class Action(ABC, Generic[ApiClient]):
         Raises:
             SDKWrapperError: if root_case does not correspond to its particular
                 reason, or if the alert is already closed
+
         """
         try:
             self.logger.info("Closing the current alert")
@@ -1403,6 +1388,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info("Escalating the case")
@@ -1416,6 +1402,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info("Marking the case as important")
@@ -1429,6 +1416,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info("Raising incident")
@@ -1460,6 +1448,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info(f"Adding entity {entity_identifier} to the case")
@@ -1487,6 +1476,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             # dictionary of indicatorIdentifier - string data
@@ -1517,6 +1507,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info("Getting current integration configuration")
@@ -1538,11 +1529,10 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
-            self.logger.info(
-                f"Checking if any alerts entities in custom list {category_name}"
-            )
+            self.logger.info(f"Checking if any alerts entities in custom list {category_name}")
             return self.soar_action.any_alert_entities_in_custom_list(category_name)
 
         except Exception as e:
@@ -1563,6 +1553,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
             self.logger.info(f"Adding entities of alert to custom list {category_name}")
@@ -1586,14 +1577,11 @@ class Action(ABC, Generic[ApiClient]):
 
         Raises:
             SDKWrapperError: if an error occurs
+
         """
         try:
-            self.logger.info(
-                f"Removing entities of alerts to custom list {category_name}"
-            )
-            return self.soar_action.remove_alert_entities_from_custom_list(
-                category_name
-            )
+            self.logger.info(f"Removing entities of alerts to custom list {category_name}")
+            return self.soar_action.remove_alert_entities_from_custom_list(category_name)
 
         except Exception as e:
             raise SDKWrapperError(consts.SDK_WRAPPER_ERR_MSG.format(error=e)) from e
@@ -1606,6 +1594,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             A `SiemplifyAction` SDK object.
+
         """
         return self._soar_action
 
@@ -1615,6 +1604,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             An Apiable object
+
         """
         return self._api_client
 
@@ -1624,6 +1614,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             A `str` representing the action's script name.
+
         """
         return self._name
 
@@ -1633,6 +1624,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             An `int` representing the action's starting time in unix.
+
         """
         return self._action_start_time
 
@@ -1642,6 +1634,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             A `NewLineLogger` object.
+
         """
         return self._logger
 
@@ -1652,6 +1645,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A `Container` object with the action's parameters (in snake_case)
             as its attributes
+
         """
         return self._params
 
@@ -1661,6 +1655,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             The action's JSON result that will be sent to the case wall.
+
         """
         return self._json_results
 
@@ -1670,6 +1665,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             The action's JSON result that will be sent to the case wall.
+
         """
         return self._is_first_run
 
@@ -1684,6 +1680,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A list of `EntityTypesEnum` objects representing the entity types
             the action can process.
+
         """
         return self._entity_types
 
@@ -1696,6 +1693,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A list of `Entity` objects representing the entities that should
             be updated in the case.
+
         """
         return self._entities_to_update
 
@@ -1709,6 +1707,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A list of `DataTable` objects representing the insights
             for this case.
+
         """
         return self._data_tables
 
@@ -1722,6 +1721,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A list of `Attachment` objects representing the insights
             for this case.
+
         """
         return self._attachments
 
@@ -1734,6 +1734,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             A list of `Content` objects representing the insights for this case.
+
         """
         return self._contents
 
@@ -1747,6 +1748,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A list of `HTMLReport` objects representing the insights
             for this case.
+
         """
         return self._html_reports
 
@@ -1759,6 +1761,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             A list of `Link` objects representing the insights for this case.
+
         """
         return self._links
 
@@ -1771,6 +1774,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             A list of `Markdown` objects representing the insights for this case.
+
         """
         return self._markdowns
 
@@ -1784,6 +1788,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A list of `EntityInsight` objects representing the insights
             for this case.
+
         """
         return self._entity_insights
 
@@ -1797,6 +1802,7 @@ class Action(ABC, Generic[ApiClient]):
         Returns:
             A list of `CaseInsight` objects representing the insights
             for this case.
+
         """
         return self._case_insights
 
@@ -1814,6 +1820,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Returns:
             The `ExecutionState`object representing the current execution state.
+
         """
         return self._execution_state
 
@@ -1857,6 +1864,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The JSON value to set.
+
         """
         if isinstance(value, (list, dict)):
             self._json_results = value
@@ -1871,6 +1879,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The entity types list to set.
+
         """
         if isinstance(value, list):
             self._entity_types = list(set(filter_list_by_type(value, EntityTypesEnum)))
@@ -1884,6 +1893,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The entities-to-update list to set.
+
         """
         if isinstance(value, list):
             self._entities_to_update = list(set(filter_list_by_type(value, Entity)))
@@ -1897,6 +1907,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The data tables list to set.
+
         """
         if isinstance(value, list):
             self._data_tables = filter_list_by_type(value, DataTable)
@@ -1910,6 +1921,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The attachments list to set.
+
         """
         if isinstance(value, list):
             self._attachments = filter_list_by_type(value, Attachment)
@@ -1923,6 +1935,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The contents list to set.
+
         """
         if isinstance(value, list):
             self._contents = filter_list_by_type(value, Content)
@@ -1936,6 +1949,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The HTML reports list to set.
+
         """
         if isinstance(value, list):
             self._html_reports = filter_list_by_type(value, HTMLReport)
@@ -1949,6 +1963,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The links list to set.
+
         """
         if isinstance(value, list):
             self._links = filter_list_by_type(value, Link)
@@ -1962,6 +1977,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The markdowns list to set.
+
         """
         if isinstance(value, list):
             self._markdowns = filter_list_by_type(value, Markdown)
@@ -1975,6 +1991,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The entity insights list to set.
+
         """
         if isinstance(value, list):
             self._entity_insights = filter_list_by_type(value, EntityInsight)
@@ -1988,6 +2005,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The case insights list to set.
+
         """
         if isinstance(value, list):
             self._case_insights = filter_list_by_type(value, CaseInsight)
@@ -2000,6 +2018,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The execution state to set.
+
         """
         if isinstance(value, ExecutionState):
             self._execution_state = value
@@ -2012,6 +2031,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The result value to set.
+
         """
         if isinstance(value, bool):
             self._result_value = value
@@ -2024,6 +2044,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The output message to set.
+
         """
         if isinstance(value, str):
             self._output_message = value
@@ -2036,6 +2057,7 @@ class Action(ABC, Generic[ApiClient]):
 
         Args:
             value: The error output message to set.
+
         """
         if isinstance(value, str):
             self._error_output_message = value

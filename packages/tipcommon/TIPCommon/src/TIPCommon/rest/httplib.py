@@ -13,15 +13,11 @@
 # limitations under the License.
 
 import requests
-from .auth import generate_jwt_from_sa, generate_jwt_from_credentials
+
+from .auth import generate_jwt_from_credentials, generate_jwt_from_sa
 
 
-def get_auth_session(
-        credentials=None,
-        service_account=None,
-        audience=None,
-        verify_ssl=True
-):
+def get_auth_session(credentials=None, service_account=None, audience=None, verify_ssl=True):
     """Creates an Authorized HTTP session to a GCP resource API.
 
     Args:
@@ -43,20 +39,16 @@ def get_auth_session(
 
     Raises:
         ValueError: if credentials and service account are not provided
-    """
 
+    """
     if credentials is not None:
         token = generate_jwt_from_credentials(credentials, verify_ssl)
     elif service_account is not None:
-        token = generate_jwt_from_sa(
-            service_account, audience=audience
-        ).decode('utf-8')
+        token = generate_jwt_from_sa(service_account, audience=audience).decode("utf-8")
     else:
-        raise ValueError('credentials or service_account must be provided')
+        raise ValueError("credentials or service_account must be provided")
 
-    headers = {
-        'Authorization': 'Bearer {}'.format(token)
-    }
+    headers = {"Authorization": f"Bearer {token}"}
     session = requests.Session()
     session.headers.update(headers)
     session.verify = verify_ssl

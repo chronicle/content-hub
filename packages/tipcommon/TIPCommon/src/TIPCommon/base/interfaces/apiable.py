@@ -15,8 +15,8 @@
 import abc
 from typing import Generic, TypeVar
 
-from .session import AuthenticatedSession
 from ...types import ApiParams
+from .session import AuthenticatedSession
 
 
 class Apiable(abc.ABC, Generic[ApiParams]):
