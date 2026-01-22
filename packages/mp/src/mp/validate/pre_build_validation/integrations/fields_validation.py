@@ -128,7 +128,7 @@ def _validate_job_parameters(job_parameters: list[JobParameter]) -> list[str]:
 
 def _integration_metadata(integration_metadata: IntegrationMetadata) -> list[str]:
     result: list[str] = []
-    if not re.match(PARAM_NAME_REGEX, integration_metadata.name):
+    if not re.match(METADATA_NAME_REGEX, integration_metadata.name):
         result.append(
             f"Integration name: {integration_metadata.name} "
             f"does not match the regex: {METADATA_NAME_REGEX}\n"
