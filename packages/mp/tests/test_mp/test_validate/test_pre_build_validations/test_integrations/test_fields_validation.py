@@ -47,6 +47,9 @@ def test_fields_validation_invalid_integration_name(temp_integration: Path) -> N
     assert invalid_name in str(excinfo.value)
 
 
+
+
+
 def test_fields_validation_invalid_action_name(temp_integration: Path) -> None:
     action_path = temp_integration / "actions" / "ping.yaml"
     with Path(action_path).open(encoding="utf-8") as f:
@@ -162,4 +165,34 @@ def test_fields_validation_invalid_job_parameter_name(temp_integration: Path) ->
         FieldsValidation.run(temp_integration)
 
     assert "Job Parameter name" in str(excinfo.value)
+    assert invalid_name in str(excinfo.value)
+
+
+def test_fields_validation_invalid_integration_parameter_name(temp_integration: Path) -> None:
+    definition_path = temp_integration / "definition.yaml"
+    with Path(definition_path).open(encoding="utf-8") as f:
+        definition = yaml.safe_load(f)
+
+    invalid_name = "Invalid Param Name!"
+    if "parameters" not in definition:
+        definition["parameters"] = []
+
+    definition["parameters"].append(
+        {
+            "name": invalid_name,
+            "description": "A parameter with an invalid name",
+            "type": "string",
+            "is_mandatory": False,
+            "default_value": "",
+            "integration_identifier": definition["identifier"],
+        }
+    )
+
+    with Path(definition_path).open("w", encoding="utf-8") as f:
+        yaml.dump(definition, f)
+
+    with pytest.raises(NonFatalValidationError) as excinfo:
+        FieldsValidation.run(temp_integration)
+
+    assert "Integration Parameter name" in str(excinfo.value)
     assert invalid_name in str(excinfo.value)
