@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 import os
 import re
+from typing import TYPE_CHECKING
 
 from SiemplifyUtils import unix_now
 
@@ -29,13 +30,20 @@ from .consts import (
 from .data_models import UserProfileCard
 from .rest.soar_api import get_user_profile_cards
 from .transformation import removeprefix
-from .types import ChronicleSOAR
 from .utils import is_python_37, none_to_default_value
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
-def get_user_by_id(chronicle_soar, user_id):
-    # type: (ChronicleSOAR, str) -> UserProfileCard | None
-    """Get a UserProfileCard object from user_id
+    from SiemplifyAction import SiemplifyAction
+    from SiemplifyJob import SiemplifyJob
+
+    from .base.action import CaseComment
+    from .types import ChronicleSOAR
+
+
+def get_user_by_id(chronicle_soar: ChronicleSOAR, user_id: str) -> UserProfileCard | None:
+    """Get a UserProfileCard object from user_id.
 
     Args:
         chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
@@ -50,19 +58,20 @@ def get_user_by_id(chronicle_soar, user_id):
         if user.user_name == user_id:
             return user
 
+    return None
+
 
 def get_users_profile_cards_with_pagination(
-    chronicle_soar,
-    search_term="",
-    page_size=20,
-    filter_by_role=False,
-    filter_disabled_users=False,
-    filter_support_users=False,
-    fetch_only_support_users=False,
-    filter_permission_types=None,
-):
-    # type: (ChronicleSOAR, str, int, bool, bool, bool, bool, list[int] | None) -> list[UserProfileCard]
-    """Get all users profiles cards using pagination
+    chronicle_soar: ChronicleSOAR,
+    search_term: str = "",
+    page_size: int = 20,
+    filter_by_role: bool = False,
+    filter_disabled_users: bool = False,
+    filter_support_users: bool = False,
+    fetch_only_support_users: bool = False,
+    filter_permission_types: list[int] | None = None,
+) -> list[UserProfileCard]:
+    """Get all users profiles cards using pagination.
 
     The page size is used as the limit of number of users each iteration.
 
@@ -99,17 +108,17 @@ def get_users_profile_cards_with_pagination(
             filter_permission_types=filter_permission_types,
         )
         results = response_json.get("objectsList", response_json.get("items"))
-        for user in results:
-            users.append(UserProfileCard.from_json(user))
+        users.extend(UserProfileCard.from_json(user) for user in results)
 
         last_fetch_number = len(results)
 
     return users
 
 
-def get_soar_case_comments(chronicle_soar, case_id):
-    # type: (SiemplifyAction | SiemplifyJob, str | int) -> list[CaseComment]
-    """Get a list of comment objects from a case by its ID
+def get_soar_case_comments(
+    chronicle_soar: SiemplifyAction | SiemplifyJob, case_id: str | int
+) -> list[CaseComment]:
+    """Get a list of comment objects from a case by its ID.
 
     Args:
         chronicle_soar (SiemplifyAction | SiemplifyJob):
@@ -123,16 +132,15 @@ def get_soar_case_comments(chronicle_soar, case_id):
     """
     comments = chronicle_soar.get_case_comments(case_id)
     if is_python_37:
-        from .base.action import parse_case_comment
+        from .base.action import parse_case_comment  # noqa: PLC0415
 
         return [parse_case_comment(comment) for comment in comments]
 
-    return [comment for comment in comments]
+    return list(comments)
 
 
-def get_clean_comment_body(comment, prefix):
-    # type: (str | CaseComment, str) -> str
-    """Remove a prefix from comment string or comment object
+def get_clean_comment_body(comment: str | CaseComment, prefix: str) -> str:
+    """Remove a prefix from comment string or comment object.
 
     Args:
         comment (str | CaseComment):
@@ -147,7 +155,7 @@ def get_clean_comment_body(comment, prefix):
 
     """
     if is_python_37:
-        from .base.action import CaseComment
+        from .base.action import CaseComment  # noqa: PLC0415
 
         if isinstance(comment, CaseComment):
             return removeprefix(comment.comment, prefix)
@@ -155,15 +163,15 @@ def get_clean_comment_body(comment, prefix):
     if isinstance(comment, str):
         return removeprefix(comment, prefix)
 
-    raise TypeError(
+    msg = (
         f"The provided comment was of type {type(comment)}, which is not str "
         "or TIPCommon.base.action.CaseComment"
     )
+    raise TypeError(msg)
 
 
-def remove_prefix_from_comments(comments, prefix):
-    # type: (list[str], str) -> list[str]
-    """Remove a prefix (if exists) from a list of comments
+def remove_prefix_from_comments(comments: list[str], prefix: str) -> list[str]:
+    """Remove a prefix (if exists) from a list of comments.
 
     Args:
         comments (list[str]): The comments to remove prefix from
@@ -176,9 +184,8 @@ def remove_prefix_from_comments(comments, prefix):
     return [get_clean_comment_body(comment, prefix) for comment in comments]
 
 
-def is_slo_comment(comment):
-    # type: (str) -> bool
-    """Check if a comment is an SLO warning comment
+def is_slo_comment(comment: str) -> bool:
+    """Check if a comment is an SLO warning comment.
 
     SLO comment is either an SLO warning or SLO breached message:
     'SLO will be breached in {int} days.' or 'SLO was breached.'
@@ -195,9 +202,10 @@ def is_slo_comment(comment):
     )
 
 
-def create_slo_message(slo, interval_days, existing_comments):
-    # type: (int, Iterable[int], Iterable[str]) -> str | None
-    """Get SLO warnings message based on time intervals, and existing comments
+def create_slo_message(
+    slo: int, interval_days: Iterable[int], existing_comments: Iterable[str]
+) -> str | None:
+    """Get SLO warnings message based on time intervals, and existing comments.
 
     For interval_days=[0, 1, 7, 14] it will send a message warning that the
     SLO would be breached once between 7-14 days of the expiration time,

@@ -32,14 +32,15 @@ Usage Example::
 
 import json
 
-empty = object()
-
 from .exceptions import ParameterValidationError
 from .transformation import (
     convert_comma_separated_to_list,
     convert_list_to_comma_string,
 )
+from .types import ChronicleSOAR
 from .utils import is_valid_email
+
+empty = object()
 
 
 class ParameterValidator:
@@ -57,11 +58,11 @@ class ParameterValidator:
         "Default value {default_value} will be used instead."
     )
 
-    def __init__(self, siemplify):
+    def __init__(self, siemplify: ChronicleSOAR) -> None:
         self.logger = siemplify.LOGGER
 
     @classmethod
-    def _get_warning(cls, param_name, value, error_msg, default_value, print_value=True):
+    def _get_warning(cls, param_name: str, value, error_msg, default_value, print_value=True):
         """Gets a formatted warning message for failed validation check
 
         Args:
