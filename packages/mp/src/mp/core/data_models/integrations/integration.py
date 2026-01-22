@@ -118,10 +118,6 @@ class Integration:
     jobs_metadata: Mapping[JobName, JobMetadata]
     widgets_metadata: Mapping[WidgetName, ActionWidgetMetadata]
 
-    def __post_init__(self) -> None:
-        """Perform post-init logic."""
-        self._validate_python_version()
-
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
         """Create the integration from a built integration's path.
@@ -213,27 +209,6 @@ class Integration:
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:
             msg: str = f"Failed to load integration {path.name}"
             raise ValueError(msg) from e
-
-    def _validate_python_version(self) -> None:
-        """Validate the integration's python version in the '.python-version' file.
-
-        Raises:
-            ValueError: When the version inside ".python-version" doesn't match the
-                version in "pyproject.toml"
-
-        """
-        msg: str
-        if not self.python_version:
-            msg = f"Missing {mp.core.constants.PYTHON_VERSION_FILE} file or the file is empty"
-            raise ValueError(msg)
-
-        metadata_version: str = self.metadata.python_version.to_string()
-        if self.python_version != metadata_version:
-            msg = (
-                f"Make sure the version in the {mp.core.constants.PYTHON_VERSION_FILE} matches"
-                f" the lowest supported version configured in {mp.core.constants.PROJECT_FILE}"
-            )
-            raise ValueError(msg)
 
     def to_built(self) -> BuiltIntegration:
         """Turn the buildable object into a "built" typed dict.

@@ -365,7 +365,7 @@ class ImportTransformer(cst.CSTTransformer):
                 ),
                 names=names,
             ):
-                return cst.Import(names=names)  # type: ignore[arg-type]
+                return cst.Import(names=names)
 
             # `from .module import ...` => `from module import ...`
             case cst.ImportFrom(relative=[cst.Dot(), *_]):

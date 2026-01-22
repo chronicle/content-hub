@@ -122,6 +122,7 @@ def _update_display_info(
 ) -> None:
     rn_values: ReleaseNotesDisplayInfo = _extract_display_info_from_rn(non_built_playbook_path)
 
+    built_display_info["Description"] = built_playbook["Definition"]["Description"]
     built_display_info["Identifier"] = built_playbook["Definition"]["Identifier"]
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
@@ -168,7 +169,7 @@ def _extract_integrations_from_nested_block(
 ) -> set[str]:
     result: set[str] = set()
     for file in base_folder.iterdir():
-        if file.is_dir():
+        if file.is_dir() or file.suffix == ".zip":
             continue
 
         with Path.open(file) as block_file:

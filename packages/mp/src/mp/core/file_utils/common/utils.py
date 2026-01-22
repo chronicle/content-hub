@@ -91,3 +91,17 @@ def create_dir_if_not_exists(p: Path, /) -> Path:
     """
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def create_or_get_download_dir() -> Path:
+    """Get the download path.
+
+    If the directory doesn't exist, it creates it
+
+    Returns:
+        The root/download directory path
+
+    """
+    return create_dir_if_not_exists(
+        mp.core.config.get_marketplace_path() / mp.core.constants.DOWNLOAD_DIR
+    )
