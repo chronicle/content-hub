@@ -187,7 +187,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
                 for drm in built.get("DynamicResultsMetadata", []) or []
             ],
             integration_identifier=built["IntegrationIdentifier"],
-            is_async=built.get("IsAsync") or False,
+            is_async=v if (v := built.get("IsAsync")) is not None else False,
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
             name=built["Name"],
