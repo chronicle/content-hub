@@ -107,7 +107,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ]
     default_result_value: str | None
     creator: str
-    script_result_name: str
+    script_result_name: Annotated[
+        str, pydantic.Field(max_length=mp.core.constants.MAX_SCRIPT_RESULT_NAME_LENGTH)
+    ]
     simulation_data_json: str
     version: Annotated[
         pydantic.PositiveFloat,
@@ -185,7 +187,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
                 for drm in built.get("DynamicResultsMetadata", []) or []
             ],
             integration_identifier=built["IntegrationIdentifier"],
-            is_async=built.get("IsAsync", False),
+            is_async=v if (v := built.get("IsAsync")) is not None else False,
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
             name=built["Name"],

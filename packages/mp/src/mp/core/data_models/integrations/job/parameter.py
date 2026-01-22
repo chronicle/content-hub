@@ -22,7 +22,6 @@ import pydantic
 import mp.core.constants
 import mp.core.utils
 import mp.core.validators
-from mp.core import exclusions
 from mp.core.data_models.abc import Buildable
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
@@ -48,7 +47,6 @@ class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=exclusions.get_param_display_name_regex(),
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
@@ -64,7 +62,7 @@ class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
     def _from_built(cls, built: BuiltJobParameter) -> Self:
         return cls(
             name=built["Name"],
-            description=built.get("Description", ""),
+            description=v if (v := built.get("Description")) is not None else "",
             is_mandatory=built["IsMandatory"],
             type_=ScriptParamType(int(built["Type"])),
             default_value=built.get("DefaultValue"),

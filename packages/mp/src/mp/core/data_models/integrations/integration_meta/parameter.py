@@ -50,7 +50,6 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=exclusions.get_param_display_name_regex(),
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
@@ -74,7 +73,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         return cls(
             name=built["PropertyName"],
             default_value=built["Value"],
-            description=built.get("PropertyDescription", ""),
+            description=v if (v := built.get("PropertyDescription")) is not None else "",
             is_mandatory=built.get("IsMandatory", False),
             type_=ScriptParamType(int(built["PropertyType"])),
             integration_identifier=built["IntegrationIdentifier"],

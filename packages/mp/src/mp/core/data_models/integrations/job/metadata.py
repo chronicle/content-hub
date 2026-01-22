@@ -74,7 +74,6 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     parameters: Annotated[
