@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 import anyio
 import typer
+from click import prompt
 from rich.logging import RichHandler
 
 from mp.core import constants

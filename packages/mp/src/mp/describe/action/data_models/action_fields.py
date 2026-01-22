@@ -18,6 +18,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from .entity_types import EntityType  # noqa: TC001
+
 
 class ActionFields(BaseModel):
     description: Annotated[
@@ -88,4 +90,13 @@ class ActionFields(BaseModel):
     ]
     can_create_case_comments: Annotated[
         bool, Field(description=("Whether the action creates case comments."))
+    ]
+    entity_scopes: Annotated[
+        list[EntityType],
+        Field(
+            description=(
+                "The entity scopes that the action can operate on. For example, ['ip', 'domain']."
+                " Determine this based on the code"
+            ),
+        ),
     ]
