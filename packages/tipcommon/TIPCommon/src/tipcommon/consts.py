@@ -22,9 +22,11 @@ Usage Example::
 
     import TIPCommon
 
-    print(TIPCommon.WHITELIST_FILTER)
+    print(TIPCommon.ALLOWLIST_FILTER)
     # 1
 """
+
+from __future__ import annotations
 
 import re
 
@@ -34,8 +36,8 @@ _CAMEL_TO_SNAKE_PATTERN2 = re.compile(r"([a-z0-9])([A-Z])")
 TRUE_VAL_LOWER_STRINGS = ("true", str(True).lower())
 FALSE_VAL_LOWER_STRINGS = ("false", str(False).lower())
 
-WHITELIST_FILTER = 1
-BLACKLIST_FILTER = 2
+ALLOWLIST_FILTER = 1
+BLOCKLIST_FILTER = 2
 
 UNIX_FORMAT = 1
 DATETIME_FORMAT = 2
