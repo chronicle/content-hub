@@ -23,13 +23,6 @@ from SiemplifyConnectorsDataModel import AlertInfo
 from SiemplifyLogger import SiemplifyLogger
 from SiemplifyUtils import from_unix_time, unix_now, utc_now
 
-from ..utils import (
-    create_params_container,
-    create_soar_connector,
-    get_param_value_from_vault,
-    is_native,
-    nativemethod,
-)
 from ... import extraction
 from ...consts import DATETIME_FORMAT, NONE_VALS, UNIX_FORMAT
 from ...data_models import BaseAlert, ConnectorParamTypes, Container
@@ -42,6 +35,13 @@ from ...utils import (
     platform_supports_db,
 )
 from ...validation import ParameterValidator
+from ..utils import (
+    create_params_container,
+    create_soar_connector,
+    get_param_value_from_vault,
+    is_native,
+    nativemethod,
+)
 
 
 class BaseConnector(ABC):
@@ -115,6 +115,7 @@ class BaseConnector(ABC):
             Boolean method to check if alert passes connector filters.
         - filter_alerts(self, alerts):
             Filter alerts from manager and return list of filtered alerts.
+
     """
 
     def __init__(self, script_name: str, is_test_run: bool | None = None) -> None:
@@ -123,9 +124,7 @@ class BaseConnector(ABC):
         self._script_name = script_name
         self._connector_start_time = unix_now()
         self._logger = self._siemplify.LOGGER
-        self._is_test_run = (
-            none_to_default_value(is_test_run, self.siemplify.is_test_run)
-        )
+        self._is_test_run = none_to_default_value(is_test_run, self.siemplify.is_test_run)
         self.detailed_params = extraction.get_connector_detailed_params(self._siemplify)
         self.param_validator = ParameterValidator(self._siemplify)
         self._params = create_params_container()
@@ -135,7 +134,7 @@ class BaseConnector(ABC):
         self._env_common = None
         self._perspectives()
 
-    ###################### Connector Properties ######################
+    # Connector Properties ######################
     @property
     def siemplify(self) -> SiemplifyConnectorExecution:
         return self._siemplify
@@ -182,31 +181,31 @@ class BaseConnector(ABC):
     def error_msg(self, val: str) -> None:
         self._error_msg = val
 
-    ###################### Abstract Methods ######################
+    # Abstract Methods ######################
 
     @abstractmethod
     def validate_params(self) -> None:
+        """Validate connector parameters.
+
+        Note:
+            Use validation `self.param_validator` methods for easier
+            one-line validation for connector parameters.
+
+        Examples::
+
+            Class MyConnector(Connector)
+
+                # method override
+                def validate_params(self):
+                    self.params.user_email = self.param_validator.validate_email(
+                        param_name='User Email',
+                        email=self.params.user_email
+                    )
+
+        Raises:
+            ConnectorSetupError: If any of the parameters are invalid.
+
         """
-    Validate connector parameters.
-
-    Note:
-        Use validation `self.param_validator` methods for easier
-        one-line validation for connector parameters.
-
-    Examples::
-
-        Class MyConnector(Connector)
-
-            # method override
-            def validate_params(self):
-                self.params.user_email = self.param_validator.validate_email(
-                    param_name='User Email',
-                    email=self.params.user_email
-                )
-
-    Raises:
-        ConnectorSetupError: If any of the parameters are invalid.
-    """
 
     @abstractmethod
     def init_managers(self) -> None:
@@ -223,21 +222,22 @@ class BaseConnector(ABC):
         Raises:
             ConnectorSetupError: If there is an error creating the manager instance
                 objects.
+
         """
 
     @abstractmethod
     def create_alert_info(self, alert: BaseAlert) -> AlertInfo:
-        """
-        Create alert info object.
+        """Create alert info object.
 
         Args:
             alert: The alert to create the alert info object for.
 
         Raises:
             ConnectorSetupError: If there is an error creating the alert info object.
+
         """
 
-    ###################### Native Methods ######################
+    # Native Methods ######################
     @nativemethod
     def extract_params(self) -> None:
         """Extracts connector parameters and store them in the `params` container.
@@ -245,6 +245,7 @@ class BaseConnector(ABC):
         Note:
             Parameter names will be stored in snake_case format.
             For example: `'Max Hours Backwards'` -> `'max_hours_backwards'`
+
         """
         for param in self.detailed_params:
             if param.type == ConnectorParamTypes.BOOLEAN:
@@ -255,22 +256,18 @@ class BaseConnector(ABC):
                 input_type = str
             is_password = param.type == ConnectorParamTypes.PASSWORD
             value = extraction.extract_connector_param(
-                        siemplify=self.siemplify,
-                        param_name=param.name,
-                        input_type=input_type,
-                        is_mandatory=param.is_mandatory,
-                        print_value=not is_password,
-                        remove_whitespaces=not is_password
-                    )
+                siemplify=self.siemplify,
+                param_name=param.name,
+                input_type=input_type,
+                is_mandatory=param.is_mandatory,
+                print_value=not is_password,
+                remove_whitespaces=not is_password,
+            )
             vault_settings = self.siemplify.context.vault_settings
             setattr(
                 self.params,
                 camel_to_snake_case(
-                    " ".join(
-                        " ".join(
-                            word[0].upper() + word[1:] for word in param.name.split()
-                        )
-                    )
+                    " ".join(" ".join(word[0].upper() + word[1:] for word in param.name.split()))
                 ),
                 input_type(
                     value
@@ -282,10 +279,8 @@ class BaseConnector(ABC):
             )
 
         self.params.whitelist = (
-            self.siemplify.whitelist if isinstance(
-                self.siemplify.whitelist,
-                list
-            )
+            self.siemplify.whitelist
+            if isinstance(self.siemplify.whitelist, list)
             else [self.siemplify.whitelist]
         )
 
@@ -293,8 +288,7 @@ class BaseConnector(ABC):
     def validate_params_wrapper(self) -> None:
         """Wrapper for validate_params method."""
         self.params.python_process_timeout = self.param_validator.validate_integer(
-            param_name="Python Process Timeout",
-            value=self.params.python_process_timeout
+            param_name="Python Process Timeout", value=self.params.python_process_timeout
         )
         if not is_native(self.validate_params):
             self.logger.info("validating input parameters...")
@@ -302,7 +296,7 @@ class BaseConnector(ABC):
 
     @nativemethod
     def read_context_data(self) -> None:
-        """load context data from platform data storage (DB/LFS)
+        """Load context data from platform data storage (DB/LFS)
         such as alert ids.
 
         Examples::
@@ -317,12 +311,12 @@ class BaseConnector(ABC):
 
         Raises:
             ConnectorSetupError: If there is an error loading the context data.
+
         """
 
     @nativemethod
     def store_alert_in_cache(self, alert: BaseAlert):
-        """
-        Save alert id to `ids.json` or equivalent.
+        """Save alert id to `ids.json` or equivalent.
 
         Args:
             alert: The alert with id to store.
@@ -337,6 +331,7 @@ class BaseConnector(ABC):
 
         Raises:
             ConnectorSetupError: If there is an error storing the alert.
+
         """
 
     @nativemethod
@@ -344,9 +339,7 @@ class BaseConnector(ABC):
         """Wrapper for read_context_data method."""
         self.context.last_success_timestamp = self.get_last_success_time()
         if not is_native(self.read_context_data):
-            self.logger.info(
-                    f"Fetching context data from {self.context._location}..."
-                )
+            self.logger.info(f"Fetching context data from {self.context._location}...")
             self.read_context_data()
 
     @nativemethod
@@ -359,10 +352,9 @@ class BaseConnector(ABC):
         time_format=DATETIME_FORMAT,
         print_value=True,
         microtime=False,
-        date_time_format=None
+        date_time_format=None,
     ):
-        """
-        Calculates the connector last successful timestamp
+        """Calculates the connector last successful timestamp
         using "max TIME backwards" and "padding period" connector parameters,
         where TIME is the time metric.
 
@@ -401,39 +393,35 @@ class BaseConnector(ABC):
 
         Example::
 
-            #overriden
+            # overriden
             def get_last_success_time():
                 return super().get_last_success_time(
                     max_backwards_param_name="max_days_backwards",
                     metric="days",
                     padding_period_param_name="padding_period",
-                    padding_period_metric="hours"
+                    padding_period_metric="hours",
                 )
 
         Returns:
             (any, int): last success time in DATETIME or UNIX format.
+
         """
-        offset = (
-            getattr(self.params, max_backwards_param_name)
-            if max_backwards_param_name else 0
-        )
+        offset = getattr(self.params, max_backwards_param_name) if max_backwards_param_name else 0
         last_success_time = get_last_success_time(
             siemplify=self.siemplify,
             offset_with_metric={metric: offset},
             time_format=time_format,
             print_value=print_value,
-            microtime=microtime
+            microtime=microtime,
         )
 
         if padding_period_param_name:
             padding_time_with_metric = {
-                padding_period_metric: getattr(
-                    self.params,
-                    padding_period_param_name
-                )
+                padding_period_metric: getattr(self.params, padding_period_param_name)
             }
             dt_last_success_time = (
-                from_unix_time(last_success_time) if time_format == UNIX_FORMAT
+                from_unix_time(last_success_time)
+                if time_format == UNIX_FORMAT
                 else last_success_time
             )
             padding_time = utc_now() - timedelta(**padding_time_with_metric)
@@ -454,8 +442,7 @@ class BaseConnector(ABC):
 
     @nativemethod
     def load_env_common(self) -> EnvironmentHandle:
-        """
-        loads environment handle object from EnvironmentCommon module
+        """Loads environment handle object from EnvironmentCommon module
         depending on Siemplify platform deployment.
 
         Note:
@@ -467,19 +454,16 @@ class BaseConnector(ABC):
 
         Returns:
             EnvironmentHandle: Environment handle object
+
         """
         try:
-            self._env_common = (
-                GetEnvironmentCommonFactory.create_environment_manager(
-                    self.siemplify,
-                    self.params.environment_field_name,
-                    self.params.environment_regex_pattern
-                )
+            self._env_common = GetEnvironmentCommonFactory.create_environment_manager(
+                self.siemplify,
+                self.params.environment_field_name,
+                self.params.environment_regex_pattern,
             )
         except Exception as e:
-            raise ConnectorSetupError(
-                f"Failed to create environment handle object: {e}"
-            ) from e
+            raise ConnectorSetupError(f"Failed to create environment handle object: {e}") from e
 
     @nativemethod
     def max_alerts_processed(self, processed_alerts) -> bool:
@@ -492,6 +476,7 @@ class BaseConnector(ABC):
         Returns:
             True if the maximum alerts to process limit has been reached,
             False otherwise.
+
         """
         return False
 
@@ -504,6 +489,7 @@ class BaseConnector(ABC):
 
         Returns:
             True if the alert passes the filters, False otherwise.
+
         """
         return True
 
@@ -516,13 +502,15 @@ class BaseConnector(ABC):
 
         Returns:
             A list of filtered alerts.
+
         """
         return alerts
 
     @nativemethod
     def _perspectives(self) -> None:
         self.context._location = (
-            "DB" if platform_supports_db(self.siemplify)
+            "DB"
+            if platform_supports_db(self.siemplify)
             else f"Local File System: {self.siemplify.run_folder}"
         )
 
@@ -546,5 +534,6 @@ class BaseConnector(ABC):
 
         Returns:
             True if alert is overflowed, False otherwise.
+
         """
         return is_overflowed(self.siemplify, alert_info, self.is_test_run)

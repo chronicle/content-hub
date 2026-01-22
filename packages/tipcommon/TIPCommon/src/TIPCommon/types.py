@@ -12,24 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Callable, Collection, MutableMapping
 from typing import (
     Any,
-    Callable,
-    Collection,
-    List,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
-
-from collections.abc import MutableMapping
 
 from SiemplifyAction import SiemplifyAction
 from SiemplifyConnectors import SiemplifyConnectorExecution
 from SiemplifyDataModel import DomainEntityInfo
 from SiemplifyJob import SiemplifyJob
-
 
 _T = TypeVar("_T")
 _E = TypeVar("_E")
@@ -40,11 +33,11 @@ ChronicleSOAR = SiemplifyAction | SiemplifyConnectorExecution | SiemplifyJob
 Entity = TypeVar("Entity", bound=DomainEntityInfo)
 
 SingleJson = MutableMapping[str, Any]
-JSON = Union[SingleJson, List[SingleJson]]
+JSON = Union[SingleJson, list[SingleJson]]
 JsonString = TypeVar("JsonString", bound=str)
 
 GeneralFunction = Callable[..., Any]
-Contains = Union[_T, Collection[_T], Type[Tuple[_T, ...]], None]
+Contains = Union[_T, Collection[_T], type[tuple[_T, ...]], None]
 
 AuthParams = TypeVar("AuthParams")
 ApiParams = TypeVar("ApiParams")

@@ -20,7 +20,6 @@ from abc import ABC, abstractmethod
 from typing import Generic
 
 import requests
-
 from SiemplifyJob import SiemplifyJob
 from SiemplifyUtils import (
     convert_datetime_to_unix_time,
@@ -32,12 +31,17 @@ from SiemplifyUtils import (
     utc_now,
 )
 
-from .consts import (
-    JOB_ID_KEY,
-    JOB_INSTANCES_PARSE_ERROR_MSG,
-    PARAMETER_EXTRACTION_ERR_MSG,
+from ...consts import DATETIME_FORMAT, NONE_VALS, NUM_OF_MILLI_IN_SEC, UNIX_FORMAT
+from ...data_models import Container, JobParamType
+from ...exceptions import JobSetupError, ParameterExtractionError
+from ...extraction import extract_job_param
+from ...rest.soar_api import get_installed_jobs
+from ...types import JSON, Contains, JsonString
+from ...utils import (
+    camel_to_snake_case,
+    safe_cast_bool_value_from_str,
+    safe_cast_int_value_from_str,
 )
-from .data_models import JobParameter
 from ..interfaces import ApiClient, ScriptLogger
 from ..utils import (
     create_logger,
@@ -47,17 +51,12 @@ from ..utils import (
     is_native,
     nativemethod,
 )
-from ...consts import DATETIME_FORMAT, NONE_VALS, NUM_OF_MILLI_IN_SEC, UNIX_FORMAT
-from ...data_models import Container, JobParamType
-from ...exceptions import JobSetupError, ParameterExtractionError
-from ...extraction import extract_job_param
-from ...rest.soar_api import get_installed_jobs
-from ...types import Contains, JSON, JsonString
-from ...utils import (
-    camel_to_snake_case,
-    safe_cast_bool_value_from_str,
-    safe_cast_int_value_from_str,
+from .consts import (
+    JOB_ID_KEY,
+    JOB_INSTANCES_PARSE_ERROR_MSG,
+    PARAMETER_EXTRACTION_ERR_MSG,
 )
+from .data_models import JobParameter
 
 
 class Job(ABC, Generic[ApiClient]):
@@ -81,9 +80,7 @@ class Job(ABC, Generic[ApiClient]):
 
         self._job_start_time: int = -1
         self._error_msg: str = "Got exception on main handler."
-        self.name_id: str = (
-            f"{self.soar_job.script_name}_{self.soar_job.unique_identifier}"
-        )
+        self.name_id: str = f"{self.soar_job.script_name}_{self.soar_job.unique_identifier}"
 
         self._soar_job.script_name = self._name
 
@@ -140,6 +137,7 @@ class Job(ABC, Generic[ApiClient]):
 
         Raises:
             NotImplementedError: If not overridden
+
         """
         raise NotImplementedError
 
@@ -164,6 +162,7 @@ class Job(ABC, Generic[ApiClient]):
 
         Raises:
             JobSetupError: If any of the parameters are invalid.
+
         """
         raise NotImplementedError
 
@@ -175,8 +174,7 @@ class Job(ABC, Generic[ApiClient]):
 
     @output_handler
     def start(self) -> None:
-        """
-        Executes the connector logic.
+        """Executes the connector logic.
 
         Execution steps:
 
@@ -187,11 +185,11 @@ class Job(ABC, Generic[ApiClient]):
         Raises:
             ParameterExtractionError: Failed to extract the job's parameters
             JobSetupError: if any of the pre setup phases fail
+
         """
         self._start_job_clock()
         self.logger.info(
-            f"==================== Starting Job - {self.name} - "
-            "Execution ===================="
+            f"==================== Starting Job - {self.name} - Execution ===================="
         )
 
         self.logger.info("-------------------- Main - Param Init --------------------")
@@ -250,6 +248,7 @@ class Job(ABC, Generic[ApiClient]):
 
         Returns:
             The loaded value under the provided key in the case context
+
         """
         return self.soar_job.get_context_property(
             context_type=1,
@@ -269,6 +268,7 @@ class Job(ABC, Generic[ApiClient]):
             case_id: The case ID to set the context under
             property_key: The key to set in the case context
             property_value: The value to set under this key
+
         """
         self.soar_job.set_context_property(
             context_type=1,
@@ -285,6 +285,7 @@ class Job(ABC, Generic[ApiClient]):
 
         Note:
             Parameter names will be stored in snake_case format.
+
         """
         self.logger.info("Getting job parameters")
         params = self.__get_job_parameters()
@@ -304,14 +305,14 @@ class Job(ABC, Generic[ApiClient]):
 
             vault_settings = self.soar_job.vault_settings
             value = extract_job_param(
-                    siemplify=self.soar_job,
-                    param_name=param.name,
-                    input_type=input_type,
-                    is_mandatory=param.is_mandatory,
-                    default_value=default_value,
-                    print_value=not is_password,
-                    remove_whitespaces=not is_password,
-                )
+                siemplify=self.soar_job,
+                param_name=param.name,
+                input_type=input_type,
+                is_mandatory=param.is_mandatory,
+                default_value=default_value,
+                print_value=not is_password,
+                remove_whitespaces=not is_password,
+            )
             setattr(
                 self.params,
                 camel_to_snake_case(param.name),
@@ -339,6 +340,7 @@ class Job(ABC, Generic[ApiClient]):
 
         Raises:
             Exception: If failed to save the timestamp
+
         """
         if new_timestamp is None:
             new_timestamp = unix_now()
@@ -379,6 +381,7 @@ class Job(ABC, Generic[ApiClient]):
 
         Returns:
             int | datetime.datetime: The job's timestamp.
+
         """
         if timestamp_key is None:
             timestamp_key = self.soar_job.TIMESTAMP_KEY
@@ -438,6 +441,7 @@ class Job(ABC, Generic[ApiClient]):
 
         Returns:
             int | datetime.datetime: The last success time.
+
         """
         last_run_timestamp = self._fetch_timestamp_by_unique_id(
             datetime_format=True, timestamp_key=timestamp_key
@@ -452,9 +456,7 @@ class Job(ABC, Generic[ApiClient]):
             unix_result //= NUM_OF_MILLI_IN_SEC
 
         if print_value:
-            self.logger.info(
-                "Last success time. " f"Date time:{datetime_result}. Unix:{unix_result}"
-            )
+            self.logger.info(f"Last success time. Date time:{datetime_result}. Unix:{unix_result}")
 
         return unix_result if time_format == UNIX_FORMAT else datetime_result
 
@@ -472,15 +474,13 @@ class Job(ABC, Generic[ApiClient]):
 
         Returns:
             A list of JobParameter objects
+
         """
         job_id = self.soar_job.unique_identifier
 
         self.logger.info(f"Searching for the job instance of {job_id}")
         installed_jobs_response = get_installed_jobs(self.soar_job)
-        if (
-            isinstance(installed_jobs_response, dict)
-            and "job_instances" in installed_jobs_response
-        ):
+        if isinstance(installed_jobs_response, dict) and "job_instances" in installed_jobs_response:
             job_instances = installed_jobs_response["job_instances"]
         else:
             job_instances = installed_jobs_response
@@ -497,9 +497,7 @@ class Job(ABC, Generic[ApiClient]):
                         chronicle_soar=self.soar_job,
                         job_instance_id=job_instance_id,
                     )
-                    return [
-                        JobParameter(p) for p in full_job_details.get("parameters", [])
-                    ]
+                    return [JobParameter(p) for p in full_job_details.get("parameters", [])]
 
         # If we didn't return and got to this point the job is not installed
         raise ParameterExtractionError(

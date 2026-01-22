@@ -20,11 +20,9 @@ from typing import TYPE_CHECKING
 
 from .exceptions import InternalJSONDecoderError
 
-
 if TYPE_CHECKING:
-    from typing import Any
-
     from collections.abc import Hashable, Sequence
+    from typing import Any
 
     from .types import SingleJson
 
@@ -38,6 +36,7 @@ def to_string(value: Any) -> str:
 
     Returns:
         The string representation of the value.
+
     """
     if value is None:
         return ""
@@ -64,6 +63,7 @@ def convert_dict_to_json_result_dict(
         InternalJSONDecoderError: If json_result is a string that cannot be
         parsed.
         ValueError: If json_result is not a dictionary after parsing.
+
     """
     if isinstance(json_result, str):
         try:
@@ -94,6 +94,7 @@ def construct_csv(list_of_dicts: Sequence[SingleJson]) -> list[str]:
 
     Returns:
         A list of strings, where each string is a row in the CSV file.
+
     """
     if not list_of_dicts:
         return []
@@ -130,6 +131,7 @@ def dict_to_flat(target_dict: SingleJson) -> SingleJson:
 
     Returns:
         The flattened dictionary.
+
     """
     target_dict = copy.deepcopy(target_dict)
 
@@ -141,13 +143,13 @@ def dict_to_flat(target_dict: SingleJson) -> SingleJson:
         if value is None:
             return [(key, "")]
 
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             return [
                 (f"{key}_{to_string(sub_key)}", to_string(sub_value))
                 for sub_key, sub_value in dict_to_flat(value).items()
             ]
 
-        elif isinstance(value, list):
+        if isinstance(value, list):
             items: list[tuple[str, str]] = []
             count: int = 1
             for item in value:
@@ -160,13 +162,10 @@ def dict_to_flat(target_dict: SingleJson) -> SingleJson:
 
             return items
 
-        else:
-            return [(key, to_string(value))]
+        return [(key, to_string(value))]
 
     items: list[tuple[str, str]] = [
-        item
-        for sub_key, sub_value in target_dict.items()
-        for item in _expand(sub_key, sub_value)
+        item for sub_key, sub_value in target_dict.items() for item in _expand(sub_key, sub_value)
     ]
 
     return dict(items)
@@ -186,6 +185,7 @@ def flat_dict_to_csv(
 
     Returns:
         The list of strings in CSV format.
+
     """
     csv_format: list[str] = [f"{property_header},{value_header}"]
     for key, value in flat_dict.items():
@@ -205,11 +205,9 @@ def add_prefix_to_dict(given_dict: SingleJson, prefix: str) -> SingleJson:
 
     Returns:
         The dictionary with the prefix added to the keys.
+
     """
-    return {
-        f"{to_string(prefix)}_{to_string(key)}": value
-        for key, value in given_dict.items()
-    }
+    return {f"{to_string(prefix)}_{to_string(key)}": value for key, value in given_dict.items()}
 
 
 add_prefix_to_dict_keys = add_prefix_to_dict
@@ -230,6 +228,7 @@ def string_to_multi_value(
 
     Returns:
         The list of values.
+
     """
     if not string_value:
         return []
@@ -257,12 +256,9 @@ def convert_comma_separated_to_list(
 
     Returns:
         The list of values.
+
     """
-    return (
-        [item.strip() for item in comma_separated.split(delimiter)]
-        if comma_separated
-        else []
-    )
+    return [item.strip() for item in comma_separated.split(delimiter)] if comma_separated else []
 
 
 def convert_list_to_comma_string(values_list: list[Any], delimiter: str = ",") -> str:
@@ -274,6 +270,7 @@ def convert_list_to_comma_string(values_list: list[Any], delimiter: str = ",") -
 
     Returns:
         The comma-separated string.
+
     """
     if not isinstance(values_list, list):
         return str(values_list)
@@ -298,6 +295,7 @@ def removeprefix(string: str, prefix: str) -> str:
 
     Returns:
         The resulting string.
+
     """
     return string.removeprefix(prefix)
 
@@ -319,6 +317,7 @@ def removesuffix(string: str, suffix: str) -> str:
 
     Returns:
         The resulting string.
+
     """
     return string.removesuffix(suffix)
 
@@ -334,6 +333,7 @@ def rename_dict_key(
         a_dict: The dictionary to modify.
         current_key: The key in a_dict to rename.
         new_key: The new key name.
+
     """
     if current_key in a_dict:
         a_dict[new_key] = a_dict.pop(current_key)

@@ -17,7 +17,6 @@ from __future__ import annotations
 import abc
 from typing import Generic, TypeVar
 
-
 _R = TypeVar("_R")
 
 
@@ -38,7 +37,9 @@ class Session(abc.ABC, Generic[_R]):
         - delete()
         - patch()
         - put()
+
     """
+
     headers: dict
     verify: bool
 

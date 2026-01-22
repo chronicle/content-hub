@@ -25,7 +25,6 @@ from .encryption import decrypt, encrypt
 from .smp_time import unix_now
 from .types import ChronicleSOAR, JsonString, SingleJson
 
-
 DB_TOKEN_KEY = "OAUTH_TOKEN"
 
 
@@ -66,7 +65,6 @@ class AuthorizedOauthClient(Client):
 
 
 class OauthManager:
-
     def __init__(self, oauth_adapter: OAuthAdapter, cred_storage: CredStorage) -> None:
         self._oauth_adapter = oauth_adapter
         self._cred_storage = cred_storage
@@ -77,7 +75,7 @@ class OauthManager:
             return self._cred_storage.get_token()
         except EncryptionError:
             # The token cannot be decrypted, invalidate it
-            return
+            return None
 
     def _refresh_token(self) -> None:
         token = self._oauth_adapter.refresh_token()
@@ -97,18 +95,15 @@ class OauthManager:
         self._cred_storage.set_token(self._token)
 
     def prepare_authorized_client(
-            self,
-            auth_client: AuthorizedOauthClient,
+        self,
+        auth_client: AuthorizedOauthClient,
     ) -> AuthorizedOauthClient:
-        return self._oauth_adapter.prepare_authorized_client(
-            self._token,
-            auth_client
-        )
+        return self._oauth_adapter.prepare_authorized_client(self._token, auth_client)
 
     def refresh_if_bad_credentials(
-            self,
-            auth_client: AuthorizedOauthClient,
-            response: Response,
+        self,
+        auth_client: AuthorizedOauthClient,
+        response: Response,
     ) -> bool:
         """If the response indicates bad credentials, token will be refreshed."""
         try:
@@ -131,7 +126,6 @@ class OauthManager:
 
 
 class OAuthAdapter(abc.ABC):
-
     @abc.abstractmethod
     def check_signer(self, token: OauthToken) -> bool:
         """Returns True if signer is valid, false otherwise."""
@@ -147,13 +141,14 @@ class OAuthAdapter(abc.ABC):
 
         Raises:
             AuthenticationError - if the response indicates expired credentials
+
         """
 
     @abc.abstractmethod
     def prepare_authorized_client(
-            self,
-            token: OauthToken,
-            auth_client: AuthorizedOauthClient,
+        self,
+        token: OauthToken,
+        auth_client: AuthorizedOauthClient,
     ) -> AuthorizedOauthClient:
         """Sets headers of whatever is needed for the client."""
 
@@ -167,15 +162,13 @@ class OauthToken:
     additional_data: SingleJson = dataclasses.field(default_factory=dict)
 
     def to_cache(self) -> JsonString:
-        return json.dumps(
-            {
-                "access_token": self.access_token,
-                "refresh_token": self.refresh_token,
-                "signer": self.signer,
-                "expiration_time": self.expiration_time,
-                "additional_data": self.additional_data,
-            }
-        )
+        return json.dumps({
+            "access_token": self.access_token,
+            "refresh_token": self.refresh_token,
+            "signer": self.signer,
+            "expiration_time": self.expiration_time,
+            "additional_data": self.additional_data,
+        })
 
     @classmethod
     def from_cache(cls, raw_data: JsonString) -> OauthToken:
@@ -183,11 +176,10 @@ class OauthToken:
 
 
 class CredStorage:
-
     def __init__(
-            self,
-            encryption_password: str,
-            chronicle_soar: ChronicleSOAR,
+        self,
+        encryption_password: str,
+        chronicle_soar: ChronicleSOAR,
     ) -> None:
         self.encryption_password = encryption_password
         self.chronicle_soar = chronicle_soar
@@ -200,16 +192,14 @@ class CredStorage:
         if hasattr(self.chronicle_soar, "context"):
             return self.chronicle_soar.context.connector_info.identifier
 
-        raise AuthenticationError(
-            "Can't extract instance identifier from ChronicleSOAR context."
-        )
+        raise AuthenticationError("Can't extract instance identifier from ChronicleSOAR context.")
 
     def get_token(self) -> OauthToken | None:
         """Extract ad decrypt a token from context database."""
         encrypted_data = self.chronicle_soar.get_context_property(
             context_type=GLOBAL_CONTEXT_SCOPE,
             identifier=self.get_instance_identifier(),
-            property_key=DB_TOKEN_KEY
+            property_key=DB_TOKEN_KEY,
         )
         if encrypted_data is None:
             return None
@@ -231,21 +221,15 @@ class CredStorage:
         try:
             return decrypt(encrypted_data, key=self.encryption_password)
         except UnicodeError as err:
-            raise EncryptionError(
-                "Can't decrypt token from ChronicleSOAR context."
-            ) from err
+            raise EncryptionError("Can't decrypt token from ChronicleSOAR context.") from err
 
     def _encrypt(self, raw_data: str) -> bytes:
         return encrypt(raw_data, key=self.encryption_password)
 
 
 class EncryptionError(Exception):
-    """
-    Generic exception for Encryption errors.
-    """
+    """Generic exception for Encryption errors."""
 
 
 class AuthenticationError(Exception):
-    """
-    Generic exception for AuthenticationErrors.
-    """
+    """Generic exception for AuthenticationErrors."""

@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-cache
+"""cache
 ==========
 
 Module for handling distributed context across different context value to avoid
@@ -43,17 +42,16 @@ Example usage:
     cache.commit()
 """
 
-
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import itertools
 import json
-import hashlib
 import uuid
 import warnings
-from collections.abc import Iterator
-from typing import Generic, Type, TypeVar, MutableMapping
+from collections.abc import Iterator, MutableMapping
+from typing import Generic, TypeVar
 
 import SiemplifyUtils
 
@@ -61,12 +59,11 @@ from .base.action import Action
 from .base.connector import BaseConnector
 from .base.job import Job
 from .context import Context, get_context_factory
-from .types import SingleJson, JsonString
-
+from .types import JsonString, SingleJson
 
 _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
-_CacheChunkContent: Type[MutableMapping[_KT, _VT]] = MutableMapping[_KT, _VT]
+_CacheChunkContent: type[MutableMapping[_KT, _VT]] = MutableMapping[_KT, _VT]
 
 CACHE_CHUNKS_METADATA_PATH: str = "{prefix}_cache_chunks_metadata"
 ROW_PADDING_LENGTH: int = 40
@@ -77,6 +74,7 @@ INT_CAST_BASE_HEX: int = 16
 @dataclasses.dataclass
 class CacheChunkMetadata:
     """Stores metadata about cache chunk, such as db size, db key and its index."""
+
     prefix: str
     db_key: str
     index: int = 0
@@ -88,7 +86,7 @@ class CacheChunkMetadata:
             prefix=prefix,
             db_key=json_obj["db_key"],
             index=json_obj["index"],
-            db_size=json_obj["db_size"]
+            db_size=json_obj["db_size"],
         )
 
     def to_json(self) -> SingleJson:
@@ -106,6 +104,7 @@ class CacheChunkMetadata:
 @dataclasses.dataclass
 class CacheChunkCut:
     """Helper class representing a result of 'cut chunk' operation."""
+
     index: int
     content: _CacheChunkContent
 
@@ -114,10 +113,10 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
     """Single Cache Chunk object that holds piece of all the data stored in cache."""
 
     def __init__(
-            self,
-            context_handler: Context,
-            cache_chunk_metadata: CacheChunkMetadata,
-            content: _CacheChunkContent[_KT, _VT] | None = None
+        self,
+        context_handler: Context,
+        cache_chunk_metadata: CacheChunkMetadata,
+        content: _CacheChunkContent[_KT, _VT] | None = None,
     ):
         self._context: Context = context_handler
         self._content: _CacheChunkContent[_KT, _VT] | None = content
@@ -167,27 +166,20 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
         Returns:
             CacheChunkCut: CacheChunkCut object containing all the extra data.
+
         """
         keys_sorted = sorted(self.content.keys(), key=lambda _k: _hash_string(_k[0]))
         _target_lookup = set(keys_sorted[:target_length])
         _extra_lookup = set(keys_sorted[target_length:])
 
         _extra = {_k: _v for _k, _v in self.content.items() if _k in _extra_lookup}
-        self.content = {
-            _k: _v for _k, _v in self.content.items() if _k in _target_lookup
-        }
-        return CacheChunkCut(
-            index=_hash_string(keys_sorted[target_length]),
-            content=_extra
-        )
+        self.content = {_k: _v for _k, _v in self.content.items() if _k in _target_lookup}
+        return CacheChunkCut(index=_hash_string(keys_sorted[target_length]), content=_extra)
 
     def split(self) -> CacheChunk:
         """Splits current chunk in two approximately equal sized chunks."""
         cut_result = self.cut(len(self) // 2)
-        warnings.warn(
-            f"Chunk with key {self.cache_chunk_metadata.key} was split",
-            ResourceWarning
-        )
+        warnings.warn(f"Chunk with key {self.cache_chunk_metadata.key} was split", ResourceWarning)
         return CacheChunk(
             context_handler=self._context,
             cache_chunk_metadata=CacheChunkMetadata(
@@ -195,7 +187,7 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
                 db_key=str(uuid.uuid4()),
                 index=cut_result.index,
             ),
-            content=cut_result.content
+            content=cut_result.content,
         )
 
     def commit(self) -> list[CacheChunk]:
@@ -206,6 +198,7 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
         Returns:
             List of resulting chunks
+
         """
         # If self._content is None, it means data was never accessed, so we can
         # skip commit for this chunk
@@ -215,10 +208,7 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
         json_str = _dump_property_value(self.content)
         if not _row_is_too_long(json_str):
             self.cache_chunk_metadata.db_size = len(self.content)
-            self._context.set_context(
-                key=self.cache_chunk_metadata.key,
-                value=json_str
-            )
+            self._context.set_context(key=self.cache_chunk_metadata.key, value=json_str)
             return [self]
 
         new_chunk = self.split()
@@ -234,17 +224,12 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
     """
 
     def __init__(
-            self,
-            chronicle_soar: Action | Job | BaseConnector,
-            prefix: str,
-            max_size: int | None = None
+        self, chronicle_soar: Action | Job | BaseConnector, prefix: str, max_size: int | None = None
     ) -> None:
         self._context: Context = get_context_factory(chronicle_soar)
         self.prefix = prefix
         self.max_size = max_size
-        self._cache_chunks: list[CacheChunk[_KT, _VT]] = (
-            self._lazy_load_cache_chunks()
-        )
+        self._cache_chunks: list[CacheChunk[_KT, _VT]] = self._lazy_load_cache_chunks()
 
     def _lazy_load_cache_chunks(self) -> list[CacheChunk[_KT, _VT]]:
         """Lazy Load partial data about cache chunks."""
@@ -254,18 +239,15 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
                 CacheChunk(
                     context_handler=self._context,
                     cache_chunk_metadata=CacheChunkMetadata(
-                        prefix=self.prefix,
-                        db_key=str(uuid.uuid4())
+                        prefix=self.prefix, db_key=str(uuid.uuid4())
                     ),
-                    content={}
+                    content={},
                 )
             ]
 
         return [
-            CacheChunk(
-                context_handler=self._context,
-                cache_chunk_metadata=cache_chunk_metadata
-            ) for cache_chunk_metadata in cache_chunks_metadata
+            CacheChunk(context_handler=self._context, cache_chunk_metadata=cache_chunk_metadata)
+            for cache_chunk_metadata in cache_chunks_metadata
         ]
 
     def _load_chunks_metadata(self) -> list[CacheChunkMetadata]:
@@ -282,7 +264,7 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
                     prefix=self.prefix,
                     db_key=metadata_json["db_key"],
                     index=metadata_json["index"],
-                    db_size=metadata_json["db_size"]
+                    db_size=metadata_json["db_size"],
                 )
                 for metadata_json in _load__json(metadata_list_json)
             ],
@@ -291,12 +273,10 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
     def _commit_chunks_metadata(self) -> None:
         """Commit chunks metadata to DB / FS."""
-        storage_keys = [
-            chunk.cache_chunk_metadata.to_json() for chunk in self._cache_chunks
-        ]
+        storage_keys = [chunk.cache_chunk_metadata.to_json() for chunk in self._cache_chunks]
         self._context.set_context(
             key=CACHE_CHUNKS_METADATA_PATH.format(prefix=self.prefix),
-            value=_dump_property_value(storage_keys)
+            value=_dump_property_value(storage_keys),
         )
 
     def _find_chunk_by_key(self, __key: _KT) -> CacheChunk[_KT, _VT]:
@@ -306,12 +286,7 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
         that has index that's bigger than current key hash value.
         """
         key_hash = _hash_string(__key)
-        return next(
-            filter(
-                lambda c: key_hash > c.cache_chunk_metadata.index,
-                self._cache_chunks
-            )
-        )
+        return next(filter(lambda c: key_hash > c.cache_chunk_metadata.index, self._cache_chunks))
 
     @property
     def content(self) -> _CacheChunkContent[_KT, _VT]:
@@ -332,9 +307,7 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
     # @override
     def __iter__(self) -> Iterator[_KT]:
-        return itertools.chain.from_iterable(
-            iter(chunk) for chunk in self._cache_chunks
-        )
+        return itertools.chain.from_iterable(iter(chunk) for chunk in self._cache_chunks)
 
     # @override
     def __setitem__(self, key: _KT, value: _VT) -> None:
@@ -411,9 +384,9 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
             self._truncate_to_max_size()
             self.balance_chunks()
 
-        self._cache_chunks = list(itertools.chain.from_iterable(
-            chunk.commit() for chunk in self._cache_chunks
-        ))
+        self._cache_chunks = list(
+            itertools.chain.from_iterable(chunk.commit() for chunk in self._cache_chunks)
+        )
         self._commit_chunks_metadata()
 
 
@@ -423,10 +396,7 @@ def _hash_string(value__: str) -> int:
     The resulting hash will be cut to KEY_HASH_LENGTH length.
     """
     return (
-        int(
-            hashlib.sha256(value__.encode("utf-8")).hexdigest(),
-            INT_CAST_BASE_HEX
-        )
+        int(hashlib.sha256(value__.encode("utf-8")).hexdigest(), INT_CAST_BASE_HEX)
         % 10**KEY_HASH_LENGTH
     )
 

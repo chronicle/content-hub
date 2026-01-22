@@ -13,31 +13,14 @@
 # limitations under the License.
 
 
-
-from .consts import (
-    IDS_DB_KEY,
-    IDS_FILE_NAME,
-    NUM_OF_HOURS_IN_3_DAYS,
-    STORED_IDS_LIMIT
-)
+from .consts import IDS_DB_KEY, IDS_FILE_NAME, NUM_OF_HOURS_IN_3_DAYS, STORED_IDS_LIMIT
 from .DataStream import DataStreamFactory
 from .filters import filter_old_ids_by_timestamp
-from .types import ChronicleSOAR
-from .utils import (
-    none_to_default_value,
-    cast_keys_to_int
-)
+from .utils import cast_keys_to_int, none_to_default_value
 
 
-def read_content(
-    siemplify,
-    file_name,
-    db_key,
-    default_value_to_return=None,
-    identifier=None
-):
-    """
-    Read the content of a `ConnectorStream` object.
+def read_content(siemplify, file_name, db_key, default_value_to_return=None, identifier=None):
+    """Read the content of a `ConnectorStream` object.
     If the object contains no data, does not exist, return a default value
 
     Args:
@@ -51,14 +34,9 @@ def read_content(
 
     Returns:
         (dict) The content inside the `DataStream` object, the content passes through `json.loads` before returning.
-    """
 
-    data = DataStreamFactory.get_stream_object(
-        file_name,
-        db_key,
-        siemplify,
-        identifier
-    )
+    """
+    data = DataStreamFactory.get_stream_object(file_name, db_key, siemplify, identifier)
 
     default_value_to_return = none_to_default_value(default_value_to_return, {})
 
@@ -70,10 +48,9 @@ def read_ids(
     default_value_to_return=None,
     identifier=None,
     ids_file_name=IDS_FILE_NAME,
-    db_key=IDS_DB_KEY
+    db_key=IDS_DB_KEY,
 ):
-    """
-    Read IDs from a `ConnectorStream` object.
+    """Read IDs from a `ConnectorStream` object.
     If the object contains no data, does not exist, return a default value
 
     Args:
@@ -87,17 +64,11 @@ def read_ids(
 
     Returns:
         (list) List of IDs inside the `DataStream` object, the content passes through `json.loads` before returning.
-    """
 
+    """
     default_value_to_return = none_to_default_value(default_value_to_return, [])
 
-    return read_content(
-        siemplify,
-        ids_file_name,
-        db_key,
-        default_value_to_return,
-        identifier
-    )
+    return read_content(siemplify, ids_file_name, db_key, default_value_to_return, identifier)
 
 
 def read_ids_by_timestamp(
@@ -109,10 +80,9 @@ def read_ids_by_timestamp(
     offset_is_in_days=False,
     identifier=None,
     ids_file_name=IDS_FILE_NAME,
-    db_key=IDS_DB_KEY
+    db_key=IDS_DB_KEY,
 ):
-    """
-    Read IDs from a `ConnectorStream` object.
+    """Read IDs from a `ConnectorStream` object.
     If the object contains no data, does not exist, return a default value
 
     Args:
@@ -129,14 +99,10 @@ def read_ids_by_timestamp(
 
     Returns:
         (list) List of IDs inside the `DataStream` object, the content passes through `json.loads` before returning.
-    """
 
+    """
     existing_ids = read_content(
-        siemplify,
-        ids_file_name,
-        db_key,
-        default_value_to_return,
-        identifier
+        siemplify, ids_file_name, db_key, default_value_to_return, identifier
     )
 
     try:
@@ -144,7 +110,7 @@ def read_ids_by_timestamp(
             ids=existing_ids,
             offset_in_hours=offset_in_hours,
             convert_to_milliseconds=convert_to_milliseconds,
-            offset_is_in_days=offset_is_in_days
+            offset_is_in_days=offset_is_in_days,
         )
         if cast_keys_to_integers:
             return cast_keys_to_int(filtered_ids)
@@ -152,13 +118,10 @@ def read_ids_by_timestamp(
         return filtered_ids
 
     except Exception as e:
-        siemplify.LOGGER.error('Unable to read ids file: {}'.format(e))
+        siemplify.LOGGER.error(f"Unable to read ids file: {e}")
         siemplify.LOGGER.exception(e)
 
-        default_value_to_return = none_to_default_value(
-            default_value_to_return,
-            {}
-        )
+        default_value_to_return = none_to_default_value(default_value_to_return, {})
         return default_value_to_return
 
 
@@ -167,7 +130,7 @@ def read_and_repair_existing_ids(
     default_value_to_return=None,
     identifier=None,
     ids_file_name=IDS_FILE_NAME,
-    db_key=IDS_DB_KEY
+    db_key=IDS_DB_KEY,
 ):
     # type: (ChronicleSOAR, dict, str, str, str) -> list
     """Read existing alert ids and convert them to list, if it is a dict.
@@ -188,14 +151,15 @@ def read_and_repair_existing_ids(
 
     Returns:
         list: List of IDs inside the `DataStream` object.
+
     """
     existing_ids_data = read_ids(
         siemplify=siemplify,
         default_value_to_return=default_value_to_return,
         identifier=identifier,
         ids_file_name=ids_file_name,
-        db_key=db_key
-        )
+        db_key=db_key,
+    )
 
     if isinstance(existing_ids_data, dict):
         return list(existing_ids_data.keys())
@@ -207,13 +171,9 @@ def read_and_repair_existing_ids(
 #              WRITE  METHODS              ##              WRITE  METHODS              #
 ########################################################################################
 
+
 def write_content(
-    siemplify,
-    content_to_write,
-    file_name,
-    db_key,
-    default_value_to_set=None,
-    identifier=None
+    siemplify, content_to_write, file_name, db_key, default_value_to_set=None, identifier=None
 ):
     """Writes content into a `ConnectorStream` object.
 
@@ -227,13 +187,9 @@ def write_content(
 
     Returns:
         None
+
     """
-    data = DataStreamFactory.get_stream_object(
-        file_name,
-        db_key,
-        siemplify,
-        identifier
-    )
+    data = DataStreamFactory.get_stream_object(file_name, db_key, siemplify, identifier)
 
     default_value_to_set = none_to_default_value(default_value_to_set, {})
 
@@ -247,7 +203,7 @@ def write_ids(
     stored_ids_limit=STORED_IDS_LIMIT,
     identifier=None,
     ids_file_name=IDS_FILE_NAME,
-    db_key=IDS_DB_KEY
+    db_key=IDS_DB_KEY,
 ):
     """Writes the last 1,000 IDs into a `ConnectorStream` object.
 
@@ -262,19 +218,12 @@ def write_ids(
 
     Returns:
         None
-    """
 
+    """
     default_value_to_set = none_to_default_value(default_value_to_set, [])
 
     ids = ids[-stored_ids_limit:]
-    write_content(
-        siemplify,
-        ids,
-        ids_file_name,
-        db_key,
-        default_value_to_set,
-        identifier
-    )
+    write_content(siemplify, ids, ids_file_name, db_key, default_value_to_set, identifier)
 
 
 def write_ids_with_timestamp(
@@ -283,7 +232,7 @@ def write_ids_with_timestamp(
     default_value_to_set=None,
     identifier=None,
     ids_file_name=IDS_FILE_NAME,
-    db_key=IDS_DB_KEY
+    db_key=IDS_DB_KEY,
 ):
     """Writes IDs into a `ConnectorStream` object with a timestamp.
 
@@ -297,15 +246,8 @@ def write_ids_with_timestamp(
 
     Returns:
         None
-    """
 
+    """
     default_value_to_set = none_to_default_value(default_value_to_set, {})
 
-    write_content(
-        siemplify,
-        ids,
-        ids_file_name,
-        db_key,
-        default_value_to_set,
-        identifier
-    )
+    write_content(siemplify, ids, ids_file_name, db_key, default_value_to_set, identifier)

@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .pubsub.pubsub import PubSubAdapter
+from .pubsub.pubsub import PubSubAdapter as PubSubAdapter

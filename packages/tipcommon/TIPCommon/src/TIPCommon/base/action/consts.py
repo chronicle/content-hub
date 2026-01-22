@@ -16,35 +16,29 @@ from __future__ import annotations
 
 from .data_models import ExecutionState
 
-
 EXECUTION_STATE = {
-    ExecutionState.COMPLETED: 'Completed',
-    ExecutionState.IN_PROGRESS: 'In Progress',
-    ExecutionState.FAILED: 'Failed',
-    ExecutionState.TIMED_OUT: 'Timed Out',
+    ExecutionState.COMPLETED: "Completed",
+    ExecutionState.IN_PROGRESS: "In Progress",
+    ExecutionState.FAILED: "Failed",
+    ExecutionState.TIMED_OUT: "Timed Out",
 }
 
 PARAMETER_EXTRACTION_ERR_MSG = (
-    'Failed to get the definition files for all the actions that are '
-    'configured in the current environment!\n'
-    'HTTPError stacktrace: {error}\n'
+    "Failed to get the definition files for all the actions that are "
+    "configured in the current environment!\n"
+    "HTTPError stacktrace: {error}\n"
 )
 CONFIG_PARAMETER_EXTRACTION_ERR_MSG = (
-    "Failed to get the full-details file of the integration!\n"
-    'HTTPError stacktrace: {error}\n'
+    "Failed to get the full-details file of the integration!\nHTTPError stacktrace: {error}\n"
 )
 DEF_FILE_PARSE_ERROR_MSG = (
-    'Failed to parse the "get env action-def" response Json\n'
-    'JSONDecoder stacktrace: {error}\n'
+    'Failed to parse the "get env action-def" response Json\nJSONDecoder stacktrace: {error}\n'
 )
 CONFIG_DEF_FILE_PARSE_ERROR_MSG = (
-    'Failed to parse the "get full-details" response Json\n'
-    'JSONDecoder stacktrace: {error}\n'
+    'Failed to parse the "get full-details" response Json\nJSONDecoder stacktrace: {error}\n'
 )
-ENTITY_OG_ID_ATTR = 'original_identifier'
-ACTION_DEF_NAME_KEY = 'name'
-ADD_TO_CASE_RESULT_MSG = 'Adding {action_type} to case result\n'
-ADD_TO_CASE_RESULT_ERR_MSG = (
-    'Failed to send {action_type} to case result, Error: {error0}\n'
-)
-SDK_WRAPPER_ERR_MSG = 'Failed to execute an SDK wrapper method, Error: {error}\n'
+ENTITY_OG_ID_ATTR = "original_identifier"
+ACTION_DEF_NAME_KEY = "name"
+ADD_TO_CASE_RESULT_MSG = "Adding {action_type} to case result\n"
+ADD_TO_CASE_RESULT_ERR_MSG = "Failed to send {action_type} to case result, Error: {error0}\n"
+SDK_WRAPPER_ERR_MSG = "Failed to execute an SDK wrapper method, Error: {error}\n"

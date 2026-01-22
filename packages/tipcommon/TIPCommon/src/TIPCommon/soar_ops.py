@@ -17,10 +17,7 @@ from __future__ import annotations
 import math
 import os
 import re
-from typing import Iterable
 
-from SiemplifyAction import SiemplifyAction
-from SiemplifyJob import SiemplifyJob
 from SiemplifyUtils import unix_now
 
 from .consts import (
@@ -46,6 +43,7 @@ def get_user_by_id(chronicle_soar, user_id):
 
     Returns:
         UserProfileCard | None: The user object if it was found, else None
+
     """
     users = get_users_profile_cards_with_pagination(chronicle_soar)
     for user in users:
@@ -54,14 +52,14 @@ def get_user_by_id(chronicle_soar, user_id):
 
 
 def get_users_profile_cards_with_pagination(
-        chronicle_soar,
-        search_term='',
-        page_size=20,
-        filter_by_role=False,
-        filter_disabled_users=False,
-        filter_support_users=False,
-        fetch_only_support_users=False,
-        filter_permission_types=None,
+    chronicle_soar,
+    search_term="",
+    page_size=20,
+    filter_by_role=False,
+    filter_disabled_users=False,
+    filter_support_users=False,
+    fetch_only_support_users=False,
+    filter_permission_types=None,
 ):
     # type: (ChronicleSOAR, str, int, bool, bool, bool, bool, list[int] | None) -> list[UserProfileCard]
     """Get all users profiles cards using pagination
@@ -81,6 +79,7 @@ def get_users_profile_cards_with_pagination(
 
     Returns:
         list[UserProfileCard]: List of all users
+
     """
     filter_permission_types = none_to_default_value(filter_permission_types, [])
 
@@ -120,6 +119,7 @@ def get_soar_case_comments(chronicle_soar, case_id):
 
     Returns:
         list[base.action.CaseComment]: List of comment objects
+
     """
     comments = chronicle_soar.get_case_comments(case_id)
     if is_python_37:
@@ -144,6 +144,7 @@ def get_clean_comment_body(comment, prefix):
 
     Returns:
         str: The comment without the prefix
+
     """
     if is_python_37:
         from .base.action import CaseComment
@@ -155,9 +156,8 @@ def get_clean_comment_body(comment, prefix):
         return removeprefix(comment, prefix)
 
     raise TypeError(
-        'The provided comment was of type {}, which is not str '.format(
-            type(comment)
-        ) + 'or TIPCommon.base.action.CaseComment'
+        f"The provided comment was of type {type(comment)}, which is not str "
+        "or TIPCommon.base.action.CaseComment"
     )
 
 
@@ -171,6 +171,7 @@ def remove_prefix_from_comments(comments, prefix):
 
     Returns:
         list[str]: List of all comments after the prefix was removed from them
+
     """
     return [get_clean_comment_body(comment, prefix) for comment in comments]
 
@@ -187,10 +188,10 @@ def is_slo_comment(comment):
 
     Returns:
         bool: True if it's an SLO comment, else False
+
     """
     return (
-            comment == SLO_BREACHED_COMMENT or
-            re.fullmatch(SLO_APPROACHING_REGEXP, comment) is not None
+        comment == SLO_BREACHED_COMMENT or re.fullmatch(SLO_APPROACHING_REGEXP, comment) is not None
     )
 
 
@@ -219,24 +220,25 @@ def create_slo_message(slo, interval_days, existing_comments):
 
     Returns:
         The comment if a comment should be sent, else None
+
     """
     for interval in interval_days:
         if interval < 0:
-            raise ValueError('Dy intervals must be positive!')
+            raise ValueError("Dy intervals must be positive!")
 
     unique_comments = set(existing_comments)
     if SLO_BREACHED_COMMENT in unique_comments:
-        return
+        return None
 
     # Mapping which comments have been set already
     comment_regex = re.compile(SLO_APPROACHING_REGEXP)
     sorted_days = sorted(interval_days)
 
-    if 0 != sorted_days[0]:
+    if sorted_days[0] != 0:
         sorted_days.insert(0, 0)
 
     reversed_sorted_days = list(reversed(sorted_days))
-    checked_slo_times = {time: False for time in sorted_days}
+    checked_slo_times = dict.fromkeys(sorted_days, False)
     for comment in unique_comments:
         match = comment_regex.fullmatch(comment)
         if match is None:
@@ -271,18 +273,12 @@ def create_slo_message(slo, interval_days, existing_comments):
             continue
 
         comment = (
-            SLO_BREACHED_COMMENT if days_left <= 0
-            else SLO_APPROACHING_COMMENT.format(days_left)
+            SLO_BREACHED_COMMENT if days_left <= 0 else SLO_APPROACHING_COMMENT.format(days_left)
         )
         return comment
 
 
-def save_file(
-    chronicle_soar: ChronicleSOAR,
-    path: str,
-    name: str,
-    content: bytes
-) -> bytes | None:
+def save_file(chronicle_soar: ChronicleSOAR, path: str, name: str, content: bytes) -> bytes | None:
     """Save file to GCP bucket or local path.
 
     Args:
@@ -293,8 +289,9 @@ def save_file(
 
     Returns:
         str | None: Path to the downloaded files
+
     """
-    if not hasattr(chronicle_soar, 'set_bytes_blob'):
+    if not hasattr(chronicle_soar, "set_bytes_blob"):
         return None
 
     identifier = os.path.join(path, name)
@@ -312,14 +309,14 @@ def get_file(chronicle_soar: ChronicleSOAR, identifier: str) -> bytes | None:
 
     Returns:
         bytes | None: bytes data of the provided identifier.
+
     """
-    if not hasattr(chronicle_soar, 'get_bytes_blob'):
+    if not hasattr(chronicle_soar, "get_bytes_blob"):
         return None
 
     return chronicle_soar.get_bytes_blob(identifier)
 
 
 def get_secops_mode() -> str | None:
-    """Returns the SECOPS_MODE environment variable.
-    """
-    return os.environ.get('SECOPS_MODE') or os.environ.get('SEC_OPS_MODE')
+    """Returns the SECOPS_MODE environment variable."""
+    return os.environ.get("SECOPS_MODE") or os.environ.get("SEC_OPS_MODE")

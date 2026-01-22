@@ -18,32 +18,31 @@ from urllib.parse import urljoin
 
 import requests
 
-from . import consts
-from .data_models import PubSubMessage
-from .parser import PubSubParser
 from ...exceptions import NotFoundError
 from ...filters import filter_none_kwargs
 from ...rest.httplib import get_auth_session
 from ...transformation import convert_list_to_comma_string
+from . import consts
+from .data_models import PubSubMessage
+from .parser import PubSubParser
 
 
 class PubSubAdapter:
-    """
-    Adapter class for managing Google Cloud project pub/sub topics
+    """Adapter class for managing Google Cloud project pub/sub topics
     and subscriptions
     """
 
     def __init__(
-            self,
-            session,
-            project_id=None,
-            logger=None,
-            region=None,
+        self,
+        session,
+        project_id=None,
+        logger=None,
+        region=None,
     ):
         self.logger = logger
         self.project_id = project_id
         self.session = session
-        self.session.headers.update({'content-type': 'application/json'})
+        self.session.headers.update({"content-type": "application/json"})
         self.region = region
 
     @staticmethod
@@ -74,15 +73,14 @@ class PubSubAdapter:
 
         Returns:
             PubSubAdapter: A `PubSubAdapter` object
+
         """
-        project_id = project_id if project_id else credentials.quota_project_id
+        project_id = project_id or credentials.quota_project_id
         session = get_auth_session(
-            credentials=credentials,
-            audience=consts.PUBSUB_SCOPE,
-            verify_ssl=verify_ssl
+            credentials=credentials, audience=consts.PUBSUB_SCOPE, verify_ssl=verify_ssl
         )
         if quota_project is not None:
-            session.headers.update({'x-goog-user-project': quota_project})
+            session.headers.update({"x-goog-user-project": quota_project})
         return PubSubAdapter(
             session=session,
             project_id=project_id,
@@ -92,11 +90,7 @@ class PubSubAdapter:
 
     @staticmethod
     def from_service_account_info(
-        user_service_account,
-        project_id=None,
-        verify_ssl=True,
-        quota_project=None,
-        logger=None
+        user_service_account, project_id=None, verify_ssl=True, quota_project=None, logger=None
     ):
         """Creates `PubSubAdapter` object from service_account json.
 
@@ -115,39 +109,30 @@ class PubSubAdapter:
 
         Returns:
             PubSubAdapter: A `PubSubAdapter` object
+
         """
         parsed_service_account = json.loads(user_service_account)
-        project_id = (
-            project_id if project_id
-            else parsed_service_account['project_id']
-        )
+        project_id = project_id or parsed_service_account["project_id"]
         session = get_auth_session(
             service_account=parsed_service_account,
             audience=consts.PUBSUB_SCOPE,
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         )
         if quota_project is not None:
-            session.headers.update({'x-goog-user-project': quota_project})
-        return PubSubAdapter(
-            session=session,
-            project_id=project_id,
-            logger=logger
-        )
+            session.headers.update({"x-goog-user-project": quota_project})
+        return PubSubAdapter(session=session, project_id=project_id, logger=logger)
 
     def _get_full_url(self, endpoint, **kwargs):
         """Build full request uri."""
-        rep_subdomain = (
-            f'.{self.region}.rep' if self.region is not None else ''
-        )
+        rep_subdomain = f".{self.region}.rep" if self.region is not None else ""
         return urljoin(
             base=consts.PUBSUB_API_ROOT.format(rep_subdomain=rep_subdomain),
-            url=consts.PUBSUB_ENDPOINTS[endpoint].format(**kwargs)
+            url=consts.PUBSUB_ENDPOINTS[endpoint].format(**kwargs),
         )
 
     @staticmethod
     def _validate_response(response):
-        """
-        Validates an http response from GCP PubSub API
+        """Validates an http response from GCP PubSub API
         Args:
             response (requests.Response): HTTP response object
         """
@@ -157,13 +142,13 @@ class PubSubAdapter:
         except requests.HTTPError as e:
             try:
                 response_json = response.json()
-                status = response_json.get('error', {}).get('status')
+                status = response_json.get("error", {}).get("status")
                 if status in consts.PUBSUB_ERROR_STATUS_MAPPING:
                     exception = consts.PUBSUB_ERROR_STATUS_MAPPING[status]
-                    msg = response_json.get('error', {}).get('message', '')
-                    details = response_json.get('error', {}).get('details', [])
+                    msg = response_json.get("error", {}).get("message", "")
+                    details = response_json.get("error", {}).get("details", [])
                     if details:
-                        msg += ' - {}'.format(details[0].get('detail'))
+                        msg += " - {}".format(details[0].get("detail"))
                     raise exception(msg)
             except (json.JSONDecodeError, IndexError):
                 # we don't care about these errors, so pass in order to
@@ -171,9 +156,7 @@ class PubSubAdapter:
                 pass
 
             if response.status_code == 502:
-                raise (
-                    consts.PUBSUB_ERROR_STATUS_MAPPING["BAD_GATEWAY"](str(e))
-                ) from e
+                raise (consts.PUBSUB_ERROR_STATUS_MAPPING["BAD_GATEWAY"](str(e))) from e
 
             raise e
 
@@ -189,19 +172,14 @@ class PubSubAdapter:
 
         Raises:
              NotFoundError: if a field provided can't be identified with a mask
+
         """
         mask = []
         for field in fields:
             try:
-                mask.append(
-                    consts.PUBSUB_FIELD_MASK_MAPPING[field]
-                )
+                mask.append(consts.PUBSUB_FIELD_MASK_MAPPING[field])
             except Exception:
-                raise NotFoundError(
-                    '"{field}" is not a valid field for pubsub resource'.format(
-                        field=field
-                    )
-                )
+                raise NotFoundError(f'"{field}" is not a valid field for pubsub resource')
         return convert_list_to_comma_string(mask)
 
     def create_topic(self, topic_name):
@@ -216,18 +194,15 @@ class PubSubAdapter:
         Returns:
              Topic:
                 ``TIPCommon.adapters.pubsub.Topic`` object of the created topic.
-        """
-        url = self._get_full_url(
-            'topic',
-            project_id=self.project_id,
-            topic_name=topic_name
-        )
 
-        topic_ = {'name': f'projects/{self.project_id}/topics/{topic_name}'}
+        """
+        url = self._get_full_url("topic", project_id=self.project_id, topic_name=topic_name)
+
+        topic_ = {"name": f"projects/{self.project_id}/topics/{topic_name}"}
         if self.region is not None:
-            topic_['message_storage_policy'] = {
-                'allowedPersistenceRegions': [self.region],
-                'enforceInTransit': True
+            topic_["message_storage_policy"] = {
+                "allowedPersistenceRegions": [self.region],
+                "enforceInTransit": True,
             }
 
         response = self.session.put(url, json=topic_)
@@ -239,12 +214,9 @@ class PubSubAdapter:
 
         Args:
             topic_name (str): The topic to be removed
+
         """
-        url = self._get_full_url(
-            'topic',
-            project_id=self.project_id,
-            topic_name=topic_name
-        )
+        url = self._get_full_url("topic", project_id=self.project_id, topic_name=topic_name)
         response = self.session.delete(url)
         self._validate_response(response)
 
@@ -261,12 +233,9 @@ class PubSubAdapter:
         Returns:
             Topic:
                 ``TIPCommon.adapters.pubsub.Topic`` object of the received topic.
+
         """
-        url = self._get_full_url(
-            'topic',
-            project_id=self.project_id,
-            topic_name=topic_name
-        )
+        url = self._get_full_url("topic", project_id=self.project_id, topic_name=topic_name)
         try:
             response = self.session.get(url)
             self._validate_response(response)
@@ -277,13 +246,16 @@ class PubSubAdapter:
         return PubSubParser.build_topic_object(response.json())
 
     def patch_topic(
-            self,
-            topic_name,
-            labels=None, message_storage_policy=None, kms_key_name=None,
-            schema_settings=None, satisfies_pzs=None, retention_duration=None
+        self,
+        topic_name,
+        labels=None,
+        message_storage_policy=None,
+        kms_key_name=None,
+        schema_settings=None,
+        satisfies_pzs=None,
+        retention_duration=None,
     ):
-        """
-        Updates an existing topic.
+        """Updates an existing topic.
 
         Notes:
             Certain properties of a topic are not modifiable.
@@ -296,22 +268,20 @@ class PubSubAdapter:
             Topic:
                 ``TIPCommon.adapters.pubsub.Topic`` object of the received
                 topic.
+
         """
         updated_fields = filter_none_kwargs(
-            labels=labels, message_storage_policy=message_storage_policy,
-            kms_key_name=kms_key_name, schema_settings=schema_settings,
-            satisfies_pzs=satisfies_pzs, retention_duration=retention_duration
+            labels=labels,
+            message_storage_policy=message_storage_policy,
+            kms_key_name=kms_key_name,
+            schema_settings=schema_settings,
+            satisfies_pzs=satisfies_pzs,
+            retention_duration=retention_duration,
         )
-        url = self._get_full_url(
-            'topic',
-            project_id=self.project_id,
-            topic_name=topic_name
-        )
+        url = self._get_full_url("topic", project_id=self.project_id, topic_name=topic_name)
         payload = {
-            'topic': {
-                'name': self.topic_name(self.project_id, topic_name)
-            }.update(updated_fields),
-            'updateMask': self._build_patch_mask_from_args(*updated_fields)
+            "topic": {"name": self.topic_name(self.project_id, topic_name)}.update(updated_fields),
+            "updateMask": self._build_patch_mask_from_args(*updated_fields),
         }
         response = self.session.patch(url, json=payload)
         self._validate_response(response)
@@ -332,12 +302,9 @@ class PubSubAdapter:
             Subscription:
                 ``TIPCommon.adapters.pubsub.Subscription`` object of the
                 created Subscription.
+
         """
-        url = self._get_full_url(
-            'subscription',
-            project_id=self.project_id,
-            sub_name=sub_name
-        )
+        url = self._get_full_url("subscription", project_id=self.project_id, sub_name=sub_name)
         payload = {"topic": self.topic_name(self.project_id, topic)}
         if attr:
             payload.update(attr)
@@ -347,27 +314,17 @@ class PubSubAdapter:
         return PubSubParser.build_subscription_object(response.json())
 
     def delete_subscription(self, sub_name):
-        """
-        Delete a pub/sub Subscription from a GCP Project
+        """Delete a pub/sub Subscription from a GCP Project
 
         Args:
             sub_name (str): The Subscription name to remove
+
         """
-        url = self._get_full_url(
-            'subscription',
-            project_id=self.project_id,
-            sub_name=sub_name
-        )
+        url = self._get_full_url("subscription", project_id=self.project_id, sub_name=sub_name)
         response = self.session.delete(url)
         self._validate_response(response)
 
-    def get_subscription(
-            self,
-            sub_name,
-            topic=None,
-            create_if_not_exist=False,
-            **attr
-    ):
+    def get_subscription(self, sub_name, topic=None, create_if_not_exist=False, **attr):
         """Retrieves a pubsub subscription
 
         Args:
@@ -386,12 +343,9 @@ class PubSubAdapter:
             Subscription:
                 ``TIPCommon.adapters.pubsub.Subscription`` object of the
                 retrieved Subscription.
+
         """
-        url = self._get_full_url(
-            'subscription',
-            project_id=self.project_id,
-            sub_name=sub_name
-        )
+        url = self._get_full_url("subscription", project_id=self.project_id, sub_name=sub_name)
 
         try:
             response = self.session.get(url)
@@ -403,18 +357,25 @@ class PubSubAdapter:
         return PubSubParser.build_subscription_object(response.json())
 
     def patch_subscription(
-            self,
-            sub_name,
-            topic_name,
-            push_config=None, bigquery_config=None, cloud_storage_config=None,
-            ack_deadline_seconds=None, retain_acked_messages=None,
-            retention_duration=None, labels=None,
-            enable_message_ordering=None, expiration_policy=None,
-            query_filter=None, dead_letter_policy=None, return_policy=None,
-            detached=None, enable_once_delivery=None
+        self,
+        sub_name,
+        topic_name,
+        push_config=None,
+        bigquery_config=None,
+        cloud_storage_config=None,
+        ack_deadline_seconds=None,
+        retain_acked_messages=None,
+        retention_duration=None,
+        labels=None,
+        enable_message_ordering=None,
+        expiration_policy=None,
+        query_filter=None,
+        dead_letter_policy=None,
+        return_policy=None,
+        detached=None,
+        enable_once_delivery=None,
     ):
-        """
-        Updates an existing topic
+        """Updates an existing topic
 
         Notes:
             Certain properties of a subscription are not modifiable.
@@ -430,6 +391,7 @@ class PubSubAdapter:
             Subscription:
                 ``TIPCommon.adapters.pubsub.Subscription`` object of the
                 received Subscription.
+
         """
         updated_fields = filter_none_kwargs(
             push_config=push_config,
@@ -445,19 +407,15 @@ class PubSubAdapter:
             dead_letter_policy=dead_letter_policy,
             return_policy=return_policy,
             detached=detached,
-            enable_once_delivery=enable_once_delivery
+            enable_once_delivery=enable_once_delivery,
         )
-        url = self._get_full_url(
-            'subscription',
-            project_id=self.project_id,
-            sub_name=sub_name
-        )
+        url = self._get_full_url("subscription", project_id=self.project_id, sub_name=sub_name)
         payload = {
-            'subscription': {
-                'name': self.subscription_name(self.project_id, sub_name),
-                'topic': self.topic_name(self.project_id, topic_name)
+            "subscription": {
+                "name": self.subscription_name(self.project_id, sub_name),
+                "topic": self.topic_name(self.project_id, topic_name),
             },
-            'updateMask': self._build_patch_mask_from_args(*updated_fields)
+            "updateMask": self._build_patch_mask_from_args(*updated_fields),
         }
         payload["subscription"].update(updated_fields)
         response = self.session.patch(url, json=payload)
@@ -476,23 +434,17 @@ class PubSubAdapter:
 
         Returns:
             list[str]: List of message ids.
+
         """
-        url = self._get_full_url(
-            'publish',
-            project_id=self.project_id,
-            topic_name=topic_name
-        )
+        url = self._get_full_url("publish", project_id=self.project_id, topic_name=topic_name)
         if messages:
-            messages = [
-                msg.json() if isinstance(msg, PubSubMessage) else msg
-                for msg in messages
-            ]
-        payload = {'messages': messages}
+            messages = [msg.json() if isinstance(msg, PubSubMessage) else msg for msg in messages]
+        payload = {"messages": messages}
         response = self.session.post(url, json=payload)
         self._validate_response(response)
         return PubSubParser.build_message_ids_list(response.json())
 
-    def pull(self, sub_name, limit, timeout=60, encoding='utf-8'):
+    def pull(self, sub_name, limit, timeout=60, encoding="utf-8"):
         """Pull messages from a pubsub subscriptions
 
         Args:
@@ -508,19 +460,13 @@ class PubSubAdapter:
         Returns:
             list[ReceivedMessage]:
                 List of ``TIPCommon.adapters.pubsub.ReceivedMessage`` objects
+
         """
-        url = self._get_full_url(
-            'pull',
-            project_id=self.project_id,
-            sub_name=sub_name
-        )
-        payload = {'maxMessages': limit}
+        url = self._get_full_url("pull", project_id=self.project_id, sub_name=sub_name)
+        payload = {"maxMessages": limit}
         response = self.session.post(url, json=payload, timeout=timeout)
         self._validate_response(response)
-        return PubSubParser.build_received_messages_list(
-            response.json(),
-            encoding
-        )
+        return PubSubParser.build_received_messages_list(response.json(), encoding)
 
     def ack(self, sub_name, ack_ids):
         """Acknowledges the messages associated with the `ackIds` in the
@@ -533,37 +479,31 @@ class PubSubAdapter:
                 List of acknowledgment IDs (str) for the messages being
                 acknowledged that was returned by the Pub/Sub system in the
                 `PubSubAdapter.pull()` response
+
         """
-        url = self._get_full_url(
-            'ack',
-            project_id=self.project_id,
-            sub_name=sub_name
-        )
-        payload = {'ackIds': ack_ids}
+        url = self._get_full_url("ack", project_id=self.project_id, sub_name=sub_name)
+        payload = {"ackIds": ack_ids}
         response = self.session.post(url, json=payload)
         self._validate_response(response)
 
     @staticmethod
     def topic_name(project_id, topic):
-        """
-        Retrieves 'projects/{project_id}/topics/{topic_name}'
+        """Retrieves 'projects/{project_id}/topics/{topic_name}'
         Args:
             project_id (str): the project name containing this resource
             topic (str): pubsub topic name
 
         Returns:
             str: full topic name `projects/{project_id}/topics/{topic_name}`
+
         """
         return consts.PUBSUB_RESOURCE_TEMPLATE.format(
-            project_id=project_id,
-            resource_type='topics',
-            resource_name=topic
+            project_id=project_id, resource_type="topics", resource_name=topic
         )
 
     @staticmethod
     def subscription_name(project_id, sub_name):
-        """
-        Retrieves the full subscription name in the format
+        """Retrieves the full subscription name in the format
         `projects/{project_id}/subscriptions/{subscription_name}`
 
         Args:
@@ -573,22 +513,15 @@ class PubSubAdapter:
         Returns:
             str: full subscription name in the format
             `projects/{project_id}/subscriptions/{subscription_name}`
+
         """
         return consts.PUBSUB_RESOURCE_TEMPLATE.format(
-            project_id=project_id,
-            resource_type='subscriptions',
-            resource_name=sub_name
+            project_id=project_id, resource_type="subscriptions", resource_name=sub_name
         )
 
     @staticmethod
-    def build_pubsub_message(
-            message_content,
-            encoding='utf-8',
-            ordering_key=None,
-            **attr
-    ):
-        """
-        Creates a PubSubMessage object
+    def build_pubsub_message(message_content, encoding="utf-8", ordering_key=None, **attr):
+        """Creates a PubSubMessage object
 
         Args:
             message_content (str):
@@ -603,14 +536,11 @@ class PubSubAdapter:
                 Optional (str). Attributes to pass as message object attributes
         Returns:
             PubSubMessage: ``TIPCommon.adapters.pubsub.PubSubMessage`` object
+
         """
-        message = {
-            'data': base64.b64encode(message_content.encode(encoding)).decode(
-                encoding
-            )
-        }
+        message = {"data": base64.b64encode(message_content.encode(encoding)).decode(encoding)}
         if ordering_key:
-            message['orderingKey'] = ordering_key
+            message["orderingKey"] = ordering_key
         if attr:
-            message['attributes'] = {k: str(v) for k, v in attr.items()}
+            message["attributes"] = {k: str(v) for k, v in attr.items()}
         return PubSubParser.build_pub_sub_message_object(message, encoding)

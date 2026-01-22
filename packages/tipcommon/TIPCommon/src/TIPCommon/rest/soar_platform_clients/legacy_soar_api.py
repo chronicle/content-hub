@@ -16,22 +16,20 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from datetime import datetime, timezone
-
+from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG
+from TIPCommon.exceptions import NotSupportedPlatformVersion
 from TIPCommon.rest.custom_types import HttpMethod
 
-from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG
-
-from TIPCommon.exceptions import NotSupportedPlatformVersion
-
-from .base_soar_api import BaseSoarApi
 from ...consts import DATAPLANE_1P_HEADER
 from ...utils import temporarily_remove_header
+from .base_soar_api import BaseSoarApi
 
 if TYPE_CHECKING:
     import requests
+
     from TIPCommon.types import SingleJson
 
 
@@ -81,9 +79,7 @@ class LegacySoarApi(BaseSoarApi):
         endpoint = "/integrations/GetEnvironmentInstalledIntegrations"
         payload = {
             "name": (
-                "*"
-                if self.params.environment == "Shared Instances"
-                else self.params.environment
+                "*" if self.params.environment == "Shared Instances" else self.params.environment
             )
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
@@ -200,14 +196,13 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def _get_all_integration_instances(self) -> list[SingleJson]:
-        """
-        Private helper method to fetch all integration instances from the API.
+        """Private helper method to fetch all integration instances from the API.
         This encapsulates the common API call logic.
         """
         endpoint = "/integrations/GetOptionalIntegrationInstances"
         payload = {
             "environments": self.params.environments,
-            "integrationIdentifier": self.params.integration_identifier
+            "integrationIdentifier": self.params.integration_identifier,
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
@@ -265,10 +260,7 @@ class LegacySoarApi(BaseSoarApi):
     def execute_bulk_assign(self) -> requests.Response:
         """Execute bulk assign"""
         endpoint = "/cases/ExecuteBulkAssign"
-        payload = {
-            "casesIds": self.params.case_ids,
-            "userName": self.params.user_name
-        }
+        payload = {"casesIds": self.params.case_ids, "userName": self.params.user_name}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
@@ -279,7 +271,7 @@ class LegacySoarApi(BaseSoarApi):
             "casesIds": self.params.case_ids,
             "closeReason": self.params.close_reason,
             "rootCause": self.params.root_cause,
-            "closeComment": self.params.close_comment
+            "closeComment": self.params.close_comment,
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
@@ -306,9 +298,7 @@ class LegacySoarApi(BaseSoarApi):
         """Get entity cards"""
         return self.get_full_case_details()
 
-    def pause_case_sla(
-        self, case_id: int, message: str | None = None
-    ) -> requests.Response:
+    def pause_case_sla(self, case_id: int, message: str | None = None) -> requests.Response:
         raise NotSupportedPlatformVersion(ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG)
 
     def resume_case_sla(self, case_id: int) -> requests.Response:
@@ -358,27 +348,20 @@ class LegacySoarApi(BaseSoarApi):
             "filterRole": self.params.filter_by_role,
             "requestedPage": self.params.requested_page,
             "pageSize": self.params.page_size,
-            "shouldHideDisabledUsers": self.params.should_hide_disabled_users
+            "shouldHideDisabledUsers": self.params.should_hide_disabled_users,
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_domain_alias(self) -> requests.Response:
         """Get domain alias"""
         endpoint = "/settings/GetDomainAliases?format=camel"
-        payload = {
-            "searchTerm": "",
-            "requestedPage": self.params.page_count,
-            "pageSize": 100
-        }
+        payload = {"searchTerm": "", "requestedPage": self.params.page_count, "pageSize": 100}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def add_tags_to_case_in_bulk(self) -> requests.Response:
         """Add tags to case in bulk"""
         endpoint = "/cases/ExecuteBulkAddCaseTag"
-        payload = {
-            "casesIds": self.params.case_ids,
-            "tags": self.params.tags
-        }
+        payload = {"casesIds": self.params.case_ids, "tags": self.params.tags}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_installed_jobs(self) -> requests.Response:
@@ -505,11 +488,11 @@ class LegacySoarApi(BaseSoarApi):
         page_size = 1000
 
         start_time_s = self.params.start_time / 1000.0
-        start_dt_object = datetime.fromtimestamp(start_time_s, tz=timezone.utc)
+        start_dt_object = datetime.fromtimestamp(start_time_s, tz=UTC)
         start_time_iso = start_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         end_time_s = self.params.end_time / 1000.0
-        end_dt_object = datetime.fromtimestamp(end_time_s, tz=timezone.utc)
+        end_dt_object = datetime.fromtimestamp(end_time_s, tz=UTC)
         end_time_iso = end_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         while True:
             endpoint = "/search/CaseSearchEverything?format=camel"
@@ -522,9 +505,7 @@ class LegacySoarApi(BaseSoarApi):
                 "timeRangeFilter": self.params.time_range_filter,
             }
 
-            response = self._make_request(
-                HttpMethod.POST, endpoint, json_payload=payload
-            )
+            response = self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
             results = response.json().get("results")
 

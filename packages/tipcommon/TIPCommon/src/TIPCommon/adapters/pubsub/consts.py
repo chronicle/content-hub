@@ -16,14 +16,14 @@ from ...exceptions import (
     AlreadyExistsError,
     BadGatewayError,
     DeadlineExceededError,
+    FailedPreconditionError,
     InvalidArgumentError,
     NotFoundError,
     PermissionDeniedError,
     ResourceExhaustedError,
     UnauthenticatedError,
-    UnavailableError, FailedPreconditionError,
+    UnavailableError,
 )
-
 
 PUBSUB_API_ROOT = "https://pubsub{rep_subdomain}.googleapis.com"
 PUBSUB_SCOPE = "https://pubsub.googleapis.com/"
@@ -33,7 +33,7 @@ PUBSUB_ENDPOINTS = {
     "subscription": "v1/projects/{project_id}/subscriptions/{sub_name}",
     "publish": "v1/projects/{project_id}/topics/{topic_name}:publish",
     "pull": "v1/projects/{project_id}/subscriptions/{sub_name}:pull",
-    "ack": "v1/projects/{project_id}/subscriptions/{sub_name}:acknowledge"
+    "ack": "v1/projects/{project_id}/subscriptions/{sub_name}:acknowledge",
 }
 PUBSUB_ERROR_STATUS_MAPPING = {
     "ALREADY_EXISTS": AlreadyExistsError,
@@ -66,5 +66,5 @@ PUBSUB_FIELD_MASK_MAPPING = {
     "message_storage_policy": "messageStoragePolicy",
     "kms_key_name": "kmsKeyName",
     "schema_settings": "schemaSettings",
-    "satisfies_pzs": "satisfiesPzs"
+    "satisfies_pzs": "satisfiesPzs",
 }

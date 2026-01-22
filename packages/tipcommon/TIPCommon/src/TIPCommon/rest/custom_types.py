@@ -21,6 +21,7 @@ import enum
 
 class HttpMethod(enum.Enum):
     """Enumerates common HTTP methods."""
+
     GET = "GET"
     POST = "POST"
     PATCH = "PATCH"

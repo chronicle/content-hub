@@ -18,7 +18,6 @@ import json
 from urllib.parse import urljoin
 
 from requests import HTTPError, Response
-
 from SiemplifyDataModel import Attachment
 
 from ..consts import DEFAULT_ENVIRONMENT
@@ -32,11 +31,11 @@ from ..data_models import (
     CustomField,
     CustomFieldValue,
     EmailTemplate,
-    Insight,
-    UserDetails,
     EntityCard,
     EventCard,
-    InstalledIntegrationInstance
+    Insight,
+    InstalledIntegrationInstance,
+    UserDetails,
 )
 from ..exceptions import InternalJSONDecoderError
 from ..types import ChronicleSOAR, SingleJson
@@ -50,20 +49,21 @@ class SoarApiServerError(Exception):
 
 
 def _validate_expand_parameters(**kwargs):
-    """
-    Validates that expand parameters do not contain the wildcard "*".
+    """Validates that expand parameters do not contain the wildcard "*".
 
     Args:
         **kwargs: keyword arguments where key is the param name and value is the list.
 
     Raises:
         ValueError: If any of the expand parameters contains "*".
+
     """
     for param_name, expand_list in kwargs.items():
         if expand_list and "*" in expand_list:
             raise ValueError(
                 f"Using '*' for '{param_name}' is not allowed. "
-                "Please specify the exact fields to expand.")
+                "Please specify the exact fields to expand."
+            )
 
 
 def validate_response(
@@ -87,9 +87,7 @@ def validate_response(
             response.json()
 
     except HTTPError as he:
-        raise HTTPError(
-            f"An error happened while requesting API, {he}", response=he.response
-        )
+        raise HTTPError(f"An error happened while requesting API, {he}", response=he.response)
 
     except json.JSONDecodeError as je:
         raise InternalJSONDecoderError(
@@ -105,8 +103,7 @@ def get_case_overview_details(
     case_expand: list[str] | None = None,
     alert_expand: list[str] | None = None,
 ) -> CaseDetails:
-    """
-    Get case overview details with explicit expand separation.
+    """Get case overview details with explicit expand separation.
 
     Args:
         chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
@@ -116,11 +113,9 @@ def get_case_overview_details(
 
     Returns:
         CaseDetails: An object containing the case overview details.
+
     """
-    _validate_expand_parameters(
-        case_expand=case_expand,
-        alert_expand=alert_expand
-    )
+    _validate_expand_parameters(case_expand=case_expand, alert_expand=alert_expand)
     api = get_soar_client(chronicle_soar)
     p = api.params
 
@@ -128,9 +123,7 @@ def get_case_overview_details(
     p.case_expand = case_expand
     p.alert_expand = alert_expand
 
-    return CaseDetails.from_json(
-        api.get_case_overview_details()
-    )
+    return CaseDetails.from_json(api.get_case_overview_details())
 
 
 def get_installed_jobs(
@@ -522,6 +515,7 @@ def get_integration_instance_details_by_id(
     Returns:
         (SingleJSON | None): The response JSON containing the full details of the
             integration.
+
     """
     api_client = get_soar_client(chronicle_soar)
 
@@ -556,6 +550,7 @@ def get_integration_instance_details_by_name(
     Returns:
         (SingleJSON | None): The response JSON containing the full details of the
             integration.
+
     """
     api_client = get_soar_client(chronicle_soar)
 
@@ -769,8 +764,7 @@ def save_attachment_to_case_wall(
 
     file_name_for_description = f"{attachment_data.name}{attachment_data.file_type}"
     final_description = (
-        attachment_data.description
-        or f'File "{file_name_for_description}" added to the case wall.'
+        attachment_data.description or f'File "{file_name_for_description}" added to the case wall.'
     )
     api_client.params.case_id = attachment_data.case_id or chronicle_soar.case_id
     api_client.params.base64_blob = attachment_data.base64_blob
@@ -792,21 +786,18 @@ def get_full_case_details(
     case_expand: list[str] | None = None,
     alert_expand: list[str] | None = None,
 ) -> SingleJson:
-    """
-    Get full case details with explicit expand controls.
+    """Get full case details with explicit expand controls.
 
-    IMPORTANT:
+    Important:
     - No implicit expand.
     - Expand must be explicitly provided.
 
     Args:
         case_expand: Fields to expand on /cases endpoint.
         alert_expand: Fields to expand on /caseAlerts endpoint.
+
     """
-    _validate_expand_parameters(
-        case_expand=case_expand,
-        alert_expand=alert_expand
-    )
+    _validate_expand_parameters(case_expand=case_expand, alert_expand=alert_expand)
     api_client = get_soar_client(chronicle_soar)
     p = api_client.params
 
@@ -1034,6 +1025,7 @@ def get_investigator_data(
     alert_identifier: str,
 ) -> SingleJson:
     """Get investigator data.
+
     Args:
         chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
         case_id (int): Chronicle SOAR case id.
@@ -1041,6 +1033,7 @@ def get_investigator_data(
 
     Returns:
         SingleJson: Response JSON.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
@@ -1154,12 +1147,14 @@ def get_security_events(
     case_id: int,
 ) -> list[SingleJson]:
     """Get security events.
+
     Args:
         chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
         case_id (int): Chronicle SOAR case id.
 
     Returns:
         list[SingleJson]: Response JSON.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
@@ -1187,12 +1182,14 @@ def get_entity_cards(
     case_id: int,
 ) -> list[EntityCard]:
     """Get entity cards.
+
     Args:
         chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
         case_id (int): Chronicle SOAR case id.
 
     Returns:
         list[SingleJson]: Response JSON.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
@@ -1207,11 +1204,13 @@ def get_entity_cards(
 
 def _get_security_events_data(response_list: list[Response]) -> list[EventCard]:
     """Get security events data.
+
     Args:
         response_list (list[requests.Response]): Response list.
 
     Returns:
         list[SingleJson]: Response JSON.
+
     """
     security_events = []
     for response in response_list:
@@ -1227,11 +1226,13 @@ def _get_security_events_data(response_list: list[Response]) -> list[EventCard]:
 
 def _get_entity_cards(response_list: list[Response]) -> list[EventCard]:
     """Get security events data.
+
     Args:
         response_list (list[requests.Response]): Response list.
 
     Returns:
         list[SingleJson]: Response JSON.
+
     """
     entity_cards = []
     for response in response_list:
@@ -1341,9 +1342,8 @@ def get_email_template(
     response_data = response.json()
     if isinstance(response_data, list):
         return [EmailTemplate.from_json(res) for res in response_data]
-    else:
-        email_templates_list = response_data.get("email_templates", [])
-        return [EmailTemplate.from_json(res) for res in email_templates_list]
+    email_templates_list = response_data.get("email_templates", [])
+    return [EmailTemplate.from_json(res) for res in email_templates_list]
 
 
 def get_siemplify_user_details(
@@ -1366,6 +1366,7 @@ def get_siemplify_user_details(
 
     Returns:
         UserDetails: A UserDetails object.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.search_term = search_term
@@ -1378,9 +1379,7 @@ def get_siemplify_user_details(
     validate_response(response, validate_json=True)
     return [
         UserDetails.from_json(res)
-        for res in response.json().get(
-            "objectsList", response.json().get("legacySoarUsers", [])
-        )
+        for res in response.json().get("objectsList", response.json().get("legacySoarUsers", []))
     ]
 
 
@@ -1420,14 +1419,12 @@ def get_all_case_overview_details(
     wall_expand: list[str] | None = None,
     entity_expand: list[str] | None = None,
 ) -> CaseDetails:
-    """
-    Get complete case overview using explicit expand parameters.
-    """
+    """Get complete case overview using explicit expand parameters."""
     _validate_expand_parameters(
         case_expand=case_expand,
         alert_expand=alert_expand,
         wall_expand=wall_expand,
-        entity_expand=entity_expand
+        entity_expand=entity_expand,
     )
     api_client = get_soar_client(chronicle_soar)
 
@@ -1447,8 +1444,7 @@ def get_case_wall_records(
     *,
     wall_expand: list[str] | None = None,
 ) -> SingleJson:
-    """
-    Get case wall records.
+    """Get case wall records.
 
     Expand behavior:
         - wall_expand is None → No expand query is sent.
@@ -1472,8 +1468,7 @@ def get_entity_expand_cards(
     *,
     entity_expand: list[str] | None = None,
 ) -> SingleJson:
-    """
-    Get entity expand cards for a case.
+    """Get entity expand cards for a case.
 
     Expand behavior:
         - entity_expand is None → No expand query is sent.
@@ -1503,6 +1498,7 @@ def get_attachments_metadata(
 
     Returns:
         AttachmentMetadata: A list of AttachmentMetadata objects.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
@@ -1532,6 +1528,7 @@ def add_attachment_to_case_wall(
 
     Returns:
         SingleJson: Response JSON.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.attachment = attachment
