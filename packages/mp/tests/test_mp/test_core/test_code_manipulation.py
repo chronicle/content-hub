@@ -208,11 +208,52 @@ def test_sdk_import_transformer(sdk_module: str) -> None:
     transformed_import_content = apply_transformers(import_content, [transformer])
     assert transformed_import_content == expected_import_content
 
+    # Test `import <sdk_module>, <sdk_module2>`
+    import_content = f"import {sdk_module}, Siemplify"
+    expected_import_content = f"import {SDK_PREFIX}{sdk_module}, {SDK_PREFIX}Siemplify"
+    transformed_import_content = apply_transformers(import_content, [transformer])
+    assert transformed_import_content == expected_import_content
+
+    # Test `import <sdk_module> as alias`
+    import_as_content = f"import {sdk_module} as sm"
+    expected_import_as_content = f"import {SDK_PREFIX}{sdk_module} as sm"
+    transformed_import_as_content = apply_transformers(import_as_content, [transformer])
+    assert transformed_import_as_content == expected_import_as_content
+
     # Test `from <sdk_module> import something`
-    from_import_content = f"from {sdk_module} import something"
-    expected_from_import_content = f"from {SDK_PACKAGE_NAME}.{sdk_module} import something"
+    from_import_content = f"from {sdk_module} import a, b"
+    expected_from_import_content = f"from {SDK_PACKAGE_NAME}.{sdk_module} import a, b"
     transformed_from_import_content = apply_transformers(from_import_content, [transformer])
     assert transformed_from_import_content == expected_from_import_content
+
+    # Test `from <sdk_module> import something as s`
+    from_import_as_content = f"from {sdk_module} import something as s"
+    expected_from_import_as_content = f"from {SDK_PACKAGE_NAME}.{sdk_module} import something as s"
+    transformed_from_import_as_content = apply_transformers(from_import_as_content, [transformer])
+    assert transformed_from_import_as_content == expected_from_import_as_content
+
+    # Test `import <sdk_module>.submodule as alias`
+    import_content = f"import {sdk_module}.submodule as alias"
+    expected_import_content = f"import {SDK_PREFIX}{sdk_module}.submodule as alias"
+    transformed_import_content = apply_transformers(import_content, [transformer])
+    assert transformed_import_content == expected_import_content
+
+    # Test `import <sdk_module>.submodule as alias, <sdk_module>.submodule2 as alias2`
+    import_content = f"import {sdk_module}.submodule as alias, {sdk_module}.submodule2 as alias2"
+    expected_import_content = (
+        f"import {SDK_PREFIX}{sdk_module}.submodule as alias, "
+        f"{SDK_PREFIX}{sdk_module}.submodule2 as alias2"
+    )
+    transformed_import_content = apply_transformers(import_content, [transformer])
+    assert transformed_import_content == expected_import_content
+
+    # Test `import <sdk_module>.submodule as alias, non-sdk_module.submodule2 as alias2`
+    import_content = f"import {sdk_module}.submodule as alias, another_module.submodule2 as alias2"
+    expected_import_content = (
+        f"import {SDK_PREFIX}{sdk_module}.submodule as alias, another_module.submodule2 as alias2"
+    )
+    transformed_import_content = apply_transformers(import_content, [transformer])
+    assert transformed_import_content == expected_import_content
 
 
 def test_sdk_import_transformer_unrelated_import() -> None:
@@ -227,10 +268,31 @@ def test_sdk_import_transformer_unrelated_import() -> None:
     ("test_name", "initial_content", "expected_content"),
     [
         ("manager_import", "import manager", "from ..core import manager"),
+        ("manager_import_as", "import manager as m", "from ..core import manager as m"),
         (
             "manager_from_import",
             "from manager import some_func",
             f"from ..{CORE_PREFIX}manager import some_func",
+        ),
+        (
+            "manager_from_import_as",
+            "from manager import some_func as sf",
+            f"from ..{CORE_PREFIX}manager import some_func as sf",
+        ),
+        (
+            "multiple_managers_import",
+            "import manager1, manager2",
+            "from ..core import manager1, manager2",
+        ),
+        (
+            "manager_from_import_multiple",
+            "from manager import a, b",
+            f"from ..{CORE_PREFIX}manager import a, b",
+        ),
+        (
+            "mixed_core_non_core_import",
+            "import manager, requests",
+            "import requests\nfrom ..core import manager",
         ),
     ],
 )
@@ -238,7 +300,7 @@ def test_core_package_import_transformer(
     test_name: str, initial_content: str, expected_content: str
 ) -> None:
     """Verify that `CorePackageImportTransformer` correctly modifies file content."""
-    transformer = CorePackageImportTransformer({"manager"})
+    transformer = CorePackageImportTransformer({"manager", "manager1", "manager2"})
     transformed_content = apply_transformers(initial_content, [transformer])
     assert transformed_content == expected_content
 
@@ -253,13 +315,35 @@ def test_core_package_import_transformer(
             "from .constants import MY_CONST",
         ),
         ("import_self", "import api_client", "import api_client"),
+        (
+            "core_internal_import_as_alias",
+            "import constants as const",
+            "from . import constants as const",
+        ),
+        (
+            "multiple_internal_imports",
+            "import constants, manager",
+            "from . import constants, manager",
+        ),
+        (
+            "from_internal_import_multiple",
+            "from constants import a, b",
+            "from .constants import a, b",
+        ),
+        (
+            "mixed_internal_non_core_import",
+            "import constants, requests",
+            "import requests\nfrom . import constants",
+        ),
     ],
 )
 def test_core_package_internal_import_transformer(
     test_name: str, initial_content: str, expected_content: str
 ) -> None:
     """Verify that `CorePackageInternalImportTransformer` correctly modifies file content."""
-    transformer = CorePackageInternalImportTransformer({"constants", "api_client"}, "api_client")
+    transformer = CorePackageInternalImportTransformer(
+        {"constants", "api_client", "manager"}, "api_client"
+    )
     transformed_content = apply_transformers(initial_content, [transformer])
     assert transformed_content == expected_content
 
@@ -306,4 +390,79 @@ def test_mixed_transformers(
     """Verify that `apply_transformers` correctly modifies file content
     with multiple transformers."""
     transformed_content = apply_transformers(initial_content, transformers)
+    assert transformed_content == expected_content
+
+
+@pytest.mark.parametrize(
+    ("test_name", "initial_content", "expected_content"),
+    [
+        # Reverse of SdkImportTransformer
+        ("sdk_import", f"import {SDK_PREFIX}SiemplifyAction", "import SiemplifyAction"),
+        (
+            "sdk_import_multiple",
+            f"import {SDK_PREFIX}Siemplify, {SDK_PREFIX}SiemplifyAction",
+            "import Siemplify, SiemplifyAction",
+        ),
+        ("sdk_import_as", f"import {SDK_PREFIX}Siemplify as S", "import Siemplify as S"),
+        (
+            "sdk_from_import",
+            f"from {SDK_PACKAGE_NAME}.SiemplifyUtils import output_handler",
+            "from SiemplifyUtils import output_handler",
+        ),
+        (
+            "sdk_from_import_as",
+            f"from {SDK_PACKAGE_NAME}.SiemplifyUtils import output_handler as oh",
+            "from SiemplifyUtils import output_handler as oh",
+        ),
+        ("sdk_import_submodule", f"import {SDK_PREFIX}Siemplify.sub", "import Siemplify.sub"),
+        # Reverse of CorePackageImportTransformer
+        ("core_package_import", "from ..core import manager", "import manager"),
+        ("core_package_import_as", "from ..core import manager as m", "import manager as m"),
+        (
+            "core_package_from_import",
+            f"from ..{CORE_PREFIX}manager import some_func",
+            "from manager import some_func",
+        ),
+        (
+            "core_package_from_import_as",
+            f"from ..{CORE_PREFIX}manager import some_func as sf",
+            "from manager import some_func as sf",
+        ),
+        (
+            "core_package_multiple_imports",
+            "from ..core import manager1, manager2",
+            "import manager1, manager2",
+        ),
+        (
+            "core_package_from_import_multiple",
+            f"from ..{CORE_PREFIX}manager import a, b",
+            "from manager import a, b",
+        ),
+        # Reverse of CorePackageInternalImportTransformer
+        ("core_internal_import", "from . import constants", "import constants"),
+        (
+            "core_internal_from_import",
+            "from .constants import MY_CONST",
+            "from constants import MY_CONST",
+        ),
+        (
+            "core_internal_import_as",
+            "from . import constants as const",
+            "import constants as const",
+        ),
+        (
+            "core_internal_multiple_imports",
+            "from . import constants, manager",
+            "import constants, manager",
+        ),
+        (
+            "core_internal_from_import_multiple",
+            "from .constants import a, b",
+            "from constants import a, b",
+        ),
+    ],
+)
+def test_import_transformer(test_name: str, initial_content: str, expected_content: str) -> None:
+    """Verify that `ImportTransformer` correctly modifies file content."""
+    transformed_content = restructure_script_imports(initial_content)
     assert transformed_content == expected_content
