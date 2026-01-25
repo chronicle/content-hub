@@ -20,6 +20,7 @@ import pydantic
 
 import mp.core.constants
 import mp.core.utils
+from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
@@ -73,7 +74,7 @@ class ActionWidgetMetadata(
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     type_: WidgetType
@@ -82,7 +83,7 @@ class ActionWidgetMetadata(
         str | None,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     description: Annotated[
