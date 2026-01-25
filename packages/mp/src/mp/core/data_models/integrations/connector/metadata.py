@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
 
 from .parameter import (
@@ -79,7 +80,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     parameters: Annotated[
