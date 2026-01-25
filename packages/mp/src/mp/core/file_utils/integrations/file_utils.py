@@ -200,10 +200,6 @@ def is_integration(path: Path) -> bool:
         Whether the provided path is an integration
 
     """
-    return _is_integration(path)
-
-
-def _is_integration(path: Path) -> bool:
     if not path.exists() or not path.is_dir():
         return False
 
