@@ -18,6 +18,7 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.exceptions import NonFatalValidationError
 from mp.core.utils import filter_and_map_yaml_files
 from mp.validate.utils import (
@@ -74,5 +75,5 @@ def _missing_documentation_link(yaml_content: YamlFileContent) -> bool:
     return (
         not yaml_content.get("documentation_link")
         and yaml_content.get("name")
-        not in mp.core.constants.EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK
+        not in exclusions.get_excluded_connector_names_without_documentation_link()
     )
