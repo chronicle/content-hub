@@ -47,12 +47,12 @@ class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.PARAM_DISPLAY_NAME_REGEX,
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
     description: Annotated[
-        str, pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH)
+        str,
+        pydantic.AfterValidator(mp.core.validators.validate_param_short_description),
     ]
     is_mandatory: bool
     type_: ScriptParamType
@@ -62,7 +62,7 @@ class JobParameter(Buildable[BuiltJobParameter, NonBuiltJobParameter]):
     def _from_built(cls, built: BuiltJobParameter) -> Self:
         return cls(
             name=built["Name"],
-            description=built.get("Description", ""),
+            description=v if (v := built.get("Description")) is not None else "",
             is_mandatory=built["IsMandatory"],
             type_=ScriptParamType(int(built["Type"])),
             default_value=built.get("DefaultValue"),
