@@ -16,20 +16,19 @@ import contextlib
 import itertools
 import logging
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Iterator, NamedTuple
+from typing import TYPE_CHECKING
 
 import anyio
 import typer
-from click import prompt
 from rich.logging import RichHandler
 
 from mp.core import constants
 from mp.core.custom_types import RepositoryType
 from mp.core.file_utils import get_integrations_repo_base_path
 from mp.core.gemini import Gemini, GeminiConfig
-from mp.core.llm_sdk import LlmConfig, LlmSdk
+from mp.core.llm_sdk import LlmSdk
 
-from .data_models.action_description import ActionDescription
+from .data_models.action_ai_metadata import ActionAiMetadata
 
 if TYPE_CHECKING:
     import pathlib
@@ -50,26 +49,22 @@ class DescribeAction:
             if a in self.actions
         ])
 
-    async def describe_action(self, action: anyio.Path) -> ActionDescription:
+    async def describe_action(self, action: anyio.Path) -> ActionAiMetadata:
         prompt: str = f"{action.name}"
         async with self._create_llm_session() as gemini:
             return await gemini.send_message(
                 prompt,
-                response_json_schema=ActionDescription,
+                response_json_schema=ActionAiMetadata,
                 raise_error_if_empty_response=True,
             )
 
     @contextlib.asynccontextmanager
     async def _create_llm_session(self) -> AsyncIterator[LlmSdk]:
         llm_config: GeminiConfig = _create_gemini_config()
-        gemini: Gemini = Gemini(llm_config)
-        try:
-            async with gemini as session:
-                system_prompt: str = self._get_system_prompt()
-                gemini.add_system_prompts_to_session(system_prompt)
-                yield session
-        finally:
-            await gemini.close()
+        async with Gemini(llm_config) as gemini:
+            system_prompt: str = self._get_system_prompt()
+            gemini.add_system_prompts_to_session(system_prompt)
+            yield gemini
 
     def _get_system_prompt(self) -> str:
         return f"{self.integration}"

@@ -23,7 +23,7 @@ from .action_tags import ActionTags  # noqa: TC001
 from .entity_usage import EntityUsage  # noqa: TC001
 
 
-class ActionDescription(BaseModel):
+class ActionAiMetadata(BaseModel):
     fields: Annotated[
         ActionFields,
         Field(
@@ -51,13 +51,3 @@ class ActionDescription(BaseModel):
             ),
         ),
     ]
-
-
-def main() -> None:
-    import json
-
-    print(json.dumps(ActionDescription.model_json_schema()))
-
-
-if __name__ == "__main__":
-    main()
