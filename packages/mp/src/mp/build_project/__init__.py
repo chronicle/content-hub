@@ -151,11 +151,11 @@ def build(  # noqa: PLR0913
     ],
     src: Annotated[
         Path | None,
-        typer.Option("--src", help="Customize source folder to build or deconstruct from."),
+        typer.Option(help="Customize source folder to build or deconstruct from."),
     ] = None,
     dst: Annotated[
         Path | None,
-        typer.Option("--dst", help="Customize destination folder to build or deconstruct to."),
+        typer.Option(help="Customize destination folder to build or deconstruct to."),
     ] = None,
     *,
     deconstruct: Annotated[

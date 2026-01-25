@@ -91,7 +91,7 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
     )
 
     custom: IntegrationsRepo
-    if modified_src:
+    if modified_src is not None:
         custom = IntegrationsRepo(modified_src, modified_dst, default_source=False)
     else:
         custom = IntegrationsRepo(
