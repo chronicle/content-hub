@@ -22,7 +22,7 @@ from .entity_types import EntityType  # noqa: TC001
 
 
 class EntityUsage(BaseModel):
-    run_on_entity_types: Annotated[
+    entity_scopes: Annotated[
         list[EntityType],
         Field(
             description=(
