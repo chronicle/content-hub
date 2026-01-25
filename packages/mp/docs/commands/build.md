@@ -1,4 +1,6 @@
-# `mp build`
+# mp Build Command
+
+---
 
 ## Description
 
@@ -24,7 +26,20 @@ mp build [OPTIONS]
 | `--quiet`              |           | Log less on runtime.                                                                                                                                             | `bool`             | `False` |
 | `--verbose`            |           | Log more on runtime.                                                                                                                                             | `bool`             | `False` |
 
+## Notes
+
+---
+
+- The `--src` and `--dst` options cannot be used with the `--custom-integration` option.
+    - Use
+      `--custom-integration` to build or deconstruct from a managed custom repository for SecOps, supported by
+      `mp` tools and Content-Hub GitHub Actions.
+    - Use `--src` and
+      `--dst` for building or deconstructing from any other source and destination directories.
+
 ## Examples
+
+---
 
 ### Build a specific integration
 
