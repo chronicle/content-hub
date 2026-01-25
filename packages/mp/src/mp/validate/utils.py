@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from mp.core import constants, file_utils
+from mp.core import constants, exclusions, file_utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
@@ -170,7 +170,7 @@ def _validate_ssl_parameter(
         An error message if the parameter is invalid, else None.
 
     """
-    if script_name in constants.EXCLUDED_NAMES_WITHOUT_VERIFY_SSL:
+    if script_name in exclusions.get_excluded_names_without_verify_ssl():
         return None
 
     ssl_param: YamlFileContent | None = next(
@@ -183,7 +183,7 @@ def _validate_ssl_parameter(
     if ssl_param["type"] != ScriptParamType.BOOLEAN.to_string():
         return f"The 'verify ssl' parameter in {script_name} must be of type 'boolean'"
 
-    if script_name in constants.EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE:
+    if script_name in exclusions.get_excluded_names_where_ssl_default_is_not_true():
         return None
 
     if not ssl_param["default_value"]:
