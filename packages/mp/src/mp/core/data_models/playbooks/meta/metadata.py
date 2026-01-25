@@ -21,6 +21,7 @@ import pydantic
 
 import mp.core.constants
 import mp.core.utils
+from mp.core import exclusions
 from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
 
 from .access_permissions import (
@@ -44,7 +45,7 @@ class PlaybookCreationSource(RepresentableEnum):
 
 
 class BuiltPlaybookMetadata(TypedDict):
-    Identifier: Annotated[str, pydantic.Field(pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX)]
+    Identifier: Annotated[str, pydantic.Field(pattern=exclusions.get_script_identifier_regex())]
     Name: Annotated[str, pydantic.Field(max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH)]
     IsEnable: bool
     Version: float
