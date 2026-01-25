@@ -39,24 +39,13 @@ class Repos(NamedTuple):
 def build_playbooks(
     playbooks: Iterable[str],
     repositories: Iterable[RepositoryType],
-    src: Path | None = None,
+    src: Path | None,
+    dst: Path | None,
     *,
     deconstruct: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
-    repos = Repos(
-        commercial=PlaybooksRepo(
-            mp.core.file_utils.get_or_create_playbook_repo_base_path(
-                mp.core.constants.COMMERCIAL_REPO_NAME
-            )
-        ),
-        community=PlaybooksRepo(
-            mp.core.file_utils.get_or_create_playbook_repo_base_path(
-                mp.core.constants.THIRD_PARTY_REPO_NAME
-            )
-        ),
-        custom=None if not src else PlaybooksRepo(src, default_source=False),
-    )
+    repos: Repos = _create_repos(src, dst)
 
     if playbooks:
         if repos.custom is not None:
@@ -76,6 +65,28 @@ def build_playbooks(
     elif repositories:
         _build_playbooks_repositories([repos.commercial, repos.community])
         write_playbooks_json(repos.commercial, repos.community)
+
+
+def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos:
+    commercial: PlaybooksRepo = PlaybooksRepo(
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.COMMERCIAL_REPO_NAME,
+        ),
+        dst=modified_dst,
+    )
+    community: PlaybooksRepo = PlaybooksRepo(
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.THIRD_PARTY_REPO_NAME,
+        ),
+        dst=modified_dst,
+    )
+    custom: PlaybooksRepo | None = None
+    if modified_src and modified_dst:
+        custom: PlaybooksRepo = PlaybooksRepo(modified_src, modified_dst, default_src=False)
+    elif modified_src:
+        custom: PlaybooksRepo = PlaybooksRepo(modified_src, default_src=False)
+
+    return Repos(commercial, community, custom)
 
 
 def _build_playbooks_repositories(repos: list[PlaybooksRepo]) -> None:
