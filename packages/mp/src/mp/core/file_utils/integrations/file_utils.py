@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-import mp.core.constants
 import mp.core.file_utils.common.utils
 from mp.core import constants
 from mp.core.validators import validate_png_content, validate_svg_content

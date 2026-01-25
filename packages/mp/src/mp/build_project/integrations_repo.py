@@ -59,7 +59,8 @@ class IntegrationsRepo:
         Args:
             integrations_dir: The path to a Content-Hub integrations folder.
             dst: The destination path for the integrations repository.
-            default_source: Indicates if the integrations_dir is the default Content-Hub integrations folder.
+            default_source: Indicates if the integrations_dir is the default Content-Hub
+                integrations folder.
 
         """
         self.name: str = integrations_dir.name

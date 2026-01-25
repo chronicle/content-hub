@@ -37,7 +37,7 @@ class Repos(NamedTuple):
     custom: IntegrationsRepo
 
 
-def build_integrations(
+def build_integrations(  # noqa: PLR0913
     integrations: Iterable[str],
     repositories: Iterable[RepositoryType],
     src: Path | None = None,

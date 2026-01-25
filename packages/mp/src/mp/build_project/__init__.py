@@ -45,6 +45,7 @@ from .flow.playbooks.flow import build_playbooks
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from mp.core.config import RuntimeParams
 
