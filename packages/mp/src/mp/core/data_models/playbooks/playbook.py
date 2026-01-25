@@ -21,6 +21,7 @@ import pydantic
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.core import exclusions
 from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 from mp.core.data_models.playbooks.meta.metadata import (
@@ -72,7 +73,7 @@ class BuiltPlaybookOverviewTemplateDetails(TypedDict):
 
 
 class BuiltPlaybookDefinition(TypedDict):
-    Identifier: Annotated[str, pydantic.Field(pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX)]
+    Identifier: Annotated[str, pydantic.Field(pattern=exclusions.get_script_identifier_regex())]
     IsEnable: bool
     Version: float
     IsArchived: bool

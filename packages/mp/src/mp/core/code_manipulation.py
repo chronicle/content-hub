@@ -18,9 +18,11 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import libcst as cst
+from libcst import FlattenSentinel
 from libcst.helpers import get_full_name_for_node
 
 from . import constants, file_utils, unix
@@ -156,68 +158,159 @@ class SdkImportTransformer(cst.CSTTransformer):
         """Transform `from <module> import ...` statements for SDK modules.
 
         Returns:
-            The updated `ImportFrom` node with SDK modules prefixed.
+            The transformed node.
 
         """
         if original_node.module is None:
             return updated_node
 
-        full_module_name: str | None = get_full_name_for_node(original_node.module)
-        if not full_module_name:
+        if not (full_module_name := get_full_name_for_node(original_node.module)):
             return updated_node
 
-        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
-
+        first_module_part = full_module_name.split(".", maxsplit=1)[0]
         if first_module_part in SDK_MODULES and not full_module_name.startswith(SDK_PREFIX):
             prefixed_module = _create_prefixed_module(full_module_name, SDK_PREFIX)
             return updated_node.with_changes(module=prefixed_module)
 
         return updated_node
 
-    def leave_Import(self, original_node: cst.Import, updated_node: cst.Import) -> cst.Import:  # noqa: N802, PLR6301
+    def leave_Import(self, original_node: cst.Import, updated_node: cst.Import) -> cst.Import:  # noqa: ARG002, N802, PLR6301
         """Transform `import <module>` statements for SDK modules.
 
         Returns:
-            The updated `Import` node with SDK modules prefixed.
+            The transformed node.
 
         """
-        full_module_name: str | None = get_full_name_for_node(original_node.names[0].name)
-        if not full_module_name:
-            return updated_node
+        new_aliases = []
+        changed = False
 
-        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
+        for alias in updated_node.names:
+            if (
+                (full_module_name := get_full_name_for_node(alias.name))
+                and full_module_name.split(".", maxsplit=1)[0] in SDK_MODULES
+                and not full_module_name.startswith(SDK_PREFIX)
+            ):
+                prefixed_module = _create_prefixed_module(full_module_name, SDK_PREFIX)
+                new_aliases.append(alias.with_changes(name=prefixed_module))
+                changed = True
+            else:
+                new_aliases.append(alias)
 
-        if first_module_part in SDK_MODULES and not full_module_name.startswith(SDK_PREFIX):
-            prefixed_module = _create_prefixed_module(full_module_name, SDK_PREFIX)
-            return updated_node.with_changes(names=[cst.ImportAlias(name=prefixed_module)])
-
-        return updated_node
+        return updated_node.with_changes(names=tuple(new_aliases)) if changed else updated_node
 
 
-class CorePackageImportTransformer(cst.CSTTransformer):
+class BaseCoreImportTransformer(cst.CSTTransformer, ABC):
+    """Base transformer for handling core package imports."""
+
     def __init__(self, core_module_names: set[str]) -> None:
         super().__init__()
-        self.core_module_names: set[str] = core_module_names
+        self.core_module_names = core_module_names
+
+    @abstractmethod
+    def _is_core_alias(self, full_module_name: str) -> bool:
+        """Determine if a module name is a core module."""
+
+    @staticmethod
+    @abstractmethod
+    def _create_core_import_from(aliases: tuple[cst.ImportAlias, ...]) -> cst.ImportFrom:
+        """Create the specific 'from ... import' node for core aliases."""
+
+    def leave_SimpleStatementLine(  # noqa: N802
+        self,
+        original_node: cst.SimpleStatementLine,  # noqa: ARG002
+        updated_node: cst.SimpleStatementLine,
+    ) -> FlattenSentinel[cst.SimpleStatementLine] | cst.SimpleStatementLine:
+        """Handle `import <module>` statements.
+
+        Common logic to split imports into core and non-core statements.
+
+        Returns:
+            The updated node, which could be a single statement or a sentinel
+            for multiple statements.
+
+        """
+        if not isinstance(updated_node.body[0], cst.Import):
+            return updated_node
+
+        import_statement = updated_node.body[0]
+        core_aliases, non_core_aliases = self._partition_aliases(import_statement.names)
+
+        if not core_aliases:
+            return updated_node
+
+        new_statements = []
+        if non_core_aliases:
+            # Preserve non-core imports
+            non_core_aliases[-1] = non_core_aliases[-1].with_changes(
+                comma=cst.MaybeSentinel.DEFAULT
+            )
+            new_statements.append(
+                cst.SimpleStatementLine(
+                    body=[import_statement.with_changes(names=tuple(non_core_aliases))]
+                )
+            )
+
+        # Transform core imports using the subclass-specific node creator
+        core_aliases[-1] = core_aliases[-1].with_changes(comma=cst.MaybeSentinel.DEFAULT)
+        new_statements.append(
+            cst.SimpleStatementLine(body=[self._create_core_import_from(tuple(core_aliases))])
+        )
+
+        return FlattenSentinel(new_statements)
+
+    def _partition_aliases(
+        self, aliases: Iterable[cst.ImportAlias]
+    ) -> tuple[list[cst.ImportAlias], list[cst.ImportAlias]]:
+        """Split import aliases into core and non-core lists.
+
+        Args:
+            aliases: An iterable of import aliases to partition.
+
+        Returns:
+            A tuple containing two lists: core aliases and non-core aliases.
+
+        """
+        core_aliases = []
+        non_core_aliases = []
+        for alias in aliases:
+            if (full_module_name := get_full_name_for_node(alias.name)) and self._is_core_alias(
+                full_module_name
+            ):
+                core_aliases.append(alias)
+            else:
+                non_core_aliases.append(alias)
+        return core_aliases, non_core_aliases
+
+
+class CorePackageImportTransformer(BaseCoreImportTransformer):
+    def _is_core_alias(self, full_module_name: str) -> bool:
+        return full_module_name in self.core_module_names
+
+    @staticmethod
+    def _create_core_import_from(aliases: tuple[cst.ImportAlias, ...]) -> cst.ImportFrom:
+        # Transforms: import manager -> from ..core import manager
+        return cst.ImportFrom(
+            module=cst.Name("core"),
+            names=aliases,
+            relative=(cst.Dot(), cst.Dot()),
+        )
 
     def leave_ImportFrom(  # noqa: N802
         self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
     ) -> cst.ImportFrom:
-        """Transform `from <module> import ...` statements for manager modules.
+        """Transform `from <module> import ...` statements for core package modules.
 
         Returns:
-            The updated `ImportFrom` node with manager modules transformed to relative imports.
+            The transformed `ImportFrom` node.
 
         """
         if original_node.relative or original_node.module is None:
             return updated_node
 
-        full_module_name: str | None = get_full_name_for_node(original_node.module)
-        if not full_module_name:
+        if not (full_module_name := get_full_name_for_node(original_node.module)):
             return updated_node
 
-        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
-
-        if first_module_part in self.core_module_names:
+        if full_module_name.split(".", maxsplit=1)[0] in self.core_module_names:
             prefixed_module = _create_prefixed_module(full_module_name, CORE_PREFIX)
             return updated_node.with_changes(
                 module=prefixed_module, relative=(cst.Dot(), cst.Dot())
@@ -225,88 +318,47 @@ class CorePackageImportTransformer(cst.CSTTransformer):
 
         return updated_node
 
-    def leave_Import(  # noqa: N802
-        self, original_node: cst.Import, updated_node: cst.Import
-    ) -> cst.ImportFrom | cst.Import:
-        """Transform `import <module>` statements for manager modules.
 
-        Returns:
-            The updated `Import` or a new `ImportFrom` node for manager modules.
-
-        """
-        full_module_name: str | None = get_full_name_for_node(original_node.names[0].name)
-        if not full_module_name:
-            return updated_node
-
-        first_module_part: str = full_module_name.split(".", maxsplit=1)[0]
-
-        if first_module_part in self.core_module_names:
-            return cst.ImportFrom(
-                module=cst.Name(value="core"),
-                names=[cst.ImportAlias(name=cst.Name(value=first_module_part))],
-                relative=(cst.Dot(), cst.Dot()),
-            )
-
-        return updated_node
-
-
-class CorePackageInternalImportTransformer(cst.CSTTransformer):
+class CorePackageInternalImportTransformer(BaseCoreImportTransformer):
     def __init__(self, core_module_names: set[str], current_module_name: str) -> None:
-        super().__init__()
-        self.core_module_names: set[str] = core_module_names
-        self.current_module_name: str = current_module_name
+        super().__init__(core_module_names)
+        self.current_module_name = current_module_name
+
+    def _is_core_alias(self, full_module_name: str) -> bool:
+        return (
+            full_module_name in self.core_module_names
+            and full_module_name != self.current_module_name
+        )
+
+    @staticmethod
+    def _create_core_import_from(aliases: tuple[cst.ImportAlias, ...]) -> cst.ImportFrom:
+        # Transforms: import manager -> from . import manager
+        return cst.ImportFrom(
+            module=None,
+            names=aliases,
+            relative=(cst.Dot(),),
+        )
 
     def leave_ImportFrom(  # noqa: N802
         self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
     ) -> cst.ImportFrom:
-        """Transform `from <module> import ...` to `from .<module> import ...` for core modules.
+        """Transform `from <module> import ...` statements for internal core package modules.
 
         Returns:
-            The updated `ImportFrom` node with a relative import.
+            The transformed `ImportFrom` node.
 
         """
         if original_node.relative or original_node.module is None:
             return updated_node
 
-        full_module_name: str | None = get_full_name_for_node(original_node.module)
-        if not full_module_name:
+        if not (full_module_name := get_full_name_for_node(original_node.module)):
             return updated_node
 
-        # Check if the imported module is a core module and not the current module
         if (
             full_module_name in self.core_module_names
             and full_module_name != self.current_module_name
         ):
             return updated_node.with_changes(relative=(cst.Dot(),))
-
-        return updated_node
-
-    def leave_Import(  # noqa: N802
-        self, original_node: cst.Import, updated_node: cst.Import
-    ) -> cst.ImportFrom | cst.Import:
-        """Transform `import <module>` to `from . import <module>` for core modules.
-
-        Returns:
-            The updated `Import` or a new `ImportFrom` node for manager modules.
-
-        """
-        if len(original_node.names) != 1:
-            # Assuming one module per import, as per ruff formatting.
-            return updated_node
-
-        full_module_name: str | None = get_full_name_for_node(original_node.names[0].name)
-        if not full_module_name:
-            return updated_node
-
-        if (
-            full_module_name in self.core_module_names
-            and full_module_name != self.current_module_name
-        ):
-            return cst.ImportFrom(
-                module=None,
-                names=[cst.ImportAlias(name=cst.Name(value=full_module_name))],
-                relative=(cst.Dot(),),
-            )
 
         return updated_node
 
@@ -338,6 +390,39 @@ def apply_transformers(content: str, transformers: list[cst.CSTTransformer]) -> 
 
 
 class ImportTransformer(cst.CSTTransformer):
+    def leave_Import(  # noqa: N802, PLR6301
+        self,
+        original_node: cst.Import,  # noqa: ARG002
+        updated_node: cst.Import,
+    ) -> cst.Import:
+        """Handle `import <module>` statements for SDK modules.
+
+        Transforms: import soar_sdk.module -> import module
+
+        Returns:
+            The transformed node.
+
+        """
+        new_aliases = []
+        changed = False
+
+        for alias in updated_node.names:
+            if (
+                full_module_name := get_full_name_for_node(alias.name)
+            ) and full_module_name.startswith(SDK_PREFIX):
+                new_module_name = full_module_name.removeprefix(SDK_PREFIX)
+                expression = cst.parse_expression(new_module_name)
+                if not isinstance(expression, cst.Name | cst.Attribute):
+                    new_aliases.append(alias)
+                    continue
+
+                new_aliases.append(alias.with_changes(name=expression))
+                changed = True
+            else:
+                new_aliases.append(alias)
+
+        return updated_node.with_changes(names=tuple(new_aliases)) if changed else updated_node
+
     def leave_ImportFrom(  # noqa: N802, PLR6301, D102
         self,
         original_node: cst.ImportFrom,
