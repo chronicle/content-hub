@@ -18,6 +18,7 @@ import pydantic
 import pytest
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.integrations.integration_meta.parameter import IntegrationParameter
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.validators import validate_param_name
@@ -68,7 +69,7 @@ class TestVerifySSLParameterValidations:
         assert len(result.split()) == mp.core.constants.PARAM_NAME_MAX_WORDS
 
     def test_excluded_param_names_with_too_many_words(self) -> None:
-        for excluded_name in mp.core.constants.EXCLUDED_PARAM_NAMES_WITH_TOO_MANY_WORDS:
+        for excluded_name in exclusions.get_excluded_param_names_with_too_many_words():
             # Should not raise an exception
             result = validate_param_name(excluded_name)
             assert result == excluded_name
