@@ -91,10 +91,8 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
     )
 
     custom: IntegrationsRepo
-    if modified_src and modified_dst:
+    if modified_src:
         custom = IntegrationsRepo(modified_src, modified_dst, default_source=False)
-    elif modified_src:
-        custom = IntegrationsRepo(modified_src, default_source=False)
     else:
         custom = IntegrationsRepo(
             mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)

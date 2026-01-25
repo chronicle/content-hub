@@ -113,6 +113,7 @@ class BuildParams:
 
         if self.dst and self.custom_integration:
             msg = "Cannot use --dst and --custom_integration."
+            raise typer.BadParameter(msg)
 
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
         return [self.repository, self.integrations, self.playbooks]

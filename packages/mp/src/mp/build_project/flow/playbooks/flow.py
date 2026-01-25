@@ -81,10 +81,8 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
         dst=modified_dst,
     )
     custom: PlaybooksRepo | None = None
-    if modified_src and modified_dst:
+    if modified_src:
         custom: PlaybooksRepo = PlaybooksRepo(modified_src, modified_dst, default_src=False)
-    elif modified_src:
-        custom: PlaybooksRepo = PlaybooksRepo(modified_src, default_src=False)
 
     return Repos(commercial, community, custom)
 
