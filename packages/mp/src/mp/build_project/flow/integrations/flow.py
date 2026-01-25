@@ -41,24 +41,13 @@ def build_integrations(
     integrations: Iterable[str],
     repositories: Iterable[RepositoryType],
     src: Path | None = None,
+    dst: Path | None = None,
     *,
     deconstruct: bool = False,
     custom_integration: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct integration operation."""
-    repos = Repos(
-        commercial=IntegrationsRepo(
-            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.COMMERCIAL)
-        ),
-        community=IntegrationsRepo(
-            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.THIRD_PARTY)
-        ),
-        custom=IntegrationsRepo(
-            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)
-        )
-        if not src
-        else IntegrationsRepo(src, default_source=False),
-    )
+    repos: Repos = _create_repos(src, dst)
 
     if integrations:
         if custom_integration or src:
@@ -89,6 +78,29 @@ def build_integrations(
 
     elif repositories:
         _build_integration_repositories(repositories, repos)
+
+
+def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos:
+    commercial = IntegrationsRepo(
+        mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.COMMERCIAL),
+        dst=modified_dst,
+    )
+    community = IntegrationsRepo(
+        mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.THIRD_PARTY),
+        dst=modified_dst,
+    )
+
+    custom: IntegrationsRepo
+    if modified_src and modified_dst:
+        custom = IntegrationsRepo(modified_src, modified_dst, default_source=False)
+    elif modified_src:
+        custom = IntegrationsRepo(modified_src, default_source=False)
+    else:
+        custom = IntegrationsRepo(
+            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)
+        )
+
+    return Repos(commercial, community, custom)
 
 
 def _build_integration_repositories(

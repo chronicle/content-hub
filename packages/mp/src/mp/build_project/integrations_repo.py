@@ -51,11 +51,14 @@ if TYPE_CHECKING:
 
 
 class IntegrationsRepo:
-    def __init__(self, integrations_dir: Path, *, default_source: bool = True) -> None:
+    def __init__(
+        self, integrations_dir: Path, dst: Path | None = None, *, default_source: bool = True
+    ) -> None:
         """Class constructor.
 
         Args:
             integrations_dir: The path to a Content-Hub integrations folder.
+            dst: The destination path for the integrations repository.
             default_source: Indicates if the integrations_dir is the default Content-Hub integrations folder.
 
         """
@@ -70,8 +73,12 @@ class IntegrationsRepo:
         for dir_name in self.paths:
             dir_name.mkdir(exist_ok=True, parents=True)
 
-        self.out_dir: Path = mp.core.file_utils.create_or_get_out_integrations_dir() / self.name
-        self.out_dir.mkdir(exist_ok=True)
+        if dst is None:
+            self.out_dir: Path = mp.core.file_utils.create_or_get_out_integrations_dir() / self.name
+        else:
+            self.out_dir = dst
+
+        self.out_dir.mkdir(exist_ok=True, parents=True)
 
     def write_marketplace_json(self) -> None:
         """Write the marketplace JSON file to the marketplace's out path."""
