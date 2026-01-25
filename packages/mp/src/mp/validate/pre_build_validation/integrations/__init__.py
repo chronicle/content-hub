@@ -22,6 +22,7 @@ from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .dependency_provider_validation import DependencyProviderValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
 from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
+from .fields_validation import FieldsValidation
 from .integration_ssl_validation import SslParameterExistsInIntegrationValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
 from .ping_validation import IntegrationHasPingActionValidation
@@ -59,6 +60,7 @@ def _get_non_priority_validations() -> list[Validator]:
         IntegrationHasDocumentationLinkValidation(),
         ConnectorsHasDocumentationLinkValidation(),
         PythonVersionValidation(),
+        FieldsValidation(),
     ]
 
 
