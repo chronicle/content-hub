@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
-import mp.core.constants
+from mp.core import exclusions
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.utils import (
     load_integration_def,
@@ -46,7 +46,7 @@ class IntegrationHasDocumentationLinkValidation:
         """
         if (
             validation_path.name
-            in mp.core.constants.EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK
+            in exclusions.get_excluded_integrations_without_documentation_link()
         ):
             return
         integration_def: YamlFileContent = load_integration_def(validation_path)

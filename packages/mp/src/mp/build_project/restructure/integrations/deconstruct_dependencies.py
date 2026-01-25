@@ -105,7 +105,9 @@ class DependencyDeconstructor:
             m
             for m in imported_modules
             if m
-            not in manager_modules.union(mp.core.constants.SDK_MODULES, sys.stdlib_module_names)
+            not in manager_modules.union(
+                mp.core.constants.SDK_MODULES, sys.stdlib_module_names, {self.integration_path.name}
+            )
         }
 
     def _resolve_dependencies(self, required_modules: set[str]) -> Dependencies:
