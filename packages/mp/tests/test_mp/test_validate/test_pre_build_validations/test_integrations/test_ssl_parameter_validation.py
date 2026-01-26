@@ -73,10 +73,9 @@ class TestSSLParameterValidation:
 
         integration_file = temp_integration / constants.DEFINITION_FILE
         _update_yaml_file(integration_file, {"parameters": []})
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_NAMES_WITHOUT_VERIFY_SSL",
-            {"Mock Integration"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_names_without_verify_ssl",
+            return_value={"Mock Integration"},
         ):
             self.integration_runner.run(temp_integration)
 
@@ -122,10 +121,9 @@ class TestSSLParameterValidation:
             }
         ]
         _update_yaml_file(integration_file, {"parameters": params})
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE",
-            {"Mock Integration"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_names_where_ssl_default_is_not_true",
+            return_value={"Mock Integration"},
         ):
             self.integration_runner.run(temp_integration)  # Should not raise
 
