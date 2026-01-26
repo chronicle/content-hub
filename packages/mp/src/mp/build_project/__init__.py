@@ -26,6 +26,7 @@ components.
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -44,6 +45,7 @@ from .flow.playbooks.flow import build_playbooks
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from mp.core.config import RuntimeParams
 
@@ -58,6 +60,8 @@ class BuildParams:
     playbooks: Iterable[str]
     deconstruct: bool
     custom_integration: bool
+    src: Path | None
+    dst: Path | None
 
     def validate(self) -> None:
         """Validate the parameters.
@@ -103,6 +107,14 @@ class BuildParams:
             msg = "Cannot use --deconstruct and --custom_integration."
             raise typer.BadParameter(msg)
 
+        if self.src and self.custom_integration:
+            msg = "Cannot use --src and --custom_integration."
+            raise typer.BadParameter(msg)
+
+        if self.dst and self.custom_integration:
+            msg = "Cannot use --dst and --custom_integration."
+            raise typer.BadParameter(msg)
+
     def _as_list(self) -> list[Iterable[RepositoryType] | Iterable[str]]:
         return [self.repository, self.integrations, self.playbooks]
 
@@ -137,6 +149,14 @@ def build(  # noqa: PLR0913
             default_factory=list,
         ),
     ],
+    src: Annotated[
+        Path | None,
+        typer.Option(help="Customize source folder to build or deconstruct from."),
+    ] = None,
+    dst: Annotated[
+        Path | None,
+        typer.Option(help="Customize destination folder to build or deconstruct to."),
+    ] = None,
     *,
     deconstruct: Annotated[
         bool,
@@ -178,6 +198,8 @@ def build(  # noqa: PLR0913
         repositories: the repositories to build
         integrations: the integrations to build
         playbooks: the playbooks to build
+        src: Customize source folder to build from.
+        dst: Customize destination folder to build to.
         deconstruct: whether to deconstruct instead of build
         custom_integration: if need to build specific integration from the custom repo.
         quiet: quiet log options
@@ -197,6 +219,8 @@ def build(  # noqa: PLR0913
         playbooks=playbooks,
         deconstruct=deconstruct,
         custom_integration=custom_integration,
+        src=src,
+        dst=dst,
     )
     params.validate()
 
@@ -204,9 +228,11 @@ def build(  # noqa: PLR0913
         build_integrations(
             integrations,
             repositories,
+            src=src,
+            dst=dst,
             deconstruct=deconstruct,
             custom_integration=custom_integration,
         )
 
     if should_preform_playbook_logic(playbooks, repositories):
-        build_playbooks(playbooks, repositories, deconstruct=deconstruct)
+        build_playbooks(playbooks, repositories, src=src, dst=dst, deconstruct=deconstruct)
