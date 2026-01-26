@@ -56,7 +56,7 @@ def push_integration(
         typer.Option("--keep-zip", help="Keep the integration zip file after pulling."),
     ] = False,
 ) -> None:
-    """Build and push an integration to the dev environment (playground).
+    """Build and push an integration to the dev environment.
 
     Args:
         integration: The integration to build and push.

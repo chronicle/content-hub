@@ -49,7 +49,7 @@ def pull_playbook(
         typer.Option(help="Keep the zip file after pulling."),
     ] = False,
 ) -> None:
-    """Pull a playbook from the SOAR environment.
+    """Pull and deconstruct a playbook from the SOAR environment.
 
     Args:
         playbook: The playbook to pull.

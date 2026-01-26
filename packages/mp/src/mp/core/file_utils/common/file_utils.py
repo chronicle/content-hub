@@ -71,14 +71,14 @@ def is_valid_source_path(path: Path) -> bool:
         Whether the path is a sub path of the configured marketplace.
 
     """
-    return _is_path_in_marketplace(path) or _is_costume_source(path) or _is_custom_dst(path)
+    return _is_path_in_marketplace(path) or _is_custom_source(path) or _is_custom_dst(path)
 
 
 def _is_path_in_marketplace(path: Path) -> bool:
     return mp.core.config.get_marketplace_path() in path.parents
 
 
-def _is_costume_source(path: Path) -> bool:
+def _is_custom_source(path: Path) -> bool:
     custom_src: Path | None = mp.core.config.get_custom_src()
     return custom_src is not None and (custom_src == path or custom_src in path.parents)
 
