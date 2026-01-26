@@ -224,10 +224,8 @@ def build(  # noqa: PLR0913
     )
     params.validate()
 
-    if src:
-        mp.core.config.set_custom_src(src)
-    if dst:
-        mp.core.config.set_custom_dst(dst)
+    mp.core.config.set_custom_src(src)
+    mp.core.config.set_custom_dst(dst)
 
     try:
         if should_preform_integration_logic(integrations, repositories):

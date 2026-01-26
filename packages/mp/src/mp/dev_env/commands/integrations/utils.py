@@ -19,7 +19,7 @@ import shutil
 import subprocess  # noqa: S404
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import rich
 import typer
@@ -28,6 +28,9 @@ import mp.core.constants
 import mp.core.file_utils
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.utils import to_snake_case
+
+if TYPE_CHECKING:
+    from requests.models import Response
 
 
 def get_integration_path(
@@ -266,7 +269,7 @@ def _modify_def_file_to_custom(file: Path) -> None:
         rich.print(f"Failed to process {file}: {e}")
 
 
-def save_integration_as_zip(integration_name: str, resp: Any, dst: Path) -> Path:  # noqa: ANN401
+def save_integration_as_zip(integration_name: str, resp: Response, dst: Path) -> Path:
     """Save raw integration data into a ZIP file.
 
     Args:

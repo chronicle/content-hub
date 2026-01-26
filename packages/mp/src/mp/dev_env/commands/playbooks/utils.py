@@ -90,18 +90,7 @@ def get_block_names_by_ids(ids_to_find: set[str], src: Path | None = None) -> se
 
 def _get_block_names_by_ids_from_src(ids_to_find: set[str], src: Path) -> tuple[set[str], set[str]]:
     remaining_ids = ids_to_find.copy()
-    result: set[str] = set()
-
-    for block_path in src.iterdir():
-        if not block_path.is_dir():
-            continue
-
-        meta = PlaybookMetadata.from_non_built_path(block_path)
-
-        if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
-            result.add(block_path.name)
-            remaining_ids.remove(meta.identifier)
-
+    result = _scan_folder_for_ids(src, remaining_ids)
     return result, remaining_ids
 
 
@@ -122,15 +111,7 @@ def _get_block_names_by_ids_from_defaults(
             if not source_folder.exists():
                 continue
 
-            for block_path in source_folder.iterdir():
-                if not block_path.is_dir():
-                    continue
-
-                meta = PlaybookMetadata.from_non_built_path(block_path)
-
-                if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
-                    result.add(block_path.name)
-                    remaining_ids.remove(meta.identifier)
+            result.update(_scan_folder_for_ids(source_folder, remaining_ids))
 
             if not remaining_ids:
                 break
@@ -138,6 +119,28 @@ def _get_block_names_by_ids_from_defaults(
             break
 
     return result, remaining_ids
+
+
+def _scan_folder_for_ids(source_folder: Path, remaining_ids: set[str]) -> set[str]:
+    found_in_folder: set[str] = set()
+
+    if not remaining_ids or not source_folder.exists():
+        return found_in_folder
+
+    for block_path in source_folder.iterdir():
+        if not block_path.is_dir():
+            continue
+
+        meta = PlaybookMetadata.from_non_built_path(block_path)
+
+        if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
+            found_in_folder.add(block_path.name)
+            remaining_ids.remove(meta.identifier)
+
+            if not remaining_ids:
+                break
+
+    return found_in_folder
 
 
 def build_playbook(playbooks_names: set[str], src: Path | None = None) -> None:
