@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import base64
-import shutil
 import subprocess  # noqa: S404
 import zipfile
 from pathlib import Path
@@ -90,7 +89,6 @@ def get_block_names_by_ids(ids_to_find: set[str], src: Path | None = None) -> se
 
 
 def _get_block_names_by_ids_from_src(ids_to_find: set[str], src: Path) -> tuple[set[str], set[str]]:
-    """Find non-built blocks names in the given source folder."""
     remaining_ids = ids_to_find.copy()
     result: set[str] = set()
 
@@ -110,7 +108,6 @@ def _get_block_names_by_ids_from_src(ids_to_find: set[str], src: Path) -> tuple[
 def _get_block_names_by_ids_from_defaults(
     ids_to_find: set[str],
 ) -> tuple[set[str], set[str]]:
-    """Find non-built blocks names in the default directories."""
     remaining_ids = ids_to_find.copy()
     playbooks_root = mp.core.file_utils.create_or_get_playbooks_root_dir()
     result: set[str] = set()
@@ -148,6 +145,7 @@ def build_playbook(playbooks_names: set[str], src: Path | None = None) -> None:
 
     Args:
         playbooks_names: Set of playbooks names to build.
+        src: Customize source folder to build from.
 
     Raises:
         typer.Exit: If the build fails.
