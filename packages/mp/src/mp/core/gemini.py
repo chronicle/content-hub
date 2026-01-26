@@ -49,9 +49,11 @@ from .llm_sdk import LlmConfig, LlmSdk, T_Schema
 if TYPE_CHECKING:
     from types import TracebackType
 
+    from google.genai.client import AsyncClient
+
 
 logger: logging.Logger = logging.getLogger("mp.gemini")
-logging.basicConfig(level="NOTSET", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
+logging.basicConfig(level="INFO", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 
 
 class ApiKeyNotFoundError(Exception):
@@ -63,7 +65,7 @@ class GeminiConfig(LlmConfig):
     temperature: float = 1.0
     sexually_explicit: str = "OFF"
     dangerous_content: str = "OFF"
-    hate_speach: str = "OFF"
+    hate_speech: str = "OFF"
     harassment: str = "OFF"
     google_search: bool = True
     url_context: bool = True
@@ -88,12 +90,11 @@ class GeminiConfig(LlmConfig):
         raise ApiKeyNotFoundError(msg) from None
 
 
-class Gemini(LlmSdk):
-    def __init__(self, llm_config: GeminiConfig) -> None:
-        self.config: GeminiConfig = llm_config
-        self.client: genai.client.AsyncClient = genai.client.Client(api_key=self.config.api_key).aio
-        self.model: str = self.config.model_name
-        self.contents: list[Content] = []
+class Gemini(LlmSdk[GeminiConfig, T_Schema]):
+    def __init__(self, config: GeminiConfig) -> None:
+        super().__init__(config)
+        self.client: AsyncClient = genai.client.Client(api_key=self.config.api_key).aio
+        self.content: Content = Content(role="user", parts=[])
 
     async def __aenter__(self) -> Self:
         return self
@@ -143,12 +144,15 @@ class Gemini(LlmSdk):
 
         config: GenerateContentConfig = self.create_generate_content_config(schema)
         logger.debug("Sending prompt: %s", prompt)
-        self.contents.append(Content(role="user", parts=[Part.from_text(text=prompt)]))
+        if not self.content.parts:
+            self.content.parts = []
+
+        self.content.parts.append(Part.from_text(text=prompt))
 
         response: io.StringIO = io.StringIO()
         async for chunk in await self.client.models.generate_content_stream(
-            model=self.model,
-            contents=self.contents,  # ty:ignore[invalid-argument-type]
+            model=self.config.model_name,
+            contents=self.content,
             config=config,
         ):
             if chunk.text:
@@ -161,8 +165,7 @@ class Gemini(LlmSdk):
             raise ValueError(msg)
 
         if text:
-            content = Content(role="migrator_assistant_llm", parts=[Part.from_text(text=text)])
-            self.contents.append(content)
+            self.content.parts.append(Part.from_text(text=text))
 
         if response_json_schema is not None and text:
             return response_json_schema.model_validate_json(text, by_alias=True)
@@ -170,23 +173,39 @@ class Gemini(LlmSdk):
         return text
 
     async def close(self) -> None:
+        """Close the client."""
         self.clean_session_history()
         await self.client.aclose()
 
     def clean_session_history(self) -> None:
-        self.contents.clear()
+        """Clean the session history."""
+        self.content = Content(role="user", parts=[])
 
     def add_system_prompts_to_session(self, *prompts: str) -> None:
-        if self.contents:
+        """Add system prompts to the session.
+
+        This can only be done if there are no other registered prompts yet
+        """
+        if self.content.parts:
             return
 
+        self.content.parts = []
         for prompt in prompts:
-            self.contents.append(Content(role="user", parts=[Part.from_text(text=prompt)]))
+            self.content.parts.append(Part.from_text(text=prompt))
 
     def create_generate_content_config(
         self,
         response_json_schema: str | None = None,
     ) -> GenerateContentConfig:
+        """Create a GenerateContentConfig object for the Gemini API.
+
+        Args:
+            response_json_schema: The JSON schema to validate the response against.
+
+        Returns:
+            The GenerateContentConfig object.
+
+        """
         response_mime_type: str = "plain/text"
         if response_json_schema is not None:
             response_mime_type = "application/json"
@@ -212,7 +231,7 @@ class Gemini(LlmSdk):
                 ),
                 SafetySetting(
                     category=HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                    threshold=HarmBlockThreshold(self.config.hate_speach),
+                    threshold=HarmBlockThreshold(self.config.hate_speech),
                 ),
                 SafetySetting(
                     category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
@@ -224,7 +243,11 @@ class Gemini(LlmSdk):
                 ),
             ]
         except ValueError as e:
-            msg: str = "Invalid HarmBlockThreshold value. Value must be an integer between 0 and 5"
+            msg: str = (
+                "Invalid HarmBlockThreshold value."
+                " Value must be one of the string representations of"
+                " HarmBlockThreshold enum (e.g., 'OFF', 'BLOCK_LOW_AND_ABOVE')"
+            )
             raise ValueError(msg) from e
 
     def _get_tools(self) -> ToolListUnion:

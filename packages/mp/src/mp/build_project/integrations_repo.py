@@ -40,6 +40,7 @@ from mp.core.data_models.integrations.integration import (
     Integration,
 )
 
+from .post_build.integrations.ai_metadata_json import write_actions_ai_metadata_json
 from .post_build.integrations.full_details_json import write_full_details
 from .post_build.integrations.marketplace_json import write_marketplace_json
 from .restructure.integrations.deconstruct import DeconstructIntegration
@@ -70,6 +71,7 @@ class IntegrationsRepo:
     def write_marketplace_json(self) -> None:
         """Write the marketplace JSON file to the marketplace's out path."""
         write_marketplace_json(self.out_dir)
+        write_actions_ai_metadata_json(self.out_dir)
 
     def build(self) -> None:
         """Build all integrations in the marketplace."""

@@ -14,25 +14,45 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated
 
+import rich
 import typer
 
 from .describe import DescribeAction
+from .describe_all import describe_all_actions
 
 app = typer.Typer(help="Commands for describing actions")
 
 
-@app.command()
+@app.command(name="action")
 def describe(
-    integration: Annotated[str, typer.Option("-i", "--integration", help="Integration name")],
-    actions: Annotated[list[str], typer.Argument(help="Action names")],
+    actions: Annotated[list[str] | None, typer.Argument(help="Action names")] = None,
+    integration: Annotated[
+        str | None, typer.Option("-i", "--integration", help="Integration name")
+    ] = None,
+    *,
+    all_marketplace: Annotated[
+        bool, typer.Option("--all", help="Describe all integrations in the marketplace")
+    ] = False,
 ) -> None:
     """Describe actions in a given integration.
 
     Args:
         integration: The name of the integration.
         actions: The names of the actions to describe.
+        all_marketplace: Whether to describe all integrations in the marketplace.
+
+    Raises:
+        typer.Exit: If neither --integration nor --all is specified.
 
     """
-    DescribeAction(integration, set(actions)).describe_actions()
+    if all_marketplace:
+        asyncio.run(describe_all_actions())
+    elif integration:
+        target_actions = set(actions) if actions else set()
+        asyncio.run(DescribeAction(integration, target_actions).describe_actions())
+    else:
+        rich.print("[red]Please specify either --integration or --all[/red]")
+        raise typer.Exit(code=1)

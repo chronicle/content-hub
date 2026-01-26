@@ -19,4 +19,4 @@ from .action.typer_app import app as action_app
 
 app: typer.Typer = typer.Typer(help="Commands for creating description for content using Gemini")
 
-app.add_typer(action_app, name="action")
+app.add_typer(action_app)

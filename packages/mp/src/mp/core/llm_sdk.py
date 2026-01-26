@@ -40,10 +40,9 @@ T_LlmConfig = TypeVar("T_LlmConfig", bound=LlmConfig)
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
-class LlmSdk(AbstractAsyncContextManager, abc.ABC):
-    @abc.abstractmethod
-    def __init__(self, llm_config: T_LlmConfig) -> None:
-        self.llm_config: T_LlmConfig = llm_config
+class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig, T_Schema]):
+    def __init__(self, config: T_LlmConfig) -> None:
+        self.config: T_LlmConfig = config
 
     @overload
     async def send_message(
@@ -83,13 +82,26 @@ class LlmSdk(AbstractAsyncContextManager, abc.ABC):
         *,
         raise_error_if_empty_response: bool,
         response_json_schema: type[T_Schema] | None = None,
-    ) -> T_Schema | str: ...
+    ) -> T_Schema | str:
+        """Send a message to the LLM provider.
+
+        Args:
+            prompt: The prompt to send to the LLM provider.
+            raise_error_if_empty_response: Whether to raise an error if the response is empty.
+            response_json_schema: The JSON schema to validate the response against.
+
+        Returns:
+            The response from the LLM provider.
+
+        """
 
     @abc.abstractmethod
-    def clean_session_history(self) -> None: ...
+    def clean_session_history(self) -> None:
+        """Clean the session history."""
 
     @abc.abstractmethod
-    def add_system_prompts_to_session(self, *prompts: str) -> None: ...
+    def add_system_prompts_to_session(self, *prompts: str) -> None:
+        """Add system prompts to the session."""
 
     @abc.abstractmethod
     async def __aenter__(self) -> Self: ...
