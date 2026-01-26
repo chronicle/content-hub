@@ -31,11 +31,12 @@ from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.utils.common.utils import to_snake_case
 
 
-def get_playbook_path_by_name(playbook: str) -> Path:
+def get_playbook_path_by_name(playbook: str, src: Path | None = None) -> Path:
     """Find the source path for a given playbook.
 
     Args:
         playbook: The name of the playbook to find.
+        src: The source folder to search for the playbook, if provided.
 
     Returns:
         The path to the playbook's source directory.
@@ -44,6 +45,11 @@ def get_playbook_path_by_name(playbook: str) -> Path:
         typer.Exit: If the integration directory is not found.
 
     """
+    if src is not None:
+        candidate = src / playbook
+        if candidate.exists():
+            return candidate
+
     playbooks_root = mp.core.file_utils.create_or_get_playbooks_root_dir()
 
     for repo, folders in mp.core.constants.PLAYBOOKS_DIRS_NAMES_DICT.items():
@@ -60,16 +66,51 @@ def get_playbook_path_by_name(playbook: str) -> Path:
     raise typer.Exit(1)
 
 
-def get_block_names_by_ids(ids_to_find: set[str]) -> set[str]:
+def get_block_names_by_ids(ids_to_find: set[str], src: Path | None = None) -> set[str]:
     """Find non-built blocks names in the repo given a set of block identifiers.
 
     Args:
         ids_to_find: A set of unique string identifiers for the blocks to find.
+        src: The source folder to search for the blocks, if provided.
 
     Returns:
         A set of directory names (strings) of the found blocks.
 
     """
+    if src is not None:
+        found_blocks, remaining_ids = _get_block_names_by_ids_from_src(ids_to_find, src)
+    else:
+        found_blocks, remaining_ids = _get_block_names_by_ids_from_defaults(ids_to_find)
+
+    if remaining_ids:
+        missing_str = ", ".join(remaining_ids)
+        rich.print(f"[red]Could not find the following blocks: {missing_str}[/red]")
+
+    return found_blocks
+
+
+def _get_block_names_by_ids_from_src(ids_to_find: set[str], src: Path) -> tuple[set[str], set[str]]:
+    """Find non-built blocks names in the given source folder."""
+    remaining_ids = ids_to_find.copy()
+    result: set[str] = set()
+
+    for block_path in src.iterdir():
+        if not block_path.is_dir():
+            continue
+
+        meta = PlaybookMetadata.from_non_built_path(block_path)
+
+        if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
+            result.add(block_path.name)
+            remaining_ids.remove(meta.identifier)
+
+    return result, remaining_ids
+
+
+def _get_block_names_by_ids_from_defaults(
+    ids_to_find: set[str],
+) -> tuple[set[str], set[str]]:
+    """Find non-built blocks names in the default directories."""
     remaining_ids = ids_to_find.copy()
     playbooks_root = mp.core.file_utils.create_or_get_playbooks_root_dir()
     result: set[str] = set()
@@ -95,16 +136,14 @@ def get_block_names_by_ids(ids_to_find: set[str]) -> set[str]:
                     remaining_ids.remove(meta.identifier)
 
             if not remaining_ids:
-                return result
+                break
+        if not remaining_ids:
+            break
 
-    if remaining_ids:
-        missing_str = ", ".join(remaining_ids)
-        rich.print(f"[red]Could not find the following blocks: {missing_str}[/red]")
-
-    return result
+    return result, remaining_ids
 
 
-def build_playbook(playbooks_names: set[str]) -> None:
+def build_playbook(playbooks_names: set[str], src: Path | None = None) -> None:
     """Run the build command for a List of playbooks names.
 
     Args:
@@ -117,6 +156,8 @@ def build_playbook(playbooks_names: set[str]) -> None:
     command: list[str] = ["mp", "build"]
     for name in playbooks_names:
         command.extend(["-p", name])
+    if src:
+        command.extend(["--src", str(src)])
     command.extend(["--quiet"])
 
     result = subprocess.run(  # noqa: S603
