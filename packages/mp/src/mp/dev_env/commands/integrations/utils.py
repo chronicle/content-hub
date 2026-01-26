@@ -30,12 +30,16 @@ from mp.core.data_models.integrations.integration import Integration
 from mp.core.utils import to_snake_case
 
 
-def get_integration_path(integration: str, *, custom: bool = False) -> Path:
+def get_integration_path(
+    integration: str, src: Path | None = None, *, custom: bool = False
+) -> Path:
     """Find the source path for a given integration.
 
     Args:
         integration: The name of the integration to find.
+        src: Customize source folder to search from.
         custom: Whether to search in the custom repository.
+
 
     Returns:
         The path to the integration's source directory.
@@ -44,6 +48,9 @@ def get_integration_path(integration: str, *, custom: bool = False) -> Path:
         typer.Exit: If the integration directory is not found.
 
     """
+    if src and (src / integration).exists():
+        return src / integration
+
     integrations_root: Path = mp.core.file_utils.create_or_get_integrations_dir()
     if custom:
         source_path = integrations_root / mp.core.constants.CUSTOM_REPO_NAME / integration
@@ -92,11 +99,12 @@ def get_integration_identifier(source_path: Path) -> str:
         return integration_obj.identifier
 
 
-def build_integration(integration: str, *, custom: bool = False) -> None:
+def build_integration(integration: str, src: Path | None = None, *, custom: bool = False) -> None:
     """Invoke the build command for a single integration.
 
     Args:
         integration: The name of the integration to build.
+        src: Customize source folder to build from.
         custom: build integration from the custom repository.
 
     Raises:
@@ -106,6 +114,8 @@ def build_integration(integration: str, *, custom: bool = False) -> None:
     command: list[str] = ["mp", "build", "--integration", integration, "--quiet"]
     if custom:
         command.append("--custom-integration")
+    if src:
+        command.extend(["--src", str(src)])
     result = subprocess.run(  # noqa: S603
         command,
         capture_output=True,
@@ -119,11 +129,14 @@ def build_integration(integration: str, *, custom: bool = False) -> None:
     rich.print(f"Build output:\n{result.stdout}")
 
 
-def find_built_integration_dir(identifier: str, *, custom: bool = False) -> Path:
+def find_built_integration_dir(
+    identifier: str, src: Path | None = None, *, custom: bool = False
+) -> Path:
     """Find the built integration directory.
 
     Args:
         identifier: The integration identifier.
+        src: Customize source folder to search from.
         custom: search integration in the out folder of custom repository.
 
 
@@ -135,6 +148,11 @@ def find_built_integration_dir(identifier: str, *, custom: bool = False) -> Path
 
     """
     root: Path = mp.core.file_utils.create_or_get_out_integrations_dir()
+    if src:
+        candidate = root / src.name / identifier
+        if candidate.exists():
+            return candidate
+
     if custom:
         candidate = root / mp.core.constants.CUSTOM_REPO_NAME / identifier
         if candidate.exists():
@@ -145,10 +163,7 @@ def find_built_integration_dir(identifier: str, *, custom: bool = False) -> Path
         if candidate.exists():
             return candidate
 
-    rich.print(
-        f"[red]Built integration not found for identifier '{identifier}'"
-        " in out/content/integrations.[/red]"
-    )
+    rich.print(f"[red]Built integration not found for identifier '{identifier}' in {root}.[/red]")
     raise typer.Exit(1)
 
 
@@ -251,7 +266,7 @@ def _modify_def_file_to_custom(file: Path) -> None:
         rich.print(f"Failed to process {file}: {e}")
 
 
-def save_integration_as_zip(integration_name: str, resp: Any, dst: Path) -> Path:
+def save_integration_as_zip(integration_name: str, resp: Any, dst: Path) -> Path:  # noqa: ANN401
     """Save raw integration data into a ZIP file.
 
     Args:

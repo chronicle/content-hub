@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 from typing import Annotated
 
 import rich
