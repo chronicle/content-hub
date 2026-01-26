@@ -19,7 +19,7 @@ import shutil
 import subprocess  # noqa: S404
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import rich
 import typer
