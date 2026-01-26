@@ -61,6 +61,8 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "raise_error_on_violations",
     "changed_files",
     "quiet",
+    "src",
+    "dst",
     "-q",
     "verbose",
     "-v",
