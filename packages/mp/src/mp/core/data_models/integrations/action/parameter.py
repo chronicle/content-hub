@@ -77,14 +77,13 @@ class ActionParameter(
 ):
     description: Annotated[
         str,
-        pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH),
+        pydantic.AfterValidator(mp.core.validators.validate_param_short_description),
     ]
     is_mandatory: bool
     name: Annotated[
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.PARAM_DISPLAY_NAME_REGEX,
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]

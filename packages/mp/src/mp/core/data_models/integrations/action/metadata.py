@@ -21,6 +21,8 @@ import pydantic
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
+import mp.core.validators
+from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
 
 from .dynamic_results_metadata import (
@@ -79,14 +81,14 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     file_name: str
     description: Annotated[
         str,
-        pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
+        pydantic.AfterValidator(mp.core.validators.validate_param_long_description),
     ]
     dynamic_results_metadata: list[DynamicResultsMetadata]
     integration_identifier: Annotated[
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX,
+            pattern=exclusions.get_script_identifier_regex(),
         ),
     ]
     is_async: bool
@@ -96,7 +98,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     parameters: Annotated[
@@ -105,7 +107,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ]
     default_result_value: str | None
     creator: str
-    script_result_name: str
+    script_result_name: Annotated[
+        str, pydantic.Field(max_length=mp.core.constants.MAX_SCRIPT_RESULT_NAME_LENGTH)
+    ]
     simulation_data_json: str
     version: Annotated[
         pydantic.PositiveFloat,
@@ -183,7 +187,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
                 for drm in built.get("DynamicResultsMetadata", []) or []
             ],
             integration_identifier=built["IntegrationIdentifier"],
-            is_async=built.get("IsAsync", False),
+            is_async=v if (v := built.get("IsAsync")) is not None else False,
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
             name=built["Name"],
