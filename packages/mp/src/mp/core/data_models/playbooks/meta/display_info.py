@@ -18,7 +18,7 @@ from typing import Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
-import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
@@ -46,7 +46,7 @@ class PlaybookContributionType(RepresentableEnum):
 
 
 class BuiltPlaybookDisplayInfo(TypedDict):
-    Identifier: Annotated[str, pydantic.Field(pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX)]
+    Identifier: Annotated[str, pydantic.Field(pattern=exclusions.get_script_identifier_regex())]
     FileName: str
     Type: int
     DisplayName: str
