@@ -24,6 +24,7 @@ from hypothesis.provisional import urls
 from pydantic import FileUrl, HttpUrl, TypeAdapter, ValidationError
 
 import mp.core.constants
+from mp.core import exclusions
 
 if TYPE_CHECKING:
     from enum import Enum
@@ -32,9 +33,9 @@ if TYPE_CHECKING:
 
 FILE_NAME: str = ""
 
-SAFE_SCRIPT_DISPLAY_NAME_REGEX = mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX.replace(r"\s", " ")
-SAFE_PARAM_DISPLAY_NAME_REGEX = mp.core.constants.PARAM_DISPLAY_NAME_REGEX.replace(r"\s", " ")
-SAFE_SCRIPT_IDENTIFIER_NAME_REGEX = mp.core.constants.SCRIPT_IDENTIFIER_REGEX.replace(r"\s", " ")
+SAFE_SCRIPT_DISPLAY_NAME_REGEX = exclusions.get_script_display_name_regex().replace(r"\s", " ")
+SAFE_PARAM_DISPLAY_NAME_REGEX = exclusions.get_param_display_name_regex().replace(r"\s", " ")
+SAFE_SCRIPT_IDENTIFIER_NAME_REGEX = exclusions.get_script_identifier_regex().replace(r"\s", " ")
 
 
 def _is_not_valid_json(s: str) -> bool:
@@ -84,7 +85,7 @@ st_valid_param_name = (
     )
 )
 st_excluded_param_name = st.sampled_from(
-    sorted(mp.core.constants.EXCLUDED_PARAM_NAMES_WITH_TOO_MANY_WORDS)
+    sorted(exclusions.get_excluded_param_names_with_too_many_words())
 )
 
 st_valid_identifier_name = st.from_regex(SAFE_SCRIPT_IDENTIFIER_NAME_REGEX, fullmatch=True).filter(
