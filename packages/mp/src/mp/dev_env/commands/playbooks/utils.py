@@ -207,11 +207,12 @@ def find_playbook_identifier(playbook_name: str, installed_playbook: list[dict[s
     raise typer.Exit(1)
 
 
-def deconstruct_playbook(built_playbook: Path) -> Path:
+def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
     """Deconstructs a built playbook and restores the source to its original directory.
 
     Args:
         built_playbook (Path): Path to the built playbook file.
+        dst (Path): Destination folder.
 
     Returns:
         Path: Path to the deconstructed playbook.
@@ -220,19 +221,18 @@ def deconstruct_playbook(built_playbook: Path) -> Path:
         typer.Exit: If the deconstruction subprocess fails.
 
     """
-    original_parent_folder = built_playbook.parent
-
-    community_folder: Path = (
-        mp.core.file_utils.create_or_get_playbooks_root_dir()
-        / mp.core.constants.THIRD_PARTY_REPO_NAME
-        / mp.core.constants.COMMUNITY_DIR_NAME
-    )
-    community_folder.mkdir(parents=True, exist_ok=True)
-    target_path_in_community = community_folder / built_playbook.name
-
-    shutil.move(str(built_playbook), str(target_path_in_community))
-
-    command: list[str] = ["mp", "build", "-p", built_playbook.name, "-d", "--quiet"]
+    command: list[str] = [
+        "mp",
+        "build",
+        "-p",
+        built_playbook.stem,
+        "--src",
+        f"{built_playbook.parent}",
+        "--dst",
+        f"{dst}",
+        "-d",
+        "--quiet",
+    ]
     result = subprocess.run(  # noqa: S603
         command, capture_output=True, check=False, text=True
     )
@@ -241,29 +241,7 @@ def deconstruct_playbook(built_playbook: Path) -> Path:
         rich.print(f"[red]Deconstruct failed:\n{result.stderr}[/red]")
         raise typer.Exit(result.returncode)
 
-    non_built_path: Path = _get_deconstructed_playbook_path(built_playbook.stem)
-    final_destination = original_parent_folder / non_built_path.name
-
-    if final_destination.exists():
-        shutil.rmtree(final_destination)
-
-    shutil.move(str(non_built_path), str(original_parent_folder))
-
-    if target_path_in_community.exists():
-        target_path_in_community.unlink()
-
-    return original_parent_folder / non_built_path.name
-
-
-def _get_deconstructed_playbook_path(playbook_name: str) -> Path:
-    root: Path = mp.core.file_utils.get_playbook_out_base_dir()
-    non_built_playbook: Path = root / mp.core.constants.PLAYBOOK_OUT_DIR_NAME / playbook_name
-
-    if non_built_playbook.exists():
-        return non_built_playbook
-
-    rich.print(f"[red]Non-built playbook '{playbook_name}' not found in {root}")
-    raise typer.Exit(1)
+    return dst / to_snake_case(built_playbook.stem)
 
 
 def unzip_playbooks(
@@ -282,7 +260,6 @@ def unzip_playbooks(
 
     """
     result: list[Path] = []
-    dest.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         for file_info in zip_ref.infolist():
