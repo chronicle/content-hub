@@ -15,15 +15,15 @@ def main():
     # Initialize Integration Configuration
     api_key = siemplify.extract_configuration_param(
         provider_name="DoppelVision",
-        param_name="API_Key",
+        param_name="API Key",
     )
     user_api_key = siemplify.extract_configuration_param(
         provider_name="DoppelVision",
-        param_name="User_API_Key",
+        param_name="User API Key",
     )
     org_code = siemplify.extract_configuration_param(
         provider_name="DoppelVision",
-        param_name="Organization_Code",
+        param_name="Organization Code",
     )
 
     # Debugging: Log the retrieved API key

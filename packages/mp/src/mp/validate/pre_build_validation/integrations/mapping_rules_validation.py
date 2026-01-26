@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
-from mp.core import constants
+from mp.core import constants, exclusions
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.utils import (
     load_components_defs,
@@ -45,7 +45,10 @@ class IntegrationHasMappingRulesIfHasConnectorValidation:
             have mapping rules.
 
         """
-        if validation_path.name in constants.EXCLUDED_INTEGRATIONS_WITH_CONNECTORS_AND_NO_MAPPING:
+        if (
+            validation_path.name
+            in exclusions.get_excluded_integrations_with_connectors_and_no_mapping()
+        ):
             return
 
         component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
