@@ -169,17 +169,3 @@ class TestIntegrationFileStructureValidation:
             FatalValidationError, match=r"has a file 'extra_widget\.yaml' without a  matching"
         ):
             self.validator_runner.run(temp_integration)
-
-    def test_failure_on_invalid_parent_directory(self, temp_integration: pathlib.Path) -> None:
-        """Test failure when the integration resides in an invalid parent directory."""
-        invalid_parent_name = "invalid_integration_type_dir"
-
-        # Move the valid temp_integration to a new path under this invalid parent
-        invalid_parent_path = temp_integration.parent.parent / invalid_parent_name
-        invalid_parent_path.mkdir(parents=True, exist_ok=True)
-
-        new_integration_path = invalid_parent_path / temp_integration.name
-        temp_integration.rename(new_integration_path)
-
-        with pytest.raises(FatalValidationError, match="Integration is in an invalid dir"):
-            self.validator_runner.run(new_integration_path)

@@ -151,6 +151,8 @@ def _filter_command_arguments(kwargs: dict[Any, Any]) -> dict[str, Any]:
     for key, value in kwargs.items():
         if key in ALLOWED_COMMAND_ARGUMENTS:
             sanitized_value = _sanitize_argument_value(value)
+            if isinstance(sanitized_value, Path):
+                sanitized_value = str(sanitized_value)
             if sanitized_value is not None:
                 sanitized_args[key] = sanitized_value
     return sanitized_args
