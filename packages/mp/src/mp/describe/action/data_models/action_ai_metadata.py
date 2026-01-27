@@ -18,7 +18,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .action_fields import ActionCapabilities  # noqa: TC001
+from .action_capabilities import ActionCapabilities  # noqa: TC001
 from .action_tags import ActionTags  # noqa: TC001
 from .entity_usage import EntityUsage  # noqa: TC001
 

@@ -126,7 +126,7 @@ class EntityUsage(BaseModel):
         Field(
             description=(
                 "Whether the code runs on entities and filters the entities it runs on by"
-                " their 'is_enriched' attribute"
+                " their 'is_vulnerable' attribute"
             )
         ),
     ]
@@ -135,7 +135,7 @@ class EntityUsage(BaseModel):
         Field(
             description=(
                 "Whether the code runs on entities and filters the entities it runs on by"
-                " their 'is_vulnerable' attribute"
+                " their 'is_enriched' attribute"
             )
         ),
     ]
