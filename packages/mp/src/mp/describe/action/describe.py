@@ -267,9 +267,9 @@ class DescribeAction:
         return {}
 
     async def _save_metadata(self, metadata: dict[str, Any]) -> None:
-        resource_ai_dir = self.integration / constants.RESOURCES_DIR / "ai"
+        resource_ai_dir = self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
         await resource_ai_dir.mkdir(parents=True, exist_ok=True)
-        metadata_file = resource_ai_dir / "ai_description.yaml"
+        metadata_file = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         await metadata_file.write_text(yaml.dump(metadata))
 
     def _get_out_path(self) -> anyio.Path:

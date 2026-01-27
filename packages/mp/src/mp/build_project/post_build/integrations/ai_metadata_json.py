@@ -35,7 +35,12 @@ def write_actions_ai_metadata_json(out_dir: Path) -> None:
         if not integration_path.is_dir() or integration_path.name.startswith("."):
             continue
 
-        ai_file: Path = integration_path / constants.RESOURCES_DIR / "ai" / "ai_description.yaml"
+        ai_file: Path = (
+            integration_path
+            / constants.RESOURCES_DIR
+            / constants.AI_FOLDER
+            / constants.ACTIONS_AI_DESCRIPTION_FILE
+        )
         if ai_file.exists():
             try:
                 with ai_file.open(encoding="utf-8") as f:
@@ -45,12 +50,12 @@ def write_actions_ai_metadata_json(out_dir: Path) -> None:
             except Exception:
                 logger.exception("Failed to read AI metadata for %s", integration_path.name)
 
-    output_file: Path = out_dir / "actions_ai_metadata.json"
+    output_file: Path = out_dir / constants.AI_META_JSON_FILE
     try:
         with output_file.open("w", encoding="utf-8") as f:
             json.dump(metadata_collection, f, indent=4)
 
-        logger.info("Generated actions_ai_metadata.json at %s", output_file)
+        logger.info("Generated %s at %s", constants.AI_META_JSON_FILE, output_file)
 
     except Exception:
-        logger.exception("Failed to write actions_ai_metadata.json")
+        logger.exception("Failed to write %s", constants.AI_META_JSON_FILE)
