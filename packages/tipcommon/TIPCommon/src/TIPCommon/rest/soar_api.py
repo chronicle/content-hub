@@ -39,7 +39,7 @@ from ..data_models import (
 )
 from ..exceptions import InternalJSONDecoderError
 from ..types import ChronicleSOAR, SingleJson
-from ..utils import none_to_default_value, safe_json_for_204
+from ..utils import get_sdk_api_uri, none_to_default_value, safe_json_for_204
 from .soar_platform_clients.api_client_factory import get_soar_client
 from .soar_platform_clients.legacy_soar_api import LegacySoarApi
 
@@ -185,8 +185,11 @@ def get_connector_cards(
             }
         )
 
-    if isinstance(response_json, dict) and "items" in response_json:
-        return [to_card(card, integration_name) for card in response_json["items"]]
+    if isinstance(response_json, dict) and "connectorInstances" in response_json:
+        return [
+            to_card(card, integration_name)
+            for card in response_json["connectorInstances"]
+        ]
 
     return [
         to_card(card, connector_card.get("integration") or integration_name)
@@ -213,12 +216,11 @@ def list_custom_fields(
         json.JSONDecoderError: If parsing the response fails
 
     """
-    endpoint = "api/1p/external/v1/customFields"
+    url = f"{get_sdk_api_uri(chronicle_soar)}/customFields"
     params = {}
     if filter_ is not None:
         params["$filter"] = filter_
 
-    url = urljoin(chronicle_soar.API_ROOT, endpoint)
     response = chronicle_soar.session.get(url=url, params=params)
 
     try:
@@ -227,7 +229,7 @@ def list_custom_fields(
     except InternalJSONDecoderError:
         return []
 
-    return [CustomField.from_json(item) for item in response.json()["items"]]
+    return [CustomField.from_json(item) for item in response.json()["customFields"]]
 
 
 def list_custom_field_values(
@@ -248,8 +250,7 @@ def list_custom_field_values(
         json.JSONDecoderError: If parsing the response fails
 
     """
-    endpoint = f"api/1p/external/v1/{parent}/customFieldValues"
-    url = urljoin(chronicle_soar.API_ROOT, endpoint)
+    url = f"{get_sdk_api_uri(chronicle_soar)}/{parent}/customFieldValues"
     response = chronicle_soar.session.get(url=url)
 
     try:
@@ -258,7 +259,10 @@ def list_custom_field_values(
     except InternalJSONDecoderError:
         return []
 
-    return [CustomFieldValue.from_json(item) for item in response.json()["items"]]
+    return [
+        CustomFieldValue.from_json(item)
+        for item in response.json()["customFieldValues"]
+    ]
 
 
 def set_custom_field_values(
@@ -279,8 +283,10 @@ def set_custom_field_values(
         CustomFieldValue: CustomFieldValue object
 
     """
-    endpoint = f"api/1p/external/v1/{parent}/customFieldValues/{custom_field_id}"
-    url = urljoin(chronicle_soar.API_ROOT, endpoint)
+    url = (
+        f"{get_sdk_api_uri(chronicle_soar)}/{parent}/customFieldValues/"
+        f"{custom_field_id}"
+    )
     payload = {
         "values": values,
     }
@@ -308,8 +314,7 @@ def batch_set_custom_field_values(
         list[CustomFieldValue]: list of CustomFieldValue objects
 
     """
-    endpoint = f"api/1p/external/v1.0/{parent}/customFieldValues:batchUpdate"
-    url = urljoin(chronicle_soar.API_ROOT, endpoint)
+    url = f"{get_sdk_api_uri(chronicle_soar)}/{parent}/customFieldValues:batchUpdate"
     requests = []
 
     for custom_field_id, custom_field_values in custom_fields_values_mapping.items():
@@ -575,8 +580,8 @@ def _get_instance_details(
 ) -> SingleJson | None:
     """Get instance details by instance name or identifier."""
     if isinstance(instance_data, dict):
-        if "items" in instance_data:
-            return instance_data["items"][0]
+        if "integrationInstances" in instance_data:
+            return instance_data["integrationInstances"][0]
 
         return instance_data
 
@@ -614,8 +619,12 @@ def get_installed_integrations_of_environment(
 
     response = api_client.get_installed_integrations_of_environment()
     validate_response(response)
-    instances = safe_json_for_204(response, default_for_204={"items": []})
-    instances = instances.get("instances", []) or instances.get("items", [])
+    instances = safe_json_for_204(
+        response, default_for_204={"integrationInstances": []}
+    )
+    instances = instances.get("instances", []) or instances.get(
+        "integrationInstances", []
+    )
     return [InstalledIntegrationInstance.from_json(instance) for instance in instances]
 
 
@@ -812,7 +821,7 @@ def get_full_case_details(
     results = response.json()
 
     if case_type == "alert" and isinstance(results, dict):
-        alerts_data = results.pop("caseAlerts", results.pop("case_alrets", []))
+        alerts_data = results.pop("caseAlerts", results.pop("case_alerts", []))
         results["alerts"] = alerts_data
 
     return results
@@ -1167,7 +1176,7 @@ def get_security_events(
 
     else:
         alerts_response = api_client.get_full_case_details()
-        alert_ids = [alert["id"] for alert in alerts_response.json()["items"]]
+        alert_ids = [alert["id"] for alert in alerts_response.json()["caseAlerts"]]
         for alert_id in alert_ids:
             api_client.params.alert_id = alert_id
             response = api_client.get_security_events()
@@ -1507,12 +1516,14 @@ def get_attachments_metadata(
     validate_response(response)
     attachment_data = safe_json_for_204(
         response,
-        default_for_204={"items": []},
+        default_for_204={"caseComments": []},
     )
 
     return [
         AttachmentMetadata.from_json(item)
-        for item in attachment_data.get("items", attachment_data.get("wall_data", []))
+        for item in attachment_data.get(
+            "caseComments", attachment_data.get("wall_data", [])
+        )
     ]
 
 
@@ -1666,6 +1677,8 @@ def get_case_activities(
     result_data = response.json()
     if isinstance(result_data, list):
         return {"items": result_data}
+
+    result_data["items"] = result_data.get("activities", [])
 
     return result_data
 

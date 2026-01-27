@@ -138,7 +138,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def pause_alert_sla(self) -> requests.Response:
         """Pause alert sla"""
         alert = self.get_case_alerts().json()
-        alert_id = alert.get("items")[0].get("id")
+        alert_id = alert.get("caseAlerts")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:pauseSla"
         payload = {
             "message": self.params.message,
@@ -148,7 +148,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def resume_alert_sla(self) -> requests.Response:
         """Resume alert sla"""
         alert = self.get_case_alerts().json()
-        alert_id = alert.get("items")[0].get("id")
+        alert_id = alert.get("caseAlerts")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:resumeSla"
         payload = {
             "message": self.params.message,
@@ -277,7 +277,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             alert_data._content = b"{}"
             return alert_data
 
-        alert_id = alert_data.json()["items"][0].get("id")
+        alert_id = alert_data.json()["caseAlerts"][0].get("id")
         endpoint = f"/cases/{case_id}/caseAlerts/{alert_id}/involvedEvents:formatted"
         return self._make_request(HttpMethod.GET, endpoint)
 
@@ -302,9 +302,16 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = self.params.list_entities_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    def _paginate_results(self, initial_endpoint: str) -> list:
+    def _paginate_results(self, initial_endpoint: str, root_response_key: str) -> list[SingleJson]:
         """Handles paginated API requests, managing tokens and aggregating results.
         Avoids infinite loops by using a controlled loop condition.
+
+        Args:
+            initial_endpoint (str): The initial API endpoint to fetch data from.
+            root_response_key (str): The key in the response JSON where records are stored.
+
+        Returns:
+            list[SingleJson]: A list of all records retrieved across paginated responses.
         """
         all_records = []
         next_token = None
@@ -324,7 +331,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 print(f"Error fetching page: {e}")
                 break
 
-            current_records = response_data.get("custom_lists", response_data.get("items", []))
+            current_records = response_data.get(root_response_key, [])
             all_records.extend(current_records)
 
             next_token = response_data.get("nextPageToken")
@@ -387,7 +394,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
-        return self._paginate_results(initial_endpoint)
+        return self._paginate_results(
+            initial_endpoint=initial_endpoint,
+            root_response_key="customLists"
+        )
 
     def get_traking_list_records_filtered(self) -> SingleJson:
         """Get all tracking list records, filtering by environment AND optional
@@ -410,7 +420,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
-        return self._paginate_results(initial_endpoint)
+        return self._paginate_results(
+            initial_endpoint=initial_endpoint,
+            root_response_key="customLists"
+        )
 
     def execute_bulk_assign(self) -> requests.Response:
         """Execute bulk assign"""
@@ -735,4 +748,4 @@ class OnePlatformSoarApi(BaseSoarApi):
             f"&pageSize={_PAGE_SIZE}"
             "&$orderBy=updateTime asc"
         )
-        return self._paginate_results(initial_endpoint)
+        return self._paginate_results(initial_endpoint=initial_endpoint, root_response_key="cases")
