@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import asyncio
@@ -34,6 +35,8 @@ from mp.core.gemini import Gemini, GeminiConfig
 from mp.core.llm_sdk import LlmSdk
 
 from .data_models.action_ai_metadata import ActionAiMetadata
+from .prompt_constructors.built import BuiltPromptConstructor
+from .prompt_constructors.source import SourcePromptConstructor
 
 if TYPE_CHECKING:
     import pathlib
@@ -42,6 +45,7 @@ if TYPE_CHECKING:
     from rich.progress import Progress
 
     from mp.core.llm_sdk import LlmSdk
+
 
 logger: logging.Logger = logging.getLogger("mp.describe_action")
 
@@ -230,7 +234,7 @@ class DescribeAction:
                 or None if description failed.
 
         """
-        constructor = PromptConstructor.create(
+        constructor = _create_prompt_constructor(
             integration=self.integration,
             integration_name=self.integration_name,
             action_name=action_name,
@@ -279,13 +283,14 @@ class DescribeAction:
 async def _create_llm_session() -> AsyncIterator[LlmSdk]:
     llm_config: GeminiConfig = _create_gemini_config()
     async with Gemini(llm_config) as gemini:
-        system_prompt: str = _get_system_prompt()
+        system_prompt: str = await _get_system_prompt()
         gemini.add_system_prompts_to_session(system_prompt)
         yield gemini
 
 
-def _get_system_prompt() -> str:
-    return "You are an expert in analyzing integration code."
+async def _get_system_prompt() -> str:
+    path: anyio.Path = anyio.Path(__file__).parent / "prompts" / "system.md"
+    return await path.read_text(encoding="utf-8")
 
 
 def _get_integration_path(name: str, *, src: pathlib.Path | None = None) -> anyio.Path:
@@ -319,146 +324,18 @@ def _create_gemini_config() -> GeminiConfig:
     return GeminiConfig()
 
 
-class PromptConstructor:
-    __slots__: tuple[str, ...] = ("action_name", "integration", "integration_name", "out_path")
+def _create_prompt_constructor(
+    integration: anyio.Path,
+    integration_name: str,
+    action_name: str,
+    status: IntegrationStatus,
+) -> BuiltPromptConstructor | SourcePromptConstructor:
+    """Create the object.
 
-    def __init__(
-        self,
-        integration: anyio.Path,
-        integration_name: str,
-        action_name: str,
-        out_path: anyio.Path,
-    ) -> None:
-        self.integration: anyio.Path = integration
-        self.integration_name: str = integration_name
-        self.action_name: str = action_name
-        self.out_path: anyio.Path = out_path
+    Returns:
+        PromptConstructor: The constructed object.
 
-    @classmethod
-    def create(
-        cls,
-        integration: anyio.Path,
-        integration_name: str,
-        action_name: str,
-        status: IntegrationStatus,
-    ) -> PromptConstructor:
-        """Create the object.
-
-        Returns:
-            PromptConstructor: The constructed object.
-
-        """
-        if status.is_built:
-            return BuiltPromptConstructor(
-                integration, integration_name, action_name, status.out_path
-            )
-        return SourcePromptConstructor(integration, integration_name, action_name, status.out_path)
-
-    async def construct(self) -> str:
-        """Construct a prompt for generating action descriptions.
-
-        Returns:
-            str: The constructed prompt.
-
-        """
-        raise NotImplementedError
-
-
-class BuiltPromptConstructor(PromptConstructor):
-    __slots__: tuple[str, ...] = ()
-
-    async def construct(self) -> str:
-        """Construct the prompt for built actions.
-
-        Returns:
-            str: The constructed prompt.
-
-        """
-        prompt_parts: list[str] = []
-        prompt_parts.extend(await self._create_managers_prompt())
-        prompt_parts.extend(await self._create_built_action_prompt())
-        prompt_parts.extend(await self._create_built_action_def_prompt())
-        return "\n\n".join(prompt_parts)
-
-    async def _create_managers_prompt(self) -> list[str]:
-        prompt_parts: list[str] = []
-        managers_dir: anyio.Path = self.out_path / constants.OUT_MANAGERS_SCRIPTS_DIR
-        if await managers_dir.exists():
-            async for manager_file in managers_dir.glob("*.py"):
-                content: str = await manager_file.read_text()
-                prompt_parts.append(f"Manager {manager_file.name}:\n{content}")
-
-        return prompt_parts
-
-    async def _create_built_action_prompt(self) -> list[str]:
-        prompt_parts: list[str] = []
-        action_script: anyio.Path = (
-            self.out_path / constants.OUT_ACTION_SCRIPTS_DIR / f"{self.action_name}.py"
-        )
-        if await action_script.exists():
-            content: str = await action_script.read_text()
-            prompt_parts.append(f"Action Script:\n{content}")
-
-        return prompt_parts
-
-    async def _create_built_action_def_prompt(self) -> list[str]:
-        prompt_parts: list[str] = []
-        action_def: anyio.Path = (
-            self.out_path
-            / constants.OUT_ACTIONS_META_DIR
-            / f"{self.action_name}{constants.ACTIONS_META_SUFFIX}"
-        )
-        if await action_def.exists():
-            content: str = await action_def.read_text()
-            prompt_parts.append(f"Action Definition:\n{content}")
-
-        return prompt_parts
-
-
-class SourcePromptConstructor(PromptConstructor):
-    __slots__: tuple[str, ...] = ()
-
-    async def construct(self) -> str:
-        """Construct the prompt for non-built actions.
-
-        Returns:
-            str: The constructed prompt.
-
-        """
-        prompt_parts: list[str] = []
-        prompt_parts.extend(await self._create_core_packages_prompt())
-        prompt_parts.extend(await self._create_non_built_action_prompt())
-        prompt_parts.extend(await self._create_non_built_action_def_prompt())
-        return "\n\n".join(prompt_parts)
-
-    async def _create_core_packages_prompt(self) -> list[str]:
-        prompt_parts: list[str] = []
-        core_dir: anyio.Path = self.integration / constants.CORE_SCRIPTS_DIR
-        if await core_dir.exists():
-            async for core_file in core_dir.glob("*.py"):
-                content: str = await core_file.read_text()
-                prompt_parts.append(f"Core {core_file.name}:\n{content}")
-
-        return prompt_parts
-
-    async def _create_non_built_action_prompt(self) -> list[str]:
-        prompt_parts: list[str] = []
-        action_script: anyio.Path = (
-            self.integration / constants.ACTIONS_DIR / f"{self.action_name}.py"
-        )
-        if await action_script.exists():
-            content: str = await action_script.read_text()
-            prompt_parts.append(f"Action Script:\n{content}")
-
-        return prompt_parts
-
-    async def _create_non_built_action_def_prompt(self) -> list[str]:
-        prompt_parts: list[str] = []
-        action_yaml: anyio.Path = (
-            self.integration / constants.ACTIONS_DIR / f"{self.action_name}{constants.YAML_SUFFIX}"
-        )
-        if await action_yaml.exists():
-            content: str = await action_yaml.read_text()
-            prompt_parts.append(f"Action YAML:\n{content}")
-
-        return prompt_parts
+    """
+    if status.is_built:
+        return BuiltPromptConstructor(integration, integration_name, action_name, status.out_path)
+    return SourcePromptConstructor(integration, integration_name, action_name, status.out_path)
