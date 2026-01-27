@@ -48,13 +48,13 @@ def main() -> None:
     setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
 
     app: typer.Typer = typer.Typer()
-    app.add_typer(build_project.app, name="build")
-    app.add_typer(check.app, name="check")
+    app.add_typer(build_project.app)
+    app.add_typer(check.app)
     app.add_typer(config.app, name="config")
-    app.add_typer(format_app.app, name="format")
-    app.add_typer(run_pre_build_tests.app, name="test")
+    app.add_typer(format_app.app)
+    app.add_typer(run_pre_build_tests.app)
     app.add_typer(dev_env.app, name="dev-env")
-    app.add_typer(validate.app, name="validate")
+    app.add_typer(validate.app)
     app.add_typer(describe.app, name="describe")
     app()
 

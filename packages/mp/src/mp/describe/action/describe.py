@@ -95,14 +95,15 @@ class DescribeAction:
             progress: An optional Progress object to use for progress reporting.
 
         """
-        metadata: dict[str, Any] = await self._load_metadata()
-        status: IntegrationStatus = await self._get_integration_status()
+        metadata, status = await asyncio.gather(
+            self._load_metadata(), self._get_integration_status()
+        )
 
-        actions_to_process = await self._prepare_actions(status, metadata)
+        actions_to_process: set[str] = await self._prepare_actions(status, metadata)
         if not actions_to_process:
             return
 
-        results = await self._execute_descriptions(
+        results: list[ActionDescriptionResult] = await self._execute_descriptions(
             actions_to_process, status, sem, on_action_done, progress
         )
 
@@ -116,9 +117,10 @@ class DescribeAction:
             int: The number of actions.
 
         """
-        status: IntegrationStatus = await self._get_integration_status()
-        metadata: dict[str, Any] = await self._load_metadata()
-        actions = await self._prepare_actions(status, metadata)
+        status, metadata = await asyncio.gather(
+            self._get_integration_status(), self._load_metadata()
+        )
+        actions: set[str] = await self._prepare_actions(status, metadata)
         return len(actions)
 
     async def _prepare_actions(
@@ -147,8 +149,9 @@ class DescribeAction:
         on_action_done: Callable[[], None] | None = None,
         progress: Progress | None = None,
     ) -> list[ActionDescriptionResult]:
-        tasks = [
-            self._process_single_action(action, status, sem, on_action_done) for action in actions
+        tasks: list[asyncio.Task] = [
+            asyncio.create_task(self._process_single_action(action, status, sem, on_action_done))
+            for action in actions
         ]
         description = f"Describing actions for {self.integration_name}..."
 
@@ -160,14 +163,15 @@ class DescribeAction:
                 progress.advance(task_id)
             progress.remove_task(task_id)
         else:
-            results.extend(
+            results.extend([
                 await coro
                 for coro in track(
                     asyncio.as_completed(tasks),
                     description=description,
                     total=len(tasks),
                 )
-            )
+            ])
+
         return results
 
     async def _process_single_action(
