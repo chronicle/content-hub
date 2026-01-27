@@ -25,6 +25,9 @@ from __future__ import annotations
 
 import typer
 
+from mp.core import config as mp_config
+from mp.core.logging_utils import setup_logging
+
 from . import build_project, check, config, describe, dev_env, run_pre_build_tests, validate
 from . import format as format_app
 
@@ -42,6 +45,8 @@ __all__: list[str] = [
 
 def main() -> None:
     """Entry point for the `mp` CLI tool, initializing all sub-applications."""
+    setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
+
     app: typer.Typer = typer.Typer()
     app.add_typer(build_project.app, name="build")
     app.add_typer(check.app, name="check")

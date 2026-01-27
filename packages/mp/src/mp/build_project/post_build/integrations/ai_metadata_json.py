@@ -19,7 +19,6 @@ import logging
 from typing import TYPE_CHECKING
 
 import yaml
-from rich.logging import RichHandler
 
 from mp.core import constants
 
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 logger: logging.Logger = logging.getLogger("mp.build.ai_metadata")
-logging.basicConfig(level="NOTSET", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 
 
 def write_actions_ai_metadata_json(out_dir: Path) -> None:

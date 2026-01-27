@@ -7,10 +7,13 @@ I have provided the following files for a Google SecOps action:
 **Reference Documentation:**
 
 * **SOAR SDK:** https://github.com/chronicle/soar-sdk/tree/main/src/soar_sdk
-* **Case Manipulation:
-  ** https://docs.cloud.google.com/chronicle/docs/soar/reference/case-manipulation
-* **TIPCommon:
-  ** https://docs.cloud.google.com/chronicle/docs/soar/marketplace-integrations/tipcommon
+* **TIPCommon:** https://github.com/chronicle/content-hub/tree/main/packages/tipcommon/TIPCommon
+* **EnvironmentCommon**:
+  https://github.com/chronicle/content-hub/tree/main/packages/envcommon/EnvironmentCommon
+* **Case Manipulation**:
+  https://docs.cloud.google.com/chronicle/docs/soar/reference/case-manipulation
+* **TIPCommon**:
+  https://docs.cloud.google.com/chronicle/docs/soar/marketplace-integrations/tipcommon
 * **Integrations:** https://docs.cloud.google.com/chronicle/docs/soar/marketplace-integrations
 * **SOAR SDK Docs:**
     * https://docs.cloud.google.com/chronicle/docs/soar/reference/custom-lists

@@ -16,10 +16,10 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from mp.describe.action.data_models.action_fields import ActionFields  # noqa: TC001
+from mp.describe.action.data_models.action_fields import ActionCapabilities  # noqa: TC001
 from mp.describe.action.data_models.action_tags import ActionTags  # noqa: TC001
 
 
 class ActionDescription(BaseModel):
-    fields: ActionFields
+    fields: ActionCapabilities
     tags: ActionTags

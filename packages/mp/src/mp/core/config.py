@@ -27,6 +27,7 @@ from typing import TypeVar
 import typer
 
 import mp.core.constants
+from mp.core.logging_utils import setup_logging
 
 CONFIG_FILE_NAME: str = ".mp_config"
 CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
@@ -34,6 +35,7 @@ CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
 PROCESSES_NUMBER_KEY: str = "processes"
+GEMINI_API_KEY_KEY: str = "gemini_api_key"
 VERBOSE_LOG_KEY: str = "is_verbose"
 QUIET_LOG_KEY: str = "is_quiet"
 DEFAULT_SECTION_NAME: str = "DEFAULT"
@@ -116,6 +118,21 @@ def set_processes_number(n: int, /) -> None:
     _set_config_key(DEFAULT_SECTION_NAME, PROCESSES_NUMBER_KEY, value=n)
 
 
+def get_gemini_api_key() -> str | None:
+    """Get the API key configured for the project.
+
+    Returns:
+        The API key is configured for the project.
+
+    """
+    return _get_config_key(DEFAULT_SECTION_NAME, GEMINI_API_KEY_KEY, str)
+
+
+def set_gemini_api_key(api_key: str, /) -> None:
+    """Set the API key for the project."""
+    _set_config_key(DEFAULT_SECTION_NAME, GEMINI_API_KEY_KEY, value=api_key)
+
+
 def is_verbose() -> bool:
     """Check whether verbose logging is enabled for the project.
 
@@ -170,7 +187,7 @@ def set_is_quiet(*, value: bool) -> None:
     _set_config_key(RUNTIME_SECTION_NAME, QUIET_LOG_KEY, value=b)
 
 
-_T = TypeVar("_T", int | bool | float, Path)
+_T = TypeVar("_T", int, bool, float, Path, str)
 
 
 @functools.lru_cache
@@ -187,6 +204,9 @@ def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
 
     if val_type is Path:
         return val_type(config.get(section, key))
+
+    if val_type is str:
+        return typing.cast("_T | None", config.get(section, key, fallback=None))
 
     msg: str = f"Unsupported type {val_type}"
     raise ValueError(msg)
@@ -246,6 +266,7 @@ class RuntimeParams:
         self.validate()
         set_is_quiet(value=self.quiet)
         set_is_verbose(value=self.verbose)
+        setup_logging(verbose=self.verbose, quiet=self.quiet)
 
     def validate(self) -> None:
         """Validate the runtime parameters.

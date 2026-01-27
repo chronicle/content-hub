@@ -28,7 +28,7 @@ import rich
 
 import mp.core.file_utils
 
-from . import code, dependencies, metadata, scripts
+from . import code, dependencies, metadata, resources, scripts
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -58,6 +58,9 @@ def restructure_integration(
 
         rich.print("Restructuring scripts")
         scripts.Scripts(integration_path, integration_out_path).restructure()
+
+        rich.print("Restructuring resources")
+        resources.Resources(integration_path, integration_out_path).restructure()
 
         rich.print("Restructuring code")
         code.Code(integration_out_path).restructure()

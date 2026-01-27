@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from .entity_types import EntityType  # noqa: TC001
 
 
-class ActionFields(BaseModel):
+class ActionCapabilities(BaseModel):
     description: Annotated[
         str,
         Field(
@@ -29,9 +29,9 @@ class ActionFields(BaseModel):
                 "Detailed description that will be used by LLMs to understand what the action does."
                 " This should be a concise yet informative summary of the action's purpose and"
                 " expected outcome."
-                " Use markdown formatting for clarity."
+                " Use markdown formatting for clarity, as this is a description for LLMs."
             ),
-            min_length=100,
+            min_length=10,
             max_length=5_000,
         ),
     ]
@@ -86,10 +86,10 @@ class ActionFields(BaseModel):
     can_update_entities: Annotated[bool, Field(description="Whether the action updates entities.")]
     can_create_insight: Annotated[bool, Field(description="Whether the action creates insights.")]
     can_create_case_wall_logs: Annotated[
-        bool, Field(description=("Whether the action creates case wall logs."))
+        bool, Field(description="Whether the action creates case wall logs.")
     ]
     can_create_case_comments: Annotated[
-        bool, Field(description=("Whether the action creates case comments."))
+        bool, Field(description="Whether the action creates case comments.")
     ]
     entity_scopes: Annotated[
         list[EntityType],

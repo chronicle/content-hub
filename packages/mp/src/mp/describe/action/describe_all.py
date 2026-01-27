@@ -14,64 +14,70 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from rich.logging import RichHandler
 from rich.progress import track
 
-from mp.core import constants
+import mp.core.config
 from mp.core.custom_types import RepositoryType
-from mp.core.file_utils import get_integrations_repo_base_path
+from mp.core.file_utils import get_integration_base_folders_paths
 from mp.describe.action.describe import DescribeAction
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
 
 
 logger: logging.Logger = logging.getLogger("mp.describe_marketplace")
-logging.basicConfig(level="INFO", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 
 
-async def describe_all_actions() -> None:
+async def describe_all_actions(src: Path | None = None) -> None:
     """Describe all actions in all integrations in the marketplace."""
-    integrations_paths: list[Path] = _get_all_integrations_paths()
-    for integration_path in track(integrations_paths, description="Describing integrations..."):
-        try:
-            await describe_integration(integration_path)
-        except Exception:
-            logger.exception("Failed to describe integration %s", integration_path.name)
+    integrations_paths: list[Path] = _get_all_integrations_paths(src=src)
+    sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_processes_number())
+
+    async def _describe_with_sem(path: Path) -> None:
+        async with sem:
+            try:
+                await describe_integration(path, src=src)
+            except Exception:
+                logger.exception("Failed to describe integration %s", path.name)
+
+    tasks: list[Coroutine[Any, Any, None]] = [
+        _describe_with_sem(path) for path in integrations_paths
+    ]
+    for coro in track(
+        sequence=asyncio.as_completed(tasks),
+        description="Describing integrations...",
+        total=len(tasks),
+    ):
+        await coro
 
 
-async def describe_integration(integration_path: Path) -> None:
+async def describe_integration(integration_path: Path, src: Path | None = None) -> None:
     """Describe all actions in a given integration."""
-    if action_files := _get_action_files(integration_path):
-        await DescribeAction(integration_path.name, set(action_files)).describe_actions()
+    await DescribeAction(integration_path.name, set(), src=src).describe_actions()
 
 
-def _get_action_files(integration_path: Path) -> list[str]:
-    actions_dir: Path = integration_path / constants.ACTIONS_DIR
-    if not actions_dir.exists():
-        return []
+def _get_all_integrations_paths(src: Path | None = None) -> list[Path]:
+    if src:
+        return (
+            [p for p in src.iterdir() if p.is_dir() and not p.name.startswith(".")]
+            if src.exists()
+            else []
+        )
 
-    return [f.stem for f in actions_dir.glob("*.py") if f.name != "__init__.py"]
-
-
-def _get_all_integrations_paths() -> list[Path]:
     paths: list[Path] = []
+    base_paths: list[Path] = []
     for repo_type in [RepositoryType.COMMERCIAL, RepositoryType.THIRD_PARTY]:
-        base_path: Path = get_integrations_repo_base_path(repo_type)
+        base_paths.extend(get_integration_base_folders_paths(repo_type.value))
+
+    for base_path in base_paths:
         if not base_path.exists():
             continue
 
-        if repo_type == RepositoryType.COMMERCIAL:
-            paths.extend([
-                p for p in base_path.iterdir() if p.is_dir() and not p.name.startswith(".")
-            ])
-        else:
-            for sub in base_path.iterdir():
-                if sub.is_dir() and not sub.name.startswith("."):
-                    paths.extend([
-                        p for p in sub.iterdir() if p.is_dir() and not p.name.startswith(".")
-                    ])
+        paths.extend([p for p in base_path.iterdir() if p.is_dir() and not p.name.startswith(".")])
+
     return paths

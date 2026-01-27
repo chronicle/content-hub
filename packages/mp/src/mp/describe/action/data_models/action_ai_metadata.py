@@ -18,14 +18,14 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .action_fields import ActionFields  # noqa: TC001
+from .action_fields import ActionCapabilities  # noqa: TC001
 from .action_tags import ActionTags  # noqa: TC001
 from .entity_usage import EntityUsage  # noqa: TC001
 
 
 class ActionAiMetadata(BaseModel):
-    fields: Annotated[
-        ActionFields,
+    capabilities: Annotated[
+        ActionCapabilities,
         Field(
             description=(
                 "Fields that describe how the action operates. Determine these fields based on the"

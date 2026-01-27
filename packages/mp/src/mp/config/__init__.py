@@ -25,21 +25,18 @@ through the `core.config` module.
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 import rich
 import typer
 
 import mp.core.config
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 __all__: list[str] = ["app", "config"]
 app: typer.Typer = typer.Typer()
 
 
-@app.command(name="config", help="Configure script settings")
+@app.callback(invoke_without_command=True)
 def config(
     root_path: Annotated[
         str | None,
@@ -52,6 +49,14 @@ def config(
         int | None,
         typer.Option(
             help="Configure the number of processes can be run in parallel",
+            show_default=False,
+        ),
+    ] = None,
+    gemini_api_key: Annotated[
+        str | None,
+        typer.Option(
+            "--gemini-api-key",
+            help="Configure the Gemini API key",
             show_default=False,
         ),
     ] = None,
@@ -68,6 +73,7 @@ def config(
     Args:
         root_path: the path to the repository root directory
         processes: the number of processes can be run in parallel
+        gemini_api_key: the Gemini API key
         display_config: whether to display the configuration after making the changes
 
     """
@@ -77,14 +83,20 @@ def config(
     if processes is not None:
         _set_processes_number(processes)
 
+    if gemini_api_key is not None:
+        _set_gemini_api_key(gemini_api_key)
+
     if display_config:
-        p: Path = mp.core.config.get_marketplace_path()
+        p: pathlib.Path = mp.core.config.get_marketplace_path()
         n: int = mp.core.config.get_processes_number()
-        rich.print(f"Marketplace path: {p}\nNumber of processes: {n}")
+        k: str | None = mp.core.config.get_gemini_api_key()
+        if k:
+            k = f"{k[:4]}{'*' * (len(k) - 4)}"
+        rich.print(f"Marketplace path: {p}\nNumber of processes: {n}\nAPI Key: {k}")
 
 
 def _set_marketplace_path(marketplace_path: str) -> None:
-    mp_path: Path = pathlib.Path(marketplace_path).expanduser()
+    mp_path: pathlib.Path = pathlib.Path(marketplace_path).expanduser()
     if not mp_path.exists():
         msg: str = f"Path {mp_path} cannot be found!"
         raise FileNotFoundError(msg)
@@ -102,6 +114,10 @@ def _set_processes_number(processes: int) -> None:
         raise ValueError(msg)
 
     mp.core.config.set_processes_number(processes)
+
+
+def _set_gemini_api_key(api_key: str) -> None:
+    mp.core.config.set_gemini_api_key(api_key)
 
 
 def _is_processes_in_range(processes: int) -> bool:

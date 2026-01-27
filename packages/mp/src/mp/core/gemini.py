@@ -35,7 +35,6 @@ from google.genai.types import (
     ToolListUnion,
     UrlContext,
 )
-from rich.logging import RichHandler
 from tenacity import (
     after_log,
     retry,
@@ -43,6 +42,8 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+
+import mp.core.config
 
 from .llm_sdk import LlmConfig, LlmSdk, T_Schema
 
@@ -53,7 +54,6 @@ if TYPE_CHECKING:
 
 
 logger: logging.Logger = logging.getLogger("mp.gemini")
-logging.basicConfig(level="INFO", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 
 
 class ApiKeyNotFoundError(Exception):
@@ -83,9 +83,12 @@ class GeminiConfig(LlmConfig):
         if gemini_api_key:
             return gemini_api_key
 
+        if mp_api_key := mp.core.config.get_gemini_api_key():
+            return mp_api_key
+
         msg: str = (
             "Could not find a saved Gemini API key in the configuration. "
-            "Please configure it using 'eve config -k'."
+            "Please configure it using 'mp config --gemini-api-key <KEY>'."
         )
         raise ApiKeyNotFoundError(msg) from None
 
