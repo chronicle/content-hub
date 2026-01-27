@@ -49,41 +49,27 @@ class IntegrationTask(NamedTuple):
     initial_action_count: int
 
 
-async def describe_all_actions(src: Path | None = None) -> None:
+async def describe_all_actions(src: Path | None = None, *, override: bool = False) -> None:
     """Describe all actions in all integrations in the marketplace."""
     integrations_paths: list[Path] = _get_all_integrations_paths(src=src)
-    orchestrator = _MarketplaceOrchestrator(src, integrations_paths)
+    orchestrator = _MarketplaceOrchestrator(src, integrations_paths, override=override)
     await orchestrator.run()
 
 
-async def _process_completed_tasks(
-    done_integration_tasks: set[IntegrationTask],
-    progress: Progress,
-    main_task: TaskID,
-) -> None:
-    """Process results and exceptions for completed tasks."""
-    for it in done_integration_tasks:
-        progress.advance(main_task)
-        try:
-            await it.task
-        except Exception:
-            logger.exception(
-                "Failed to describe integration %s",
-                it.integration_name,
-            )
-
-
 class _MarketplaceOrchestrator:
-    def __init__(self, src: Path | None, integrations_paths: list[Path]) -> None:
-        self.src = src
-        self.integrations_paths = integrations_paths
-        self.concurrency = mp.core.config.get_gemini_concurrency()
-        self.action_sem = asyncio.Semaphore(self.concurrency)
-        self.max_active_integrations = max(MAX_ACTIVE_INTEGRATIONS, self.concurrency)
+    def __init__(
+        self, src: Path | None, integrations_paths: list[Path], *, override: bool = False
+    ) -> None:
+        self.src: Path | None = src
+        self.integrations_paths: list[Path] = integrations_paths
+        self.concurrency: int = mp.core.config.get_gemini_concurrency()
+        self.action_sem: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
+        self.max_active_integrations: int = max(MAX_ACTIVE_INTEGRATIONS, self.concurrency)
+        self.override: bool = override
 
-        self.pending_paths = collections.deque(integrations_paths)
+        self.pending_paths: collections.deque[Path] = collections.deque(integrations_paths)
         self.active_tasks: set[IntegrationTask] = set()
-        self.actions_in_flight = 0
+        self.actions_in_flight: int = 0
 
     def _on_action_done(self) -> None:
         self.actions_in_flight -= 1
@@ -109,7 +95,9 @@ class _MarketplaceOrchestrator:
     async def _start_next_integration(self, progress: Progress) -> None:
         """Start describing the next integration in the queue."""
         path: Path = self.pending_paths.popleft()
-        da: DescribeAction = DescribeAction(integration=path.name, actions=set(), src=self.src)
+        da: DescribeAction = DescribeAction(
+            integration=path.name, actions=set(), src=self.src, override=self.override
+        )
 
         # Pre-discover action count to decide if we should start more
         count: int = await da.get_actions_count()
@@ -176,13 +164,21 @@ class _MarketplaceOrchestrator:
                 await _process_completed_tasks(done_integration_tasks, progress, main_task)
 
 
-async def describe_integration(
-    integration_path: Path,
-    src: Path | None = None,
-    action_sem: asyncio.Semaphore | None = None,
+async def _process_completed_tasks(
+    done_integration_tasks: set[IntegrationTask],
+    progress: Progress,
+    main_task: TaskID,
 ) -> None:
-    """Describe all actions in a given integration."""
-    await DescribeAction(integration_path.name, set(), src=src).describe_actions(sem=action_sem)
+    """Process results and exceptions for completed tasks."""
+    for it in done_integration_tasks:
+        progress.advance(main_task)
+        try:
+            await it.task
+        except Exception:
+            logger.exception(
+                "Failed to describe integration %s",
+                it.integration_name,
+            )
 
 
 def _get_all_integrations_paths(src: Path | None = None) -> list[Path]:

@@ -67,6 +67,13 @@ def describe(  # noqa: PLR0913
             help="Log more on runtime.",
         ),
     ] = False,
+    override: Annotated[
+        bool,
+        typer.Option(
+            "--override",
+            help="Rewrite actions that already have their description.",
+        ),
+    ] = False,
 ) -> None:
     """Describe actions in a given integration.
 
@@ -77,6 +84,7 @@ def describe(  # noqa: PLR0913
         src: Customize the source folder to describe from.
         quiet: Quiet log options.
         verbose: Verbose log options.
+        override: Whether to rewrite existing descriptions.
 
     Raises:
         typer.Exit: If neither --integration nor --all is specified.
@@ -93,9 +101,13 @@ def describe(  # noqa: PLR0913
             target_actions = set()
 
         sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
-        asyncio.run(DescribeAction(integration, target_actions, src=src).describe_actions(sem=sem))
+        asyncio.run(
+            DescribeAction(
+                integration, target_actions, src=src, override=override
+            ).describe_actions(sem=sem)
+        )
     elif all_marketplace:
-        asyncio.run(describe_all_actions(src=src))
+        asyncio.run(describe_all_actions(src=src, override=override))
     else:
         rich.print("[red]Please specify either --integration or --all[/red]")
         raise typer.Exit(code=1)
