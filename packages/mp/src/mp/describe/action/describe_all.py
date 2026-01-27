@@ -15,10 +15,19 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import logging
-from typing import TYPE_CHECKING, Any
+from asyncio import Task
+from typing import TYPE_CHECKING, NamedTuple
 
-from rich.progress import track
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskID,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 import mp.core.config
 from mp.core.custom_types import RepositoryType
@@ -26,42 +35,154 @@ from mp.core.file_utils import get_integration_base_folders_paths
 from mp.describe.action.describe import DescribeAction
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
     from pathlib import Path
 
 
 logger: logging.Logger = logging.getLogger("mp.describe_marketplace")
-MAX_INTEGRATION_IN_BATCH: int = 5
+MAX_ACTIVE_INTEGRATIONS: int = 5
+MAX_ACTIVE_TASKS: int = 3
+
+
+class IntegrationTask(NamedTuple):
+    task: asyncio.Task[None]
+    integration_name: str
+    initial_action_count: int
 
 
 async def describe_all_actions(src: Path | None = None) -> None:
     """Describe all actions in all integrations in the marketplace."""
     integrations_paths: list[Path] = _get_all_integrations_paths(src=src)
-    sem: asyncio.Semaphore = asyncio.Semaphore(
-        min(MAX_INTEGRATION_IN_BATCH, mp.core.config.get_processes_number())
-    )
-
-    async def _describe_with_sem(path: Path) -> None:
-        async with sem:
-            try:
-                await describe_integration(path, src=src)
-            except Exception:
-                logger.exception("Failed to describe integration %s", path.name)
-
-    tasks: list[Coroutine[Any, Any, None]] = [
-        _describe_with_sem(path) for path in integrations_paths
-    ]
-    for coro in track(
-        sequence=asyncio.as_completed(tasks),
-        description="Describing integrations...",
-        total=len(tasks),
-    ):
-        await coro
+    orchestrator = _MarketplaceOrchestrator(src, integrations_paths)
+    await orchestrator.run()
 
 
-async def describe_integration(integration_path: Path, src: Path | None = None) -> None:
+async def _process_completed_tasks(
+    done_integration_tasks: set[IntegrationTask],
+    progress: Progress,
+    main_task: TaskID,
+) -> None:
+    """Process results and exceptions for completed tasks."""
+    for it in done_integration_tasks:
+        progress.advance(main_task)
+        try:
+            await it.task
+        except Exception:
+            logger.exception(
+                "Failed to describe integration %s",
+                it.integration_name,
+            )
+
+
+class _MarketplaceOrchestrator:
+    def __init__(self, src: Path | None, integrations_paths: list[Path]) -> None:
+        self.src = src
+        self.integrations_paths = integrations_paths
+        self.concurrency = mp.core.config.get_gemini_concurrency()
+        self.action_sem = asyncio.Semaphore(self.concurrency)
+        self.max_active_integrations = max(MAX_ACTIVE_INTEGRATIONS, self.concurrency)
+
+        self.pending_paths = collections.deque(integrations_paths)
+        self.active_tasks: set[IntegrationTask] = set()
+        self.actions_in_flight = 0
+
+    def _on_action_done(self) -> None:
+        self.actions_in_flight -= 1
+
+    def _can_start_more(self) -> bool:
+        """Check if we have capacity and space in UI to start new integrations.
+
+        Returns:
+            bool: True if we can start more integrations, False otherwise.
+
+        """
+        # We want to have at least 'concurrency' actions in flight (or queued),
+        # But we also want to limit the number of integrations to keep the UI clean.
+        return bool(
+            self.pending_paths
+            and (
+                self.actions_in_flight < self.concurrency
+                or len(self.active_tasks) < MAX_ACTIVE_TASKS
+            )
+            and len(self.active_tasks) < self.max_active_integrations
+        )
+
+    async def _start_next_integration(self, progress: Progress) -> None:
+        """Start describing the next integration in the queue."""
+        path: Path = self.pending_paths.popleft()
+        da: DescribeAction = DescribeAction(integration=path.name, actions=set(), src=self.src)
+
+        # Pre-discover action count to decide if we should start more
+        count: int = await da.get_actions_count()
+        self.actions_in_flight += count
+
+        task: Task[None] = asyncio.create_task(
+            da.describe_actions(
+                sem=self.action_sem, on_action_done=self._on_action_done, progress=progress
+            )
+        )
+        self.active_tasks.add(
+            IntegrationTask(
+                task=task,
+                integration_name=path.name,
+                initial_action_count=count,
+            )
+        )
+
+    async def _wait_for_tasks(self) -> set[IntegrationTask]:
+        """Wait for at least one active task to complete and return done tasks.
+
+        Returns:
+            set[IntegrationTask]: Set of completed tasks.
+
+        """
+        if not self.active_tasks:
+            return set()
+
+        done_tasks, pending_tasks = await asyncio.wait(
+            {it.task for it in self.active_tasks}, return_when=asyncio.FIRST_COMPLETED
+        )
+
+        done_integration_tasks: set[IntegrationTask] = {
+            it for it in self.active_tasks if it.task in done_tasks
+        }
+        self.active_tasks: set[IntegrationTask] = {
+            it for it in self.active_tasks if it.task in pending_tasks
+        }
+
+        return done_integration_tasks
+
+    async def run(self) -> None:
+        """Run the orchestration loop."""
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+        ) as progress:
+            main_task: TaskID = progress.add_task(
+                description="Describing integrations...",
+                total=len(self.integrations_paths),
+            )
+
+            while self.pending_paths or self.active_tasks:
+                while self._can_start_more():
+                    await self._start_next_integration(progress)
+
+                if not self.active_tasks:
+                    break
+
+                done_integration_tasks: set[IntegrationTask] = await self._wait_for_tasks()
+                await _process_completed_tasks(done_integration_tasks, progress, main_task)
+
+
+async def describe_integration(
+    integration_path: Path,
+    src: Path | None = None,
+    action_sem: asyncio.Semaphore | None = None,
+) -> None:
     """Describe all actions in a given integration."""
-    await DescribeAction(integration_path.name, set(), src=src).describe_actions()
+    await DescribeAction(integration_path.name, set(), src=src).describe_actions(sem=action_sem)
 
 
 def _get_all_integrations_paths(src: Path | None = None) -> list[Path]:

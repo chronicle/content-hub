@@ -92,7 +92,8 @@ def describe(  # noqa: PLR0913
         if all_marketplace:
             target_actions = set()
 
-        asyncio.run(DescribeAction(integration, target_actions, src=src).describe_actions())
+        sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
+        asyncio.run(DescribeAction(integration, target_actions, src=src).describe_actions(sem=sem))
     elif all_marketplace:
         asyncio.run(describe_all_actions(src=src))
     else:

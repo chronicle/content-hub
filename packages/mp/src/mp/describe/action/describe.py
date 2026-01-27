@@ -37,7 +37,9 @@ from .data_models.action_ai_metadata import ActionAiMetadata
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
+
+    from rich.progress import Progress
 
     from mp.core.llm_sdk import LlmSdk
 
@@ -57,9 +59,76 @@ class DescribeAction:
         self.integration: anyio.Path = _get_integration_path(integration, src=src)
         self.actions: set[str] = actions
 
-    async def describe_actions(self) -> None:
-        """Describe actions in a given integration."""
+    async def describe_actions(
+        self,
+        sem: asyncio.Semaphore | None = None,
+        on_action_done: Callable[[], None] | None = None,
+        progress: Progress | None = None,
+    ) -> None:
+        """Describe actions in a given integration.
+
+        Args:
+            sem: An optional semaphore to limit concurrent Gemini requests.
+            on_action_done: An optional callback called when an action is finished.
+            progress: An optional Progress object to use for progress reporting.
+
+        """
         metadata = await self._load_metadata()
+        is_built, out_path = await self._get_status_and_out_path()
+
+        if not self.actions:
+            self.actions = await self._get_all_actions(is_built=is_built, out_path=out_path)
+
+        async def _process_action(action_name: str) -> tuple[str, ActionAiMetadata | None]:
+            try:
+                if sem:
+                    async with sem:
+                        return await self._describe_action_with_error_handling(
+                            action_name, out_path, is_built=is_built
+                        )
+                return await self._describe_action_with_error_handling(
+                    action_name, out_path, is_built=is_built
+                )
+            finally:
+                if on_action_done:
+                    on_action_done()
+
+        tasks = [_process_action(action) for action in self.actions]
+
+        description = f"Describing actions for {self.integration_name}..."
+        if progress:
+            task_id = progress.add_task(description, total=len(tasks))
+            for coro in asyncio.as_completed(tasks):
+                action, description_obj = await coro
+                if description_obj is not None:
+                    metadata[action] = description_obj.model_dump(mode="json")
+                progress.advance(task_id)
+            progress.remove_task(task_id)
+        else:
+            for coro in track(
+                asyncio.as_completed(tasks),
+                description=description,
+                total=len(tasks),
+            ):
+                action, description_obj = await coro
+                if description_obj is not None:
+                    metadata[action] = description_obj.model_dump(mode="json")
+
+        await self._save_metadata(metadata)
+
+    async def get_actions_count(self) -> int:
+        """Get the number of actions in the integration.
+
+        Returns:
+            int: The number of actions.
+
+        """
+        if not self.actions:
+            is_built, out_path = await self._get_status_and_out_path()
+            self.actions = await self._get_all_actions(is_built=is_built, out_path=out_path)
+        return len(self.actions)
+
+    async def _get_status_and_out_path(self) -> tuple[bool, anyio.Path]:
         out_path = self._get_out_path()
         is_built = await out_path.exists()
 
@@ -71,33 +140,20 @@ class DescribeAction:
             if await def_file.exists():
                 is_built = True
                 out_path = self.integration
+        return is_built, out_path
 
-        if not self.actions:
-            self.actions = await self._get_all_actions(is_built=is_built, out_path=out_path)
-
-        async def _process_action(action_name: str) -> tuple[str, ActionAiMetadata | None]:
-            try:
-                desc = await self.describe_action(
-                    action_name=action_name, is_built=is_built, out_path=out_path
-                )
-            except Exception:
-                logger.exception("Failed to describe action %s", action_name)
-                return action_name, None
-            else:
-                return action_name, desc
-
-        tasks = [_process_action(action) for action in self.actions]
-
-        for coro in track(
-            asyncio.as_completed(tasks),
-            description=f"Describing actions for {self.integration_name}...",
-            total=len(tasks),
-        ):
-            action, description = await coro
-            if description is not None:
-                metadata[action] = description.model_dump(mode="json")
-
-        await self._save_metadata(metadata)
+    async def _describe_action_with_error_handling(
+        self, action_name: str, out_path: anyio.Path, *, is_built: bool
+    ) -> tuple[str, ActionAiMetadata | None]:
+        try:
+            desc = await self.describe_action(
+                action_name=action_name, is_built=is_built, out_path=out_path
+            )
+        except Exception:
+            logger.exception("Failed to describe action %s", action_name)
+            return action_name, None
+        else:
+            return action_name, desc
 
     async def _get_all_actions(
         self, *, is_built: bool, out_path: anyio.Path | None = None

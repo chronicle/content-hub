@@ -60,6 +60,14 @@ def config(
             show_default=False,
         ),
     ] = None,
+    gemini_concurrency: Annotated[
+        int | None,
+        typer.Option(
+            "--gemini-concurrency",
+            help="Configure the number of concurrent Gemini requests for action description",
+            show_default=False,
+        ),
+    ] = None,
     *,
     display_config: Annotated[
         bool,
@@ -71,6 +79,7 @@ def config(
     """Run the `mp config` command.
 
     Args:
+        gemini_concurrency: the number of concurrent Gemini requests for action description
         root_path: the path to the repository root directory
         processes: the number of processes can be run in parallel
         gemini_api_key: the Gemini API key
@@ -86,13 +95,22 @@ def config(
     if gemini_api_key is not None:
         _set_gemini_api_key(gemini_api_key)
 
+    if gemini_concurrency is not None:
+        _set_gemini_concurrency(gemini_concurrency)
+
     if display_config:
         p: pathlib.Path = mp.core.config.get_marketplace_path()
         n: int = mp.core.config.get_processes_number()
+        c: int = mp.core.config.get_gemini_concurrency()
         k: str | None = mp.core.config.get_gemini_api_key()
         if k:
             k = f"{k[:4]}{'*' * (len(k) - 4)}"
-        rich.print(f"Marketplace path: {p}\nNumber of processes: {n}\nAPI Key: {k}")
+        rich.print(
+            f"Marketplace path: {p}\n"
+            f"Number of processes: {n}\n"
+            f"Gemini concurrency: {c}\n"
+            f"API Key: {k}"
+        )
 
 
 def _set_marketplace_path(marketplace_path: str) -> None:
@@ -118,6 +136,14 @@ def _set_processes_number(processes: int) -> None:
 
 def _set_gemini_api_key(api_key: str) -> None:
     mp.core.config.set_gemini_api_key(api_key)
+
+
+def _set_gemini_concurrency(concurrency: int) -> None:
+    if not isinstance(concurrency, int) or concurrency < 1:
+        msg: str = "Gemini concurrency must be an integer greater than or equal to 1"
+        raise ValueError(msg)
+
+    mp.core.config.set_gemini_concurrency(concurrency)
 
 
 def _is_processes_in_range(processes: int) -> bool:
