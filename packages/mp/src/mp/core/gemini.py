@@ -88,7 +88,7 @@ class GeminiConfig(LlmConfig):
 
         msg: str = (
             "Could not find a saved Gemini API key in the configuration. "
-            "Please configure it using 'mp config --gemini-api-key <KEY>'."
+            "Please configure it using 'mp config --gemini-api-key <KEY>' or set the GEMINI_API_KEY environment variable."
         )
         raise ApiKeyNotFoundError(msg) from None
 
