@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import arrow
-from mp.validate.pre_build_validation.playbooks.overview_roles_validation import ALLOWED_ROLES
 
 from .consts import (
     ALLOWLIST_FILTER,
@@ -22,7 +21,6 @@ from .consts import (
     NUM_OF_MILLI_IN_SEC,
     NUM_OF_SEC_IN_SEC,
 )
-from .encryption import BLOCK_SIZE
 
 
 def filter_list_by_type(array, inner_type):
