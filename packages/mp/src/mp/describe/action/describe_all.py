@@ -31,12 +31,15 @@ if TYPE_CHECKING:
 
 
 logger: logging.Logger = logging.getLogger("mp.describe_marketplace")
+MAX_INTEGRATION_IN_BATCH: int = 5
 
 
 async def describe_all_actions(src: Path | None = None) -> None:
     """Describe all actions in all integrations in the marketplace."""
     integrations_paths: list[Path] = _get_all_integrations_paths(src=src)
-    sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_processes_number())
+    sem: asyncio.Semaphore = asyncio.Semaphore(
+        min(MAX_INTEGRATION_IN_BATCH, mp.core.config.get_processes_number())
+    )
 
     async def _describe_with_sem(path: Path) -> None:
         async with sem:
