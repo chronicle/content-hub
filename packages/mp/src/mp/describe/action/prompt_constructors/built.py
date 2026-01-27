@@ -70,7 +70,7 @@ class BuiltPromptConstructor(PromptConstructor):
             / f"{self.action_name}{constants.ACTIONS_META_SUFFIX}"
         )
         if await action_def.exists():
-            return await action_def.read_text()
+            return await action_def.read_text(encoding="utf-8")
 
         return DEFAULT_FILE_CONTENT
 
@@ -79,6 +79,6 @@ class BuiltPromptConstructor(PromptConstructor):
             self.out_path / constants.OUT_ACTION_SCRIPTS_DIR / f"{self.action_name}.py"
         )
         if await action_script.exists():
-            return await action_script.read_text()
+            return await action_script.read_text(encoding="utf-8")
 
         return DEFAULT_FILE_CONTENT

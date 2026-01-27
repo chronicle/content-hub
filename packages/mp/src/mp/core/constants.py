@@ -174,6 +174,9 @@ SDK_MODULES: frozenset[str] = frozenset({
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",
     "__pycache__",
+    ".ruff_cache",
+    ".pytest_cache",
+    "CACHEDIR.TAG",
 }
 EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
     "chronicle_support_tools",

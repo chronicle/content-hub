@@ -85,7 +85,10 @@ class IntegrationsRepo:
     def write_marketplace_json(self) -> None:
         """Write the marketplace JSON file to the marketplace's out path."""
         write_marketplace_json(self.out_dir)
-        write_actions_ai_metadata_json(self.out_dir)
+
+    def write_actions_ai_metadata_json(self) -> None:
+        """Write the actions AI metadata JSON file to the marketplace's out path."""
+        write_actions_ai_metadata_json(self.out_dir, self.paths)
 
     def build(self) -> None:
         """Build all integrations in the marketplace."""

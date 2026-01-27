@@ -45,9 +45,11 @@ NAME_MAPPER: dict[str, str] = {
     "push_playbook": "dev-env push playbook",
     "pull_playbook": "dev-env pull playbook",
     "push_custom_integration_repository": "dev-env push custom integration repository",
+    "describe_action_with_ai": "describe action",
 }
 
 ALLOWED_COMMAND_ARGUMENTS: set[str] = {
+    "help",
     "repository",
     "integration",
     "playbook",
@@ -70,4 +72,6 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "-i",
     "-p",
     "-d",
+    "all",
+    "override",
 }

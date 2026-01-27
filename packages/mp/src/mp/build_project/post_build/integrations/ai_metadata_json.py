@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -28,15 +28,26 @@ if TYPE_CHECKING:
 logger: logging.Logger = logging.getLogger("mp.build.ai_metadata")
 
 
-def write_actions_ai_metadata_json(out_dir: Path) -> None:
+def write_actions_ai_metadata_json(out_dir: Path, source_paths: list[Path]) -> None:
     """Aggregate ai_description.yaml files from integrations into a single JSON file."""
-    metadata_collection: dict[str, dict[str, str]] = {}
-    for integration_path in out_dir.iterdir():
-        if not integration_path.is_dir() or integration_path.name.startswith("."):
+    metadata_collection: dict[str, dict[str, Any]] = {}
+    for integration_dir in out_dir.iterdir():
+        if not integration_dir.is_dir() or integration_dir.name.startswith("."):
+            continue
+
+        integration_id: str = integration_dir.name
+        # Find source directory
+        source_dir: Path | None = None
+        for base_path in source_paths:
+            if (p := base_path / integration_id).exists():
+                source_dir = p
+                break
+
+        if not source_dir:
             continue
 
         ai_file: Path = (
-            integration_path
+            source_dir
             / constants.RESOURCES_DIR
             / constants.AI_FOLDER
             / constants.ACTIONS_AI_DESCRIPTION_FILE
@@ -45,10 +56,10 @@ def write_actions_ai_metadata_json(out_dir: Path) -> None:
             try:
                 with ai_file.open(encoding="utf-8") as f:
                     if data := yaml.safe_load(f):
-                        metadata_collection[integration_path.name] = data
+                        metadata_collection[integration_id] = {"actions": data}
 
             except Exception:
-                logger.exception("Failed to read AI metadata for %s", integration_path.name)
+                logger.exception("Failed to read AI metadata for %s", integration_id)
 
     output_file: Path = out_dir / constants.AI_META_JSON_FILE
     try:
