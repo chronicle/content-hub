@@ -23,6 +23,7 @@ ALERT_SCORE_INFO = "ALERT_SCORE_INFO"
 ALERT_SCORE = "ALERT_SCORE"
 ALERT_MAX_SCORE = "ALERT_MAX_SCORE"
 ALERT_SEVERITY = "ALERT_SEVERITY"
+# test
 
 SEVERITIES = {"Informational": 0, "Low": 1, "Medium": 2, "High": 3, "Critical": 4}
 SEV_LIST = ["Informational", "Low", "Medium", "High", "Critical"]
