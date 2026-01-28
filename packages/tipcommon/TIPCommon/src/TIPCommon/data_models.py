@@ -2098,7 +2098,7 @@ class Environment:
         if aliases is None:
             try:
                 aliases = json.loads(data.get("aliasesJson") or "[]")
-            except Exception:
+            except json.JSONDecodeError:
                 aliases = []
 
         scopes = data.get("dataAccessScopes")
@@ -2474,8 +2474,7 @@ class CaseCloseReasons:
         return cls(
             identifier=data.get("id"),
             root_cause=data.get("rootCause", ""),
-            close_reason=data.get("forCloseReason", 0)
-                         or data.get("closeReason", 0),
+            close_reason=data.get("forCloseReason") or data.get("closeReason"),
             creation_time_unix_time_in_ms=data.get("creationTimeUnixTimeInMs"),
             modification_time_unix_time_in_ms=data.get("modificationTimeUnixTimeInMs"),
         )
@@ -2583,7 +2582,9 @@ class Blacklist:
             "entityIdentifier": self.entity_identifier,
             "entityType": self.entity_type,
             "action": self.action,
-            "environmentsJson": ",".join(self.environments) if self.environments else "",
+            "environmentsJson": (
+                ",".join(map(str, self.environments)) if self.environments else ""
+            )
         }
 
 
