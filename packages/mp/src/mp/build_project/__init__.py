@@ -223,16 +223,24 @@ def build(  # noqa: PLR0913
         dst=dst,
     )
     params.validate()
+    if src:
+        mp.core.config.set_custom_src(src)
+    if dst:
+        mp.core.config.set_custom_dst(dst)
 
-    if should_preform_integration_logic(integrations, repositories):
-        build_integrations(
-            integrations,
-            repositories,
-            src=src,
-            dst=dst,
-            deconstruct=deconstruct,
-            custom_integration=custom_integration,
-        )
+    try:
+        if should_preform_integration_logic(integrations, repositories):
+            build_integrations(
+                integrations,
+                repositories,
+                src=src,
+                dst=dst,
+                deconstruct=deconstruct,
+                custom_integration=custom_integration,
+            )
 
-    if should_preform_playbook_logic(playbooks, repositories):
-        build_playbooks(playbooks, repositories, src=src, dst=dst, deconstruct=deconstruct)
+        if should_preform_playbook_logic(playbooks, repositories):
+            build_playbooks(playbooks, repositories, src=src, dst=dst, deconstruct=deconstruct)
+    finally:
+        mp.core.config.clear_custom_src()
+        mp.core.config.clear_custom_dst()

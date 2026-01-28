@@ -32,7 +32,7 @@ VALID_REPEATED_FILES: set[str] = {"__init__.py"}
 
 def recreate_dir(path: Path) -> None:
     """Remove the provided directory and create a new one."""
-    if path.exists() and is_path_in_marketplace(path):
+    if path.exists() and is_valid_source_path(path):
         shutil.rmtree(path)
         path.mkdir()
 
@@ -57,24 +57,35 @@ def remove_rglobs_if_exists(*patterns: str, root: Path) -> None:
 
 
 def _remove_path_if_exists(path: Path) -> None:
-    if path.is_file() and is_path_in_marketplace(path):
+    if path.is_file() and is_valid_source_path(path):
         path.unlink(missing_ok=True)
 
-    elif path.is_dir() and path.exists() and is_path_in_marketplace(path):
+    elif path.is_dir() and path.exists() and is_valid_source_path(path):
         shutil.rmtree(path)
 
 
-def is_path_in_marketplace(path: Path) -> bool:
-    """Check whether a path is in the marketplace.
-
-    This is mostly used to ensure any file deletion will not occur outside the
-    boundaries of the configured project.
+def is_valid_source_path(path: Path) -> bool:
+    """Check whether a path is a valid source.
 
     Returns:
         Whether the path is a sub path of the configured marketplace.
 
     """
+    return _is_path_in_marketplace(path) or _is_custom_source(path) or _is_custom_dst(path)
+
+
+def _is_path_in_marketplace(path: Path) -> bool:
     return mp.core.config.get_marketplace_path() in path.parents
+
+
+def _is_custom_source(path: Path) -> bool:
+    custom_src: Path | None = mp.core.config.get_custom_src()
+    return custom_src is not None and (custom_src == path or custom_src in path.parents)
+
+
+def _is_custom_dst(path: Path) -> bool:
+    custom_dst: Path | None = mp.core.config.get_custom_dst()
+    return custom_dst is not None and (custom_dst == path or custom_dst in path.parents)
 
 
 def flatten_dir(path: Path, dest: Path) -> None:
@@ -88,7 +99,7 @@ def flatten_dir(path: Path, dest: Path) -> None:
         FileExistsError: If more than one file with the same name is found
 
     """
-    if path.is_file() and is_path_in_marketplace(path):
+    if path.is_file() and is_valid_source_path(path):
         new_path: Path = dest / path.name
         if new_path.exists():
             if new_path.name in VALID_REPEATED_FILES:
@@ -99,7 +110,7 @@ def flatten_dir(path: Path, dest: Path) -> None:
 
         shutil.copyfile(path, new_path)
 
-    elif path.is_dir() and is_path_in_marketplace(path):
+    elif path.is_dir() and is_valid_source_path(path):
         for child in path.iterdir():
             flatten_dir(child, dest)
 
@@ -107,7 +118,7 @@ def flatten_dir(path: Path, dest: Path) -> None:
 def remove_files_by_suffix_from_dir(dir_: Path, suffix: str) -> None:
     """Remove all files with a specific suffix from a directory."""
     for file in dir_.rglob(f"*{suffix}"):
-        if file.is_file() and is_path_in_marketplace(file):
+        if file.is_file() and is_valid_source_path(file):
             file.unlink(missing_ok=True)
 
 

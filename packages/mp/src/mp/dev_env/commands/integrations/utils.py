@@ -17,7 +17,9 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess  # noqa: S404
+import zipfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import rich
 import typer
@@ -25,14 +27,22 @@ import typer
 import mp.core.constants
 import mp.core.file_utils
 from mp.core.data_models.integrations.integration import Integration
+from mp.core.utils import to_snake_case
+
+if TYPE_CHECKING:
+    from requests.models import Response
 
 
-def get_integration_path(integration: str, *, custom: bool = False) -> Path:
+def get_integration_path(
+    integration: str, src: Path | None = None, *, custom: bool = False
+) -> Path:
     """Find the source path for a given integration.
 
     Args:
         integration: The name of the integration to find.
+        src: Customize source folder to search from.
         custom: Whether to search in the custom repository.
+
 
     Returns:
         The path to the integration's source directory.
@@ -41,6 +51,9 @@ def get_integration_path(integration: str, *, custom: bool = False) -> Path:
         typer.Exit: If the integration directory is not found.
 
     """
+    if src and (src / integration).exists():
+        return src / integration
+
     integrations_root: Path = mp.core.file_utils.create_or_get_integrations_dir()
     if custom:
         source_path = integrations_root / mp.core.constants.CUSTOM_REPO_NAME / integration
@@ -89,11 +102,12 @@ def get_integration_identifier(source_path: Path) -> str:
         return integration_obj.identifier
 
 
-def build_integration(integration: str, *, custom: bool = False) -> None:
+def build_integration(integration: str, src: Path | None = None, *, custom: bool = False) -> None:
     """Invoke the build command for a single integration.
 
     Args:
         integration: The name of the integration to build.
+        src: Customize source folder to build from.
         custom: build integration from the custom repository.
 
     Raises:
@@ -103,6 +117,8 @@ def build_integration(integration: str, *, custom: bool = False) -> None:
     command: list[str] = ["mp", "build", "--integration", integration, "--quiet"]
     if custom:
         command.append("--custom-integration")
+    if src:
+        command.extend(["--src", str(src)])
     result = subprocess.run(  # noqa: S603
         command,
         capture_output=True,
@@ -116,11 +132,14 @@ def build_integration(integration: str, *, custom: bool = False) -> None:
     rich.print(f"Build output:\n{result.stdout}")
 
 
-def find_built_integration_dir(identifier: str, *, custom: bool = False) -> Path:
+def find_built_integration_dir(
+    identifier: str, src: Path | None = None, *, custom: bool = False
+) -> Path:
     """Find the built integration directory.
 
     Args:
         identifier: The integration identifier.
+        src: Customize source folder to search from.
         custom: search integration in the out folder of custom repository.
 
 
@@ -132,20 +151,19 @@ def find_built_integration_dir(identifier: str, *, custom: bool = False) -> Path
 
     """
     root: Path = mp.core.file_utils.create_or_get_out_integrations_dir()
+    if src and (candidate := root / src.name / identifier).exists():
+        return candidate
+
     if custom:
         candidate = root / mp.core.constants.CUSTOM_REPO_NAME / identifier
         if candidate.exists():
             return candidate
 
     for repo in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT:
-        candidate: Path = root / repo / identifier
-        if candidate.exists():
+        if (candidate := root / repo / identifier).exists():
             return candidate
 
-    rich.print(
-        f"[red]Built integration not found for identifier '{identifier}'"
-        " in out/content/integrations.[/red]"
-    )
+    rich.print(f"[red]Built integration not found for identifier '{identifier}' in {root}.[/red]")
     raise typer.Exit(1)
 
 
@@ -246,3 +264,73 @@ def _modify_def_file_to_custom(file: Path) -> None:
 
     except (OSError, json.JSONDecodeError) as e:
         rich.print(f"Failed to process {file}: {e}")
+
+
+def save_integration_as_zip(integration_name: str, resp: Response, dst: Path) -> Path:
+    """Save raw integration data into a ZIP file.
+
+    Args:
+        integration_name: The name of the integration to save.
+        resp: The raw integration data to save.
+        dst: The directory where the ZIP file should be saved.
+
+    Returns:
+        Path: The path to the saved ZIP file.
+
+    """
+    zip_path = dst / f"{integration_name}.zip"
+    zip_path.write_bytes(resp.content)
+    return zip_path
+
+
+def unzip_integration(zip_path: Path, temp_path: Path) -> Path:
+    """Unzips an integration to a destination.
+
+    Args:
+        zip_path: The path to the source ZIP file.
+        temp_path: temp path that the built integration will be extracted to.
+
+    Returns:
+        A path to the successfully extracted folder.
+
+    """
+    dest: Path = temp_path / zip_path.stem
+    dest.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(dest)
+    return dest
+
+
+def deconstruct_integration(built_integration: Path, dst: Path) -> Path:
+    """Deconstructs a built integration and restores the source to its original directory.
+
+    Args:
+        built_integration (Path): Path to the built integration folder.
+        dst (Path): Destination folder.
+
+    Returns:
+        Path: Path to the deconstructed integration.
+
+    Raises:
+        typer.Exit: If the deconstruction subprocess fails.
+
+    """
+    command: list[str] = [
+        "mp",
+        "build",
+        "-i",
+        built_integration.stem,
+        "--src",
+        f"{built_integration.parent}",
+        "--dst",
+        f"{dst}",
+        "-d",
+    ]
+    result = subprocess.run(  # noqa: S603
+        command, capture_output=True, check=False, text=True
+    )
+    if result.returncode != 0:
+        rich.print(f"[red]Deconstruct failed:\n{result.stderr}[/red]")
+        raise typer.Exit(result.returncode)
+
+    return dst / to_snake_case(built_integration.stem)
