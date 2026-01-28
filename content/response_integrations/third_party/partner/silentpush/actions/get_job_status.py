@@ -36,7 +36,8 @@ def main():
         "force_metadata_on": force_metadata_on,
         "force_metadata_off": force_metadata_off,
     }
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
+    # Used to flag back to Siemplify system the action's final status
+    status = EXECUTION_STATE_COMPLETED
     output_message = (
         "output message :"  # human readable message, showed in UI as the action result
     )
