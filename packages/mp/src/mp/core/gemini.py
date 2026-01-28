@@ -14,19 +14,24 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
+import json
 import logging
 import os
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from google import genai
 from google.genai.errors import ClientError
 from google.genai.types import (
+    BatchJob,
     Content,
     GenerateContentConfig,
     GoogleSearch,
     HarmBlockThreshold,
     HarmCategory,
+    InlinedRequest,
+    InlinedResponse,
     Part,
     SafetySetting,
     ThinkingConfig,
@@ -99,6 +104,7 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         super().__init__(config)
         self.client: AsyncClient = genai.client.Client(api_key=self.config.api_key).aio
         self.content: Content = Content(role="user", parts=[])
+        self.bulk_threshold: int = 4
 
     async def __aenter__(self) -> Self:
         return self
@@ -197,9 +203,240 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         for prompt in prompts:
             self.content.parts.append(Part.from_text(text=prompt))
 
-    def create_generate_content_config(
+    @retry(
+        retry=retry_if_not_exception_type(ClientError),
+        stop=stop_after_attempt(4),
+        wait=wait_exponential(),
+        after=after_log(logger, logging.DEBUG),
+    )
+    async def send_bulk_messages(
         self,
-        response_json_schema: str | None = None,
+        prompts: list[str],
+        /,
+        *,
+        response_json_schema: type[T_Schema] | None = None,
+    ) -> list[Any] | tuple[Any] | list[T_Schema | str]:
+        """Send multiple messages to the LLM and get responses.
+
+        Args:
+            prompts: The prompts to send to the LLM.
+            response_json_schema: The JSON schema to use for validation.
+
+        Returns:
+            The LLM responses as a list of strings or Pydantic models.
+
+        """
+        if not prompts:
+            return []
+
+        if len(prompts) <= self.bulk_threshold:
+            return await asyncio.gather(*[
+                self._send_single_message_independent(prompt, response_json_schema)
+                for prompt in prompts
+            ])
+
+        requests: list[InlinedRequest] = self._prepare_batch_requests(prompts, response_json_schema)
+        batch_job: BatchJob = await self._create_batch_job(requests)
+        await self._poll_batch_job(batch_job)
+        return await self._get_batch_results(batch_job, response_json_schema)
+
+    @retry(
+        retry=retry_if_not_exception_type(ClientError),
+        stop=stop_after_attempt(4),
+        wait=wait_exponential(),
+        after=after_log(logger, logging.DEBUG),
+    )
+    async def _send_single_message_independent(
+        self,
+        prompt: str,
+        response_json_schema: type[T_Schema] | None = None,
+    ) -> T_Schema | str:
+        """Send a single message independently of the session history.
+
+        Args:
+            prompt: The prompt to send.
+            response_json_schema: Optional schema for JSON response.
+
+        Returns:
+            The LLM response.
+
+        """
+        schema: dict[str, Any] | None = None
+        if response_json_schema is not None:
+            schema = response_json_schema.model_json_schema()
+
+        config: GenerateContentConfig = self.create_generate_content_config(schema)
+
+        parts: list[Part] = []
+        if self.content.parts:
+            parts.extend(self.content.parts)
+        parts.append(Part.from_text(text=prompt))
+
+        response = await self.client.models.generate_content(
+            model=self.config.model_name,
+            contents=[Content(role="user", parts=parts)],
+            config=config,
+        )
+
+        text: str = response.text or ""
+        if response_json_schema is not None and text:
+            return response_json_schema.model_validate_json(text, by_alias=True)
+
+        return text
+
+    def _prepare_batch_requests(
+        self,
+        prompts: list[str],
+        response_json_schema: type[T_Schema] | None,
+    ) -> list[InlinedRequest]:
+        """Prepare inlined requests for a batch job.
+
+        Args:
+            prompts: The prompts to send.
+            response_json_schema: Optional schema for JSON responses.
+
+        Returns:
+            list[types.InlinedRequest]: The prepared requests.
+
+        """
+        schema: dict[str, Any] | None = None
+        if response_json_schema is not None:
+            schema = response_json_schema.model_json_schema()
+
+        config: GenerateContentConfig = self.create_generate_content_config(schema)
+
+        inlined_requests: list[InlinedRequest] = []
+        for prompt in prompts:
+            parts: list[Part] = []
+            if self.content.parts:
+                parts.extend(self.content.parts)
+            parts.append(Part.from_text(text=prompt))
+
+            inlined_requests.append(
+                InlinedRequest(
+                    model=self.config.model_name,
+                    contents=[Content(role="user", parts=parts)],
+                    config=config,
+                )
+            )
+
+        return inlined_requests
+
+    async def _create_batch_job(self, requests: list[InlinedRequest]) -> BatchJob:
+        """Create a batch job on the Gemini API.
+
+        Args:
+            requests: The requests to include in the batch.
+
+        Returns:
+            types.BatchJob: The created batch job.
+
+        Raises:
+            RuntimeError: If job creation fails.
+
+        """
+        batch_job: BatchJob = await self.client.batches.create(
+            model=self.config.model_name,
+            src=requests,
+        )
+
+        if not batch_job.name:
+            msg: str = "Batch job creation failed: no name returned"
+            raise RuntimeError(msg)
+
+        logger.info("Created batch job: %s", batch_job.name)
+        return batch_job
+
+    async def _poll_batch_job(self, batch_job: BatchJob) -> None:
+        """Poll the batch job until it completes or fails.
+
+        Args:
+            batch_job: The job to poll.
+
+        Raises:
+            RuntimeError: If the job fails or loses its name.
+
+        """
+        while batch_job.state in {
+            "JOB_STATE_PENDING",
+            "JOB_STATE_RUNNING",
+            "JOB_STATE_QUEUED",
+            "JOB_STATE_UNSPECIFIED",
+        }:
+            logger.info("Batch job %s is in state %s, waiting...", batch_job.name, batch_job.state)
+            await asyncio.sleep(10)
+            if not batch_job.name:
+                msg: str = "Batch job lost name during polling"
+                raise RuntimeError(msg)
+
+            batch_job = await self.client.batches.get(name=batch_job.name)
+            logger.debug("Batch job %s state: %s", batch_job.name, batch_job.state)
+
+        if batch_job.state != "JOB_STATE_SUCCEEDED":
+            msg: str = f"Batch job {batch_job.name} failed with state {batch_job.state}"
+            if batch_job.error:
+                msg += f": {batch_job.error}"
+
+            raise RuntimeError(msg)
+
+    async def _get_batch_results(
+        self,
+        batch_job: BatchJob,
+        response_json_schema: type[T_Schema] | None,
+    ) -> list[T_Schema | str]:
+        """Extract results from a completed batch job.
+
+        Args:
+            batch_job: The completed job.
+            response_json_schema: Optional schema for result validation.
+
+        Returns:
+            list[T_Schema | str]: The parsed results.
+
+        Raises:
+            RuntimeError: If no results are found.
+
+        """
+        if not batch_job.dest:
+            msg: str = f"Batch job {batch_job.name} succeeded but no results destination found"
+            raise RuntimeError(msg)
+
+        if batch_job.dest.inlined_responses:
+            return _parse_inlined_responses(batch_job.dest.inlined_responses, response_json_schema)
+
+        if batch_job.dest.file_name:
+            return await self._parse_file_responses(batch_job.dest.file_name, response_json_schema)
+
+        msg: str = f"Batch job {batch_job.name} succeeded but no results found in dest"
+        raise RuntimeError(msg)
+
+    async def _parse_file_responses(
+        self,
+        file_name: str,
+        response_json_schema: type[T_Schema] | None,
+    ) -> list[T_Schema | str]:
+        """Parse file-based responses from a batch job.
+
+        Returns:
+            list[T_Schema | str]: The parsed results.
+
+        """
+        results: list[T_Schema | str] = []
+        output_bytes: bytes = await self.client.files.download(file=file_name)
+        for line in output_bytes.decode().splitlines():
+            if not line.strip():
+                continue
+
+            text: str = _parse_response_line_to_text(line)
+            if response_json_schema is not None and text:
+                results.append(response_json_schema.model_validate_json(text, by_alias=True))
+            else:
+                results.append(text)
+
+        return results
+
+    def create_generate_content_config(
+        self, response_json_schema: str | None = None
     ) -> GenerateContentConfig:
         """Create a GenerateContentConfig object for the Gemini API.
 
@@ -268,3 +505,40 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         return (
             ThinkingConfig(thinking_level=ThinkingLevel.HIGH) if self.config.use_thinking else None
         )
+
+
+def _parse_response_line_to_text(line: str) -> str:
+    data: dict[str, Any] = json.loads(line)
+    response_data: dict[str, Any] = data.get("response")
+    text: str = ""
+    if response_data and response_data.get("candidates"):
+        resp_content: dict[str, Any] = response_data["candidates"][0].get("content", {})
+        parts: list[dict[str, Any]] = resp_content.get("parts", [])
+        if parts:
+            text: str = parts[0].get("text", "")
+
+    return text
+
+
+def _parse_inlined_responses(
+    inline_responses: list[InlinedResponse],
+    response_json_schema: type[T_Schema] | None,
+) -> list[T_Schema | str]:
+    """Parse inlined responses from a batch job.
+
+    Returns:
+        list[T_Schema | str]: The parsed results.
+
+    """
+    results: list[T_Schema | str] = []
+    for inline_response in inline_responses:
+        if not inline_response.response:
+            continue
+
+        text: str = inline_response.response.text or ""
+        if response_json_schema is not None and text:
+            results.append(response_json_schema.model_validate_json(text, by_alias=True))
+        else:
+            results.append(text)
+
+    return results

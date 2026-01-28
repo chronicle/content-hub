@@ -96,6 +96,25 @@ class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig, T_Schema
         """
 
     @abc.abstractmethod
+    async def send_bulk_messages(
+        self,
+        prompts: list[str],
+        /,
+        *,
+        response_json_schema: type[T_Schema] | None = None,
+    ) -> list[T_Schema | str]:
+        """Send multiple messages to the LLM provider in bulk.
+
+        Args:
+            prompts: The prompts to send to the LLM provider.
+            response_json_schema: The JSON schema to validate the responses against.
+
+        Returns:
+            The responses from the LLM provider.
+
+        """
+
+    @abc.abstractmethod
     def clean_session_history(self) -> None:
         """Clean the session history."""
 

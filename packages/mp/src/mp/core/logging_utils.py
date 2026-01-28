@@ -61,7 +61,5 @@ def _configure_queue_logging(root: Logger) -> None:
 
 def _set_other_noisy_loggers_level(*, verbose: bool) -> None:
     extra_level: int = logging.NOTSET if verbose else logging.WARNING
-    logging.getLogger("google").setLevel(extra_level)
-    logging.getLogger("google_genai").setLevel(extra_level)
-    logging.getLogger("urllib3").setLevel(extra_level)
-    logging.getLogger("httpx").setLevel(extra_level)
+    for logger_name in ("google", "google_genai", "urllib3", "httpx"):
+        logging.getLogger(logger_name).setLevel(extra_level)

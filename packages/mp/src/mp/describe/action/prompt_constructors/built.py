@@ -15,7 +15,10 @@
 from __future__ import annotations
 
 import io
+import json
 from typing import TYPE_CHECKING
+
+import toon_format
 
 from mp.core import constants
 
@@ -25,6 +28,8 @@ if TYPE_CHECKING:
     from string import Template
 
     import anyio
+
+    from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata
 
 DEFAULT_FILE_CONTENT: str = "N/A"
 
@@ -70,7 +75,13 @@ class BuiltPromptConstructor(PromptConstructor):
             / f"{self.action_name}{constants.ACTIONS_META_SUFFIX}"
         )
         if await action_def.exists():
-            return await action_def.read_text(encoding="utf-8")
+            content: str = await action_def.read_text(encoding="utf-8")
+            try:
+                data: BuiltActionMetadata = json.loads(content)
+                return toon_format.encode(data)
+
+            except json.JSONDecodeError:
+                return content
 
         return DEFAULT_FILE_CONTENT
 

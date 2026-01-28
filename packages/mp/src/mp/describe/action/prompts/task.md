@@ -240,7 +240,7 @@ results = ticket_manager.create_ticket(title, description)
 — START OF FILE ${json_file_name}—
 
 ```
-$json_file_ontent
+${json_file_content}
 ```
 
 — END OF FILE ${json_file_name}—

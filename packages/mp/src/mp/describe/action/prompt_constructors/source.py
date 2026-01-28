@@ -17,6 +17,9 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING
 
+import toon_format
+import yaml
+
 from mp.core import constants
 
 from .prompt_constructor import PromptConstructor
@@ -26,6 +29,7 @@ if TYPE_CHECKING:
 
     import anyio
 
+    from mp.core.data_models.integrations.action.metadata import NonBuiltActionMetadata
 
 DEFAULT_FILE_CONTENT: str = "N/A"
 
@@ -69,7 +73,13 @@ class SourcePromptConstructor(PromptConstructor):
             self.integration / constants.ACTIONS_DIR / f"{self.action_name}{constants.YAML_SUFFIX}"
         )
         if await action_yaml.exists():
-            return await action_yaml.read_text(encoding="utf-8")
+            content: str = await action_yaml.read_text(encoding="utf-8")
+            try:
+                data: NonBuiltActionMetadata = yaml.safe_load(content)
+                return toon_format.encode(data)
+
+            except yaml.YAMLError:
+                return content
 
         return DEFAULT_FILE_CONTENT
 

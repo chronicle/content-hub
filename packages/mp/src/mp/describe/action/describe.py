@@ -17,39 +17,28 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import pathlib
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
-import anyio
-import typer
 import yaml
-from rich.progress import track
+from rich.progress import TaskID, track
 
 from mp.core import constants
-from mp.core.custom_types import RepositoryType
-from mp.core.file_utils import (
-    create_or_get_out_integrations_dir,
-    get_integration_base_folders_paths,
-)
-from mp.core.gemini import Gemini, GeminiConfig
-from mp.core.llm_sdk import LlmSdk
 
 from .data_models.action_ai_metadata import ActionAiMetadata
 from .prompt_constructors.built import BuiltPromptConstructor
 from .prompt_constructors.source import SourcePromptConstructor
+from .utils import llm, paths
 
 if TYPE_CHECKING:
     import pathlib
     from collections.abc import AsyncIterator, Callable
 
+    import anyio
     from rich.progress import Progress
 
-    from mp.core.llm_sdk import LlmSdk
-
-
-GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
 
 logger: logging.Logger = logging.getLogger("mp.describe_action")
+_PromptConstructor: TypeAlias = BuiltPromptConstructor | SourcePromptConstructor
 
 
 class IntegrationStatus(NamedTuple):
@@ -62,10 +51,71 @@ class ActionDescriptionResult(NamedTuple):
     metadata: ActionAiMetadata | None
 
 
+class RichParams(NamedTuple):
+    """Parameters for rich progress reporting and callbacks."""
+
+    on_action_done: Callable[[], None] | None = None
+    progress: Progress | None = None
+    task_id: TaskID | None = None
+
+
+class DescriptionParams(NamedTuple):
+    """Parameters required to construct an action prompt."""
+
+    integration: anyio.Path
+    integration_name: str
+    action_name: str
+    status: IntegrationStatus
+
+
 def _merge_results(metadata: dict[str, Any], results: list[ActionDescriptionResult]) -> None:
     for result in results:
         if result.metadata is not None:
             metadata[result.action_name] = result.metadata.model_dump(mode="json")
+
+
+def _create_notifier(rich_params: RichParams) -> Callable[[], None]:
+    """Create a notifier function to handle progress and callbacks.
+
+    Args:
+        rich_params: Progress and callback parameters.
+
+    Returns:
+        Callable[[], None]: A function that advances progress and calls the callback.
+
+    """
+
+    def notify() -> None:
+        if rich_params.on_action_done:
+            rich_params.on_action_done()
+        if rich_params.progress and rich_params.task_id:
+            rich_params.progress.advance(rich_params.task_id)
+
+    return notify
+
+
+def _map_bulk_results_to_actions(
+    actions: list[str],
+    valid_indices: list[int],
+    results: list[ActionAiMetadata | str],
+) -> list[ActionDescriptionResult]:
+    """Map Gemini results back to action names.
+
+    Args:
+        actions: Original list of action names.
+        valid_indices: Indices of actions that had valid prompts.
+        results: Results from Gemini for those valid prompts.
+
+    Returns:
+        list[ActionDescriptionResult]: Mapped results.
+
+    """
+    final_results = [ActionDescriptionResult(a, None) for a in actions]
+    for i, result in zip(valid_indices, results, strict=False):
+        final_results[i] = ActionDescriptionResult(
+            actions[i], result if isinstance(result, ActionAiMetadata) else None
+        )
+    return final_results
 
 
 class DescribeAction:
@@ -79,7 +129,7 @@ class DescribeAction:
     ) -> None:
         self.integration_name: str = integration
         self.src: pathlib.Path | None = src
-        self.integration: anyio.Path = _get_integration_path(integration, src=src)
+        self.integration: anyio.Path = paths.get_integration_path(integration, src=src)
         self.actions: set[str] = actions
         self.override: bool = override
 
@@ -107,6 +157,19 @@ class DescribeAction:
                 "All actions in %s already have descriptions. Skipping.", self.integration_name
             )
             return
+
+        if len(actions_to_process) == 1:
+            logger.info(
+                "Describing action %s for %s",
+                next(iter(actions_to_process)),
+                self.integration_name,
+            )
+        else:
+            logger.info(
+                "Describing %d actions for %s",
+                len(actions_to_process),
+                self.integration_name,
+            )
 
         results: list[ActionDescriptionResult] = await self._execute_descriptions(
             actions_to_process, status, sem, on_action_done, progress
@@ -137,12 +200,19 @@ class DescribeAction:
         if not self.override:
             original_count: int = len(self.actions)
             self.actions = {action for action in self.actions if action not in metadata}
-            if len(self.actions) < original_count:
-                logger.info(
-                    "Skipping %d actions that already have a description in %s",
-                    original_count - len(self.actions),
-                    self.integration_name,
-                )
+            skipped_count: int = original_count - len(self.actions)
+            if skipped_count > 0:
+                if skipped_count == 1:
+                    logger.info(
+                        "Skipping 1 action that already has a description in %s",
+                        self.integration_name,
+                    )
+                else:
+                    logger.info(
+                        "Skipping %d actions that already have a description in %s",
+                        skipped_count,
+                        self.integration_name,
+                    )
 
         return self.actions
 
@@ -154,49 +224,148 @@ class DescribeAction:
         on_action_done: Callable[[], None] | None = None,
         progress: Progress | None = None,
     ) -> list[ActionDescriptionResult]:
-        tasks: list[asyncio.Task] = [
-            asyncio.create_task(self._process_single_action(action, status, sem, on_action_done))
-            for action in actions
+        action_list = list(actions)
+        bulks = [
+            action_list[i : i + llm.DESCRIBE_BULK_SIZE]
+            for i in range(0, len(action_list), llm.DESCRIBE_BULK_SIZE)
         ]
-        description = f"Describing actions for {self.integration_name}..."
+
+        if len(actions) == 1:
+            description = f"Describing action {next(iter(actions))} for {self.integration_name}..."
+        else:
+            description = f"Describing actions for {self.integration_name}..."
 
         results: list[ActionDescriptionResult] = []
+
         if progress:
-            task_id = progress.add_task(description, total=len(tasks))
+            task_id = progress.add_task(description, total=len(actions))
+            rich_params = RichParams(on_action_done, progress, task_id)
+            tasks: list[asyncio.Task] = [
+                asyncio.create_task(self._process_bulk_actions(bulk, status, sem, rich_params))
+                for bulk in bulks
+            ]
             for coro in asyncio.as_completed(tasks):
-                results.append(await coro)
-                progress.advance(task_id)
+                results.extend(await coro)
             progress.remove_task(task_id)
         else:
+            rich_params = RichParams(on_action_done)
+            tasks: list[asyncio.Task] = [
+                asyncio.create_task(self._process_bulk_actions(bulk, status, sem, rich_params))
+                for bulk in bulks
+            ]
             results.extend([
-                await coro
-                for coro in track(
+                res
+                for bulk_res in track(
                     asyncio.as_completed(tasks),
                     description=description,
-                    total=len(tasks),
+                    total=len(bulks),
                 )
+                for res in await bulk_res
             ])
 
         return results
 
-    async def _process_single_action(
+    async def _process_bulk_actions(
         self,
-        action_name: str,
+        actions: list[str],
         status: IntegrationStatus,
         sem: asyncio.Semaphore | None = None,
-        on_action_done: Callable[[], None] | None = None,
-    ) -> ActionDescriptionResult:
+        rich_params: RichParams | None = None,
+    ) -> list[ActionDescriptionResult]:
+        if rich_params is None:
+            rich_params = RichParams()
+
+        notify_done: Callable[[], None] = _create_notifier(rich_params)
         try:
-            if sem:
-                async with sem:
-                    return await self._describe_action_with_error_handling(action_name, status)
-            return await self._describe_action_with_error_handling(action_name, status)
-        finally:
-            if on_action_done:
-                on_action_done()
+            async with _maybe_use_semaphore(sem):
+                return await self._describe_actions_bulk_with_error_handling(
+                    actions, status, notify_done
+                )
+
+        except Exception:
+            logger.exception("Failed to process bulk of actions: %s", actions)
+            for _ in actions:
+                notify_done()
+
+            return [ActionDescriptionResult(a, None) for a in actions]
+
+    async def _describe_actions_bulk_with_error_handling(
+        self,
+        actions: list[str],
+        status: IntegrationStatus,
+        notify_done: Callable[[], None],
+    ) -> list[ActionDescriptionResult]:
+        try:
+            results: list[ActionDescriptionResult] = await self.describe_actions_bulk(
+                actions, status
+            )
+        except Exception:
+            logger.exception("Failed to describe actions bulk %s", actions)
+            results: list[ActionDescriptionResult] = [
+                ActionDescriptionResult(a, None) for a in actions
+            ]
+
+        for _ in actions:
+            notify_done()
+
+        return results
+
+    async def describe_actions_bulk(
+        self,
+        actions: list[str],
+        status: IntegrationStatus,
+    ) -> list[ActionDescriptionResult]:
+        """Describe multiple actions of a given integration in bulk.
+
+        Args:
+            actions: The names of the actions to describe.
+            status: The status of the integration.
+
+        Returns:
+            list[ActionDescriptionResult]: The AI-generated metadata for the actions.
+
+        """
+        prompts: list[str] = await self._construct_prompts(actions, status)
+
+        valid_indices: list[int] = [i for i, p in enumerate(prompts) if p]
+        valid_prompts: list[str] = [prompts[i] for i in valid_indices]
+
+        if not valid_prompts:
+            return [ActionDescriptionResult(a, None) for a in actions]
+
+        results: list[ActionAiMetadata | str] = await llm.call_gemini_bulk(valid_prompts)
+        return _map_bulk_results_to_actions(actions, valid_indices, results)
+
+    async def _construct_prompts(self, actions: list[str], status: IntegrationStatus) -> list[str]:
+        """Construct prompts for a list of actions.
+
+        Args:
+            actions: Names of actions.
+            status: Integration status.
+
+        Returns:
+            list[str]: List of constructed prompts.
+
+        """
+        prompts: list[str] = []
+        for action_name in actions:
+            params = DescriptionParams(
+                integration=self.integration,
+                integration_name=self.integration_name,
+                action_name=action_name,
+                status=status,
+            )
+            constructor: _PromptConstructor = _create_prompt_constructor(params)
+            prompt: str = await constructor.construct()
+            if not prompt:
+                logger.warning("Could not construct prompt for action %s", action_name)
+                prompts.append("")
+            else:
+                prompts.append(prompt)
+        return prompts
 
     async def _get_integration_status(self) -> IntegrationStatus:
-        out_path: anyio.Path = self._get_out_path()
+        out_path: anyio.Path = paths.get_out_path(self.integration_name, src=self.src)
         is_built: bool = await out_path.exists()
 
         # If it's not built in the out directory, check if the integration itself is built
@@ -206,27 +375,16 @@ class DescribeAction:
             )
             if await def_file.exists():
                 is_built = True
-                out_path: anyio.Path = self.integration
+                out_path = self.integration
 
         return IntegrationStatus(is_built=is_built, out_path=out_path)
-
-    async def _describe_action_with_error_handling(
-        self, action_name: str, status: IntegrationStatus
-    ) -> ActionDescriptionResult:
-        try:
-            desc = await self.describe_action(action_name=action_name, status=status)
-        except Exception:
-            logger.exception("Failed to describe action %s", action_name)
-            return ActionDescriptionResult(action_name, None)
-        else:
-            return ActionDescriptionResult(action_name, desc)
 
     async def _get_all_actions(self, status: IntegrationStatus) -> set[str]:
         actions: set[str] = set()
         if status.is_built:
-            path = status.out_path / constants.OUT_ACTION_SCRIPTS_DIR
+            path: anyio.Path = status.out_path / constants.OUT_ACTION_SCRIPTS_DIR
         else:
-            path = self.integration / constants.ACTIONS_DIR
+            path: anyio.Path = self.integration / constants.ACTIONS_DIR
 
         if await path.exists():
             async for file in path.glob("*.py"):
@@ -244,18 +402,19 @@ class DescribeAction:
                 or None if description failed.
 
         """
-        constructor: BuiltPromptConstructor | SourcePromptConstructor = _create_prompt_constructor(
+        params = DescriptionParams(
             integration=self.integration,
             integration_name=self.integration_name,
             action_name=action_name,
             status=status,
         )
+        constructor: _PromptConstructor = _create_prompt_constructor(params)
         prompt: str = await constructor.construct()
         if not prompt:
             logger.warning("Could not construct prompt for action %s", action_name)
             return None
 
-        async with _create_llm_session() as gemini:
+        async with llm.create_llm_session() as gemini:
             return await gemini.send_message(
                 prompt,
                 response_json_schema=ActionAiMetadata,
@@ -284,63 +443,9 @@ class DescribeAction:
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         await metadata_file.write_text(yaml.dump(metadata))
 
-    def _get_out_path(self) -> anyio.Path:
-        base_out: anyio.Path = anyio.Path(create_or_get_out_integrations_dir())
-        if self.src:
-            return base_out / self.src.name / self.integration_name
-        return base_out / self.integration_name
-
-
-@contextlib.asynccontextmanager
-async def _create_llm_session() -> AsyncIterator[LlmSdk]:
-    llm_config: GeminiConfig = _create_gemini_config()
-    async with Gemini(llm_config) as gemini:
-        system_prompt: str = await _get_system_prompt()
-        gemini.add_system_prompts_to_session(system_prompt)
-        yield gemini
-
-
-async def _get_system_prompt() -> str:
-    path: anyio.Path = anyio.Path(__file__).parent / "prompts" / "system.md"
-    return await path.read_text(encoding="utf-8")
-
-
-def _get_integration_path(name: str, *, src: pathlib.Path | None = None) -> anyio.Path:
-    if src:
-        return _get_source_integration_path(name, src)
-    return _get_marketplace_integration_path(name)
-
-
-def _get_source_integration_path(name: str, src: pathlib.Path) -> anyio.Path:
-    path = src / name
-    if path.exists():
-        return anyio.Path(path)
-    logger.error("Integration '%s' not found in source '%s'", name, src)
-    raise typer.Exit(1)
-
-
-def _get_marketplace_integration_path(name: str) -> anyio.Path:
-    base_paths: list[pathlib.Path] = []
-    for repo_type in [RepositoryType.COMMERCIAL, RepositoryType.THIRD_PARTY]:
-        base_paths.extend(get_integration_base_folders_paths(repo_type.value))
-
-    for path in base_paths:
-        if (p := path / name).exists():
-            return anyio.Path(p)
-
-    logger.error("Integration '%s' not found in marketplace", name)
-    raise typer.Exit(1)
-
-
-def _create_gemini_config() -> GeminiConfig:
-    return GeminiConfig(model_name=GEMINI_MODEL_NAME)
-
 
 def _create_prompt_constructor(
-    integration: anyio.Path,
-    integration_name: str,
-    action_name: str,
-    status: IntegrationStatus,
+    params: DescriptionParams,
 ) -> BuiltPromptConstructor | SourcePromptConstructor:
     """Create the object.
 
@@ -348,6 +453,28 @@ def _create_prompt_constructor(
         PromptConstructor: The constructed object.
 
     """
-    if status.is_built:
-        return BuiltPromptConstructor(integration, integration_name, action_name, status.out_path)
-    return SourcePromptConstructor(integration, integration_name, action_name, status.out_path)
+    if params.status.is_built:
+        return BuiltPromptConstructor(
+            params.integration, params.integration_name, params.action_name, params.status.out_path
+        )
+    return SourcePromptConstructor(
+        params.integration, params.integration_name, params.action_name, params.status.out_path
+    )
+
+
+@contextlib.asynccontextmanager
+async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncIterator[None]:
+    """Use a context manager that optionally uses semaphore.
+
+    Args:
+        sem: The semaphore to use, or None.
+
+    Yields:
+        None: When the semaphore is acquired or if no semaphore is provided.
+
+    """
+    if sem:
+        async with sem:
+            yield
+    else:
+        yield
