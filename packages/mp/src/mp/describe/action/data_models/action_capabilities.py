@@ -67,7 +67,7 @@ class ActionCapabilities(BaseModel):
         bool,
         Field(
             description=(
-                "Whether the action mutates or changes any data in any external system inside"
+                "Whether the action mutates or changes any data in any internal system inside"
                 " Google SecOps."
             )
         ),
