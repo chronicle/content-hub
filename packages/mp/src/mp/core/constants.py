@@ -82,6 +82,10 @@ OUT_CONNECTORS_META_DIR: str = "Connectors"
 OUT_JOBS_META_DIR: str = "Jobs"
 OUT_WIDGETS_META_DIR: str = "Widgets"
 
+AI_FOLDER: str = "ai"
+ACTIONS_AI_DESCRIPTION_FILE: str = "actions_ai_description.yaml"
+AI_META_JSON_FILE: str = "actions_ai_metadata.json"
+
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"
 JOBS_META_SUFFIX: str = ".jobdef"
@@ -170,6 +174,9 @@ SDK_MODULES: frozenset[str] = frozenset({
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",
     "__pycache__",
+    ".ruff_cache",
+    ".pytest_cache",
+    "CACHEDIR.TAG",
 }
 EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
     "chronicle_support_tools",
