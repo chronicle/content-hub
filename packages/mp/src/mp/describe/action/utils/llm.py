@@ -19,13 +19,13 @@ from typing import TYPE_CHECKING, TypeVar
 
 import anyio
 
-from mp.core.gemini import Gemini, GeminiConfig
+from mp.core.llm.gemini import Gemini, GeminiConfig
 from mp.describe.action.data_models.action_ai_metadata import ActionAiMetadata
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from mp.core.llm_sdk import LlmSdk
+    from mp.core.llm.llm_sdk import LlmSdk
 
 GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
 DESCRIBE_BULK_SIZE: int = 4
