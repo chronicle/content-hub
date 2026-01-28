@@ -58,7 +58,6 @@ class ValidateParams:
 
 
 @app.command(name="integration", help="Validate the content-hub response integrations")
-@app.command(name="i", help="Validate the content-hub response integrations")
 @track_command
 def validate_integration(  # noqa: PLR0913
     integrations: Annotated[
