@@ -151,10 +151,8 @@ def find_built_integration_dir(
 
     """
     root: Path = mp.core.file_utils.create_or_get_out_integrations_dir()
-    if src:
-        candidate = root / src.name / identifier
-        if candidate.exists():
-            return candidate
+    if src and (candidate := root / src.name / identifier).exists():
+        return candidate
 
     if custom:
         candidate = root / mp.core.constants.CUSTOM_REPO_NAME / identifier
@@ -162,8 +160,7 @@ def find_built_integration_dir(
             return candidate
 
     for repo in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT:
-        candidate: Path = root / repo / identifier
-        if candidate.exists():
+        if (candidate := root / repo / identifier).exists():
             return candidate
 
     rich.print(f"[red]Built integration not found for identifier '{identifier}' in {root}.[/red]")
