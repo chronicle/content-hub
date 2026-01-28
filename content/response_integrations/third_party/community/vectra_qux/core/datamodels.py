@@ -66,7 +66,8 @@ class Detection(BaseModel):
         self.entity_name = None
         self.detection_url = data.get("detection_url", "")
         self.detection_url = (
-            self.detection_url.replace(API_VERSION_2_5, "")
+            self.detection_url
+            .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
         )
@@ -416,11 +417,16 @@ class Entity(BaseModel):
         alert_info.priority = self.get_siemplify_severity()
         alert_info.rule_generator = f"{RULE_GENERATOR}: {name}"
         alert_info.source_grouping_identifier = f"{entity_type}#{self.id}"
-        alert_info.start_time = convert_string_to_unix_time(self.last_timestamp)
-        alert_info.end_time = convert_string_to_unix_time(self.last_timestamp)
+        # Add 'Z' suffix to _doc_modified_ts timestamp if not present (for UTC timezone)
+        timestamp_with_tz = (
+            self.last_timestamp
+            if self.last_timestamp.endswith("Z")
+            else f"{self.last_timestamp.split('.')[0]}Z"
+        )
+        alert_info.start_time = convert_string_to_unix_time(timestamp_with_tz)
+        alert_info.end_time = convert_string_to_unix_time(timestamp_with_tz)
         alert_info.events = [
-            dict_to_flat(self.create_event(detection.raw_data))
-            for detection in detections
+            dict_to_flat(self.create_event(detection.raw_data)) for detection in detections
         ]
         alert_info.extensions = dict_to_flat(self.get_extensions(entity_type))
         alert_info.device_product = (

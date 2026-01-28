@@ -80,9 +80,7 @@ def main():
 
         response, assignment_info = vectra_manager.describe_assignment(assignment_id)
 
-        output_message = (
-            f"Successfully retrieved information for assignment ID {assignment_id}."
-        )
+        output_message = f"Successfully retrieved information for assignment ID {assignment_id}."
 
         siemplify.result.add_result_json(json.dumps(response, indent=4))
 

@@ -118,11 +118,9 @@ ENDPOINTS = {
     LIST_OUTCOMES_API_NAME: f"{API_VERSION}/{OUTCOMES}",
     MARK_DETECTION_API_NAME: f"{API_VERSION}/{DETECTIONS}",
     ADD_OUTCOME_API_NAME: f"{API_VERSION}/{OUTCOMES}",
-    RESOLVE_ASSIGNMENT_API_NAME: f"{API_VERSION}/{ASSIGNMENTS}"
-    + "/{assignment_id}/resolve",
+    RESOLVE_ASSIGNMENT_API_NAME: f"{API_VERSION}/{ASSIGNMENTS}" + "/{assignment_id}/resolve",
     ADD_NOTE_API_NAME: f"{API_VERSION}" + "/{entity_type}/{entity_id}/notes",
-    REMOVE_NOTE_API_NAME: f"{API_VERSION}"
-    + "/{entity_type}/{entity_id}/notes/{note_id}",
+    REMOVE_NOTE_API_NAME: f"{API_VERSION}" + "/{entity_type}/{entity_id}/notes/{note_id}",
     SEARCH_DETECTIONS_API_NAME: f"{API_VERSION}/{DETECTIONS}",
     DOWANLOAD_PCAP_API_NAME: f"{API_VERSION}/{DETECTIONS}" + "/{detection_id}/pcap",
     UPDATE_GROUP_MEMBERS_API_NAME: f"{API_VERSION}/{GROUPS}" + "/{group_id}",

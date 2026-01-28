@@ -59,9 +59,7 @@ def main():
                 all_cases = False
 
         environments = [env.strip() for env in environments.split(",") if env.strip()]
-        product_names = [
-            product.strip() for product in product_names.split(",") if product.strip()
-        ]
+        product_names = [product.strip() for product in product_names.split(",") if product.strip()]
 
         # Check if required fields are provided or not
         if not (environments and product_names):

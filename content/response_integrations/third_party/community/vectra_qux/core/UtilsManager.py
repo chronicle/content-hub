@@ -185,9 +185,7 @@ class HandleExceptions:
         if status_code == 400:
             # Extract the error message from the response
             field_name = list(error_response.keys())[0]
-            error_msg = (
-                f"Error in field '{field_name}': {error_response[field_name][0]}"
-            )
+            error_msg = f"Error in field '{field_name}': {error_response[field_name][0]}"
             return BadRequestException, error_msg
 
         # Raise a common exception if no specific exception is found
@@ -244,9 +242,7 @@ class HandleExceptions:
         status_code = self.response.status_code
 
         if status_code == 414:
-            error_msg = (
-                "The combined length of all parameter values exceeds the allowed limit."
-            )
+            error_msg = "The combined length of all parameter values exceeds the allowed limit."
             return LongURIException, error_msg
 
         return self.common_exception()
@@ -285,9 +281,7 @@ class HandleExceptions:
             if isinstance(error, list):
                 pattern1 = r"members value '([^']*)' is invalid\."
                 pattern2 = r"IP address is not valid: (.*)"
-                group_type = (
-                    "domain" if error and error[0].startswith("members") else "IP"
-                )
+                group_type = "domain" if error and error[0].startswith("members") else "IP"
                 for err in error:
                     match1 = re.search(pattern1, err)
                     match2 = re.search(pattern2, err)
@@ -366,9 +360,7 @@ def extract_fields(response, mandatory_fields):
     :return: The extracted fields as a dictionary
     """
     updated_response = {
-        key: value
-        for key, value in response.items()
-        if not isinstance(value, (dict, list))
+        key: value for key, value in response.items() if not isinstance(value, (dict, list))
     }
 
     present_fields = {key: response[key] for key in mandatory_fields if key in response}
@@ -421,9 +413,7 @@ def process_action_parameter(action_parameter):
     return (
         list(
             set(
-                parameter.strip()
-                for parameter in action_parameter.split(",")
-                if parameter.strip()
+                parameter.strip() for parameter in action_parameter.split(",") if parameter.strip()
             ),
         )
         if action_parameter
@@ -498,16 +488,12 @@ def get_last_success_time_for_job(
 
     # Calculate the result based on the offset
     datetime_result = (
-        current_time - offset
-        if current_time - last_run_timestamp > offset
-        else last_run_timestamp
+        current_time - offset if current_time - last_run_timestamp > offset else last_run_timestamp
     )
 
     # Convert result to Unix time
     unix_result = convert_datetime_to_unix_time(current_time - offset)
-    unix_result = (
-        unix_result if not microtime else int(unix_result / NUM_OF_MILLI_IN_SEC)
-    )
+    unix_result = unix_result if not microtime else int(unix_result / NUM_OF_MILLI_IN_SEC)
 
     if print_value:
         siemplify.LOGGER.info(f"Last success time. Date time:{datetime_result}.")
@@ -835,7 +821,9 @@ def find_identical_alerts(siemplify, cases):
                     siemplify.LOGGER.info(
                         f"Case {case_id} can be closed; identical alerts found: {identical_alerts}",
                     )
-                    comment = f"Closing case - {case_id} as identical alerts found: {identical_alerts}"
+                    comment = (
+                        f"Closing case - {case_id} as identical alerts found: {identical_alerts}"
+                    )
                     closed_cases_count += close_case_as_not_malicious(
                         case_id,
                         comment,

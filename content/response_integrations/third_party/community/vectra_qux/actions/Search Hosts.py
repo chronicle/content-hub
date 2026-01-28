@@ -255,9 +255,7 @@ def main():
         privilege_level_gte = validator(privilege_level_gte, name="Privilege Level")
         limit = validator(limit, zero_allowed=True, name="Limit")
         privilege_category = privilege_category.lower() if privilege_category else None
-        is_targeting_key_asset = (
-            is_targeting_key_asset.lower() if is_targeting_key_asset else None
-        )
+        is_targeting_key_asset = is_targeting_key_asset.lower() if is_targeting_key_asset else None
         state = state.lower() if state else None
         active_traffic = active_traffic.lower() if active_traffic else None
 
@@ -290,9 +288,7 @@ def main():
             output_message = "No hosts were found with the provided parameters."
             siemplify.result.add_result_json({})
         else:
-            output_message = (
-                f"Successfully retrieved the details for {len(hosts)} hosts"
-            )
+            output_message = f"Successfully retrieved the details for {len(hosts)} hosts"
 
             mendatory_fields = [
                 "id",
