@@ -100,9 +100,9 @@ class BaseAsyncSoarApi:
             httpx.Response: The HTTP response object.
 
         Raises:
-        httpx.HTTPStatusError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
         """
-        return await self._make_request(HttpMethod.GET, endpoint, params=params)
+        return await self._make_request(HttpMethod.GET.value, endpoint, params=params)
 
     async def post(
         self,
@@ -121,7 +121,7 @@ class BaseAsyncSoarApi:
         Raises:
             httpx.HTTPStatusError: If the API request fails.
         """
-        return await self._make_request(HttpMethod.POST, endpoint, payload=payload)
+        return await self._make_request(HttpMethod.POST.value, endpoint, payload=payload)
 
     async def patch(
         self,
@@ -143,7 +143,7 @@ class BaseAsyncSoarApi:
             httpx.HTTPStatusError: If the API request fails.
         """
         return await self._make_request(
-            HttpMethod.PATCH,
+            HttpMethod.PATCH.value,
             endpoint,
             payload=payload,
             params=params,
@@ -161,4 +161,4 @@ class BaseAsyncSoarApi:
         Raises:
             httpx.HTTPStatusError: If the API request fails.
         """
-        return await self._make_request(HttpMethod.DELETE, endpoint)
+        return await self._make_request(HttpMethod.DELETE.value, endpoint)
