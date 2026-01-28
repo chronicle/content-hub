@@ -9,6 +9,7 @@ For a high-level overview and workflow, see the [Main README](../README.md).
 - [**Build**](commands/build.md): Build integrations or playbooks.
 - [**Check**](commands/check.md): Lint and check code quality.
 - [**Config**](commands/config.md): Configure `mp` settings.
+- [**Describe**](commands/describe.md): Generate AI action descriptions.
 - [**Format**](commands/format.md): Format Python code.
 - [**Test**](commands/test.md): Run integration tests.
 - [**Validate**](commands/validate.md): Validate integration structure.
@@ -23,4 +24,5 @@ mp --help
 ```
 
 > [!NOTE]
-> **Windows Users**: Please use the `wmp` command (e.g., `wmp --help`) instead of `mp` to avoid conflicts with default system aliases.
+> **Windows Users**: Please use the `wmp` command (e.g., `wmp --help`) instead of
+`mp` to avoid conflicts with default system aliases.

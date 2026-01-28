@@ -29,7 +29,18 @@ from .describe_all import describe_all_actions
 app = typer.Typer(help="Commands for describing actions")
 
 
-@app.command(name="action")
+@app.command(
+    name="action",
+    help="Describe actions in an integration or across the entire marketplace using Gemini.",
+    epilog=(
+        "Examples:\n\n"
+        "    $ mp describe action ping get_logs -i aws_ec2\n\n"
+        "    $ mp describe action -i aws_ec2 --all\n\n"
+        "    $ mp describe action --all\n\n"
+        "    $ mp describe action --all --src ./custom_folder\n\n"
+    ),
+    no_args_is_help=True,
+)
 def describe(  # noqa: PLR0913
     actions: Annotated[list[str] | None, typer.Argument(help="Action names")] = None,
     integration: Annotated[
