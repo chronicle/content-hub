@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import rich
 import typer
@@ -38,6 +38,10 @@ def push_integration(
         str,
         typer.Argument(help="Integration to build and push."),
     ],
+    src: Annotated[
+        Path | None,
+        typer.Option(help="Source folder, where the content will be pushed from."),
+    ] = None,
     *,
     is_staging: Annotated[
         bool,
@@ -47,42 +51,31 @@ def push_integration(
         bool,
         typer.Option(help="Push integration from the custom repository."),
     ] = False,
+    keep_zip: Annotated[
+        bool,
+        typer.Option("--keep-zip", help="Keep the integration zip file after pulling."),
+    ] = False,
 ) -> None:
-    """Build and push an integration to the dev environment (playground).
+    """Build and push an integration to the dev environment.
 
     Args:
         integration: The integration to build and push.
+        src: Source folder, where the content will be pushed from.
         is_staging: Add this option to push integration in to staging mode.
         custom: Add this option to push integration from the custom repository.
+        keep_zip: Keep the integration zip file after pulling.
+
+    Raises:
+        typer.Exit: If the upload fails.
 
     """
-    utils.build_integration(integration, custom=custom)
+    utils.build_integration(integration, src=src, custom=custom)
 
-    zip_path: Path = _zip_integration(integration, custom=custom)
-
-    _push_zip_to_soar(zip_path, is_staging=is_staging)
-
-
-def _zip_integration(integration: str, *, custom: bool) -> Path:
-    source_path: Path = utils.get_integration_path(integration, custom=custom)
-    identifier: str = utils.get_integration_identifier(source_path)
-    built_dir: Path = utils.find_built_integration_dir(identifier, custom=custom)
-    minor_version_bump(built_dir, source_path, identifier)
-    zip_path: Path = utils.zip_integration_dir(built_dir, custom=custom)
+    zip_path: Path = _zip_integration(integration, src=src, custom=custom)
     rich.print(f"Zipped built integration at {zip_path}")
-    return zip_path
-
-
-def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> None:
-    config = load_dev_env_config()
-    backend_api: BackendAPI = get_backend_api(config)
 
     try:
-        details = backend_api.get_integration_details(zip_path, is_staging=is_staging)
-        result = backend_api.upload_integration(
-            zip_path, details["identifier"], is_staging=is_staging
-        )
-        zip_path.unlink()
+        result = _push_zip_to_soar(zip_path, is_staging=is_staging)
         rich.print(f"Upload result: {result}")
         rich.print("[green]✅ Integration pushed successfully.[/green]")
 
@@ -90,6 +83,26 @@ def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> None:
         error_message = f"Upload failed for {zip_path.stem}: {e}"
         rich.print(f"[red]{error_message}[/red]")
         raise typer.Exit(1) from e
+
+    finally:
+        if not keep_zip:
+            zip_path.unlink()
+
+
+def _zip_integration(integration: str, src: Path | None = None, *, custom: bool) -> Path:
+    source_path: Path = utils.get_integration_path(integration, src=src, custom=custom)
+    identifier: str = utils.get_integration_identifier(source_path)
+    built_dir: Path = utils.find_built_integration_dir(identifier, src=src, custom=custom)
+    minor_version_bump(built_dir, source_path, identifier)
+    zip_path: Path = utils.zip_integration_dir(built_dir, custom=(bool(src) or custom))
+    return zip_path
+
+
+def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> dict[str, Any]:
+    config = load_dev_env_config()
+    backend_api: BackendAPI = get_backend_api(config)
+    details = backend_api.get_integration_details(zip_path, is_staging=is_staging)
+    return backend_api.upload_integration(zip_path, details["identifier"], is_staging=is_staging)
 
 
 @push_app.command(name="custom-integration-repository")

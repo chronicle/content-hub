@@ -34,6 +34,8 @@ CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
 
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
+CUSTOM_SRC_KEY: str = "src"
+CUSTOM_DST_KEY: str = "dst"
 PROCESSES_NUMBER_KEY: str = "processes"
 GEMINI_API_KEY_KEY: str = "gemini_api_key"
 GEMINI_CONCURRENCY_KEY: str = "gemini_concurrency"
@@ -85,6 +87,54 @@ def set_marketplace_path(p: Path, /) -> None:
         MARKETPLACE_PATH_KEY,
         value=p.resolve().absolute().expanduser(),
     )
+
+
+def get_custom_src() -> Path | None:
+    """Get the custom source path if configured.
+
+    Returns:
+        The custom source path as a `pathlib.Path` object, or None if not set.
+
+    """
+    return _get_config_key(RUNTIME_SECTION_NAME, CUSTOM_SRC_KEY, Path)
+
+
+def set_custom_src(p: Path, /) -> None:
+    """Set the custom source path."""
+    _set_config_key(
+        RUNTIME_SECTION_NAME,
+        CUSTOM_SRC_KEY,
+        value=p.resolve().absolute().expanduser(),
+    )
+
+
+def clear_custom_src() -> None:
+    """Clear the custom source path from the configuration."""
+    _remove_config_key(RUNTIME_SECTION_NAME, CUSTOM_SRC_KEY)
+
+
+def get_custom_dst() -> Path | None:
+    """Get the custom destination path if configured.
+
+    Returns:
+        The custom destination path as a `pathlib.Path` object, or None if not set.
+
+    """
+    return _get_config_key(RUNTIME_SECTION_NAME, CUSTOM_DST_KEY, Path)
+
+
+def set_custom_dst(p: Path, /) -> None:
+    """Set the custom destination path."""
+    _set_config_key(
+        RUNTIME_SECTION_NAME,
+        CUSTOM_DST_KEY,
+        value=p.resolve().absolute().expanduser(),
+    )
+
+
+def clear_custom_dst() -> None:
+    """Clear the custom destination path from the configuration."""
+    _remove_config_key(RUNTIME_SECTION_NAME, CUSTOM_DST_KEY)
 
 
 def get_local_packages_path() -> Path:
@@ -211,17 +261,22 @@ _T = TypeVar("_T", int, bool, float, Path, str)
 @functools.lru_cache
 def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
     config: configparser.ConfigParser = _read_config_if_exists_or_create_defaults()
-    if val_type is bool:
-        return typing.cast("_T | None", config[section].getboolean(key))
+    try:
+        if val_type is bool:
+            return typing.cast("_T | None", config[section].getboolean(key))
 
-    if val_type is int:
-        return typing.cast("_T | None", config[section].getint(key))
+        if val_type is int:
+            return typing.cast("_T | None", config[section].getint(key))
 
-    if val_type is float:
-        return typing.cast("_T | None", config[section].getfloat(key))
+        if val_type is float:
+            return typing.cast("_T | None", config[section].getfloat(key))
 
-    if val_type is Path:
-        return val_type(config.get(section, key))
+        if val_type is Path:
+            val = config.get(section, key, fallback=None)
+            return val_type(val) if val else None
+
+    except (configparser.NoOptionError, configparser.NoSectionError, KeyError):
+        return None
 
     if val_type is str:
         return typing.cast("_T | None", config.get(section, key, fallback=None))
@@ -232,8 +287,18 @@ def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
 
 def _set_config_key(section: str, key: str, *, value: str | bool | int | Path) -> None:
     config: configparser.ConfigParser = _read_config_if_exists_or_create_defaults()
+    if section not in config:
+        config.add_section(section)
     config[section][key] = str(value)
     _write_config_to_file(config)
+    _get_config_key.cache_clear()
+
+
+def _remove_config_key(section: str, key: str) -> None:
+    config: configparser.ConfigParser = _read_config_if_exists_or_create_defaults()
+    if section in config and config.remove_option(section, key):
+        _write_config_to_file(config)
+        _get_config_key.cache_clear()
 
 
 def _read_config_if_exists_or_create_defaults() -> configparser.ConfigParser:
