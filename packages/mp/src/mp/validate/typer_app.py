@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from __future__ import annotations
 
 import typer
 
-from .commands.deprecated.typer_app import validate as validate_deprecated
-from .commands.integrations.typer_app import app as validate_integrations
-from .commands.playbooks.typer_app import app as validate_playbooks
-from .commands.repository.typer_app import app as validate_repository
+from .sub_commands.deprecated.validate import validate as validate_deprecated
+from .sub_commands.integrations.validate import app as validate_integrations
+from .sub_commands.playbooks.validate import app as validate_playbooks
+from .sub_commands.repository.validate import app as validate_repository
 
 validate_app: typer.Typer = typer.Typer(
     name="validate", help="Command that runs the validation on the content-hub."

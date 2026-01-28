@@ -39,10 +39,8 @@ if TYPE_CHECKING:
     from mp.core.config import RuntimeParams
 
 __all__: list[str] = [
-    "app",
     "validate",
 ]
-app: typer.Typer = typer.Typer()
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -84,7 +82,6 @@ class ValidateParams:
             raise typer.BadParameter(msg)
 
 
-@app.callback(invoke_without_command=True, help="Validate the marketplace")
 @track_command
 def validate(  # noqa: PLR0913
     ctx: typer.Context,
