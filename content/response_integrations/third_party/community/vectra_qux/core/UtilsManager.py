@@ -869,3 +869,14 @@ def process_action_parameter_integer(action_parameter, field_name):
             if parameter.strip()
         ]
     return []
+
+
+def datetime_convert(input_datetime):
+    # Parse the timestamp with microseconds
+    dt = datetime.datetime.strptime(input_datetime, "%Y-%m-%dT%H:%M:%S.%f")
+
+    # Convert to UTC and drop microseconds
+    dt = dt.replace(tzinfo=datetime.timezone.utc, microsecond=0)
+
+    # Format in the desired output
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
