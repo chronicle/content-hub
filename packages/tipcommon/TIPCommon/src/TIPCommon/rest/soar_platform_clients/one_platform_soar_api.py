@@ -826,7 +826,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             return []
         try:
             data = response.json()
-        except Exception:
+        except json.JSONDecodeError:
             return []
         return data.get("domains", [])
 
@@ -840,7 +840,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Get environment names"""
         endpoint = "/system/settings/environments"
         response = self._make_request(HttpMethod.GET, endpoint)
-        return [evn_name["displayName"] for evn_name in response.json()["environments"]]
+        return [
+            evn_name.get("displayName")
+            for evn_name in response.json().get("environments", [])
+        ]
 
     def get_environments(self) -> requests.Response:
         """Get environments"""

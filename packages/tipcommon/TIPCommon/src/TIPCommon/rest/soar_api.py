@@ -1760,7 +1760,7 @@ def get_env_dynamic_parameters(chronicle_soar: ChronicleSOAR) -> list[SingleJson
         if isinstance(response_data, dict) and "dynamic_parameters" in response_data:
             return response_data["dynamic_parameters"]
     except InternalJSONDecoderError:
-        return {}
+        return []
 
     return response_data
 
@@ -1913,7 +1913,7 @@ def get_environments(
     search_term: str = "",
     requested_page: int = 0,
     page_size: int = 100,
-) -> Environment:
+) -> list[Environment]:
     """Get environments"""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.searchTerm = search_term
@@ -2030,7 +2030,7 @@ def add_close_reason(
         validate_response(response, validate_json=False)
         return response.json()
     except (HTTPError, InternalJSONDecoderError):
-        return []
+        return {}
 
 
 def get_networks(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
@@ -2092,7 +2092,7 @@ def get_custom_lists(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
         if isinstance(raw_data, dict) and "custom_lists" in raw_data:
             return raw_data["custom_lists"]
     except InternalJSONDecoderError:
-        return {}
+        return []
 
     return raw_data
 
@@ -2153,7 +2153,7 @@ def update_sla_record(
         return {}
     try:
         return safe_json_for_204(response, default_for_204={})
-    except Exception:
+    except (ValueError, InternalJSONDecoderError):
         return {}
 
 
@@ -2442,7 +2442,7 @@ def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
                 return parsed.get("sla_definitions", []) or []
             except (ValueError, InternalJSONDecoderError):
                 return []
-    except Exception:
+    except (ValueError, InternalJSONDecoderError):
         return []
 
     return []
@@ -2456,7 +2456,7 @@ def get_all_model_block_records(chronicle_soar: ChronicleSOAR) -> list[SingleJso
         validate_response(response, validate_json=True)
         return response.json()
     except InternalJSONDecoderError:
-        return {}
+        return []
 
 def get_company_logo(chronicle_soar: ChronicleSOAR) -> SingleJson:
     """Get company logo."""

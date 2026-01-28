@@ -1006,5 +1006,4 @@ class LegacySoarApi(BaseSoarApi):
 
     def get_sla_records(self) -> requests.Response:
         """Get sla records"""
-        url: str = "/settings/GetSlaDefinitionsRecords"
-        return self._make_request(HttpMethod.GET, url)
+        return self.get_page_results("/settings/GetSlaDefinitionsRecords")
