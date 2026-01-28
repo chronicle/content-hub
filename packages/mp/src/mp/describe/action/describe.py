@@ -47,6 +47,8 @@ if TYPE_CHECKING:
     from mp.core.llm_sdk import LlmSdk
 
 
+GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
+
 logger: logging.Logger = logging.getLogger("mp.describe_action")
 
 
@@ -331,7 +333,7 @@ def _get_marketplace_integration_path(name: str) -> anyio.Path:
 
 
 def _create_gemini_config() -> GeminiConfig:
-    return GeminiConfig()
+    return GeminiConfig(model_name=GEMINI_MODEL_NAME)
 
 
 def _create_prompt_constructor(
