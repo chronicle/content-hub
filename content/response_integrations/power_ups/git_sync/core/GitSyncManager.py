@@ -19,6 +19,7 @@ import tempfile
 import uuid
 from typing import TYPE_CHECKING, Any
 from TIPCommon.types import SingleJson
+from TIPCommon.rest.soar_api import install_integration
 
 from jinja2 import Template
 
@@ -87,6 +88,7 @@ class GitSyncManager:
             smp_credentials.get("username") if smp_credentials else None,
             smp_credentials.get("password") if smp_credentials else None,
             smp_verify,
+            siemplify_soar=siemplify,
         )
         self.git_server_fingerprint = git_server_fingerprint
         self.git_client = Git(
@@ -235,7 +237,7 @@ class GitSyncManager:
                     return
             integration_cards = next(
                 x
-                for x in self.api.get_ide_cards()
+                for x in self.api.get_ide_cards(integration.identifier)
                 if x["identifier"] == integration.identifier
             )["cards"]
             for script in integration.get_all_items():
@@ -306,7 +308,7 @@ class GitSyncManager:
                 "Please upgrade the connector.",
             )
             connector.raw_data["isUpdateAvailable"] = True
-        if connector.environment not in self.api.get_environment_names():
+        if connector.environment not in self.api.get_environment_names(self._siemplify):
             self.logger.warn(
                 f"Connector is set to non-existing environment {connector.environment}. "
                 f"Using Default Environment instead",
@@ -345,7 +347,7 @@ class GitSyncManager:
         """
         # Validate all playbook environments exist as environments or environment groups
         environments = (
-            self.api.get_environment_names()
+            self.api.get_environment_names(self._siemplify)
             + self.api.get_environment_group_names()
             + [ALL_ENVIRONMENTS_IDENTIFIER]
         )
@@ -353,8 +355,8 @@ class GitSyncManager:
             invalid_environments = [x for x in p.environments if x not in environments]
             if invalid_environments:
                 raise Exception(
-                    f"Playbook '{p.name}' is assigned to environment(s) that don't exist: "
-                    f"{', '.join(invalid_environments)}. "
+                    f"Playbook '{p.name}' is assigned to environment(s) that don't "
+                    f"exist: {', '.join(invalid_environments)}. "
                     f"Available environments: {', '.join(environments)}"
                 )
 
@@ -400,7 +402,10 @@ class GitSyncManager:
             return
         # Try to find and fix the jobDefinitionId field
         integration_cards = next(
-            (x for x in self.api.get_ide_cards() if x["identifier"] == job.integration),
+            (
+                x for x in self.api.get_ide_cards(job.integration)
+                if x["identifier"] == job.integration
+            ),
             {},
         ).get("cards", None)
         if integration_cards:
@@ -415,7 +420,14 @@ class GitSyncManager:
             if job_def_id:
                 job.raw_data["jobDefinitionId"] = job_def_id.get("id")
 
-        job_id = next((x for x in self.api.get_jobs() if x["name"] == job.name), None)
+        job_id = next(
+            (
+                x
+                for x in self.api.get_jobs(chronicle_soar=self._siemplify)
+                if x.get("displayName", x.get("name")) == job.name
+            ),
+            None,
+        )
         if job_id:
             job.raw_data["id"] = job_id.get("id")
         self.api.add_job(job.raw_data)
@@ -546,10 +558,12 @@ class GitSyncManager:
             )
             return False
         try:
-            self.api.install_integration(
-                integration_name,
-                store_integration["version"],
-                store_integration["isCertified"],
+            install_integration(
+                chronicle_soar=self._siemplify,
+                integration_identifier=integration_name,
+                integration_name="",
+                version=store_integration["version"],
+                is_certified=store_integration["isCertified"],
             )
             self.logger.info(f"{integration_name} installed successfully")
             return True
@@ -583,7 +597,7 @@ class WorkflowInstaller:
 
     def __init__(
         self,
-        chronicle_soar: ChronicleSOAR,
+        chronicle_soar: ChronicleSOAR, # type: ignore
         api: SiemplifyApiClient,
         logger: SiemplifyLogger,
         mod_time_cache: Cache[str, int],
@@ -659,6 +673,9 @@ class WorkflowInstaller:
         self._define_workflow_as_new(workflow)
         self._process_steps(workflow)
         self.api.save_playbook(workflow.raw_data)
+
+        self.refresh_cache_item("playbooks")
+
         self._save_workflow_mod_time_to_context(workflow)
         self.logger.info(f"New workflow '{workflow.name}' was installed successfully")
 
@@ -781,7 +798,9 @@ class WorkflowInstaller:
         default: int | None = None,
         /,
     ) -> int:
-        playbook: dict[str, Any] = self._installed_playbooks[__workflow_name]
+        playbook = self._installed_playbooks.get(__workflow_name)
+        if not playbook:
+            return default
         return playbook.get("modificationTimeUnixTimeInMs", default)
 
     @property
@@ -789,7 +808,8 @@ class WorkflowInstaller:
         """Currently installed playbooks and blocks"""
         if "playbooks" not in self._cache:
             self._cache["playbooks"] = {
-                x.get("name"): x for x in self.api.get_playbooks()
+                x.get("name"): x
+                for x in self.api.get_playbooks(chronicle_soar=self.chronicle_soar)
             }
         return self._cache.get("playbooks")
 
@@ -877,14 +897,14 @@ class WorkflowInstaller:
                 instance_id = self.api.get_integration_instance_id_by_name(
                     self.chronicle_soar,
                     step.get("integration"),
-                    environments=environments,
+                    environments=environments, # type: ignore
                     display_name=instance_display_name,
                     consider_404_to_none=True,
                 )
                 self._set_step_parameter_by_name(
                     step,
                     "IntegrationInstance",
-                    instance_id or integration_instances[0].get("identifier"),
+                    instance_id or integration_instances[0].identifier,
                 )
                 self._set_step_parameter_by_name(
                     step,
@@ -905,7 +925,7 @@ class WorkflowInstaller:
                 self._set_step_parameter_by_name(
                     step,
                     "FallbackIntegrationInstance",
-                    fallback_instance_id or integration_instances[0].get("identifier"),
+                    fallback_instance_id or integration_instances[0].identifier,
                 )
             else:
                 self._set_step_parameter_by_name(
@@ -945,16 +965,18 @@ class WorkflowInstaller:
         """
         cache_key = f"integration_instances_{environment}"
         if cache_key not in self._cache:
-            self._cache[cache_key] = self.api.get_integrations_instances(environment)
+            self._cache[cache_key] = self.api.get_integrations_instances(
+                chronicle_soar=self.chronicle_soar,
+                environment=environment,
+            )
 
         instances = self._cache.get(cache_key)
-        instances.sort(key=lambda x: x.get("instanceName"))
+        instances.sort(key=lambda x: x.instance_name)
 
         return [
             x
             for x in instances
-            if x.get("integrationIdentifier") == integration_name
-            and x.get("isConfigured")
+            if x.integration_identifier == integration_name and x.is_configured
         ]
 
     @staticmethod

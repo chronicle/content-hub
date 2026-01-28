@@ -46,16 +46,6 @@ if TYPE_CHECKING:
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
 
-PUSH_FAILURE_INDICATORS = (
-        "pre-receive hook declined",
-        "not allowed to push",
-        "push rejected",
-        "failed to push",
-        "error: failed to push",
-        "! [rejected]",
-        "! [remote rejected]",
-    )
-
 class Git:
     """GitManager"""
 
@@ -232,26 +222,13 @@ class Git:
             equivalent to 'git push --force'. Defaults to False.
 
         """
-        error_content = ""
         try:
-            error_buffer = StringIO()
-            tee_stream = TeeStream(sys.stderr, error_buffer)
-
-            try:
-                porcelain.push(
-                    self.repo,
-                    refspecs=[self.local_branch_ref],
-                    force=force_push,
-                    errstream=tee_stream,
-                    **self.connection_args,
-                )
-            finally:
-                tee_stream.flush()
-                error_content = error_buffer.getvalue().strip()
-                tee_stream.close()
-
-            self._raise_on_push_errors(error_content)
-
+            porcelain.push(
+                self.repo,
+                refspecs=[self.local_branch_ref],
+                force=force_push,
+                **self.connection_args,
+            )
         except porcelain.DivergedBranches:
             self.logger.error("Could not push updates to remote repository!")
             self.logger.warn(
@@ -263,15 +240,6 @@ class Git:
             self.logger.info(
                 "Updates will be pushed in the next python script execution",
             )
-
-    def _raise_on_push_errors(self, error_content: str |None) -> None:
-        """Check for push failure indicators and raise exception."""
-        if not error_content:
-            return
-
-        if any(indicator in error_content for indicator in PUSH_FAILURE_INDICATORS):
-            self.logger.error(f"Push operation failed: {error_content}")
-            raise GitSyncException(f"Push operation failed: {error_content}")
 
     def _checkout(self) -> None:
         """Checkout a branch

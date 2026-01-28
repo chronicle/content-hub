@@ -59,7 +59,7 @@ def main():
 
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
-        installed_playbooks = gitsync.api.get_playbooks()
+        installed_playbooks = gitsync.api.get_playbooks(chronicle_soar=siemplify)
 
         for playbook in installed_playbooks:
             if (
@@ -78,7 +78,10 @@ def main():
                         readme_addon,
                     )
 
-                playbook = gitsync.api.get_playbook(playbook.get("identifier"))
+                playbook = gitsync.api.get_playbook(
+                    chronicle_soar=siemplify,
+                    identifier=playbook.get("identifier"),
+                )
                 workflow = Workflow(playbook)
                 workflow.update_instance_name_in_steps(gitsync.api, siemplify)
                 gitsync.content.push_playbook(workflow)
@@ -99,7 +102,10 @@ def main():
                             )
                             continue
                         block = Workflow(
-                            gitsync.api.get_playbook(installed_block.get("identifier")),
+                            gitsync.api.get_playbook(
+                                chronicle_soar=siemplify,
+                                identifier=installed_block.get("identifier"),
+                            ),
                         )
                         block.update_instance_name_in_steps(gitsync.api, siemplify)
                         gitsync.content.push_playbook(block)
