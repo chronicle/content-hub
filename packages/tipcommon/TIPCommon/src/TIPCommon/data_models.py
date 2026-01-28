@@ -1173,14 +1173,18 @@ class InstalledIntegrationInstance:
         instance: SingleJson,
         identifier: str,
         integration_identifier: str,
+        instance_description: str,
         environment_identifier: str,
         instance_name: str,
+        is_configured: bool
     ) -> None:
         self.instance = instance
         self.identifier = identifier
         self.integration_identifier = integration_identifier
+        self.instance_description = instance_description
         self.environment_identifier = environment_identifier
         self.instance_name = instance_name
+        self.is_configured = is_configured
 
     @classmethod
     def from_json(
@@ -1200,14 +1204,19 @@ class InstalledIntegrationInstance:
         """
         return cls(
             instance=integration_env_json,
-            identifier=integration_env_json["identifier"],
-            integration_identifier=integration_env_json["integrationIdentifier"],
+            identifier=integration_env_json.get("identifier", ""),
+            integration_identifier=integration_env_json.get("integrationIdentifier", ""),
+            instance_description=integration_env_json.get("instanceDescription", ""),
             environment_identifier=(
                 integration_env_json.get("environmentIdentifier")
                 or integration_env_json.get("environment")
             ),
             instance_name=(
                 integration_env_json.get("instanceName") or integration_env_json.get("displayName")
+            ),
+            is_configured=integration_env_json.get(
+                "isConfigured",
+                integration_env_json.get("configured", False)
             ),
         )
 
@@ -1363,9 +1372,12 @@ class DynamicParameter:
     @classmethod
     def from_json(cls, json_data: SingleJson) -> DynamicParameter:
         return cls(
-            key=json_data["key"],
-            value=json_data["value"],
+            key=json_data.get("key", json_data.get("dynamicParameterId", "")),
+            value=json_data.get("value", ""),
         )
+
+    def to_json(self) -> SingleJson:
+        return {"key": self.key, "value": self.value}
 
 
 @dataclasses.dataclass(slots=True)
@@ -2011,4 +2023,861 @@ class CreateEntity:
             "typesToConnect": self.types_to_connect or [],
             "isPrimaryLink": self.is_primary_link,
             "isDirectional": self.is_directional,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class Environment:
+    name: str | None
+    display_name: str | None
+    description: str | None
+    contact_name: str | None
+    contact_emails: str | None
+    contact_phone: str | None
+    remediation_duration_in_days: int | None
+    allow_remediation_actions: bool | None
+    notify_on_remediation_actions: bool | None
+    retention_duration_in_months: int | None
+    retention_duration_internal: int | None
+    base64_image: str | None
+    for_db_migration: bool | None
+    environment_allowed_for_all_users: bool | None
+    dynamic_parameters: list[SingleJson]
+    properties: SingleJson
+    is_system: bool | None
+    aliases: list[str]
+    instance_url: str | None
+    data_access_scopes: list[Any]
+    identifier: int | None
+    weight: int | None
+
+    # -------------------------
+    # FACTORY
+    # -------------------------
+
+    @classmethod
+    def from_json(cls, data: dict) -> "Environment":
+        aliases = data.get("aliases")
+        if aliases is None:
+            try:
+                aliases = json.loads(data.get("aliasesJson") or "[]")
+            except Exception:
+                aliases = []
+
+        scopes = data.get("dataAccessScopes")
+        if scopes is None:
+            try:
+                scopes = json.loads(data.get("dataAccessScopesJson") or "[]")
+            except Exception:
+                scopes = []
+
+        return cls(
+            # ✅ PRESERVE NAME FROM BOTH LEGACY & 1P
+            name=data.get("name") or data.get("displayName"),
+            display_name=data.get("displayName"),
+            description=data.get("description"),
+            contact_name=data.get("contactName", data.get("contact")),
+            contact_emails=data.get("contactEmails"),
+            contact_phone=data.get("contactPhone"),
+            remediation_duration_in_days=data.get("remediationDurationInDays"),
+            allow_remediation_actions=data.get("shouldAllowRemediationActions"),
+            notify_on_remediation_actions=data.get("shouldNotifyOnRemediationActions"),
+            retention_duration_in_months=data.get(
+                "retentionDurationInMonths",
+                data.get("retentionDuration"),
+            ),
+            retention_duration_internal=data.get("retentionDurationInMonthsInternal"),
+            base64_image=data.get("base64Image"),
+            for_db_migration=data.get("forDBMigration"),
+            environment_allowed_for_all_users=data.get("environmentAllowedForAllUsers"),
+            dynamic_parameters=list(data.get("dynamicParameters") or []),
+            properties=data.get("properties") or {},
+            is_system=data.get("isSystem", data.get("system")),
+            aliases=aliases,
+            instance_url=data.get("instanceUrl", data.get("instanceUri")),
+            data_access_scopes=scopes,
+            identifier=data.get("id"),
+            weight=data.get("weight"),
+        )
+
+    # -------------------------
+    # SERIALIZERS
+    # -------------------------
+
+    def to_legacy(self) -> dict:
+        return {
+            "id": self.identifier,
+            "name": self.name,  # ✅ EXACT echo (IMMUTABLE)
+            "description": self.description,
+            "contactName": self.contact_name,
+            "contactEmails": self.contact_emails,
+            "contactEmailsList": None,
+            "contactPhone": self.contact_phone,
+            "allowedActions": None,
+            "remediationDurationInDays": self.remediation_duration_in_days,
+            "shouldAllowRemediationActions": self.allow_remediation_actions,
+            "shouldNotifyOnRemediationActions": self.notify_on_remediation_actions,
+            "retentionDurationInMonths": self.retention_duration_in_months,
+            "retentionDurationInMonthsInternal": self.retention_duration_internal,
+            "base64Image": self.base64_image,
+            "forDBMigration": self.for_db_migration,
+            "environmentAllowedForAllUsers": self.environment_allowed_for_all_users,
+            "dynamicParameters": self.dynamic_parameters,
+            "properties": self.properties,
+            "isSystem": self.is_system,
+            "aliases": self.aliases,
+            "instanceUrl": self.instance_url,
+            "dataAccessScopes": self.data_access_scopes,
+        }
+
+    def to_1p(self) -> dict:
+        weight_value = (
+            self.weight
+            if isinstance(self.weight, int) and 1 <= self.weight <= 10
+            else 1
+        )
+
+        if not self.name:
+            raise ValueError("1P environment name is required")
+
+        return {
+            "name": self.name,  # ✅ IMMUTABLE
+            "id": self.identifier,
+            "system": bool(self.is_system),
+            "displayName": self.display_name or self.name,
+            "description": self.description or "",
+            "contact": self.contact_name or "N/A",
+            "contactEmails": self.contact_emails or "example@example.com",
+            "contactPhone": self.contact_phone or "0000000000",
+            "retentionDuration": int(self.retention_duration_in_months or 0),
+            "dynamicParameters": self.dynamic_parameters or [],
+            "aliasesJson": json.dumps(self.aliases or []),
+            "dataAccessScopesJson": json.dumps(self.data_access_scopes or []),
+            "instanceUri": self.instance_url or "",
+            "weight": weight_value,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class IntegrationSetting:
+    """Represents a single setting from an integration instance."""
+    display_name: str
+    property_name: str
+    value: Any
+    property_type: str
+    _id: int
+    property_description: str
+    is_password: bool
+    is_mandatory: bool
+
+    @classmethod
+    def from_json(cls, data: SingleJson) -> IntegrationSetting:
+        """Parses a setting JSON object."""
+        is_password = data.get("propertyType") == 3 or data.get("type") == "Password"
+
+        return cls(
+            display_name=data.get("displayName", data.get("propertyDisplayName", "")),
+            property_name=data.get("propertyName", ""),
+            value=data.get("value"),
+            property_type=data.get("type", data.get("propertyType", "")),
+            _id=data.get("id"),
+            property_description=data.get(
+                "propertyDescription",
+                data.get("description", ""),
+            ),
+            is_password=is_password,
+            is_mandatory=data.get("mandatory", data.get("isMandatory", False)),
+        )
+
+
+
+@dataclasses.dataclass(slots=True)
+class VisualFamily:
+    _id: Any
+    family: str
+    description: str = ""
+    image_base64: str = ""
+    is_custom: bool = False
+    rules: list[dict] = dataclasses.field(default_factory=list)
+    creation_time: int = 0
+    modification_time: int = 0
+
+    @classmethod
+    def from_json(cls, data: SingleJson) -> VisualFamily:
+        return cls(
+            _id=data.get("id"),
+            family=data.get("family"),
+            description=data.get("description", ""),
+            image_base64=data.get("imageBase64", ""),
+            is_custom=data.get("custom", data.get("isCustom", False)),
+            rules=data.get("modelingRules", data.get("rules", [])),
+            creation_time=data.get("creationTimeUnixTimeInMs", 0),
+            modification_time=data.get("modificationTimeUnixTimeInMs", 0),
+        )
+
+    def to_json(self) -> SingleJson:
+        return {
+            "id": self._id,
+            "family": self.family,
+            "description": self.description,
+            "imageBase64": self.image_base64,
+            "isCustom": self.is_custom,
+            "rules": self.rules,
+            "creationTimeUnixTimeInMs": self.creation_time,
+            "modificationTimeUnixTimeInMs": self.modification_time,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class OntologyRecord:
+    _id: Any
+    source: str
+    family_name: str = ""
+    family_id: int | None = None
+    product: str | None = None
+    event_name: str | None = None
+    mapping_status: str | None = None
+    change_source: Any = None
+    example_event_fields: list[dict] = dataclasses.field(default_factory=list)
+
+    @classmethod
+    def from_json(cls, data: SingleJson) -> OntologyRecord:
+        return cls(
+            _id=data.get("id"),
+            source=data.get("source"),
+            family_name=data.get("visualFamily", data.get("familyName", "")),
+            family_id=data.get("familyId"),
+            product=data.get("product"),
+            event_name=data.get("eventName"),
+            mapping_status=data.get("mappingStatus"),
+            change_source=data.get("changeSource"),
+            example_event_fields=data.get("exampleEventFields", [])
+        )
+
+
+    def to_json(self) -> SingleJson:
+        return {
+            "id": self._id,
+            "source": self.source,
+            "familyName": self.family_name,
+            "familyId": self.family_id,
+            "product": self.product,
+            "eventName": self.event_name,
+            "mappingStatus": self.mapping_status,
+            "changeSource": self.change_source,
+            "exampleEventFields": self.example_event_fields,
+        }
+
+@dataclasses.dataclass(slots=True)
+class CaseTag:
+    """Represents a single case tag."""
+    value: str
+    name: str
+    property_name: str
+    priority: int
+    is_potential_case_name: bool
+    environments: list[Any]
+    kind: int
+    compare_type: int
+    identifier: int
+    creation_time_unix_time_in_ms: int
+    modification_time_unix_time_in_ms: int
+
+    @classmethod
+    def from_json(cls, data: SingleJson) -> "CaseTag":
+        """Parses a case tag JSON object and guarantees non-empty value."""
+
+        name = data.get("displayName") or data.get("name") or ""
+
+        value = data.get("value")
+        if not value:
+            value = name
+
+        return cls(
+            value=value,
+            name=name,
+            property_name=data.get("propertyName", ""),
+            priority=int(data.get("priority", 0)),
+            is_potential_case_name=data.get(
+                "isPotentialCaseName",
+                data.get("canBeCaseTitle", False),
+            ),
+            environments=data.get("environments", []),
+            kind=data.get("type", data.get("matchCriteria")),
+            compare_type=data.get(
+                "compareType",
+                data.get("comparisonType"),
+            ),
+            identifier=data.get("id"),
+            creation_time_unix_time_in_ms=data.get(
+                "creationTimeUnixTimeInMs"
+            ),
+            modification_time_unix_time_in_ms=data.get(
+                "modificationTimeUnixTimeInMs"
+            ),
+        )
+
+    def to_json(self) -> SingleJson:
+        """Converts the CaseTag object to a JSON-serializable dictionary."""
+        return {
+            "value": self.value,
+            "name": self.name,
+            "propertyName": self.property_name,
+            "priority": self.priority,
+            "isPotentialCaseName": self.is_potential_case_name,
+            "environments": self.environments,
+            "type": self.kind,
+            "compareType": self.compare_type,
+            "id": self.identifier,
+            "creationTimeUnixTimeInMs": self.creation_time_unix_time_in_ms,
+            "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
+        }
+
+    def to_json_1p(self) -> SingleJson:
+        return {
+            "displayName": self.name,
+            "matchCriteria": self.kind,
+            "value": self.value,
+            "propertyName": self.property_name,
+            "comparisonType": self.compare_type,
+            "priority": self.priority,
+            "canBeCaseTitle": self.is_potential_case_name,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class Domain:
+    domain: str
+    alias: str | None
+    environments: list[Any]
+    identifier: int
+    creation_time_unix_time_in_ms: int
+    modification_time_unix_time_in_ms: int
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: SingleJson) -> "Domain":
+        if "environments" in data:
+            envs = data.get("environments") or []
+        else:
+            raw = data.get("environmentsJson", "[]") or "[]"
+            try:
+                envs = json.loads(raw)
+            except Exception:
+                envs = []
+
+        return cls(
+            domain=data.get("displayName") or data.get("domain") or "",
+            alias=data.get("alias"),
+            environments=envs,
+            identifier=data.get("id"),
+            creation_time_unix_time_in_ms=data.get("creationTimeUnixTimeInMs", 0),
+            modification_time_unix_time_in_ms=data.get("modificationTimeUnixTimeInMs", 0),
+        )
+
+    def to_legacy(self) -> SingleJson:
+        return {
+            "domain": self.domain,
+            "alias": self.alias,
+            "environments": self.environments,
+            "id": self.identifier,
+            "creationTimeUnixTimeInMs": self.creation_time_unix_time_in_ms,
+            "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
+        }
+
+    def to_1p(self) -> SingleJson:
+        return {
+            "displayName": self.domain,
+            "environmentsJson": self.environments,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class CaseStage:
+    name: str
+    order: int
+    identifier: int
+    creation_time_unix_time_in_ms: int
+    modification_time_unix_time_in_ms: int
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: SingleJson) -> "CaseStage":
+        return cls(
+            name=data.get("displayName") or data.get("name") or "",
+            order=data.get("order", 0),
+            identifier=data.get("id"),
+            creation_time_unix_time_in_ms=data.get("creationTimeUnixTimeInMs"),
+            modification_time_unix_time_in_ms=data.get("modificationTimeUnixTimeInMs"),
+        )
+
+    def to_legacy(self) -> SingleJson:
+        return {
+            "name": self.name,
+            "order": self.order,
+            "id": self.identifier,
+            "creationTimeUnixTimeInMs": self.creation_time_unix_time_in_ms,
+            "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
+        }
+
+    def to_1p(self) -> SingleJson:
+        return {
+            "displayName": self.name,
+            "order": self.order,
+        }
+
+@dataclasses.dataclass(slots=True)
+class CaseCloseReasons:
+    identifier: int
+    root_cause: str
+    close_reason: str | None
+    creation_time_unix_time_in_ms: int | None
+    modification_time_unix_time_in_ms: int | None
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: dict) -> "CaseCloseReasons":
+        return cls(
+            identifier=data.get("id"),
+            root_cause=data.get("rootCause", ""),
+            close_reason=data.get("forCloseReason", 0)
+                         or data.get("closeReason", 0),
+            creation_time_unix_time_in_ms=data.get("creationTimeUnixTimeInMs"),
+            modification_time_unix_time_in_ms=data.get("modificationTimeUnixTimeInMs"),
+        )
+
+    def to_legacy(self) -> dict:
+        return {
+            "rootCause": self.root_cause,
+            "forCloseReason": self.close_reason,
+            "id": self.identifier,
+            "creationTimeUnixTimeInMs": self.creation_time_unix_time_in_ms,
+            "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
+        }
+
+    def to_1p(self) -> dict:
+        return {
+            "id": self.identifier,
+            "rootCause": self.root_cause,
+            "closeReason": self.close_reason,
+        }
+
+@dataclasses.dataclass(slots=True)
+class CustomList:
+    entity_identifier: str
+    category: str
+    for_db_migration: bool | None
+    environments: list[str]
+    identifier: int
+    creation_time_unix_time_in_ms: int
+    modification_time_unix_time_in_ms: int
+
+    @classmethod
+    def from_legacy_or_1p(cls, data):
+        envs = data.get("environments")
+        if envs is None:
+            envs_json = data.get("environmentsJson")
+            if isinstance(envs_json, str):
+                try:
+                    envs = json.loads(envs_json)
+                except Exception:
+                    envs = []
+            else:
+                envs = []
+
+        return cls(
+            entity_identifier=data.get("entityIdentifier", ""),
+            category=data.get("category", ""),
+            for_db_migration=data.get("forDBMigration"),
+            environments=envs,
+            identifier=data.get("id"),
+            creation_time_unix_time_in_ms=data.get("creationTimeUnixTimeInMs"),
+            modification_time_unix_time_in_ms=data.get("modificationTimeUnixTimeInMs"),
+        )
+
+    def to_legacy(self):
+        return {
+            "entityIdentifier": self.entity_identifier,
+            "category": self.category,
+            "forDBMigration": self.for_db_migration,
+            "environments": self.environments,  # list
+            "id": self.identifier,
+            "creationTimeUnixTimeInMs": self.creation_time_unix_time_in_ms,
+            "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
+        }
+
+    def to_1p(self):
+        return {
+            "category": self.category,
+            "entityIdentifier": self.entity_identifier,
+            "environments":  self.environments,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class Blacklist:
+    entity_identifier: str
+    entity_type: str
+    action: int
+    environments: list[Any]
+    scope: int | None
+    identifier: int
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: SingleJson) -> "Blacklist":
+        return cls(
+            entity_identifier=data.get("entityIdentifier", ""),
+            entity_type=data.get("entityType", ""),
+            action=data.get("elementType", data.get("action", 0)),
+            environments=data.get("environments", []),
+            scope=data.get("scope"),
+            identifier=data.get("id"),
+        )
+
+    def to_legacy(self) -> SingleJson:
+        return {
+            "id": self.identifier,
+            "entityIdentifier": self.entity_identifier,
+            "entityType": self.entity_type,
+            "elementType": self.action,
+            "scope": self.scope,
+            "environments": self.environments,
+        }
+
+    def to_1p(self) -> SingleJson:
+        return {
+            "entityIdentifier": self.entity_identifier,
+            "entityType": self.entity_type,
+            "action": self.action,
+            "environmentsJson": ",".join(self.environments) if self.environments else "",
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class Network:
+    name: str
+    address: str
+    priority: int
+    environments: list[Any]
+    identifier: int
+    creation_time_unix_time_in_ms: int | None
+    modification_time_unix_time_in_ms: int | None
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: dict) -> "Network":
+        # environments can come from legacy (list) or 1p (string → JSON list)
+        envs = data.get("environments")
+        if envs is None:
+            envs_json = data.get("environmentsJson")
+            if isinstance(envs_json, str):
+                try:
+                    envs = json.loads(envs_json)
+                except Exception:
+                    envs = []
+            else:
+                envs = []
+
+        return cls(
+            name=data.get("displayName") or data.get("name") or "",
+            address=data.get("address", ""),
+            priority=data.get("priority", 0),
+            environments=envs,
+            identifier=data.get("id"),
+            creation_time_unix_time_in_ms=data.get("creationTimeUnixTimeInMs"),
+            modification_time_unix_time_in_ms=data.get("modificationTimeUnixTimeInMs"),
+        )
+
+    def to_legacy(self) -> dict:
+        return {
+            "address": self.address,
+            "name": self.name,
+            "priority": self.priority,
+            "environments": self.environments,
+            "id": self.identifier,
+            "creationTimeUnixTimeInMs": self.creation_time_unix_time_in_ms,
+            "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
+        }
+
+    def to_1p(self) -> dict:
+        return {
+            "name": (
+                "projects/project/locations/location/instances/"
+                f"instance/internalNetworks/{self.identifier}"
+            ),
+            "id": self.identifier,
+            "displayName": self.name,
+            "address": self.address,
+            "environmentsJson": json.dumps(self.environments),
+            "priority": self.priority,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class SlaDefinition:
+    identifier: int | None
+    sla_type: int
+    alert_type: int
+    sla_type_value: str
+    sla_period: float
+    sla_period_time_unit: int
+    critical_sla_period: float
+    critical_sla_period_time_unit: int
+    environments: list[Any]
+    values: list[str]
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: dict) -> "SlaDefinition":
+        SLA_TYPE_MAP = {
+            0: "AlertRuleGenerator",
+            1: "AlertType",
+            2: "CaseStage",
+            3: "CasePriority",
+            4: "AlertPriority",
+        }
+        SLA_TYPE_REVERSE_MAP = {v.lower(): k for k, v in SLA_TYPE_MAP.items()}
+
+        def safe_int(value: Any, default: int = 0) -> int:
+            try:
+                if value is None:
+                    return default
+                if isinstance(value, str):
+                    value = value.strip()
+                    if not value.isdigit():
+                        return default
+                return int(value)
+            except Exception:
+                return default
+
+        def normalize_sla_type(raw: Any) -> int:
+            """
+            Normalize slaType / valueType to numeric enum.
+            Supports:
+            - int: 1,2,3,4
+            - numeric string: "1"
+            - enum string: "CaseStage"
+            """
+            if raw is None:
+                return 0
+
+            # Fast path → numeric
+            numeric = safe_int(raw, None)
+            if numeric in SLA_TYPE_MAP:
+                return numeric
+
+            # Enum string → mapped int
+            if isinstance(raw, str):
+                return SLA_TYPE_REVERSE_MAP.get(raw.strip().lower(), 0)
+
+            return 0
+
+        alert_type = safe_int(data.get("alertType"), 0)
+
+        raw_value = data.get("value", data.get("slaTypeValue", ""))
+        if isinstance(raw_value, str):
+            raw_value = raw_value.strip()
+
+        values_list = list(data.get("values") or [])
+
+        if raw_value:
+            normalized_value = raw_value
+        elif values_list:
+            cleaned = [v for v in values_list if isinstance(v, str) and v.strip()]
+            normalized_value = json.dumps(cleaned) if cleaned else "ALL"
+        else:
+            normalized_value = "ALL"
+
+        sla_type_raw = data.get("valueType", data.get("slaType"))
+
+        return cls(
+            identifier=data.get("id"),
+            sla_type=normalize_sla_type(sla_type_raw),
+            alert_type=alert_type,
+            sla_type_value=normalized_value,
+            sla_period=float(data.get("slaPeriod", 0.0) or 0.0),
+            sla_period_time_unit=safe_int(
+                data.get("slaPeriodType", data.get("slaPeriodTimeUnit")), 0
+            ),
+            critical_sla_period=float(
+                data.get("criticalPeriod", data.get("criticalSlaPeriod", 0.0)) or 0.0
+            ),
+            critical_sla_period_time_unit=safe_int(
+                data.get(
+                    "criticalPeriodType",
+                    data.get("criticalSlaPeriodTimeUnit"),
+                ),
+                0,
+            ),
+            environments=list(data.get("environments") or []),
+            values=list(data.get("values") or []),
+        )
+
+    def to_legacy(self) -> dict:
+        return {
+            "id": self.identifier,
+            "valueType": self.sla_type,
+            "value": self.sla_type_value,
+            "slaPeriodType": self.sla_period_time_unit,
+            "slaPeriod": self.sla_period,
+            "criticalPeriodType": self.critical_sla_period_time_unit,
+            "criticalPeriod": self.critical_sla_period,
+            "environments": self.environments,
+            "alertType": self.alert_type,
+            "values": self.values,
+        }
+
+    def to_1p(self) -> dict:
+        sla_type_map = {
+            0: "AlertRuleGenerator",
+            1: "AlertType",
+            2: "CaseStage",
+            3: "CasePriority",
+            4: "AlertPriority",
+        }
+
+        return {
+            "name": (
+                "projects/project/locations/location/instances/instance/"
+                f"slaDefinitions/{self.identifier}"
+            ),
+            "id": self.identifier,
+            "slaType": sla_type_map.get(self.sla_type, self.sla_type),
+            "alertType": self.alert_type,
+            "slaTypeValue": self.sla_type_value,
+            "slaPeriod": self.sla_period,
+            "slaPeriodTimeUnit": self.sla_period_time_unit,
+            "criticalSlaPeriod": self.critical_sla_period,
+            "criticalSlaPeriodTimeUnit": self.critical_sla_period_time_unit,
+            "environments": self.environments,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class SoarBlockEntity:
+    """Represents a single soar block entity"""
+    entity_identifier: str
+    entity_type: str
+    action: str
+    environments: list[Any]
+    scope: int | None
+    identifier: int
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: dict) -> "SoarBlockEntity":
+        """Creates a SoarBlockEntity object from a JSON dictionary.
+
+        Args:
+            data (dict): A dictionary containing the soar block entity data.
+        Returns:
+            A SoarBlockEntity object.
+        """
+        envs = data.get("environments")
+        if envs is None:
+            envs_json = data.get("environmentsJson")
+            if isinstance(envs_json, str):
+                try:
+                    envs = json.loads(envs_json)
+                except Exception:
+                    envs = []
+            else:
+                envs = []
+
+        action_value = data.get("action")
+        if action_value is None:
+            element_type = data.get("elementType", 0)
+            action_value = "DoNotGroupAlerts" if element_type == 0 else "Unknown"
+
+        return cls(
+            entity_identifier=data.get("entityIdentifier", ""),
+            entity_type=data.get("entityType", ""),
+            action=action_value,
+            environments=envs,
+            scope=data.get("scope"),
+            identifier=data.get("id"),
+        )
+
+    def to_legacy(self) -> dict:
+        """Converts the SoarBlockEntity object to a JSON-serializable dictionary."""
+        return {
+            "id": self.identifier,
+            "entityIdentifier": self.entity_identifier,
+            "entityType": self.entity_type,
+            "elementType": 0 if self.action == "DoNotGroupAlerts" else 1,
+            "scope": self.scope,
+            "environments": self.environments,
+        }
+
+    def to_1p(self) -> dict:
+        """Converts the SoarBlockEntity object to a 1P-serializable dictionary."""
+        return {
+            "name": f"projects//locations//instances//entitiesBlocklists/{self.identifier}",
+            "id": self.identifier,
+            "entityIdentifier": self.entity_identifier,
+            "entityType": self.entity_type,
+            "action": self.action,
+            "environmentsJson": json.dumps(self.environments),
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class SimulatedCases:
+    cases: list[dict]
+    type: int | None
+    connector_identifier: str | None
+    debug_output: Any
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: dict) -> "SimulatedCases":
+        cases = list(data.get("cases") or [])
+
+        for idx, case in enumerate(cases):
+            # -----------------------------
+            # ticketId MUST NOT be empty
+            # -----------------------------
+            ticket_id = case.get("ticketId")
+            if not isinstance(ticket_id, str) or not ticket_id.strip():
+                fallback = (
+                    case.get("displayId")
+                    or case.get("name")
+                    or f"AUTO-TICKET-{idx + 1}"
+                )
+                case["ticketId"] = str(fallback)
+
+            # -----------------------------
+            # Normalize baseEventIds
+            # -----------------------------
+            for event in case.get("events", []):
+                fields = event.get("_fields", {})
+                base_event_ids = fields.get("baseEventIds")
+
+                if isinstance(base_event_ids, str):
+                    try:
+                        parsed = json.loads(base_event_ids)
+                        if isinstance(parsed, list):
+                            fields["baseEventIds"] = parsed
+                        else:
+                            fields["baseEventIds"] = []
+                    except Exception:
+                        fields["baseEventIds"] = []
+
+                elif base_event_ids is None:
+                    fields["baseEventIds"] = []
+
+        return cls(
+            cases=cases,
+            type=data.get("type"),
+            connector_identifier=data.get("connectorIdentifier"),
+            debug_output=data.get("debugOutput"),
+        )
+
+    def to_legacy(self) -> dict:
+        return {
+            "cases": self.cases,
+            "type": self.type,
+            "connectorIdentifier": self.connector_identifier,
+            "debugOutput": self.debug_output,
+        }
+
+    def to_1p(self) -> dict:
+        return {
+            "cases": self.cases,
+            "type": self.type,
+            "connectorIdentifier": self.connector_identifier,
+            "debugOutput": self.debug_output,
         }
