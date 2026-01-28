@@ -42,6 +42,13 @@ class Dependencies(NamedTuple):
     dev_dependencies: list[str]
 
 
+class DependencyResolutionResult(NamedTuple):
+    """A tuple representing the resolved dependencies, and placeholders for missing local ones."""
+
+    dependencies: Dependencies
+    placeholders: Dependencies
+
+
 MIN_RELEVANT_TIP_COMMON_VERSION: int = 2
 TIP_COMMON: str = "TIPCommon"
 ENV_COMMON: str = "EnvironmentCommon"
@@ -63,11 +70,11 @@ class DependencyDeconstructor:
         self.integration_path = integration_path
         self.local_packages_base_path = config.get_local_packages_path()
 
-    def get_dependencies(self) -> Dependencies:
+    def get_dependencies(self) -> DependencyResolutionResult:
         """Get the dependencies of the integration.
 
         Returns:
-            A Dependencies object.
+            A DependencyResolutionResult object containing local and PyPI dependencies.
 
         """
         imported_modules_names: set[str] = self._get_package_names_from_python_code()
@@ -127,9 +134,11 @@ class DependencyDeconstructor:
 
         return provided_imports
 
-    def _resolve_dependencies(self, required_modules: set[str]) -> Dependencies:
+    def _resolve_dependencies(self, required_modules: set[str]) -> DependencyResolutionResult:
         deps_to_add: list[str] = []
         dev_deps_to_add: list[str] = []
+        placeholder_deps, placeholder_dev_deps = [], []
+
         if TIP_COMMON in required_modules:
             required_modules.add(ENV_COMMON)
 
@@ -164,6 +173,8 @@ class DependencyDeconstructor:
                         deps_to_add.extend(repo_packages.dependencies)
                         dev_deps_to_add.extend(repo_packages.dev_dependencies)
                     except FileNotFoundError as e:
+                        # This dependency will be added as a placeholder comment
+                        placeholder_deps.append(f"{package_install_name}=={version}")
                         rich.print(
                             f"[yellow]Warning:[/] Could not resolve local dependency "
                             f"{package_install_name}: {e}"
@@ -172,11 +183,15 @@ class DependencyDeconstructor:
                     deps_to_add.append(f"{package_install_name}=={version}")
 
         missing_packages: set[str] = required_modules.difference(found_packages)
-        deps_to_add.extend(missing_packages)
+        for missing_package in missing_packages:
+            package_to_add = missing_package
+            if package_to_add in mp.core.constants.SDK_MODULES_CONFIG:
+                package_to_add = mp.core.constants.SDK_MODULES_CONFIG[package_to_add]
+            deps_to_add.append(package_to_add)
 
-        return Dependencies(
-            deps_to_add,
-            dev_deps_to_add,
+        return DependencyResolutionResult(
+            dependencies=Dependencies(deps_to_add, dev_deps_to_add),
+            placeholders=Dependencies(placeholder_deps, placeholder_dev_deps),
         )
 
     def _get_repo_package_dependencies(
@@ -193,12 +208,12 @@ class DependencyDeconstructor:
             FileNotFoundError: If a local dependency's directory or wheel is not found.
 
         """
-        version_dir: Path = self.local_packages_base_path / _resolve_version_dir(name, version)
-        if not version_dir.is_dir():
-            msg: str = f"Could not find local dependency directory: {version_dir}"
+        wheels_dir: Path = self.local_packages_base_path / _get_package_wheels_dir(name)
+        if not wheels_dir.is_dir():
+            msg: str = f"Could not find local dependency directory: {wheels_dir}"
             raise FileNotFoundError(msg)
 
-        package_file: Path = _find_package_file(version_dir)
+        package_file: Path = _find_package_file(wheels_dir, f"{name}-{version}")
         local_deps_to_add: list[str] = [str(package_file)]
         local_dev_deps_to_add: list[str] = []
 
@@ -213,18 +228,15 @@ class DependencyDeconstructor:
                     f"{integration_testing_version_dir}"
                 )
             else:
-                try:
-                    it_package_file: Path = _find_package_file(
-                        integration_testing_version_dir, f"{INTEGRATION_TESTING}-{version}"
-                    )
-                    local_dev_deps_to_add.append(str(it_package_file))
-                except FileNotFoundError as e:
-                    rich.print(f"[yellow]Warning:[/] {e}")
+                it_package_file: Path = _find_package_file(
+                    integration_testing_version_dir, f"{INTEGRATION_TESTING}-{version}"
+                )
+                local_dev_deps_to_add.append(str(it_package_file))
 
         return Dependencies(local_deps_to_add, local_dev_deps_to_add)
 
 
-def _find_package_file(package_dir: Path, version_prefix: str = "") -> Path:
+def _find_package_file(package_dir: Path, wheel_name_prefix: str) -> Path:
     """Find a wheel or source distribution file in a directory.
 
     Returns:
@@ -235,17 +247,16 @@ def _find_package_file(package_dir: Path, version_prefix: str = "") -> Path:
 
     """
     for extension in PACAKGE_SUFFIXES:
-        for file in package_dir.glob(f"{version_prefix}{extension}"):
+        for file in package_dir.glob(f"{wheel_name_prefix}{extension}"):
             return file
 
     msg: str = f"No wheel or source distribution found in {package_dir}"
     raise FileNotFoundError(msg)
 
 
-def _resolve_version_dir(name: str, version: str) -> Path:
+def _get_package_wheels_dir(name: str) -> Path:
     package_dir_name: str = mp.core.constants.REPO_PACKAGES_CONFIG[name]
-    version_dir_name: str = f"{name}-{version}"
-    return Path(package_dir_name) / version_dir_name
+    return Path(package_dir_name) / "whls"
 
 
 def _should_add_integration_testing(name: str, version: str) -> bool:
