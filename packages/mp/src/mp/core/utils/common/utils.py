@@ -237,6 +237,32 @@ def to_snake_case(s: str, /) -> str:
     )
 
 
+def is_integration_repo(repositories: list[RepositoryType]) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return (
+        RepositoryType.ALL_CONTENT in repositories
+        or RepositoryType.COMMERCIAL in repositories
+        or RepositoryType.THIRD_PARTY in repositories
+        or RepositoryType.CUSTOM in repositories
+    )
+
+
+def is_playbook_repo(repositories: list[RepositoryType]) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return RepositoryType.ALL_CONTENT in repositories or RepositoryType.PLAYBOOKS in repositories
+
+
+# Deprecated
 def should_preform_integration_logic(
     integrations: Iterable[str],
     repos: Iterable[RepositoryType],
@@ -255,6 +281,7 @@ def should_preform_integration_logic(
     )
 
 
+# Deprecated
 def should_preform_playbook_logic(
     playbooks: Iterable[str], repos: Iterable[RepositoryType]
 ) -> bool:

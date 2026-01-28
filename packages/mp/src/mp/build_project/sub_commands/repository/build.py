@@ -20,24 +20,21 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
+from mp.build_project.flow.integrations.flow import build_integrations
+from mp.build_project.flow.playbooks.flow import build_playbooks
 from mp.core.custom_types import RepositoryType  # noqa: TC001
 from mp.core.utils import ensure_valid_list
 from mp.core.utils.common import is_integration_repo, is_playbook_repo
 from mp.telemetry import track_command
-from mp.validate.data_models import ContentType, FullReport
-from mp.validate.display import display_validation_reports
-from mp.validate.flow.integrations.flow import validate_integrations
-from mp.validate.flow.playbooks.flow import validate_playbooks
 
 if TYPE_CHECKING:
     from mp.core.config import RuntimeParams
-
 
 app: typer.Typer = typer.Typer()
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class ValidateParams:
+class BuildParams:
     repositories: list[RepositoryType]
 
     def validate(self) -> None:
@@ -60,32 +57,23 @@ class ValidateParams:
             raise typer.BadParameter(msg)
 
 
-@app.command(name="repository", help="Validate content-hub full repository.")
+@app.command(name="repository", help="Build content-hub full repository.")
 @track_command
-def validate_repository(
+def build_repository(
     repositories: Annotated[
         list[RepositoryType],
         typer.Argument(
             help="'google' - for commercial integrations, 'third_party' - for community and partner"
-            " integrations, 'playbooks' for playbooks.",
+            " integrations, custom - for custom integrations, 'playbooks' for playbooks.",
         ),
     ],
     *,
-    only_pre_build: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the integrations, skipping the full build process."
-            ),
-        ),
-    ] = False,
     quiet: Annotated[
         bool,
         typer.Option(
             "--quiet",
             "-q",
-            help="Suppress most logging output during runtime, showing only essential information.",
+            help="Log less on runtime.",
         ),
     ] = False,
     verbose: Annotated[
@@ -93,47 +81,37 @@ def validate_repository(
         typer.Option(
             "--verbose",
             "-v",
-            help="Enable verbose logging output during runtime for detailed debugging information.",
+            help="Log more on runtime.",
         ),
     ] = False,
 ) -> None:
-    """Run the mp validate command.
-
-    Validate repositories within the content-hub based on specified criteria.
+    """Run the `mp build` command.
 
     Args:
-        repositories: repository type on which to run validation.
-                    Validation will be performed on all content found
-                    within this repository.
-        only_pre_build: If set to True, only pre-build validation checks are
-                        performed.
+        repositories: the repositories to build
         quiet: quiet log options
         verbose: Verbose log options
 
-    Raises:
-        typer.Exit: If validation fails, the program will exit with code 1.
-
     """
+    repositories = ensure_valid_list(repositories)
+
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    repositories = ensure_valid_list(repositories)
-    params: ValidateParams = ValidateParams(repositories)
+    params: BuildParams = BuildParams(repositories=repositories)
     params.validate()
 
-    full_report: dict[ContentType, FullReport] = {}
-    f1, f2 = False, False
     if is_integration_repo(repositories):
-        full_report[ContentType.INTEGRATION], f1 = validate_integrations(
-            integrations=[], repositories=repositories, only_pre_build=only_pre_build
+        build_integrations(
+            integrations=[],
+            repositories=repositories,
+            src=None,
+            dst=None,
+            deconstruct=False,
+            custom_integration=False,
         )
 
     if is_playbook_repo(repositories):
-        full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(
-            playbooks=[], repositories=repositories, only_pre_build=only_pre_build
+        build_playbooks(
+            playbooks=[], repositories=repositories, src=None, dst=None, deconstruct=False
         )
-
-    display_validation_reports(full_report)
-
-    if f1 or f2:
-        raise typer.Exit(1)

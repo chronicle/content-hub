@@ -27,6 +27,7 @@ import typer
 
 from . import build_project, check, config, describe, dev_env, run_pre_build_tests, validate
 from . import format as format_app
+from .build_project.typer_app import build_app
 from .validate.typer_app import validate_app
 
 __all__: list[str] = [
@@ -44,7 +45,7 @@ __all__: list[str] = [
 def main() -> None:
     """Entry point for the `mp` CLI tool, initializing all sub-applications."""
     app: typer.Typer = typer.Typer()
-    app.add_typer(build_project.app)
+    app.add_typer(build_app, name="build")
     app.add_typer(check.app)
     app.add_typer(config.app)
     app.add_typer(format_app.app)

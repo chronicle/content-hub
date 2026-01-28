@@ -15,28 +15,32 @@
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 import typer
 
 import mp.core.config
+from mp.build_project.flow.playbooks.flow import build_playbooks
 from mp.core.utils import (
     ensure_valid_list,
 )
 from mp.telemetry import track_command
-from mp.validate.data_models import ContentType, FullReport
-from mp.validate.display import display_validation_reports
-from mp.validate.flow.playbooks.flow import validate_playbooks
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from mp.core.config import RuntimeParams
 
 app: typer.Typer = typer.Typer()
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class ValidateParams:
+class BuildParams:
     playbooks: list[str]
+    deconstruct: bool
+    src: Path | None
+    dst: Path | None
 
     def validate(self) -> None:
         """Validate the parameters.
@@ -44,37 +48,44 @@ class ValidateParams:
         Validates the provided parameters
         to ensure proper usage of mutually exclusive
         options and constraints.
+        Handles error messages and raises exceptions if validation fails.
 
         Raises:
             typer.BadParameter:
-                If the parameter is not used correctly.
+                If parameters are not provided correctly.
 
         """
         msg: str
-
         if len(self.playbooks) == 0:
-            msg = "At least one playbook must be provided to run this action."
+            msg = "At least one playbook name need to be provided."
             raise typer.BadParameter(msg)
 
 
-@app.command(name="playbook", help="Validate the content-hub playbooks")
+@app.command(name="playbook", help="Build content-hub playbooks")
 @track_command
-def validate_playbook(
+def build_playbook(  # noqa: PLR0913
     playbooks: Annotated[
         list[str],
         typer.Argument(
-            help="Playbooks to validate.",
+            help="Build the specified playbooks",
             default_factory=list,
         ),
     ],
+    src: Annotated[
+        Path | None,
+        typer.Option(help="Customize source folder to build or deconstruct from."),
+    ] = None,
+    dst: Annotated[
+        Path | None,
+        typer.Option(help="Customize destination folder to build or deconstruct to."),
+    ] = None,
     *,
-    only_pre_build: Annotated[
+    deconstruct: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the playbooks, skipping the full build process."
-            ),
+            "--deconstruct",
+            "-d",
+            help="Deconstruct built playbooks instead of building them.",
         ),
     ] = False,
     quiet: Annotated[
@@ -82,7 +93,7 @@ def validate_playbook(
         typer.Option(
             "--quiet",
             "-q",
-            help="Suppress most logging output during runtime, showing only essential information.",
+            help="Log less on runtime.",
         ),
     ] = False,
     verbose: Annotated[
@@ -90,23 +101,19 @@ def validate_playbook(
         typer.Option(
             "--verbose",
             "-v",
-            help="Enable verbose logging output during runtime for detailed debugging information.",
+            help="Log more on runtime.",
         ),
     ] = False,
 ) -> None:
-    """Run the mp validate command.
-
-    Validate playbooks within the marketplace based on specified criteria.
+    """Run the `mp build playbook` command.
 
     Args:
-        playbooks: A list of specific playbooks to validate.
-        only_pre_build: If set to True, only pre-build validation checks are
-                        performed.
+        playbooks: the playbooks to build
+        src: Customize source folder to build from.
+        dst: Customize destination folder to build to.
+        deconstruct: whether to deconstruct instead of build
         quiet: quiet log options
         verbose: Verbose log options
-
-    Raises:
-        typer.Exit: If validation fails, the program will exit with code 1.
 
     """
     playbooks = ensure_valid_list(playbooks)
@@ -114,18 +121,23 @@ def validate_playbook(
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    params: ValidateParams = ValidateParams(playbooks)
+    params: BuildParams = BuildParams(
+        playbooks=playbooks,
+        deconstruct=deconstruct,
+        src=src,
+        dst=dst,
+    )
     params.validate()
+    if src:
+        mp.core.config.set_custom_src(src)
+    if dst:
+        mp.core.config.set_custom_dst(dst)
 
-    full_report: dict[ContentType, FullReport] = {}
-    should_fail: bool = False
-
-    if playbooks:
-        full_report[ContentType.PLAYBOOK], should_fail = validate_playbooks(
-            playbooks=playbooks, repositories=[], only_pre_build=only_pre_build
-        )
-
-    display_validation_reports(full_report)
-
-    if should_fail:
-        raise typer.Exit(1)
+    try:
+        if playbooks:
+            build_playbooks(
+                playbooks=playbooks, repositories=[], src=src, dst=dst, deconstruct=deconstruct
+            )
+    finally:
+        mp.core.config.clear_custom_src()
+        mp.core.config.clear_custom_dst()

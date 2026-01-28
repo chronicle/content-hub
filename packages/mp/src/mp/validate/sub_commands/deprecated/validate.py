@@ -140,6 +140,7 @@ def validate(  # noqa: PLR0913
     Validate integrations within the marketplace based on specified criteria.
 
     Args:
+        ctx: typer context
         repository: A list of repository types on which to run validation.
                     Validation will be performed on all integrations found
                     within these repositories.
@@ -159,7 +160,7 @@ def validate(  # noqa: PLR0913
 
     if not any([repository, integration, playbook]):
         typer.echo(ctx.get_help())
-        raise typer.Exit()
+        raise typer.Exit
 
     rich.print(
         "[yellow]Note: 'validate' flags are deprecated. "
