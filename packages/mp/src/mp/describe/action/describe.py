@@ -101,6 +101,9 @@ class DescribeAction:
 
         actions_to_process: set[str] = await self._prepare_actions(status, metadata)
         if not actions_to_process:
+            logger.info(
+                "All actions in %s already have descriptions. Skipping.", self.integration_name
+            )
             return
 
         results: list[ActionDescriptionResult] = await self._execute_descriptions(
@@ -191,17 +194,18 @@ class DescribeAction:
                 on_action_done()
 
     async def _get_integration_status(self) -> IntegrationStatus:
-        out_path = self._get_out_path()
-        is_built = await out_path.exists()
+        out_path: anyio.Path = self._get_out_path()
+        is_built: bool = await out_path.exists()
 
         # If it's not built in the out directory, check if the integration itself is built
         if not is_built:
-            def_file = self.integration / constants.INTEGRATION_DEF_FILE.format(
+            def_file: anyio.Path = self.integration / constants.INTEGRATION_DEF_FILE.format(
                 self.integration_name
             )
             if await def_file.exists():
                 is_built = True
-                out_path = self.integration
+                out_path: anyio.Path = self.integration
+
         return IntegrationStatus(is_built=is_built, out_path=out_path)
 
     async def _describe_action_with_error_handling(
@@ -238,7 +242,7 @@ class DescribeAction:
                 or None if description failed.
 
         """
-        constructor = _create_prompt_constructor(
+        constructor: BuiltPromptConstructor | SourcePromptConstructor = _create_prompt_constructor(
             integration=self.integration,
             integration_name=self.integration_name,
             action_name=action_name,
@@ -271,13 +275,15 @@ class DescribeAction:
         return {}
 
     async def _save_metadata(self, metadata: dict[str, Any]) -> None:
-        resource_ai_dir = self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
+        resource_ai_dir: anyio.Path = (
+            self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
+        )
         await resource_ai_dir.mkdir(parents=True, exist_ok=True)
-        metadata_file = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
+        metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         await metadata_file.write_text(yaml.dump(metadata))
 
     def _get_out_path(self) -> anyio.Path:
-        base_out = anyio.Path(create_or_get_out_integrations_dir())
+        base_out: anyio.Path = anyio.Path(create_or_get_out_integrations_dir())
         if self.src:
             return base_out / self.src.name / self.integration_name
         return base_out / self.integration_name
