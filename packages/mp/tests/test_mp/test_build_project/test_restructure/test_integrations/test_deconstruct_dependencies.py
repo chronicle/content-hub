@@ -24,6 +24,7 @@ import mp.core.constants
 from mp.build_project.restructure.integrations.deconstruct_dependencies import (
     Dependencies,
     DependencyDeconstructor,
+    DependencyResolutionResult,
     _should_add_integration_testing,  # noqa: PLC2701
 )
 
@@ -72,36 +73,41 @@ def test_get_dependencies_with_local_and_remote(tmp_path: Path) -> None:
 
         mock_resolve.side_effect = mock_resolver
 
-        dependencies: Dependencies = DependencyDeconstructor(tmp_path).get_dependencies()
+        result: DependencyResolutionResult = DependencyDeconstructor(tmp_path).get_dependencies()
 
-        assert "requests==2.25.1" in dependencies.dependencies
-        assert "path/to/TIPCommon.whl" in dependencies.dependencies
-        assert "path/to/EnvironmentCommon.whl" in dependencies.dependencies
-        assert "path/to/integration-testing.whl" in dependencies.dev_dependencies
+        assert "requests==2.25.1" in result.dependencies.dependencies
+        assert "path/to/TIPCommon.whl" in result.dependencies.dependencies
+        assert "path/to/EnvironmentCommon.whl" in result.dependencies.dependencies
+        assert "path/to/integration-testing.whl" in result.dependencies.dev_dependencies
+        assert not result.placeholders.dependencies
+        assert not result.placeholders.dev_dependencies
 
 
 def test_get_dependencies_with_no_dependencies(tmp_path: Path) -> None:
     """Test get_dependencies when there are no dependencies."""
     _create_dummy_python_file(tmp_path, "print('hello')")
     _create_dependencies_dir(tmp_path)
-    deps, dev_deps = DependencyDeconstructor(tmp_path).get_dependencies()
-    assert not deps
-    assert not dev_deps
+    result = DependencyDeconstructor(tmp_path).get_dependencies()
+    assert not result.dependencies.dependencies
+    assert not result.dependencies.dev_dependencies
+    assert not result.placeholders.dependencies
+    assert not result.placeholders.dev_dependencies
 
 
 def test_get_dependencies_ignores_sdk_and_core_modules(tmp_path: Path) -> None:
     """Test that get_dependencies ignores SDK and core modules."""
     _create_dummy_python_file(tmp_path, "import SiemplifyAction\nimport core_module")
 
-    # Create dummy core module file
     core_modules_dir = tmp_path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
     core_modules_dir.mkdir()
     (core_modules_dir / "core_module.py").touch()
 
-    deps, dev_deps = DependencyDeconstructor(tmp_path).get_dependencies()
+    result = DependencyDeconstructor(tmp_path).get_dependencies()
 
-    assert not deps
-    assert not dev_deps
+    assert not result.dependencies.dependencies
+    assert not result.dependencies.dev_dependencies
+    assert not result.placeholders.dependencies
+    assert not result.placeholders.dev_dependencies
 
 
 def test_get_dependencies_ignores_builtin_modules(tmp_path: Path) -> None:
@@ -109,10 +115,12 @@ def test_get_dependencies_ignores_builtin_modules(tmp_path: Path) -> None:
     _create_dummy_python_file(tmp_path, "import sys\nimport os")
     _create_dependencies_dir(tmp_path)
 
-    deps, dev_deps = DependencyDeconstructor(tmp_path).get_dependencies()
+    result = DependencyDeconstructor(tmp_path).get_dependencies()
 
-    assert not deps
-    assert not dev_deps
+    assert not result.dependencies.dependencies
+    assert not result.dependencies.dev_dependencies
+    assert not result.placeholders.dependencies
+    assert not result.placeholders.dev_dependencies
 
 
 def test_get_dependencies_includes_envcommon_when_tipcommon_exists(tmp_path: Path) -> None:
@@ -139,8 +147,10 @@ def test_get_dependencies_includes_envcommon_when_tipcommon_exists(tmp_path: Pat
             return Dependencies(dependencies=[], dev_dependencies=[])
 
         mock_resolve.side_effect = mock_resolver
-        dependencies = DependencyDeconstructor(tmp_path).get_dependencies()
-        assert "path/to/EnvironmentCommon.whl" in dependencies.dependencies
+        result = DependencyDeconstructor(tmp_path).get_dependencies()
+        assert "path/to/EnvironmentCommon.whl" in result.dependencies.dependencies
+        assert not result.placeholders.dependencies
+        assert not result.placeholders.dev_dependencies
 
 
 def test_get_dependencies_with_mismatched_import_and_package_name(tmp_path: Path) -> None:
@@ -151,20 +161,54 @@ def test_get_dependencies_with_mismatched_import_and_package_name(tmp_path: Path
     dependencies_dir = _create_dependencies_dir(tmp_path)
     wheel_path = dependencies_dir / "PyYAML-6.0-cp39-cp39-manylinux_2_17_x86_64.whl"
 
-    # Create a valid zip file (wheel) with a top_level.txt
     with zipfile.ZipFile(wheel_path, "w") as zf:
         dist_info_dir = "PyYAML-6.0.dist-info/"
         # The top_level.txt file tells pip what top-level modules are installed.
         zf.writestr(f"{dist_info_dir}top_level.txt", "yaml")
 
-    # Mock local package resolution to return nothing for this package
     with unittest.mock.patch(
         "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
         return_value=Dependencies(dependencies=[], dev_dependencies=[]),
     ):
-        dependencies = DependencyDeconstructor(tmp_path).get_dependencies()
+        result = DependencyDeconstructor(tmp_path).get_dependencies()
 
-        assert "PyYAML==6.0" in dependencies.dependencies
+        assert "PyYAML==6.0" in result.dependencies.dependencies
+        assert not result.placeholders.dependencies
+        assert not result.placeholders.dev_dependencies
+
+
+def test_get_dependencies_with_sdk_modules_config_mapping(tmp_path: Path) -> None:
+    """Test that a missing dependency is correctly mapped using SDK_MODULES_CONFIG."""
+    _create_dummy_python_file(tmp_path, "import dateutil")
+    _create_dependencies_dir(tmp_path)  # Empty dependencies dir
+
+    with unittest.mock.patch.dict(
+        "mp.core.constants.SDK_MODULES_CONFIG", {"dateutil": "python-dateutil"}
+    ):
+        result = DependencyDeconstructor(tmp_path).get_dependencies()
+
+        assert "python-dateutil" in result.dependencies.dependencies
+        assert not result.dependencies.dev_dependencies
+        assert not result.placeholders.dependencies
+        assert not result.placeholders.dev_dependencies
+
+
+def test_get_dependencies_creates_placeholder_for_missing_local_file(tmp_path: Path) -> None:
+    """Test that a placeholder is created when a local dependency file is not found."""
+    _create_dummy_python_file(tmp_path, "import EnvironmentCommon")
+    dependencies_dir = _create_dependencies_dir(tmp_path)
+    (dependencies_dir / "EnvironmentCommon-2.0.2-py3-none-any.whl").touch()
+
+    # Simulate the scenario where the local package file is not found during resolution
+    with unittest.mock.patch(
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
+        side_effect=FileNotFoundError("Could not find wheel file"),
+    ):
+        result = DependencyDeconstructor(tmp_path).get_dependencies()
+
+        assert not result.dependencies.dependencies
+        assert not result.dependencies.dev_dependencies
+        assert "EnvironmentCommon==2.0.2" in result.placeholders.dependencies
 
 
 @pytest.mark.parametrize(
