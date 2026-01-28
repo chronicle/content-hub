@@ -39,6 +39,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Returns:
             SingleJson: A list of integrations available for upgrade.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         params: SingleJson = {
             "orderBy": "identifier asc",
@@ -67,6 +70,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Returns:
             SingleJson: The response from the upgrade request.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         endpoint: str = f"/marketplaceIntegrations/{integration_id}:install"
         payload: SingleJson = {"overrideMapping": override_mapping, "staging": staging}
@@ -79,6 +85,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Returns:
             SingleJson: A list of connector instances.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         endpoint: str = "/integrations/-/connectors/-/connectorInstances"
         params: SingleJson = {"pageSize": DEFAULT_PAGE_SIZE}
@@ -103,6 +112,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Returns:
             SingleJson: Details of the connector instance.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         endpoint: str = (
             f"/integrations/{integration_id}/connectors/{connector_id}/"
@@ -127,6 +139,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Returns:
             SingleJson: The latest connector definition.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         endpoint: str = (
             f"/integrations/{integration_id}/connectors/{connector_id}/"
@@ -144,6 +159,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Returns:
             SingleJson: Details of the integration.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         endpoint: str = f"/integrations/{integration_id}"
         response: httpx.Response = await self.get(endpoint)
@@ -167,6 +185,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Returns:
             SingleJson: The response from the upgrade request.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         endpoint: str = (
             f"/integrations/{integration_name}/connectors/{connector_id}/"

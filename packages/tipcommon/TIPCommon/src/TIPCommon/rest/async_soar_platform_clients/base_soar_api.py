@@ -44,7 +44,7 @@ class BaseAsyncSoarApi:
         endpoint: str,
         *,
         params: SingleJson | None = None,
-        payload: dict | None = None,
+        payload: SingleJson | None = None,
         headers: dict[str, str] | None = None,
     ) -> httpx.Response:
         """Make an asynchronous HTTP request to the SOAR API.
@@ -53,11 +53,14 @@ class BaseAsyncSoarApi:
             method (str): HTTP method (e.g., 'GET', 'POST').
             endpoint (str): API endpoint.
             params (SingleJson | None): Query parameters. Defaults to None.
-            payload (dict | None): Request body. Defaults to None.
+            payload (SingleJson | None): Request body. Defaults to None.
             headers (dict[str, str] | None): Headers. Defaults to None.
 
         Returns:
             httpx.Response: The HTTP response object.
+
+        Raises:
+            httpx.HTTPStatusError: If the request returns an unsuccessful status code.
         """
         endpoint: str = endpoint.lstrip("/")
 
@@ -95,6 +98,9 @@ class BaseAsyncSoarApi:
 
         Returns:
             httpx.Response: The HTTP response object.
+
+        Raises:
+        httpx.HTTPStatusError: If the API request fails.
         """
         return await self._make_request(HttpMethod.GET, endpoint, params=params)
 
@@ -111,6 +117,9 @@ class BaseAsyncSoarApi:
 
         Returns:
             httpx.Response: The HTTP response object.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         return await self._make_request(HttpMethod.POST, endpoint, payload=payload)
 
@@ -129,6 +138,9 @@ class BaseAsyncSoarApi:
 
         Returns:
             httpx.Response: The HTTP response object.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         return await self._make_request(
             HttpMethod.PATCH,
@@ -145,5 +157,8 @@ class BaseAsyncSoarApi:
 
         Returns:
             httpx.Response: The HTTP response object.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
         """
         return await self._make_request(HttpMethod.DELETE, endpoint)
