@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import base64
-import subprocess  # noqa: S404
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -25,6 +24,7 @@ import typer
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.build_project.sub_commands.playbooks.build import build_playbook as build_playbook_
 from mp.core.data_models.playbooks.meta.display_info import PlaybookType
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.utils.common.utils import to_snake_case
@@ -154,24 +154,13 @@ def build_playbook(playbooks_names: set[str], src: Path | None = None) -> None:
         typer.Exit: If the build fails.
 
     """
-    command: list[str] = ["mp", "build"]
-    for name in playbooks_names:
-        command.extend(["-p", name])
-    if src:
-        command.extend(["--src", str(src)])
-    command.extend(["--quiet"])
+    try:
+        build_playbook_(list(playbooks_names), src=src, quiet=True)
+        rich.print(f"[green]Build successful for {', '.join(playbooks_names)}[/green]")
 
-    result = subprocess.run(  # noqa: S603
-        command,
-        capture_output=True,
-        check=False,
-        text=True,
-    )
-    if result.returncode != 0:
-        rich.print(f"[red]Build failed:\n{result.stderr}[/red]")
-        raise typer.Exit(result.returncode)
-
-    rich.print(f"Build output:\n{result.stdout}")
+    except typer.Exit as e:
+        rich.print(f"[red]Build failed: {e}[/red]")
+        raise typer.Exit(1) from e
 
 
 def get_built_playbook_path(playbook_name: str) -> Path:
@@ -263,27 +252,15 @@ def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
         typer.Exit: If the deconstruction subprocess fails.
 
     """
-    command: list[str] = [
-        "mp",
-        "build",
-        "-p",
-        built_playbook.stem,
-        "--src",
-        f"{built_playbook.parent}",
-        "--dst",
-        f"{dst}",
-        "-d",
-        "--quiet",
-    ]
-    result = subprocess.run(  # noqa: S603
-        command, capture_output=True, check=False, text=True
-    )
+    try:
+        build_playbook_(
+            [built_playbook.stem], src=built_playbook.parent, deconstruct=True, quiet=True
+        )
+        return dst / to_snake_case(built_playbook.stem)
 
-    if result.returncode != 0:
-        rich.print(f"[red]Deconstruct failed:\n{result.stderr}[/red]")
-        raise typer.Exit(result.returncode)
-
-    return dst / to_snake_case(built_playbook.stem)
+    except typer.Exit as e:
+        rich.print(f"[red]Deconstruct failed: {e}[/red]")
+        raise typer.Exit(1) from e
 
 
 def unzip_playbooks(

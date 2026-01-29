@@ -17,4 +17,4 @@ from __future__ import annotations
 
 import typer
 
-pull_app = typer.Typer(help="Pull content to the SOAR environment.")
+push_app = typer.Typer(name="push", help="Push content to the SecOps environment.")
