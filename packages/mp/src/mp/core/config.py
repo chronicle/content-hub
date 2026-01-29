@@ -27,6 +27,7 @@ from typing import TypeVar
 import typer
 
 import mp.core.constants
+from mp.core.logging_utils import setup_logging
 
 CONFIG_FILE_NAME: str = ".mp_config"
 CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
@@ -36,6 +37,8 @@ MARKETPLACE_PATH_KEY: str = "marketplace_path"
 CUSTOM_SRC_KEY: str = "src"
 CUSTOM_DST_KEY: str = "dst"
 PROCESSES_NUMBER_KEY: str = "processes"
+GEMINI_API_KEY_KEY: str = "gemini_api_key"
+GEMINI_CONCURRENCY_KEY: str = "gemini_concurrency"
 VERBOSE_LOG_KEY: str = "is_verbose"
 QUIET_LOG_KEY: str = "is_quiet"
 DEFAULT_SECTION_NAME: str = "DEFAULT"
@@ -43,6 +46,7 @@ RUNTIME_SECTION_NAME: str = "RUNTIME"
 PROCESSES_MIN_VALUE: int = 1
 PROCESSES_MAX_VALUE: int = 10
 DEFAULT_PROCESSES_NUMBER: int = 5
+DEFAULT_GEMINI_CONCURRENCY: int = 10
 DEFAULT_QUIET_VALUE: str = "no"
 DEFAULT_VERBOSE_VALUE: str = "no"
 DEFAULT_MARKETPLACE_PATH: Path = Path.home() / mp.core.constants.REPO_NAME
@@ -166,6 +170,37 @@ def set_processes_number(n: int, /) -> None:
     _set_config_key(DEFAULT_SECTION_NAME, PROCESSES_NUMBER_KEY, value=n)
 
 
+def get_gemini_api_key() -> str | None:
+    """Get the API key configured for the project.
+
+    Returns:
+        The API key is configured for the project.
+
+    """
+    return _get_config_key(DEFAULT_SECTION_NAME, GEMINI_API_KEY_KEY, str)
+
+
+def set_gemini_api_key(api_key: str, /) -> None:
+    """Set the API key for the project."""
+    _set_config_key(DEFAULT_SECTION_NAME, GEMINI_API_KEY_KEY, value=api_key)
+
+
+def get_gemini_concurrency() -> int:
+    """Get the maximum number of concurrent actions to describe using Gemini.
+
+    Returns:
+        The maximum number of concurrent actions.
+
+    """
+    c: int | None = _get_config_key(DEFAULT_SECTION_NAME, GEMINI_CONCURRENCY_KEY, int)
+    return c if c is not None else DEFAULT_GEMINI_CONCURRENCY
+
+
+def set_gemini_concurrency(n: int, /) -> None:
+    """Set the maximum number of concurrent actions for Gemini."""
+    _set_config_key(DEFAULT_SECTION_NAME, GEMINI_CONCURRENCY_KEY, value=n)
+
+
 def is_verbose() -> bool:
     """Check whether verbose logging is enabled for the project.
 
@@ -220,7 +255,7 @@ def set_is_quiet(*, value: bool) -> None:
     _set_config_key(RUNTIME_SECTION_NAME, QUIET_LOG_KEY, value=b)
 
 
-_T = TypeVar("_T", int | bool | float, Path)
+_T = TypeVar("_T", int, bool, float, Path, str)
 
 
 @functools.lru_cache
@@ -242,6 +277,9 @@ def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
 
     except (configparser.NoOptionError, configparser.NoSectionError, KeyError):
         return None
+
+    if val_type is str:
+        return typing.cast("_T | None", config.get(section, key, fallback=None))
 
     msg: str = f"Unsupported type {val_type}"
     raise ValueError(msg)
@@ -286,6 +324,7 @@ def _create_default_config(config: configparser.ConfigParser) -> None:
     config[DEFAULT_SECTION_NAME] = {
         MARKETPLACE_PATH_KEY: str(mp_path),
         PROCESSES_NUMBER_KEY: str(DEFAULT_PROCESSES_NUMBER),
+        GEMINI_CONCURRENCY_KEY: str(DEFAULT_GEMINI_CONCURRENCY),
     }
 
 
@@ -311,6 +350,7 @@ class RuntimeParams:
         self.validate()
         set_is_quiet(value=self.quiet)
         set_is_verbose(value=self.verbose)
+        setup_logging(verbose=self.verbose, quiet=self.quiet)
 
     def validate(self) -> None:
         """Validate the runtime parameters.
