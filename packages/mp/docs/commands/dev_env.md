@@ -1,7 +1,5 @@
 # `mp dev-env`
 
-## Description
-
 Commands for interacting with the development environment (playground). This suite of commands helps you manage your connection to the Google SecOps SOAR environment and deploy your integrations for testing.
 
 ## Getting Your Credentials
@@ -23,169 +21,122 @@ To use these commands, you'll need the API Root URL and an API Key (or Username/
 4. Set **Permission Groups** to `Admins`.
 5. Copy the generated API Key.
 
-## Sub-commands
+## Subcommands
 
 ### `login`
 
-Authenticate to the dev environment (playground).
+Authenticate to the dev environment.
 
-#### Usage
+**Usage:**
 
 ```bash
 mp dev-env login [OPTIONS]
 ```
 
-#### Options
+**Options:**
 
-| Option        | Description                                                | Type   | Default |
-|:--------------|:-----------------------------------------------------------|:-------|:--------|
-| `--api-root`  | The API root URL (e.g., `https://your-env.siemplify.com`). | `str`  | `None`  |
-| `--username`  | Authentication username.                                   | `str`  | `None`  |
-| `--password`  | Authentication password.                                   | `str`  | `None`  |
-| `--api-key`   | Authentication API key.                                    | `str`  | `None`  |
-| `--no-verify` | Skip credential verification after saving.                 | `bool` | `False` |
-
-#### Examples
-
-```bash
-mp dev-env login --api-root https://my-env.siemplify.com --api-key my-api-key
-```
+| Option        | Description                                            | Type   | Default |
+|:--------------|:-------------------------------------------------------|:-------|:--------|
+| `--api-root`  | API root URL (e.g., `https://your-env.siemplify.com`). | `str`  | `None`  |
+| `--username`  | Authentication username.                               | `str`  | `None`  |
+| `--password`  | Authentication password.                               | `str`  | `None`  |
+| `--api-key`   | Authentication API key.                                | `str`  | `None`  |
+| `--no-verify` | Skip credential verification after saving.             | `bool` | `False` |
 
 ### `push integration`
 
-Build and deploy an integration to the dev environment (playground).
+Build and push an integration to the dev environment.
 
-#### Usage
-
-```bash
-mp dev-env push integration INTEGRATION [OPTIONS]
-```
-
-#### Arguments
-
-| Argument      | Description                                      | Type  |
-|:--------------|:-------------------------------------------------|:------|
-| `INTEGRATION` | The name of the integration to build and deploy. | `str` |
-
-#### Options
-
-| Option       | Description                                                                                                                                     | Type   | Default |
-|:-------------|:------------------------------------------------------------------------------------------------------------------------------------------------|:-------|:--------|
-| `--staging`  | Deploy integration into staging mode.                                                                      | `bool` | `False` |
-| `--custom`   | Deploy integration from the custom repository.                                                             | `bool` | `False` |
-| `--src`      | Custom source path. If not provided, the integration will be pushed from the default repositories.         | `Path` | `None`  |
-| `--keep-zip` | Keep the generated zip file.                                                                               | `bool` | `False` |
-
-#### Notes:
-
-- The `--src` and `--custom` options cannot be used together.
-
-#### Examples
+**Usage:**
 
 ```bash
-mp dev-env push integration my_integration
+mp dev-env push integration [INTEGRATION] [OPTIONS]
 ```
+
+**Arguments:**
+
+* `INTEGRATION`: The name of the integration to build and push.
+
+**Options:**
+
+| Option       | Description                                           | Type   | Default |
+|:-------------|:------------------------------------------------------|:-------|:--------|
+| `--src`      | Source folder, where the content will be pushed from. | `Path` | `None`  |
+| `--staging`  | Push integration into staging mode.                   | `bool` | `False` |
+| `--custom`   | Push integration from the custom repository.          | `bool` | `False` |
+| `--keep-zip` | Keep the generated zip file after pushing.            | `bool` | `False` |
+
+### `push playbook`
+
+Build and push a playbook to the dev environment.
+
+**Usage:**
+
+```bash
+mp dev-env push playbook [PLAYBOOK] [OPTIONS]
+```
+
+**Arguments:**
+
+* `PLAYBOOK`: The name of the playbook to build and push.
+
+**Options:**
+
+| Option             | Description                                           | Type   | Default |
+|:-------------------|:------------------------------------------------------|:-------|:--------|
+| `--src`            | Source folder, where the content will be pushed from. | `Path` | `None`  |
+| `--include-blocks` | Push all playbook dependent blocks.                   | `bool` | `False` |
+| `--keep-zip`       | Keep the generated zip file after pushing.            | `bool` | `False` |
 
 ### `push custom-integration-repository`
 
 Build, zip, and upload the entire custom integration repository.
 
-#### Usage
+**Usage:**
 
 ```bash
 mp dev-env push custom-integration-repository
-```
-
-### `push playbook`
-
-Build and deploy a playbook to the dev environment (playground).
-
-#### Usage
-
-```bash
-mp dev-env push playbook PLAYBOOK [OPTIONS]
-```
-
-#### Arguments
-
-| Argument   | Description                                 | Type  |
-|:-----------|:--------------------------------------------|:------|
-| `PLAYBOOK` | The name of the playbook to build and push. | `str` |
-
-#### Options
-
-| Option             | Description                                                                                                                                      | Type   | Default |
-|:-------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------|:-------|:--------|
-| `--include-blocks` | Push all playbook dependent blocks.                                                                    | `bool` | `False` |
-| `--src`            | Custom source path. If not provided, the playbook will be pushed from the default repositories.        | `Path` | `None`  |
-| `--keep-zip`       | Keep the generated zip file.                                                                           | `bool` | `False` |
-
-#### Notes:
-
-- The `--src` and `--custom` options cannot be used together.
-
-#### Examples
-
-```bash
-mp dev-env push playbook my_playbook --include-blocks
 ```
 
 ### `pull integration`
 
 Pull and deconstruct an integration from the dev environment.
 
-#### Usage
+**Usage:**
 
 ```bash
-mp dev-env pull integration INTEGRATION [OPTIONS]
+mp dev-env pull integration [INTEGRATION] [OPTIONS]
 ```
 
-#### Arguments
+**Arguments:**
 
-| Argument      | Description                              | Type  |
-|:--------------|:-----------------------------------------|:------|
-| `INTEGRATION` | The integration to pull and deconstruct. | `str` |
+* `INTEGRATION`: The integration to pull.
 
-#### Options
+**Options:**
 
-| Option       | Description                                                                                                                           | Type   | Default |
-|:-------------|:--------------------------------------------------------------------------------------------------------------------------------------|:-------|:--------|
-| `--dst`      | Custom destination path. If not provided, output will be saved to the `.downloads` directory in the content-hub repository. | `Path` | `None`  |
-| `--keep-zip` | Keep the integration zip file after pulling.                                                                                                | `bool` | `False` |
-
-#### Examples
-
-```bash
-mp dev-env pull integration my_integration --dst ./downloads
-```
+| Option       | Description                                                             | Type   | Default |
+|:-------------|:------------------------------------------------------------------------|:-------|:--------|
+| `--dst`      | Destination folder. Defaults to the `.downloads` directory in the repo. | `Path` | `None`  |
+| `--keep-zip` | Keep the zip file after pulling.                                        | `bool` | `False` |
 
 ### `pull playbook`
 
-Pull a playbook from the dev environment (playground).
+Pull and deconstruct a playbook from the dev environment.
 
-#### Usage
-
-```bash
-mp dev-env pull playbook PLAYBOOK [OPTIONS]
-```
-
-#### Arguments
-
-| Argument   | Description                       | Type  |
-|:-----------|:----------------------------------|:------|
-| `PLAYBOOK` | The name of the playbook to pull. | `str` |
-
-#### Options
-
-| Option             | Description                                                                                                                          | Type   | Default |
-|:-------------------|:-------------------------------------------------------------------------------------------------------------------------------------|:-------|:--------|
-| `--dst`            | Custom destination path. If not provided, output will be saved to the `.downloads` directory in the content-hub repository. | `Path` | `None`  |
-| `--include-blocks` | Pull all playbook dependent blocks.                                                                                                         | `bool` | `False` |
-| `--keep-zip`       | Keep the zip file after pulling.                                                                                                            | `bool` | `False` |
-
-#### Examples
+**Usage:**
 
 ```bash
-mp dev-env pull playbook soar_playbook --include-blocks --dst ./downloads
+mp dev-env pull playbook [PLAYBOOK] [OPTIONS]
 ```
 
+**Arguments:**
+
+* `PLAYBOOK`: The playbook to pull.
+
+**Options:**
+
+| Option             | Description                                                             | Type   | Default |
+|:-------------------|:------------------------------------------------------------------------|:-------|:--------|
+| `--dst`            | Destination folder. Defaults to the `.downloads` directory in the repo. | `Path` | `None`  |
+| `--include-blocks` | Pull all playbook dependent blocks.                                     | `bool` | `False` |
+| `--keep-zip`       | Keep the zip file after pulling.                                        | `bool` | `False` |

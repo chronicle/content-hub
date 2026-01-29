@@ -1,8 +1,6 @@
 # `mp validate`
 
-## Description
-
-Validate the marketplace content. This command validates integrations, playbooks, or entire repositories within the content-hub based on specified criteria, such as directory structure, file naming conventions, and required metadata.
+Validate content (integrations and playbooks) within the Content Hub.
 
 ## Usage
 
@@ -12,9 +10,9 @@ mp validate [SUBCOMMAND] [OPTIONS]
 
 ## Subcommands
 
-### `integration` (alias: `i`)
+### `integration`
 
-Validate specific integrations.
+Validate specific response integrations.
 
 **Usage:**
 
@@ -24,9 +22,17 @@ mp validate integration [INTEGRATIONS]... [OPTIONS]
 
 **Arguments:**
 
-- `INTEGRATIONS`: One or more integration names to validate.
+*   `INTEGRATIONS`: A list of integrations to validate.
 
-### `playbook` (alias: `p`)
+**Options:**
+
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--only-pre-build` | | Execute only pre-build validations checks, skipping the full build process. | `bool` | `False` |
+| `--quiet` | `-q` | Suppress most logging output during runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Enable verbose logging output during runtime. | `bool` | `False` |
+
+### `playbook`
 
 Validate specific playbooks.
 
@@ -38,11 +44,19 @@ mp validate playbook [PLAYBOOKS]... [OPTIONS]
 
 **Arguments:**
 
-- `PLAYBOOKS`: One or more playbook names to validate.
+*   `PLAYBOOKS`: A list of playbooks to validate.
 
-### `repository` (alias: `r`)
+**Options:**
 
-Validate entire repositories.
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--only-pre-build` | | Execute only pre-build validations checks, skipping the full build process. | `bool` | `False` |
+| `--quiet` | `-q` | Suppress most logging output during runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Enable verbose logging output during runtime. | `bool` | `False` |
+
+### `repository`
+
+Validate entire content repositories.
 
 **Usage:**
 
@@ -52,48 +66,44 @@ mp validate repository [REPOSITORIES]... [OPTIONS]
 
 **Arguments:**
 
-- `REPOSITORIES`: One or more repository types (`google`, `third_party`, `playbooks`,
-  `all_content`).
+*   `REPOSITORIES`: One or more repository types to validate. Options:
+    *   `google`: Commercial integrations.
+    *   `third_party`: Community and partner integrations.
+    *   `playbooks`: Playbooks.
 
-## Options
+**Options:**
 
-The following options are available for all subcommands:
-
-| Option             | Shorthand | Description                                                                 | Type   | Default |
-|:-------------------|:----------|:----------------------------------------------------------------------------|:-------|:--------|
-| `--only-pre-build` |           | Execute only pre-build validations checks, skipping the full build process. | `bool` | `False` |
-| `--quiet`          | `-q`      | Suppress most logging output during runtime.                                | `bool` | `False` |
-| `--verbose`        | `-v`      | Enable verbose logging output during runtime.                               | `bool` | `False` |
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--only-pre-build` | | Execute only pre-build validations checks, skipping the full build process. | `bool` | `False` |
+| `--quiet` | `-q` | Suppress most logging output during runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Enable verbose logging output during runtime. | `bool` | `False` |
 
 ## Examples
 
-### Validate specific integrations
-
+### Validate a specific integration
 ```bash
-mp validate integration my_integration another_integration --only-pre-build
+mp validate integration my_integration
 ```
 
-### Validate a specific playbook
-
+### Validate a playbook with only pre-build checks
 ```bash
 mp validate playbook my_playbook --only-pre-build
 ```
 
-### Validate all third-party integrations
-
+### Validate the third-party repository
 ```bash
-mp validate repository third_party --only-pre-build
+mp validate repository third_party
 ```
 
 ---
 
 ## Deprecated Usage
 
-The legacy flag-based usage is deprecated and will be removed in a future version.
+The following flag-based usage is deprecated and will be removed in future versions. Please use the subcommands above.
 
 ```bash
-# Deprecated:
-mp validate --integration my_integration
-mp validate --playbook my_playbook
-mp validate --repository google
+mp validate --integration <name>
+mp validate --playbook <name>
+mp validate --repository <type>
 ```
