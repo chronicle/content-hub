@@ -19,6 +19,7 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
+import anyio
 import yaml
 from rich.progress import TaskID, track
 
@@ -30,10 +31,8 @@ from .prompt_constructors.source import SourcePromptConstructor
 from .utils import llm, paths
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import AsyncIterator, Callable
 
-    import anyio
     from rich.progress import Progress
 
 
@@ -124,11 +123,13 @@ class DescribeAction:
         integration: str,
         actions: set[str],
         *,
-        src: pathlib.Path | None = None,
+        src: anyio.Path | None = None,
+        dst: anyio.Path | None = None,
         override: bool = False,
     ) -> None:
         self.integration_name: str = integration
-        self.src: pathlib.Path | None = src
+        self.src: anyio.Path | None = src
+        self.dst: anyio.Path | None = dst
         self.integration: anyio.Path = paths.get_integration_path(integration, src=src)
         self.actions: set[str] = actions
         self.override: bool = override
@@ -224,8 +225,8 @@ class DescribeAction:
         on_action_done: Callable[[], None] | None = None,
         progress: Progress | None = None,
     ) -> list[ActionDescriptionResult]:
-        action_list = list(actions)
-        bulks = [
+        action_list: list[str] = list(actions)
+        bulks: list[list[str]] = [
             action_list[i : i + llm.DESCRIBE_BULK_SIZE]
             for i in range(0, len(action_list), llm.DESCRIBE_BULK_SIZE)
         ]
@@ -247,6 +248,7 @@ class DescribeAction:
             for coro in asyncio.as_completed(tasks):
                 results.extend(await coro)
             progress.remove_task(task_id)
+
         else:
             rich_params = RichParams(on_action_done)
             tasks: list[asyncio.Task] = [
@@ -392,53 +394,38 @@ class DescribeAction:
                     actions.add(file.stem)
         return actions
 
-    async def describe_action(
-        self, action_name: str, status: IntegrationStatus
-    ) -> ActionAiMetadata | None:
-        """Describe an action of a given integration.
-
-        Returns:
-            ActionAiMetadata | None: The AI-generated metadata for the action,
-                or None if description failed.
-
-        """
-        params = DescriptionParams(
-            integration=self.integration,
-            integration_name=self.integration_name,
-            action_name=action_name,
-            status=status,
-        )
-        constructor: _PromptConstructor = _create_prompt_constructor(params)
-        prompt: str = await constructor.construct()
-        if not prompt:
-            logger.warning("Could not construct prompt for action %s", action_name)
-            return None
-
-        async with llm.create_llm_session() as gemini:
-            return await gemini.send_message(
-                prompt,
-                response_json_schema=ActionAiMetadata,
-                raise_error_if_empty_response=True,
-            )
-
     async def _load_metadata(self) -> dict[str, Any]:
+        metadata: dict[str, Any] = {}
+
+        # Load from integration folder
         resource_ai_dir: anyio.Path = (
             self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
         )
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         if await metadata_file.exists():
             content: str = await metadata_file.read_text()
-            try:
-                return yaml.safe_load(content) or {}
-            except yaml.YAMLError:
-                return {}
+            with contextlib.suppress(yaml.YAMLError):
+                metadata = yaml.safe_load(content) or {}
 
-        return {}
+        # Load from dst folder if provided (overwrites integration metadata)
+        if self.dst:
+            dst_metadata_file: anyio.Path = (
+                anyio.Path(self.dst) / constants.ACTIONS_AI_DESCRIPTION_FILE
+            )
+            if await dst_metadata_file.exists():
+                content = await dst_metadata_file.read_text()
+                with contextlib.suppress(yaml.YAMLError):
+                    dst_metadata = yaml.safe_load(content) or {}
+                    metadata.update(dst_metadata)
+
+        return metadata
 
     async def _save_metadata(self, metadata: dict[str, Any]) -> None:
-        resource_ai_dir: anyio.Path = (
-            self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
-        )
+        if self.dst:
+            resource_ai_dir = anyio.Path(self.dst)
+        else:
+            resource_ai_dir = self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
+
         await resource_ai_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         await metadata_file.write_text(yaml.dump(metadata))
