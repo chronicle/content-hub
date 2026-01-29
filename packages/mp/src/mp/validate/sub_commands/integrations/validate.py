@@ -94,7 +94,7 @@ def validate_integration(
         ),
     ] = False,
 ) -> None:
-    """Run the mp validate command.
+    """Run the `mp validate integration` command.
 
     Validate integrations within the marketplace based on specified criteria.
 
