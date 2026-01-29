@@ -107,7 +107,7 @@ def get_users_profile_cards_with_pagination(
             fetch_only_support_users=fetch_only_support_users,
             filter_permission_types=filter_permission_types,
         )
-        results = response_json.get("objectsList", response_json.get("items"))
+        results = response_json.get("legacySoarUsers", response_json.get("objectsList"))
         users.extend(UserProfileCard.from_json(user) for user in results)
 
         last_fetch_number = len(results)

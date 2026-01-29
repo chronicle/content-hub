@@ -52,6 +52,8 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
             "marketplaceIntegrations",
             params=params,
         )
+        if response.status_code == STATUS_CODE_NO_CONTENT:
+            return {"marketplace_integrations": []}
 
         return response.json()
 
