@@ -445,9 +445,7 @@ class SiemplifyApiClient:
 
         Returns:
             list[SingleJson]: List of connectors."""
-        res = get_installed_connectors(chronicle_soar=chronicle_soar)
-
-        return res.get("connector_instances", res.get("installedConnectors", []))
+        return get_installed_connectors(chronicle_soar=chronicle_soar)
 
     def update_connector(self, connector_data):
         return update_connector(self.siemplify_soar, connector_data)

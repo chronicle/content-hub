@@ -235,11 +235,18 @@ class GitSyncManager:
                         "from the marketplace",
                     )
                     return
-            integration_cards = next(
-                x
-                for x in self.api.get_ide_cards(integration.identifier)
-                if x["identifier"] == integration.identifier
-            )["cards"]
+            response = self.api.get_ide_cards(integration.identifier)
+            integration_cards = []
+            if isinstance(response, dict) and "cards" in response:
+                integration_cards = response.get("cards", [])
+            elif isinstance(response, list):
+                integration_cards = response
+            else:
+                self.logger.warning(
+                    "Unexpected response format from get_ide_cards "
+                    "for integration '{integration.identifier}'. "
+                    f"Expected dict or list, but got {type(response).__name__}."
+                )
             for script in integration.get_all_items():
                 item_card = next(
                     (
@@ -584,7 +591,7 @@ class GitSyncManager:
         """
         return next(
             (
-                x["installedVersion"]
+                x.get("installedVersion") or x.get("version")
                 for x in self._marketplace_integrations
                 if x["identifier"] == integration_name
             ),
