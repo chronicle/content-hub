@@ -23,13 +23,8 @@ them onto the main Typer instance.
 
 from __future__ import annotations
 
-import typer
-
 from . import build_project, check, config, describe, dev_env, run_pre_build_tests, validate
 from . import format as format_app
-from .build_project.typer_app import build_app
-from .dev_env.typer_app import dev_env_app
-from .validate.typer_app import validate_app
 
 __all__: list[str] = [
     "build_project",
@@ -41,20 +36,3 @@ __all__: list[str] = [
     "run_pre_build_tests",
     "validate",
 ]
-
-
-def main() -> None:
-    """Entry point for the `mp` CLI tool, initializing all sub-applications."""
-    app: typer.Typer = typer.Typer()
-    app.add_typer(build_app, name="build")
-    app.add_typer(check.app)
-    app.add_typer(config.app)
-    app.add_typer(format_app.app)
-    app.add_typer(run_pre_build_tests.app)
-    app.add_typer(dev_env_app, name="dev-env")
-    app.add_typer(validate_app, name="validate")
-    app()
-
-
-if __name__ == "__main__":
-    main()
