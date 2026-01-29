@@ -1,4 +1,4 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,17 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 
-import mp.dev_env.commands.integrations.pull as integrations_pull_command
-import mp.dev_env.commands.integrations.push as integrations_push_command
-import mp.dev_env.commands.playbooks.pull as playbook_pull_command
-import mp.dev_env.commands.playbooks.push as playbook_push_command
+import typer
 
-__all__ = [
-    "integrations_pull_command",
-    "integrations_push_command",
-    "playbook_pull_command",
-    "playbook_push_command",
-]
+from .action.typer_app import app as action_app
+
+app: typer.Typer = typer.Typer(help="Commands for creating description for content using Gemini")
+
+app.add_typer(action_app)

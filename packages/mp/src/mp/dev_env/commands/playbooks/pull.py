@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path  # noqa: TC003
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import rich
@@ -34,11 +35,9 @@ if TYPE_CHECKING:
 @track_command
 def pull_playbook(
     playbook: Annotated[str, typer.Argument(help="Playbook to pull and deconstruct.")],
-    dest: Annotated[
+    dst: Annotated[
         Path | None,
-        typer.Option(
-            "--dest", help="Destination folder. the 'download' directory in content-hub repo."
-        ),
+        typer.Option(help="Destination folder. the 'download' directory in content-hub repo."),
     ] = None,
     *,
     include_blocks: Annotated[
@@ -50,11 +49,11 @@ def pull_playbook(
         typer.Option(help="Keep the zip file after pulling."),
     ] = False,
 ) -> None:
-    """Pull a playbook from the SOAR environment.
+    """Pull and deconstruct a playbook from the SOAR environment.
 
     Args:
         playbook: The playbook to pull.
-        dest: Destination folder.
+        dst: Destination folder.
         include_blocks: Pull all playbook-dependent blocks.
         keep_zip: Keep the zip file after pulling.
 
@@ -63,17 +62,17 @@ def pull_playbook(
 
     """
     zip_path: Path | None = None
-    if dest is None:
-        dest = mp.core.file_utils.common.utils.create_or_get_download_dir()
+    if dst is None:
+        dst = mp.core.file_utils.common.utils.create_or_get_download_dir()
     else:
-        dest.mkdir(parents=True, exist_ok=True)
+        dst.mkdir(parents=True, exist_ok=True)
 
     try:
-        zip_path = _pull_playbook_zip_from_soar(playbook, dest)
-        _deconstruct_playbook(zip_path, dest, playbook)
+        zip_path = _pull_playbook_zip_from_soar(playbook, dst)
+        _deconstruct_playbook(zip_path, dst, playbook)
 
         if include_blocks:
-            _deconstruct_blocks(zip_path, dest, playbook)
+            _deconstruct_blocks(zip_path, dst, playbook)
 
         rich.print(f"[green]✅ Playbook {playbook} pulled successfully.[/green]")
 
@@ -87,21 +86,27 @@ def pull_playbook(
             zip_path.unlink()
 
 
-def _pull_playbook_zip_from_soar(playbook: str, dest: Path) -> Path:
+def _pull_playbook_zip_from_soar(playbook: str, dst: Path) -> Path:
     config = load_dev_env_config()
     backend_api: BackendAPI = get_backend_api(config)
     installed_playbook: list[dict[str, Any]] = backend_api.list_playbooks()
     playbook_identifier = utils.find_playbook_identifier(playbook, installed_playbook)
     data_json: dict[str, Any] = backend_api.download_playbook(playbook_identifier)
-    return utils.save_playbook_as_zip(playbook, data_json, dest)
+    return utils.save_playbook_as_zip(playbook, data_json, dst)
 
 
-def _deconstruct_playbook(zip_path: Path, dest: Path, playbook: str) -> None:
-    playbook_file: list[Path] = utils.unzip_playbooks(zip_path, dest, include_playbook=playbook)
-    utils.deconstruct_playbook(playbook_file[0])
+def _deconstruct_playbook(zip_path: Path, dst: Path, playbook: str) -> None:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        temp_path = Path(tmp_dir)
+        playbook_file: list[Path] = utils.unzip_playbooks(
+            zip_path, temp_path, include_playbook=playbook
+        )
+        utils.deconstruct_playbook(playbook_file[0], dst)
 
 
-def _deconstruct_blocks(zip_path: Path, dest: Path, playbook: str) -> None:
-    all_built_files: list[Path] = utils.unzip_playbooks(zip_path, dest, "", playbook)
-    for built_file in all_built_files:
-        utils.deconstruct_playbook(built_file)
+def _deconstruct_blocks(zip_path: Path, dst: Path, playbook: str) -> None:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        temp_path = Path(tmp_dir)
+        all_built_files: list[Path] = utils.unzip_playbooks(zip_path, temp_path, "", playbook)
+        for built_file in all_built_files:
+            utils.deconstruct_playbook(built_file, dst)

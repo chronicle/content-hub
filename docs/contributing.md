@@ -45,6 +45,8 @@ with your changes to the main repository's main branch.
 
 ### Detailed Contribution Guides
 
+- [Response Integrations](/docs/content_deep_dive/response_integrations/how_to_contribute.md)
+
 - [Playbooks](/docs/content_deep_dive/playbooks/how_to_contribute.md)
 
 ### Code Reviews

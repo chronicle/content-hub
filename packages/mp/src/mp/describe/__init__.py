@@ -1,4 +1,4 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
+from . import action
+from .typer_app import app
 
-import mp.dev_env.commands.integrations.pull as integrations_pull_command
-import mp.dev_env.commands.integrations.push as integrations_push_command
-import mp.dev_env.commands.playbooks.pull as playbook_pull_command
-import mp.dev_env.commands.playbooks.push as playbook_push_command
-
-__all__ = [
-    "integrations_pull_command",
-    "integrations_push_command",
-    "playbook_pull_command",
-    "playbook_push_command",
-]
+__all__: list[str] = ["action", "app"]
