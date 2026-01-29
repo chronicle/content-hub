@@ -12,16 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from __future__ import annotations
 
-import mp.dev_env.commands.integrations.pull as integrations_pull_command
-import mp.dev_env.commands.integrations.push as integrations_push_command
-import mp.dev_env.commands.playbooks.pull as playbook_pull_command
-import mp.dev_env.commands.playbooks.push as playbook_push_command
+import typer
 
-__all__ = [
-    "integrations_pull_command",
-    "integrations_push_command",
-    "playbook_pull_command",
-    "playbook_push_command",
-]
+pull_app = typer.Typer(name="pull", help="Pull content to the SecOps environment.")

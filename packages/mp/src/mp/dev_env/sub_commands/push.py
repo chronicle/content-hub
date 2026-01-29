@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from __future__ import annotations
 
-from .sub_commands.integrations.build import build_integration
-from .sub_commands.playbooks.build import build_playbook
-from .sub_commands.repository.build import build_repository
+import typer
 
-__all__: list[str] = ["build_integration", "build_playbook", "build_repository"]
+push_app = typer.Typer(name="push", help="Push content to the SecOps environment.")

@@ -22,8 +22,8 @@ import rich
 import typer
 
 import mp.core.file_utils
-from mp.dev_env.commands.playbooks import utils
-from mp.dev_env.commands.pull import pull_app
+from mp.dev_env.sub_commands.playbooks import utils
+from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 

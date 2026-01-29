@@ -28,19 +28,11 @@ import typer
 from mp.core import config as mp_config
 from mp.core.logging_utils import setup_logging
 
-from . import build_project, check, config, describe, dev_env, run_pre_build_tests, validate
+from . import check, config, describe, run_pre_build_tests
 from . import format as format_app
-
-__all__: list[str] = [
-    "build_project",
-    "check",
-    "config",
-    "dev_env",
-    "format_app",
-    "main",
-    "run_pre_build_tests",
-    "validate",
-]
+from .build_project.typer_app import build_app
+from .dev_env.typer_app import dev_env_app
+from .validate.typer_app import validate_app
 
 
 def main() -> None:
@@ -48,13 +40,13 @@ def main() -> None:
     setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
 
     app: typer.Typer = typer.Typer()
-    app.add_typer(build_project.app)
+    app.add_typer(build_app, name="build")
     app.add_typer(check.app)
     app.add_typer(config.app, name="config")
     app.add_typer(format_app.app)
     app.add_typer(run_pre_build_tests.app)
-    app.add_typer(dev_env.app, name="dev-env")
-    app.add_typer(validate.app)
+    app.add_typer(dev_env_app, name="dev-env")
+    app.add_typer(validate_app, name="validate")
     app.add_typer(describe.app, name="describe")
     app()
 

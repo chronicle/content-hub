@@ -395,8 +395,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
         return self._paginate_results(
-            initial_endpoint=initial_endpoint,
-            root_response_key="customLists"
+            initial_endpoint=initial_endpoint, root_response_key="customLists"
         )
 
     def get_traking_list_records_filtered(self) -> SingleJson:
@@ -421,8 +420,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
         return self._paginate_results(
-            initial_endpoint=initial_endpoint,
-            root_response_key="customLists"
+            initial_endpoint=initial_endpoint, root_response_key="customLists"
         )
 
     def execute_bulk_assign(self) -> requests.Response:
