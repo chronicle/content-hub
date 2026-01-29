@@ -95,12 +95,6 @@ def main():
     end_date = siemplify.extract_action_param(
         param_name="End Date", input_type=str, is_mandatory=False, default_value=None
     )
-    max_snapshots_per_object = siemplify.extract_action_param(
-        param_name="Max Snapshots Per Object",
-        input_type=str,
-        is_mandatory=False,
-        default_value=None,
-    )
     max_matches_per_snapshot = siemplify.extract_action_param(
         param_name="Max Matches Per Snapshot",
         input_type=str,
@@ -210,6 +204,7 @@ def main():
             start_date=start_date,
             end_date=end_date,
             max_snapshots_per_object=max_snapshots_per_object,
+            max_matches_per_snapshot=max_matches_per_snapshot,
             min_file_size=min_file_size,
             max_file_size=max_file_size,
             paths_to_include=paths_to_include,

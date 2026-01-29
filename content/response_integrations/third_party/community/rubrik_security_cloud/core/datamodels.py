@@ -320,7 +320,7 @@ class SonarSensitiveHitsDatamodel:
                     "Policy Object ID": policy_object_id,
                     "Analyzer Group Name": analyzer_group_name,
                     "Analyzer Name": analyzer_name,
-                    "Total Hits": total_hits,
+                    "Total Hits": str(total_hits),
                 })
 
         if not results:
@@ -328,7 +328,7 @@ class SonarSensitiveHitsDatamodel:
                 "Policy Object ID": policy_object_id,
                 "Analyzer Group Name": "N/A",
                 "Analyzer Name": "N/A",
-                "Total Hits": total_hits,
+                "Total Hits": str(total_hits),
             })
 
         return results
