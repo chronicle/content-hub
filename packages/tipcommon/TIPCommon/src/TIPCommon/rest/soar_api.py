@@ -1351,7 +1351,7 @@ def get_email_template(
     response_data = response.json()
     if isinstance(response_data, list):
         return [EmailTemplate.from_json(res) for res in response_data]
-    email_templates_list = response_data.get("email_templates", [])
+    email_templates_list = response_data.get("emailTemplates", [])
     return [EmailTemplate.from_json(res) for res in email_templates_list]
 
 
