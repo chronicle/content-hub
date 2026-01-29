@@ -53,7 +53,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
             params=params,
         )
         if response.status_code == STATUS_CODE_NO_CONTENT:
-            return {"marketplace_integrations": []}
+            return {"marketplaceIntegrations": []}
 
         return response.json()
 
@@ -95,7 +95,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
         params: SingleJson = {"pageSize": DEFAULT_PAGE_SIZE}
         response: httpx.Response = await self.get(endpoint, params=params)
         if response.status_code == STATUS_CODE_NO_CONTENT:
-            return {"connector_instances": []}
+            return {"connectorInstances": []}
 
         return response.json()
 
