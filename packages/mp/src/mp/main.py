@@ -28,10 +28,13 @@ import typer
 from mp.core import config as mp_config
 from mp.core.logging_utils import setup_logging
 
-from . import check, config, describe, run_pre_build_tests
-from . import format as format_app
+from . import describe
 from .build_project.typer_app import build_app
+from .check.typer_app import check_app
+from .config.typer_app import config_app
 from .dev_env.typer_app import dev_env_app
+from .format.tpyer_app import format_app
+from .run_pre_build_tests.typer_app import test_app
 from .validate.typer_app import validate_app
 
 
@@ -41,10 +44,10 @@ def main() -> None:
 
     app: typer.Typer = typer.Typer()
     app.add_typer(build_app, name="build")
-    app.add_typer(check.app)
-    app.add_typer(config.app, name="config")
-    app.add_typer(format_app.app)
-    app.add_typer(run_pre_build_tests.app)
+    app.add_typer(check_app)
+    app.add_typer(config_app, name="config")
+    app.add_typer(format_app)
+    app.add_typer(test_app)
     app.add_typer(dev_env_app, name="dev-env")
     app.add_typer(validate_app, name="validate")
     app.add_typer(describe.app, name="describe")
