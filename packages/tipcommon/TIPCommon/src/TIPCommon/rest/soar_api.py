@@ -2132,8 +2132,11 @@ def update_blocklist(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.blocklist_data = blocklist_data
     response = api_client.update_blocklist()
-    validate_response(response, validate_json=True)
-    return response.json()
+    try:
+        response = validate_response(response, validate_json=False)
+        return response
+    except (HTTPError, InternalJSONDecoderError):
+        return {}
 
 
 def update_sla_record(

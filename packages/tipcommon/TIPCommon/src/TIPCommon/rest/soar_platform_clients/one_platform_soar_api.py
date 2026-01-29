@@ -1005,7 +1005,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         return detailed_data_list
 
-    def get_installed_connectors(self) -> requests.Response: # 29 jan
+    def get_installed_connectors(self) -> requests.Response:
         """Get installed connectors."""
         instance_id: str = self.params.connector_instance_id
         endpoint: str = "/integrations/-/connectors/-/connectorInstances"

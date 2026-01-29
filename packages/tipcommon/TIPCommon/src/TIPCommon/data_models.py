@@ -2051,10 +2051,6 @@ class Environment:
     identifier: int | None
     weight: int | None
 
-    # -------------------------
-    # FACTORY
-    # -------------------------
-
     @classmethod
     def from_json(cls, data: dict) -> "Environment":
         aliases = data.get("aliases")
@@ -2072,24 +2068,29 @@ class Environment:
                 scopes = []
 
         return cls(
-            # ✅ PRESERVE NAME FROM BOTH LEGACY & 1P
             name=data.get("name") or data.get("displayName"),
             display_name=data.get("displayName"),
             description=data.get("description"),
             contact_name=data.get("contactName", data.get("contact")),
             contact_emails=data.get("contactEmails"),
             contact_phone=data.get("contactPhone"),
-            remediation_duration_in_days=data.get("remediationDurationInDays"),
-            allow_remediation_actions=data.get("shouldAllowRemediationActions"),
-            notify_on_remediation_actions=data.get("shouldNotifyOnRemediationActions"),
+            remediation_duration_in_days=data.get("remediationDurationInDays", 0),
+            allow_remediation_actions=data.get("shouldAllowRemediationActions", 0),
+            notify_on_remediation_actions=data.get(
+                "shouldNotifyOnRemediationActions",
+                0
+            ),
             retention_duration_in_months=data.get(
                 "retentionDurationInMonths",
-                data.get("retentionDuration"),
+                data.get("retentionDuration", 0),
             ),
             retention_duration_internal=data.get("retentionDurationInMonthsInternal"),
             base64_image=data.get("base64Image"),
-            for_db_migration=data.get("forDBMigration"),
-            environment_allowed_for_all_users=data.get("environmentAllowedForAllUsers"),
+            for_db_migration=data.get("forDBMigration", 0),
+            environment_allowed_for_all_users=data.get(
+                "environmentAllowedForAllUsers",
+                0
+            ),
             dynamic_parameters=list(data.get("dynamicParameters") or []),
             properties=data.get("properties") or {},
             is_system=data.get("isSystem", data.get("system")),
@@ -2100,14 +2101,10 @@ class Environment:
             weight=data.get("weight"),
         )
 
-    # -------------------------
-    # SERIALIZERS
-    # -------------------------
-
     def to_legacy(self) -> dict:
         return {
             "id": self.identifier,
-            "name": self.name,  # ✅ EXACT echo (IMMUTABLE)
+            "name": self.display_name or self.name,
             "description": self.description,
             "contactName": self.contact_name,
             "contactEmails": self.contact_emails,
@@ -2141,7 +2138,7 @@ class Environment:
             raise ValueError("1P environment name is required")
 
         return {
-            "name": self.name,  # ✅ IMMUTABLE
+            "name": self.name,
             "id": self.identifier,
             "system": bool(self.is_system),
             "displayName": self.display_name or self.name,
@@ -2881,4 +2878,58 @@ class SimulatedCases:
             "type": self.type,
             "connectorIdentifier": self.connector_identifier,
             "debugOutput": self.debug_output,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class BlockRecord:
+    identifier: int
+    entity_identifier: str
+    entity_type: str
+    element_type: int
+    scope: int
+    environments: list[str]
+
+    @classmethod
+    def from_legacy_or_1p(cls, data: SingleJson) -> "Entity":
+        """
+        Factory method to create an Entity instance from a dictionary.
+        Handles cases where environments might be a JSON string or a list.
+        """
+        envs = data.get("environments")
+        if isinstance(envs, str):
+            try:
+                envs = json.loads(envs)
+            except json.JSONDecodeError:
+                envs = []
+        
+        return cls(
+            identifier=data.get("id", 0),
+            entity_identifier=data.get("entityIdentifier", ""),
+            entity_type=data.get("entityType", ""),
+            element_type=data.get("elementType", 0),
+            scope=data.get("scope", 0),
+            environments=envs if isinstance(envs, list) else [],
+        )
+
+    def to_legacy(self) -> SingleJson:
+        """Serializes the object back to the source JSON format."""
+        return {
+            "id": self.identifier,
+            "entityIdentifier": self.entity_identifier,
+            "entityType": self.entity_type,
+            "elementType": self.element_type,
+            "scope": self.scope,
+            "environments": self.environments,
+        }
+
+    def to_1p(self) -> SingleJson:
+        """Serializes the object back to the source JSON format."""
+        return {
+            "id": self.identifier,
+            "entityIdentifier": self.entity_identifier,
+            "entityType": self.entity_type,
+            "elementType": self.element_type,
+            "scope": self.scope,
+            "environments": self.environments,
         }
