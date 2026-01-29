@@ -14,10 +14,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from .all_blocks_existing_validation import AllBlocksExistValidation
 from .block_env_matches_playbook_env_validation import BlockEnvMatchesPlaybookEnvValidation
 from .block_overview_validation import BlockDoesNotContainAnOverviewValidation
-from .collection import get_playbooks_pre_build_validations
 from .debug_data_validation import DebugDataValidation
 from .environments_validation import EnvironmentsValidation
 from .loop_step_validation import LoopStepValidation
@@ -26,16 +27,31 @@ from .steps_parameters_validation import StepParamsValidation
 from .unique_name_validation import UniqueNameValidation
 from .version_bump_validation import VersionBumpValidation
 
-__all__: list[str] = [
-    "AllBlocksExistValidation",
-    "BlockDoesNotContainAnOverviewValidation",
-    "BlockEnvMatchesPlaybookEnvValidation",
-    "DebugDataValidation",
-    "EnvironmentsValidation",
-    "LoopStepValidation",
-    "OverviewContainsOnlyAllowedRolesValidation",
-    "StepParamsValidation",
-    "UniqueNameValidation",
-    "VersionBumpValidation",
-    "get_playbooks_pre_build_validations",
-]
+if TYPE_CHECKING:
+    from mp.validate.data_models import Validator
+
+
+def get_playbooks_pre_build_validations() -> list[Validator]:
+    """Get a list of all available pre-build validations.
+
+    Returns:
+        A list of all `Validator` instances.
+
+    """
+    return _get_non_priority_validations() + _get_priority_validations()
+
+
+def _get_non_priority_validations() -> list[Validator]:
+    return [
+        VersionBumpValidation(),
+        BlockDoesNotContainAnOverviewValidation(),
+        EnvironmentsValidation(),
+        StepParamsValidation(),
+        BlockEnvMatchesPlaybookEnvValidation(),
+        OverviewContainsOnlyAllowedRolesValidation(),
+        DebugDataValidation(),
+    ]
+
+
+def _get_priority_validations() -> list[Validator]:
+    return [AllBlocksExistValidation(), LoopStepValidation(), UniqueNameValidation()]
