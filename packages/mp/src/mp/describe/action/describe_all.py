@@ -49,18 +49,26 @@ class IntegrationTask(NamedTuple):
     initial_action_count: int
 
 
-async def describe_all_actions(src: Path | None = None, *, override: bool = False) -> None:
+async def describe_all_actions(
+    src: Path | None = None, dst: Path | None = None, *, override: bool = False
+) -> None:
     """Describe all actions in all integrations in the marketplace."""
     integrations_paths: list[Path] = _get_all_integrations_paths(src=src)
-    orchestrator = _MarketplaceOrchestrator(src, integrations_paths, override=override)
+    orchestrator = _MarketplaceOrchestrator(src, dst, integrations_paths, override=override)
     await orchestrator.run()
 
 
 class _MarketplaceOrchestrator:
     def __init__(
-        self, src: Path | None, integrations_paths: list[Path], *, override: bool = False
+        self,
+        src: Path | None,
+        dst: Path | None,
+        integrations_paths: list[Path],
+        *,
+        override: bool = False,
     ) -> None:
         self.src: Path | None = src
+        self.dst: Path | None = dst
         self.integrations_paths: list[Path] = integrations_paths
         self.concurrency: int = mp.core.config.get_gemini_concurrency()
         self.action_sem: asyncio.Semaphore = asyncio.Semaphore(self.concurrency)
@@ -96,7 +104,11 @@ class _MarketplaceOrchestrator:
         """Start describing the next integration in the queue."""
         path: Path = self.pending_paths.popleft()
         da: DescribeAction = DescribeAction(
-            integration=path.name, actions=set(), src=self.src, override=self.override
+            integration=path.name,
+            actions=set(),
+            src=self.src,
+            dst=self.dst,
+            override=self.override,
         )
 
         # Pre-discover action count to decide if we should start more

@@ -19,6 +19,7 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
+import anyio
 import yaml
 from rich.progress import TaskID, track
 
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import AsyncIterator, Callable
 
-    import anyio
     from rich.progress import Progress
 
 
@@ -125,10 +125,12 @@ class DescribeAction:
         actions: set[str],
         *,
         src: pathlib.Path | None = None,
+        dst: pathlib.Path | None = None,
         override: bool = False,
     ) -> None:
         self.integration_name: str = integration
         self.src: pathlib.Path | None = src
+        self.dst: pathlib.Path | None = dst
         self.integration: anyio.Path = paths.get_integration_path(integration, src=src)
         self.actions: set[str] = actions
         self.override: bool = override
@@ -422,23 +424,37 @@ class DescribeAction:
             )
 
     async def _load_metadata(self) -> dict[str, Any]:
+        metadata: dict[str, Any] = {}
+
+        # Load from integration folder
         resource_ai_dir: anyio.Path = (
             self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
         )
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         if await metadata_file.exists():
             content: str = await metadata_file.read_text()
-            try:
-                return yaml.safe_load(content) or {}
-            except yaml.YAMLError:
-                return {}
+            with contextlib.suppress(yaml.YAMLError):
+                metadata = yaml.safe_load(content) or {}
 
-        return {}
+        # Load from dst folder if provided (overwrites integration metadata)
+        if self.dst:
+            dst_metadata_file: anyio.Path = (
+                anyio.Path(self.dst) / constants.ACTIONS_AI_DESCRIPTION_FILE
+            )
+            if await dst_metadata_file.exists():
+                content = await dst_metadata_file.read_text()
+                with contextlib.suppress(yaml.YAMLError):
+                    dst_metadata = yaml.safe_load(content) or {}
+                    metadata.update(dst_metadata)
+
+        return metadata
 
     async def _save_metadata(self, metadata: dict[str, Any]) -> None:
-        resource_ai_dir: anyio.Path = (
-            self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
-        )
+        if self.dst:
+            resource_ai_dir = anyio.Path(self.dst)
+        else:
+            resource_ai_dir = self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
+
         await resource_ai_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         await metadata_file.write_text(yaml.dump(metadata))
