@@ -18,8 +18,9 @@ import asyncio
 import collections
 import logging
 from asyncio import Task
-from typing import TYPE_CHECKING, NamedTuple
+from typing import NamedTuple
 
+from anyio import Path
 from rich.progress import (
     BarColumn,
     Progress,
@@ -34,10 +35,6 @@ from mp.core.custom_types import RepositoryType
 from mp.core.file_utils import get_integration_base_folders_paths
 from mp.describe.action.describe import DescribeAction
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-
 logger: logging.Logger = logging.getLogger("mp.describe_marketplace")
 MAX_ACTIVE_INTEGRATIONS: int = 5
 MAX_ACTIVE_TASKS: int = 3
@@ -50,10 +47,13 @@ class IntegrationTask(NamedTuple):
 
 
 async def describe_all_actions(
-    src: Path | None = None, dst: Path | None = None, *, override: bool = False
+    src: Path | None = None,
+    dst: Path | None = None,
+    *,
+    override: bool = False,
 ) -> None:
     """Describe all actions in all integrations in the marketplace."""
-    integrations_paths: list[Path] = _get_all_integrations_paths(src=src)
+    integrations_paths: list[Path] = await _get_all_integrations_paths(src=src)
     orchestrator = _MarketplaceOrchestrator(src, dst, integrations_paths, override=override)
     await orchestrator.run()
 
@@ -193,23 +193,25 @@ async def _process_completed_tasks(
             )
 
 
-def _get_all_integrations_paths(src: Path | None = None) -> list[Path]:
+async def _get_all_integrations_paths(src: Path | None = None) -> list[Path]:
     if src:
         return (
-            [p for p in src.iterdir() if p.is_dir() and not p.name.startswith(".")]
-            if src.exists()
+            [p async for p in src.iterdir() if p.is_dir() and not p.name.startswith(".")]
+            if await src.exists()
             else []
         )
 
     paths: list[Path] = []
     base_paths: list[Path] = []
     for repo_type in [RepositoryType.COMMERCIAL, RepositoryType.THIRD_PARTY]:
-        base_paths.extend(get_integration_base_folders_paths(repo_type.value))
+        base_paths.extend(map(Path, get_integration_base_folders_paths(repo_type.value)))
 
     for base_path in base_paths:
         if not base_path.exists():
             continue
 
-        paths.extend([p for p in base_path.iterdir() if p.is_dir() and not p.name.startswith(".")])
+        paths.extend([
+            p async for p in base_path.iterdir() if p.is_dir() and not p.name.startswith(".")
+        ])
 
     return paths

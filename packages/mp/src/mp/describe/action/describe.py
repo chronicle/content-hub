@@ -31,7 +31,6 @@ from .prompt_constructors.source import SourcePromptConstructor
 from .utils import llm, paths
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import AsyncIterator, Callable
 
     from rich.progress import Progress
@@ -124,13 +123,13 @@ class DescribeAction:
         integration: str,
         actions: set[str],
         *,
-        src: pathlib.Path | None = None,
-        dst: pathlib.Path | None = None,
+        src: anyio.Path | None = None,
+        dst: anyio.Path | None = None,
         override: bool = False,
     ) -> None:
         self.integration_name: str = integration
-        self.src: pathlib.Path | None = src
-        self.dst: pathlib.Path | None = dst
+        self.src: anyio.Path | None = src
+        self.dst: anyio.Path | None = dst
         self.integration: anyio.Path = paths.get_integration_path(integration, src=src)
         self.actions: set[str] = actions
         self.override: bool = override
@@ -226,8 +225,8 @@ class DescribeAction:
         on_action_done: Callable[[], None] | None = None,
         progress: Progress | None = None,
     ) -> list[ActionDescriptionResult]:
-        action_list = list(actions)
-        bulks = [
+        action_list: list[str] = list(actions)
+        bulks: list[list[str]] = [
             action_list[i : i + llm.DESCRIBE_BULK_SIZE]
             for i in range(0, len(action_list), llm.DESCRIBE_BULK_SIZE)
         ]
@@ -249,6 +248,7 @@ class DescribeAction:
             for coro in asyncio.as_completed(tasks):
                 results.extend(await coro)
             progress.remove_task(task_id)
+
         else:
             rich_params = RichParams(on_action_done)
             tasks: list[asyncio.Task] = [
@@ -393,35 +393,6 @@ class DescribeAction:
                 if file.name != "__init__.py":
                     actions.add(file.stem)
         return actions
-
-    async def describe_action(
-        self, action_name: str, status: IntegrationStatus
-    ) -> ActionAiMetadata | None:
-        """Describe an action of a given integration.
-
-        Returns:
-            ActionAiMetadata | None: The AI-generated metadata for the action,
-                or None if description failed.
-
-        """
-        params = DescriptionParams(
-            integration=self.integration,
-            integration_name=self.integration_name,
-            action_name=action_name,
-            status=status,
-        )
-        constructor: _PromptConstructor = _create_prompt_constructor(params)
-        prompt: str = await constructor.construct()
-        if not prompt:
-            logger.warning("Could not construct prompt for action %s", action_name)
-            return None
-
-        async with llm.create_llm_session() as gemini:
-            return await gemini.send_message(
-                prompt,
-                response_json_schema=ActionAiMetadata,
-                raise_error_if_empty_response=True,
-            )
 
     async def _load_metadata(self) -> dict[str, Any]:
         metadata: dict[str, Any] = {}

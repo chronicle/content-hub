@@ -18,6 +18,7 @@ import asyncio
 import pathlib  # noqa: TC003
 from typing import Annotated
 
+import anyio
 import rich
 import typer
 
@@ -119,11 +120,21 @@ def describe(  # noqa: PLR0913
         sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
         asyncio.run(
             DescribeAction(
-                integration, target_actions, src=src, dst=dst, override=override
+                integration=integration,
+                actions=target_actions,
+                src=anyio.Path(src) if src is not None else None,
+                dst=anyio.Path(dst) if dst is not None else None,
+                override=override,
             ).describe_actions(sem=sem)
         )
     elif all_marketplace:
-        asyncio.run(describe_all_actions(src=src, dst=dst, override=override))
+        asyncio.run(
+            describe_all_actions(
+                src=anyio.Path(src) if src is not None else None,
+                dst=anyio.Path(dst) if dst is not None else None,
+                override=override,
+            )
+        )
     else:
         rich.print("[red]Please specify either --integration or --all[/red]")
         raise typer.Exit(code=1)

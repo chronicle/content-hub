@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 logger: logging.Logger = logging.getLogger("mp.describe_action.paths")
 
 
-def get_integration_path(name: str, *, src: pathlib.Path | None = None) -> anyio.Path:
+def get_integration_path(name: str, *, src: anyio.Path | None = None) -> anyio.Path:
     """Get the path to an integration.
 
     Args:
@@ -48,8 +48,8 @@ def get_integration_path(name: str, *, src: pathlib.Path | None = None) -> anyio
     return _get_marketplace_integration_path(name)
 
 
-def _get_source_integration_path(name: str, src: pathlib.Path) -> anyio.Path:
-    path = src / name
+def _get_source_integration_path(name: str, src: anyio.Path) -> anyio.Path:
+    path: anyio.Path = src / name
     if path.exists():
         return anyio.Path(path)
     logger.error("Integration '%s' not found in source '%s'", name, src)
@@ -69,7 +69,7 @@ def _get_marketplace_integration_path(name: str) -> anyio.Path:
     raise typer.Exit(1)
 
 
-def get_out_path(integration_name: str, src: pathlib.Path | None = None) -> anyio.Path:
+def get_out_path(integration_name: str, src: anyio.Path | None = None) -> anyio.Path:
     """Get the output path for a built integration.
 
     Args:
