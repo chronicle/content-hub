@@ -250,9 +250,7 @@ def main():
             output_message = "No accounts were found with the provided parameters."
             siemplify.result.add_result_json({})
         else:
-            output_message = (
-                f"Successfully retrieved the details for {len(accounts)} accounts."
-            )
+            output_message = f"Successfully retrieved the details for {len(accounts)} accounts."
 
             mendatory_fields = [
                 "id",

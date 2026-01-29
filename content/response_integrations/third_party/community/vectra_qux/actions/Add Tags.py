@@ -172,7 +172,9 @@ def main():
                 failure_ids.append(entity_id)
 
         if success_ids:
-            output_message = f'Successfully added tag(s) to {entity_type}(s): "{", ".join(success_ids)}".'
+            output_message = (
+                f'Successfully added tag(s) to {entity_type}(s): "{", ".join(success_ids)}".'
+            )
             if failure_ids:
                 output_message += f' Failed to add tag(s) to {entity_type}(s): "{", ".join(failure_ids)}". Check logs for more details.'
             siemplify.result.add_result_json(json.dumps(result_table))
@@ -181,9 +183,7 @@ def main():
                 data_table=construct_csv(result_table),
             )
         else:
-            output_message = (
-                f'Failed to add tag(s) to {entity_type}(s): "{", ".join(failure_ids)}"'
-            )
+            output_message = f'Failed to add tag(s) to {entity_type}(s): "{", ".join(failure_ids)}"'
             status = EXECUTION_STATE_FAILED
             result_value = RESULT_VALUE_FALSE
 

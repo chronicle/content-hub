@@ -249,12 +249,8 @@ def main():
         limit = validator(limit, zero_allowed=True, name="Limit")
         host_id = validator(host_id, zero_allowed=False, name="Host ID")
         state = state.lower() if state else None
-        is_targeting_key_asset = (
-            is_targeting_key_asset.lower() if is_targeting_key_asset else None
-        )
-        detection_category = (
-            detection_category.split()[0].lower() if detection_category else None
-        )
+        is_targeting_key_asset = is_targeting_key_asset.lower() if is_targeting_key_asset else None
+        detection_category = detection_category.split()[0].lower() if detection_category else None
 
         vectra_manager = VectraQUXManager(
             api_root,
@@ -283,9 +279,7 @@ def main():
             output_message = "No detections were found for the given parameters."
             siemplify.result.add_result_json({})
         else:
-            output_message = (
-                f"Successfully retrieved the details for {len(detections)} detections"
-            )
+            output_message = f"Successfully retrieved the details for {len(detections)} detections"
 
             mendatory_fields = [
                 "id",

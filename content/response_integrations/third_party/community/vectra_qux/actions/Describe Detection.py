@@ -78,9 +78,7 @@ def main():
         )
 
         detection = vectra_manager.describe_detection(detection_id)
-        output_message = (
-            f"Successfully retrieved information for detection ID {detection_id}."
-        )
+        output_message = f"Successfully retrieved information for detection ID {detection_id}."
 
         siemplify.result.add_data_table(
             title="Describe Detection",
