@@ -152,7 +152,7 @@ def main():
     try:
         object_id = string_to_list(object_id, param_name="Object ID", is_mandatory=True)
         scan_name = generate_scan_name(scan_name)
-        advance_ioc = validate_json(advance_ioc, "advance ioc")
+        advance_ioc = validate_json(advance_ioc, "advanced ioc")
 
         # Validate and process integer parameters
         max_snapshots_per_object = validate_integer_param(
@@ -200,7 +200,7 @@ def main():
             siemplify=siemplify,
         )
 
-        siemplify.LOGGER.info("Starting Advance IOC Scan")
+        siemplify.LOGGER.info("Starting Advanced IOC Scan")
         response = rubrik_manager.start_advance_ioc_scan(
             object_id=object_id,
             ioc_type=ioc_type,
@@ -222,14 +222,14 @@ def main():
 
         model = AdvanceIOCScanDatamodel(hunts)
         output_message = (
-            f"Successfully started Advance IOC Scan with {len(hunts)} hunt(s)"
+            f"Successfully started Advanced IOC Scan with {len(hunts)} hunt(s)"
             f"Showing up to {MAX_TABLE_RECORDS} records in table."
         )
         table_data = model.to_csv()
         consise_table_data = table_data[:MAX_TABLE_RECORDS]
         if consise_table_data:
             siemplify.result.add_data_table(
-                "Advance IOC Scan Results", construct_csv(consise_table_data), "RSC"
+                "Advanced IOC Scan Results", construct_csv(consise_table_data), "RSC"
             )
 
     except (

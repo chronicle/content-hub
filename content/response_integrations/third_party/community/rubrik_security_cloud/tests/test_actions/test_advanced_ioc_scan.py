@@ -24,7 +24,7 @@ class TestAdvancedIOCScan:
         rubrik: RubrikSecurityCloud,
     ) -> None:
         rubrik.advanced_ioc_scan_response = MOCK_ADVANCED_IOC_SCAN
-        success_output_msg_prefix = "Successfully started Advance IOC Scan"
+        success_output_msg_prefix = "Successfully started Advanced IOC Scan"
 
         advanced_ioc_scan.main()
 

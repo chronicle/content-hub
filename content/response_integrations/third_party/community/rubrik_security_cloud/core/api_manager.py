@@ -394,7 +394,7 @@ class APIManager:
         return indicators
 
     def _parse_advance_ioc_json(self, advance_ioc_json: dict) -> List[Dict[str, str]]:
-        """Parse advance IOC JSON and extract indicators.
+        """Parse advanced IOC JSON and extract indicators.
 
         Args:
             advance_ioc_json: Dictionary containing IOC data
@@ -434,7 +434,7 @@ class APIManager:
                 if isinstance(advance_ioc_json, dict):
                     indicators = self._parse_advance_ioc_json(advance_ioc_json)
             except Exception as e:
-                raise GraphQLQueryException(f"Invalid Advance IOC JSON. Error: {str(e)}")
+                raise GraphQLQueryException(f"Invalid Advanced IOC JSON. Error: {str(e)}")
         elif ioc_type and ioc_value:
             mapped_kind = IOC_TYPE_MAP.get(ioc_type, ioc_type)
             indicators.append({"iocKind": mapped_kind, "iocValue": ioc_value})
@@ -552,7 +552,7 @@ class APIManager:
         indicators = self._build_ioc_list(advance_ioc_json, ioc_type, ioc_value)
         if not indicators:
             raise GraphQLQueryException(
-                "At least one of the following is required: the Advance IOC parameter, "
+                "At least one of the following is required: the Advanced IOC parameter, "
                 "or the combination of IOC Type and IOC Value parameters.",
             )
 

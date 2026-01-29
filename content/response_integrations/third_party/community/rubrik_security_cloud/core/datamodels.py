@@ -21,7 +21,7 @@ class TurboIOCScanDatamodel:
 
 class AdvanceIOCScanDatamodel:
     """
-    Data model for Advance IOC Scan results.
+    Data model for Advanced IOC Scan results.
     Accepts a list of hunts as returned by startBulkThreatHunt.
     """
 

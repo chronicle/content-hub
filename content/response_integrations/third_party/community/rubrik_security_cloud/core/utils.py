@@ -552,7 +552,7 @@ class HandleExceptions(object):
 
     def _handle_advance_ioc_scan(self) -> Tuple[Type[Exception], str]:
         """
-        Handle errors for Advance IOC Scan action.
+        Handle errors for Advanced IOC Scan action.
         Returns a tuple (ExceptionClass, message) as per project convention.
         """
         status_code = self.response.status_code
