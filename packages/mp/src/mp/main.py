@@ -33,7 +33,7 @@ from .build_project.typer_app import build_app
 from .check.typer_app import check_app
 from .config.typer_app import config_app
 from .dev_env.typer_app import dev_env_app
-from .format.tpyer_app import format_app
+from .format.typer_app import format_app
 from .run_pre_build_tests.typer_app import test_app
 from .validate.typer_app import validate_app
 
