@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess  # noqa: S404
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -26,6 +25,8 @@ import typer
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.build_project.sub_commands.integration.build import build_integration as build_integration_
+from mp.build_project.sub_commands.repository.build import build_repository
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.utils import to_snake_case
 
@@ -114,22 +115,13 @@ def build_integration(integration: str, src: Path | None = None, *, custom: bool
         typer.Exit: If the build fails.
 
     """
-    command: list[str] = ["mp", "build", "--integration", integration, "--quiet"]
-    if custom:
-        command.append("--custom-integration")
-    if src:
-        command.extend(["--src", str(src)])
-    result = subprocess.run(  # noqa: S603
-        command,
-        capture_output=True,
-        check=False,
-        text=True,
-    )
-    if result.returncode != 0:
-        rich.print(f"[red]Build failed:\n{result.stderr}[/red]")
-        raise typer.Exit(result.returncode)
+    try:
+        build_integration_([integration], src=src, custom_integration=custom, quiet=True)
+        rich.print(f"[green]Build successful for {integration}[/green]")
 
-    rich.print(f"Build output:\n{result.stdout}")
+    except typer.Exit as e:
+        rich.print(f"[red]Build failed: {e}[/red]")
+        raise typer.Exit(1) from e
 
 
 def find_built_integration_dir(
@@ -191,16 +183,12 @@ def build_integrations_custom_repository() -> None:
         typer.Exit: If the build fails.
 
     """
-    command: list[str] = ["mp", "build", "-r", "custom"]
-    result = subprocess.run(  # noqa: S603
-        command,
-        capture_output=True,
-        check=False,
-        text=True,
-    )
-    if result.returncode != 0:
-        rich.print(f"[red]Build failed:\n{result.stderr}[/red]")
-        raise typer.Exit(result.returncode)
+    try:
+        build_repository(["custom"])
+
+    except typer.Exit as e:
+        rich.print(f"[red]Build failed: {e}[/red]")
+        raise typer.Exit(1) from e
 
 
 def zip_integration_custom_repository() -> list[Path]:
@@ -315,22 +303,16 @@ def deconstruct_integration(built_integration: Path, dst: Path) -> Path:
         typer.Exit: If the deconstruction subprocess fails.
 
     """
-    command: list[str] = [
-        "mp",
-        "build",
-        "-i",
-        built_integration.stem,
-        "--src",
-        f"{built_integration.parent}",
-        "--dst",
-        f"{dst}",
-        "-d",
-    ]
-    result = subprocess.run(  # noqa: S603
-        command, capture_output=True, check=False, text=True
-    )
-    if result.returncode != 0:
-        rich.print(f"[red]Deconstruct failed:\n{result.stderr}[/red]")
-        raise typer.Exit(result.returncode)
+    try:
+        build_integration_(
+            [built_integration.stem],
+            src=built_integration.parent,
+            dst=dst,
+            deconstruct=True,
+            quiet=True,
+        )
+        return dst / to_snake_case(built_integration.stem)
 
-    return dst / to_snake_case(built_integration.stem)
+    except typer.Exit as e:
+        rich.print(f"[red]Deconstruct failed: {e}[/red]")
+        raise typer.Exit(1) from e
