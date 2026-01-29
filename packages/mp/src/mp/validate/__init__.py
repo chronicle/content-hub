@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-from .sub_commands.integrations.validate import validate_integration
-from .sub_commands.playbooks.validate import validate_playbook
+from .sub_commands.integration.validate import validate_integration
+from .sub_commands.playbook.validate import validate_playbook
 from .sub_commands.repository.validate import validate_repository
 
 __all__: list[str] = ["validate_integration", "validate_playbook", "validate_repository"]

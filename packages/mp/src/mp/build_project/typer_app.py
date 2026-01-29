@@ -17,8 +17,8 @@ from __future__ import annotations
 import typer
 
 from .sub_commands.deprecated.build import build as build_deprecated
-from .sub_commands.integrations.build import app as build_integrations
-from .sub_commands.playbooks.build import app as build_playbooks
+from .sub_commands.integration.build import app as build_integrations
+from .sub_commands.playbook.build import app as build_playbooks
 from .sub_commands.repository.build import app as build_repository
 
 build_app: typer.Typer = typer.Typer(

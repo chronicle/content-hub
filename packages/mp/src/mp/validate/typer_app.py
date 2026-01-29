@@ -16,8 +16,8 @@ from __future__ import annotations
 import typer
 
 from .sub_commands.deprecated.validate import validate as validate_deprecated
-from .sub_commands.integrations.validate import app as validate_integrations
-from .sub_commands.playbooks.validate import app as validate_playbooks
+from .sub_commands.integration.validate import app as validate_integrations
+from .sub_commands.playbook.validate import app as validate_playbooks
 from .sub_commands.repository.validate import app as validate_repository
 
 validate_app: typer.Typer = typer.Typer(

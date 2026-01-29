@@ -25,7 +25,7 @@ import typer
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.build_project.sub_commands.integrations.build import build_integration as build_integration_
+from mp.build_project.sub_commands.integration.build import build_integration as build_integration_
 from mp.build_project.sub_commands.repository.build import build_repository
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.utils import to_snake_case

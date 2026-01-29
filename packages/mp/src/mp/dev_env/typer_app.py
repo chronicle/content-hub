@@ -19,7 +19,7 @@ import typer
 
 from mp.telemetry import track_command
 
-from .sub_commands.integrations.push import push_integration
+from .sub_commands.integration.push import push_integration
 from .sub_commands.login import login_app
 from .sub_commands.pull import pull_app
 from .sub_commands.push import push_app

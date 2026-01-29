@@ -24,7 +24,7 @@ import typer
 
 import mp.core.constants
 import mp.core.file_utils
-from mp.build_project.sub_commands.playbooks.build import build_playbook as build_playbook_
+from mp.build_project.sub_commands.playbook.build import build_playbook as build_playbook_
 from mp.core.data_models.playbooks.meta.display_info import PlaybookType
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.utils.common.utils import to_snake_case

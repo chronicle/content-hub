@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-from .sub_commands.integrations.build import build_integration
-from .sub_commands.playbooks.build import build_playbook
+from .sub_commands.integration.build import build_integration
+from .sub_commands.playbook.build import build_playbook
 from .sub_commands.repository.build import build_repository
 
 __all__: list[str] = ["build_integration", "build_playbook", "build_repository"]
