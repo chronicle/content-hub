@@ -431,7 +431,7 @@ class GitSyncManager:
             (
                 x
                 for x in self.api.get_jobs(chronicle_soar=self._siemplify)
-                if x.get("displayName", x.get("name")) == job.name
+                if x.get("name") or x.get("displayName") == job.name
             ),
             None,
         )

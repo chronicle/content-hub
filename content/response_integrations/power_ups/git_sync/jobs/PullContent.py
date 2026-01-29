@@ -18,6 +18,7 @@ from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.data_models import (
+    BlockRecord,
     CaseTag,
     CaseStage,
     Domain,
@@ -329,8 +330,13 @@ def main():
 
         if features["Blacklists"]:
             siemplify.LOGGER.info("Installing denylists")
-            for bl in gitsync.content.get_denylists():
-                gitsync.api.update_denylist(siemplify, bl)
+            for definition in gitsync.content.get_denylists():
+                definition = (
+                    BlockRecord.from_legacy_or_1p(definition).to_1p()
+                    if platform_supports_1p_api()
+                    else BlockRecord.from_legacy_or_1p(definition).to_legacy()
+                )
+                gitsync.api.update_denylist(siemplify, definition)
 
         if features["SLA Records"]:
             siemplify.LOGGER.info("Installing SLA definition")
