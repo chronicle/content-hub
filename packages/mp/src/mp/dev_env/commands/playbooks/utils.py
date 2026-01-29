@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import base64
-import shutil
 import subprocess  # noqa: S404
 import zipfile
 from pathlib import Path
@@ -31,11 +30,12 @@ from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.utils.common.utils import to_snake_case
 
 
-def get_playbook_path_by_name(playbook: str) -> Path:
+def get_playbook_path_by_name(playbook: str, src: Path | None = None) -> Path:
     """Find the source path for a given playbook.
 
     Args:
         playbook: The name of the playbook to find.
+        src: The source folder to search for the playbook, if provided.
 
     Returns:
         The path to the playbook's source directory.
@@ -44,6 +44,11 @@ def get_playbook_path_by_name(playbook: str) -> Path:
         typer.Exit: If the integration directory is not found.
 
     """
+    if src is not None:
+        candidate = src / playbook
+        if candidate.exists():
+            return candidate
+
     playbooks_root = mp.core.file_utils.create_or_get_playbooks_root_dir()
 
     for repo, folders in mp.core.constants.PLAYBOOKS_DIRS_NAMES_DICT.items():
@@ -60,16 +65,38 @@ def get_playbook_path_by_name(playbook: str) -> Path:
     raise typer.Exit(1)
 
 
-def get_block_names_by_ids(ids_to_find: set[str]) -> set[str]:
+def get_block_names_by_ids(ids_to_find: set[str], src: Path | None = None) -> set[str]:
     """Find non-built blocks names in the repo given a set of block identifiers.
 
     Args:
         ids_to_find: A set of unique string identifiers for the blocks to find.
+        src: The source folder to search for the blocks, if provided.
 
     Returns:
         A set of directory names (strings) of the found blocks.
 
     """
+    if src is not None:
+        found_blocks, remaining_ids = _get_block_names_by_ids_from_src(ids_to_find, src)
+    else:
+        found_blocks, remaining_ids = _get_block_names_by_ids_from_defaults(ids_to_find)
+
+    if remaining_ids:
+        missing_str = ", ".join(remaining_ids)
+        rich.print(f"[red]Could not find the following blocks: {missing_str}[/red]")
+
+    return found_blocks
+
+
+def _get_block_names_by_ids_from_src(ids_to_find: set[str], src: Path) -> tuple[set[str], set[str]]:
+    remaining_ids = ids_to_find.copy()
+    result = _scan_folder_for_ids(src, remaining_ids)
+    return result, remaining_ids
+
+
+def _get_block_names_by_ids_from_defaults(
+    ids_to_find: set[str],
+) -> tuple[set[str], set[str]]:
     remaining_ids = ids_to_find.copy()
     playbooks_root = mp.core.file_utils.create_or_get_playbooks_root_dir()
     result: set[str] = set()
@@ -84,31 +111,44 @@ def get_block_names_by_ids(ids_to_find: set[str]) -> set[str]:
             if not source_folder.exists():
                 continue
 
-            for block_path in source_folder.iterdir():
-                if not block_path.is_dir():
-                    continue
-
-                meta = PlaybookMetadata.from_non_built_path(block_path)
-
-                if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
-                    result.add(block_path.name)
-                    remaining_ids.remove(meta.identifier)
+            result.update(_scan_folder_for_ids(source_folder, remaining_ids))
 
             if not remaining_ids:
-                return result
+                break
+        if not remaining_ids:
+            break
 
-    if remaining_ids:
-        missing_str = ", ".join(remaining_ids)
-        rich.print(f"[red]Could not find the following blocks: {missing_str}[/red]")
-
-    return result
+    return result, remaining_ids
 
 
-def build_playbook(playbooks_names: set[str]) -> None:
+def _scan_folder_for_ids(source_folder: Path, remaining_ids: set[str]) -> set[str]:
+    found_in_folder: set[str] = set()
+
+    if not remaining_ids or not source_folder.exists():
+        return found_in_folder
+
+    for block_path in source_folder.iterdir():
+        if not block_path.is_dir():
+            continue
+
+        meta = PlaybookMetadata.from_non_built_path(block_path)
+
+        if meta.type_ == PlaybookType.BLOCK and meta.identifier in remaining_ids:
+            found_in_folder.add(block_path.name)
+            remaining_ids.remove(meta.identifier)
+
+            if not remaining_ids:
+                break
+
+    return found_in_folder
+
+
+def build_playbook(playbooks_names: set[str], src: Path | None = None) -> None:
     """Run the build command for a List of playbooks names.
 
     Args:
         playbooks_names: Set of playbooks names to build.
+        src: Customize source folder to build from.
 
     Raises:
         typer.Exit: If the build fails.
@@ -117,6 +157,8 @@ def build_playbook(playbooks_names: set[str]) -> None:
     command: list[str] = ["mp", "build"]
     for name in playbooks_names:
         command.extend(["-p", name])
+    if src:
+        command.extend(["--src", str(src)])
     command.extend(["--quiet"])
 
     result = subprocess.run(  # noqa: S603
@@ -207,11 +249,12 @@ def find_playbook_identifier(playbook_name: str, installed_playbook: list[dict[s
     raise typer.Exit(1)
 
 
-def deconstruct_playbook(built_playbook: Path) -> Path:
+def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
     """Deconstructs a built playbook and restores the source to its original directory.
 
     Args:
         built_playbook (Path): Path to the built playbook file.
+        dst (Path): Destination folder.
 
     Returns:
         Path: Path to the deconstructed playbook.
@@ -220,19 +263,18 @@ def deconstruct_playbook(built_playbook: Path) -> Path:
         typer.Exit: If the deconstruction subprocess fails.
 
     """
-    original_parent_folder = built_playbook.parent
-
-    community_folder: Path = (
-        mp.core.file_utils.create_or_get_playbooks_root_dir()
-        / mp.core.constants.THIRD_PARTY_REPO_NAME
-        / mp.core.constants.COMMUNITY_DIR_NAME
-    )
-    community_folder.mkdir(parents=True, exist_ok=True)
-    target_path_in_community = community_folder / built_playbook.name
-
-    shutil.move(str(built_playbook), str(target_path_in_community))
-
-    command: list[str] = ["mp", "build", "-p", built_playbook.name, "-d", "--quiet"]
+    command: list[str] = [
+        "mp",
+        "build",
+        "-p",
+        built_playbook.stem,
+        "--src",
+        f"{built_playbook.parent}",
+        "--dst",
+        f"{dst}",
+        "-d",
+        "--quiet",
+    ]
     result = subprocess.run(  # noqa: S603
         command, capture_output=True, check=False, text=True
     )
@@ -241,29 +283,7 @@ def deconstruct_playbook(built_playbook: Path) -> Path:
         rich.print(f"[red]Deconstruct failed:\n{result.stderr}[/red]")
         raise typer.Exit(result.returncode)
 
-    non_built_path: Path = _get_deconstructed_playbook_path(built_playbook.stem)
-    final_destination = original_parent_folder / non_built_path.name
-
-    if final_destination.exists():
-        shutil.rmtree(final_destination)
-
-    shutil.move(str(non_built_path), str(original_parent_folder))
-
-    if target_path_in_community.exists():
-        target_path_in_community.unlink()
-
-    return original_parent_folder / non_built_path.name
-
-
-def _get_deconstructed_playbook_path(playbook_name: str) -> Path:
-    root: Path = mp.core.file_utils.get_playbook_out_base_dir()
-    non_built_playbook: Path = root / mp.core.constants.PLAYBOOK_OUT_DIR_NAME / playbook_name
-
-    if non_built_playbook.exists():
-        return non_built_playbook
-
-    rich.print(f"[red]Non-built playbook '{playbook_name}' not found in {root}")
-    raise typer.Exit(1)
+    return dst / to_snake_case(built_playbook.stem)
 
 
 def unzip_playbooks(
@@ -282,7 +302,6 @@ def unzip_playbooks(
 
     """
     result: list[Path] = []
-    dest.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         for file_info in zip_ref.infolist():
