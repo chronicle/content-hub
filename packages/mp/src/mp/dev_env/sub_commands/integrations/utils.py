@@ -116,7 +116,7 @@ def build_integration(integration: str, src: Path | None = None, *, custom: bool
 
     """
     try:
-        build_integration_([integration], src=src, custom=custom, quiet=True)
+        build_integration_([integration], src=src, custom_integration=custom, quiet=True)
         rich.print(f"[green]Build successful for {integration}[/green]")
 
     except typer.Exit as e:
@@ -309,7 +309,11 @@ def deconstruct_integration(built_integration: Path, dst: Path) -> Path:
     """
     try:
         build_integration_(
-            [built_integration.stem], src=built_integration.parent, deconstruct=True, quiet=True
+            [built_integration.stem],
+            src=built_integration.parent,
+            dst=dst,
+            deconstruct=True,
+            quiet=True,
         )
         return dst / to_snake_case(built_integration.stem)
 

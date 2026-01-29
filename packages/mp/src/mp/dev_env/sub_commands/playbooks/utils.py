@@ -254,7 +254,7 @@ def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
     """
     try:
         build_playbook_(
-            [built_playbook.stem], src=built_playbook.parent, deconstruct=True, quiet=True
+            [built_playbook.stem], src=built_playbook.parent, dst=dst, deconstruct=True, quiet=True
         )
         return dst / to_snake_case(built_playbook.stem)
 
