@@ -2260,11 +2260,8 @@ def get_installed_connectors(
     api_clinet = get_soar_client(chronicle_soar)
     api_clinet.params.connector_instance_id = connector_instance_id
     response = api_clinet.get_installed_connectors()
-    try:
-        validate_response(response, validate_json=True)
-        return response.json()
-    except InternalJSONDecoderError:
-        return {}
+    return response
+
 
 def get_visual_families(
     chronicle_soar: ChronicleSOAR,

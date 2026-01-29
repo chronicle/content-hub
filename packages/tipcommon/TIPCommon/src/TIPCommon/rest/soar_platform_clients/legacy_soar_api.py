@@ -966,7 +966,10 @@ class LegacySoarApi(BaseSoarApi):
     def get_installed_connectors(self) -> requests.Response:
         """Get installed connectors."""
         endpoint: str = "/connectors/GetConnectorsData"
-        return self._make_request(HttpMethod.GET, endpoint)
+        return self._make_request(
+            HttpMethod.GET,
+            endpoint
+        ).json()["installedConnectors"]
 
     def get_visual_families(self) -> requests.Response:
         """Get custom visual families."""
@@ -1006,4 +1009,5 @@ class LegacySoarApi(BaseSoarApi):
 
     def get_sla_records(self) -> requests.Response:
         """Get sla records"""
-        return self.get_page_results("/settings/GetSlaDefinitionsRecords")
+        endpoint = "/settings/GetSlaDefinitionsRecords"
+        return self._make_request(HttpMethod.GET, endpoint)

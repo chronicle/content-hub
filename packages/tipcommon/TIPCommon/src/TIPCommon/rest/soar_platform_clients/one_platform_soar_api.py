@@ -980,45 +980,32 @@ class OnePlatformSoarApi(BaseSoarApi):
             endpoint += f"/{self.params.job_instance_id}"
         return self._make_request(HttpMethod.GET, endpoint)
 
-    def _enrich_connector_instances_with_params(self, response: requests.Response) -> requests.Response:
+    def _enrich_connector_instances_with_params(
+        self,
+        response_json: SingleJson
+    ) -> list[SingleJson]:
         """Helper to add parameters to a list of connector instances."""
-        response.raise_for_status()
-        response_json = response.json()
-
         instances = (
                 response_json.get("connector_instances")
-                or response_json.get("items")
                 or response_json.get("connectorInstances", [])
         )
+        connector_names = [item['name'] for item in instances]
 
-        for instance in instances:
-            instance_name = instance.get("name")
-            if instance_name:
-                try:
-                    details_response = self._make_request(
-                        HttpMethod.GET, f"/{instance_name}"
-                    )
-                    if details_response.status_code == 200:
-                        details = details_response.json()
-                        instance["parameters"] = details.get("parameters", [])
-                    else:
-                        instance["parameters"] = []
-                except Exception as e:
-                    if hasattr(self, "chronicle_soar") and hasattr(self.chronicle_soar, "logger"):
-                        self.chronicle_soar.logger.warning(
-                            f"Could not fetch parameters for connector instance "
-                            f"'{instance.get('displayName', instance_name)}'. Error: {e}"
-                        )
-                    instance["parameters"] = []
+        detailed_data_list = []
+        for name in connector_names:
+            prefix = "projects/project/locations/location/instances/instance/"
+            clean_path = name.replace(prefix, "")
+            detail_response = self._make_request(HttpMethod.GET, f"/{clean_path}")
+            if detail_response.status_code == 200:
+                data = detail_response.json()
+                data["params"] = data["parameters"]
+                detailed_data_list.append(data)
+            else:
+                print(f"Failed to fetch details for {name}")
 
-        new_response = requests.Response()
-        new_response.status_code = response.status_code
-        new_response.headers = response.headers
-        new_response.headers["Content-Type"] = "application/json"
-        new_response._content = json.dumps(response_json).encode("utf-8")
-        return new_response
+        return detailed_data_list
 
-    def get_installed_connectors(self) -> requests.Response:
+    def get_installed_connectors(self) -> requests.Response: # 29 jan
         """Get installed connectors."""
         instance_id: str = self.params.connector_instance_id
         endpoint: str = "/integrations/-/connectors/-/connectorInstances"
@@ -1026,7 +1013,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             endpoint += f"/{instance_id}"
             return self._make_request(HttpMethod.GET, endpoint)
 
-        response = self._make_request(HttpMethod.GET, endpoint)
+        response = self._make_request(HttpMethod.GET, endpoint).json()
         return self._enrich_connector_instances_with_params(response)
 
     def get_connector_params(self) -> requests.Response:
