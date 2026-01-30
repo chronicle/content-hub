@@ -1,59 +1,64 @@
 from __future__ import annotations
-
-from datetime import datetime
-
-from greynoise import GreyNoise
-from greynoise.exceptions import RequestFailure
+from greynoise.exceptions import RequestFailure, RateLimitError
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
-from ..core.constants import USER_AGENT
-
-INTEGRATION_NAME = "GreyNoise"
-
-SCRIPT_NAME = "Ping"
+from ..core.api_manager import APIManager
+from ..core.constants import (
+    PING_SCRIPT_NAME,
+    RESULT_VALUE_TRUE,
+    RESULT_VALUE_FALSE,
+    COMMON_ACTION_ERROR_MESSAGE,
+)
+from ..core.utils import get_integration_params
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    siemplify.script_name = SCRIPT_NAME
+    siemplify.script_name = PING_SCRIPT_NAME
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
-    api_key = siemplify.extract_configuration_param(
-        provider_name=INTEGRATION_NAME,
-        param_name="GN API Key",
-    )
+    # Configuration Parameters
+    api_key = get_integration_params(siemplify)
 
-    session = GreyNoise(api_key=api_key, integration_name=USER_AGENT)
-    result_value = True
+    siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
     try:
-        res = session.test_connection()
-        expires = datetime.strptime(res["expiration"], "%Y-%m-%d")
-        now = datetime.today()
-        if res["offering"] != "community" and expires > now:
-            # is valid enterprise api key
-            siemplify.LOGGER.info(f"Connectivity Response: {res}")
-            output_message = "Successful Connection"
-        elif res["offering"] != "community" and expires < now:
-            # is expired enterprise api key
-            siemplify.LOGGER.info("Unable to auth, API Key appears to be expired")
-            output_message = "Unable to auth, API Key appears to be expired"
-            result_value = False
-            status = EXECUTION_STATE_FAILED
-        else:
-            # is a community api key
-            siemplify.LOGGER.info(f"Connectivity Response: {res}")
-            output_message = "Successful Connection"
+        greynoise_manager = APIManager(api_key, siemplify=siemplify)
+        greynoise_manager.test_connectivity()
+        output_message = "Successfully connected to the GreyNoise server!"
+        connectivity_result = RESULT_VALUE_TRUE
+        siemplify.LOGGER.info(
+            f"Connection to API established, performing action {PING_SCRIPT_NAME}"
+        )
 
-    except RequestFailure:
-        siemplify.LOGGER.info("Unable to auth, please check API Key")
-        output_message = "Unable to auth, please check API Key"
-        result_value = False
+    except RateLimitError as e:
+        output_message = f"Rate limit reached: {str(e)}"
+        connectivity_result = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
 
-    siemplify.end(output_message, result_value, status)
+    except RequestFailure as e:
+        output_message = f"Failed to connect to the GreyNoise server: {str(e)}"
+        connectivity_result = RESULT_VALUE_FALSE
+        status = EXECUTION_STATE_FAILED
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+
+    except Exception as e:
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(PING_SCRIPT_NAME, e)
+        connectivity_result = RESULT_VALUE_FALSE
+        status = EXECUTION_STATE_FAILED
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+
+    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
+    siemplify.LOGGER.info(f"Status: {status}")
+    siemplify.LOGGER.info(f"result_value: {connectivity_result}")
+    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.end(output_message, connectivity_result, status)
 
 
 if __name__ == "__main__":
