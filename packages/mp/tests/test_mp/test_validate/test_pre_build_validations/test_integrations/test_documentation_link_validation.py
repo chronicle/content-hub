@@ -84,10 +84,9 @@ class TestIntegrationHasDocumentationLinkValidation:
         integration_def_file = temp_integration / constants.DEFINITION_FILE
         _remove_key_from_yaml(integration_def_file, "documentation_link")
 
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK",
-            {"mock_integration"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_integrations_without_documentation_link",
+            return_value={"mock_integration"},
         ):
             self.integration_validator_runner.run(temp_integration)
 
@@ -108,9 +107,8 @@ class TestIntegrationHasDocumentationLinkValidation:
         connector_def_file = temp_integration / constants.CONNECTORS_DIR / "connector.yaml"
         _remove_key_from_yaml(connector_def_file, "documentation_link")
 
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK",
-            {"Mock Integration Connector"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_connector_names_without_documentation_link",
+            return_value={"Mock Integration Connector"},
         ):
             self.connectors_validator_runner.run(temp_integration)

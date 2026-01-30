@@ -126,3 +126,6 @@ jobs:
 
 **Note:** You must provide either `soar_api_key` or both `soar_username` and `soar_password` for the
 action to work.
+
+**Note:** If moving an integration into a custom folder, ensure that all `relative dependency` paths
+and `file paths` are correctly updated.

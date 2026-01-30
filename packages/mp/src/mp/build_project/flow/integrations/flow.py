@@ -37,29 +37,20 @@ class Repos(NamedTuple):
     custom: IntegrationsRepo
 
 
-def build_integrations(
+def build_integrations(  # noqa: PLR0913
     integrations: Iterable[str],
-    integration_groups: Iterable[str],
     repositories: Iterable[RepositoryType],
+    src: Path | None = None,
+    dst: Path | None = None,
     *,
     deconstruct: bool = False,
     custom_integration: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct integration operation."""
-    repos = Repos(
-        commercial=IntegrationsRepo(
-            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.COMMERCIAL)
-        ),
-        community=IntegrationsRepo(
-            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.THIRD_PARTY)
-        ),
-        custom=IntegrationsRepo(
-            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)
-        ),
-    )
+    repos: Repos = _create_repos(src, dst)
 
     if integrations:
-        if custom_integration:
+        if custom_integration or src:
             not_founds = _build_integrations_from_repos(
                 integrations,
                 [repos.custom],
@@ -85,34 +76,29 @@ def build_integrations(
             if commercial_not_found.intersection(community_not_found):
                 rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
 
-    elif integration_groups:
-        build_integration_groups(integration_groups, repos)
-
     elif repositories:
         _build_integration_repositories(repositories, repos)
 
 
-def build_integration_groups(
-    groups: Iterable[str],
-    repos: Repos,
-) -> None:
-    """Build integration according to their groups."""
-    rich.print("Building integration groups...")
-    _build_integration_groups(set(groups), repos.commercial)
-    _build_integration_groups(set(groups), repos.community)
-    rich.print("Done building integration groups.")
+def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos:
+    commercial = IntegrationsRepo(
+        mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.COMMERCIAL),
+        dst=modified_dst,
+    )
+    community = IntegrationsRepo(
+        mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.THIRD_PARTY),
+        dst=modified_dst,
+    )
 
+    custom: IntegrationsRepo
+    if modified_src is not None:
+        custom = IntegrationsRepo(modified_src, modified_dst, default_source=False)
+    else:
+        custom = IntegrationsRepo(
+            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)
+        )
 
-def _build_integration_groups(groups: Iterable[str], marketplace_: IntegrationsRepo) -> None:
-    valid_groups: set[Path] = _get_marketplace_paths_from_names(groups, marketplace_.paths)
-    valid_group_names: set[str] = {g.name for g in valid_groups}
-    not_found: set[str] = set(groups).difference(valid_group_names)
-    if not_found:
-        rich.print(f"The following groups could not be found: {', '.join(not_found)}")
-
-    if valid_groups:
-        rich.print(f"Building the following groups: {', '.join(valid_group_names)}")
-        marketplace_.build_groups(valid_groups)
+    return Repos(commercial, community, custom)
 
 
 def _build_integration_repositories(
@@ -121,19 +107,21 @@ def _build_integration_repositories(
 ) -> None:
     repo_types: set[RepositoryType] = set(repositories)
     if _is_commercial_repo(repo_types):
-        rich.print("Building all integrations and groups in commercial repo...")
+        rich.print("Building all integrations in commercial repo...")
         repos.commercial.build()
         repos.commercial.write_marketplace_json()
+        repos.commercial.write_actions_ai_metadata_json()
         rich.print("Done Commercial integrations build.")
 
     if _is_third_party_repo(repo_types):
-        rich.print("Building all integrations and groups in third party repo...")
+        rich.print("Building all integrations in third party repo...")
         repos.community.build()
         repos.community.write_marketplace_json()
+        repos.community.write_actions_ai_metadata_json()
         rich.print("Done third party integrations build.")
 
     if _is_custom_repo(repo_types):
-        rich.print("Building all integrations and groups in custom repo...")
+        rich.print("Building all integrations in custom repo...")
         repos.custom.build()
         rich.print("Done custom integrations build.")
 

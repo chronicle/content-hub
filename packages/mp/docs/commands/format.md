@@ -1,30 +1,28 @@
 # `mp format`
 
-## Description
-Format Python (`.py`) files. This command allows you to specify files or directories for formatting and can also format only the files that have been changed according to the Git history. It uses `ruff` to ensure consistent code style and readability.
+Format Python (`.py`) files using `ruff`.
 
 ## Usage
+
 ```bash
 mp format [OPTIONS] [FILE_PATHS]...
 ```
 
 ## Arguments
 
-| Argument | Description | Type |
-| :--- | :--- | :--- |
-| `FILE_PATHS` | Path of the files or dirs to format | `[str]` |
+*   `FILE_PATHS`: One or more paths to files or directories to format.
 
 ## Options
 
 | Option | Description | Type | Default |
 | :--- | :--- | :--- | :--- |
-| `--changed-files` | Format all changed files based on a diff with the origin. | `bool` | `False` |
-| `--quiet` | Log less on runtime. | `bool` | `False` |
-| `--verbose` | Log more on runtime. | `bool` | `False` |
+| `--changed-files` | Check all changed files based on a diff with the origin/develop branch instead of providing `FILE_PATHS`. | `bool` | `False` |
+| `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
 
 ## Examples
 
-### Format detailed files
+### Format specific files
 ```bash
 mp format path/to/file.py path/to/dir
 ```

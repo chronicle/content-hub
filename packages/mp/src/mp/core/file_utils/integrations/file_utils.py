@@ -26,17 +26,15 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-import mp.core.constants
 import mp.core.file_utils.common.utils
 from mp.core import constants
-from mp.core.custom_types import JsonString, ManagerName, Products
 from mp.core.validators import validate_png_content, validate_svg_content
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
 
-    from mp.core.custom_types import RepositoryType
+    from mp.core.custom_types import JsonString, ManagerName, RepositoryType
 
 
 def get_integrations_repo_base_path(integrations_classification: RepositoryType) -> Path:
@@ -162,8 +160,8 @@ def discover_core_modules(path: Path) -> list[ManagerName]:
     )
 
 
-def get_integrations_and_groups_from_paths(*paths: Path) -> Products[set[Path]]:
-    """Get all integrations and integration groups paths from the provided paths.
+def get_integrations_from_paths(*paths: Path) -> set[Path]:
+    """Get all integrations paths from the provided paths.
 
     Args:
         *paths: The paths to search integrations and groups in
@@ -174,19 +172,15 @@ def get_integrations_and_groups_from_paths(*paths: Path) -> Products[set[Path]]:
 
     """
     integrations: set[Path] = set()
-    groups: set[Path] = set()
     for path in paths:
         if not path.exists():
             continue
 
         for dir_ in path.iterdir():
-            if is_group(dir_):
-                groups.add(dir_)
-
-            elif is_integration(dir_):
+            if is_integration(dir_):
                 integrations.add(dir_)
 
-    return Products(integrations=integrations, groups=groups)
+    return integrations
 
 
 def is_python_file(path: Path) -> bool:
@@ -199,23 +193,13 @@ def is_python_file(path: Path) -> bool:
     return path.exists() and path.is_file() and path.suffix == ".py"
 
 
-def is_integration(path: Path, *, group: str = "") -> bool:
+def is_integration(path: Path) -> bool:
     """Check whether a path is an integration.
 
     Returns:
         Whether the provided path is an integration
 
     """
-    parents: set[str] = {p.name for p in (path, *path.parents)}
-    valid_base_dirs: set[str] = set(mp.core.constants.INTEGRATIONS_TYPES)
-
-    if group:
-        valid_base_dirs.add(group)
-
-    return bool(parents.intersection(valid_base_dirs) and _is_integration(path))
-
-
-def _is_integration(path: Path) -> bool:
     if not path.exists() or not path.is_dir():
         return False
 
@@ -225,26 +209,6 @@ def _is_integration(path: Path) -> bool:
     pyproject_toml: Path = path / constants.PROJECT_FILE
     def_: Path = path / constants.INTEGRATION_DEF_FILE.format(path.name)
     return pyproject_toml.exists() or def_.exists()
-
-
-def is_group(path: Path) -> bool:
-    """Check whether a path is an integration group.
-
-    Returns:
-        Whether the provided path is an integration group
-
-    """
-    parents: set[str] = {p.name for p in (path, *path.parents)}
-    return bool(parents.intersection(constants.INTEGRATIONS_TYPES) and _is_group(path))
-
-
-def _is_group(path: Path) -> bool:
-    if not path.exists() or not path.is_dir():
-        return False
-
-    return not is_integration(path) and all(
-        is_integration(p, group=path.name) for p in path.iterdir() if p.is_dir()
-    )
 
 
 def replace_file_content(file: Path, replace_fn: Callable[[str], str]) -> None:

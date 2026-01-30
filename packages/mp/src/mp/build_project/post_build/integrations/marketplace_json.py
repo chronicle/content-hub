@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from pathlib import Path
 
-    from mp.core.custom_types import Products
     from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata
 
     from .data_models import BuiltFullDetailsIntegrationMetadata, BuiltSupportedAction
@@ -77,11 +76,11 @@ def write_marketplace_json(dst: Path) -> None:
             `marketplace.json` file
 
     """
-    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(dst)
+    integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(dst)
     identifiers: set[str] = set()
     duplicates: list[tuple[str, str]] = []
     def_files: list[BuiltFullDetailsIntegrationMetadata] = []
-    for i in products.integrations:
+    for i in integrations:
         mjd: MarketplaceJsonDefinition = MarketplaceJsonDefinition(i)
         def_file_path: Path = i / mp.core.constants.INTEGRATION_DEF_FILE.format(i.name)
         def_file: BuiltFullDetailsIntegrationMetadata = mjd.get_def_file(def_file_path)

@@ -1,7 +1,7 @@
 """Core logic for building and deconstructing integration marketplaces.
 
 This module defines the `Marketplace` class, which provides the functionality
-to build and deconstruct integrations and groups of integrations within a
+to build and deconstruct integrations of integrations within a
 marketplace directory. It orchestrates the process of reading integration
 definitions, restructuring their components, and generating the final
 marketplace JSON file. It also handles the reverse process of deconstructing
@@ -40,6 +40,7 @@ from mp.core.data_models.integrations.integration import (
     Integration,
 )
 
+from .post_build.integrations.ai_metadata_json import write_actions_ai_metadata_json
 from .post_build.integrations.full_details_json import write_full_details
 from .post_build.integrations.marketplace_json import write_marketplace_json
 from .restructure.integrations.deconstruct import DeconstructIntegration
@@ -49,65 +50,50 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
 
-    from mp.core.custom_types import Products
-
 
 class IntegrationsRepo:
-    def __init__(self, integrations_dir: Path) -> None:
+    def __init__(
+        self, integrations_dir: Path, dst: Path | None = None, *, default_source: bool = True
+    ) -> None:
         """Class constructor.
 
         Args:
-            integrations_dir: The path to a Content-Hub integrations folders
-                and groups exist
+            integrations_dir: The path to a Content-Hub integrations folder.
+            dst: The destination path for the integrations repository.
+            default_source: Indicates if the integrations_dir is the default Content-Hub
+                integrations folder.
 
         """
         self.name: str = integrations_dir.name
-        self.paths: list[Path] = mp.core.file_utils.get_integration_base_folders_paths(self.name)
+        if default_source:
+            self.paths: list[Path] = mp.core.file_utils.get_integration_base_folders_paths(
+                self.name
+            )
+        else:
+            self.paths: list[Path] = [integrations_dir]
 
         for dir_name in self.paths:
             dir_name.mkdir(exist_ok=True, parents=True)
 
-        self.out_dir: Path = mp.core.file_utils.create_or_get_out_integrations_dir() / self.name
-        self.out_dir.mkdir(exist_ok=True)
+        if dst is None:
+            self.out_dir: Path = mp.core.file_utils.create_or_get_out_integrations_dir() / self.name
+        else:
+            self.out_dir = dst
+
+        self.out_dir.mkdir(exist_ok=True, parents=True)
 
     def write_marketplace_json(self) -> None:
         """Write the marketplace JSON file to the marketplace's out path."""
         write_marketplace_json(self.out_dir)
 
+    def write_actions_ai_metadata_json(self) -> None:
+        """Write the actions AI metadata JSON file to the marketplace's out path."""
+        write_actions_ai_metadata_json(self.out_dir, self.paths)
+
     def build(self) -> None:
-        """Build all integrations and groups in the marketplace."""
-        products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
-            *self.paths
-        )
-        self.build_groups(products.groups)
-        self.build_integrations(products.integrations)
-
-    def build_groups(self, group_paths: Iterable[Path]) -> None:
-        """Build all groups provided by `group_paths`.
-
-        Args:
-            group_paths: The paths of integrations to build
-
-        """
-        processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_group, group_paths)
-
-    def build_group(self, group_dir: Path) -> None:
-        """Build a single group provided by `group_path`.
-
-        Args:
-            group_dir: The paths of the integration to build
-
-        Raises:
-            FileNotFoundError: when `group_dir` does not exist
-
-        """
-        if not group_dir.exists():
-            msg: str = f"Invalid integration {group_dir}"
-            raise FileNotFoundError(msg)
-
-        self.build_integrations(group_dir.iterdir())
+        """Build all integrations in the marketplace."""
+        integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(*self.paths)
+        self.build_integrations(integrations)
 
     def build_integrations(self, integration_paths: Iterable[Path]) -> None:
         """Build all integrations provided by `integration_paths`.
