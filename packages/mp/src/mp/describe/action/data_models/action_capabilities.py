@@ -18,8 +18,6 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .entity_types import EntityType  # noqa: TC001
-
 
 class ActionCapabilities(BaseModel):
     description: Annotated[

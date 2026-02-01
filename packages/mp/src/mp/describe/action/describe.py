@@ -19,6 +19,7 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
+import anyio
 import yaml
 from rich.progress import TaskID, track
 
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import AsyncIterator, Callable
 
-    import anyio
     from rich.progress import Progress
 
 
@@ -125,6 +125,7 @@ class DescribeAction:
         actions: set[str],
         *,
         src: pathlib.Path | None = None,
+        dst: pathlib.Path | None = None,
         override: bool = False,
     ) -> None:
         self.integration_name: str = integration
@@ -132,6 +133,7 @@ class DescribeAction:
         self.integration: anyio.Path = paths.get_integration_path(integration, src=src)
         self.actions: set[str] = actions
         self.override: bool = override
+        self.dst: pathlib.Path | None = dst
 
     async def describe_actions(
         self,
@@ -153,9 +155,13 @@ class DescribeAction:
 
         actions_to_process: set[str] = await self._prepare_actions(status, metadata)
         if not actions_to_process:
-            logger.info(
-                "All actions in %s already have descriptions. Skipping.", self.integration_name
-            )
+            if not self.actions:
+                # No actions in the integration at all. We should still ensure the file exists.
+                await self._save_metadata(metadata)
+            else:
+                logger.info(
+                    "All actions in %s already have descriptions. Skipping.", self.integration_name
+                )
             return
 
         if len(actions_to_process) == 1:
@@ -198,9 +204,8 @@ class DescribeAction:
             self.actions = await self._get_all_actions(status)
 
         if not self.override:
-            original_count: int = len(self.actions)
-            self.actions = {action for action in self.actions if action not in metadata}
-            skipped_count: int = original_count - len(self.actions)
+            actions_to_process = {action for action in self.actions if action not in metadata}
+            skipped_count: int = len(self.actions) - len(actions_to_process)
             if skipped_count > 0:
                 if skipped_count == 1:
                     logger.info(
@@ -213,6 +218,7 @@ class DescribeAction:
                         skipped_count,
                         self.integration_name,
                     )
+            return actions_to_process
 
         return self.actions
 
@@ -426,21 +432,32 @@ class DescribeAction:
             self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
         )
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
+        metadata: dict[str, Any] = {}
+
         if await metadata_file.exists():
             content: str = await metadata_file.read_text()
-            try:
-                return yaml.safe_load(content) or {}
-            except yaml.YAMLError:
-                return {}
+            with contextlib.suppress(yaml.YAMLError):
+                metadata = yaml.safe_load(content) or {}
 
-        return {}
+        if self.dst:
+            dst_file: anyio.Path = anyio.Path(self.dst) / constants.ACTIONS_AI_DESCRIPTION_FILE
+            if await dst_file.exists():
+                content: str = await dst_file.read_text()
+                with contextlib.suppress(yaml.YAMLError):
+                    dst_metadata = yaml.safe_load(content) or {}
+
+                metadata.update(dst_metadata)
+
+        return metadata
 
     async def _save_metadata(self, metadata: dict[str, Any]) -> None:
-        resource_ai_dir: anyio.Path = (
-            self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
-        )
-        await resource_ai_dir.mkdir(parents=True, exist_ok=True)
-        metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
+        if self.dst:
+            save_dir: anyio.Path = anyio.Path(self.dst)
+        else:
+            save_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
+
+        await save_dir.mkdir(parents=True, exist_ok=True)
+        metadata_file: anyio.Path = save_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         await metadata_file.write_text(yaml.dump(metadata))
 
 
