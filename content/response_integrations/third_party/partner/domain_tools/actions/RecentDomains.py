@@ -35,6 +35,7 @@ def main():
     res = domaintools_manager.get_recent_domains_by_string_query(string_query)
 
     if res:
+        entity = None
         # Push entity to entities to update array.
         entities_to_update.append(entity)
         # Convert response dict to flat dict.
