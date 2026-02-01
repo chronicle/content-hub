@@ -27,7 +27,17 @@ class EntityUsage(BaseModel):
         Field(
             description=(
                 "The scopes/types of the entities the action runs on, if it runs on"
-                " entities. Use the code and the metadata json to determine this field"
+                " entities. Use the code and the metadata json to determine this field."
+                " If an action runs on entities it most likely will use the target_entities"
+                " attribute to go over the entities or filter them by type or other"
+                " attributes. It is possible that an action doesn't run on entities."
+                " In that case leave this list empty. An action that doesn't use any entity doesn't"
+                " run on a generic entity, but simply it works on other sources of data."
+                " Make sure you check this carefully and distinguish correctly between actions that"
+                " run on/use entities and ones that don't. Then, if it does use entities, make sure"
+                " to check which types of entities (specific ones or all of them). Note that it is"
+                " possible for the code to contain the word 'entity' in some variables, but it"
+                " doesn't always mean it uses entities."
             )
         ),
     ]

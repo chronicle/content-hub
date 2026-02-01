@@ -43,7 +43,7 @@ from google.genai.types import (
 from tenacity import (
     after_log,
     retry,
-    retry_if_not_exception_type,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
@@ -118,8 +118,8 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         await self.close()
 
     @retry(
-        retry=retry_if_not_exception_type(ClientError),
-        stop=stop_after_attempt(4),
+        retry=retry_if_exception_type(ClientError),
+        stop=stop_after_attempt(5),
         wait=wait_exponential(),
         after=after_log(logger, logging.DEBUG),
     )
@@ -203,19 +203,13 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         for prompt in prompts:
             self.content.parts.append(Part.from_text(text=prompt))
 
-    @retry(
-        retry=retry_if_not_exception_type(ClientError),
-        stop=stop_after_attempt(4),
-        wait=wait_exponential(),
-        after=after_log(logger, logging.DEBUG),
-    )
     async def send_bulk_messages(
         self,
         prompts: list[str],
         /,
         *,
         response_json_schema: type[T_Schema] | None = None,
-    ) -> list[Any] | tuple[Any] | list[T_Schema | str]:
+    ) -> list[T_Schema | str]:
         """Send multiple messages to the LLM and get responses.
 
         Args:
@@ -241,8 +235,8 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=retry_if_not_exception_type(ClientError),
-        stop=stop_after_attempt(4),
+        retry=retry_if_exception_type(ClientError),
+        stop=stop_after_attempt(5),
         wait=wait_exponential(),
         after=after_log(logger, logging.DEBUG),
     )

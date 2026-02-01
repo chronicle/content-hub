@@ -41,9 +41,9 @@ async def create_llm_session() -> AsyncIterator[LlmSdk]:
         AsyncIterator[LlmSdk]: The LLM session.
 
     """
-    llm_config = _create_gemini_config()
-    async with Gemini(llm_config) as gemini:
-        system_prompt = await _get_system_prompt()
+    llm_config: GeminiConfig = _create_gemini_config()
+    async with Gemini(config=llm_config) as gemini:
+        system_prompt: str = await _get_system_prompt()
         gemini.add_system_prompts_to_session(system_prompt)
         yield gemini
 
@@ -70,5 +70,5 @@ def _create_gemini_config() -> GeminiConfig:
 
 
 async def _get_system_prompt() -> str:
-    path = anyio.Path(__file__).parent.parent / "prompts" / "system.md"
+    path: anyio.Path = anyio.Path(__file__).parent.parent / "prompts" / "system.md"
     return await path.read_text(encoding="utf-8")
