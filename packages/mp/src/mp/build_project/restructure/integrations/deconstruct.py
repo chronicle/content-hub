@@ -23,6 +23,7 @@ scripts, definitions, and other related files into designated directories.
 from __future__ import annotations
 
 import dataclasses
+import io
 import shutil
 import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
@@ -124,22 +125,22 @@ class DeconstructIntegration:
         )
         _update_pyproject_from_integration_meta(toml_content, self.integration.metadata)
 
-        final_content = toml.dumps(toml_content)
+        buffer = io.StringIO()
+        buffer.write(toml.dumps(toml_content))
 
         if placeholders and (placeholders.dependencies or placeholders.dev_dependencies):
-            placeholder_comments = [
-                f"\n# TODO: Failed to automatically add the following dependency. "
-                f"Please add it manually: {dep}\n"
-                for dep in placeholders.dependencies
-            ]
-            placeholder_comments.extend(
-                f"\n# TODO: Failed to automatically add the following dev-dependency. "
-                f"Please add it manually: {dep}\n"
-                for dep in placeholders.dev_dependencies
-            )
-            final_content += "".join(placeholder_comments)
+            for dep in placeholders.dependencies:
+                buffer.write(
+                    f"\n# TODO: Failed to automatically add the following dependency. "
+                    f"Please add it manually: {dep}\n",
+                )
+            for dep in placeholders.dev_dependencies:
+                buffer.write(
+                    f"\n# TODO: Failed to automatically add the following dev-dependency. "
+                    f"Please add it manually: {dep}\n",
+                )
 
-        pyproject_toml.write_text(final_content, encoding="utf-8")
+        pyproject_toml.write_text(buffer.getvalue(), encoding="utf-8")
         self._copy_lock_file()
 
     def _copy_lock_file(self) -> None:

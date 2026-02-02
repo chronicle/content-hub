@@ -23,8 +23,10 @@ from __future__ import annotations
 
 import ast
 import itertools
+import re
 import sys
 import zipfile
+from contextlib import suppress
 from pathlib import Path
 from typing import NamedTuple
 
@@ -106,33 +108,6 @@ class DependencyDeconstructor:
             not in manager_modules.union(mp.core.constants.SDK_MODULES, sys.stdlib_module_names)
         }
 
-    @staticmethod
-    def _get_provided_imports(wheel_path: Path) -> set[str]:
-        """Open a .whl file and read top_level.txt to find provided module names.
-
-        Args:
-            wheel_path: The path to the wheel file.
-
-        Returns:
-            A set of import names provided by the wheel.
-
-        """
-        provided_imports = set()
-        try:
-            with zipfile.ZipFile(wheel_path, "r") as z:
-                # Find the top_level.txt file inside .dist-info
-                top_level_file = next(
-                    (f for f in z.namelist() if f.endswith(".dist-info/top_level.txt")), None
-                )
-                if top_level_file:
-                    with z.open(top_level_file):
-                        import_names = z.read(top_level_file).decode("utf-8").strip().split()
-                        provided_imports.update(import_names)
-        except (zipfile.BadZipFile, FileNotFoundError):
-            pass
-
-        return provided_imports
-
     def _resolve_dependencies(self, required_modules: set[str]) -> DependencyResolutionResult:
         deps_to_add: list[str] = []
         dev_deps_to_add: list[str] = []
@@ -156,7 +131,7 @@ class DependencyDeconstructor:
                 package_install_name: str = match.group("name")
                 version: str = match.group("version").replace("_", "-")
 
-                provided_imports = self._get_provided_imports(package).union({package_install_name})
+                provided_imports = _get_provided_imports(package).union({package_install_name})
                 matched_imports = required_modules.intersection(provided_imports)
 
                 if not matched_imports:
@@ -263,3 +238,25 @@ def _should_add_integration_testing(name: str, version: str) -> bool:
         name == TIP_COMMON
         and int(version.lstrip("v").split(".")[0]) >= MIN_RELEVANT_TIP_COMMON_VERSION
     )
+
+
+def _get_provided_imports(wheel_path: Path) -> set[str]:
+    """Open a .whl file and read top_level.txt to find provided module names.
+
+    Args:
+        wheel_path: The path to the wheel file. Can also be a source distribution.
+
+    Returns:
+        A set of import names provided by the wheel, or an empty set if it cannot be read.
+
+    """
+    with (
+        suppress(zipfile.BadZipFile, FileNotFoundError, IsADirectoryError),
+        zipfile.ZipFile(wheel_path, "r") as z,
+    ):
+        for file_info in z.infolist():
+            if file_info.filename.endswith(".dist-info/top_level.txt"):
+                with z.open(file_info) as top_level_file:
+                    content = top_level_file.read().decode("utf-8").strip()
+                    return set(content.split())
+    return set()
