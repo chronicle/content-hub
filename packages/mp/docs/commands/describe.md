@@ -1,68 +1,46 @@
 # `mp describe action`
 
-## Description
-
-Generate AI-based descriptions for integration actions using Gemini. This command analyzes action scripts and YAML definitions to create detailed metadata, which is saved in
-`Resources/ai/ai_description.yaml` within the integration's source directory.
-
-The command supports both built integrations (in the `out/` directory) and source integrations.
+Generate AI-based descriptions for integration actions using Gemini. This command analyzes action scripts and metadata to create detailed documentation and capabilities summaries.
 
 ## Usage
 
 ```bash
-mp describe action [ACTION_NAMES]... [OPTIONS]
+mp describe action [ACTIONS]... [OPTIONS]
 ```
 
 ## Arguments
 
-*
-`[ACTION_NAMES]...`: Optional list of specific action names to describe. If omitted, all actions in the integration will be described.
+*   `ACTIONS`: Optional list of specific action names to describe. If omitted and a specific integration is targeted, all actions in that integration will be described.
 
 ## Options
 
-| Option              | Description                                                                                  | Type   | Default |
-|:--------------------|:---------------------------------------------------------------------------------------------|:-------|:--------|
-| `-i, --integration` | The name of the integration to describe.                                                     | `str`  | `None`  |
-| `-a, --all`         | Describe all integrations in the marketplace, or all actions if an integration is specified. | `bool` | `False` |
-| `--src`             | Path to a custom source directory containing integrations.                                   | `Path` | `None`  |
-| `--override`        | Rewrite actions that already have a description in `ai_description.yaml`.                    | `bool` | `False` |
-| `-q, --quiet`       | Reduce logging output.                                                                       | `bool` | `False` |
-| `-v, --verbose`     | Increase logging output (shows LLM prompts and responses).                                   | `bool` | `False` |
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--integration` | `-i` | The name of the integration containing the actions. | `str` | `None` |
+| `--all` | `-a` | Describe all integrations in the marketplace, or all actions if an integration is specified. | `bool` | `False` |
+| `--src` | | Customize source folder to describe from. | `Path` | `None` |
+| `--override` | | Rewrite actions that already have a description. | `bool` | `False` |
+| `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
 
 ## Examples
 
-### Describe all actions for a specific integration
-
+### Describe specific actions in an integration
 ```bash
-mp describe action --integration aws_ec2
+mp describe action ping get_logs --integration aws_ec2
 ```
 
-### Describe a specific action for an integration
-
+### Describe all actions in a specific integration
 ```bash
-mp describe action Ping --integration aws_ec2
+mp describe action --integration aws_ec2 --all
 ```
 
-### Describe all actions for all integrations in the marketplace
-
+### Describe all actions in the entire marketplace
 ```bash
 mp describe action --all
 ```
 
-### Describe all actions for a specific integration and override existing descriptions
-
+### Describe all actions in a custom source directory
 ```bash
-mp describe action --all --integration aws_ec2 --override
+mp describe action --all --src ./custom_integrations
 ```
-
-### Describe all integrations in a custom source directory
-
-```bash
-mp describe action --all --src /path/to/custom/integrations
-```
-
-## AI Metadata Aggregation
-
-When running `mp build`, all generated
-`ai_description.yaml` files from the source directories are aggregated into a single JSON file named
-`actions_ai_metadata.json`, located in the `out/response_integrations` directory.
