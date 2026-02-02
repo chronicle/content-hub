@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import rich
+from packaging.version import Version
 
 import mp.core.constants
 from mp.core import config
@@ -50,7 +51,17 @@ class DependencyResolutionResult(NamedTuple):
     placeholders: Dependencies
 
 
-MIN_RELEVANT_TIP_COMMON_VERSION: int = 2
+class ProcessedPackage(NamedTuple):
+    """Represents the outcome of processing a single package file."""
+
+    matched_imports: set[str]
+    dependencies: Dependencies
+    placeholders: Dependencies
+    env_common_to_remove: bool = False
+
+
+MIN_TIP_COMMON_VERSION_DEPENDS_ON_ENVCOMMON: Version = Version("1.0.14")
+MIN_RELEVANT_TIP_COMMON_VERSION_FOR_INTEGRATION_TESTING: Version = Version("2.0.0")
 TIP_COMMON: str = "TIPCommon"
 ENV_COMMON: str = "EnvironmentCommon"
 INTEGRATION_TESTING: str = "integration_testing"
@@ -124,38 +135,16 @@ class DependencyDeconstructor:
                 dependencies_dir.glob(ext) for ext in PACAKGE_SUFFIXES
             )
             for package in package_files:
-                match = re.match(PACKAGE_FILE_PATTERN, package.name)
-
-                if not match:
-                    continue
-                package_install_name: str = match.group("name")
-                version: str = match.group("version").replace("_", "-")
-
-                provided_imports = _get_provided_imports(package).union({package_install_name})
-                matched_imports = required_modules.intersection(provided_imports)
-
-                if not matched_imports:
+                result = self._process_package_file(package, required_modules)
+                if not result:
                     continue
 
-                found_packages.update(matched_imports)
-
-                if package_install_name in mp.core.constants.REPO_PACKAGES_CONFIG:
-                    try:
-                        repo_packages: Dependencies = self._get_repo_package_dependencies(
-                            package_install_name, version
-                        )
-                        deps_to_add.extend(repo_packages.dependencies)
-                        dev_deps_to_add.extend(repo_packages.dev_dependencies)
-                    except FileNotFoundError as e:
-                        # This dependency will be added as a placeholder comment
-                        placeholder_deps.append(f"{package_install_name}=={version}")
-                        rich.print(
-                            f"[yellow]Warning:[/] Could not resolve local dependency "
-                            f"{package_install_name}: {e}"
-                        )
-                else:
-                    deps_to_add.append(f"{package_install_name}=={version}")
-
+                found_packages.update(result.matched_imports)
+                deps_to_add.extend(result.dependencies.dependencies)
+                dev_deps_to_add.extend(result.dependencies.dev_dependencies)
+                placeholder_deps.extend(result.placeholders.dependencies)
+                if result.env_common_to_remove:
+                    required_modules.remove(ENV_COMMON)
         missing_packages: set[str] = required_modules.difference(found_packages)
         for missing_package in missing_packages:
             package_to_add = missing_package
@@ -166,6 +155,58 @@ class DependencyDeconstructor:
         return DependencyResolutionResult(
             dependencies=Dependencies(deps_to_add, dev_deps_to_add),
             placeholders=Dependencies(placeholder_deps, placeholder_dev_deps),
+        )
+
+    def _process_package_file(
+        self,
+        package_path: Path,
+        required_modules: set[str],
+    ) -> ProcessedPackage | None:
+        match = re.match(PACKAGE_FILE_PATTERN, package_path.name)
+        if not match:
+            return None
+
+        package_install_name: str = match.group("name")
+        version: str = match.group("version").replace("_", "-")
+
+        provided_imports = _get_provided_imports(package_path).union({package_install_name})
+        matched_imports = required_modules.intersection(provided_imports)
+
+        if not matched_imports:
+            return None
+
+        deps_to_add, dev_deps_to_add = [], []
+        placeholder_deps, placeholder_dev_deps = [], []
+        env_common_to_remove = False
+
+        if package_install_name in mp.core.constants.REPO_PACKAGES_CONFIG:
+            if (
+                package_install_name == TIP_COMMON
+                and Version(version) < MIN_TIP_COMMON_VERSION_DEPENDS_ON_ENVCOMMON
+                and ENV_COMMON in required_modules
+            ):
+                env_common_to_remove = True
+
+            try:
+                repo_packages: Dependencies = self._get_repo_package_dependencies(
+                    package_install_name, version
+                )
+                deps_to_add.extend(repo_packages.dependencies)
+                dev_deps_to_add.extend(repo_packages.dev_dependencies)
+            except FileNotFoundError as e:
+                # This dependency will be added as a placeholder comment
+                placeholder_deps.append(f"{package_install_name}=={version}")
+                rich.print(
+                    f"[yellow]Warning:[/] Could not resolve local dependency "
+                    f"{package_install_name}: {e}"
+                )
+        else:
+            deps_to_add.append(f"{package_install_name}=={version}")
+        return ProcessedPackage(
+            matched_imports=matched_imports,
+            dependencies=Dependencies(deps_to_add, dev_deps_to_add),
+            placeholders=Dependencies(placeholder_deps, placeholder_dev_deps),
+            env_common_to_remove=env_common_to_remove,
         )
 
     def _get_repo_package_dependencies(
@@ -236,7 +277,7 @@ def _get_package_wheels_dir(name: str) -> Path:
 def _should_add_integration_testing(name: str, version: str) -> bool:
     return (
         name == TIP_COMMON
-        and int(version.lstrip("v").split(".")[0]) >= MIN_RELEVANT_TIP_COMMON_VERSION
+        and Version(version) >= MIN_RELEVANT_TIP_COMMON_VERSION_FOR_INTEGRATION_TESTING
     )
 
 

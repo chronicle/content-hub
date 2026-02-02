@@ -212,6 +212,53 @@ def test_get_dependencies_creates_placeholder_for_missing_local_file(tmp_path: P
 
 
 @pytest.mark.parametrize(
+    ("tipcommon_version", "envcommon_should_be_dependency"),
+    [
+        ("1.0.13", False),  # Old version, EnvCommon should be removed.
+        ("1.0.14", True),  # Exact version, EnvCommon should be kept.
+        ("2.0.0", True),  # Newer version, EnvCommon should be kept.
+    ],
+)
+def test_get_dependencies_handles_tipcommon_version_for_envcommon_dependency(
+    tmp_path: Path, tipcommon_version: str, envcommon_should_be_dependency: bool
+) -> None:
+    """Test that EnvironmentCommon is only a dependency for TIPCommon >= 1.0.14."""
+    _create_dummy_python_file(tmp_path, "import TIPCommon")
+    dependencies_dir = _create_dependencies_dir(tmp_path)
+    (dependencies_dir / f"TIPCommon-{tipcommon_version}-py3-none-any.whl").touch()
+    (dependencies_dir / "EnvironmentCommon-1.0.0-py3-none-any.whl").touch()
+
+    with unittest.mock.patch(
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+    ) as mock_resolve:
+
+        def mock_resolver(
+            name: str,
+            version: str,
+        ) -> Dependencies:
+            if name == "TIPCommon":
+                return Dependencies(
+                    dependencies=[f"path/to/TIPCommon-{version}.whl"],
+                    dev_dependencies=[],
+                )
+            if name == "EnvironmentCommon":
+                return Dependencies(
+                    dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[]
+                )
+            return Dependencies(dependencies=[], dev_dependencies=[])
+
+        mock_resolve.side_effect = mock_resolver
+
+        result = DependencyDeconstructor(tmp_path).get_dependencies()
+
+        envcommon_is_dependency = (
+            "path/to/EnvironmentCommon.whl" in result.dependencies.dependencies
+        )
+        assert envcommon_is_dependency is envcommon_should_be_dependency
+        assert f"path/to/TIPCommon-{tipcommon_version}.whl" in result.dependencies.dependencies
+
+
+@pytest.mark.parametrize(
     ("name", "version", "expected"),
     [
         ("TIPCommon", "2.0.2", True),
