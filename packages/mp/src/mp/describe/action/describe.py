@@ -428,9 +428,7 @@ class DescribeAction:
             )
 
     async def _load_metadata(self) -> dict[str, Any]:
-        resource_ai_dir: anyio.Path = (
-            self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
-        )
+        resource_ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         metadata: dict[str, Any] = {}
 
@@ -454,7 +452,7 @@ class DescribeAction:
         if self.dst:
             save_dir: anyio.Path = anyio.Path(self.dst)
         else:
-            save_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
+            save_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
 
         await save_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = save_dir / constants.ACTIONS_AI_DESCRIPTION_FILE

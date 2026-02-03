@@ -49,17 +49,19 @@ def write_actions_ai_metadata_json(out_dir: Path, source_paths: list[Path]) -> N
         ai_file: Path = (
             source_dir
             / constants.RESOURCES_DIR
-            / constants.AI_FOLDER
+            / constants.AI_DIR
             / constants.ACTIONS_AI_DESCRIPTION_FILE
         )
-        if ai_file.exists():
-            try:
-                with ai_file.open(encoding="utf-8") as f:
-                    if data := yaml.safe_load(f):
-                        metadata_collection[integration_id] = {"actions": data}
+        if not ai_file.exists():
+            continue
 
-            except Exception:
-                logger.exception("Failed to read AI metadata for %s", integration_id)
+        try:
+            with ai_file.open(encoding="utf-8") as f:
+                if data := yaml.safe_load(f):
+                    metadata_collection[integration_id] = {"actions": data}
+
+        except Exception:
+            logger.exception("Failed to read AI metadata for %s", integration_id)
 
     output_file: Path = out_dir / constants.AI_META_JSON_FILE
     try:
