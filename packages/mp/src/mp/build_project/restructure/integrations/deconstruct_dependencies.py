@@ -23,12 +23,12 @@ from __future__ import annotations
 
 import ast
 import itertools
-import re
 import sys
 from pathlib import Path
 from typing import NamedTuple
 
 import rich
+from packaging.utils import canonicalize_name, parse_wheel_filename
 
 import mp.core.constants
 from mp.core import config
@@ -45,16 +45,6 @@ MIN_RELEVANT_TIP_COMMON_VERSION: int = 2
 TIP_COMMON: str = "TIPCommon"
 ENV_COMMON: str = "EnvironmentCommon"
 INTEGRATION_TESTING: str = "integration_testing"
-# PEP 440 compliant regex for parsing package versions from filenames.
-PACKAGE_FILE_PATTERN: str = (
-    r"^([a-zA-Z0-9_.\-]+?)-("
-    r"v?(?:[0-9]+!)?[0-9]+(?:\.[0-9]+)*"
-    r"(?:[-._]?(?:a|b|c|rc|alpha|beta|pre|preview)[-._]?[0-9]*)?"
-    r"(?:-[0-9]+|[-._]?(?:post|rev|r)[-._]?[0-9]*)?"
-    r"(?:[-._]?dev[-._]?[0-9]*)?"
-    r"(?:\+[a-z0-9]+(?:[-._][a-z0-9]+)*)?"
-    r")"
-)
 PACAKGE_SUFFIXES: tuple[str, str] = ("*.whl", "*.tar.gz")
 
 
@@ -116,6 +106,10 @@ class DependencyDeconstructor:
         if TIP_COMMON in required_modules:
             required_modules.add(ENV_COMMON)
 
+        normalized_required_modules: dict[str, str] = {
+            canonicalize_name(name): name for name in required_modules
+        }
+
         dependencies_dir: Path = self.integration_path / mp.core.constants.OUT_DEPENDENCIES_DIR
         found_packages: set[str] = set()
 
@@ -124,15 +118,20 @@ class DependencyDeconstructor:
                 dependencies_dir.glob(ext) for ext in PACAKGE_SUFFIXES
             )
             for package in package_files:
-                match = re.match(PACKAGE_FILE_PATTERN, package.name)
-                if not match:
-                    continue
-                package_name: str = match.group(1).replace("_", "-")
-                if package_name not in required_modules:
+                try:
+                    normalized_package_name, package_version, _, _ = parse_wheel_filename(
+                        package.name
+                    )
+                except ValueError:
+                    continue  # not a wheel
+
+                if normalized_package_name not in normalized_required_modules:
                     continue
 
+                package_name: str = normalized_required_modules[normalized_package_name]
                 found_packages.add(package_name)
-                version: str = match.group(2)
+                version: str = str(package_version)
+
                 if package_name in mp.core.constants.REPO_PACKAGES_CONFIG:
                     try:
                         repo_packages: Dependencies = self._get_repo_package_dependencies(
@@ -170,12 +169,12 @@ class DependencyDeconstructor:
             FileNotFoundError: If a local dependency's directory or wheel is not found.
 
         """
-        version_dir: Path = self.local_packages_base_path / _resolve_version_dir(name, version)
-        if not version_dir.is_dir():
-            msg: str = f"Could not find local dependency directory: {version_dir}"
+        wheels_dir: Path = self.local_packages_base_path / _resolve_wheels_dir(name)
+        if not wheels_dir.is_dir():
+            msg: str = f"Could not find local dependency directory: {wheels_dir}"
             raise FileNotFoundError(msg)
 
-        package_file: Path = _find_package_file(version_dir)
+        package_file: Path = _find_package_file(wheels_dir, f"{name}-{version}")
         local_deps_to_add: list[str] = [str(package_file)]
         local_dev_deps_to_add: list[str] = []
 
@@ -201,7 +200,7 @@ class DependencyDeconstructor:
         return Dependencies(local_deps_to_add, local_dev_deps_to_add)
 
 
-def _find_package_file(package_dir: Path, version_prefix: str = "") -> Path:
+def _find_package_file(package_dir: Path, file_prefix: str) -> Path:
     """Find a wheel or source distribution file in a directory.
 
     Returns:
@@ -212,17 +211,16 @@ def _find_package_file(package_dir: Path, version_prefix: str = "") -> Path:
 
     """
     for extension in PACAKGE_SUFFIXES:
-        for file in package_dir.glob(f"{version_prefix}{extension}"):
+        for file in package_dir.glob(f"{file_prefix}{extension}"):
             return file
 
     msg: str = f"No wheel or source distribution found in {package_dir}"
     raise FileNotFoundError(msg)
 
 
-def _resolve_version_dir(name: str, version: str) -> Path:
+def _resolve_wheels_dir(name: str) -> Path:
     package_dir_name: str = mp.core.constants.REPO_PACKAGES_CONFIG[name]
-    version_dir_name: str = f"{name}-{version}"
-    return Path(package_dir_name) / version_dir_name
+    return Path(package_dir_name) / "whls"
 
 
 def _should_add_integration_testing(name: str, version: str) -> bool:
