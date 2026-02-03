@@ -18,14 +18,12 @@ def main():
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
     # Extract action parameter
-    job_id = siemplify.extract_action_param("job_id", print_value=True)
-    max_wait = siemplify.extract_action_param("max_wait", print_value=True)
-    status_only = siemplify.extract_action_param("status_only", print_value=True)
-    force_metadata_on = siemplify.extract_action_param(
-        "force_metadata_on", print_value=True
+    job_id = siemplify.extract_action_param("Job ID", print_value=True)
+    max_wait = siemplify.extract_action_param("Max Wait", print_value=True)
+    status_only = siemplify.extract_action_param("Status Only", print_value=True)
+    force_metadata_on = siemplify.extract_action_param("Force Metadata On", print_value=True
     )
-    force_metadata_off = siemplify.extract_action_param(
-        "force_metadata_off", print_value=True
+    force_metadata_off = siemplify.extract_action_param("Force Metadata Off", print_value=True
     )
 
     if max_wait:

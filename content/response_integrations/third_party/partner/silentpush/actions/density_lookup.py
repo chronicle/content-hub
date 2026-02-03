@@ -15,9 +15,9 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    qtype = siemplify.extract_action_param("qtype", print_value=True)
-    query = siemplify.extract_action_param("query", print_value=True)
-    scope = siemplify.extract_action_param("scope", print_value=True)
+    qtype = siemplify.extract_action_param("Qtype", print_value=True)
+    query = siemplify.extract_action_param("Query", print_value=True)
+    scope = siemplify.extract_action_param("Scope", print_value=True)
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)

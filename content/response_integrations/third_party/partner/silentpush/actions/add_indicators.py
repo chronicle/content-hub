@@ -18,9 +18,9 @@ def main():
     )
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    feed_uuid = siemplify.extract_action_param("feed_uuid", print_value=True)
-    indicators = siemplify.extract_action_param("indicators", print_value=True)
-    asn = siemplify.extract_action_param("asn", print_value=True)
+    feed_uuid = siemplify.extract_action_param("Feed UUID", print_value=True)
+    indicators = siemplify.extract_action_param("Indicators", print_value=True)
+    asn = siemplify.extract_action_param("ASN", print_value=True)
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)

@@ -17,7 +17,7 @@ def main():
     )
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    feed_url = siemplify.extract_action_param("feed_url", print_value=True)
+    feed_url = siemplify.extract_action_param("Feed URL", print_value=True)
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)

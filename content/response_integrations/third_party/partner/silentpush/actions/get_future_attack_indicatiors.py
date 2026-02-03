@@ -18,9 +18,9 @@ def main():
     )
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    feed_uuid = siemplify.extract_action_param("feed_uuid", print_value=True)
-    page_no = siemplify.extract_action_param("page_no", print_value=True)
-    page_size = siemplify.extract_action_param("page_size", print_value=True)
+    feed_uuid = siemplify.extract_action_param("Feed UUID", print_value=True)
+    page_no = siemplify.extract_action_param("Page No", print_value=True)
+    page_size = siemplify.extract_action_param("Page Size", print_value=True)
 
     if page_no is None:
         page_no = 1

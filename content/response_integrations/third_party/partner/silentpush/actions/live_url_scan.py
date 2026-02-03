@@ -18,11 +18,11 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    url = siemplify.extract_action_param("url", print_value=True)
-    platform: str = siemplify.extract_action_param("platform", print_value=True)
-    browser: str = siemplify.extract_action_param("browser", print_value=True)
-    os: str = siemplify.extract_action_param("os", print_value=True)
-    region: str = siemplify.extract_action_param("region", print_value=True)
+    url = siemplify.extract_action_param("URL", print_value=True)
+    platform: str = siemplify.extract_action_param("Platform", print_value=True)
+    browser: str = siemplify.extract_action_param("Browser", print_value=True)
+    os: str = siemplify.extract_action_param("Os", print_value=True)
+    region: str = siemplify.extract_action_param("Region", print_value=True)
 
     try:
         # Validate platform, os, browser, and region

@@ -17,10 +17,10 @@ def main():
     )
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    resource = siemplify.extract_action_param("resource", print_value=True)
-    value = siemplify.extract_action_param("value", print_value=True)
-    explain = siemplify.extract_action_param("explain", print_value=True)
-    scan_data = siemplify.extract_action_param("scan_data", print_value=True)
+    resource = siemplify.extract_action_param("Resource", print_value=True)
+    value = siemplify.extract_action_param("Value", print_value=True)
+    explain = siemplify.extract_action_param("Explain", print_value=True)
+    scan_data = siemplify.extract_action_param("Scan Data", print_value=True)
     if explain == "false":
         explanation: bool = False
     else:

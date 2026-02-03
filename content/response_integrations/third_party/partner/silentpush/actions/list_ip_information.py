@@ -15,7 +15,7 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    ips = siemplify.extract_action_param("ips", print_value=True)
+    ips = siemplify.extract_action_param("Ips", print_value=True)
     ips = ips.split(",")
 
     try:

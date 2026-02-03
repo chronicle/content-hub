@@ -17,13 +17,13 @@ def main():
     )
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    domain = siemplify.extract_action_param("domain", print_value=True)
-    cluster = siemplify.extract_action_param("cluster", print_value=True)
-    mode = siemplify.extract_action_param("mode", print_value=True)
-    arg_match = siemplify.extract_action_param("match", print_value=True)
-    as_of = siemplify.extract_action_param("as_of", print_value=True)
-    origin_uid = siemplify.extract_action_param("origin_uid", print_value=True)
-    use_get = siemplify.extract_action_param("use_get", print_value=True)
+    domain = siemplify.extract_action_param("Domain", print_value=True)
+    cluster = siemplify.extract_action_param("Cluster", print_value=True)
+    mode = siemplify.extract_action_param("Mode", print_value=True)
+    arg_match = siemplify.extract_action_param("Match", print_value=True)
+    as_of = siemplify.extract_action_param("As Of", print_value=True)
+    origin_uid = siemplify.extract_action_param("Origin UID", print_value=True)
+    use_get = siemplify.extract_action_param("Use Get", print_value=True)
     cluster = cluster.lower() == "true"
 
     domains: list = domain.split(",")

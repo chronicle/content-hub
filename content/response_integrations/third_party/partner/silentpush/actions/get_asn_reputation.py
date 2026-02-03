@@ -15,9 +15,9 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    asn = siemplify.extract_action_param("asn", print_value=True)
-    explain = siemplify.extract_action_param("explain", print_value=True)
-    limit = siemplify.extract_action_param("limit", print_value=True)
+    asn = siemplify.extract_action_param("ASN", print_value=True)
+    explain = siemplify.extract_action_param("Explain", print_value=True)
+    limit = siemplify.extract_action_param("Limit", print_value=True)
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)

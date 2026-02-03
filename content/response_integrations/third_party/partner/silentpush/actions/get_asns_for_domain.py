@@ -15,7 +15,7 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    domain = siemplify.extract_action_param("domain", print_value=True)
+    domain = siemplify.extract_action_param("Domain", print_value=True)
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)

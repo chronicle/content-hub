@@ -18,32 +18,28 @@ def main():
     )
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    qtype = siemplify.extract_action_param("qtype", print_value=True)
-    qname = siemplify.extract_action_param("qname", print_value=True)
-    netmask = siemplify.extract_action_param("netmask", print_value=True)
-    subdomains = siemplify.extract_action_param("subdomains", print_value=True)
-    regex = siemplify.extract_action_param("regex", print_value=True)
-    match_arg = siemplify.extract_action_param("match", print_value=True)
-    first_seen_after = siemplify.extract_action_param(
-        "first_seen_after", print_value=True
+    qtype = siemplify.extract_action_param("Qtype", print_value=True)
+    qname = siemplify.extract_action_param("Qname", print_value=True)
+    netmask = siemplify.extract_action_param("Netmask", print_value=True)
+    subdomains = siemplify.extract_action_param("Subdomains", print_value=True)
+    regex = siemplify.extract_action_param("Regex", print_value=True)
+    match_arg = siemplify.extract_action_param("Match", print_value=True)
+    first_seen_after = siemplify.extract_action_param("First Seen After", print_value=True
     )
-    first_seen_before = siemplify.extract_action_param(
-        "first_seen_before", print_value=True
+    first_seen_before = siemplify.extract_action_param("First Seen Before", print_value=True
     )
-    last_seen_after = siemplify.extract_action_param(
-        "last_seen_after", print_value=True
+    last_seen_after = siemplify.extract_action_param("Last Seen After", print_value=True
     )
-    last_seen_before = siemplify.extract_action_param(
-        "last_seen_before", print_value=True
+    last_seen_before = siemplify.extract_action_param("Last Seen Before", print_value=True
     )
-    as_of = siemplify.extract_action_param("as_of", print_value=True)
-    sort = siemplify.extract_action_param("sort", print_value=True)
-    output_format = siemplify.extract_action_param("output_format", print_value=True)
-    prefer = siemplify.extract_action_param("prefer", print_value=True)
-    with_metadata = siemplify.extract_action_param("with_metadata", print_value=True)
-    max_wait = siemplify.extract_action_param("max_wait", print_value=True)
-    limit = siemplify.extract_action_param("limit", print_value=True)
-    skip = siemplify.extract_action_param("skip", print_value=True)
+    as_of = siemplify.extract_action_param("As Of", print_value=True)
+    sort = siemplify.extract_action_param("Sort", print_value=True)
+    output_format = siemplify.extract_action_param("Output Format", print_value=True)
+    prefer = siemplify.extract_action_param("Prefer", print_value=True)
+    with_metadata = siemplify.extract_action_param("With Metadata", print_value=True)
+    max_wait = siemplify.extract_action_param("Max Wait", print_value=True)
+    limit = siemplify.extract_action_param("Limit", print_value=True)
+    skip = siemplify.extract_action_param("Skip", print_value=True)
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)

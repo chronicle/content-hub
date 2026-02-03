@@ -17,18 +17,17 @@ def main():
     )
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    domain = siemplify.extract_action_param("domain", print_value=True)
-    domain_regex = siemplify.extract_action_param("domain_regex", print_value=True)
-    certificate_issuer = siemplify.extract_action_param(
-        "certificate_issuer", print_value=True
+    domain = siemplify.extract_action_param("Domain", print_value=True)
+    domain_regex = siemplify.extract_action_param("Domain Regex", print_value=True)
+    certificate_issuer = siemplify.extract_action_param("Certificate Issuer", print_value=True
     )
-    date_min = siemplify.extract_action_param("date_min", print_value=True)
-    date_max = siemplify.extract_action_param("date_max", print_value=True)
-    prefer = siemplify.extract_action_param("prefer", print_value=True)
-    max_wait = siemplify.extract_action_param("max_wait", print_value=True)
-    with_metadata = siemplify.extract_action_param("with_metadata", print_value=True)
-    skip = siemplify.extract_action_param("skip", print_value=True)
-    limit = siemplify.extract_action_param("limit", print_value=True)
+    date_min = siemplify.extract_action_param("Date Min", print_value=True)
+    date_max = siemplify.extract_action_param("Date Max", print_value=True)
+    prefer = siemplify.extract_action_param("Prefer", print_value=True)
+    max_wait = siemplify.extract_action_param("Max Wait", print_value=True)
+    with_metadata = siemplify.extract_action_param("With Metadata", print_value=True)
+    skip = siemplify.extract_action_param("Skip", print_value=True)
+    limit = siemplify.extract_action_param("Limit", print_value=True)
 
     params = {
         "domain_regex": domain_regex,

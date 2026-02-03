@@ -15,11 +15,11 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    query = siemplify.extract_action_param("query", print_value=True)
-    fields = bool(siemplify.extract_action_param("fields", print_value=True))
-    limit = siemplify.extract_action_param("limit", print_value=True)
-    skip = siemplify.extract_action_param("skip", print_value=True)
-    with_metadata = bool(siemplify.extract_action_param("with_metadata", print_value=True))
+    query = siemplify.extract_action_param("Query", print_value=True)
+    fields = bool(siemplify.extract_action_param("Fields", print_value=True))
+    limit = siemplify.extract_action_param("Limit", print_value=True)
+    skip = siemplify.extract_action_param("Skip", print_value=True)
+    with_metadata = bool(siemplify.extract_action_param("With Metadata", print_value=True))
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)

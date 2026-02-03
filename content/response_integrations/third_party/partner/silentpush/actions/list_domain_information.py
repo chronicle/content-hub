@@ -17,10 +17,10 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    domain = siemplify.extract_action_param("domains", print_value=True)
+    domain = siemplify.extract_action_param("Domains", print_value=True)
     domains: list = domain.split(",")
-    fetch_risk_score = siemplify.extract_action_param("fetch_risk_score", print_value=True)
-    fetch_whois_info = siemplify.extract_action_param("fetch_whois_info", print_value=True)
+    fetch_risk_score = siemplify.extract_action_param("Fetch Risk Score", print_value=True)
+    fetch_whois_info = siemplify.extract_action_param("Fetch Whois Info", print_value=True)
 
     if fetch_risk_score == "false":
         fetch_risk_score: bool = False

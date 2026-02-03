@@ -18,29 +18,25 @@ def main():
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
     # Extract action parameter
-    query = siemplify.extract_action_param("domain", print_value=True)
-    limit = siemplify.extract_action_param("limit", print_value=True)
-    skip = siemplify.extract_action_param("skip", print_value=True)
-    start_date = siemplify.extract_action_param("start_date", print_value=True)
-    end_date = siemplify.extract_action_param("end_date", print_value=True)
-    risk_score_min = siemplify.extract_action_param("risk_score_min", print_value=True)
-    risk_score_max = siemplify.extract_action_param("risk_score_max", print_value=True)
-    domain_regex = siemplify.extract_action_param("domain_regex", print_value=True)
-    name_server = siemplify.extract_action_param("name_server", print_value=True)
-    asnum = siemplify.extract_action_param("asnum", print_value=True)
-    asname = siemplify.extract_action_param("asname", print_value=True)
-    min_ip_diversity = siemplify.extract_action_param(
-        "min_ip_diversity", print_value=True
+    query = siemplify.extract_action_param("Domain", print_value=True)
+    limit = siemplify.extract_action_param("Limit", print_value=True)
+    skip = siemplify.extract_action_param("Skip", print_value=True)
+    start_date = siemplify.extract_action_param("Start Date", print_value=True)
+    end_date = siemplify.extract_action_param("End Date", print_value=True)
+    risk_score_min = siemplify.extract_action_param("Risk Score Min", print_value=True)
+    risk_score_max = siemplify.extract_action_param("Risk Score Max", print_value=True)
+    domain_regex = siemplify.extract_action_param("Domain Regex", print_value=True)
+    name_server = siemplify.extract_action_param("Name Server", print_value=True)
+    asnum = siemplify.extract_action_param("Asnum", print_value=True)
+    asname = siemplify.extract_action_param("Asname", print_value=True)
+    min_ip_diversity = siemplify.extract_action_param("Min IP Diversity", print_value=True
     )
-    registrar = siemplify.extract_action_param("registrar", print_value=True)
-    min_asn_diversity = siemplify.extract_action_param(
-        "min_asn_diversity", print_value=True
+    registrar = siemplify.extract_action_param("Registrar", print_value=True)
+    min_asn_diversity = siemplify.extract_action_param("Min ASN Diversity", print_value=True
     )
-    certificate_issuer = siemplify.extract_action_param(
-        "certificate_issuer", print_value=True
+    certificate_issuer = siemplify.extract_action_param("Certificate Issuer", print_value=True
     )
-    whois_date_after = siemplify.extract_action_param(
-        "whois_date_after", print_value=True
+    whois_date_after = siemplify.extract_action_param("Whois Date After", print_value=True
     )
 
     try:

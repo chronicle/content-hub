@@ -16,12 +16,12 @@ def main():
     server_url = siemplify.extract_configuration_param(INTEGRATION_NAME, "Silent Push Server")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
 
-    name = siemplify.extract_action_param("name", print_value=True)
-    type_arg = siemplify.extract_action_param("type", print_value=True)
+    name = siemplify.extract_action_param("Name", print_value=True)
+    type_arg = siemplify.extract_action_param("Type", print_value=True)
     category = siemplify.extract_action_param("Category", print_value=True)
-    vendor = siemplify.extract_action_param("vendor", print_value=True)
-    feed_description = siemplify.extract_action_param("feed_description", print_value=True)
-    tags = siemplify.extract_action_param("tags", print_value=True)
+    vendor = siemplify.extract_action_param("Vendor", print_value=True)
+    feed_description = siemplify.extract_action_param("Feed Description", print_value=True)
+    tags = siemplify.extract_action_param("Tags", print_value=True)
 
     try:
         sp_manager = SilentPushManager(server_url, api_key, logger=siemplify.LOGGER)
