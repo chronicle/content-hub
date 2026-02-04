@@ -23,12 +23,15 @@ from __future__ import annotations
 
 import ast
 import itertools
+import re
 import sys
+import zipfile
+from contextlib import suppress
 from pathlib import Path
 from typing import NamedTuple
 
 import rich
-from packaging.utils import canonicalize_name, parse_wheel_filename
+from packaging.version import Version
 
 import mp.core.constants
 from mp.core import config
@@ -41,10 +44,28 @@ class Dependencies(NamedTuple):
     dev_dependencies: list[str]
 
 
-MIN_RELEVANT_TIP_COMMON_VERSION: int = 2
+class DependencyResolutionResult(NamedTuple):
+    """A tuple representing the resolved dependencies, and placeholders for missing local ones."""
+
+    dependencies: Dependencies
+    placeholders: Dependencies
+
+
+class ProcessedPackage(NamedTuple):
+    """Represents the outcome of processing a single package file."""
+
+    matched_imports: set[str]
+    dependencies: Dependencies
+    placeholders: Dependencies
+    env_common_to_remove: bool = False
+
+
+MIN_TIP_COMMON_VERSION_DEPENDS_ON_ENVCOMMON: Version = Version("1.0.14")
+MIN_RELEVANT_TIP_COMMON_VERSION_FOR_INTEGRATION_TESTING: Version = Version("2.0.0")
 TIP_COMMON: str = "TIPCommon"
 ENV_COMMON: str = "EnvironmentCommon"
 INTEGRATION_TESTING: str = "integration_testing"
+PACKAGE_FILE_PATTERN: str = r"^(?P<name>[^-]+)-(?P<version>[^-]+)-.*\.whl$"
 PACAKGE_SUFFIXES: tuple[str, str] = ("*.whl", "*.tar.gz")
 
 
@@ -61,11 +82,11 @@ class DependencyDeconstructor:
         self.integration_path = integration_path
         self.local_packages_base_path = config.get_local_packages_path()
 
-    def get_dependencies(self) -> Dependencies:
+    def get_dependencies(self) -> DependencyResolutionResult:
         """Get the dependencies of the integration.
 
         Returns:
-            A Dependencies object.
+            A DependencyResolutionResult object containing local and PyPI dependencies.
 
         """
         imported_modules_names: set[str] = self._get_package_names_from_python_code()
@@ -95,20 +116,17 @@ class DependencyDeconstructor:
             m
             for m in imported_modules
             if m
-            not in manager_modules.union(
-                mp.core.constants.SDK_MODULES, sys.stdlib_module_names, {self.integration_path.name}
-            )
+            not in manager_modules.union(mp.core.constants.SDK_MODULES, sys.stdlib_module_names)
         }
 
-    def _resolve_dependencies(self, required_modules: set[str]) -> Dependencies:
+    def _resolve_dependencies(self, required_modules: set[str]) -> DependencyResolutionResult:
         deps_to_add: list[str] = []
         dev_deps_to_add: list[str] = []
+        placeholder_deps, placeholder_dev_deps = [], []
+
+        env_common_to_remove = False
         if TIP_COMMON in required_modules:
             required_modules.add(ENV_COMMON)
-
-        normalized_required_modules: dict[str, str] = {
-            canonicalize_name(name): name for name in required_modules
-        }
 
         dependencies_dir: Path = self.integration_path / mp.core.constants.OUT_DEPENDENCIES_DIR
         found_packages: set[str] = set()
@@ -118,41 +136,82 @@ class DependencyDeconstructor:
                 dependencies_dir.glob(ext) for ext in PACAKGE_SUFFIXES
             )
             for package in package_files:
-                try:
-                    normalized_package_name, package_version, _, _ = parse_wheel_filename(
-                        package.name
-                    )
-                except ValueError:
-                    continue  # not a wheel
-
-                if normalized_package_name not in normalized_required_modules:
+                result = self._process_package_file(package, required_modules)
+                if not result:
                     continue
 
-                package_name: str = normalized_required_modules[normalized_package_name]
-                found_packages.add(package_name)
-                version: str = str(package_version)
-
-                if package_name in mp.core.constants.REPO_PACKAGES_CONFIG:
-                    try:
-                        repo_packages: Dependencies = self._get_repo_package_dependencies(
-                            package_name, version
-                        )
-                        deps_to_add.extend(repo_packages.dependencies)
-                        dev_deps_to_add.extend(repo_packages.dev_dependencies)
-                    except FileNotFoundError as e:
-                        rich.print(
-                            f"[yellow]Warning:[/] Could not resolve local dependency "
-                            f"{package_name}: {e}"
-                        )
-                else:
-                    deps_to_add.append(f"{package_name}=={version}")
+                found_packages.update(result.matched_imports)
+                deps_to_add.extend(result.dependencies.dependencies)
+                dev_deps_to_add.extend(result.dependencies.dev_dependencies)
+                placeholder_deps.extend(result.placeholders.dependencies)
+                if result.env_common_to_remove:
+                    env_common_to_remove = True
 
         missing_packages: set[str] = required_modules.difference(found_packages)
-        deps_to_add.extend(missing_packages)
+        for missing_package in missing_packages:
+            package_to_add = missing_package
+            if package_to_add in mp.core.constants.SDK_MODULES_CONFIG:
+                package_to_add = mp.core.constants.SDK_MODULES_CONFIG[package_to_add]
+            deps_to_add.append(package_to_add)
 
-        return Dependencies(
-            deps_to_add,
-            dev_deps_to_add,
+        if env_common_to_remove:
+            deps_to_add = [dep for dep in deps_to_add if not Path(dep).name.startswith(ENV_COMMON)]
+
+        return DependencyResolutionResult(
+            dependencies=Dependencies(deps_to_add, dev_deps_to_add),
+            placeholders=Dependencies(placeholder_deps, placeholder_dev_deps),
+        )
+
+    def _process_package_file(
+        self,
+        package_path: Path,
+        required_modules: set[str],
+    ) -> ProcessedPackage | None:
+        match = re.match(PACKAGE_FILE_PATTERN, package_path.name)
+        if not match:
+            return None
+
+        package_install_name: str = match.group("name")
+        version: str = match.group("version").replace("_", "-")
+
+        provided_imports = _get_provided_imports(package_path).union({package_install_name})
+        matched_imports = required_modules.intersection(provided_imports)
+
+        if not matched_imports:
+            return None
+
+        deps_to_add, dev_deps_to_add = [], []
+        placeholder_deps, placeholder_dev_deps = [], []
+        env_common_to_remove = False
+
+        if package_install_name in mp.core.constants.REPO_PACKAGES_CONFIG:
+            if (
+                package_install_name == TIP_COMMON
+                and Version(version) < MIN_TIP_COMMON_VERSION_DEPENDS_ON_ENVCOMMON
+                and ENV_COMMON in required_modules
+            ):
+                env_common_to_remove = True
+
+            try:
+                repo_packages: Dependencies = self._get_repo_package_dependencies(
+                    package_install_name, version
+                )
+                deps_to_add.extend(repo_packages.dependencies)
+                dev_deps_to_add.extend(repo_packages.dev_dependencies)
+            except FileNotFoundError as e:
+                # This dependency will be added as a placeholder comment
+                placeholder_deps.append(f"{package_install_name}=={version}")
+                rich.print(
+                    f"[yellow]Warning:[/] Could not resolve local dependency "
+                    f"{package_install_name}: {e}"
+                )
+        else:
+            deps_to_add.append(f"{package_install_name}=={version}")
+        return ProcessedPackage(
+            matched_imports=matched_imports,
+            dependencies=Dependencies(deps_to_add, dev_deps_to_add),
+            placeholders=Dependencies(placeholder_deps, placeholder_dev_deps),
+            env_common_to_remove=env_common_to_remove,
         )
 
     def _get_repo_package_dependencies(
@@ -169,7 +228,7 @@ class DependencyDeconstructor:
             FileNotFoundError: If a local dependency's directory or wheel is not found.
 
         """
-        wheels_dir: Path = self.local_packages_base_path / _resolve_wheels_dir(name)
+        wheels_dir: Path = self.local_packages_base_path / _get_package_wheels_dir(name)
         if not wheels_dir.is_dir():
             msg: str = f"Could not find local dependency directory: {wheels_dir}"
             raise FileNotFoundError(msg)
@@ -189,18 +248,15 @@ class DependencyDeconstructor:
                     f"{integration_testing_version_dir}"
                 )
             else:
-                try:
-                    it_package_file: Path = _find_package_file(
-                        integration_testing_version_dir, f"{INTEGRATION_TESTING}-{version}"
-                    )
-                    local_dev_deps_to_add.append(str(it_package_file))
-                except FileNotFoundError as e:
-                    rich.print(f"[yellow]Warning:[/] {e}")
+                it_package_file: Path = _find_package_file(
+                    integration_testing_version_dir, f"{INTEGRATION_TESTING}-{version}"
+                )
+                local_dev_deps_to_add.append(str(it_package_file))
 
         return Dependencies(local_deps_to_add, local_dev_deps_to_add)
 
 
-def _find_package_file(package_dir: Path, file_prefix: str) -> Path:
+def _find_package_file(package_dir: Path, wheel_name_prefix: str) -> Path:
     """Find a wheel or source distribution file in a directory.
 
     Returns:
@@ -211,14 +267,14 @@ def _find_package_file(package_dir: Path, file_prefix: str) -> Path:
 
     """
     for extension in PACAKGE_SUFFIXES:
-        for file in package_dir.glob(f"{file_prefix}{extension}"):
+        for file in package_dir.glob(f"{wheel_name_prefix}{extension}"):
             return file
 
     msg: str = f"No wheel or source distribution found in {package_dir}"
     raise FileNotFoundError(msg)
 
 
-def _resolve_wheels_dir(name: str) -> Path:
+def _get_package_wheels_dir(name: str) -> Path:
     package_dir_name: str = mp.core.constants.REPO_PACKAGES_CONFIG[name]
     return Path(package_dir_name) / "whls"
 
@@ -226,5 +282,27 @@ def _resolve_wheels_dir(name: str) -> Path:
 def _should_add_integration_testing(name: str, version: str) -> bool:
     return (
         name == TIP_COMMON
-        and int(version.lstrip("v").split(".")[0]) >= MIN_RELEVANT_TIP_COMMON_VERSION
+        and Version(version) >= MIN_RELEVANT_TIP_COMMON_VERSION_FOR_INTEGRATION_TESTING
     )
+
+
+def _get_provided_imports(wheel_path: Path) -> set[str]:
+    """Open a .whl file and read top_level.txt to find provided module names.
+
+    Args:
+        wheel_path: The path to the wheel file. Can also be a source distribution.
+
+    Returns:
+        A set of import names provided by the wheel, or an empty set if it cannot be read.
+
+    """
+    with (
+        suppress(zipfile.BadZipFile, FileNotFoundError, IsADirectoryError),
+        zipfile.ZipFile(wheel_path, "r") as z,
+    ):
+        for file_info in z.infolist():
+            if file_info.filename.endswith(".dist-info/top_level.txt"):
+                with z.open(file_info) as top_level_file:
+                    content = top_level_file.read().decode("utf-8").strip()
+                    return set(content.split())
+    return set()
