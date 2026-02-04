@@ -18,18 +18,15 @@ from typing import Literal, Self, TypedDict
 
 from mp.core.data_models.abc import Buildable
 
-VisibilityKind = Literal["SystemMode", "FeatureFlag", "Internal"]
-VisibilityValue = Literal["Nexus", "featEnableFederationSecondary", "alwaysInvisible"]
-
 
 class BuiltIntegrationVisibilityProperty(TypedDict):
-    Kind: VisibilityKind
-    Value: VisibilityValue
+    Kind: Literal["SystemMode", "FeatureFlag", "Internal"]
+    Value: Literal["Nexus", "featEnableFederationSecondary", "alwaysInvisible"]
 
 
 class NonBuiltIntegrationVisibilityProperty(TypedDict):
-    kind: VisibilityKind
-    value: VisibilityValue
+    kind: Literal["SystemMode", "FeatureFlag", "Internal"]
+    value: Literal["Nexus", "featEnableFederationSecondary", "alwaysInvisible"]
 
 
 class IntegrationVisibilityProperty(
@@ -38,8 +35,8 @@ class IntegrationVisibilityProperty(
         NonBuiltIntegrationVisibilityProperty,
     ],
 ):
-    kind: VisibilityKind
-    value: VisibilityValue
+    kind: Literal["SystemMode", "FeatureFlag", "Internal"]
+    value: Literal["Nexus", "featEnableFederationSecondary", "alwaysInvisible"]
 
     @classmethod
     def _from_built(cls, built: BuiltIntegrationVisibilityProperty) -> Self:
