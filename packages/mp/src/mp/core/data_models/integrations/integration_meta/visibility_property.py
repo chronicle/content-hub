@@ -20,13 +20,13 @@ from mp.core.data_models.abc import Buildable
 
 
 class BuiltIntegrationVisibilityProperty(TypedDict):
-    Kind: Literal["SystemMode", "FeatureFlag"]
-    Value: Literal["Nexus", "featEnableFederationSecondary"]
+    Kind: Literal["SystemMode", "FeatureFlag", "Internal"]
+    Value: Literal["Nexus", "featEnableFederationSecondary", "alwaysInvisible"]
 
 
 class NonBuiltIntegrationVisibilityProperty(TypedDict):
-    kind: Literal["SystemMode", "FeatureFlag"]
-    value: Literal["Nexus", "featEnableFederationSecondary"]
+    kind: Literal["SystemMode", "FeatureFlag", "Internal"]
+    value: Literal["Nexus", "featEnableFederationSecondary", "alwaysInvisible"]
 
 
 class IntegrationVisibilityProperty(
@@ -35,8 +35,8 @@ class IntegrationVisibilityProperty(
         NonBuiltIntegrationVisibilityProperty,
     ],
 ):
-    kind: Literal["SystemMode", "FeatureFlag"]
-    value: Literal["Nexus", "featEnableFederationSecondary"]
+    kind: Literal["SystemMode", "FeatureFlag", "Internal"]
+    value: Literal["Nexus", "featEnableFederationSecondary", "alwaysInvisible"]
 
     @classmethod
     def _from_built(cls, built: BuiltIntegrationVisibilityProperty) -> Self:
