@@ -1,9 +1,9 @@
 from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from SiemplifyUtils import output_handler
-from SilentPushManager import RESOURCE, SilentPushManager
 from soar_sdk.SiemplifyAction import SiemplifyAction
 
 from ..core.constants import GET_ENRICHMENT_DATA_SCRIPT_NAME, INTEGRATION_NAME
+from ..core.silent_push_manager import RESOURCE, SilentPushManager
 
 
 @output_handler
