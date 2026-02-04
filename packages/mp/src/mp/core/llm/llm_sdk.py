@@ -42,6 +42,7 @@ T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig, T_Schema]):
     def __init__(self, config: T_LlmConfig) -> None:
+        self.system_prompt: str = ""
         self.config: T_LlmConfig = config
 
     @overload
@@ -118,9 +119,9 @@ class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig, T_Schema
     def clean_session_history(self) -> None:
         """Clean the session history."""
 
-    @abc.abstractmethod
-    def add_system_prompts_to_session(self, *prompts: str) -> None:
-        """Add system prompts to the session."""
+    def set_system_prompt_to_session(self, prompt: str) -> None:
+        """Set the system prompt for the session."""
+        self.system_prompt = prompt
 
     @abc.abstractmethod
     async def __aenter__(self) -> Self: ...

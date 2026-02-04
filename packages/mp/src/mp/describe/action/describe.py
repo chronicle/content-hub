@@ -24,8 +24,9 @@ import yaml
 from rich.progress import TaskID, track
 
 from mp.core import constants
+from mp.core.utils import folded_string_representer
+from mp.describe.action.data_models.action_ai_metadata import ActionAiMetadata
 
-from .data_models.action_ai_metadata import ActionAiMetadata
 from .prompt_constructors.built import BuiltPromptConstructor
 from .prompt_constructors.source import SourcePromptConstructor
 from .utils import llm, paths
@@ -52,16 +53,12 @@ class ActionDescriptionResult(NamedTuple):
 
 
 class RichParams(NamedTuple):
-    """Parameters for rich progress reporting and callbacks."""
-
     on_action_done: Callable[[], None] | None = None
     progress: Progress | None = None
     task_id: TaskID | None = None
 
 
 class DescriptionParams(NamedTuple):
-    """Parameters required to construct an action prompt."""
-
     integration: anyio.Path
     integration_name: str
     action_name: str
@@ -156,7 +153,6 @@ class DescribeAction:
         actions_to_process: set[str] = await self._prepare_actions(status, metadata)
         if not actions_to_process:
             if not self.actions:
-                # No actions in the integration at all. We should still ensure the file exists.
                 await self._save_metadata(metadata)
             else:
                 logger.info(
@@ -398,35 +394,6 @@ class DescribeAction:
                     actions.add(file.stem)
         return actions
 
-    async def describe_action(
-        self, action_name: str, status: IntegrationStatus
-    ) -> ActionAiMetadata | None:
-        """Describe an action of a given integration.
-
-        Returns:
-            ActionAiMetadata | None: The AI-generated metadata for the action,
-                or None if description failed.
-
-        """
-        params = DescriptionParams(
-            integration=self.integration,
-            integration_name=self.integration_name,
-            action_name=action_name,
-            status=status,
-        )
-        constructor: _PromptConstructor = _create_prompt_constructor(params)
-        prompt: str = await constructor.construct()
-        if not prompt:
-            logger.warning("Could not construct prompt for action %s", action_name)
-            return None
-
-        async with llm.create_llm_session() as gemini:
-            return await gemini.send_message(
-                prompt,
-                response_json_schema=ActionAiMetadata,
-                raise_error_if_empty_response=True,
-            )
-
     async def _load_metadata(self) -> dict[str, Any]:
         resource_ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
@@ -456,7 +423,8 @@ class DescribeAction:
 
         await save_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = save_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
-        await metadata_file.write_text(yaml.dump(metadata))
+        yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
+        await metadata_file.write_text(yaml.safe_dump(metadata))
 
 
 def _create_prompt_constructor(

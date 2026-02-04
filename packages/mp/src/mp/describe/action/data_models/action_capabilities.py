@@ -28,9 +28,23 @@ class ActionCapabilities(BaseModel):
                 " This should be a concise yet informative summary of the action's purpose and"
                 " expected outcome."
                 " Use markdown formatting for clarity, as this is a description for LLMs."
+                " Please add a description of the flow of the action in numbered or bulleted points"
+                " to describe each stage of the action logically. In addition, create a table that"
+                " describes the parameters. How to use them, what is the expected type of value,"
+                " whether the parameter is mandatory or not, and describe what each of them does"
+                " and how it might affect the action's flow."
+                " If you noticed a parameter is not mandatory but in the code it is required to"
+                " fill it with a value depending on whether other parameters are filled or not -"
+                " mention it in the description of the parameter if it makes sense, or in an"
+                " 'additional notes' section of the entire description of the action."
+                " Something like 'either this set of parameters or this set of"
+                " parameters must be configured for the action to run'."
+                " If there are no parameters, mention that it under the parameters section."
+                " Overall the description should be decided into 3-4 sections, General description,"
+                " Parameters description, additional notes, and Flow description."
+                " If there are no parameters just mention that there are no parameters"
+                " in the parameters section or additional notes section."
             ),
-            min_length=10,
-            max_length=5_000,
         ),
     ]
     fetches_data: Annotated[
@@ -57,8 +71,6 @@ class ActionCapabilities(BaseModel):
                 "If the action mutates external data outside Google SecOps, provide a brief"
                 " explanation of how and why the data is changed. If not, leave null."
             ),
-            min_length=20,
-            max_length=200,
         ),
     ]
     can_mutate_internal_data: Annotated[
@@ -77,8 +89,6 @@ class ActionCapabilities(BaseModel):
                 "If the action mutates internal data (meaning inside Google SecOps), provide a"
                 " brief explanation of how and why the data is changed. If not, leave null."
             ),
-            min_length=10,
-            max_length=200,
         ),
     ]
     can_update_entities: Annotated[bool, Field(description="Whether the action updates entities.")]

@@ -191,18 +191,6 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         """Clean the session history."""
         self.content = Content(role="user", parts=[])
 
-    def add_system_prompts_to_session(self, *prompts: str) -> None:
-        """Add system prompts to the session.
-
-        This can only be done if there are no other registered prompts yet
-        """
-        if self.content.parts:
-            return
-
-        self.content.parts = []
-        for prompt in prompts:
-            self.content.parts.append(Part.from_text(text=prompt))
-
     async def send_bulk_messages(
         self,
         prompts: list[str],
@@ -455,6 +443,7 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
             response_json_schema=response_json_schema,
             tools=tools,
             safety_settings=safety_settings,
+            system_instruction=self.system_prompt,
         )
 
     def _get_safety_settings(self) -> list[SafetySetting]:

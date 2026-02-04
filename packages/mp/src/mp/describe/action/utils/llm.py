@@ -44,7 +44,7 @@ async def create_llm_session() -> AsyncIterator[LlmSdk]:
     llm_config: GeminiConfig = _create_gemini_config()
     async with Gemini(config=llm_config) as gemini:
         system_prompt: str = await _get_system_prompt()
-        gemini.add_system_prompts_to_session(system_prompt)
+        gemini.set_system_prompt_to_session(system_prompt)
         yield gemini
 
 

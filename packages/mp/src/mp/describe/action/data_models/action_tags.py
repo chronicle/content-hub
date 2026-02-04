@@ -26,12 +26,12 @@ class ActionTags(BaseModel):
             description=(
                 "whether this code is considered an enrich action."
                 " An enrichment action is one that only fetches data and does not modify any"
-                " entities data outside or inside of Google SecOps. It is okay if it does modify"
+                " entities or data outside or inside of Google SecOps. It is okay if it does modify"
                 " entities, create insights or create case wall logs. This means the 'fetches_data'"
                 " field must be true, and 'can_mutate_external_data' field must be false. Usually"
-                " based 'can_mutate_internal_data' is always false, but determine this based on"
-                "the 'internal_data_mutation_explanation' to make sure it doesn't modify any data"
-                "that isn't allowed. The results of 'can_update_entities', "
+                " 'can_mutate_internal_data' is false, but determine this based on"
+                " the 'internal_data_mutation_explanation' to make sure it doesn't modify any data"
+                " that isn't allowed. The results of 'can_update_entities', "
                 " 'can_create_insight', and 'can_create_case_wall_logs'"
                 " can either be true or false."
             )

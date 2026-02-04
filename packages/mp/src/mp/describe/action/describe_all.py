@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 
 logger: logging.Logger = logging.getLogger("mp.describe_marketplace")
-MAX_ACTIVE_INTEGRATIONS: int = 5
+MAX_ACTIVE_INTEGRATIONS: int = 3
 MAX_ACTIVE_TASKS: int = 3
 
 
