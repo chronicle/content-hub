@@ -24,8 +24,8 @@ import yaml
 from rich.progress import TaskID, track
 
 from mp.core import constants
+from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
 from mp.core.utils import folded_string_representer
-from mp.describe.action.data_models.action_ai_metadata import ActionAiMetadata
 
 from .prompt_constructors.built import BuiltPromptConstructor
 from .prompt_constructors.source import SourcePromptConstructor

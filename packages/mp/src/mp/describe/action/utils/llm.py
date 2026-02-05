@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, TypeVar
 
 import anyio
 
+from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
 from mp.core.llm.gemini import Gemini, GeminiConfig
-from mp.describe.action.data_models.action_ai_metadata import ActionAiMetadata
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

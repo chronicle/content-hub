@@ -109,13 +109,13 @@ def _build_integration_repositories(
     if _is_commercial_repo(repo_types):
         rich.print("Building all integrations in commercial repo...")
         repos.commercial.build()
-        repos.commercial.run_post_build_processes()
+        repos.commercial.write_marketplace_json()
         rich.print("Done Commercial integrations build.")
 
     if _is_third_party_repo(repo_types):
         rich.print("Building all integrations in third party repo...")
         repos.community.build()
-        repos.community.run_post_build_processes()
+        repos.community.write_marketplace_json()
         rich.print("Done third party integrations build.")
 
     if _is_custom_repo(repo_types):

@@ -28,6 +28,3 @@ You will be provided with Python code, JSON configurations, and access to librar
 
 **Output Format:**
 Return **strictly** a valid JSON object matching the provided schema. Do not include Markdown code blocks or conversational text.
-Before providing the final JSON, perform a mental validation pass.
-Check for schema consistency and factual accuracy.
-If you find an error, correct it in the final output.

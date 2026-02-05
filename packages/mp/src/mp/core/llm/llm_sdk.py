@@ -40,7 +40,7 @@ T_LlmConfig = TypeVar("T_LlmConfig", bound=LlmConfig)
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
-class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig, T_Schema]):
+class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig]):
     def __init__(self, config: T_LlmConfig) -> None:
         self.system_prompt: str = ""
         self.config: T_LlmConfig = config
