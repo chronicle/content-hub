@@ -100,7 +100,9 @@ ASSIGN_ENTITY_API_NAME = "LIST_ASSIGNEMENTS"
 DOWANLOAD_PCAP_API_NAME = "DOWNLOAD_PCAP"
 UPDATE_GROUP_MEMBERS_API_NAME = "UPDATE_GROUP"
 ENTITY_SEARCH_API_NAME = "ENTITY_SEARCH"
-LIST_ENTITY_DETECTIONS_QUERY_PARAM = '?query_string=detection.src_{entity_type}.id:{entity_id} AND detection.state:"{state}"'
+LIST_ENTITY_DETECTIONS_QUERY_PARAM = (
+    '?query_string=detection.src_{entity_type}.id:{entity_id} AND detection.state:"{state}"'
+)
 
 ENDPOINTS = {
     SEARCH_HOSTS_API_NAME: f"{API_VERSION}/{HOSTS}",

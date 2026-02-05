@@ -321,7 +321,8 @@ class VectraQUXManager:
         return response_list
 
     def get_assignment_list(self, query_params, max_assignment_to_return):
-        """Get a list of assignments based on specified query parameters and up to a specified limit.
+        """Get a list of assignments based on specified query parameters and up to a
+        specified limit.
 
         Args:
             query_params (dict): The query parameters to filter the assignments.

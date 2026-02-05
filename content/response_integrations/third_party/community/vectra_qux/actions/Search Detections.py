@@ -25,14 +25,16 @@ from ..core.VectraQUXManager import VectraQUXManager
 def remove_api_version_from_url(detection):
     if detection.get("url"):
         detection["url"] = (
-            detection.get("url", "")
+            detection
+            .get("url", "")
             .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
         )
     if detection.get("detection_url"):
         detection["detection_url"] = (
-            detection.get("detection_url", "")
+            detection
+            .get("detection_url", "")
             .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")

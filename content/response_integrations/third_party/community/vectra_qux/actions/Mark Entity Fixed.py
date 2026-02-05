@@ -91,7 +91,8 @@ def main():
             output_message = f"No detections found for entity ID {entity_id}"
         else:
             siemplify.LOGGER.info(
-                f"Successfully retrieved {len(detection_ids)} detections for entity ID {entity_id}.",
+                f"Successfully retrieved {len(detection_ids)} detections for "
+                f"entity ID {entity_id}.",
             )
 
             response = vectra_manager.mark_detection_as_fixed(detection_ids)

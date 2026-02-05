@@ -15,7 +15,7 @@ from .constants import (
     RULE_GENERATOR,
     SEVERITY_MAP,
 )
-from .UtilsManager import get_alert_id, datetime_convert
+from .UtilsManager import datetime_convert, get_alert_id
 
 # Defining constants
 ASSIGNMENT_ID = "Assignment ID"
@@ -45,13 +45,15 @@ class Detection(BaseModel):
     def __init__(self, data):
         self.raw_data = data
         self.raw_data["detection_url"] = (
-            self.raw_data.get("detection_url", "")
+            self.raw_data
+            .get("detection_url", "")
             .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
         )
         self.raw_data["url"] = (
-            self.raw_data.get("url", "")
+            self.raw_data
+            .get("url", "")
             .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
@@ -75,7 +77,8 @@ class Detection(BaseModel):
             self.entity_id = data["src_account"]["id"]
             self.entity_name = data["src_account"]["name"]
             self.raw_data["src_account"]["url"] = (
-                self.raw_data["src_account"]["url"]
+                self
+                .raw_data["src_account"]["url"]
                 .replace(API_VERSION_2_5, "")
                 .replace(API_VERSION_2_1, "")
                 .replace(API_VERSION_2_2, "")
@@ -85,14 +88,16 @@ class Detection(BaseModel):
             self.entity_name = data["src_host"]["name"]
             if self.raw_data["src_host"].get("url"):
                 self.raw_data["src_host"]["url"] = (
-                    self.raw_data["src_host"]["url"]
+                    self
+                    .raw_data["src_host"]["url"]
                     .replace(API_VERSION_2_5, "")
                     .replace(API_VERSION_2_1, "")
                     .replace(API_VERSION_2_2, "")
                 )
         if data.get("src_linked_account"):
             self.raw_data["src_linked_account"]["url"] = (
-                self.raw_data["src_linked_account"]["url"]
+                self
+                .raw_data["src_linked_account"]["url"]
                 .replace(API_VERSION_2_5, "")
                 .replace(API_VERSION_2_1, "")
                 .replace(API_VERSION_2_2, "")
@@ -343,21 +348,24 @@ class Entity(BaseModel):
         super(Entity, self).__init__(raw_data)
         self.raw_data = raw_data
         self.raw_data["detection_set"] = [
-            url.replace(API_VERSION_2_5, "")
+            url
+            .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
             for url in detection_set
         ]
         if self.raw_data.get("url"):
             self.raw_data["url"] = (
-                self.raw_data["url"]
+                self
+                .raw_data["url"]
                 .replace(API_VERSION_2_5, "")
                 .replace(API_VERSION_2_1, "")
                 .replace(API_VERSION_2_2, "")
             )
         if self.raw_data.get("host_url"):
             self.raw_data["host_url"] = (
-                self.raw_data["host_url"]
+                self
+                .raw_data["host_url"]
                 .replace(API_VERSION_2_5, "")
                 .replace(API_VERSION_2_1, "")
                 .replace(API_VERSION_2_2, "")

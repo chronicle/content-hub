@@ -114,7 +114,10 @@ def main():
         siemplify.LOGGER.exception(e)
     except ItemNotFoundException as e:
         status = EXECUTION_STATE_FAILED
-        output_message = f"File not found for detection ID - {detection_id}. Please provide valid detection ID. Error - {e}"
+        output_message = (
+            f"File not found for detection ID - {detection_id}. "
+            f"Please provide valid detection ID. Error - {e}"
+        )
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)

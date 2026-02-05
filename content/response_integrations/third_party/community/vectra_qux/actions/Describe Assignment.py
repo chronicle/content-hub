@@ -97,7 +97,10 @@ def main():
         siemplify.LOGGER.exception(e)
     except ItemNotFoundException as e:
         status = EXECUTION_STATE_FAILED
-        output_message = f"Assignment not found for the given ID: '{assignment_id}'. Please verify the ID and try again."
+        output_message = (
+            f"Assignment not found for the given ID: '{assignment_id}'. "
+            f"Please verify the ID and try again."
+        )
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)

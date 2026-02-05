@@ -13,8 +13,43 @@ from soar_sdk.SiemplifyUtils import (
     utc_now,
 )
 
-from .constants import *
-from .VectraQUXExceptions import *
+from .constants import (
+    ADD_NOTE_API_NAME,
+    ADD_OUTCOME_API_NAME,
+    ALERT_ROOT_CAUSE,
+    ASSIGN_ENTITY_API_NAME,
+    ASSIGNMENT_API_NAME,
+    CASE_ALERT_REASON,
+    CASE_DEFAULT_ENVIRONMENT,
+    CASE_DEFAULT_PRODUCTNAME,
+    CASE_ROOT_CAUSE,
+    CASE_STATUS,
+    CASES_TIMESTAMP_DB_KEY,
+    DATETIME_FORMAT,
+    DESCRIBE_DETECTION_API_NAME,
+    DESCRIBE_ENTITY_API_NAME,
+    DOWANLOAD_PCAP_API_NAME,
+    LIST_GROUPS_API_NAME,
+    MARK_DETECTION_API_NAME,
+    MAX_OPEN_CASES,
+    NUM_OF_MILLI_IN_SEC,
+    REMOVE_NOTE_API_NAME,
+    RESOLVE_ASSIGNMENT_API_NAME,
+    TAGGING_API_NAME,
+    UNIX_FORMAT,
+    UPDATE_GROUP_MEMBERS_API_NAME,
+)
+from .VectraQUXExceptions import (
+    BadRequestException,
+    InternalSeverError,
+    InvalidDetectionIDException,
+    InvalidIntegerException,
+    ItemNotFoundException,
+    LongURIException,
+    RequestEntityTooLargeException,
+    UserNotPermittedException,
+    VectraQUXException,
+)
 
 
 class HandleExceptions:
@@ -38,13 +73,14 @@ class HandleExceptions:
         """Processes the error by calling the appropriate handler."""
         if self.response.status_code >= 500:
             raise InternalSeverError(
-                f"It seems like the Vectra server is experiencing some issues, Status: {self.response.status_code}",
+                f"It seems like the Vectra server is experiencing some issues, "
+                f"Status: {self.response.status_code}",
             )
 
         try:
             handler = self.get_handler()
             _exception, _error_msg = handler()
-        except:
+        except Exception:
             _exception, _error_msg = self.common_exception()
 
         raise _exception(_error_msg)
@@ -290,7 +326,10 @@ class HandleExceptions:
                 if not members:
                     error_msg = "Error: This group cannot be edited. "
                 else:
-                    error_msg = f"Following {group_type}s are invalid: {', '.join(members)}, Please provide a valid {group_type}s."
+                    error_msg = (
+                        f"Following {group_type}s are invalid: {', '.join(members)}, "
+                        f"Please provide a valid {group_type}s."
+                    )
             else:
                 error_msg = error + ", Provide a valid hosts that exists."
             return BadRequestException, error_msg
@@ -343,7 +382,7 @@ def validate_integer(value, zero_allowed=False, allow_negative=False, field_name
                 f"Please enter a valid non-negative integer value for '{field_name}'.",
             )
         return value
-    except:
+    except Exception:
         raise InvalidIntegerException(
             f"Please enter a valid integer value for '{field_name}'.",
         )
@@ -534,7 +573,7 @@ def fetch_timestamp_for_job(
         last_run_time = 0
     try:
         last_run_time = int(last_run_time)
-    except:
+    except Exception:
         last_run_time = convert_string_to_unix_time(last_run_time)
 
     if datetime_format:
@@ -598,7 +637,9 @@ def get_all_open_cases(siemplify, cases_last_success_timestamp, all_cases):
         )
     else:
         siemplify.LOGGER.info(
-            f"Fetching all the open cases after unix time - {cases_last_success_timestamp}. Date time - {convert_unixtime_to_datetime(cases_last_success_timestamp)}",
+            f"Fetching all the open cases after unix time - "
+            f"{cases_last_success_timestamp}. Date time - "
+            f"{convert_unixtime_to_datetime(cases_last_success_timestamp)}",
         )
         open_cases = siemplify.get_cases_ids_by_filter(
             status=CASE_STATUS,
@@ -646,7 +687,8 @@ def get_case_detections(siemplify, entities, o_case, environments, product_names
             sorted_alerts = sorted(alerts, key=lambda alert: alert["creation_time"])
     except KeyError as e:
         siemplify.LOGGER.info(
-            f"Case - {o_case} alerts does not contains 'creation_time' in list. Hence, skipping to sort.",
+            f"Case - {o_case} alerts does not contains 'creation_time' in list. "
+            f"Hence, skipping to sort.",
         )
         siemplify.LOGGER.error(f"Exception - {e}")
 
@@ -667,15 +709,16 @@ def get_case_detections(siemplify, entities, o_case, environments, product_names
                 detections[alert.get("identifier")] = list(set(events_id_list))
         else:
             siemplify.LOGGER.info(
-                f"Case - {o_case}, Alert - {alert.get('identifier')} does not fall under the Product names - {product_names}.",
+                f"Case - {o_case}, Alert - {alert.get('identifier')} does not fall "
+                f"under the Product names - {product_names}.",
             )
             break
     return detections
 
 
 def find_identical_alerts(siemplify, cases):
-    """Finds identical alerts and determines which cases/alerts to remove based on the provided logic,
-    while ignoring previously closed cases and alerts.
+    """Finds identical alerts and determines which cases/alerts to remove based on
+    the provided logic, while ignoring previously closed cases and alerts.
 
     Args:
         cases (dict): Dictionary of cases with their alerts and event IDs.
@@ -722,7 +765,8 @@ def find_identical_alerts(siemplify, cases):
         except Exception as e:
             siemplify.LOGGER.error(f"Exception - {e}")
             siemplify.LOGGER.error(
-                f"Exception occured as case - {case_id} is already closed. Hence, Skipping to closing this case",
+                f"Exception occured as case - {case_id} is already closed. "
+                f"Hence, Skipping to closing this case",
             )
         return closed_case_count
 
@@ -753,7 +797,8 @@ def find_identical_alerts(siemplify, cases):
         except Exception as e:
             siemplify.LOGGER.error(f"Exception - {e}")
             siemplify.LOGGER.error(
-                f"Exception occured as alert - {alert_name} is already closed. Hence, Skipping to closing this alert",
+                f"Exception occured as alert - {alert_name} is already closed. "
+                f"Hence, Skipping to closing this alert",
             )
         return closed_alert_count
 
@@ -815,7 +860,8 @@ def find_identical_alerts(siemplify, cases):
                     proceed = True
                     break
             if proceed:
-                # Case should be closed if all alerts and their event IDs are duplicated in different case
+                # Case should be closed if all alerts and their event IDs are
+                # duplicated in different case
                 case_alert_dict = {alert["case_id"] for alert in identical_alerts}
                 if len(case_alert_dict) >= 1 and case_id not in case_alert_dict:
                     siemplify.LOGGER.info(
@@ -833,9 +879,13 @@ def find_identical_alerts(siemplify, cases):
                 # Remove only specific alerts that are fully duplicated
                 if identical_alerts:
                     siemplify.LOGGER.info(
-                        f"Alert '{alert_name}' in case {case_id} can be removed; duplicate events: {identical_alerts}",
+                        f"Alert '{alert_name}' in case {case_id} can be removed; "
+                        f"duplicate events: {identical_alerts}",
                     )
-                    comment = f"Closing Alert - '{alert_name}' from case - {case_id} as it is duplicate events found: {identical_alerts}"
+                    comment = (
+                        f"Closing Alert - '{alert_name}' from case - {case_id} as it is "
+                        f"duplicate events found: {identical_alerts}"
+                    )
                     closed_alerts_count += remove_alert_from_case(
                         case_id,
                         alert_name,
@@ -843,7 +893,8 @@ def find_identical_alerts(siemplify, cases):
                     )
             else:
                 siemplify.LOGGER.info(
-                    f"Alert '{alert_name}' in case {case_id} can not be removed as it contains more events then other alerts in same or other identical case",
+                    f"Alert '{alert_name}' in case {case_id} can not be removed as it "
+                    f"contains more events then other alerts in same or other identical case",
                 )
 
     siemplify.LOGGER.info(f"Total {closed_cases_count} cases closed")
