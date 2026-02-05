@@ -110,16 +110,14 @@ def describe(  # noqa: PLR0913
     run_params.set_in_config()
 
     if integration:
-        target_actions = set(actions) if actions else set()
-        # If --all is specified with --integration, it means all actions for that integration.
-        # We ensure target_actions is empty to trigger auto-discovery of all actions.
+        target_action_file_names: set[str] = set(actions) if actions else set()
         if all_marketplace:
-            target_actions = set()
+            target_action_file_names = set()
 
         sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
         asyncio.run(
             DescribeAction(
-                integration, target_actions, src=src, dst=dst, override=override
+                integration, target_action_file_names, src=src, dst=dst, override=override
             ).describe_actions(sem=sem)
         )
     elif all_marketplace:

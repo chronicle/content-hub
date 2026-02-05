@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
@@ -36,6 +37,11 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
     from rich.progress import Progress
+
+    from mp.core.data_models.integrations.action.metadata import (
+        BuiltActionMetadata,
+        NonBuiltActionMetadata,
+    )
 
 
 logger: logging.Logger = logging.getLogger("mp.describe_action")
@@ -62,6 +68,7 @@ class DescriptionParams(NamedTuple):
     integration: anyio.Path
     integration_name: str
     action_name: str
+    action_file_name: str
     status: IntegrationStatus
 
 
@@ -131,6 +138,8 @@ class DescribeAction:
         self.actions: set[str] = actions
         self.override: bool = override
         self.dst: pathlib.Path | None = dst
+
+        self._action_name_to_file_stem: dict[str, str] = {}
 
     async def describe_actions(
         self,
@@ -353,10 +362,15 @@ class DescribeAction:
         """
         prompts: list[str] = []
         for action_name in actions:
+            if action_name not in self._action_name_to_file_stem:
+                # Fallback: assume the file stem is the action name (legacy support)
+                self._action_name_to_file_stem[action_name] = action_name
+
             params = DescriptionParams(
                 integration=self.integration,
                 integration_name=self.integration_name,
                 action_name=action_name,
+                action_file_name=self._action_name_to_file_stem[action_name],
                 status=status,
             )
             constructor: _PromptConstructor = _create_prompt_constructor(params)
@@ -386,15 +400,36 @@ class DescribeAction:
     async def _get_all_actions(self, status: IntegrationStatus) -> set[str]:
         actions: set[str] = set()
         if status.is_built:
-            path: anyio.Path = status.out_path / constants.OUT_ACTION_SCRIPTS_DIR
+            await self._get_all_built_actions(status.out_path, actions)
         else:
-            path: anyio.Path = self.integration / constants.ACTIONS_DIR
-
-        if await path.exists():
-            async for file in path.glob("*.py"):
-                if file.name != "__init__.py":
-                    actions.add(file.stem)
+            await self._get_all_non_built_actions(actions)
         return actions
+
+    async def _get_all_built_actions(self, out_path: anyio.Path, actions: set[str]) -> None:
+        path: anyio.Path = out_path / constants.OUT_ACTIONS_META_DIR
+        if await path.exists():
+            async for file in path.glob(f"*{constants.ACTIONS_META_SUFFIX}"):
+                content: str = await file.read_text(encoding="utf-8")
+                try:
+                    data: BuiltActionMetadata = json.loads(content)
+                    name: str = data["Name"]
+                    self._action_name_to_file_stem[name] = file.stem
+                    actions.add(name)
+                except (json.JSONDecodeError, KeyError):
+                    logger.warning("Failed to parse built action metadata %s", file.name)
+
+    async def _get_all_non_built_actions(self, actions: set[str]) -> None:
+        path: anyio.Path = self.integration / constants.ACTIONS_DIR
+        if await path.exists():
+            async for file in path.glob(f"*{constants.YAML_SUFFIX}"):
+                content: str = await file.read_text(encoding="utf-8")
+                try:
+                    data: NonBuiltActionMetadata = yaml.safe_load(content)
+                    name: str = data["name"]
+                    self._action_name_to_file_stem[name] = file.stem
+                    actions.add(name)
+                except (yaml.YAMLError, KeyError):
+                    logger.warning("Failed to parse non-built action metadata %s", file.name)
 
     async def _load_metadata(self) -> dict[str, Any]:
         resource_ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
@@ -440,10 +475,18 @@ def _create_prompt_constructor(
     """
     if params.status.is_built:
         return BuiltPromptConstructor(
-            params.integration, params.integration_name, params.action_name, params.status.out_path
+            params.integration,
+            params.integration_name,
+            params.action_name,
+            params.action_file_name,
+            params.status.out_path,
         )
     return SourcePromptConstructor(
-        params.integration, params.integration_name, params.action_name, params.status.out_path
+        params.integration,
+        params.integration_name,
+        params.action_name,
+        params.action_file_name,
+        params.status.out_path,
     )
 
 
