@@ -161,7 +161,7 @@ def _sanitize_yaml_filename(filename: str) -> str:
         The sanitized filename.
 
     """
-    invalid_chars: str = r'[\/:*?"<>|]'
+    invalid_chars: str = r'./<>!@#$%^&*()+={};:~`"'
     sanitized: str = re.sub(invalid_chars, " ", filename)
 
     return " ".join(sanitized.split())
