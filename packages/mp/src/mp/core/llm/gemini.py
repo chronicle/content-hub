@@ -51,7 +51,7 @@ from tenacity import (
 
 import mp.core.config
 
-from .llm_sdk import LlmConfig, LlmSdk, T_Schema
+from .sdk import LlmConfig, LlmSdk, T_Schema
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -154,7 +154,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
     @retry(
         retry=retry_if_exception_type(ClientError),
-        stop=stop_after_attempt(5),
+        stop=stop_after_attempt(10),
         wait=wait_exponential(),
         after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
     )
@@ -259,7 +259,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
     @retry(
         retry=retry_if_exception_type(ClientError),
-        stop=stop_after_attempt(5),
+        stop=stop_after_attempt(10),
         wait=wait_exponential(),
         after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
     )

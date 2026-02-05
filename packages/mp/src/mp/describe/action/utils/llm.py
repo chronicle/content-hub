@@ -25,27 +25,12 @@ from mp.core.llm.gemini import Gemini, GeminiConfig
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from mp.core.llm.llm_sdk import LlmSdk
+    from mp.core.llm.sdk import LlmConfig, LlmSdk
 
 GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
 DESCRIBE_BULK_SIZE: int = 4
 
 T_Schema = TypeVar("T_Schema")
-
-
-@contextlib.asynccontextmanager
-async def create_llm_session() -> AsyncIterator[LlmSdk]:
-    """Create an LLM session with the system prompt configured.
-
-    Yields:
-        AsyncIterator[LlmSdk]: The LLM session.
-
-    """
-    llm_config: GeminiConfig = _create_gemini_config()
-    async with Gemini(config=llm_config) as gemini:
-        system_prompt: str = await _get_system_prompt()
-        gemini.set_system_prompt_to_session(system_prompt)
-        yield gemini
 
 
 async def call_gemini_bulk(prompts: list[str]) -> list[ActionAiMetadata | str]:
@@ -63,6 +48,21 @@ async def call_gemini_bulk(prompts: list[str]) -> list[ActionAiMetadata | str]:
             prompts,
             response_json_schema=ActionAiMetadata,
         )
+
+
+@contextlib.asynccontextmanager
+async def create_llm_session() -> AsyncIterator[LlmSdk[LlmConfig]]:
+    """Create an LLM session with the system prompt configured.
+
+    Yields:
+        AsyncIterator[LlmSdk]: The LLM session.
+
+    """
+    llm_config: GeminiConfig = _create_gemini_config()
+    async with Gemini(config=llm_config) as gemini:
+        system_prompt: str = await _get_system_prompt()
+        gemini.set_system_prompt_to_session(system_prompt)
+        yield gemini
 
 
 def _create_gemini_config() -> GeminiConfig:
