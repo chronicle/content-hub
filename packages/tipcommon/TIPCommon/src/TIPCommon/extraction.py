@@ -61,7 +61,7 @@ def extract_script_param(
     #  =========== start validation logic =====================
     value = SiemplifyVaultUtils.extract_vault_param(
         input_dictionary.get(param_name),
-        siemplify.context.vault_settings,
+        siemplify.context.vault_settings
     )
 
     if not value:
