@@ -25,21 +25,24 @@ from ..core.VectraQUXManager import VectraQUXManager
 def remove_api_version_from_url(host):
     if host.get("url"):
         host["url"] = (
-            host.get("url", "")
+            host
+            .get("url", "")
             .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
         )
     if host.get("host_url"):
         host["host_url"] = (
-            host.get("host_url", "")
+            host
+            .get("host_url", "")
             .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
         )
     if host.get("detection_set"):
         host["detection_set"] = [
-            url.replace(API_VERSION_2_5, "")
+            url
+            .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
             for url in host.get("detection_set", "")
@@ -255,9 +258,7 @@ def main():
         privilege_level_gte = validator(privilege_level_gte, name="Privilege Level")
         limit = validator(limit, zero_allowed=True, name="Limit")
         privilege_category = privilege_category.lower() if privilege_category else None
-        is_targeting_key_asset = (
-            is_targeting_key_asset.lower() if is_targeting_key_asset else None
-        )
+        is_targeting_key_asset = is_targeting_key_asset.lower() if is_targeting_key_asset else None
         state = state.lower() if state else None
         active_traffic = active_traffic.lower() if active_traffic else None
 
@@ -290,9 +291,7 @@ def main():
             output_message = "No hosts were found with the provided parameters."
             siemplify.result.add_result_json({})
         else:
-            output_message = (
-                f"Successfully retrieved the details for {len(hosts)} hosts"
-            )
+            output_message = f"Successfully retrieved the details for {len(hosts)} hosts"
 
             mendatory_fields = [
                 "id",

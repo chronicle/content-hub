@@ -96,9 +96,7 @@ def main():
         siemplify.result.add_data_table(title="Add Note", data_table=response.to_csv())
         siemplify.result.add_result_json(json.dumps(response.raw_data, indent=4))
 
-        output_message = (
-            f'Successfully added note to {entity_type} with ID "{entity_id}"'
-        )
+        output_message = f'Successfully added note to {entity_type} with ID "{entity_id}"'
 
     except VectraQUXException as e:
         output_message = f"{e}"
