@@ -1,21 +1,43 @@
 convert_file:
+  ai_description: "The **Convert File** action is a utility designed to change the\
+    \ file format of a specified file located on a Remote Agent's filesystem. It specifically\
+    \ supports bidirectional conversion between **PNG** and **PDF** formats. This\
+    \ action is useful for standardizing image or document evidence during investigation\
+    \ workflows. \n\n### Parameters\n| Parameter Name | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| Input File Format | DDL | Yes | The current\
+    \ format of the source file (Options: PNG, PDF). |\n| Input File Path | String\
+    \ | Yes | The absolute local path to the file on the Remote Agent's filesystem.\
+    \ |\n| Output File Format | DDL | Yes | The desired format for the resulting file\
+    \ (Options: PNG, PDF). |\n\n### Additional Notes\n* **Remote Agent Required:**\
+    \ This action *must* be executed on a Remote Agent to access the local filesystem\
+    \ and utilize local conversion libraries (Poppler/PIL).\n* **Validation:** The\
+    \ action will fail if the input file does not exist or if the 'Input File Format'\
+    \ and 'Output File Format' are identical.\n* **Dependencies:** PDF-to-PNG conversion\
+    \ requires `poppler-utils` (specifically the `pdftoppm` binary) to be installed\
+    \ on the Remote Agent host.\n\n### Flow Description\n1. **Environment Check:**\
+    \ Verifies the action is running on a Remote Agent.\n2. **Validation:** Checks\
+    \ if the source file exists at the provided path and ensures the requested conversion\
+    \ is valid (i.e., different formats).\n3. **Conversion:** \n    * If converting\
+    \ **PDF to PNG**: Uses the `pdf2image` library to extract the first page of the\
+    \ PDF and save it as a PNG image.\n    * If converting **PNG to PDF**: Uses the\
+    \ `Pillow` (PIL) library to convert the image to RGB color space and wrap it in\
+    \ a PDF container.\n4. **Output:** Saves the new file to the agent's temporary\
+    \ directory with a timestamped filename and returns the resulting file path and\
+    \ format in the JSON results."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
-    can_mutate_external_data: false
+    can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Converts files between PNG and PDF formats on a Remote Agent. The
-      action takes an input file path and transforms the file into the requested output
-      format, supporting conversions from PDF to PNG (using poppler-utils) and PNG
-      to PDF (using Pillow). It validates the existence of the source file, ensures
-      input and output formats are distinct, and saves the converted file to a temporary
-      directory, returning the result path in a JSON format. This action requires
-      a Remote Agent to execute system-level dependencies.
-    external_data_mutation_explanation: null
+    external_data_mutation_explanation: >-
+      Creates a new converted file (PDF or PNG) on the local filesystem of the Remote
+      Agent host.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -31,9 +53,49 @@ convert_file:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 ocr_image:
+  ai_description: >-
+    ### General Description
+
+    The **OCR Image** action performs Optical Character Recognition (OCR) to extract
+    text from an image file. It supports images provided either as a base64 encoded
+    string or as a local file path on the agent. This utility is essential for processing
+    screenshots or scanned documents during automated incident response workflows.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Base64 Encoded Image | String | No* | The base64 encoded string of the image
+    file to be processed. |
+
+    | File Path | String | No* | The path to the image file on the filesystem. |
+
+
+    ### Additional Notes
+
+    - **Mandatory Requirements:** Either the 'Base64 Encoded Image' or the 'File Path'
+    must be provided. If both are supplied, 'Base64 Encoded Image' will be prioritized.
+
+    - **Environment Requirement:** This action requires execution on a **Remote Agent**
+    with the `tesseract-ocr` package installed in the container/environment.
+
+
+    ### Flow Description
+
+    1. **Validation:** Checks if the action is running on a Remote Agent and ensures
+    at least one input parameter (Base64 or File Path) is provided.
+
+    2. **Preparation:** If a Base64 string is provided, it is decoded and saved to
+    a temporary file. If a File Path is provided, the script accesses that path directly.
+
+    3. **Extraction:** The action uses the Tesseract OCR engine (via `pytesseract`)
+    to scan the image and convert visual characters into a text string.
+
+    4. **Output:** The extracted text is returned as a JSON result under the key `extracted_text`.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -41,49 +103,11 @@ ocr_image:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Performs optical character recognition (OCR) on image files to extract
-      text content. The action accepts images as base64-encoded strings or local file
-      paths and utilizes the Tesseract OCR engine. It is designed to run on a Remote
-      Agent where the tesseract-ocr package is installed. The extracted text is returned
-      as a structured JSON result, facilitating automated analysis of image-based
-      data within playbooks.
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-  tags:
-    is_enrichment: true
-ping:
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    description: Tests the connectivity and environment readiness for the Image Utilities
-      integration. This action verifies that the execution environment is a Google
-      SecOps Remote Agent and checks for the presence and proper configuration of
-      critical dependencies, specifically the Tesseract OCR engine and Playwright
-      browser binaries. It ensures the Remote Agent is capable of performing image
-      processing and web content rasterization tasks.
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -99,27 +123,115 @@ ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
-rasterize_content:
+ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connectivity and environment readiness for the **Image\
+    \ Utilities** integration. It ensures that the required external dependencies,\
+    \ specifically Tesseract OCR and Playwright (Chromium), are correctly installed\
+    \ and accessible within the execution environment. This action is critical for\
+    \ troubleshooting setup issues before running more complex imaging or OCR tasks.\n\
+    \n### Parameters Description\nThis action does not require any input parameters.\n\
+    \n### Additional Notes\n- **Requirement:** This action **must** be executed on\
+    \ a **Remote Agent**. It will fail if run on a cloud-based environment because\
+    \ it checks for local system binaries.\n- **Dependencies Verified:** \n    - **Tesseract\
+    \ OCR:** Used for text recognition in images.\n    - **Playwright:** Used for\
+    \ web page rasterization and HTML-to-image conversion.\n\n### Flow Description\n\
+    1.  **Environment Validation:** The action first checks if it is running on a\
+    \ Remote Agent using the `ensure_remote_agent` utility.\n2.  **Tesseract Verification:**\
+    \ It attempts to retrieve the Tesseract version. If Tesseract is missing, it raises\
+    \ a detailed error with installation instructions for Debian-based containers.\n\
+    3.  **Playwright Verification:** It initializes a Playwright instance and attempts\
+    \ to launch a headless Chromium browser. If the binaries are missing or misconfigured,\
+    \ it raises an error with specific steps to install Playwright and fix permissions.\n\
+    4.  **Completion:** If both checks pass, it returns a success message confirming\
+    \ the server's readiness."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: [ ]
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+rasterize_content:
+  ai_description: "### General Description\nThe **Rasterize Content** action converts\
+    \ vector or complex content, such as web pages (URLs), raw HTML, or Email bodies,\
+    \ into fixed bitmap images (PNG) or PDF documents. It leverages a headless Chromium\
+    \ browser (via the Playwright library) to render the content exactly as it would\
+    \ appear to a user, ensuring that dynamic elements, CSS, and complex layouts are\
+    \ preserved. This action is primarily used for visual evidence collection and\
+    \ safe viewing of potentially malicious content.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Input Type** | DDL | True | Determines the format of the input data. Options:\
+    \ `URL`, `HTML`, `Email`. |\n| **URLs or Body** | String | True | The actual content\
+    \ to process. If `URL` is selected, provide a comma-separated list of web addresses.\
+    \ If `Email` or `HTML`, provide the raw content string. |\n| **Output Type** |\
+    \ DDL | False | The desired output format. Options: `PNG` (default), `PDF`, or\
+    \ `Both`. |\n| **Export Method** | DDL | False | Defines how the result is returned.\
+    \ `Case Attachment` (default) uploads the file to the case; `File Path` returns\
+    \ the local disk path; `Both` does both. |\n| **Width** | String | True | The\
+    \ browser viewport width in pixels (default: `1920`). |\n| **Height** | String\
+    \ | True | The browser viewport height in pixels (default: `1080`). This is ignored\
+    \ if **Full Screen** is enabled. |\n| **Full Screen** | Boolean | True | If true,\
+    \ the action calculates the full height of the rendered content and captures the\
+    \ entire page instead of a fixed viewport height. |\n| **Timeout** | String |\
+    \ False | Maximum time in seconds to wait for page rendering (max 120s). |\n|\
+    \ **Wait For** | DDL | False | The page state to reach before capturing. `NETWORK_IDLE`\
+    \ (default) is recommended for modern web apps. |\n| **Wait for Selector** | String\
+    \ | False | A specific CSS selector to wait for (e.g., `#content-loaded`) before\
+    \ taking the capture. |\n\n### Additional Notes\n*   **Remote Agent Required**:\
+    \ This action **must** be executed on a Remote Agent. It will fail if run on a\
+    \ shared cloud environment because it requires specific OS-level browser binaries.\n\
+    *   **Dependencies**: The Remote Agent environment must have `playwright` and\
+    \ browser binaries installed (Chromium). The description in the code provides\
+    \ specific CLI commands for installation within a container.\n*   **Security**:\
+    \ The action is configured to ignore HTTPS errors, allowing the capture of sites\
+    \ with expired or self-signed certificates.\n\n### Flow Description\n1.  **Validation**:\
+    \ The action verifies it is running on a Remote Agent and validates the input\
+    \ parameters (dimensions, timeouts, and DDL values).\n2.  **Initialization**:\
+    \ Launches a headless Chromium instance using Playwright and creates a browser\
+    \ context with the specified viewport dimensions.\n3.  **Content Loading**: \n\
+    \    *   If a **URL** is provided, the browser navigates to the address.\n   \
+    \ *   If **HTML** or **Email** is provided, the browser sets the page content\
+    \ directly (Email content is wrapped in basic HTML tags).\n4.  **Wait Cycle**:\
+    \ The action waits for the specified network state (`NETWORK_IDLE`, etc.) and/or\
+    \ a specific CSS selector to become visible.\n5.  **Rasterization**: The browser\
+    \ captures a screenshot (PNG) and/or generates a PDF print-out based on the **Output\
+    \ Type**.\n6.  **Export**: Depending on the **Export Method**, files are either\
+    \ uploaded as attachments to the Google SecOps case or their file system paths\
+    \ are returned in the JSON results."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
     can_create_insight: false
     can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: false
-    description: Converts URLs, HTML code, or email bodies into fixed bitmap images
-      (PNG) or PDF documents using a headless browser (Playwright). The action supports
-      customization of viewport dimensions, wait conditions for dynamic content rendering,
-      and specific CSS selector targeting. Resulting files can be attached directly
-      to the SOAR case or saved to a local file path on a Remote Agent. This action
-      is primarily used for visual evidence capture and document rendering within
-      automation workflows.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: Adds the generated rasterized images (PNG)
-      or documents (PDF) as attachments to the SOAR case.
+    internal_data_mutation_explanation: >-
+      Adds generated PNG and PDF files as attachments to the Google SecOps case.
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -135,5 +247,3 @@ rasterize_content:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

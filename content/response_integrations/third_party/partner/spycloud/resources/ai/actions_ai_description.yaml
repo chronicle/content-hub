@@ -1,4 +1,69 @@
 ListCatalogs:
+  ai_description: >-
+    ### General Description
+
+    The **List Catalogs** action retrieves a list of available data breach catalogs
+    from the SpyCloud platform. This action allows users to browse and search through
+    SpyCloud's breach database metadata to identify specific sources of interest within
+    a selected timeframe. It is primarily used for investigative reconnaissance to
+    see what data sets have been recently added or updated.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Filter Logic | DDL | No | Specifies the matching logic for filtering. 'Equal'
+    performs an exact match on the catalog title, while 'Contains' searches for a
+    substring across all result fields. Defaults to 'Equal'. |
+
+    | Filter Value | String | No | The search string to filter catalogs. If empty,
+    no filtering is applied. |
+
+    | Time Frame | DDL | Yes | The time window for the search (Last Week, Last Month,
+    Last Year, or Custom). |
+
+    | Start Time | String | No | The start time in ISO 8601 format. This is **mandatory**
+    if 'Time Frame' is set to 'Custom'. |
+
+    | End Time | String | No | The end time in ISO 8601 format. If empty and 'Time
+    Frame' is 'Custom', it defaults to the current time. |
+
+    | Max Catalogs To Return | String | No | Limits the number of catalog entries
+    returned. Defaults to 50. Must be a positive number. |
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization:** The action extracts API credentials and user-defined
+    parameters, including filtering logic and time constraints.
+
+    2. **Timeframe Processing:** The action calculates the specific start and end
+    dates based on the 'Time Frame' selection or custom ISO 8601 inputs.
+
+    3. **API Interaction:** It calls the SpyCloud API (`/enterprise-v1/breach/catalog`)
+    to fetch catalogs that match the query and timeframe.
+
+    4. **Refined Filtering:** If 'Equal' filter logic is specified, the action performs
+    a local exact-match filter on the titles of the retrieved catalogs.
+
+    5. **Limiting and Formatting:** The results are sliced according to the 'Max Catalogs
+    To Return' limit and converted into JSON objects and a structured Data Table.
+
+    6. **Final Output:** The action completes by adding the formatted data to the
+    case and providing a summary message of the findings.
+
+
+    ### Additional Notes
+
+    - This action does not require or operate on specific entities (like IPs or Emails);
+    it is a global fetch action.
+
+    - If 'Custom' is selected for 'Time Frame', the 'Start Time' parameter must be
+    provided, or the action will fail.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,15 +71,11 @@ ListCatalogs:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Lists available breach catalogs from SpyCloud based on a specified
-      time frame. The action allows for filtering results by specific values using
-      'Equal' or 'Contains' logic. It retrieves metadata for each catalog, including
-      the title, type, number of records, and the associated site. The results are
-      outputted as a JSON result and a data table named 'Available Catalogs' for review
-      within the case.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -30,25 +91,93 @@ ListCatalogs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ListEntityBreaches:
+  ai_description: >-
+    ### General Description
+
+    The **List Entity Breaches** action enriches entities by searching for historical
+    data breaches in the SpyCloud database. It identifies if specific IP addresses,
+    usernames, email addresses, or domains have been compromised in known security
+    incidents. The action retrieves detailed breach information, including severity
+    and affected credentials, and updates the entity's context within Google SecOps.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Catalog Filter** | String | No | Allows narrowing the search to a specific
+    SpyCloud category (catalog). If provided, the action validates the catalog name
+    before searching for breaches. |
+
+    | **Time Frame** | DDL | Yes | Specifies the lookback period for breaches. Options
+    include `Last Week`, `Last Month`, `Last Year`, or `Custom`. |
+
+    | **Start Time** | String | No* | The beginning of the search window in ISO 8601
+    format. *Mandatory if 'Time Frame' is set to 'Custom'.* |
+
+    | **End Time** | String | No | The end of the search window in ISO 8601 format.
+    Defaults to the current time if omitted and 'Custom' timeframe is selected. |
+
+    | **Max Breaches To Return** | String | No | Limits the number of breach records
+    returned per entity. Defaults to 1; maximum is 1000. |
+
+
+    ### Additional Notes
+
+    - **Email vs. Username:** The action automatically distinguishes between plain
+    usernames and email addresses using regex. If a `USERUNIQNAME` entity matches
+    an email format, it is queried as an email breach type; otherwise, it is queried
+    as a username.
+
+    - **Domain Extraction:** For `DestinationURL` entities, the action automatically
+    extracts the domain part to perform the lookup.
+
+    - **Password Obfuscation:** The integration obfuscates password strings in the
+    results (keeping only the first and last two characters) to maintain security.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves integration configuration (API Key, Root, SSL)
+    and action parameters.
+
+    2. **Timeframe Calculation:** Determines the search start and end dates based
+    on the selected `Time Frame` or custom input strings.
+
+    3. **Catalog Validation:** If a `Catalog Filter` is provided, it fetches available
+    catalogs from SpyCloud to resolve the corresponding Catalog ID.
+
+    4. **Entity Processing:** Iterates through supported entities (`ADDRESS`, `USERUNIQNAME`,
+    `DestinationURL`) and maps them to SpyCloud breach types (`ips`, `emails`, `usernames`,
+    or `domains`).
+
+    5. **Data Retrieval:** Queries the SpyCloud API for each entity's breach history
+    within the specified timeframe and limits.
+
+    6. **Enrichment:** For entities with found breaches, it adds a `SpyCloud_was_breached:
+    True` flag to the entity's additional properties and sets the `is_enriched` status
+    to true.
+
+    7. **Output:** Updates the entities in the case, attaches the full breach details
+    as a JSON result, and provides a summary message of successful and failed lookups.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
-    description: Fetches information about security breaches associated with IP Address,
-      Username, Email, and Domain entities using SpyCloud. This action allows filtering
-      results by specific catalogs and timeframes. It enriches entities with breach
-      status, updates their additional properties with details such as severity and
-      sighting information, and returns comprehensive breach records in JSON format
-      for further investigation.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates the entity's 'additional_properties' with breach status (e.g., 'SpyCloud_was_breached')
+      and sets the 'is_enriched' attribute to true.
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - ADDRESS
@@ -59,7 +188,7 @@ ListEntityBreaches:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -67,9 +196,54 @@ ListEntityBreaches:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    Tests connectivity to the SpyCloud server using the configured API credentials.
+    This action verifies that the API Root and API Key provided in the integration
+    settings are valid and that the SOAR platform can establish a secure connection
+    to the service.
+
+
+    ### General Description
+
+    The Ping action is a utility function used to validate the communication link
+    between Google SecOps and the SpyCloud API. It attempts to perform a simple GET
+    request to a known endpoint (Catalog) to confirm the integration is functional.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action does not have any input parameters. It utilizes
+    configuration parameters defined at the integration level (API Root, API Key,
+    Verify SSL). |
+
+
+    ### Additional Notes
+
+    - This action does not interact with any entities or modify any data within the
+    SOAR or external systems.
+
+    - It is primarily used for troubleshooting and initial setup verification.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the `API Root`, `API Key`, and `Verify SSL` settings
+    from the integration configuration.
+
+    2. **Manager Setup**: Instantiates the `SpyCloudManager` with the retrieved connection
+    parameters.
+
+    3. **Connectivity Test**: Executes a GET request to the `/enterprise-v1/breach/catalog/1`
+    endpoint.
+
+    4. **Status Validation**: Checks the HTTP response. If successful (200 OK), it
+    reports a successful connection. If an error occurs (e.g., 401 Unauthorized or
+    connection timeout), it catches the exception and reports a failure.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -77,14 +251,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests connectivity to the SpyCloud service using the provided API
-      credentials. This action validates the API Root, API Key, and SSL certificate
-      verification settings by performing a test GET request to the SpyCloud breach
-      catalog endpoint. It ensures the integration can successfully communicate with
-      the external API and that the authentication parameters are correct.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -100,5 +271,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

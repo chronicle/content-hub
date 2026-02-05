@@ -1,4 +1,33 @@
 EnrichEntities:
+  ai_description: "### General Description\nThis action enriches **USER** entities\
+    \ using the Full Contact API. It retrieves comprehensive professional and organizational\
+    \ data including company details (name, size, industry, location) and personal\
+    \ profile information (job title, gender, LinkedIn profile). The gathered data\
+    \ is used to populate entity properties within Google SecOps, providing analysts\
+    \ with immediate context regarding the user's professional background and the\
+    \ company they are associated with.\n\n### Parameters Description\nThere are no\
+    \ specific parameters for this action in the action configuration itself. However,\
+    \ it requires the following global configuration to be set for the **Full Contact**\
+    \ integration:\n\n*   **API Key**: A valid Full Contact API key used for authentication.\
+    \ This is mandatory for the integration to function.\n\n### Additional Notes\n\
+    *   The action specifically targets entities of type **USER**. \n*   The email\
+    \ address of the user is used to perform both the person enrichment and the company\
+    \ enrichment (by extracting the domain from the email).\n*   While the code uses\
+    \ HTTP POST requests, these are standard for the Full Contact v3 API's enrichment\
+    \ endpoints and do not represent a state-changing mutation in the external system.\n\
+    \n### Flow Description\n1.  **Authentication**: Retrieves the API Key from the\
+    \ 'Full Contact' integration configuration.\n2.  **Entity Selection**: Iterates\
+    \ through the target entities in the current scope.\n3.  **Data Extraction**:\
+    \ For each **USER** entity, it extracts the full email address and the domain\
+    \ (the part after the '@' symbol).\n4.  **Company Enrichment**: Calls the Full\
+    \ Contact `company.enrich` endpoint using the extracted domain to retrieve organizational\
+    \ metadata.\n5.  **Person Enrichment**: Calls the Full Contact `person.enrich`\
+    \ endpoint using the user's email address to retrieve professional profile data.\n\
+    6.  **Data Mapping**: Maps the results from both API calls to the entity's `additional_properties`\
+    \ (e.g., `FullContact_CompanyName`, `FullContact_Person_Title`).\n7.  **Entity\
+    \ Update**: Updates the entities within Google SecOps with the new enriched metadata.\n\
+    8.  **Output**: Returns a JSON result containing the raw enrichment data for each\
+    \ successful lookup."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,15 +35,11 @@ EnrichEntities:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: true
-    description: Enriches User entities with personal and company data from the Full
-      Contact API. This action uses email-based user identifiers to retrieve details
-      such as job titles, social profiles (LinkedIn), and gender, as well as comprehensive
-      company information including industry, employee count, and location. It updates
-      the entity's additional properties with the retrieved data points and provides
-      the full results in JSON format.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - USERUNIQNAME
@@ -31,9 +56,47 @@ EnrichEntities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    ### General description
+
+    Tests connectivity with the Full Contact service to ensure that the integration
+    is correctly configured and the API key is valid. The action performs a sample
+    enrichment request for a hardcoded domain to verify the communication path.
+
+
+    ### Parameters description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | This action does not take any input parameters. | N/A | N/A |
+
+
+    ### Additional notes
+
+    * This action uses a hardcoded domain ('google.com') for the connectivity test.
+
+    * It does not process any entities associated with the case.
+
+
+    ### Flow description
+
+    1. **Configuration Retrieval**: Fetches the 'API Key' from the Full Contact integration
+    configuration.
+
+    2. **Manager Initialization**: Initializes the `FullContactManager` with the retrieved
+    API Key.
+
+    3. **Connectivity Test**: Executes a POST request to the Full Contact 'company.enrich'
+    endpoint using 'google.com' as the target.
+
+    4. **Authentication Validation**: Checks the response status. If a 401 status
+    code is returned, it raises an exception indicating an authentication failure.
+
+    5. **Completion**: If the request succeeds, it returns a success message and a
+    result value of `True`.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -41,14 +104,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests connectivity with the Full Contact service. The action verifies
-      that the API key is valid and the service is reachable by performing a sample
-      enrichment request for the domain 'google.com'. It specifically checks for authorization
-      errors and returns a success indicator to confirm the integration is correctly
-      configured.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -64,5 +124,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true

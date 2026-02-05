@@ -1,4 +1,48 @@
 EnrichEntities:
+  ai_description: >-
+    ### General Description
+
+    This action enriches entities by querying the EclecticIQ platform for threat intelligence.
+    It retrieves observable data, associated entities, and source information to provide
+    context on the reputation and maliciousness of indicators. The action updates
+    entities with enrichment data, adds direct platform links, and generates detailed
+    CSV tables for analysis.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | No Parameters | N/A | N/A | This action does not require any input parameters
+    beyond the integration configuration. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves connection settings (URL, API Token,
+    SSL verification) and initializes the EclecticIQ manager.
+
+    2. **Entity Identification**: It identifies all target entities in the current
+    scope and extracts their identifiers.
+
+    3. **Observable Retrieval**: The action performs batch requests to EclecticIQ
+    to find observables matching the entity identifiers.
+
+    4. **Entity & Source Fetching**: For discovered observables, it retrieves linked
+    entities and maps their source IDs to human-readable names.
+
+    5. **Data Parsing**: The retrieved intelligence (maliciousness/confidence, tags,
+    timestamps, and platform links) is parsed for each identifier.
+
+    6. **Internal Updates**: For each enriched entity, the action:
+        *   Updates the entity's additional properties in Google SecOps.
+        *   Adds a direct link to the observable on the EclecticIQ platform.
+        *   Generates a data table containing comprehensive details of the associated
+    entities and observables.
+    7. **Reporting**: The action concludes by listing any entities that were not found
+    in the EclecticIQ database.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,15 +50,11 @@ EnrichEntities:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: true
-    description: Enriches multiple entity types using EclecticIQ threat intelligence.
-      The action retrieves observable details and associated entities from the platform,
-      including metadata such as confidence scores (maliciousness), timestamps, tags,
-      and source information. It updates entities in Google SecOps with these properties,
-      adds external platform links for direct investigation, and populates data tables
-      with enrichment results.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - ADDRESS
@@ -48,9 +88,28 @@ EnrichEntities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: "### General Description\nThe **Ping** action facilitates a connectivity\
+    \ test between the Google SecOps platform and the EclecticIQ instance. Its primary\
+    \ purpose is to verify that the integration configuration\u2014specifically the\
+    \ URL and API credentials\u2014is correct and that the network connection is functional.\n\
+    \n### Parameters Description\nThis action does not utilize action-level parameters.\
+    \ It relies on the following integration configuration settings:\n| Parameter\
+    \ Name | Expected Type | Mandatory | Description |\n| :--- | :--- | :--- | :---\
+    \ |\n| **EclecticIQ URL** | String | Yes | The base URL of the EclecticIQ instance\
+    \ to which the action will connect. |\n| **API Token** | String | Yes | The API\
+    \ Token used for Bearer authentication. |\n| **Verify SSL** | Boolean | No | Indicates\
+    \ whether the action should verify the SSL certificate of the EclecticIQ server.\
+    \ |\n\n### Flow Description\n1. **Initialization:** The action retrieves the integration's\
+    \ global configuration, including the target URL, API token, and SSL verification\
+    \ preference.\n2. **Manager Setup:** It initializes the `EclecticIQManager` with\
+    \ these parameters.\n3. **Connectivity Verification:** The action executes the\
+    \ `test_connectivity` method, which performs an HTTP GET request to the `/api/v2/sources`\
+    \ endpoint.\n4. **Status Reporting:** If the request is successful, it logs a\
+    \ success message and returns a positive result. If an error occurs (such as an\
+    \ authentication failure or connection timeout), it captures the exception and\
+    \ returns a failed status.\n\n### Additional Notes\nThis action is strictly for\
+    \ diagnostic purposes and does not process entities or modify data in any system."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -58,13 +117,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests connectivity with EclecticIQ by validating the provided URL
-      and API Token. The action performs a GET request to the EclecticIQ sources endpoint
-      to verify that the integration is configured correctly and that the service
-      is reachable and authenticated.
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -80,47 +137,94 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 SendEntitiesToEclecticiq:
+  ai_description: >-
+    ### General Description
+
+    This action sends entities from a Google SecOps case to the EclecticIQ Intelligence
+    Center. It functions as a containment or record-keeping integration by creating
+    'sightings' in EclecticIQ for every supported entity within the case. Optionally,
+    it can also create 'indicator' objects. This allows SOC teams to synchronize threat
+    data detected in Google SecOps with their central threat intelligence platform
+    (TIP).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Group Name | String | True | The name of the EclecticIQ Intelligence Center
+    Group/Source where the sightings and indicators will be created. |
+
+    | Create Indicator | Boolean | False | If set to `true`, the action will create
+    both a sighting and an indicator in EclecticIQ. If `false` (default), only a sighting
+    is created. |
+
+
+    ### Additional Notes
+
+    - The action includes significant case metadata in the EclecticIQ description,
+    such as Case Title, Priority, Status, and SLA expiration.
+
+    - It automatically adds a direct link to the created entity in the EclecticIQ
+    platform within the Google SecOps action results.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action connects to the EclecticIQ API using the provided
+    URL and API Token.
+
+    2.  **Source Resolution**: It retrieves the `source_id` from EclecticIQ that corresponds
+    to the provided **Group Name**.
+
+    3.  **Data Preparation**: It iterates through the case entities, filtering for
+    supported types (e.g., IP addresses, domains, file hashes, URLs). It constructs
+    a payload containing the case's metadata (title, description, priority).
+
+    4.  **Creation**: It makes a PUT request to EclecticIQ to create a 'sighting'
+    object (and an 'indicator' object if requested) containing the extracted entity
+    data.
+
+    5.  **Audit**: A comment is added to the Google SecOps case wall confirming successful
+    creation, and a platform link is attached to the action results.
   capabilities:
     can_create_case_comments: true
     can_create_case_wall_logs: false
     can_create_insight: false
     can_mutate_external_data: true
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
-    description: Sends case entities to the EclecticIQ Intelligence Center as sightings
-      and optionally as indicators. The action retrieves the source identifier associated
-      with a specified Group Name and uploads a structured payload containing case
-      metadata (title, description, priority, status) and entity identifiers. It supports
-      a wide range of entity types including network, file, and threat-related artifacts.
-      Upon successful creation, it provides a direct platform link to the created
-      EclecticIQ entities and adds a confirmation comment to the case wall.
-    external_data_mutation_explanation: Creates new sighting and indicator objects
-      within the EclecticIQ platform via PUT requests to the entities endpoint.
+    external_data_mutation_explanation: >-
+      Creates new sighting and indicator entities in the EclecticIQ Intelligence Center
+      via PUT requests.
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Adds a comment to the case wall and attaches an external platform link to the
+      action results.
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes:
+      - HOSTNAME
       - ADDRESS
-      - CHILDHASH
+      - PROCESS
+      - PARENTPROCESS
       - CHILDPROCESS
-      - CREDITCARD
-      - CVE
+      - FILENAME
+      - FILEHASH
+      - PARENTHASH
+      - CHILDHASH
+      - DestinationURL
       - CVEID
+      - CREDITCARD
+      - PHONENUMBER
+      - THREATACTOR
+      - SOURCEDOMAIN
       - DESTINATIONDOMAIN
       - DOMAIN
-      - FILEHASH
-      - FILENAME
-      - HOSTNAME
-      - PARENTHASH
-      - PARENTPROCESS
-      - PHONENUMBER
-      - PROCESS
-      - SOURCEDOMAIN
-      - THREATACTOR
-      - DestinationURL
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -134,5 +238,3 @@ SendEntitiesToEclecticiq:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

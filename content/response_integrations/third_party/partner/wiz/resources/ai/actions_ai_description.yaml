@@ -1,4 +1,47 @@
 add_comment_to_issue:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to a specified issue in Wiz. This action allows security analysts
+    to document findings or provide updates directly within the Wiz platform from
+    the SOAR interface.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Issue ID | string | Yes | The unique identifier of the issue in Wiz where the
+    comment will be added. |
+
+    | Comment | string | Yes | The actual text content of the comment to be added
+    to the issue. |
+
+
+    ### Additional Notes
+
+    There are no specific dependencies between parameters; both are required for the
+    action to execute successfully.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the `Issue ID` and the `Comment`
+    text from the input configuration.
+
+    2. **Client Initialization:** The action initializes a Wiz API client and authenticates
+    using OAuth credentials.
+
+    3. **Request Construction:** A GraphQL mutation (`createIssueNote`) is constructed
+    using the provided `Issue ID` and `Comment` content.
+
+    4. **Execution:** The action sends the POST request to the Wiz GraphQL endpoint.
+
+    5. **Output:** On success, the action returns a JSON object containing the details
+    of the newly created comment (ID and creation timestamp) and updates the action
+    status with a success message.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,14 +49,12 @@ add_comment_to_issue:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Adds a comment to a specific Wiz issue using its unique ID. The action
-      utilizes the Wiz GraphQL API to execute a mutation that creates a new issue
-      note, facilitating communication and documentation of security findings within
-      the Wiz platform.
-    external_data_mutation_explanation: Adds a new comment (issue note) to the specified
-      issue in Wiz, altering the issue's external record history.
+    external_data_mutation_explanation: >-
+      Adds a new comment (note) to a specific issue record within the Wiz platform.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -29,9 +70,47 @@ add_comment_to_issue:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 get_issue_details:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves comprehensive details for a specific issue in the Wiz platform
+    using its unique identifier. It fetches various data points including the issue's
+    current status, severity level, description, associated cloud entity snapshots
+    (such as cloud platform, region, and subscription), project associations, and
+    the specific security rules that triggered the issue.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Issue ID | string | Yes | The unique identifier of the Wiz issue to retrieve
+    or act upon. |
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves the mandatory `Issue ID` from the action
+    parameters.
+
+    2. **Initialization**: It initializes the Wiz API client by authenticating with
+    the provided Client ID and Secret to obtain a bearer token.
+
+    3. **Query Construction**: A GraphQL query is built using the `IssueQueryBuilder`
+    to request specific fields (id, status, severity, description, entity snapshots,
+    etc.).
+
+    4. **Execution**: The action sends a POST request to the Wiz GraphQL endpoint
+    with the constructed query and the specific `Issue ID` as a variable.
+
+    5. **Data Processing**: The API response is validated and parsed into a structured
+    `Issue` data model.
+
+    6. **Output**: The results are returned as a JSON object, and a success message
+    is displayed in the SOAR interface.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -39,15 +118,11 @@ get_issue_details:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves comprehensive details for a specific security issue in
-      Wiz using its unique identifier. This action interacts with the Wiz GraphQL
-      API to fetch metadata including issue status, severity levels, creation and
-      resolution timestamps, detailed descriptions, and snapshots of affected cloud
-      entities. It also provides context on associated projects and the specific security
-      rules that triggered the issue.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -63,9 +138,60 @@ get_issue_details:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ignore_issue:
+  ai_description: >-
+    ### General Description
+
+    The **Ignore Issue** action allows users to ignore a specific issue in the Wiz
+    platform by updating its status to 'REJECTED'. This action is designed specifically
+    for Graph Control or Cloud Configuration issues. It helps in maintaining a clean
+    security posture by dismissing issues that are identified as false positives,
+    exceptions, or items that will not be addressed ('Won't Fix').
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Issue ID** | String | Yes | The unique identifier of the issue in Wiz that
+    you want to ignore. |
+
+    | **Resolution Reason** | DDL | Yes | The reason for the resolution. Choices include:
+    `False Positive`, `Exception`, and `Won't Fix`. If not provided, it defaults to
+    `False Positive`. |
+
+    | **Resolution Note** | String | Yes | A mandatory note providing additional context
+    or justification for the issue resolution. |
+
+
+    ### Additional Notes
+
+    - This action specifically targets issues that belong to 'Graph Control' or 'Cloud
+    Configuration' categories within Wiz.
+
+    - The resolution note is a required field to ensure auditability of why an issue
+    was ignored.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action extracts the `Issue ID`, `Resolution Reason`, and
+    `Resolution Note` from the input parameters.
+
+    2. **Validation**: It validates the `Resolution Reason` against the allowed list
+    of values defined in the integration constants.
+
+    3. **API Client Initialization**: Initializes the Wiz API client using the configured
+    credentials (API Root, Client ID, and Client Secret).
+
+    4. **Mutation Execution**: Constructs and sends a GraphQL mutation to the Wiz
+    API to update the issue's status to `REJECTED`, applying the specified resolution
+    reason and note.
+
+    5. **Completion**: Upon success, it returns the updated issue data in JSON format
+    and provides a success message to the case wall.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -73,16 +199,13 @@ ignore_issue:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Ignores a specified security issue in Wiz by changing its status
-      to 'REJECTED'. The action requires an Issue ID, a resolution reason (False Positive,
-      Exception, or Won't Fix), and a mandatory context note. It communicates with
-      the Wiz GraphQL API to perform the update and retrieves the updated issue details
-      as a result. This action is specifically designed for Graph Control or Cloud
-      Configuration issues.
-    external_data_mutation_explanation: Updates the status of an issue in Wiz to 'REJECTED'
-      and attaches a resolution reason and context note.
-    fetches_data: true
+    external_data_mutation_explanation: >-
+      Updates the status of an issue in Wiz to 'REJECTED' (Ignored) and attaches a
+      resolution reason and note.
+    fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -98,9 +221,39 @@ ignore_issue:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a utility tool designed to verify the connection between
+    Google SecOps and the Wiz platform. It confirms that the API credentials (Client
+    ID and Client Secret) and the API Root URL provided in the integration settings
+    are valid and that the network connection is functional.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action starts by authenticating with the Wiz platform
+    using the OAuth2 client credentials flow to retrieve a bearer token.
+
+    2. **Connectivity Test**: It sends a minimal GraphQL query to the Wiz API to fetch
+    the ID of a single issue, acting as a heartbeat check to ensure the API is reachable
+    and authorized.
+
+    3. **Validation**: If the API responds successfully without errors, the action
+    reports a success message. If the request fails due to invalid credentials or
+    network issues, it returns an error message.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the integration or for
+    troubleshooting connectivity issues. It does not process or affect any case entities.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -108,47 +261,11 @@ ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests the connectivity to the Wiz platform using the provided connection
-      parameters including `API Root`, `Client ID`, and `Client Secret`. It performs
-      an authenticated GraphQL query to verify that the credentials are valid and
-      that the Google SecOps platform can successfully communicate with the Wiz server.
-      This action is primarily used for troubleshooting and initial setup verification.
     external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-  tags:
-    is_enrichment: false
-reopen_issue:
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    description: Reopens a specific security issue in Wiz by updating its status to
-      'OPEN'. The action utilizes the Wiz GraphQL API to perform a mutation on the
-      issue state based on a provided Issue ID. It returns the updated issue details
-      as JSON results and confirms the operation's success.
-    external_data_mutation_explanation: Updates the status of an existing issue in
-      the Wiz platform to 'OPEN' via a GraphQL mutation.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -164,9 +281,41 @@ reopen_issue:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
-resolve_issue:
+reopen_issue:
+  ai_description: >-
+    ### General Description
+
+    The **Reopen Issue** action allows users to change the status of a specific issue
+    in Wiz back to 'OPEN'. This is useful when a previously resolved or ignored issue
+    requires further investigation or has re-occurred. The action interacts with the
+    Wiz GraphQL API to perform the status update.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Issue ID** | The unique identifier of the issue in Wiz to be reopened. | String
+    | Yes |
+
+
+    ### Flow Description
+
+    1. **Extract Parameters**: The action retrieves the mandatory `Issue ID` from
+    the input.
+
+    2. **Initialize API Client**: Establishes an authenticated session with the Wiz
+    platform using the integration's configuration (API Root, Client ID, and Client
+    Secret).
+
+    3. **Execute Mutation**: Sends a GraphQL mutation (`updateIssue`) to the Wiz API
+    to set the issue's status to `OPEN`.
+
+    4. **Handle Results**: If successful, the action returns the updated issue data
+    as a JSON object and displays a success message. If the issue is not found, it
+    raises a specific error.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -174,17 +323,13 @@ resolve_issue:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Resolves a specified issue in Wiz, specifically targeting Threat
-      Detection issues. This action performs a GraphQL mutation to update the issue's
-      status to 'RESOLVED' within the Wiz platform. It requires a mandatory Issue
-      ID and a resolution reason (e.g., Malicious Threat, Not Malicious Threat, Security
-      Test Threat, Planned Action Threat, or Inconclusive Threat). Users can also
-      provide an optional resolution note to supply further context regarding the
-      resolution.
-    external_data_mutation_explanation: Updates the status of an issue to 'RESOLVED'
-      and records the resolution reason and note in Wiz.
-    fetches_data: false
+    external_data_mutation_explanation: >-
+      Updates the status of a specific issue in Wiz from its current state (e.g.,
+      Resolved, Rejected) to 'OPEN'.
+    fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -200,5 +345,78 @@ resolve_issue:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
+resolve_issue:
+  ai_description: >-
+    Resolves a specified issue in Wiz. This action is specifically designed for Threat
+    Detection issues and updates the status of the issue to 'RESOLVED' in the Wiz
+    platform.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Issue ID | string | Yes | The unique identifier of the issue in Wiz to be resolved.
+    |
+
+    | Resolution Reason | ddl | No | The reason for the resolution. Options include:
+    'Malicious Threat', 'Not Malicious Threat' (default), 'Security Test Threat',
+    'Planned Action Threat', or 'Inconclusive Threat'. |
+
+    | Resolution Note | string | No | A note providing additional context regarding
+    the resolution decision. |
+
+
+    ### Flow Description
+
+    1. **Extraction**: Retrieves the Issue ID, Resolution Reason, and optional Resolution
+    Note from the action parameters.
+
+    2. **Validation**: Validates that the provided Resolution Reason is one of the
+    accepted values defined for the Wiz integration.
+
+    3. **Mutation**: Constructs and executes a GraphQL mutation via the Wiz API to
+    update the status of the specified issue to 'RESOLVED', applying the chosen reason
+    and note.
+
+    4. **Completion**: Returns the JSON representation of the updated issue and displays
+    a success message upon successful execution.
+
+
+    ### Additional Notes
+
+    - This action only supports resolving issues categorized as 'Threat Detection'
+    in Wiz.
+
+    - If the Issue ID is not found, an 'IssueNotFoundError' will be raised.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of a specific issue in the Wiz platform to 'RESOLVED' and
+      attaches a resolution reason and note.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: [ ]
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,19 +1,67 @@
 EnrichAssetInformation:
+  ai_description: >-
+    Enriches IP Address entities with asset information retrieved from the CylusOne
+    platform. This action fetches detailed context such as MAC addresses, asset properties,
+    and associated metadata to provide better visibility into industrial control systems
+    (ICS) assets.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Base URL | String | Yes | The root URL of the CylusOne instance (configured
+    at the integration level). |
+
+    | Cylus API Key | String | Yes | The API key used for authentication (configured
+    at the integration level). |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the CylusOne server. Defaults to false. |
+
+
+    ### Additional Notes
+
+    - This action specifically targets `ADDRESS` (IP) entities.
+
+    - Retrieved data is prefixed with `Cylus_` and added to the entity's additional
+    properties.
+
+    - Custom properties from Cylus are cleaned (lowercase, spaces replaced with underscores)
+    and added as `Cylus_prop_<name>`.
+
+
+    ### Flow Description
+
+    1. **Validation**: Checks if the entity is a valid IPv4 address.
+
+    2. **API Request**: Performs a GET request to the CylusOne `/rest/v1/assets/by-ip`
+    endpoint using the entity identifier.
+
+    3. **Data Transformation**: Flattens nested asset properties and formats list
+    values (like MAC addresses) into comma-separated strings.
+
+    4. **Internal Mutation**: Updates the entity's `additional_properties` with the
+    enriched asset data.
+
+    5. **Completion**: Sets the `is_enriched` status to true for successful entities
+    and updates them within the Google SecOps environment.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
-    description: Enriches IP Address entities with asset information retrieved from
-      the CylusOne API. The action fetches asset details including MAC addresses and
-      custom defined properties, flattens this information into a namespaced format
-      (prefixed with Cylus_), updates the entity's additional properties with the
-      retrieved data, and marks the entity as enriched in the SOAR environment.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates the entity's 'additional_properties' with asset metadata from CylusOne
+      and marks the entity as enriched (is_enriched = True).
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - ADDRESS
@@ -30,9 +78,64 @@ EnrichAssetInformation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a utility designed to verify the connectivity and authentication
+    credentials between Google SecOps and the CylusOne platform. It ensures that the
+    integration is properly configured and that the external API is reachable. This
+    action is typically used for initial setup verification or troubleshooting connection
+    issues.
+
+
+    ### Parameters Description
+
+    This action does not require any specific input parameters from the user during
+    execution. It relies entirely on the global integration settings:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Base URL | String | Yes | The root URL for the CylusOne API endpoint. |
+
+    | Cylus API Key | String | Yes | The API key used for authenticating requests.
+    |
+
+    | Verify SSL | Boolean | No | Determines if the action should verify the SSL certificate
+    of the server. |
+
+
+    ### Additional Notes
+
+    There are no action-specific parameters. If the connectivity test fails, the action
+    provides a detailed error message based on the HTTP status code received (e.g.,
+    'Invalid API credentials' for 401 errors).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify context and logs the
+    start of the process.
+
+    2. **Configuration Extraction**: It retrieves the integration's global settings
+    (Base URL, API Key, and SSL verification status).
+
+    3. **API Manager Setup**: An API manager instance is created to handle communication
+    with the CylusOne server.
+
+    4. **Connectivity Test**: The action calls a 'test_connectivity' method, which
+    performs a GET request to a specific endpoint (`/rest/v1/assets/by-ip`) using
+    a hardcoded placeholder IP (10.0.0.5).
+
+    5. **Response Analysis**: It evaluates the HTTP response. A status code of 200
+    or 404 indicates successful connectivity (even if the asset isn't found), while
+    401 or 403 indicate authentication/permission issues.
+
+    6. **Final Result**: The action ends with a boolean result (True/False) and an
+    output message describing the outcome.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -40,14 +143,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests connectivity to the CylusOne platform to verify that the provided
-      Base URL and API Key are valid. The action performs a GET request to the assets
-      endpoint with a test IP address to check for a successful response (200 OK)
-      or a not found response (404), ensuring the integration can communicate with
-      the external service.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -63,5 +163,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true

@@ -1,4 +1,63 @@
 GetCountryFlag:
+  ai_description: >-
+    ### General Description
+
+    The **Get Country Flag** action retrieves the flag of a specific country in base64
+    format. It can process a manual input of a two-digit country code or extract country
+    codes from the additional properties of entities within a case. To optimize performance,
+    the action maintains a local cache of flags in the environment's run folder, only
+    making external requests to `countryflags.io` when a flag is not already stored
+    locally.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Country Code Two Digit** | String | No | A manual two-digit ISO country code
+    (e.g., 'us', 'fr') to retrieve the flag for. |
+
+    | **Country Code From Entity Field** | String | No | A comma-separated list of
+    property keys to search for within the target entities' `additional_properties`.
+    If a match is found, the value is used as the country code to fetch the flag for
+    that entity. |
+
+
+    ### Additional Notes
+
+    - This action uses a local file named `flags.json` as a cache to minimize API
+    calls to the external service.
+
+    - If neither parameter is provided, the action will successfully complete but
+    will not produce any results.
+
+    - The results are returned as a JSON object mapping the entity identifier or country
+    code to the base64-encoded flag string.
+
+
+    ### Flow Description
+
+    1. **Initialize Cache**: The action attempts to load existing flag data from `flags.json`
+    in the run folder.
+
+    2. **Entity Processing**: If `Country Code From Entity Field` is provided, the
+    action iterates through all target entities in the scope and searches their `additional_properties`
+    for the specified keys.
+
+    3. **Manual Code Processing**: If `Country Code Two Digit` is provided, it is
+    added to the list of codes to fetch.
+
+    4. **Fetch and Encode**: For each identified country code, the action checks the
+    local cache. If the flag is missing, it performs a GET request to `countryflags.io`,
+    downloads the image, and converts it to a base64 string.
+
+    5. **Update Cache**: If new flags were retrieved from the external service, the
+    local `flags.json` file is updated.
+
+    6. **Output Results**: The retrieved base64 flags are added to the action's result
+    JSON and the action finishes execution.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,16 +65,11 @@ GetCountryFlag:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves a base64-encoded country flag image based on a two-digit
-      country code. The action can process a manual input parameter or dynamically
-      extract country codes from specified 'additional_properties' of entities in
-      the current scope. It implements a local caching mechanism ('flags.json') to
-      store flags, only fetching from the external 'countryflags.io' service when
-      the code is not already cached. The final base64-encoded image data is provided
-      as a JSON result.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - GENERICENTITY
@@ -32,9 +86,44 @@ GetCountryFlag:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    ### General Description
+
+    This action serves as a connectivity test (Ping) for the Country Flags integration.
+    It verifies that the Google SecOps environment can successfully communicate with
+    the Country Flags service (hosted at countryflags.io) by attempting to retrieve
+    a specific flag image.
+
+
+    ### Parameters
+
+    There are no parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the connection and prepares to access
+    the local execution folder.
+
+    2. **Cache Loading**: It attempts to load a local cache file (`flags.json`) from
+    the execution folder to check for previously downloaded flags.
+
+    3. **Connectivity Check**: The action targets a hardcoded country code ('us')
+    and attempts to fetch the corresponding flag image from the external URL `https://www.countryflags.io/us/flat/64.png`
+    if it's not found in the cache.
+
+    4. **Data Processing**: Upon a successful response, the image content is base64-encoded.
+
+    5. **Completion**: If the image data is successfully retrieved (either from cache
+    or the external API), the action concludes with a success state. Otherwise, it
+    fails.
+
+
+    ### Additional Notes
+
+    This action does not process entities from the case; it uses a hardcoded value
+    to validate the integration's configuration and network reachability.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -42,14 +131,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Verifies connectivity with the Country Flags service. The action
-      attempts to retrieve the flag image for a default country ('us') by performing
-      an external GET request to the countryflags.io API. It utilizes a local JSON
-      file to cache retrieved flag data in base64 format and confirms a successful
-      connection if the data is fetched correctly.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -65,5 +151,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

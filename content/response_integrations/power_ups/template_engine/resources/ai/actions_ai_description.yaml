@@ -1,4 +1,36 @@
 EntityInsight:
+  ai_description: "### General Description\nThis action transforms a raw JSON object\
+    \ into formatted Entity Insights using a Jinja2 template. It is designed to take\
+    \ results from previous actions (in a specific 'EntityResult' format) and render\
+    \ them into human-readable HTML or text. This allows for customized data presentation\
+    \ within the Google SecOps case wall and entity summaries.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **JSON Object** | JSON Object (content) | Yes | The raw JSON data used to populate\
+    \ the template. It should follow the format where each entry specifies an 'Entity'\
+    \ identifier and its corresponding 'EntityResult'. |\n| **Template** | Template\
+    \ (email_content) | Yes | The Jinja2 template string used to render the insight.\
+    \ Supports custom filters like `json2tbl`, `filter_datetime`, and regex operations.\
+    \ |\n| **Triggered By** | String | Yes | The name of the integration or process\
+    \ to be displayed as the source of the insight (e.g., 'VirusTotal', 'Active Directory').\
+    \ |\n| **Remove BRs** | Boolean | No | If set to `true`, all `<br>` tags will\
+    \ be stripped from the rendered template. Default is `false`. |\n| **Create Insight**\
+    \ | Boolean | No | When enabled, the action will officially create an 'Entity\
+    \ Insight' in the SOAR. If disabled, it only produces JSON results. Default is\
+    \ `true`. |\n\n### Additional Notes\n- The input **JSON Object** must contain\
+    \ a list of objects, each with an `Entity` key matching the entity's identifier\
+    \ in the case.\n- The action utilizes a robust set of custom Jinja2 filters (defined\
+    \ in `JinjaFilters.py`) to assist in complex data transformations, such as converting\
+    \ JSON to HTML tables or formatting timestamps.\n\n### Flow Description\n1.  **Parameter\
+    \ Extraction**: Retrieves the JSON data, Jinja2 template, and configuration flags.\n\
+    2.  **Environment Setup**: Initializes the Jinja2 environment and registers a\
+    \ library of custom filters for data manipulation (regex, datetime, JSON-to-table).\n\
+    3.  **Data Parsing**: Parses the input JSON object and maps case entities to their\
+    \ respective data entries based on identifiers.\n4.  **Template Rendering**: For\
+    \ each entity found in the input data, it renders the provided template using\
+    \ the entity-specific context.\n5.  **Internal Update**: \n    - Adds the rendered\
+    \ template as a JSON result to the entity.\n    - If 'Create Insight' is enabled,\
+    \ it generates a formal Entity Insight visible in the Google SecOps UI.\n6.  **Finalization**:\
+    \ Returns the rendered content and execution status."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,96 +38,29 @@ EntityInsight:
     can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: false
-    description: Renders custom Jinja2 templates using provided JSON data to generate
-      Entity Insights within Google SecOps. The action processes a raw JSON input
-      object (in EntityResult format) and applies a template to specific target entities,
-      allowing for formatted, data-driven insights. It includes a robust set of built-in
-      Jinja filters for data manipulation, such as JSON-to-table conversion, regex
-      operations, date formatting, and priority mapping. Users can also define custom
-      filters to extend transformation capabilities.
     external_data_mutation_explanation: null
     fetches_data: false
-    internal_data_mutation_explanation: Creates new Entity Insights within the SOAR
-      platform based on the rendered Jinja2 template content.
+    internal_data_mutation_explanation: >-
+      Creates Entity Insights and attaches formatted JSON results to entities within
+      the Google SecOps case environment.
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes:
-      - GENERICENTITY
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-  tags:
-    is_enrichment: false
-Ping:
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    description: Verifies connectivity and responsiveness of the TemplateEngine integration
-      within Google SecOps. This action serves as a basic health check, confirming
-      that the integration environment is correctly configured and capable of executing
-      scripts without performing any external API calls or processing entity-specific
-      data.
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-  tags:
-    is_enrichment: false
-RenderTemplate:
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    description: "Renders a Jinja2 template using a JSON input, with the option to\
-      \ include contextual alert data such as security events and entity attributes.\
-      \ This action facilitates dynamic content generation within playbooks\u2014\
-      such as HTML emails, reports, or formatted logs\u2014by combining user-provided\
-      \ templates with live case data. It supports standard Jinja2 syntax and provides\
-      \ a robust library of custom filters for data transformation, including JSON-to-HTML\
-      \ table conversion, epoch-to-human date formatting, regex operations, and list\
-      \ deduplication."
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  entity_usage:
-    entity_scopes:
+      - ADDRESS
+      - DOMAIN
+      - FILENAME
+      - FILEHASH
+      - HOSTNAME
+      - USERUNIQNAME
+      - PROCESS
       - GENERICENTITY
     filters_by_additional_properties: true
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: false
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -103,9 +68,32 @@ RenderTemplate:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
-RenderTemplateFromArray:
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies connectivity to the TemplateEngine integration. This action is used to
+    ensure that the integration is correctly configured and that the Google SecOps
+    environment can successfully execute scripts associated with this integration.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This is a standard 'Ping' or connectivity check action. It does not interact with
+    external APIs, nor does it process or enrich any entities.
+
+
+    ### Flow Description
+
+    1. Initialize the Siemplify action module.
+
+    2. Terminate the action execution immediately with a success message confirming
+    that the environment is connected.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -113,17 +101,11 @@ RenderTemplateFromArray:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Renders a Jinja2 template for each item in a provided JSON array.
-      This utility action is designed for data transformation and formatting within
-      playbooks. It iterates through list elements, applies user-defined Jinja logic
-      (including support for 'row' context), and joins the rendered results with a
-      specified delimiter. The action includes a wide array of custom filters for
-      regex operations, datetime formatting, JSON-to-HTML table conversion, and priority
-      mapping. It is primarily used to generate human-readable reports or formatted
-      strings from complex JSON structures for use in subsequent automation steps.
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -139,5 +121,146 @@ RenderTemplateFromArray:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
+RenderTemplate:
+  ai_description: >-
+    ### General Description
+
+    This action renders a Jinja2 template using a provided JSON input. It is a utility
+    tool designed to transform data into human-readable formats, such as HTML reports
+    or formatted text, by applying Jinja2 templating logic. It supports custom filters
+    for complex transformations like regex operations, date formatting, and JSON-to-HTML
+    table conversion.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **JSON Object** | JSON Object | No | The raw JSON object or list used as the
+    data source for the template. This value is accessible within the Jinja template
+    as the `input_json` variable. Defaults to an empty object `{}`. |
+
+    | **Jinja** | Code | No | Custom Jinja2 template code to be rendered. If provided,
+    this overrides the 'Template' parameter. |
+
+    | **Include Case Data** | Boolean | No | When set to `true`, the action automatically
+    injects the alert's security events and target entities into the template data
+    under the keys `SiemplifyEvents` and `SiemplifyEntities` respectively. Defaults
+    to `false` in settings but logic handles `true`. |
+
+    | **Template** | Email Content | No | A predefined Jinja2 template (e.g., from
+    Environment settings) to be rendered. This is used if the 'Jinja' parameter is
+    not provided. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts parameters including the input JSON,
+    Jinja code, and the choice to include case data.
+
+    2. **Context Gathering**: If 'Include Case Data' is enabled, the action retrieves
+    all security events and target entities (excluding those of type 'ALERT') from
+    the current Google SecOps alert context.
+
+    3. **Environment Setup**: A Jinja2 environment is initialized with standard extensions
+    (do, loopcontrols) and a comprehensive suite of custom filters (e.g., `json2tbl`,
+    `regex_match`, `filter_datetime`, `to_nice_json`).
+
+    4. **Data Preparation**: The input JSON is parsed. If 'Include Case Data' is true,
+    the gathered events and entities are merged into the data object.
+
+    5. **Rendering**: The action determines the template source (prioritizing the
+    'Jinja' parameter) and renders it using the prepared data. It supports both single
+    dictionaries and lists of objects (rendering the template for each item in the
+    list).
+
+    6. **Output**: The rendered string is saved to the result JSON under the key `html_output`
+    and the action completes successfully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes:
+      - GENERICENTITY
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+RenderTemplateFromArray:
+  ai_description: >-
+    Renders a Jinja2 template against a list of items provided in a JSON array. This
+    utility action transforms data from previous playbook steps into a single string
+    (e.g., HTML, Markdown, or CSV) by applying a consistent template to each entry.
+    It supports advanced formatting through custom filters such as `json2tbl`, `regex_replace`,
+    `filter_datetime`, and `to_nice_json`.### Parameters| Parameter | Type | Mandatory
+    | Description || :--- | :--- | :--- | :--- || Array input | content | No | A JSON
+    string representing an array of items (or a single object) to iterate over. Defaults
+    to an empty list. || Jinja | code | No | The Jinja2 template string to be rendered.
+    Each item in the input array can be accessed using the `row` variable (e.g., `{{
+    row.id }}`) or directly via key names (e.g., `{{ id }}`). || join | string | No
+    | The character or string used to join the rendered outputs of each iteration.
+    Defaults to an empty string. || prefix | string | No | A string to prepend to
+    the start of the final rendered output. || suffix | string | No | A string to
+    append to the end of the final rendered output. |### Additional NotesThis action
+    includes a comprehensive set of Jinja filters for data manipulation, including
+    regex matching, date parsing (supporting epoch and ISO formats), and JSON-to-HTML
+    table conversion. If the input is a single JSON object instead of an array, the
+    action automatically treats it as a single-element list.### Flow Description1.
+    **Input Extraction**: Retrieves the JSON input, Jinja template, and formatting
+    parameters (join, prefix, suffix).2. **JSON Parsing**: Parses the 'Array input'
+    string. If the result is a single dictionary, it is wrapped into a list.3. **Filter
+    Initialization**: Loads standard Jinja2 extensions and specialized custom filters
+    (e.g., `regex_substring`, `map_priority`, `json2tbl`) into the template environment.4.
+    **Loop Rendering**: Iterates through each item in the list, rendering the template
+    string with the item's data.5. **Concatenation**: Joins the individual rendered
+    strings using the 'join' parameter.6. **Final Formatting**: Prepends the 'prefix'
+    and appends the 'suffix' to the joined string.7. **Output**: Returns the final
+    string as the script result and adds it to the JSON results under the key `html_output`.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: [ ]
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

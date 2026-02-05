@@ -1,23 +1,46 @@
 CheckUrl:
+  ai_description: "### General Description\nThe **Check Url** action queries the **PhishTank**\
+    \ community database to identify if specific URL entities are recognized as known\
+    \ phishing links. This action provides automated enrichment to determine the reputation\
+    \ and verification status of URLs within a case.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Service Url** | String | Yes | The API endpoint for the PhishTank service\
+    \ (retrieved from the integration configuration). |\n\n### Additional Notes\n\
+    - This action specifically targets entities of type **URL** (mapped to `DestinationURL`).\n\
+    - It attempts to use the `OriginalIdentifier` property of an entity to ensure\
+    \ the raw, unescaped URL is queried.\n- URLs that are found and marked as **verified**\
+    \ in PhishTank will have their `is_suspicious` status set to `True` in Google\
+    \ SecOps.\n\n### Flow Description\n1. **Initialization:** Retrieves the PhishTank\
+    \ Service URL from the integration configuration.\n2. **Entity Filtering:** Iterates\
+    \ through target entities and selects those categorized as **URL** entities.\n\
+    3. **External API Query:** For each URL, sends a POST request to the PhishTank\
+    \ API to check for its presence in the threat database.\n4. **Data Parsing:**\
+    \ Parses the resulting XML data to extract key details such as database presence,\
+    \ verification status, and valid status.\n5. **Enrichment & Insights:** \n   \
+    \ - Generates an entity insight containing the phishing detail page link and verification\
+    \ status.\n    - Records the raw API results in the action's JSON result.\n6.\
+    \ **Internal State Mutation:** If PhishTank confirms the URL is a verified phishing\
+    \ link, the entity's suspicious flag is updated within Google SecOps.\n7. **Completion:**\
+    \ Summarizes the results, highlighting how many URLs were found, verified, or\
+    \ not present in the database."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: true
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
-    description: Checks URL entities against the PhishTank community database to identify
-      known phishing links. This action retrieves metadata including the database
-      presence, verification status, and PhishTank detail page links. If a URL is
-      found and verified as phishing, the action updates the entity's suspicious status
-      in Google SecOps and generates a detailed entity insight with the findings.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates the 'is_suspicious' attribute of URL entities within Google SecOps if
+      they are confirmed as verified phishing links in the PhishTank database.
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - DestinationURL
-    filters_by_additional_properties: true
+    filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
@@ -30,9 +53,48 @@ CheckUrl:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify connectivity between
+    the Google SecOps platform and the PhishTank service. Its primary purpose is to
+    ensure that the integration configuration, specifically the API endpoint URL,
+    is correct and reachable from the environment.
+
+
+    ### Parameters Description
+
+    This action does not require any input parameters from the user at runtime. It
+    relies solely on the global integration configuration.
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action has no input parameters. |
+
+
+    ### Additional Notes
+
+    The action uses a hardcoded URL (`google.com`) as a test payload to PhishTank's
+    API to confirm that the service can process requests and return valid JSON responses.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the **Service Url** from
+    the PhishTank integration's configuration settings.
+
+    2. **Network Request**: It performs a POST request to the extracted Service URL,
+    including a sample payload (`url=google.com`) and required headers.
+
+    3. **Connectivity Validation**: The script evaluates the HTTP response status.
+    If the request fails (e.g., 404, 500 errors), an exception is raised.
+
+    4. **Execution Finalization**: If the API call succeeds, the action concludes
+    by reporting that PhishTank is successfully connected.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -40,14 +102,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Verifies the connectivity between Google SecOps and the PhishTank
-      service. It performs a test POST request to the configured Service URL using
-      a placeholder URL check to ensure that the network path, API endpoint, and authentication
-      credentials are functional. This action is primarily used for diagnostic purposes
-      during integration setup.
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -63,5 +122,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

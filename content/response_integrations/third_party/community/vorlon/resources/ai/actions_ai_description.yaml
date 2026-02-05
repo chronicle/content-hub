@@ -1,4 +1,63 @@
 GetAlerts:
+  ai_description: >-
+    ### General Description
+
+    The **Get Alerts** action retrieves a list of alerts from the Vorlon system based
+    on user-defined filters. It allows analysts to query historical or current alerts
+    to better understand security events across different services. The action returns
+    the alerts in a JSON format suitable for downstream processing in a playbook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Requesting Service** | String | No | A comma-separated list of service IDs
+    that initiated the requests associated with the alerts. |
+
+    | **Responding Service** | String | No | A comma-separated list of service IDs
+    that responded to the requests associated with the alerts. |
+
+    | **Alert IDs** | String | No | A comma-separated list of specific alert IDs to
+    retrieve. |
+
+    | **From** | String | No | Filter alerts starting from this timestamp (Format:
+    YYYY-MM-DDTHH:MM:SS). |
+
+    | **To** | String | No | Filter alerts ending at this timestamp (Format: YYYY-MM-DDTHH:MM:SS).
+    |
+
+    | **Alert Status** | DDL | No | Filter by alert status: `open` (default), `dismissed`,
+    or `resolved`. |
+
+    | **Limit** | String | No | The maximum number of alerts to return (Default is
+    100). |
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action initializes the Vorlon manager using the integration's
+    API credentials (API Root, Client ID, and Client Secret).
+
+    2.  **Parameter Parsing**: Action parameters such as service IDs, alert IDs, time
+    filters, and status are extracted and formatted (e.g., converting time strings
+    to epoch format).
+
+    3.  **Data Retrieval**: The logic calls the Vorlon API's GET `/rest/v1/alerts`
+    endpoint with the specified query parameters.
+
+    4.  **Result Processing**: The retrieved alerts are added to the action's execution
+    results as a JSON object, and the action concludes with a success message.
+
+
+    ### Additional Notes
+
+    *   This action does not run on specific entities; it is a global data retrieval
+    action.
+
+    *   If no results are found, it returns an empty object.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,14 +65,11 @@ GetAlerts:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves alerts from the Vorlon platform based on provided filter
-      criteria. This action allows users to query for alerts by requesting or responding
-      service IDs, specific alert IDs, status (open, dismissed, resolved), and time
-      ranges. It fetches the matching alert data from the external API and returns
-      the results in a JSON format for use in playbooks.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -29,9 +85,49 @@ GetAlerts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetAllServices:
+  ai_description: >-
+    ### General Description
+
+    The **Get All Services** action retrieves a comprehensive list of all services
+    that have been detected and observed by the Vorlon platform. This action is primarily
+    used for infrastructure discovery and visibility, allowing security analysts to
+    understand the environment's service landscape directly within a playbook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters. It relies
+    on the global integration configuration for connectivity. |
+
+
+    ### Additional Notes
+
+    This action does not target specific entities; it performs a global query against
+    the Vorlon API to fetch all available service records.
+
+
+    ### Flow Description
+
+    1. **Setup**: The action initializes the Vorlon Manager using the API Root, Client
+    ID, and Client Secret provided in the integration's configuration.
+
+    2. **Authentication**: The manager authenticates with the Vorlon server to obtain
+    a valid OAuth2 bearer token.
+
+    3. **API Call**: The action executes a GET request to the `/rest/v1/services`
+    endpoint to retrieve the list of services.
+
+    4. **Data Handling**: The raw JSON response from the server, containing the details
+    of all detected services, is captured.
+
+    5. **Completion**: The list of services is added to the action's JSON results,
+    and the action concludes with a success message including the count or status
+    of the retrieval.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -39,14 +135,11 @@ GetAllServices:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Fetches all detected and observed services from the Vorlon server.
-      The action retrieves a comprehensive list of monitored services and their associated
-      metadata, providing visibility into the environment's service inventory. It
-      returns the data as a structured JSON object for use in downstream automation
-      tasks.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -62,9 +155,67 @@ GetAllServices:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetConnectionSummary:
+  ai_description: >-
+    ### General Description
+
+    The **Get Connection Summary** action retrieves a summary of network connections
+    for a specific service from the Vorlon platform. This action is primarily used
+    for visibility into how services are interacting with secrets and other instances,
+    providing high-level telemetry about observed or detected connections.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Service ID** | String | Yes | The ID (typically service name or app name)
+    of the service to retrieve the connection summary for. |
+
+    | **Instance ID** | String | No | If provided, filters the results by a specific
+    instance ID of the service. |
+
+    | **From** | String | No | Start time filter in the format `YYYY-MM-DDTHH:MM:SS`.
+    If provided, it is converted to epoch time for the API request. |
+
+    | **To** | String | No | End time filter in the format `YYYY-MM-DDTHH:MM:SS`.
+    If provided, it is converted to epoch time for the API request. |
+
+    | **Type** | DDL | No | Specifies the type of connection to filter for. Options
+    are `observed` (default) or `detected`. |
+
+    | **Secret IDs** | String | No | A comma-separated list of secret IDs to filter
+    the connection summary. |
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it relies entirely on the provided **Service
+    ID** parameter.
+
+    - Time parameters must strictly follow the `YYYY-MM-DDTHH:MM:SS` format (e.g.,
+    `2023-10-27T10:00:00`) to avoid execution failure.
+
+
+    ### Flow Description
+
+    1.  **Authentication**: The action initializes the Vorlon Manager, obtaining an
+    OAuth2 bearer token using the configured Client ID and Client Secret.
+
+    2.  **Parameter Extraction**: Retrieves the Service ID, filter parameters (Instance,
+    Secret IDs, Type), and time range from the action configuration.
+
+    3.  **Data Processing**: Converts the `From` and `To` timestamp strings into Unix
+    epoch format and cleans whitespace from the `Secret IDs` list.
+
+    4.  **API Interaction**: Executes a GET request to the `/rest/v1/connections/summary/{service}`
+    endpoint with the provided filters as query parameters.
+
+    5.  **Output**: Returns the raw JSON connection summary from Vorlon and populates
+    the action result in Google SecOps.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -72,13 +223,11 @@ GetConnectionSummary:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves a summary of network connections for a specific service
-      ID from Vorlon. The action supports filtering by Instance ID, time range (From/To),
-      connection type (observed or detected), and specific Secret IDs. It returns
-      the connection metadata in JSON format for analysis.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -94,9 +243,68 @@ GetConnectionSummary:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetConnections:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves connection details for a specific service ID from the Vorlon
+    platform. It allows analysts to gather data about how a specific service (typically
+    an application or app name) is interacting with other resources, including associated
+    secrets and instance-level details. The results are returned as a structured JSON
+    object for further analysis or investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Service ID** | string | Yes | The Service ID (typically service name or app
+    name) to retrieve connections for. |
+
+    | **Instance ID** | string | No | If provided, filters the results by the specific
+    instance ID of the service. |
+
+    | **From** | string | No | If provided, filters by start time in the format "YYYY-MM-DDTHH:MM:SS"
+    (e.g., 2023-01-01T00:00:00). |
+
+    | **To** | string | No | If provided, filters by end time in the format "YYYY-MM-DDTHH:MM:SS"
+    (e.g., 2023-12-31T23:59:59). |
+
+    | **Secret IDs** | string | No | A comma-separated list of secret IDs to filter
+    the connections. |
+
+    | **Limit** | string | No | If provided, limits the number of results returned.
+    Default is 100. |
+
+
+    ### Additional Notes
+
+    - Time parameters must strictly adhere to the "YYYY-MM-DDTHH:MM:SS" format; otherwise,
+    the action will fail during the epoch conversion process.
+
+    - The **Service ID** is a required parameter and serves as the primary identifier
+    for the API request.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action extracts the API configuration (Root,
+    Client ID, Secret) and all user-provided action parameters.
+
+    2. **Manager Initialization:** A `VorlonManager` instance is created, which handles
+    authentication and API token management.
+
+    3. **Data Preparation:** The action cleans the `Secret IDs` (removing extra spaces),
+    validates and converts `From`/`To` time strings into Unix epoch timestamps, and
+    converts the `Limit` to an integer.
+
+    4. **API Request:** The manager performs a `GET` request to the `/rest/v1/connections/{service}`
+    endpoint with the specified filters.
+
+    5. **Result Output:** The retrieved connection data is added as a JSON result
+    to the action, and a success message is displayed.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -104,13 +312,11 @@ GetConnections:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves network connection data from the Vorlon server for a specific
-      Service ID. This action allows for granular filtering using Instance ID, specific
-      Secret IDs, and a defined time range (From/To). The fetched connection information
-      is returned as a JSON result for use in subsequent playbook steps.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -126,9 +332,57 @@ GetConnections:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetLinkedAlerts:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves alerts from the Vorlon platform that are linked to a specific
+    Alert ID. Alerts are considered 'linked' if they share the same secret ID and
+    belong to the same alert group. This is useful for identifying related security
+    events and understanding the broader context of an incident.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert for which linked
+    alerts should be retrieved. |
+
+    | Alert Status | DDL | No | Filters the results by the status of the linked alerts.
+    Options include: `open`, `dismissed`, and `resolved`. |
+
+    | Page | String | No | Specifies the page number for paginated results. |
+
+    | Limit | String | No | Defines the maximum number of linked alerts to return.
+    Defaults to 100 if not specified. |
+
+
+    ### Additional Notes
+
+    - This action is parameter-based and does not automatically iterate over entities
+    in the current scope.
+
+    - The action expects valid API credentials (API Root, Client ID, Client Secret)
+    configured in the integration settings.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts connection settings and the provided
+    user parameters (Alert ID, Status, Page, Limit).
+
+    2. **Authentication**: The action initializes the `VorlonManager` which handles
+    OAuth2 token retrieval using the Client ID and Client Secret.
+
+    3. **Data Retrieval**: It performs a GET request to the Vorlon `/rest/v1/alerts/linked/`
+    endpoint using the specified Alert ID and filter parameters.
+
+    4. **Completion**: The resulting linked alerts data is attached to the action
+    as a JSON result, which can be utilized by subsequent playbook steps.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -136,14 +390,11 @@ GetLinkedAlerts:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves alerts linked to a specific Alert ID from the Vorlon server.
-      Linked alerts are defined as those sharing the same secret ID and alert group.
-      This action allows users to filter results by alert status (open, dismissed,
-      or resolved) and supports pagination through page and limit parameters. The
-      retrieved data is returned as a JSON result for further use in playbooks.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -159,9 +410,54 @@ GetLinkedAlerts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetSecrets:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information about secrets from the Vorlon platform. This action
+    allows security teams to programmatically fetch the configuration and metadata
+    of secrets either by targeting specific secret identifiers or by querying all
+    secrets associated with a particular service ID.
+
+
+    ### Parameters
+
+    | Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Service ID** | String | No | Typically the service name. Used to retrieve
+    all secrets belonging to a specific service. |
+
+    | **Secret IDs** | String | No | A comma-separated list of specific secret IDs
+    to fetch details for. |
+
+
+    ### Additional Notes
+
+    - **Logic Constraint:** The action enforces an 'exclusive or' logic. You must
+    provide either the `Secret IDs` or the `Service ID`. Providing both or neither
+    will result in an action failure.
+
+    - **Output:** The result is returned as a JSON object containing the secret details.
+
+
+    ### Flow Description
+
+    1. **Setup:** Extracts API credentials (API Root, Client ID, Client Secret) from
+    the integration settings and retrieves user-provided parameters.
+
+    2. **Manager Initialization:** Initializes the VorlonManager which manages OAuth2
+    token authentication and API communication.
+
+    3. **Validation:** Verifies that exactly one of the parameters (`Secret IDs` or
+    `Service ID`) is populated.
+
+    4. **API Call:** Executes a GET request to the `/rest/v1/secrets` endpoint with
+    the relevant query parameters.
+
+    5. **Finalization:** The retrieved secret data is added as a JSON result to the
+    action, and the execution is marked as completed.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -169,16 +465,11 @@ GetSecrets:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves detailed information and metadata for specific secrets
-      from Vorlon. The action allows users to fetch data by providing either a comma-separated
-      list of **Secret IDs** or a specific **Service ID**. It interacts with the Vorlon
-      API via a GET request to the `/rest/v1/secrets` endpoint and outputs the retrieved
-      secret details as a JSON result. This action is primarily used for gathering
-      context about credentials or configurations associated with services during
-      security orchestration workflows.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -194,9 +485,32 @@ GetSecrets:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: "### General Description\nThe **Ping** action is a utility tool\
+    \ designed to verify the connectivity between Google SecOps and the **Vorlon**\
+    \ instance. It ensures that the integration is correctly configured and that the\
+    \ provided credentials have the necessary permissions to interact with the Vorlon\
+    \ API. This is typically used during initial setup or troubleshooting to confirm\
+    \ that the network path and authentication are functional.\n\n### Parameters Description\n\
+    This action does not have any specific action parameters. It relies entirely on\
+    \ the **Integration Configuration** parameters:\n\n| Parameter Name | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| API Root | String | Yes |\
+    \ The base URL of the Vorlon instance API. |\n| Client ID | String | Yes | The\
+    \ Client ID used for OAuth2 authentication. |\n| Client Secret | String | Yes\
+    \ | The Client Secret used for OAuth2 authentication. |\n\n### Additional Notes\n\
+    * The action performs an authentication handshake (retrieving an access token)\
+    \ before attempting the connectivity test.\n* If the connectivity test fails,\
+    \ the action will return a failure status along with the specific error message\
+    \ retrieved from the Vorlon manager or the network stack.\n\n### Flow Description\n\
+    1.  **Initialization**: The action extracts the global configuration parameters\
+    \ (API Root, Client ID, Client Secret).\n2.  **Authentication**: It initializes\
+    \ the `VorlonManager`, which automatically attempts to retrieve a Bearer token\
+    \ using the provided credentials.\n3.  **Connectivity Test**: The manager executes\
+    \ a `GET` request to the `/rest/v1/services` endpoint of the Vorlon API.\n4. \
+    \ **Result Handling**: \n    *   If the request is successful (HTTP 200), the\
+    \ action completes with a success message.\n    *   If any exception occurs (e.g.,\
+    \ authentication failure, timeout, or invalid URL), the action catches the error\
+    \ and reports an execution failure."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -204,14 +518,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests connectivity with a Vorlon instance to verify that the provided
-      credentials and API Root are correct. The action first authenticates by requesting
-      an OAuth2 access token and then validates the connection by performing a GET
-      request to the Vorlon services endpoint. It returns a success message if the
-      connection is established or an error message if it fails.
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -227,9 +538,53 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 UpdateAlert:
+  ai_description: >-
+    ### General Description
+
+    The **Update Alert** action allows users to modify the properties of an existing
+    alert within the Vorlon platform. This is typically used to change an alert's
+    status (e.g., from 'open' to 'dismissed') or to apply changes to linked alerts.
+    The action interacts with the Vorlon API via a PUT request, providing a flexible
+    way to manage alert lifecycles directly from Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Alert Object** | String | Yes | A JSON-formatted string containing the update
+    details. It must include the `alert_id`. Other common fields include `new_status`
+    and `apply_to_linked_alerts`. |
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action retrieves the connection configuration
+    (API Root, Client ID, and Client Secret) and the `Alert Object` parameter.
+
+    2.  **Authentication:** The `VorlonManager` initializes and obtains a Bearer token
+    using the provided credentials.
+
+    3.  **Data Validation:** The action attempts to parse the `Alert Object` string
+    into a valid JSON dictionary.
+
+    4.  **API Interaction:** A `PUT` request is sent to the `/rest/v1/alerts/update`
+    endpoint with the JSON payload.
+
+    5.  **Result Processing:** The response from the Vorlon server (containing the
+    updated alert details) is added to the action's JSON results.
+
+    6.  **Completion:** The action concludes by reporting success or failure based
+    on the API response.
+
+
+    ### Additional Notes
+
+    *   The **Alert Object** must be a strictly valid JSON string. If the string is
+    malformed, the action will fail during the parsing stage before reaching the API.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -237,14 +592,13 @@ UpdateAlert:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Updates an alert's properties on the Vorlon server. This action takes
-      a JSON-formatted string containing alert details (such as alert_id, new_status,
-      and apply_to_linked_alerts) and submits a PUT request to the Vorlon API to modify
-      the alert's state.
-    external_data_mutation_explanation: Updates the status and metadata of an alert
-      on the Vorlon server via a PUT request.
-    fetches_data: false
+    external_data_mutation_explanation: >-
+      This action performs a PUT request to the Vorlon API to update the state, status,
+      or configuration of an alert on the remote server.
+    fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -260,5 +614,3 @@ UpdateAlert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

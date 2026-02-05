@@ -1,4 +1,66 @@
 AssignToGroup:
+  ai_description: >-
+    ### General Description
+
+    Adds computers to a specified computer group in Jamf Pro. This containment action
+    enables administrators to manage group memberships in bulk by identifying devices
+    through multiple methods: computer IDs, computer names, or serial numbers. It
+    interacts with the Jamf Pro Classic API to perform the updates.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Group ID | String | Yes | The ID of the target computer group in Jamf Pro to
+    which the computers will be added. |
+
+    | Computer IDs | String | No | A comma-separated list of Jamf computer IDs (e.g.,
+    "101, 102"). |
+
+    | Computer Names | String | No | A comma-separated list of computer names (e.g.,
+    "MacBook-Admin"). Warning: Names are not unique in Jamf; the API will act on the
+    first match found. |
+
+    | Computer Serial Numbers | String | No | A comma-separated list of hardware serial
+    numbers (e.g., "C02XXXXX, C02YYYYY"). |
+
+
+    ### Additional Notes
+
+    - **Mandatory Requirements:** While individual computer identifier parameters
+    are marked as non-mandatory in the configuration, the action logic requires that
+    at least one of the three (Computer IDs, Computer Names, or Computer Serial Numbers)
+    is provided with a value.
+
+    - **API Protocol:** This action utilizes the Jamf Classic API and communicates
+    using XML payloads.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves Jamf Pro connection details (API Root, Client
+    ID, Secret) and action parameters from the environment.
+
+    2. **Validation:** Checks that a Group ID is provided and that at least one computer
+    identifier parameter contains data. It then parses the comma-separated strings
+    into lists.
+
+    3. **Authentication:** Initializes the Jamf Manager and retrieves an OAuth2 access
+    token from the Jamf Pro server.
+
+    4. **Payload Construction:** Converts the lists of IDs, names, and serial numbers
+    into a properly formatted XML structure required by the Jamf Classic API's `computer_additions`
+    schema.
+
+    5. **External Mutation:** Sends a PUT request to the `/JSSResource/computergroups/id/{id}`
+    endpoint to update the group membership.
+
+    6. **Result Reporting:** Parses the XML response to determine the group name and
+    the number of computers processed, then returns a JSON result and success message
+    to the Google SecOps action interface.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,16 +68,13 @@ AssignToGroup:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Assigns computers to a specific computer group in Jamf Pro using
-      identifiers such as computer IDs, names, or serial numbers. The action supports
-      bulk operations by processing comma-separated lists and performs a state-changing
-      update to the computer group membership list via a PUT request to the Jamf Pro
-      Classic API. It validates input identifiers and returns a summary of processed
-      devices.
-    external_data_mutation_explanation: Updates the membership list of a computer
-      group in Jamf Pro by adding specified computers through an API PUT request.
+    external_data_mutation_explanation: >-
+      Updates computer group membership in Jamf Pro by adding specified computer records
+      to a group using a PUT request to the Classic API.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -31,9 +90,35 @@ AssignToGroup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 GetComputerInventory:
+  ai_description: "### General Description\nRetrieves paginated Computer Inventory\
+    \ records from Jamf Pro. This action allows users to search for specific devices\
+    \ using various filter criteria and optimize data retrieval by selecting specific\
+    \ device sections (such as hardware, security, or applications). It supports custom\
+    \ sorting and pagination for handling large datasets.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Page** | String | No | The page number to retrieve. Defaults to '0'. |\n|\
+    \ **Page Size** | String | No | The number of records to return per page. Defaults\
+    \ to '100' (maximum 2000). |\n| **Filter** | DDL | Yes | The criteria field used\
+    \ to filter the inventory (e.g., `general.name`, `udid`, `userAndLocation.email`).\
+    \ |\n| **Filter Value** | String | Yes | The specific value to search for within\
+    \ the chosen filter field. |\n| **Section** | Multi-choice | No | Defines which\
+    \ data sections to include in the response (e.g., `GENERAL`, `HARDWARE`, `SECURITY`).\
+    \ Selecting 'ALL' retrieves all available data. |\n| **Sort** | Multi-choice |\
+    \ No | Specifies the sorting field and direction (e.g., `general.name:asc`, `udid:desc`).\
+    \ |\n\n### Flow Description\n1. **Initialization**: Validates connection parameters\
+    \ and authenticates with Jamf Pro using OAuth 2.0.\n2. **Parameter Processing**:\
+    \ Converts pagination, sorting, and filtering inputs into the format required\
+    \ by the Jamf Pro API. \n3. **Section Determination**: Evaluates the requested\
+    \ sections. If a filter field is provided but its corresponding data section isn't\
+    \ selected, the action automatically adds the required section to ensure the filter\
+    \ works correctly.\n4. **Data Retrieval**: Executes a GET request to the `/api/v1/computers-inventory`\
+    \ endpoint with the constructed query parameters.\n5. **Output**: Returns the\
+    \ inventory data in JSON format, providing a summary of the total count and records\
+    \ retrieved.\n\n### Additional Notes\n- If `Page` or `Page Size` are not valid\
+    \ integers, the action will fail.\n- The action intelligently maps filter fields\
+    \ (like `udid`) to their parent sections (like `HARDWARE`) to ensure the external\
+    \ API call succeeds even if the user didn't explicitly select that section."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -41,16 +126,11 @@ GetComputerInventory:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves paginated computer inventory records from Jamf Pro with
-      support for comprehensive filtering, sorting, and section-based data selection.
-      This action allows security teams to fetch detailed asset information, including
-      hardware specifications, installed applications, security settings, and user
-      location data. It provides the ability to filter results by name, serial number,
-      UDID, username, or email, making it an essential tool for asset enrichment and
-      vulnerability management within the SOAR environment.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -66,9 +146,44 @@ GetComputerInventory:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetDeviceGroupMembership:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed membership information for a specific Computer
+    Group from Jamf Pro. It is designed to fetch a list of all devices associated
+    with a group, including their basic information, and works with both static and
+    smart computer groups. This is useful for identifying the scope of a group or
+    verifying which devices are subject to specific management policies.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Group ID | String | Yes | The unique identifier (ID) of the computer group in
+    Jamf Pro for which you want to retrieve membership data. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Jamf Manager using the provided
+    API Root, Client ID, and Client Secret from the integration configuration.
+
+    2. **Authentication**: It verifies the current access token and retrieves a new
+    one from the Jamf Pro OAuth2 endpoint if necessary.
+
+    3. **Data Retrieval**: The action makes a GET request to the Jamf Pro Classic
+    API (`/JSSResource/computergroups/id/{id}`) to fetch the membership details for
+    the specified Group ID.
+
+    4. **Processing**: It extracts the list of computers and calculates the total
+    member count from the API response.
+
+    5. **Output**: The action returns a JSON object containing the `group_id`, `member_count`,
+    and the raw `membership_data`, and provides a summary message to the case wall.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -76,13 +191,11 @@ GetDeviceGroupMembership:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves membership information for a specific Computer Group (static
-      or smart) from Jamf Pro using its Group ID. This action fetches the full list
-      of member devices and their basic details, returning the total member count
-      and the raw membership data as a JSON result for further orchestration or analysis.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -98,9 +211,54 @@ GetDeviceGroupMembership:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetDeviceInformation:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed management, hardware, and operating system information for
+    a specific computer from Jamf Pro using its unique ID. This action is designed
+    to provide security analysts with deep technical context regarding a managed asset,
+    including its disk encryption status, security posture, installed applications,
+    and hardware specifications.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Computer ID | The unique identifier of the computer in Jamf Pro to retrieve
+    information for. | String | Yes |
+
+
+    ### Additional Notes
+
+    - This action does not process Siemplify/SecOps entities; it relies entirely on
+    the provided 'Computer ID' parameter.
+
+    - The action utilizes internal data cleaning logic to ensure that complex characters
+    within Jamf inventory (like certificate strings or extension attributes) do not
+    break the SOAR's JSON processing.
+
+
+    ### Flow Description
+
+    1. **Setup**: The action initializes the connection to Jamf Pro using the API
+    Root and client credentials provided in the integration configuration.
+
+    2. **Parameter Extraction**: It retrieves the 'Computer ID' input provided by
+    the user or playbook.
+
+    3. **API Request**: The Jamf Manager performs a GET request to the `/api/v1/computers-inventory-detail/{id}`
+    endpoint to fetch the device's full inventory data.
+
+    4. **Data Sanitization**: The retrieved JSON data is recursively cleaned to properly
+    escape special characters and control tokens.
+
+    5. **Execution Outcome**: If a device is found, the detailed information is appended
+    to the action results as a JSON object. If no device is found, the action completes
+    with an informative failure message.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -108,15 +266,11 @@ GetDeviceInformation:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves comprehensive information for a specific computer from
-      Jamf Pro using its unique Computer ID. This action fetches general details,
-      hardware specifications, operating system information, and user/location data
-      from the Jamf Pro inventory. It utilizes the Jamf Pro API v1 computers-inventory-detail
-      endpoint to return a detailed JSON structure containing the device profile,
-      which can be used for enrichment or assessment in security workflows.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -132,9 +286,63 @@ GetDeviceInformation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetMobileDeviceInventory:
+  ai_description: >-
+    ### General Description
+
+    Retrieves mobile device inventory data from Jamf Pro using the v2 API. This action
+    supports pagination, sorting, and specific data section filtering (e.g., hardware,
+    security, applications) to optimize retrieval. It allows users to search for specific
+    devices based on identifiers like serial numbers, UDIDs, usernames, or email addresses.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Page** | String | No | The page number to retrieve. Defaults to 0. |
+
+    | **Page Size** | String | No | The number of records to return per page. Defaults
+    to 100. |
+
+    | **Filter** | DDL | Yes | The field to filter by (serialNumber, udid, username,
+    emailAddress). |
+
+    | **Filter Value** | String | Yes | The value for the selected filter field. |
+
+    | **Section** | DDL | No | Specific data categories to include (e.g., HARDWARE,
+    SECURITY). Defaults to 'ALL'. |
+
+    | **Sort** | Multi-Choice | No | Defines sorting order for results (e.g., 'displayName:asc').
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the Jamf Pro API using Client ID and Secret
+    to obtain an OAuth token.
+
+    2. **Parameter Extraction**: Retrieves and validates the page number, page size,
+    filter field, and target value.
+
+    3. **Logic Handling**: If a specific filter is provided (like serialNumber), the
+    action automatically ensures the relevant data section (like HARDWARE) is requested
+    from the API if it wasn't already included.
+
+    4. **Data Retrieval**: Executes a GET request to the `/api/v2/mobile-devices/detail`
+    endpoint with the specified query parameters.
+
+    5. **Result Processing**: Parses the inventory data, cleans JSON string formatting
+    to prevent display issues, and attaches the results to the action output.
+
+
+    ### Additional Notes
+
+    - Either the 'ALL' section or a list of specific sections can be provided. If
+    the user filters by a field not in the requested sections, the script dynamically
+    adds the necessary section to ensure the filter works correctly.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -142,15 +350,11 @@ GetMobileDeviceInventory:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves mobile device inventory data from Jamf Pro using the v2
-      API. This action supports pagination, sorting, and advanced filtering by fields
-      such as serial number, UDID, username, or email address. Users can specify which
-      data sections to include (e.g., Hardware, Security, Applications, Network) to
-      optimize the response and data retrieval. The action returns a structured JSON
-      object containing the inventory data for the matched devices.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -166,9 +370,61 @@ GetMobileDeviceInventory:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ListComputerGroups:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a comprehensive list of all computer groups configured within a Jamf
+    Pro instance, including both static and smart groups. This action is primarily
+    used for administrative visibility and identifying available logical groupings
+    of devices for targeting in subsequent workflow steps.
+
+
+    ### Parameters Description
+
+    This action does not require any action-specific parameters. It relies solely
+    on the integration's configuration parameters:
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Jamf Pro API Root | String | Yes | The base URL of the Jamf Pro server (e.g.,
+    `https://yourserver.jamfcloud.com`). |
+
+    | Jamf Pro Client API ID | String | Yes | The Client ID used for OAuth authentication.
+    |
+
+    | Jamf Pro Client API Secret | String | Yes | The Client Secret used for OAuth
+    authentication. |
+
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate of the Jamf
+    Pro server. Defaults to `true`. |
+
+
+    ### Additional Notes
+
+    * The action returns the results as a JSON object containing an array of computer
+    groups.
+
+    * If no groups are found, the action will still complete successfully but return
+    an empty list.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the `JamfManager` which obtains
+    an OAuth access token using the provided Client ID and Secret.
+
+    2. **Data Retrieval**: It performs a GET request to the `/api/v1/computer-groups`
+    endpoint to fetch all available groups.
+
+    3. **Result Processing**: The retrieved list of groups is encapsulated into a
+    JSON structure.
+
+    4. **Output**: The JSON results are added to the action execution result for use
+    in subsequent playbook tasks.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -176,13 +432,11 @@ ListComputerGroups:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Lists all computer groups, including both static and smart groups,
-      configured in a Jamf Pro environment. The action authenticates with the Jamf
-      Pro API and retrieves group identifiers and names, returning the data in a structured
-      JSON format for use in downstream playbook logic.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -198,9 +452,40 @@ ListComputerGroups:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: "### General Description\nVerifies connectivity and authentication\
+    \ to the Jamf Pro API and optionally the Jamf Protect API. This action is primarily\
+    \ used to ensure that the integration configuration parameters (such as API roots,\
+    \ Client IDs, and Secrets) are correct and that the Google SecOps environment\
+    \ can successfully communicate with the Jamf services.\n\n### Parameters Description\n\
+    This action utilizes the following configuration parameters from the integration\
+    \ settings:\n\n| Parameter Name | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| Jamf Pro API Root | String | Yes | The base URL of the Jamf\
+    \ Pro server (e.g., `https://yourserver.jamfcloud.com`). |\n| Jamf Pro Client\
+    \ API ID | String | Yes | The API Client ID used for Jamf Pro authentication.\
+    \ |\n| Jamf Pro Client API Secret | String | Yes | The API Client Secret used\
+    \ for Jamf Pro authentication. |\n| Verify SSL | Boolean | No | If enabled, the\
+    \ action will verify SSL certificates for API requests. Default is `True`. |\n\
+    | Jamf Protect API Root | String | No | The base URL of the Jamf Protect server.\
+    \ Required only if testing Jamf Protect connectivity. |\n| Jamf Protect Client\
+    \ API ID | String | No | The API Client ID for Jamf Protect. Required only if\
+    \ testing Jamf Protect connectivity. |\n| Jamf Protect Client API Secret | String\
+    \ | No | The API Client Secret for Jamf Protect. Required only if testing Jamf\
+    \ Protect connectivity. |\n\n### Additional Notes\n- To test Jamf Protect connectivity,\
+    \ all three Jamf Protect parameters (`Root`, `Client ID`, and `Secret`) must be\
+    \ provided. If any are missing, the action will skip testing the Protect API and\
+    \ only verify Jamf Pro.\n- The action performs actual authentication requests\
+    \ (POST to token endpoints) and basic GET requests (e.g., version check) to confirm\
+    \ end-to-end connectivity.\n\n### Flow Description\n1. **Parameter Extraction:**\
+    \ Retrieves Jamf Pro and Jamf Protect configuration settings.\n2. **Jamf Pro Connectivity\
+    \ Test:** \n    - Initializes the `JamfManager`.\n    - Attempts to retrieve an\
+    \ OAuth access token from the Jamf Pro token endpoint.\n    - Executes a GET request\
+    \ to the `jamf-pro-version` endpoint to verify connectivity and permissions.\n\
+    3. **Jamf Protect Connectivity Test (Optional):**\n    - If Protect parameters\
+    \ are provided, initializes `JamfProtectManager`.\n    - Attempts to retrieve\
+    \ an access token from the Jamf Protect authentication endpoint.\n4. **Final Result:**\
+    \ Returns a combined status message indicating whether the connection to Jamf\
+    \ Pro (and Jamf Protect, if configured) was successful."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -208,14 +493,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests the connectivity to Jamf Pro and optionally Jamf Protect APIs.
-      This action verifies that the integration can successfully authenticate and
-      communicate with the Jamf Pro server using the provided Client API ID and Secret.
-      If Jamf Protect configuration is provided, it also validates connectivity to
-      the Jamf Protect GraphQL API. It is used primarily for configuration validation.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -231,9 +513,60 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 RemoteLockManagedDevice:
+  ai_description: >-
+    ### General Description
+
+    Remotely locks a managed computer using Jamf Pro MDM commands. This action is
+    designed specifically for computers (macOS/Windows managed via Jamf Pro) rather
+    than mobile devices. It sends a `device_lock` command to the target system, which
+    immediately locks the device screen. To unlock the device, the end-user will need
+    to enter the 6-digit PIN provided during the action's execution.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Computer ID** | String | Yes | The unique identifier of the managed computer
+    in Jamf Pro. |
+
+    | **PIN** | String | Yes | A 6-digit PIN code required to unlock the device once
+    it is locked. |
+
+    | **Message** | String | No | A custom message to display on the locked screen
+    (e.g., 'This device has been locked by Security'). |
+
+    | **Phone Number** | String | No | A contact phone number to display on the locked
+    screen for recovery purposes. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to Jamf Pro API using the configured client credentials
+    to obtain a Bearer token.
+
+    2. **Device Discovery**: Retrieves device inventory details for the provided **Computer
+    ID** to extract its `managementId`.
+
+    3. **Command Initiation**: Sends a POST request to the Jamf Pro MDM commands endpoint
+    (`/api/v2/mdm/commands`) with the `DEVICE_LOCK` command type.
+
+    4. **Payload Construction**: Includes the 6-digit PIN and optional message/phone
+    number in the command payload.
+
+    5. **Verification**: Confirms with the Jamf Pro API that the command has been
+    successfully queued/initiated for the target device.
+
+
+    ### Additional Notes
+
+    Although the description in the metadata mentions the PIN is optional, the underlying
+    Python code and API manager treat the PIN as a mandatory 6-digit numeric string
+    for computer lock commands. Ensure the PIN is exactly 6 digits to avoid validation
+    errors.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -241,17 +574,13 @@ RemoteLockManagedDevice:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Remotely locks a managed computer using Jamf Pro MDM commands. The
-      action requires a specific Computer ID and a 6-digit PIN for unlocking the device.
-      It optionally allows for a custom message and a phone number to be displayed
-      on the screen of the locked device. The process involves retrieving the device's
-      management identification and then issuing a DEVICE_LOCK MDM command to the
-      Jamf Pro API to secure the hardware.
-    external_data_mutation_explanation: Initiates a DEVICE_LOCK MDM command on a managed
-      computer via Jamf Pro, changing the device's operational state to prevent unauthorized
-      access.
+    external_data_mutation_explanation: >-
+      Sends a 'device_lock' MDM command to the Jamf Pro API, which changes the state
+      of the physical managed computer to a locked state.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -267,9 +596,59 @@ RemoteLockManagedDevice:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 RemoteLockMobileDevice:
+  ai_description: >-
+    ### General Description
+
+    The **Remote Lock Mobile Device** action allows security analysts to remotely
+    lock a managed mobile device (such as an iPhone or iPad) via the Jamf Pro MDM
+    platform. This is a containment action used to secure a device that is lost, stolen,
+    or involved in a security incident. The action sends a specific MDM command that
+    immediately locks the screen of the device.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Mobile Device ID** | String | Yes | The unique identifier of the mobile device
+    in Jamf Pro. |
+
+    | **Message** | String | No | An optional custom message to display on the locked
+    screen (e.g., 'Property of Company X'). |
+
+    | **Phone Number** | String | No | An optional contact phone number to display
+    on the lock screen for recovery. |
+
+
+    ### Flow Description
+
+    1. **Credential Retrieval:** The action starts by fetching the Jamf Pro API credentials
+    and configuration parameters from the integration settings.
+
+    2. **Authentication:** It establishes a session with Jamf Pro and retrieves a
+    Bearer access token using OAuth 2.0 client credentials.
+
+    3. **Management ID Lookup:** Before locking, the action calls the Jamf API to
+    retrieve the device's `managementId` using the provided `Mobile Device ID`. This
+    ID is required for sending MDM commands.
+
+    4. **MDM Command Dispatch:** It sends a `DEVICE_LOCK` command to the Jamf Pro
+    MDM command endpoint, including the optional message and phone number if provided.
+
+    5. **Completion:** The action reports whether the command was successfully initiated
+    and provides the raw API response for auditing.
+
+
+    ### Additional Notes
+
+    * This action does not rely on Google SecOps entities; it uses a direct input
+    parameter for the device ID.
+
+    * The device must be managed by Jamf Pro and have a valid MDM profile for the
+    command to succeed.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -277,16 +656,13 @@ RemoteLockMobileDevice:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Remotely locks a managed mobile device via Jamf Pro using MDM commands.
-      The action identifies the device by its Mobile Device ID, retrieves its corresponding
-      management ID from the Jamf inventory details, and issues a 'DEVICE_LOCK' command.
-      It optionally supports displaying a custom message and a contact phone number
-      on the device's lock screen to assist in device recovery or user communication.
-    external_data_mutation_explanation: Sends a 'DEVICE_LOCK' MDM command to the Jamf
-      Pro API, which changes the operational state of the target mobile device by
-      locking its screen.
+    external_data_mutation_explanation: >-
+      Initiates a 'DEVICE_LOCK' MDM command in Jamf Pro, which changes the physical
+      state of the target mobile device by locking its user interface.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -302,9 +678,62 @@ RemoteLockMobileDevice:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 UpdateExtensionAttribute:
+  ai_description: >-
+    ### General Description
+
+    Updates a single extension attribute for a specific computer in Jamf Pro using
+    the API. This action allows administrators to programmatically set or modify custom
+    metadata (extension attributes) stored in Jamf inventory records, supporting both
+    single and multi-value attributes.
+
+
+    ### Parameters Description
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Computer ID | string | Yes | The unique identifier of the computer record in
+    Jamf Pro that needs to be updated. |
+
+    | Extension Attribute Name | string | Yes | The human-readable name of the extension
+    attribute. The action will automatically resolve this name to its corresponding
+    definition ID. |
+
+    | Values | string | Yes | A comma-separated list of values to set for the attribute.
+    For single-value attributes, provide one value; for multi-value attributes, provide
+    multiple values separated by commas. |
+
+
+    ### Additional Notes
+
+    - The action performs a lookup of all available extension attributes to match
+    the provided name (case-insensitive) to an ID before performing the update.
+
+    - The update is performed via a `PATCH` request to the computer inventory detail
+    endpoint.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts API configuration and input parameters
+    (`Computer ID`, `Extension Attribute Name`, and `Values`).
+
+    2. **Value Parsing**: Converts the comma-separated `Values` string into a cleaned
+    list of strings.
+
+    3. **Attribute Resolution**: Calls the Jamf Pro API to list all computer extension
+    attributes and finds the ID (`definitionId`) associated with the provided `Extension
+    Attribute Name`.
+
+    4. **Update Execution**: Sends a PATCH request to the Jamf Pro API for the specified
+    `Computer ID`, updating the `extensionAttributes` field with the new values.
+
+    5. **Result Processing**: Captures the API response, extracts computer details
+    (like name and serial number) for the output message, and returns the full JSON
+    result.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -312,17 +741,13 @@ UpdateExtensionAttribute:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Updates a specific extension attribute for a computer in Jamf Pro
-      using the API. This action takes a computer ID, an extension attribute name,
-      and a list of values (comma-separated). It first retrieves the full list of
-      extension attributes from Jamf Pro to resolve the provided name to its corresponding
-      definition ID, then performs a PATCH request to update the computer's inventory
-      details with the new values. This is typically used to manage device metadata
-      like department, ownership, or custom status tags.
-    external_data_mutation_explanation: Modifies the computer's extension attribute
-      values within the Jamf Pro inventory records via a PATCH request.
+    external_data_mutation_explanation: >-
+      Updates the inventory record of a computer in Jamf Pro by modifying the values
+      of a specified extension attribute via a PATCH request.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -338,9 +763,62 @@ UpdateExtensionAttribute:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 UpdateProtectPreventList:
+  ai_description: >-
+    Updates an existing prevent list in Jamf Protect to block specified indicators
+    such as file hashes, Team IDs, or Signing IDs. This action retrieves current list
+    configurations, merges new indicators and tags with existing ones, and performs
+    a GraphQL mutation to update the security policy on the Jamf Protect server.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Prevent List Name | string | Yes | The exact name of the existing prevent list
+    to update. |
+
+    | Prevent List Description | string | No | An optional updated description for
+    the prevent list. |
+
+    | Prevent Type | ddl | Yes | The category of indicators being added (e.g., File
+    Hash, Team ID, Signing ID). This must match the existing list's type. |
+
+    | Prevent List Data | string | Yes | A comma-separated string of indicators to
+    be added to the list. |
+
+    | Prevent List Tags | string | No | A comma-separated string of tags to be appended
+    to the prevent list. |
+
+
+    ### Flow Description
+
+    1. **Authentication:** Establishes a connection to the Jamf Protect API using
+    client credentials to obtain an access token.
+
+    2. **List Retrieval:** Fetches all existing prevent lists to locate the specific
+    list by name.
+
+    3. **Validation:** Verifies that the specified list exists and that the provided
+    'Prevent Type' matches the existing list configuration. It also validates the
+    format of the input data (e.g., checking for valid SHA-1/SHA-256 hashes).
+
+    4. **Data Merging:** Merges the new indicators and tags with the current ones,
+    performing deduplication to ensure unique entries.
+
+    5. **Mutation:** Executes a GraphQL mutation to update the prevent list in the
+    Jamf Protect environment with the updated values and metadata.
+
+
+    ### Additional Notes
+
+    - This action is strictly for updating existing lists; it cannot create new lists
+    or change the 'Type' of an existing list.
+
+    - At least one valid value and one tag (either new or existing) must be present
+    for the update to proceed.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -348,17 +826,13 @@ UpdateProtectPreventList:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Updates an existing prevent list in Jamf Protect to block specific
-      security indicators such as file hashes (SHA-1/SHA-256), Apple Team IDs, Signing
-      IDs, or Code Directory Hashes. The action retrieves existing prevent lists to
-      identify the target by name, validates the input data against the selected prevent
-      type, merges new values and tags with existing ones to prevent duplicates, and
-      executes a GraphQL mutation to apply the changes. This is primarily used for
-      automated containment and threat blocking.
-    external_data_mutation_explanation: Updates the configuration of an existing prevent
-      list in Jamf Protect by adding new blocklist indicators and tags.
+    external_data_mutation_explanation: >-
+      Updates the configuration of an existing prevent list in Jamf Protect by adding
+      new indicators and tags via a GraphQL mutation.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -374,9 +848,67 @@ UpdateProtectPreventList:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 WipeManagedDevice:
+  ai_description: >-
+    Remotely erases or wipes a Jamf-managed computer using the Jamf Pro ERASE_DEVICE
+    MDM command. This action is specifically designed for computers and initiates
+    a complete wipe of the target system based on provided configurations.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Computer ID | String | Yes | The ID of the computer within Jamf Pro to be erased.
+    |
+
+    | PIN | String | Yes | A 6-digit PIN required for the erase command. Must be numeric.
+    |
+
+    | Obliteration Behavior | DDL | Yes | Determines how the device data is obliterated
+    during the erase process. Options include: Default, DoNotObliterate, ObliterateWithWarning,
+    Always. |
+
+    | Return to Service | Boolean | Yes | If enabled, the device will attempt to return
+    to a managed state after the erase process completes. |
+
+    | MDM Profile Data | String | No | Base64-encoded MDM profile data used if 'Return
+    to Service' is enabled. |
+
+    | WiFi Profile Data | String | No | Base64-encoded WiFi profile data used if 'Return
+    to Service' is enabled. |
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action initializes the Jamf Manager and extracts connection
+    configurations and action parameters.
+
+    2. **Authentication**: Authenticates with Jamf Pro using the provided Client API
+    ID and Secret to obtain a bearer token.
+
+    3. **Management Identification**: Fetches detailed device information for the
+    specified Computer ID to retrieve the required `managementId` used in MDM command
+    routing.
+
+    4. **Execution**: Sends the `ERASE_DEVICE` command to the Jamf Pro API (`/api/v2/mdm/commands`)
+    including configuration for PIN, obliteration behavior, and optional 'Return to
+    Service' profile data.
+
+    5. **Completion**: Processes the API response and logs the initiation of the erase
+    command to the action result.
+
+
+    ### Additional Notes
+
+
+    - If the 'Return to Service' parameter is set to true, the Jamf API requires that
+    at least one of 'MDM Profile Data' or 'WiFi Profile Data' is provided; otherwise,
+    the action will fail during validation.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -384,16 +916,13 @@ WipeManagedDevice:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Remotely erases a managed computer using the Jamf Pro ERASE_DEVICE
-      MDM command. The action targets a specific computer by ID and supports configuration
-      for obliteration behavior, PIN protection, and return-to-service settings. It
-      fetches device management information to resolve the necessary management identifier
-      before issuing the wipe command to Jamf Pro. Results include command details
-      and the initiation status of the MDM command.
-    external_data_mutation_explanation: Executes an ERASE_DEVICE MDM command through
-      Jamf Pro to remotely wipe all data from a managed computer.
+    external_data_mutation_explanation: >-
+      Initiates an ERASE_DEVICE MDM command in Jamf Pro, which triggers a remote wipe/factory
+      reset of the target computer.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -409,9 +938,75 @@ WipeManagedDevice:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 WipeMobileDevice:
+  ai_description: >-
+    ### General Description
+
+    This action remotely erases or wipes a managed mobile device using the Jamf Pro
+    `ERASE_DEVICE` MDM command. It is designed as a containment measure to secure
+    lost, stolen, or compromised mobile assets. The action allows for granular control
+    over the wipe process, including options to preserve data plans for eSIM devices
+    and configure 'Return to Service' settings to automatically re-enroll the device
+    after erasure.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Mobile Device ID | String | Yes | The unique identifier of the mobile device
+    in Jamf Pro that needs to be erased. |
+
+    | Preserve Data Plan | Boolean | No | If true, preserves the data plan on devices
+    with eSIM functionality (iOS 11+). Default is false. |
+
+    | Disallow Proximity Setup | Boolean | No | If true, disables Proximity Setup
+    on the next reboot and skips the pane in the Setup Assistant. Default is false.
+    |
+
+    | Return to Service | Boolean | Yes | If true, enables the 'Return to Service'
+    feature which allows the device to automatically re-connect to Wi-Fi and re-enroll
+    in MDM after the wipe. |
+
+    | MDM Profile Data | String | No | Base64-encoded MDM profile data required for
+    the Return to Service feature. Used only if 'Return to Service' is enabled. |
+
+    | WiFi Profile Data | String | No | Base64-encoded WiFi profile data required
+    for the Return to Service feature. Used only if 'Return to Service' is enabled.
+    |
+
+    | Bootstrap Token | String | No | Base64-encoded bootstrap token for the device.
+    Used only if 'Return to Service' is enabled. |
+
+
+    ### Additional Notes
+
+    *   The 'Return to Service' feature requires the device to be on a supported OS
+    version and have valid profile data provided.
+
+    *   This action is highly destructive; once the command is acknowledged by the
+    device, all data will be unrecoverable unless backed up externally.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: Extracts configuration credentials (API Root, Client ID,
+    Secret) and action parameters.
+
+    2.  **Manager Setup**: Initializes the Jamf Pro Manager and handles authentication
+    to obtain an OAuth token.
+
+    3.  **Device Identification**: Queries the Jamf Pro API to retrieve the `managementId`
+    for the provided Mobile Device ID. This is a prerequisite for sending MDM commands.
+
+    4.  **Command Execution**: Sends a POST request to the Jamf Pro MDM commands endpoint
+    (`/api/v2/mdm/commands`) with the `ERASE_DEVICE` payload and specified configuration
+    flags.
+
+    5.  **Completion**: Returns the initiation status and command details to the Google
+    SecOps case wall and result JSON.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -419,17 +1014,13 @@ WipeMobileDevice:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Initiates a remote wipe (ERASE_DEVICE) command on a managed mobile
-      device using Jamf Pro. The action first retrieves the device's management details
-      and then sends an MDM command to perform a factory reset. It provides granular
-      control over the erasure process, including options to preserve eSIM data plans,
-      skip the proximity setup pane on reboot, and configure 'Return to Service' by
-      providing base64-encoded MDM profiles, WiFi profiles, and bootstrap tokens.
-    external_data_mutation_explanation: Initiates a remote wipe (ERASE_DEVICE) command
-      on a managed mobile device via the Jamf Pro API, resulting in a factory reset
-      of the target hardware.
+    external_data_mutation_explanation: >-
+      Initiates an 'ERASE_DEVICE' MDM command in Jamf Pro, which remotely wipes all
+      user data and settings from the target mobile device.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -445,5 +1036,3 @@ WipeMobileDevice:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

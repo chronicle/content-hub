@@ -1,4 +1,64 @@
 create_case:
+  ai_description: >-
+    ### General Description
+
+    This action creates a case or triggers a specific workflow in Torq by sending
+    a webhook request containing Google SecOps alert and case context. It is designed
+    to bridge the gap between SecOps detection and Torq orchestration, allowing for
+    automated incident response initiation. If configured with API credentials, the
+    action can poll the Torq Public API to retrieve the final output of the triggered
+    workflow execution.
+
+
+    ### Parameters Description
+
+    | Name | Description | Type | Mandatory | Default |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Deduplication Key | An optional idempotency key used by Torq to ensure that
+    duplicate requests do not create multiple cases. | String | No | "" |
+
+    | Correlation Key | An optional correlation key for grouping related cases or
+    incidents within the Torq platform. | String | No | "" |
+
+    | Poll Max Seconds | The maximum amount of time (in seconds) the action will poll
+    for the Torq workflow execution to complete. | String | No | 60 |
+
+    | Poll Interval Seconds | The frequency (in seconds) at which the action will
+    check the Torq API for workflow execution updates. | String | No | 3 |
+
+
+    ### Flow Description
+
+    1. **Context Collection**: The action retrieves minimal metadata from the current
+    Google SecOps case, such as Case ID, Name, and Environment.
+
+    2. **Alert Serialization**: It extracts structured data from the current alert
+    (or the first alert in the case), including identifiers, vendor/product info,
+    severity, description, and a subset of entity attributes.
+
+    3. **Webhook Invocation**: The action sends a POST request to the configured Torq
+    Webhook URL. Authentication is performed using a 'secret' header (Webhook Secret)
+    specified in the integration settings.
+
+    4. **Asynchronous Polling**: If Torq API credentials (Client ID/Secret) or a Bearer
+    Token are provided, the action initiates a polling loop using the Torq Public
+    API to track the execution status until it reaches a terminal state (e.g., SUCCESS,
+    FAILED).
+
+    5. **Result Reporting**: The action captures the webhook response and the final
+    workflow execution output, returning them as a JSON result for use in subsequent
+    playbook steps.
+
+
+    ### Additional Notes
+
+    - This action requires the 'Torq URL' and 'Webhook Secret' to be configured in
+    the integration instance.
+
+    - Polling functionality is only active if API credentials or a Bearer Token override
+    are provided; otherwise, the action completes immediately after the webhook trigger.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,88 +66,14 @@ create_case:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Creates a case in Torq by triggering a workflow via a Webhook. The
-      action sends the current alert's metadata, including associated entities and
-      properties, to Torq to initiate automated response logic. It supports idempotency
-      through deduplication and correlation keys and can optionally poll the Torq
-      Public API to retrieve the final execution status and output data, which is
-      then attached to the action results in Google SecOps.
-    external_data_mutation_explanation: Invokes a Torq workflow via a Webhook POST
-      request, which initiates processes or case management actions within the Torq
-      platform.
+    external_data_mutation_explanation: >-
+      Invokes a Torq workflow via a Webhook POST request, which typically results
+      in the creation of a case, incident, or the execution of automated logic within
+      the Torq platform.
     fetches_data: true
     internal_data_mutation_explanation: null
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-  tags:
-    is_enrichment: false
-ping:
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    description: Sends a trigger (ping) to a Torq workflow via a Webhook and optionally
-      polls the Torq Public API for the execution status and results. The action transmits
-      metadata about the current Google SecOps case, including case ID, name, and
-      environment, as a JSON payload. It supports asynchronous execution by monitoring
-      the workflow's progress based on user-defined polling intervals and maximum
-      durations, returning the final workflow output and execution details.
-    external_data_mutation_explanation: Triggers the execution of a workflow in the
-      Torq platform by sending a POST request to a configured Webhook URL.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-  tags:
-    is_enrichment: false
-run_workflow:
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    description: Triggers a **Torq workflow** via a webhook POST request, passing
-      a custom JSON input and optionally including the current alert's context and
-      entity data. If Torq API credentials (Client ID/Secret or Bearer Token) are
-      provided, the action performs asynchronous polling of the **Torq Public API**
-      to retrieve the final execution status, ID, and workflow output. This action
-      enables seamless integration between Google SecOps and external Torq automation
-      logic.
-    external_data_mutation_explanation: Initiates the execution of a workflow in the
-      Torq platform by sending a POST request to a configured webhook URL.
-    fetches_data: true
-    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes:
       - ALERT
@@ -104,5 +90,184 @@ run_workflow:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
+ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action triggers a specified Torq workflow via a Webhook and provides
+    the option to poll the Torq Public API to retrieve the execution results. It is
+    primarily used to verify connectivity between Google SecOps and Torq or to initiate
+    lightweight workflows that return immediate status updates.
+
+
+    ### Parameters Description
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Poll Max Seconds** | String | No | The maximum amount of time (in seconds)
+    the action will wait and poll for the workflow execution to reach a terminal state
+    (e.g., SUCCESS, FAILED). Default is 60 seconds. |
+
+    | **Poll Interval Seconds** | String | No | The time interval (in seconds) between
+    each poll request to the Torq API. Default is 3 seconds. |
+
+
+    ### Flow Description
+
+    1.  **Configuration Retrieval:** The action fetches Torq integration settings
+    (URL, Webhook Secret, Region, and API credentials) and action-specific polling
+    parameters.
+
+    2.  **Payload Construction:** It builds a JSON payload containing the source identifier
+    ("Google SecOps"), the action name ("ping"), and minimal case context (Case ID,
+    Case Name, and Environment).
+
+    3.  **Webhook Execution:** The action sends a POST request to the Torq Webhook
+    URL. Authentication is handled via the "secret" header.
+
+    4.  **Execution Identification:** It extracts the `execution_id` from the initial
+    Webhook response.
+
+    5.  **Polling (Optional):** If an execution ID is found, the action polls the
+    Torq Public API for the workflow's status until it completes or the `Poll Max
+    Seconds` threshold is met.
+
+    6.  **Result Reporting:** The final JSON result, including the request/response
+    data and the workflow's output (if available), is attached to the action result
+    in Google SecOps.
+
+
+    ### Additional Notes
+
+    - To enable polling, the Torq integration must be configured with valid Public
+    API credentials (Client ID and Client Secret) or a Bearer Token override.
+
+    - If no `execution_id` is returned by the webhook, the action will skip the polling
+    phase and report the initial response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers the execution of a workflow in the Torq platform via a Webhook POST
+      request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: [ ]
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+run_workflow:
+  ai_description: >-
+    ### General Description
+
+    This action serves as a generic runner for Torq workflows. It initiates a workflow
+    execution by sending a POST request to a Torq webhook URL with a user-defined
+    JSON payload. The action is designed to bridge Google SecOps cases with Torq's
+    automation capabilities, allowing for complex orchestration based on alert data.
+    If API credentials (or a bearer token) are configured, the action will asynchronously
+    poll the Torq Public API to retrieve the final execution status and output once
+    the workflow completes.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Workflow Input | String (JSON) | Yes | A JSON object containing the data to
+    be passed into the Torq workflow. |
+
+    | Include Alert Payload | Boolean | No | If enabled, the action extracts the current
+    alert's metadata (severity, vendor, product) and a list of entities to include
+    in the request payload under the 'alert' key. |
+
+    | Poll Max Seconds | String | No | The maximum amount of time (in seconds) the
+    action will poll the Torq API for execution results. Default is 60 seconds. |
+
+    | Poll Interval Seconds | String | No | The frequency (in seconds) at which the
+    action checks the Torq API for status updates. Default is 3 seconds. |
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action retrieves integration configuration, including
+    the Webhook URL, Webhook Secret, and optional API credentials (Client ID and Secret).
+
+    2. **Payload Construction:** It parses the 'Workflow Input' and, if requested,
+    gathers the current alert context (identifier, name, severity, and entities) to
+    build the final request body.
+
+    3. **Webhook Execution:** The action performs a POST request to the Torq webhook.
+    It handles authentication using the 'secret' header and supports retries for transient
+    network or server errors.
+
+    4. **Execution Tracking:** Upon a successful trigger, the action extracts the
+    unique Execution ID from the response.
+
+    5. **Polling (Optional):** If API credentials are provided, the action enters
+    a polling loop, querying the Torq Public API for the workflow's state (e.g., SUCCESS,
+    FAILED).
+
+    6. **Result Reporting:** Once the workflow reaches a terminal state or the timeout
+    is reached, the action adds the full response details and execution output to
+    the results and provides a summary message.
+
+
+    ### Additional Notes
+
+    - **Authentication:** Webhook triggering requires a valid 'Webhook Secret'. Tracking/Polling
+    requires 'Client ID' and 'Client Secret' or a 'Bearer Token (override)'.
+
+    - **Async Handling:** The action uses a short read-timeout for the initial webhook
+    post to support asynchronous trigger patterns gracefully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers the execution of a workflow within the Torq platform via a webhook
+      POST request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: [ ]
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,4 +1,57 @@
 AddPermission:
+  ai_description: >-
+    ### General Description
+
+    This action adds specific access permissions to a file stored in Google Drive
+    for one or more users. It allows administrators to programmatically manage file
+    sharing by assigning roles such as Owner, Writer, or Reader to specified email
+    addresses. The action can also trigger an automated notification email to the
+    recipients of the new permissions.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **File Id** | String | Yes | The unique identifier of the Google Drive file.
+    This can be found in the file's sharing URL. |
+
+    | **Role** | DDL | Yes | The permission level to grant. Options are: `owner` (full
+    control), `writer` (can edit and comment), or `reader` (view only). |
+
+    | **Emails** | String | Yes | A semicolon-separated list of email addresses (e.g.,
+    `user1@example.com;user2@example.com`) to which the permissions will be granted.
+    |
+
+    | **Should send notification** | Boolean | No | If set to `true`, Google Drive
+    will send an automated email notification to the users regarding their new access
+    level. Defaults to `true`. |
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action initializes the Google Drive Manager using
+    the provided service account credentials.
+
+    2.  **Input Processing**: It extracts the `File Id`, `Role`, and `Should send
+    notification` flag. It then parses the `Emails` string, splitting it by semicolons
+    into individual email addresses.
+
+    3.  **Permission Insertion**: For each email address provided, the action calls
+    the Google Drive API to create a new permission entry for the specified file with
+    the selected role.
+
+    4.  **Completion**: The action concludes by returning a success message indicating
+    the role granted and the file ID affected.
+
+
+    ### Additional Notes
+
+    This action operates directly on the Google Drive API and requires a service account
+    with sufficient scopes (`drive`, `drive.file`, or `drive.metadata`) to modify
+    permissions on the target file.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,15 +59,13 @@ AddPermission:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Adds specific access permissions (Owner, Writer, or Reader) for a
-      file stored in Google Drive to one or more user email addresses. The action
-      accepts a Google Drive File ID, a semicolon-separated list of emails, and a
-      role, then updates the file's access control list. It also supports sending
-      an optional notification email to the users who were granted access.
-    external_data_mutation_explanation: Creates new permission entries on a specific
-      Google Drive file for the provided email addresses.
+    external_data_mutation_explanation: >-
+      This action modifies the Access Control List (ACL) of a file in Google Drive
+      by adding new user permissions (Reader, Writer, or Owner).
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -30,9 +81,19 @@ AddPermission:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 DeleteFile:
+  ai_description: "Deletes a specific file stored in Google Drive using its unique\
+    \ File ID. This action interacts directly with the Google Drive API to permanently\
+    \ remove a file, skipping the trash. \n\n### Parameters\n| Parameter Name | Description\
+    \ | Type | Mandatory |\n| :--- | :--- | :--- | :--- |\n| File Id | The unique\
+    \ identifier of the file to be deleted. This can be found in the file's sharing\
+    \ URL (e.g., https://drive.google.com/drive/u/0/folders/{file-id}). | String |\
+    \ Yes |\n\n### Flow Description\n1. **Initialization**: The action extracts the\
+    \ necessary Google Drive credentials from the integration configuration.\n2. **Parameter\
+    \ Extraction**: It retrieves the 'File Id' provided by the user.\n3. **Execution**:\
+    \ The action uses the Google Drive Manager to call the Google Drive API's delete\
+    \ method for the specified file ID.\n4. **Completion**: If successful, the action\
+    \ terminates with a success message confirming the file deletion."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -40,14 +101,13 @@ DeleteFile:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Deletes a specific file stored in Google Drive using its unique File
-      ID. This action interacts with the Google Drive API to perform a permanent deletion,
-      skipping the trash folder. It requires service account credentials with the
-      appropriate OAuth scopes to manage files in the target Drive environment.
-    external_data_mutation_explanation: Permanently deletes a file from the external
-      Google Drive storage, which is a non-reversible state change.
+    external_data_mutation_explanation: >-
+      Permanently deletes a file from the user's Google Drive, skipping the trash
+      bin.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -63,9 +123,31 @@ DeleteFile:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 DownloadFileToBase64:
+  ai_description: "### General Description\nThe **Download File To Base64** action\
+    \ allows users to retrieve the content of a file stored in Google Drive and receive\
+    \ it as a Base64-encoded string. This is particularly useful for automated workflows\
+    \ that need to process file contents (e.g., malware analysis, attachment processing)\
+    \ without requiring direct access to the Google Drive storage. It handles both\
+    \ standard binary files and Google Workspace documents (Google Docs, Sheets, and\
+    \ Slides) by automatically exporting them to common Office formats (DOCX, XLSX,\
+    \ PPTX).\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| **File Id** | String | Yes | The unique\
+    \ identifier of the file in Google Drive. This ID can be found in the file's sharing\
+    \ URL (e.g., `https://drive.google.com/open?id={file-id}`). |\n\n### Flow Description\n\
+    1. **Authentication**: The action initializes the Google Drive Manager using the\
+    \ provided service account credentials.\n2. **Metadata Retrieval**: It fetches\
+    \ the metadata for the specified `File Id` to determine the file's name and MIME\
+    \ type.\n3. **Content Processing**: \n    * If the file is a **Google Workspace\
+    \ document**, the action performs an export operation to convert it into a standard\
+    \ format (OpenXML).\n    * If the file is a **standard binary file**, it performs\
+    \ a direct media download.\n4. **Encoding**: The binary stream of the file content\
+    \ is converted into a Base64 string.\n5. **Result Generation**: The action returns\
+    \ a JSON object containing the original filename, the MIME type (or extension),\
+    \ and the Base64-encoded content.\n\n### Additional Notes\n*   Google Docs are\
+    \ exported to `.docx`.\n*   Google Sheets are exported to `.xlsx`.\n*   Google\
+    \ Slides are exported to `.pptx`.\n*   This action does not interact with SOAR\
+    \ entities; it operates strictly based on the provided `File Id` parameter."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -73,15 +155,11 @@ DownloadFileToBase64:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Downloads a file from Google Drive based on a provided File ID. The
-      action retrieves the file's content and metadata, automatically converting Google
-      Workspace documents (Docs, Sheets, and Slides) into standard Microsoft Office
-      formats (DOCX, XLSX, PPTX) where applicable. The retrieved content is then encoded
-      into a Base64 string and returned as part of the action's JSON results for further
-      processing in the playbook.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -97,26 +175,78 @@ DownloadFileToBase64:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 DownloadFileToPath:
+  ai_description: >-
+    ### General Description
+
+    This action downloads a specific file stored in Google Drive and saves it to a
+    designated local directory on the Google SecOps runner. It is designed to handle
+    standard files as well as Google Workspace documents (Docs, Sheets, Slides) by
+    automatically converting them to common formats (DOCX, XLSX, PPTX) during the
+    download process.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Id | String | Yes | The unique identifier of the file in Google Drive,
+    typically found in the file's sharing URL. |
+
+    | Folder Path | String | Yes | The local directory path on the SOAR worker where
+    the file should be saved. Note: While the configuration metadata marks this as
+    optional with a default of `/temp`, the underlying Python code treats it as a
+    mandatory field during execution. |
+
+
+    ### Additional Notes
+
+    - **Discrepancy:** There is a discrepancy between the integration metadata (YAML)
+    and the Python script regarding the `Folder Path` parameter. The script explicitly
+    requires this parameter (`is_mandatory=True`), while the YAML suggests it is optional.
+    Users should provide a value to ensure successful execution.
+
+    - **Internal Mutation:** This action modifies the local filesystem of the environment
+    it runs in by writing the downloaded file and a temporary credentials file.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action initializes the Google Drive Manager using the
+    provided service account credentials.
+
+    2. **Metadata Retrieval:** It fetches the metadata for the provided `File Id`
+    from Google Drive to determine the file's name and original MIME type.
+
+    3. **Extension Resolution:** Based on the MIME type, the action determines if
+    the file is a Google Workspace document. If it is, it assigns a corresponding
+    extension (e.g., `.docx` for Google Docs) and prepares for an export; otherwise,
+    it prepares for a standard media download.
+
+    4. **Content Streaming:** The action requests the file content from the Google
+    Drive API, streaming the binary data into memory.
+
+    5. **File Writing:** The binary stream is written to the specified `Folder Path`
+    using the resolved filename.
+
+    6. **Finalization:** The action returns the final saved path and file details
+    as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
-    description: Downloads a file from Google Drive using its File ID and saves it
-      to a specified folder on the local system. The action supports the retrieval
-      of standard files and also includes logic to export Google Workspace documents
-      (Docs, Sheets, Slides) by automatically converting them into Microsoft Office
-      formats (.docx, .xlsx, .pptx). It utilizes a Google service account for authentication
-      and returns detailed metadata about the operation, including the final saved
-      file path, MIME type, and file name.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      The action writes the downloaded file content to the local filesystem of the
+      runner/worker. It also creates a local 'credentials.json' file during initialization.
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -132,9 +262,48 @@ DownloadFileToPath:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 GetFileMetadata:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed metadata for a specific file stored in Google Drive. This action
+    interacts with the Google Drive API to fetch all available metadata fields associated
+    with a unique file identifier. It is primarily used to gather technical details
+    about a file, such as its name, MIME type, size, creation date, and current permissions,
+    which can be used for downstream analysis or evidence gathering.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Id | String | Yes | The unique identifier of the file. This ID is found
+    in the file's URL (e.g., https://drive.google.com/drive/u/0/folders/{file-id}).
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google Drive manager using the
+    provided credentials.
+
+    2. **Parameter Extraction**: It retrieves the `File Id` from the action input.
+
+    3. **API Request**: The action calls the Google Drive API (`files.get` method)
+    with the `fields="*"` parameter to ensure all available metadata properties are
+    returned.
+
+    4. **Outcome**: The retrieved metadata is attached to the action results as a
+    JSON object, and the file ID is set as the primary result value.
+
+
+    ### Additional Notes
+
+    This action does not run on entities automatically; it requires a specific File
+    ID as input. It is a read-only action and does not modify the file or its metadata
+    in Google Drive.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -142,15 +311,11 @@ GetFileMetadata:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves comprehensive metadata for a specific file within Google
-      Drive using its unique File ID. The action interfaces with the Google Drive
-      API (v3) to fetch detailed attributes such as the file's name, MIME type, creation
-      and modification timestamps, ownership information, and permission sets. This
-      information is returned as a structured JSON object to assist in forensic analysis
-      or document tracking within a security workflow.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -166,9 +331,44 @@ GetFileMetadata:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 PermissionList:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a comprehensive list of users, groups, and domains that have access
+    permissions for a specific file stored in Google Drive. This action provides visibility
+    into who can view, comment on, or edit a resource, which is critical for security
+    auditing and access control reviews.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Id | The unique identifier for the Google Drive file. This ID is found
+    within the file's sharing URL (e.g., `https://drive.google.com/file/d/{file-id}/view`).
+    | String | Yes |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the Google Drive service account credentials
+    from the integration configuration and the target `File Id` from the action parameters.
+
+    2. **API Connection**: It initializes a connection to the Google Drive API (v3)
+    using the provided service account.
+
+    3. **Permission Retrieval**: The action executes a request to list all permissions
+    associated with the specified `File Id`, fetching all metadata fields for each
+    permission entry.
+
+    4. **Data Handling**: It captures the list of permissions, calculates the total
+    count, and attaches the full permission set as a JSON result to the action.
+
+    5. **Output**: The action concludes by providing a summary message stating the
+    number of permissions found and returns the count as the script result value.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -176,15 +376,11 @@ PermissionList:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves the list of users and their associated permissions for
-      a specific file stored in Google Drive using the File ID. This action interacts
-      with the Google Drive API to fetch metadata including user roles, email addresses,
-      and permission types. The results are returned as a JSON object, providing visibility
-      into the access control list (ACL) of the target file for auditing or investigative
-      purposes.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -200,9 +396,46 @@ PermissionList:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a utility designed to verify the connectivity between Google
+    SecOps (Chronicle) and the Google Drive API. It ensures that the provided service
+    account credentials are valid and that the environment has the necessary network
+    permissions to reach Google Drive's endpoints.
+
+
+    ### Parameters Description
+
+    This action does not have any specific action parameters. It relies solely on
+    the integration's configuration parameters (e.g., 'Credentials Json') to establish
+    a connection.
+
+
+    ### Additional Notes
+
+    - This action is typically used for troubleshooting or initial setup to ensure
+    the integration is configured correctly.
+
+    - It performs a read-only operation (listing files) to test connectivity and does
+    not modify any data in Google Drive.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google SecOps action module
+    and retrieves the 'Credentials Json' from the integration configuration.
+
+    2. **Manager Setup**: A `GoogleDriveManager` instance is created, which handles
+    authentication via a Google Service Account.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    executes a search query (`files().list`) to retrieve a list of JPEG images from
+    the drive. This verifies both authentication and API accessibility.
+
+    4. **Completion**: If the API call is successful, the action ends with a 'Connected
+    successfully' status.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -210,14 +443,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Verifies connectivity to the Google Drive API using provided Service
-      Account credentials. The action performs a test request by listing image file
-      metadata within the drive to ensure that the integration can successfully authenticate
-      and communicate with the external service. This is a standard connectivity check
-      used during initial configuration or for troubleshooting purposes.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -233,9 +463,51 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 RemovePermission:
+  ai_description: >-
+    ### General Description
+
+    Removes a specific permission for a specific file stored in Google Drive. This
+    action is used to programmatically revoke access (e.g., for a specific user, group,
+    or domain) to a document or file, which is critical for incident response and
+    containment of data leaks.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Id | string | Yes | The unique identifier for the file in Google Drive.
+    This ID can be found in the file's URL (e.g., https://drive.google.com/drive/u/0/folders/{file-id}).
+    |
+
+    | Permission Id | string | Yes | The unique identifier for the specific permission
+    to be removed. This ID is typically retrieved using the 'List Permissions' action
+    in the Google Drive integration. |
+
+
+    ### Additional Notes
+
+    This action requires a valid Service Account JSON configuration for the Google
+    Drive integration. Once a permission is removed, the associated user or group
+    will lose access to the file immediately.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the 'Credentials Json' from the integration
+    configuration to authenticate with the Google Drive API.
+
+    2. **Parameter Extraction**: It retrieves the mandatory 'File Id' and 'Permission
+    Id' from the action's input parameters.
+
+    3. **API Interaction**: Using the Google Drive Manager, it sends a DELETE request
+    to the Google Drive Permissions API for the specified file and permission identifiers.
+
+    4. **Result Reporting**: Upon a successful deletion, the action provides an output
+    message confirming that the permission was removed and ends with a success status.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -243,15 +515,13 @@ RemovePermission:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Removes a specific permission from a file stored in Google Drive.
-      This action interacts with the Google Drive API to delete a permission entry
-      identified by a Permission ID from a target File ID. It is typically used to
-      revoke access for specific users or groups as part of a containment or cleanup
-      workflow. The File ID and Permission ID are required as input parameters.
-    external_data_mutation_explanation: Permanently deletes a permission record from
-      a file within Google Drive, altering who has access to that resource.
+    external_data_mutation_explanation: >-
+      This action deletes a permission entry from a Google Drive file's Access Control
+      List (ACL), effectively revoking access for a specific entity.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -267,9 +537,62 @@ RemovePermission:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 UploadFileFromBase64:
+  ai_description: >-
+    ### General Description
+
+    This action uploads a file to Google Drive by decoding a provided Base64 string.
+    It is designed to facilitate the storage of evidence, reports, or logs generated
+    during a security workflow directly into a cloud storage environment. Additionally,
+    it supports sharing the uploaded file with specific users by granting them 'writer'
+    permissions via their email addresses.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Name | string | Yes | The name to be given to the file in Google Drive.
+    The extension helps determine the MIME type. |
+
+    | Share with emails | string | Yes | A semicolon-separated (';') list of email
+    addresses to grant 'writer' access to (e.g., 'analyst@company.com;manager@company.com').
+    |
+
+    | Base64 String | string | Yes | The file content encoded in Base64 format. |
+
+
+    ### Flow Description
+
+    1. **Credential Setup**: Initializes the Google Drive Manager using service account
+    credentials.
+
+    2. **Parameter Extraction**: Retrieves the file name, the Base64 encoded content,
+    and the list of emails to share with.
+
+    3. **MIME Type Identification**: Checks the file extension of the 'File Name'
+    against a known list to determine the correct MIME type for the upload.
+
+    4. **Upload Process**: Decodes the Base64 string into a binary stream and uploads
+    it to Google Drive as a new file.
+
+    5. **Permission Management**: If email addresses are provided, the action iterates
+    through each email and calls the Google Drive API to add 'writer' permissions
+    for that specific user.
+
+    6. **Result Reporting**: Returns the full metadata of the created file and sets
+    the file ID as the primary action result.
+
+
+    ### Additional Notes
+
+    - The action requires a valid Service Account 'Credentials Json' in the integration
+    configuration.
+
+    - The 'Share with emails' parameter is configured as mandatory in the settings;
+    providing multiple emails requires the ';' separator.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -277,14 +600,13 @@ UploadFileFromBase64:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Uploads a file to Google Drive from a Base64 encoded string. This
-      action creates a new file in the target Google Drive account with a specified
-      filename and content. It also allows sharing the uploaded file with specific
-      email addresses by granting them 'writer' permissions.
-    external_data_mutation_explanation: Creates a new file in Google Drive and adds
-      write permissions for specified email recipients.
+    external_data_mutation_explanation: >-
+      Creates a new file in the user's Google Drive and modifies file permissions
+      to share it with specified email addresses.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -300,9 +622,54 @@ UploadFileFromBase64:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 UploadFileFromPath:
+  ai_description: >-
+    ### General Description
+
+    Uploads a file from a specified local path to Google Drive and shares it with
+    a list of email addresses by granting them 'writer' permissions. This action is
+    primarily used to move local artifacts or reports into a collaborative cloud environment
+    for sharing and storage.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Path | string | True | The absolute filesystem path of the file on the
+    SOAR runner that should be uploaded to Google Drive. |
+
+    | Share with emails | string | True | A semicolon (";") separated list of email
+    addresses. Each email will be granted 'writer' access to the uploaded file. |
+
+
+    ### Flow Description
+
+    1. **Configuration**: The action retrieves Google Drive Service Account credentials
+    from the integration settings.
+
+    2. **Upload**: It reads the file from the provided 'File Path' and uploads it
+    to the Google Drive account associated with the credentials.
+
+    3. **Permission Management**: Once the file is uploaded and a File ID is generated,
+    the action parses the 'Share with emails' parameter.
+
+    4. **Granting Access**: For each email address provided, it performs an API call
+    to Google Drive to insert a new 'writer' permission for the specific file.
+
+    5. **Completion**: The action returns the full metadata of the uploaded file as
+    a JSON result and sets the File ID as the primary action output.
+
+
+    ### Additional Notes
+
+    - The SOAR runner or agent executing this action must have the necessary filesystem
+    permissions to read from the 'File Path' provided.
+
+    - The 'Credentials Json' configuration parameter must contain a valid Google Service
+    Account key with appropriate Drive API scopes enabled.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -310,16 +677,13 @@ UploadFileFromPath:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Uploads a file from a specified local path to a Google Drive account.
-      The action also supports sharing the uploaded file with specific users by granting
-      them 'writer' permissions via a semicolon-separated list of email addresses.
-      It returns the metadata of the created file, including its unique ID, which
-      can be used in subsequent playbook steps.
-    external_data_mutation_explanation: Creates a new file in the user's Google Drive
-      and modifies the file's access control list by adding new permissions for specified
-      email addresses.
+    external_data_mutation_explanation: >-
+      This action uploads a new file to the user's Google Drive and modifies the file's
+      access control list (ACL) by adding new permissions for specified email addresses.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -335,5 +699,3 @@ UploadFileFromPath:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

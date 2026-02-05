@@ -1,4 +1,78 @@
 CalculateRiskScore:
+  ai_description: >-
+    ### General Description
+
+    This action calculates a custom risk score for an alert by analyzing enrichment
+    data provided by XM Cyber. It processes security event attributes and entity properties
+    (labels) already present within the Google SecOps context. The action aggregates
+    risk factors like Active Directory vulnerabilities, MFA status, and asset criticality
+    into a single structured JSON object, allowing playbooks to perform complex filtering
+    and prioritization based on calculated risk.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | AD Risk to Domain | DDL | Yes | Sets the weight for Active Directory risk to
+    the domain in score calculations (Disabled, Low, Default, High). |
+
+    | AD Risky Principals | DDL | Yes | Sets the weight for AD Risky Principals in
+    score calculations (Disabled, Low, Default, High). |
+
+    | AD Admins And DCs | DDL | Yes | Sets the weight for AD Administrators and Domain
+    Controllers in score calculations (Disabled, Low, Default, High). |
+
+    | User without MFA | DDL | Yes | Sets the weight for users lacking Multi-Factor
+    Authentication in score calculations (Disabled, Low, Default, High). |
+
+    | Is Critical Asset | DDL | Yes | Sets the weight for assets marked as critical
+    in score calculations (Disabled, Low, Default, High). |
+
+    | Predefined Admin | DDL | Yes | Sets the weight for predefined administrative
+    accounts in score calculations (Disabled, Low, Default, High). |
+
+    | Highly Privileged | DDL | Yes | Sets the weight for highly privileged accounts
+    in score calculations (Disabled, Low, Default, High). |
+
+    | Compromise Risk Score | DDL | Yes | Defines the sensitivity level for the external
+    Compromise Risk Score provided by XM Cyber (Low, Default, High). |
+
+    | Choke Point Score | DDL | Yes | Defines the sensitivity level for the Choke
+    Point Score provided by XM Cyber (Low, Default, High). |
+
+
+    ### Flow Description
+
+    1. **Parameter Collection**: The action retrieves the weighting configurations
+    for various risk vectors (e.g., AD risk, MFA status) from the user-defined parameters.
+
+    2. **Event Analysis**: It iterates through the security events of the current
+    alert, identifying entities that have been enriched with XM Cyber metadata (e.g.,
+    product object IDs).
+
+    3. **Risk Calculation**: For each identified entity, it calculates a risk score
+    using a formula that combines a base risk score with probability and impact multipliers
+    derived from the XM Cyber labels and the user-provided weights.
+
+    4. **Entity Analysis**: It repeats the calculation for the alert's target entities
+    (Hostname and User) if they contain relevant XM Cyber enrichment properties.
+
+    5. **Aggregation**: It aggregates the findings from all processed events and entities,
+    selecting the maximum values for risk scores and merging labels.
+
+    6. **Result Output**: The action generates a final JSON object containing the
+    aggregated risk summary and adds it to the action results for use in playbook
+    decision-making.
+
+
+    ### Additional Notes
+
+    This action does not communicate with any external API; it strictly performs mathematical
+    calculations based on metadata already existing on the alerts and entities within
+    Google SecOps.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,21 +80,15 @@ CalculateRiskScore:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Calculates risk scores for XM Cyber alerts by analyzing existing
-      event data and entity properties within the SOAR platform. It evaluates risk
-      based on user-configurable weights for parameters like Critical Asset status,
-      Multi-Factor Authentication (MFA) presence, and administrative privileges. The
-      action identifies security indicators such as choke points and potential compromise
-      scores, aggregating these values into a structured JSON result. This enables
-      playbooks to perform advanced alert filtering and prioritization based on calculated
-      risk thresholds.
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes:
-      - HOSTNAME
       - USERUNIQNAME
+      - HOSTNAME
     filters_by_additional_properties: true
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -34,9 +102,49 @@ CalculateRiskScore:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 EnrichEntities:
+  ai_description: >-
+    ### General Description
+
+    This action enriches HOSTNAME and USER entities within a Google SecOps alert using
+    asset and risk data from the XM Cyber platform. It retrieves security-relevant
+    attributes such as risk scores, critical asset status, and observed attack techniques,
+    enabling analysts to prioritize investigation based on the entity's exposure and
+    importance.
+
+
+    ### Parameters Description
+
+    This action does not have any input parameters.
+
+
+    ### Flow Description
+
+    1. **Entity Identification**: Extracts HOSTNAME and USER entities from the current
+    alert.
+
+    2. **Filtering Logic**: Performs three checks to filter entities for enrichment:
+       - Ensures the entity type is either HOSTNAME or USER.
+       - Skips entities that are already identified as XM Cyber entities within the
+    event's additional properties.
+       - Skips entities that have been enriched within the last 24 hours, determined
+    by checking the 'XMC_last_enriched' property.
+    3. **API Interaction**: Requests detailed enrichment data for the filtered entity
+    names from the XM Cyber platform via the API manager.
+
+    4. **Data Mapping**: Processes the API response and maps relevant attributes (e.g.,
+    Compromise Risk Score, Choke Point Score, AD Risk factors) to the entity's additional
+    properties using the 'XMC_' prefix.
+
+    5. **Entity Update**: Updates the modified entities within the Google SecOps platform
+    and marks them as enriched.
+
+
+    ### Additional Notes
+
+    If no entities match the criteria (type, recent enrichment, or XM Cyber identity),
+    the action completes without making external API calls and provides a summary
+    message.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -44,15 +152,11 @@ EnrichEntities:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: true
-    description: Enriches HOSTNAME and USER entities using XM Cyber's enrichment data.
-      This action retrieves detailed security attributes such as Compromise Risk Scores,
-      Critical Asset status, Choke Point scores, and Active Directory specific properties.
-      It includes logic to optimize API usage by skipping entities already enriched
-      within the last 24 hours or those already identified within the current security
-      event's properties.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - HOSTNAME
@@ -70,9 +174,58 @@ EnrichEntities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 GetEventDataJSON:
+  ai_description: >-
+    ### General Description
+
+    The 'Get Event Data JSON' action is a utility designed to aggregate and format
+    threat intelligence data provided by XM Cyber. It scans the security events associated
+    with a Google SecOps alert and the metadata of the entities within that alert
+    to extract XM Cyber-specific enrichment details. The result is a unified JSON
+    object that maps each entity to its detailed risk parameters and includes direct
+    deep links to the XM Cyber console for further investigation.
+
+
+    ### Parameters Description
+
+    This action does not require any input parameters. It operates automatically based
+    on the context of the current alert and the entities involved.
+
+
+    ### Additional Notes
+
+    - This action specifically targets data fields prefixed with 'XMC' or 'XM Cyber
+    -' which are typically populated by previous XM Cyber enrichment steps or connectors.
+
+    - It supports 'USER' and 'HOSTNAME' entity types.
+
+    - The action does not perform any external API calls; it processes data already
+    stored within the alert's context.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action starts by fetching the integration's
+    Base URL to construct links to the external XM Cyber instance.
+
+    2. **Event Parsing**: It iterates through all security events attached to the
+    current alert, searching for XM Cyber asset or user identifiers (productObjectIds)
+    and their associated attribute labels.
+
+    3. **Entity Processing**: It identifies target entities of type 'USER' and 'HOSTNAME'
+    that have already been enriched with XM Cyber data (identified by specific keys
+    in their 'additional_properties').
+
+    4. **Data Aggregation**: The extracted data from both events and entities is consolidated
+    into a single mapping object, where keys are XM Cyber IDs and values are dictionaries
+    of attributes like 'Compromise Risk Score', 'Critical Asset' status, and 'Attacked
+    By Techniques'.
+
+    5. **URL Generation**: For every identified entity, a unique URL is generated
+    that points to the specific entity report in the XM Cyber web interface.
+
+    6. **Result Output**: The final dictionary is returned as a JSON result, which
+    can be used by subsequent playbook actions for logic branching or reporting.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -80,21 +233,15 @@ GetEventDataJSON:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Aggregates and transforms XM Cyber security intelligence data from
-      alert events and enriched entities into a single JSON object. It extracts specialized
-      fields such as Compromise Risk Scores, Choke Point Scores, and attack techniques
-      from the additional properties of Hostname and User entities. This action provides
-      a consolidated mapping of entity IDs to their risk attributes and generates
-      direct deep-link URLs to the XM Cyber platform for further investigation. It
-      processes data already present in the alert context without making external
-      API calls.
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes:
-      - HOSTNAME
       - USERUNIQNAME
+      - HOSTNAME
     filters_by_additional_properties: true
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -108,9 +255,32 @@ GetEventDataJSON:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 Ping:
+  ai_description: "### General Description\nTests the connectivity and authentication\
+    \ configuration for the XM Cyber integration. This action is primarily used during\
+    \ the initial setup or troubleshooting phase to ensure that the SOAR platform\
+    \ can successfully communicate with the XM Cyber instance using the provided credentials\
+    \ (either API Key or Access Token based authentication).\n\n### Parameters Description\n\
+    This action does not have any action-specific input parameters. It utilizes the\
+    \ global integration configuration parameters defined at the instance level:\n\
+    \n| Parameter | Expected Type | Mandatory | Description |\n| :--- | :--- | :---\
+    \ | :--- |\n| Access Token Based Authentication | Boolean | Yes | Determines whether\
+    \ to use OAuth2 (True) or static API Key (False) authentication logic. |\n| Base\
+    \ URL | String | Yes | The root URL of the XM Cyber API instance. |\n| API Key\
+    \ | String | Yes | The API Key or Secret used for authentication or generating\
+    \ tokens. |\n\n### Additional Notes\n- If the authentication fails, the action\
+    \ will return a failure status along with the specific error message returned\
+    \ by the XM Cyber API or the connection handler.\n- The action supports both standard\
+    \ API key headers and OAuth2 flow (Token/Refresh token) via the `ApiManager`.\n\
+    \n### Flow Description\n1. **Extraction:** Retrieves the global integration settings\
+    \ (`Access Token Based Authentication`, `Base URL`, and `API Key`) from the environment.\n\
+    2. **Initialization:** Initializes the `ApiManager` which configures the underlying\
+    \ HTTP session and authentication headers.\n3. **Validation:** \n    - If using\
+    \ **API Key Auth**: Sends a `POST` request to the `/api/auth/` endpoint. \n  \
+    \  - If using **OAuth**: Triggers the OAuth manager to validate/refresh tokens\
+    \ and test the connection.\n4. **Completion:** Reports `Successfully connected`\
+    \ if the authentication call returns a 200 OK status; otherwise, it captures the\
+    \ exception and returns a failure status."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -118,14 +288,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests the connectivity and authentication credentials for the XM
-      Cyber integration. The action validates the provided Base URL and API Key or
-      Access Token by performing an authentication check against the XM Cyber API.
-      It ensures that the environment is correctly configured and can establish a
-      successful connection to the service.
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -141,9 +308,66 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 PushBreachPointData:
+  ai_description: >-
+    ### General Description
+
+    The **Push Breach Point Data** action allows users to apply a specific label or
+    attribute to entities within the XM Cyber platform based on custom filtering criteria.
+    This action is used to mark entities as 'Breach Points' or other relevant statuses
+    within XM Cyber, facilitating better synchronization between Google SecOps and
+    XM Cyber attack path analysis.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Attribute Name** | string | Yes | The name of the attribute/label to be pushed
+    to entities in XM Cyber (default: `Google_SecOps_BP`). |
+
+    | **Parameter** | DDL | Yes | The entity field or attribute to evaluate against
+    the criteria. Options include `All` (applies to all supported entities), `entityID`,
+    risk scores, techniques, or specific labels. |
+
+    | **Operator** | DDL | Yes | The logical operator used for comparison (e.g., `Equals`,
+    `Not Contains`, `Greater than`). |
+
+    | **Value** | string | Yes | The target value to compare the entity's parameter
+    against. Supports strings, booleans, numbers, and dates. |
+
+
+    ### Flow Description
+
+    1.  **Authentication**: The action initializes a connection to XM Cyber using
+    either API Key or OAuth2 authentication.
+
+    2.  **Input Validation**: It validates the provided parameters, ensuring the operator
+    is compatible with the parameter type (e.g., ensuring `Contains` is only used
+    for list-type parameters).
+
+    3.  **Entity Identification**: The script scans both the `security_events` (Security
+    Events) and `target_entities` (SOAR Entities) associated with the current alert.
+
+    4.  **Criteria Matching**: For each entity found, it retrieves local enrichment
+    data (stored in `additional_properties` from previous enrichment actions) and
+    evaluates it against the user-defined `Parameter`, `Operator`, and `Value`.
+
+    5.  **External Update**: If an entity matches the criteria, its external XM Cyber
+    ID is collected. The action then sends a `POST` request to XM Cyber's `applyImportedLabelsOnEntities`
+    endpoint to apply the specified `Attribute Name` to those entities.
+
+
+    ### Additional Notes
+
+    *   This action relies on entities having been previously enriched with XM Cyber
+    data (specifically the `XMC_product_object_id`) to successfully map SOAR entities
+    to the external platform.
+
+    *   If the `Parameter` is set to `All`, the criteria evaluation is bypassed, and
+    the label is pushed for all supported entities identified in the alert.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -151,19 +375,13 @@ PushBreachPointData:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Pushes labels and attributes to specific entities in XM Cyber based
-      on user-defined filtering criteria. The action evaluates USER and HOSTNAME entities
-      within the current alert or case, checking properties such as risk scores, critical
-      asset status, and attack techniques using configurable operators (e.g., Equals,
-      Contains). For entities that match the criteria, it sends a POST request to
-      the XM Cyber API to apply a specified attribute, such as the default 'Google_SecOps_BP',
-      facilitating the synchronization of breach point data between Google SecOps
-      and XM Cyber.
-    external_data_mutation_explanation: Applies or updates imported labels/attributes
-      on entities within the XM Cyber platform via the applyImportedLabelsOnEntities
-      API endpoint.
+    external_data_mutation_explanation: >-
+      Updates entity attributes in the XM Cyber platform by pushing a specified label
+      (e.g., Google_SecOps_BP: true) to entities that match the defined criteria.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes:
       - USERUNIQNAME
@@ -181,5 +399,3 @@ PushBreachPointData:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

@@ -1,22 +1,37 @@
 EnrichHash:
+  ai_description: >-
+    Enriches file hash entities (MD5, SHA1, SHA256) with threat intelligence data
+    from the Stairwell platform. This action retrieves comprehensive file metadata,
+    including malware probability, signature details, and sighting information. It
+    automatically marks entities as suspicious based on Stairwell's malicious probability
+    thresholds and generates detailed insights and data tables for investigation.
+    ### Parameters | Parameter | Type | Mandatory | Description | |-----------|------|-----------|-------------|
+    | API Root | String | Yes | The base URL of the Stairwell API instance. | | API
+    Key | String | Yes | The API key used for authenticating with Stairwell. | | Organization
+    ID | String | No | The specific Stairwell Organization ID to query against. |
+    | User ID | String | No | The specific Stairwell User ID to include in the request
+    headers. | ### Flow 1. **Initialization**: Connects to the Stairwell API using
+    provided credentials and configuration. 2. **Entity Selection**: Filters the current
+    context for File Hash entities. 3. **Data Retrieval**: For each hash, it queries
+    the Stairwell Enrichment API to fetch object event data. 4. **Risk Assessment**:
+    Evaluates the 'verdictMalevalMaliciousProbability' and verdict labels to determine
+    if the file is suspicious. 5. **Internal Enrichment**: Updates the entity's additional
+    properties with the retrieved metadata and marks 'is_enriched' as true. 6. **Insight
+    Generation**: If a hash is deemed suspicious, a detailed HTML insight is added
+    to the entity. 7. **Reporting**: Adds a data table to the case wall containing
+    a summary report and provides the raw JSON results for downstream processing.
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: true
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: true
-    description: Enriches File Hash entities using Stairwell's threat intelligence
-      platform. This action retrieves comprehensive file metadata including various
-      hash types (SHA256, SHA1, MD5, Imphash, TLSH), file size, entropy, and MIME
-      types. It also fetches reputation data such as Malicious Probability scores,
-      AI-generated summaries, YARA rule matches, and sighting information. The action
-      updates entity properties with the retrieved data, marks entities as suspicious
-      based on Stairwell's verdict, and generates entity insights and data tables
-      for investigation.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - FILEHASH
@@ -33,25 +48,77 @@ EnrichHash:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 EnrichHostname:
+  ai_description: >-
+    Enriches Hostname entities with threat intelligence data from the Stairwell platform.
+    This action retrieves comprehensive data including verdicts, expert opinions,
+    recent comments, and DNS records (A, AAAA, MX) for specified hostnames. Analysts
+    can use this information to quickly assess the reputation and risk level of network
+    assets or external domains.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Stairwell API instance. |
+
+    | API Key | String | Yes | The API key used for authentication with Stairwell.
+    |
+
+    | Organization ID | String | No | The specific Stairwell Organization ID associated
+    with the account. |
+
+    | User ID | String | No | The Stairwell User ID for context-specific queries.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Validates the Stairwell API credentials and configuration
+    parameters.
+
+    2. **Entity Selection**: Identifies all Hostname entities within the current case
+    context.
+
+    3. **Data Retrieval**: For each hostname, it queries the Stairwell Enrichment
+    API to fetch associated threat intelligence and DNS metadata.
+
+    4. **Enrichment**: Updates entity properties with retrieved details (prefixed
+    with 'SW').
+
+    5. **Risk Assessment**: Checks the verdict; if the hostname is classified as 'MALICIOUS',
+    the entity is marked as suspicious.
+
+    6. **Insight Generation**: Creates a detailed insight for suspicious entities
+    and populates a data table on the case wall with the full report.
+
+    7. **Finalization**: Updates the entities in Google SecOps and returns the aggregated
+    JSON results.
+
+
+    ### Additional Notes
+
+    - Enrichment data added to entities follows the naming convention `SW_<Field_Name>`.
+
+    - The action fails gracefully for individual entities if they are not found in
+    the Stairwell database while continuing to process others.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: true
     can_create_insight: true
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
-    description: Enriches **Hostname** entities with threat intelligence data from
-      **Stairwell**. This action retrieves security data including verdicts, opinions
-      from various environments, and DNS records (A, AAAA, MX). It updates the entity's
-      suspicious status based on whether Stairwell classifies the host as malicious,
-      attaches enrichment data to the entity's additional properties, generates an
-      insight for identified threats, and creates a report table on the case wall.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with threat intelligence, sets the suspicious
+      flag based on the verdict, and adds data tables and insights to the case.
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - HOSTNAME
@@ -68,9 +135,63 @@ EnrichHostname:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 EnrichIP:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP address entities using threat intelligence data from the Stairwell
+    platform. This action retrieves comprehensive data regarding an IP address, including
+    its verdict (e.g., MALICIOUS), analyst opinions, environment context, and historical
+    comments. It is designed to provide security analysts with immediate context on
+    network indicators directly within the Google SecOps interface.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Stairwell API instance. |
+
+    | API Key | String | Yes | The API key used for authentication with Stairwell.
+    |
+
+    | Organization ID | String | No | The specific Stairwell Organization ID to scope
+    the request. |
+
+    | User ID | String | No | The specific Stairwell User ID to scope the request.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves configuration parameters including API credentials
+    and optional organization/user IDs.
+
+    2. **Entity Selection**: Filters the target entities to identify those of type
+    `ADDRESS` (IP Addresses).
+
+    3. **Data Retrieval**: For each identified IP, the action calls the Stairwell
+    Enrichment API (`/labs/appapi/enrichment/v1/ip_event/`) to fetch threat intelligence.
+
+    4. **Enrichment**: Updates the entity's additional properties with prefix 'SW'
+    containing details like verdict and comments.
+
+    5. **Risk Assessment**: Marks the entity as suspicious and generates a SOAR Insight
+    if the Stairwell verdict is identified as 'MALICIOUS'.
+
+    6. **Data Presentation**: Populates a data table on the case wall with the retrieved
+    enrichment details and attaches the raw JSON result for further analysis.
+
+
+    ### Additional Notes
+
+    - The action includes built-in timeout handling to ensure it respects the SOAR
+    execution deadline.
+
+    - Entities are only marked as suspicious if the external service explicitly returns
+    a 'MALICIOUS' verdict.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: true
@@ -78,15 +199,11 @@ EnrichIP:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: true
-    description: Enriches IP address entities with threat intelligence from Stairwell.
-      The action retrieves reputation verdicts, analyst opinions, and comments by
-      querying the Stairwell API. It updates the entity's suspicious status if a malicious
-      verdict is found, populates the entity's additional properties with enrichment
-      data, adds a detailed report as a data table to the case wall, and generates
-      insights for identified threats.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - ADDRESS
@@ -103,9 +220,52 @@ EnrichIP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    Verifies connectivity to the Stairwell API using the configured credentials. This
+    action is used to ensure that the integration is correctly configured and can
+    communicate with the Stairwell service. It performs a test retrieval for a dummy
+    hostname to confirm that the API key and root URL are valid and functional.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Stairwell API service. |
+
+    | API Key | String | Yes | The API key provided by Stairwell for authentication.
+    |
+
+    | Organization ID | String | No | The identifier for the specific organization
+    within Stairwell. |
+
+    | User ID | String | No | The identifier for the specific user performing the
+    request. |
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action extracts the API Root, API Key, Organization
+    ID, and User ID from the integration configuration.
+
+    2. **Manager Initialization**: A StairwellManager instance is created with the
+    provided credentials and configuration.
+
+    3. **Connectivity Verification**: The action calls the test_connectivity method,
+    which attempts to retrieve enrichment data for a hardcoded dummy hostname ('www.google.com').
+
+    4. **Output Generation**: If the request succeeds, the action returns a 'Connection
+    Established' message. If any exception occurs (e.g., authentication failure, connection
+    error), the action fails and provides a detailed error message.
+
+
+    ### Additional Notes
+
+    This action does not process any entities from the case; it is strictly a connectivity
+    test and does not affect any internal or external data.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -113,14 +273,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests the connectivity to the Stairwell API to verify communication
-      and authentication settings. The action attempts a dummy hostname lookup via
-      a GET request using the provided API Root, API Key, and optional Organization
-      and User IDs to ensure the integration is correctly configured and the service
-      is reachable.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -136,5 +293,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true

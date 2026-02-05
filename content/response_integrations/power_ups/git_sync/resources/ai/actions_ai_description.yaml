@@ -1,4 +1,79 @@
 Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action tests the connectivity and configuration for the GitSync integration.
+    It verifies communication with both the Google SecOps (Chronicle) SOAR API and
+    the target Git repository (e.g., GitHub, GitLab, Bitbucket). This action ensures
+    that the credentials, repository URLs, and network settings (including SSL and
+    SSH fingerprints) are correctly configured before performing synchronization tasks.
+
+
+    ### Parameters Description
+
+    | Parameter | Expected Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Repo URL** | String | Yes | The URL of the Git repository. Supports both SSH
+    and HTTP/HTTPS formats. |
+
+    | **Branch** | String | Yes | The name of the Git branch to verify connectivity
+    with. |
+
+    | **Git Server Fingerprint** | String | No | Optional SSH host key fingerprint
+    (SHA256 or MD5) to verify the Git server's identity. |
+
+    | **Git Password/Token/SSH Key** | Password | Yes | The authentication credential
+    for the Git server. Can be a password, API token, or a base64-encoded SSH private
+    key. |
+
+    | **Git Username** | String | No | The username used for Git authentication. Defaults
+    to 'None'. |
+
+    | **Commit Author** | String | No | The author identity for commits, formatted
+    as `Name <email@example.com>`. |
+
+    | **SOAR Username** | String | No | The username used to authenticate against
+    the Chronicle SOAR API. |
+
+    | **SOAR Password** | Password | No | The password used to authenticate against
+    the Chronicle SOAR API. |
+
+    | **Siemplify Verify SSL** | Boolean | Yes | Whether to verify SSL certificates
+    when connecting to the Chronicle SOAR API. |
+
+    | **Git Verify SSL** | Boolean | Yes | Whether to verify SSL certificates when
+    connecting to the Git server via HTTPS. |
+
+
+    ### Additional Notes
+
+    - This action is a diagnostic utility and does not modify any data in the Git
+    repository or Google SecOps.
+
+    - The **Commit Author** must strictly follow the format `Name <email@address.com>`
+    or the action will fail validation.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** The action retrieves integration-level configuration
+    parameters for Git and SOAR credentials.
+
+    2. **Author Validation:** Validates the `Commit Author` parameter against a specific
+    regex pattern to ensure Git compatibility.
+
+    3. **SOAR Connectivity Test:** Uses the `SiemplifyApiClient` to attempt a connection
+    to the Chronicle SOAR API by fetching the system version.
+
+    4. **Git Repository Test:** Initializes the Git client (cloning or pulling metadata)
+    to verify access to the specified repository and branch.
+
+    5. **Fingerprint Verification:** If a `Git Server Fingerprint` is provided, it
+    performs a specific SSH handshake check to verify the remote server's host key.
+
+    6. **Final Status:** Returns `True` if all connectivity checks pass.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,16 +81,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests the connectivity between Google SecOps and the GitSync integration
-      components. It validates the connection to the Chronicle SOAR API by retrieving
-      the system version and verifies access to the specified Git repository using
-      credentials such as usernames, passwords, tokens, or SSH keys. The action also
-      confirms the availability of the target branch and can optionally perform SSH
-      host key verification if a Git server fingerprint is provided. This is primarily
-      used as a diagnostic tool to ensure the integration is correctly configured.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -31,5 +101,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

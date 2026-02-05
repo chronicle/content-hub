@@ -1,4 +1,69 @@
 create_custom_list:
+  ai_description: >-
+    ### General Description
+
+    Creates a new custom list in Infoblox Threat Defense with DDI. This action allows
+    users to define and categorize lists of indicators, such as IP addresses or domains,
+    which can then be utilized within security policies to manage and respond to network
+    threats. It provides a way to programmatically manage threat intelligence sources
+    within the Infoblox environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | Specify the unique name for the Custom List to be created.
+    |
+
+    | Type | String | Yes | Specify the category or type of Custom List (default is
+    "custom_list"). |
+
+    | Items | String | No | Provide comma-separated indicators (IPv4, IPv6, or domain
+    names) to include in the list. |
+
+    | Description | String | No | A brief description explaining the purpose or content
+    of the Custom List. |
+
+    | Confidence Level | DDL | No | Set the confidence level for the list data (High,
+    Medium, Low). Defaults to High. |
+
+    | Threat Level | DDL | No | Set the threat severity associated with the list (High,
+    Medium, Low, Info). Defaults to Low. |
+
+    | Tags | String | No | Provide a JSON object string to categorize the list with
+    custom tags. |
+
+
+    ### Additional Notes
+
+    - The action performs rigorous validation on the 'Items' parameter; indicators
+    must be valid IPv4 addresses, IPv6 addresses, or domain names.
+
+    - The 'Tags' parameter expects a valid JSON string (e.g., '{"project": "security"}');
+    providing a non-JSON string will result in an error.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action extracts integration configuration
+    and user-defined parameters from the SOAR environment.
+
+    2. **Input Validation**: Validates that mandatory fields are present, verifies
+    that 'Items' follow correct networking patterns (using regex), and parses the
+    'Tags' string into a JSON object.
+
+    3. **Payload Construction**: Combines all provided metadata and validated indicators
+    into a request payload.
+
+    4. **External API Interaction**: Makes a POST request to the Infoblox API to create
+    the custom list resource.
+
+    5. **Output Generation**: Captures the API response, adds it as a JSON result,
+    and generates a data table displaying the created list's ID, name, levels, and
+    item count for the user.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,16 +71,13 @@ create_custom_list:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Creates a new custom list in Infoblox Threat Defense for use in security
-      policies. This action allows the definition of a list name, its type (defaulting
-      to 'custom_list'), and a set of items such as IPv4 addresses, IPv6 addresses,
-      or domain names. It also supports metadata configuration including description,
-      confidence level, threat level, and categorization tags. The created list's
-      details are retrieved and displayed in a formatted data table for verification.
-    external_data_mutation_explanation: Creates a new custom list entry (named list)
-      within the Infoblox Threat Defense platform via a POST request.
+    external_data_mutation_explanation: >-
+      Creates a new custom list resource in Infoblox Threat Defense via a POST request
+      to the API.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -31,9 +93,50 @@ create_custom_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 create_network_list:
+  ai_description: >-
+    ### General Description
+
+    Creates a new network list in Infoblox Threat Defense to define specific network
+    segments or IP addresses where security policies should be applied. This action
+    allows administrators to programmatically group network assets for simplified
+    policy management.
+
+
+    ### Parameters
+
+    | Parameter | Description | Type | Mandatory | Notes |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Name | Specify the unique name for the network list. | string | Yes | Must be
+    a non-empty string. |
+
+    | Items | Specify the comma-separated items to include (e.g., IPv4/IPv6 addresses
+    or CIDRs). | string | Yes | The string is parsed into a list of items for the
+    API request. |
+
+    | Description | Specify an optional description for the network list. | string
+    | No | Provides context for why the list was created. |
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** Retrieves the network list name, items, and description
+    from the action inputs.
+
+    2.  **Validation:** Ensures that both the 'Name' and 'Items' parameters are provided
+    and non-empty. The 'Items' string is converted into a Python list.
+
+    3.  **API Interaction:** Sends a POST request to the Infoblox `/api/atcfw/v1/network_lists`
+    endpoint via the APIManager to create the resource.
+
+    4.  **Result Processing:** Parses the API response into a `NetworkList` data model.
+    The raw response is added as Result JSON, and a structured summary is added to
+    the case as a Data Table named 'Network List Details'.
+
+    5.  **Termination:** Updates the action output message and status based on the
+    success or failure of the creation request.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -41,17 +144,13 @@ create_network_list:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Creates a new network list in Infoblox Threat Defense to define where
-      security policies should be applied. The action accepts a unique name, a comma-separated
-      list of network items (such as IP addresses or CIDRs), and an optional description.
-      It communicates with the Infoblox API via a POST request to generate the resource.
-      Upon successful creation, the action returns the raw JSON response and populates
-      a data table with the network list's ID, name, description, and associated security
-      policy ID.
-    external_data_mutation_explanation: Creates a new network list resource within
-      the Infoblox Threat Defense platform via a POST request.
+    external_data_mutation_explanation: >-
+      Creates a new 'Network List' resource within the Infoblox Threat Defense platform
+      via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -67,9 +166,40 @@ create_network_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 create_security_policy:
+  ai_description: "Creates a new security policy in Infoblox Threat Defense with DDI.\
+    \ This action allows users to define a comprehensive security policy including\
+    \ rules, associated network lists, DNS Forwarding Proxies (DFPs), and roaming\
+    \ device groups. It also supports granular settings like DNS rebinding protection\
+    \ and safe search filtering.\n\n### Parameters\n| Parameter | Mandatory | Type\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Policy Name | True | string\
+    \ | The unique name for the security policy. |\n| Description | False | string\
+    \ | A descriptive text for the policy. |\n| Rules | False | string | A JSON array\
+    \ of rule objects, where each object defines the action, type, and data for the\
+    \ rule. |\n| Network Lists | False | string | Comma-separated list of Network\
+    \ List IDs to associate with this policy. |\n| DFPS | False | string | Comma-separated\
+    \ list of DNS Forwarding Proxy IDs. |\n| Roaming Device Groups | False | string\
+    \ | Comma-separated list of Roaming Device Group IDs. |\n| Block DNS Rebinding\
+    \ | False | boolean | If enabled, blocks DNS rebinding attacks. Defaults to false.\
+    \ |\n| Safe Search | False | boolean | If enabled, enforces safe search filtering.\
+    \ Defaults to false. |\n| Tags | False | string | A JSON object containing key-value\
+    \ pairs to categorize the policy. |\n| Additional Parameters | False | string\
+    \ | A JSON object for advanced configuration (e.g., precedence, access_codes,\
+    \ doh_enabled, doh_fqdn). |\n\n### Additional Notes\n- Parameters like 'Rules',\
+    \ 'Tags', and 'Additional Parameters' must be provided as valid JSON-formatted\
+    \ strings. \n- 'Additional Parameters' supports specific keys: precedence, access_codes,\
+    \ doh_enabled, doh_fqdn, ecs, onprem_resolve, dfp_services, net_address_dfps,\
+    \ user_groups, and default_redirect_name.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action retrieves integration configuration (API Key, Root URL) and extracts\
+    \ user-provided policy parameters.\n2. **Validation**: It validates the mandatory\
+    \ 'Policy Name' and ensures that JSON-based parameters (Rules, Tags, Additional\
+    \ Parameters) are correctly formatted.\n3. **Payload Construction**: It builds\
+    \ a structured JSON payload, converting CSV strings for Network Lists, DFPs, and\
+    \ Roaming Device Groups into integer lists.\n4. **API Execution**: Sends a POST\
+    \ request to the Infoblox API endpoint to create the security policy.\n5. **Result\
+    \ Processing**: Upon success, it returns the metadata of the created policy as\
+    \ a JSON result and populates a data table named 'Security Policy Details' for\
+    \ visibility within the SOAR platform."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -77,19 +207,13 @@ create_security_policy:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Creates a new security policy in Infoblox Threat Defense. This action
-      allows users to define a policy with a specific name and description, and associate
-      it with network lists, DNS Forwarding Proxies (DFPs), and roaming device groups.
-      It supports the inclusion of security rules (passed as a JSON array), tags,
-      and advanced parameters such as DNS rebinding protection and safe search filtering.
-      The action performs a POST request to the Infoblox BloxOne API and returns the
-      created policy's details in both JSON format and a SOAR data table for visibility
-      within the case.
-    external_data_mutation_explanation: Creates a new security policy resource within
-      the Infoblox BloxOne Threat Defense environment, which affects how network traffic
-      is handled for associated network segments.
+    external_data_mutation_explanation: >-
+      Creates a new security policy object within the Infoblox Threat Defense platform
+      via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -105,9 +229,61 @@ create_security_policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 dhcp_lease_lookup:
+  ai_description: >-
+    ### General Description
+
+    The **DHCP Lease Lookup** action retrieves detailed DHCP lease information from
+    Infoblox based on specified filter criteria. It is used to query the DHCP database
+    for records associated with specific IP addresses, MAC addresses, or hostnames.
+    This action is essential for tracking network assignments and identifying devices
+    within a DDI environment.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **DHCP Lease Filter** | String | No | A logical expression used to filter DHCP
+    leases. For example: `address == "192.168.1.10"` or `hostname == "workstation-01"`.
+    |
+
+    | **Offset** | String | No | The numeric offset from which to start pagination.
+    Defaults to "0". |
+
+    | **Limit** | String | No | The maximum number of results to return in a single
+    request. Defaults to "100". |
+
+    | **Order By** | String | No | A comma-separated list of JSON fields to sort the
+    results, supporting `asc` or `desc` directions. |
+
+
+    ### Additional Notes
+
+    This action does not run on specific entities within the Google SecOps case; instead,
+    it relies on the user-provided filter string to define the search scope.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action retrieves configuration settings (API
+    Root, API Key) and user-provided parameters (Filter, Offset, Limit, Order By).
+
+    2.  **Validation:** It validates that 'Offset' and 'Limit' are valid non-negative
+    integers.
+
+    3.  **External Query:** The action calls the Infoblox API GET endpoint `/api/ddi/v1/dhcp/lease`
+    using the provided filter and pagination settings.
+
+    4.  **Data Processing:** The raw JSON response is attached to the action results.
+
+    5.  **Output Generation:** If results are found, the action creates a data table
+    titled "DHCP Leases" containing details such as Address, Hostname, MAC Address
+    (Hardware), State, and Lease timestamps. A summary message confirms the number
+    of records retrieved.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -115,16 +291,11 @@ dhcp_lease_lookup:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Searches for DHCP lease records in Infoblox based on user-defined
-      filtering criteria such as IP addresses or hostnames. The action retrieves detailed
-      lease metadata, including start and end times, hardware addresses, lease states,
-      and client fingerprints. Results are output as a raw JSON object and a formatted
-      summary data table for easy inspection. It supports advanced pagination through
-      Offset and Limit parameters and allows sorting of results via the Order By parameter
-      to handle large data sets efficiently.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -140,25 +311,46 @@ dhcp_lease_lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 dns_record_lookup:
+  ai_description: "### General Description\nThe **DNS Record Lookup** action performs\
+    \ a DNS record query to retrieve associated IPs or domains from Infoblox. It allows\
+    \ users to search through Infoblox DDI data using specific filters, pagination,\
+    \ and sorting to find detailed information about DNS records, including their\
+    \ TTL, type, and zone details.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| DNS Record Filter\
+    \ | String | No | Filter DNS records by specific criteria (e.g., `type==\"PTR\"\
+    \ and absolute_zone_name == \"Test\"`). |\n| Tag Filter | String | No | Filter\
+    \ DNS records by specific tags (e.g., `'nios/federation_enabled'==true`). |\n\
+    | Offset | String | No | Specify the offset from where to start pagination. Defaults\
+    \ to \"0\". |\n| Limit | String | No | Specify the maximum number of results to\
+    \ return. Defaults to \"100\". |\n| Order By | String | No | Comma-separated JSON\
+    \ fields to sort the results. Supports dot notation and `asc`/`desc` directions.\
+    \ |\n\n### Flow Description\n1. **Initialization**: The action retrieves integration\
+    \ configuration (API Root, Key) and validates input parameters like `Offset` and\
+    \ `Limit` to ensure they are non-negative integers.\n2. **API Request**: The action\
+    \ makes a GET request to the Infoblox `/api/ddi/v1/dns/record` endpoint, applying\
+    \ the provided DNS record filters, tag filters, and sorting parameters.\n3. **Result\
+    \ Processing**: It iterates through the retrieved records, converting them into\
+    \ structured `DNSRecord` data models.\n4. **Output Generation**: \n    - Adds\
+    \ the complete raw API response as a JSON result for further automated logic.\n\
+    \    - Constructs and attaches a CSV-formatted data table named \"DNS Records\"\
+    \ to the Case Wall, displaying key record attributes (up to 20 records).\n   \
+    \ - Provides a summary message indicating the total number of records found.\n\
+    \n### Additional Notes\n- This is a lookup/query action and does not target or\
+    \ modify case entities directly.\n- Pagination is supported via the `Offset` and\
+    \ `Limit` parameters to handle large record sets."
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: false
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Performs DNS record queries in Infoblox Threat Defense with DDI to
-      retrieve associated IP addresses or domains. The action allows for granular
-      filtering using DNS record criteria and tag-based filters. It supports pagination
-      through offset and limit parameters and allows for custom result ordering. The
-      output is provided as a formatted data table of DNS records and the raw JSON
-      response from the Infoblox API.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -174,9 +366,76 @@ dns_record_lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 get_custom_list:
+  ai_description: >-
+    Retrieves the contents of one or more custom lists from Infoblox Threat Defense.
+    The action allows for specific retrieval by ID, name and type, or general discovery
+    using tag-based filters and pagination.
+
+
+    ### General Description
+
+    This action interacts with the Infoblox BloxOne Threat Defense API to fetch configuration
+    and membership details of 'Named' or 'Custom' lists. These lists are typically
+    used in security policies to manage allowed or blocked domains, IPs, and networks.
+    The action supports pagination through offset and limit parameters and can provide
+    results in both raw JSON and a formatted data table.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Custom List ID | String | No | The unique identifier for a specific custom list.
+    If provided, the action fetches data specifically for this list. |
+
+    | Name | String | No | The name of the custom list. Must be used in conjunction
+    with the 'Type' parameter to filter by a specific list name. |
+
+    | Type | String | No | The type of the custom list (e.g., 'custom_list'). Default
+    is 'custom_list'. |
+
+    | Tag Filter | String | No | Filters results based on tags assigned to the list,
+    using the format: `'<tag_name>'='<tag_value>'`. |
+
+    | Tag Sort Filter | String | No | Sorts the returned lists based on a specific
+    tag name. |
+
+    | Offset | String | No | The numeric offset to start pagination (e.g., '0'). |
+
+    | Limit | String | No | The maximum number of results to return (default is 100).
+    |
+
+
+    ### Flow Description
+
+    1.  **Initialization**: Extracts the integration configuration and action parameters.
+
+    2.  **Validation**: Validates that numeric parameters (Offset, Limit, and Custom
+    List ID) are non-negative integers.
+
+    3.  **API Selection**: Determines the correct API endpoint based on provided inputs:
+        *   If **Custom List ID** is provided, it queries that specific ID endpoint.
+        *   If both **Name** and **Type** are provided, it queries the list endpoint
+    with name/type filters.
+        *   Otherwise, it queries the general custom list endpoint using the provided
+    **Tag Filters**.
+    4.  **Data Processing**: Converts the API response into a structured data model.
+
+    5.  **Output**: Adds the raw response as a JSON result and populates a Siemplify
+    data table with high-level list details (ID, Name, Confidence Level, Threat Level,
+    and Item Count).
+
+
+    ### Additional Notes
+
+    *   Either the 'Custom List ID' or both 'Name' and 'Type' should be configured
+    for precise retrieval. If only one of 'Name' or 'Type' is provided, the action
+    defaults to a general query.
+
+    *   This action does not run on entities; it is a utility action for list management.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -184,16 +443,11 @@ get_custom_list:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves the contents and metadata of custom lists from Infoblox
-      Threat Defense. This action allows users to fetch specific list details using
-      a Custom List ID or by filtering by name and type. It supports advanced filtering
-      and sorting via tags, as well as pagination using offset and limit parameters.
-      The retrieved data includes list identification, description, confidence level,
-      threat level, and the total count of items. Results are returned as a JSON object
-      and presented in a data table for easy viewing within the SOAR platform.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -209,9 +463,48 @@ get_custom_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 get_indicator_intel_lookup_result:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the intelligence results of a previously initiated Infoblox Dossier
+    lookup job. This action allows users to fetch detailed threat intelligence for
+    indicators such as IP addresses, URLs, hostnames, emails, and hashes by providing
+    the specific Job ID generated when the lookup was first triggered.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Job ID | String | Yes | Specify the unique identifier of the Dossier lookup
+    job to retrieve the results for. This is usually the output from a previous initiation
+    action. |
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action extracts the provided `Job ID` from the parameters.
+
+    2. **API Call**: It initiates a GET request to the Infoblox TIDE API using the
+    Job ID to fetch the dossier results.
+
+    3. **Parsing**: The script processes the raw API response, converting itemized
+    results into a structured data model.
+
+    4. **Reporting**: The full response is added as JSON to the action results. Additionally,
+    a data table titled 'Dossier Lookup Results' is created, displaying truncated
+    details of the indicator intelligence including source, status, and relevant data
+    points up to a predefined record limit.
+
+
+    ### Additional Notes
+
+    This action does not directly target SOAR entities (like IP or Domain entities
+    in the current scope); it relies solely on the provided `Job ID` parameter to
+    retrieve data.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -219,15 +512,11 @@ get_indicator_intel_lookup_result:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves the results of a previously initiated Dossier threat intelligence
-      lookup from Infoblox Threat Defense. This action uses a mandatory Job ID to
-      fetch detailed intelligence for indicators such as IP addresses, URLs, hosts,
-      emails, and hashes. The retrieved data includes status information, source details,
-      and specific indicator metadata, which is then presented in a Siemplify data
-      table and attached as raw JSON for downstream analysis.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -243,9 +532,69 @@ get_indicator_intel_lookup_result:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 get_network_list:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves the details and contents of network lists from the Infoblox
+    Threat Defense platform. Users can fetch a specific network list by providing
+    its unique ID or retrieve multiple lists by applying logical filter expressions.
+    The action is designed for administrative and investigative workflows where visibility
+    into defined network boundaries or exclusion zones is required.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Network List ID | string | No | The unique identifier of a specific network
+    list. If provided, the action fetches only this list, bypassing other filters.
+    |
+
+    | Security Network Filter | string | No | A logical expression string used to
+    filter results (e.g., `name == 'internal_network'`). |
+
+    | Offset | string | No | The starting point for pagination. Defaults to '0'. |
+
+    | Limit | string | No | The maximum number of network lists to return in a single
+    execution. Defaults to '100'. |
+
+
+    ### Additional Notes
+
+    - If a `Network List ID` is provided, the `Security Network Filter` parameter
+    is ignored by the API.
+
+    - The action supports pagination via the `Offset` and `Limit` parameters to handle
+    large sets of data.
+
+    - Results are displayed both as a raw JSON object and as a formatted CSV table
+    in the SOAR interface (limited to the first 20 records in the table for performance).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Infoblox APIManager using the
+    provided configuration parameters (API Root, API Key, and SSL verification).
+
+    2. **Parameter Extraction**: It extracts the `Network List ID`, `Security Network
+    Filter`, `Offset`, and `Limit` from the action input.
+
+    3. **Validation**: The action validates that `Network List ID` (if provided),
+    `Offset`, and `Limit` are valid non-negative integers.
+
+    4. **API Request**: It sends a GET request to the Infoblox API. If an ID is provided,
+    it targets the specific resource endpoint; otherwise, it queries the collection
+    endpoint with the specified filter and pagination parameters.
+
+    5. **Data Processing**: The received JSON response is parsed. If results are found,
+    they are mapped to the NetworkList data model.
+
+    6. **Output Generation**: The action adds the full response as JSON to the execution
+    results and constructs a CSV data table for the SOAR Case Wall to visualize the
+    network list names and descriptions.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -253,15 +602,11 @@ get_network_list:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves the contents and configuration of network lists from Infoblox
-      Threat Defense. The action enables users to fetch specific network list details
-      using a unique ID or search across lists using logical filter expressions. It
-      returns information including network list names, descriptions, and security
-      policy identifiers. Data is provided as a structured table and raw JSON, facilitating
-      visibility into defined network perimeters.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -277,9 +622,72 @@ get_network_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 get_security_policies:
+  ai_description: >-
+    ### General Description
+
+    The **Get Security Policies** action retrieves a list of all configured security
+    policies and their associated metadata from Infoblox Threat Defense. This action
+    is primarily used for administrative visibility and auditing, allowing security
+    teams to verify the state of security policies within the environment. It supports
+    advanced filtering by policy names or expressions, as well as tag-based filtering
+    and sorting.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Security Policy Filter** | string | No | A logical expression string to filter
+    security policies (e.g., `name == 'sec_policy_a'`). |
+
+    | **Tag Filter** | string | No | Filters security policies by specific tags using
+    the format `'<tag_name>'='<tag_value>'`. |
+
+    | **Tag Sort Filter** | string | No | Sorts the resulting security policy list
+    by specific Tags. |
+
+    | **Offset** | string | No | The pagination starting point (default is '0'). Must
+    be a non-negative integer. |
+
+    | **Limit** | string | No | The maximum number of results to return per request
+    (default is '100'). Must be a positive integer. |
+
+
+    ### Additional Notes
+
+    - This action does not require any entities to run.
+
+    - The results displayed in the SOAR UI table are limited to the first 20 records
+    to maintain performance, though the full data set is available in the JSON output.
+
+    - Ensure that filter expressions follow the specific syntax required by the Infoblox
+    API.
+
+
+    ### Flow Description
+
+    1.  **Parameter Initialization**: Extracts integration settings (API Root, Key)
+    and action parameters (Filters, Offset, Limit).
+
+    2.  **Validation**: Validates that the `Offset` and `Limit` parameters are valid
+    integers (offset >= 0, limit > 0).
+
+    3.  **API Interaction**: Establishes a connection via the `APIManager` and sends
+    a `GET` request to the `/api/atcfw/v1/security_policies` endpoint with the provided
+    filters and pagination settings.
+
+    4.  **Data Modeling**: Parses the API response and maps each security policy item
+    to a `SecurityPolicy` data model.
+
+    5.  **Output Generation**: Appends the full raw JSON response to the action results
+    and constructs a flattened data table for visualization in the case wall.
+
+    6.  **Finalization**: Reports the total number of policies retrieved and completes
+    the action execution.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -287,15 +695,11 @@ get_security_policies:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves all configured security policies and their metadata from
-      Infoblox Threat Defense. The action allows for complex filtering using logical
-      expressions and tag-based queries, as well as sorting and pagination through
-      offset and limit parameters. The retrieved security policy details, including
-      names, descriptions, and default actions, are provided as a JSON result and
-      a structured data table for use in playbooks or manual investigation.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -311,9 +715,76 @@ get_security_policies:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 get_soc_insights_assets:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of associated assets for a specific SOC Insight ID
+    from the Infoblox Threat Defense platform. It allows security analysts to identify
+    which devices, IP addresses, or users are linked to a particular security insight,
+    providing critical context for incident response and investigation.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Insight ID** | String | Yes | The unique identifier of the SOC insight to
+    retrieve assets for. |
+
+    | **Asset IP** | String | No | Filters the results to return only assets matching
+    a specific IP address. |
+
+    | **MAC Address** | String | No | Filters the results to return only assets matching
+    a specific MAC address. |
+
+    | **OS Version** | String | No | Filters the results by the operating system version
+    of the asset. |
+
+    | **User** | String | No | Filters the results by the user associated with the
+    asset. |
+
+    | **Limit** | String | No | Specifies the maximum number of records to return.
+    Default is 100. |
+
+    | **From** | String | No | Filters for assets changed after this time (Format:
+    YYYY-MM-DDTHH:mm:ss.SSS). |
+
+    | **To** | String | No | Filters for assets changed before this time (Format:
+    YYYY-MM-DDTHH:mm:ss.SSS). |
+
+
+    ### Additional Notes
+
+    * The action results include a full JSON representation of the retrieved assets.
+
+    * A UI data table is created showing up to the first 20 asset records found.
+
+    * If no assets are found matching the criteria, the action will complete successfully
+    with an informative message.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action extracts the mandatory Insight ID and
+    optional filter parameters (IP, MAC, OS, User, Time range, and Limit).
+
+    2.  **Validation:** It validates that the Insight ID is not empty and that the
+    Limit is a valid positive integer.
+
+    3.  **API Interaction:** It initializes the Infoblox APIManager and sends a GET
+    request to the `/api/v1/insights/{insight_id}/assets` endpoint with the provided
+    filters.
+
+    4.  **Data Processing:** The action parses the API response, converting asset
+    data into a flat format for UI display.
+
+    5.  **Output Generation:** It adds the raw JSON response to the action results
+    and constructs a CSV-formatted data table named 'Assets' (limited to 20 records)
+    for the Case Wall.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -321,15 +792,11 @@ get_soc_insights_assets:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves the list of assets associated with a specific Infoblox
-      SOC Insight ID. The action allows for granular filtering based on asset IP,
-      MAC address, operating system version, and username. It fetches metadata for
-      each asset including its IP, MAC address, threat level, OS version, and associated
-      user. The results are provided in a JSON format and a summarized data table
-      for quick review within the platform.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -345,9 +812,31 @@ get_soc_insights_assets:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 get_soc_insights_comments:
+  ai_description: "## General description\nRetrieves the list of comments associated\
+    \ with a specific Security Operations Center (SOC) Insight from Infoblox Threat\
+    \ Defense. This action is designed to provide visibility into the history of comments,\
+    \ status changes, and analyst notes for a given insight, allowing for better tracking\
+    \ of investigation progress.\n\n## Parameters description\n| Name | Description\
+    \ | Type | Mandatory | \n| :--- | :--- | :--- | :--- | \n| Insight ID | The unique\
+    \ identifier of the SOC insight to retrieve comments from. | string | Yes |\n\
+    | From | Filter by comments changed after this time. Expected format: `YYYY-MM-DDTHH:mm:ss.SSS`.\
+    \ | string | No |\n| To | Filter by comments changed before this time. Expected\
+    \ format: `YYYY-MM-DDTHH:mm:ss.SSS`. | string | No |\n\n## Additional notes\n\
+    - This action does not process entities from the case. It relies exclusively on\
+    \ the provided `Insight ID` parameter.\n- If no comments are found, the action\
+    \ will complete successfully with a notification message.\n- A maximum of 20 records\
+    \ are displayed in the data table for readability, though the full response is\
+    \ available in the JSON results.\n\n## Flow description\n1. **Initialization**:\
+    \ Retrieve API credentials and action parameters (`Insight ID`, `From`, `To`).\n\
+    2. **Validation**: Validate that the `Insight ID` is a non-empty string.\n3. **API\
+    \ Interaction**: Call the Infoblox `/api/v1/insights/{insight_id}/comments` endpoint\
+    \ with the provided filters.\n4. **Response Processing**: Parse the JSON response\
+    \ into standardized `SOCInsightComment` objects.\n5. **Output Generation**: \n\
+    \   - Populate a data table titled 'SOC Insight Comments' with flattened comment\
+    \ details (Changer, Date, Comment text, and Status).\n   - Attach the raw API\
+    \ response as a JSON result.\n   - Report the total number of comments successfully\
+    \ retrieved."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -355,14 +844,11 @@ get_soc_insights_comments:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: 'Retrieves the list of comments associated with a specific SOC Insight
-      ID from Infoblox Threat Defense. This action allows users to filter comments
-      by a specific time range using the ''From'' and ''To'' parameters (format: YYYY-MM-DDTHH:mm:ss.SSS).
-      The retrieved comments, including the changer, date, and content, are displayed
-      in a data table and provided as a raw JSON result for further processing.'
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -378,9 +864,87 @@ get_soc_insights_comments:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 get_soc_insights_events:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of events associated with a specific SOC Insight
+    ID from the Infoblox Threat Defense platform. It allows analysts to drill down
+    into the underlying activity that triggered an insight by applying various filters
+    such as device IP, DNS query types, threat levels, and time ranges. The retrieved
+    events are displayed in a formatted data table within the Google SecOps case and
+    are also available in raw JSON format for further processing.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Insight ID** | String | Yes | The unique identifier of the SOC insight from
+    which to retrieve events. |
+
+    | **Device IP** | String | No | Filters the results to only include events from
+    a specific source device IP address. |
+
+    | **Query** | String | No | Filters events by a specific query string (e.g., a
+    domain name). |
+
+    | **Query Type** | String | No | Filters events by the DNS query type (e.g., A,
+    AAAA, TXT, MX). |
+
+    | **Source** | String | No | Filters events by the threat intelligence source
+    or feed (e.g., 'DFP'). |
+
+    | **Indicator** | String | No | Filters events by a specific threat indicator
+    (e.g., domain, IP, or hash). |
+
+    | **Threat Level** | DDL | No | Filters by severity level. Options: All, Info,
+    Low, Medium, High. Default is 'All'. |
+
+    | **Confidence Level** | DDL | No | Filters by confidence score. Options: All,
+    Low, Medium, High. Default is 'All'. |
+
+    | **Limit** | String | No | The maximum number of events to return. Default is
+    '100'. Must be a positive integer. |
+
+    | **From** | String | No | Start time for the search in ISO format (YYYY-MM-DDTHH:mm:ss.SSS).
+    |
+
+    | **To** | String | No | End time for the search in ISO format (YYYY-MM-DDTHH:mm:ss.SSS).
+    |
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it requires a valid **Insight ID** as
+    a direct input parameter.
+
+    - The action populates a data table named "SOC Insight Events" with up to 20 records
+    for immediate visibility, while the full result set is provided in the raw JSON
+    output.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action parses all input parameters and validates the
+    mandatory **Insight ID** and the **Limit** (ensuring it is a valid integer).
+
+    2.  **API Call**: It establishes a connection to the Infoblox API via the `APIManager`
+    and sends a GET request to the SOC insights events endpoint with the specified
+    filters.
+
+    3.  **Data Processing**: Upon receiving the response, it checks if any events
+    were found.
+
+    4.  **Table Creation**: If events exist, it uses the `SOCInsightEvent` data model
+    to map the results and constructs a CSV data table containing the key event details
+    (Device IP, Threat Level, Action, etc.).
+
+    5.  **Output**: It adds the data table to the case wall, attaches the full raw
+    JSON response to the action results, and completes the execution with a success
+    message.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -388,15 +952,11 @@ get_soc_insights_events:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves a list of security events associated with a specific SOC
-      Insight ID from Infoblox Threat Defense. This action supports granular filtering
-      based on device IP, DNS query type (e.g., A, MX, TXT), threat intelligence sources,
-      indicator values, and threat/confidence levels. It provides a summarized data
-      table of the events and returns the full JSON response for detailed downstream
-      processing.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -412,9 +972,62 @@ get_soc_insights_events:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 get_soc_insights_indicators:
+  ai_description: >-
+    Retrieves a list of indicators associated with a specific SOC Insight from Infoblox
+    Threat Defense. This action allows analysts to investigate the specific threat
+    indicators (such as IPs or domains) that triggered a SOC Insight, providing context
+    on confidence scores, threat actors, and actions taken.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Insight ID | string | Yes | The unique identifier of the SOC insight to retrieve
+    indicators from. |
+
+    | Confidence | string | No | Filter indicators by their confidence score. |
+
+    | Indicator | string | No | Filter by a specific indicator value (e.g., a specific
+    domain or IP). |
+
+    | Actor | string | No | Filter indicators associated with a specific threat actor.
+    |
+
+    | From | string | No | Filter indicators seen after this time (Format: YYYY-MM-DDTHH:mm:ss.SSS).
+    |
+
+    | To | string | No | Filter indicators seen before this time (Format: YYYY-MM-DDTHH:mm:ss.SSS).
+    |
+
+    | Action | string | No | Filter by the action taken on the indicator (e.g., Blocked,
+    Allowed). |
+
+    | Limit | string | No | The maximum number of results to return. Defaults to 100.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes connection parameters (API Root,
+    API Key) and extracts user-provided filters like Insight ID, Confidence, and Time
+    ranges.
+
+    2. **Validation**: It ensures the mandatory Insight ID is provided and validates
+    that the Limit parameter is a positive integer.
+
+    3. **Data Retrieval**: It performs a GET request to the Infoblox API endpoint
+    for SOC Insight indicators, applying the specified filters.
+
+    4. **Processing**: If results are found, it maps the raw data into a structured
+    CSV-ready format for the case wall.
+
+    5. **Output**: It generates a data table titled 'SOC Insight Indicators' containing
+    key fields (Action, Confidence, Indicator, Actor) and attaches the full raw JSON
+    response to the action results.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -422,14 +1035,11 @@ get_soc_insights_indicators:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves a list of indicators associated with a specific SOC Insight
-      from Infoblox Threat Defense. The action allows filtering results by confidence
-      score, specific indicator values, threat actors, time ranges, and actions taken.
-      It provides the collected indicators in a data table and as raw JSON for further
-      analysis.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -445,9 +1055,35 @@ get_soc_insights_indicators:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 host_lookup:
+  ai_description: "### General Description\nRetrieves host information from Infoblox\
+    \ IPAM (Internet Protocol Address Management) based on custom filters and search\
+    \ criteria. This action allows security analysts to perform lookups for specific\
+    \ host asset records within the Infoblox environment to gather context during\
+    \ investigations. It supports complex filtering by host attributes and tags, as\
+    \ well as pagination and sorting.\n\n### Parameters Description\n\n| Parameter\
+    \ | Description | Type | Mandatory | Default Value |\n| :--- | :--- | :--- | :---\
+    \ | :--- |\n| **Host Filter** | Logical expression to filter IPAM hosts (e.g.,\
+    \ `name==\"webserver01\"` or `ip_address==\"192.168.1.100\"`). | String | No |\
+    \ N/A |\n| **Tag Filter** | Filter IP addresses by specific metadata tags (e.g.,\
+    \ `'Tenable_scan'=='true'`). | String | No | N/A |\n| **Offset** | The starting\
+    \ index for the results (useful for pagination). | String | No | 0 |\n| **Limit**\
+    \ | The maximum number of host records to retrieve. | String | No | 100 |\n| **Order\
+    \ By** | Comma-separated fields to sort the results (e.g., `name desc`). Supports\
+    \ dot notation. | String | No | N/A |\n\n### Additional Notes\n* The action validates\
+    \ that **Offset** and **Limit** are non-negative integers. \n* A maximum of 20\
+    \ records will be displayed in the Siemplify UI data table, though all retrieved\
+    \ records are available in the raw JSON output.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the Infoblox API manager using the integration's API\
+    \ Root and API Key.\n2. **Parameter Extraction**: Retrieves search filters, pagination\
+    \ offsets, and sorting preferences provided by the user.\n3. **Validation**: Validates\
+    \ that the numeric parameters (Offset and Limit) are correctly formatted and within\
+    \ valid ranges.\n4. **API Request**: Executes a GET request to the `/api/ddi/v1/ipam/host`\
+    \ endpoint with the processed filters.\n5. **Data Processing**: Parses the host\
+    \ records from the API response and converts them into a flattened format suitable\
+    \ for reporting.\n6. **Output Generation**: Adds the raw JSON response to the\
+    \ action results and constructs a data table titled 'Hosts' for the case wall.\
+    \ If no records are found, it provides a corresponding status message."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -455,16 +1091,11 @@ host_lookup:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves host asset records from Infoblox IPAM based on specific
-      filter criteria. This action enables searching for host information using flexible
-      filters for host attributes (like name or IP address) and tags. It fetches detailed
-      asset data including host names, network spaces, comments, and timestamps, presenting
-      the results in a structured data table and raw JSON format. The action supports
-      pagination through offset and limit parameters and allows results to be ordered
-      by specified fields.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -480,26 +1111,96 @@ host_lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 indicator_threat_lookup_with_tide:
+  ai_description: >-
+    ### General Description
+
+    The 'Indicator Threat Lookup With TIDE' action allows users to query the Infoblox
+    TIDE (Threat Intelligence Data Exchange) service for detailed threat intelligence
+    information. It supports searching for specific indicators like IP addresses,
+    Hostnames, URLs, Emails, or Hashes, and allows for broader searches using filters
+    such as domains, top-level domains (TLDs), threat classes, or targets. This action
+    is primarily used for enrichment and threat research, providing context such as
+    threat levels, classes, and profiles for known malicious indicators.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Indicator Type | ddl | No | Defines the category of indicator to search for.
+    Options: All, IP, Host, URL, Email, Hash. Defaults to 'All'. |
+
+    | Indicator Value | string | No | The specific value (e.g., a specific IP or URL)
+    associated with the selected 'Indicator Type'. |
+
+    | Domain | string | No | A comma-separated list of domains to filter the threat
+    lookup results. |
+
+    | Top-Level Domain | string | No | A comma-separated list of TLDs (e.g., .com,
+    .org) to filter the threat lookup results. |
+
+    | Threat Class | string | No | A comma-separated list of threat classes (e.g.,
+    malware, phishing) to filter for. |
+
+    | Target | string | No | A comma-separated list of targets (e.g., financial, government)
+    to filter results. |
+
+    | Expiration | string | No | A timestamp or period (ISO8601) to filter out indicators
+    that are no longer considered active. |
+
+    | Limit | string | No | The maximum number of threat records to retrieve from
+    the TIDE service. Defaults to 1000. |
+
+
+    ### Additional Notes
+
+    *   Either an 'Indicator Value' (along with a specific 'Indicator Type') or general
+    filters (Domain, TLD, Threat Class, etc.) must be provided to perform a meaningful
+    search.
+
+    *   If 'Indicator Type' is set to 'All', the 'Indicator Value' parameter is typically
+    ignored in favor of the other filter criteria.
+
+    *   The action results are capped at a specific number of records in the UI table
+    (20 by default) even if more results are returned in the raw JSON.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action extracts connection settings and user-provided
+    search parameters (Indicator Type, Value, Domain, etc.).
+
+    2.  **Input Validation:** The 'Limit' parameter is validated to ensure it is a
+    positive integer.
+
+    3.  **API Interaction:** The script calls the Infoblox TIDE API via a GET request
+    to the `/tide/api/data/threats` endpoint, passing all provided filters as query
+    parameters.
+
+    4.  **Data Processing:** The response is parsed to extract the 'threat' list.
+    If threats are found, they are converted into a flat structure suitable for a
+    data table.
+
+    5.  **Result Generation:** The action populates the JSON result with the full
+    API response and creates a visual data table on the case wall for the analyst
+    to review.
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
-    description: Performs threat intelligence lookups for various indicator types
-      including IP, URL, Host, Email, or Hash using Infoblox TIDE (Threat Intelligence
-      Data Exchange). The action retrieves records containing threat levels, classes,
-      profiles, and detection statuses based on user-provided indicator values and
-      optional filters such as Domain, Top-Level Domain, Threat Class, and Target.
-      Results are formatted into a data table for immediate review and provided as
-      raw JSON for downstream processing.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Creates a data table in the action results displaying threat records retrieved
+      from Infoblox TIDE.
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -515,9 +1216,64 @@ indicator_threat_lookup_with_tide:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
-initiate_indicator_intel_lookup_with_dossier:
+"initiate_indicator_intel_lookup_with_dossier":
+  ai_description: >-
+    ### General Description
+
+    This action initiates an indicator investigation using Infoblox Dossier for specific
+    indicator types including Host, IP, URL, Email, and Hash. It allows users to query
+    threat intelligence sources to retrieve detailed Dossier results. Depending on
+    the configuration, the action can either return a Job ID for a background investigation
+    or wait for the investigation to complete and return the full results in a data
+    table.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Indicator Type | DDL | Yes | Specifies the type of indicator to search for.
+    Supported values are Host, IP, URL, Email, and Hash. Defaults to 'Host'. |
+
+    | Indicator Value | String | Yes | The actual indicator value (e.g., an IP address
+    or domain) to be investigated. |
+
+    | Source | String | No | A comma-separated list of specific Infoblox sources to
+    query for information. |
+
+    | Wait for Results | Boolean | No | If set to 'true', the action blocks until
+    the investigation is complete and returns the full Dossier results. If 'false',
+    it returns a Job ID and status immediately. Defaults to 'false'. |
+
+
+    ### Additional Notes
+
+    This action does not iterate over entities automatically; it processes a single
+    indicator provided via the 'Indicator Value' and 'Indicator Type' parameters.
+    To use this in a playbook for multiple entities, it should be placed in a loop
+    or mapped to specific entity identifiers.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts connection parameters and action inputs (Indicator
+    Type, Value, Source, and Wait for Results).
+
+    2. **Validation**: Ensures the 'Indicator Value' is a non-empty string and trims
+    whitespace from the 'Source' parameter if provided.
+
+    3. **API Call**: Initiates a request to the Infoblox Dossier API using a GET request.
+
+    4. **Handling Response**:
+        - If **Wait for Results** is enabled, the action parses the list of dossier
+    results into a data table showing source, status, and data.
+        - If **Wait for Results** is disabled, the action captures the Job ID and
+    current status for later retrieval.
+    5. **Completion**: Adds the raw API response to the action's JSON results and
+    populates a data table in the case wall.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -525,17 +1281,11 @@ initiate_indicator_intel_lookup_with_dossier:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: 'Initiates an indicator investigation using Infoblox Dossier for
-      specific types including **Host, IP, URL, Email, or Hash**. This action allows
-      users to query threat intelligence by specifying the indicator value and optional
-      intelligence sources. It provides a flexible execution flow via the ''Wait for
-      Results'' parameter: it can either return a **Job ID** and status immediately
-      for asynchronous tracking or wait to retrieve and display the full dossier intelligence.
-      Results are returned as a JSON object and presented in a structured data table
-      titled ''Dossier Lookup Results''.'
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -551,9 +1301,71 @@ initiate_indicator_intel_lookup_with_dossier:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ip_lookup:
+  ai_description: >-
+    ### General Description
+
+    Retrieves IP address information from the Infoblox DDI (IPAM) module based on
+    various filter criteria. This action allows users to search for IP address records,
+    identify their current state (Free, Used, or Any), and retrieve metadata such
+    as associated hostnames, usage patterns, hardware addresses, and protocols. It
+    is primarily used for network visibility and asset identification within the Infoblox
+    environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | IP Filter | String | No | A logical expression used to filter IP addresses (e.g.,
+    address=="192.168.1.100" or state=="USED"). |
+
+    | Address State | DDL | No | Filters results by the status of the IP address.
+    Options include 'Any', 'Free', and 'Used'. Defaults to 'Used'. |
+
+    | Scope | String | No | Restricts the lookup to a specific network scope defined
+    in Infoblox. |
+
+    | Tag Filter | String | No | Filters IP addresses by specific metadata tags (e.g.,
+    'Location'=='NewYork'). |
+
+    | Offset | String | No | The starting point for pagination. Defaults to '0'. |
+
+    | Limit | String | No | The maximum number of records to return. Defaults to '100'.
+    |
+
+    | Order By | String | No | Determines the sorting order of the results (e.g.,
+    'address desc'). |
+
+
+    ### Additional Notes
+
+    This action performs a general search and does not automatically process entities
+    from the Google SecOps case context. It relies entirely on the provided input
+    parameters to query the Infoblox API.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes by retrieving integration configuration
+    details (API Root, API Key, and SSL verification) and extracting the user-defined
+    parameters.
+
+    2. **Validation**: It validates the 'Offset' and 'Limit' parameters to ensure
+    they are valid non-negative integers.
+
+    3. **API Execution**: A GET request is sent to the Infoblox IPAM API endpoint
+    (`/api/ddi/v1/ipam/address`) with the specified filters, state, and pagination
+    settings.
+
+    4. **Data Transformation**: The raw API response is parsed and mapped to an internal
+    data model (`IPLookup`).
+
+    5. **Results Delivery**: The action provides the full raw JSON response and constructs
+    a structured data table (displaying up to 20 records) for the case management
+    interface, showing critical fields like IP Address, Host Name, and Hardware Address.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -561,16 +1373,11 @@ ip_lookup:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Retrieves IP address records from Infoblox DDI based on specified
-      criteria. The action supports filtering by IP address, state (Any, Free, Used),
-      scope, and tags. It provides paginated results with support for sorting, outputting
-      detailed IP management information including hostnames, states, and hardware
-      addresses into both raw JSON and a formatted data table. This allows security
-      teams to query and monitor the status of IP assets within their managed network
-      infrastructure.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -586,9 +1393,51 @@ ip_lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies connectivity and validates the provided credentials for the Infoblox
+    Threat Defense with DDI integration. This utility action is used to ensure that
+    the Google SecOps platform can successfully communicate with the Infoblox API
+    endpoints.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | There are no action-specific parameters for the Ping action. It relies
+    on global configuration parameters (API Root, API Key, Verify SSL). | N/A | No
+    |
+
+
+    ### Additional Notes
+
+    This action uses the `test_connectivity` method within the `APIManager` to perform
+    a basic authentication check against the Infoblox account endpoint. It does not
+    process or require any entity input.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the integration parameters (API
+    Root, API Key, and SSL verification settings).
+
+    2. **Connection Attempt**: It instantiates the `APIManager` and calls the `test_connectivity`
+    method.
+
+    3. **API Request**: The manager executes a `GET` request to the `/api/authn/v1/account`
+    endpoint to verify authentication.
+
+    4. **Status Handling**: If the request is successful, it returns a success message.
+    If the request fails (e.g., unauthorized or network error), it captures the exception
+    and reports the failure.
+
+    5. **Completion**: The action terminates, returning a boolean status and a descriptive
+    message to the case wall.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -596,14 +1445,11 @@ ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Verifies connectivity to the Infoblox server. This action tests the
-      communication between Google SecOps and the Infoblox Threat Defense with DDI
-      API by performing a health check against the account authentication endpoint.
-      It ensures that the provided API credentials and root URL are valid and that
-      the service is reachable.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -619,9 +1465,44 @@ ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 remove_custom_list:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specified custom list from the Infoblox Threat Defense platform. This
+    action is used for cleanup or management of threat intelligence lists that are
+    no longer required.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory | Notes |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Custom List ID | The unique identifier of the custom list to be removed. | String
+    | Yes | Must be a valid positive integer. |
+
+
+    ### Additional Notes
+
+    This action performs a permanent deletion of the custom list resource in Infoblox.
+    It does not operate on Google SecOps entities but targets a specific resource
+    by its ID.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves integration configuration (API Root,
+    API Key) and the `Custom List ID` parameter.
+
+    2. **Validation**: Validates that the provided ID is a positive integer.
+
+    3. **API Interaction**: Executes a `DELETE` request to the Infoblox API endpoint
+    for the specified custom list ID.
+
+    4. **Result Handling**: If successful, it returns a confirmation message. If the
+    ID is invalid or not found, it logs an error and fails the action.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -629,14 +1510,13 @@ remove_custom_list:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Deletes a specific custom list from Infoblox Threat Defense using
-      its unique identifier. This action communicates with the Infoblox API to perform
-      a permanent removal of the named list, effectively managing security policy
-      components by cleaning up deprecated or unnecessary custom lists.
-    external_data_mutation_explanation: Permanently deletes a named custom list from
-      the Infoblox Threat Defense platform via a DELETE request.
+    external_data_mutation_explanation: >-
+      Performs a DELETE request to remove a custom list resource from the external
+      Infoblox Threat Defense system.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -652,9 +1532,23 @@ remove_custom_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 remove_network_list:
+  ai_description: "Removes an existing network list from the Infoblox Threat Defense\
+    \ environment. This action is used to clean up or decommission specific network\
+    \ groups that are no longer required for security policies. \n\n### Parameters\
+    \ Description:\n\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| Network List ID | String | Yes | The unique identifier of\
+    \ the network list to be removed. The action validates this value as a positive\
+    \ integer before processing. |\n\n### Additional Notes:\n\n- The action will fail\
+    \ if the provided ID does not exist or if the network list is currently assigned\
+    \ to an active security policy.\n- This is a destructive action and cannot be\
+    \ undone via the SOAR interface.\n\n### Flow Description:\n\n1. **Initialization**:\
+    \ Retrieves integration configuration including API Root and API Key.\n2. **Parameter\
+    \ Extraction**: Extracts the `Network List ID` provided by the user.\n3. **Validation**:\
+    \ Validates that the `Network List ID` is a valid positive integer.\n4. **API\
+    \ Execution**: Sends a DELETE request to the Infoblox API endpoint for the specific\
+    \ network list ID.\n5. **Completion**: Returns a success message if the deletion\
+    \ is confirmed by the external system or an error message if the operation fails."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -662,15 +1556,13 @@ remove_network_list:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Removes a specified network list from the Infoblox Threat Defense
-      environment using its unique identifier. This action validates that the provided
-      Network List ID is a positive integer before executing a DELETE request to the
-      Infoblox API. It is primarily used for resource management and the decommissioning
-      of obsolete network configurations within the security platform.
-    external_data_mutation_explanation: Removes a specified network list from the
-      Infoblox environment using a DELETE request.
+    external_data_mutation_explanation: >-
+      Removes a network list configuration object from the Infoblox Threat Defense
+      environment via a DELETE request.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -686,9 +1578,23 @@ remove_network_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 remove_security_policy:
+  ai_description: "### General Description\nDeletes a specified security policy from\
+    \ the Infoblox Threat Defense system. This action is typically used to unblock\
+    \ indicators or manage policy configurations by removing them via their unique\
+    \ system identifier.\n\n### Parameters Description\n| Parameter | Description\
+    \ | Type | Mandatory |\n| :--- | :--- | :--- | :--- |\n| Security Policy ID |\
+    \ The unique identifier of the security policy to be deleted from the system.\
+    \ The value provided must be a valid positive integer string. | String | Yes |\n\
+    \n### Additional Notes\n- This action performs a destructive operation (DELETE)\
+    \ in the external Infoblox system. \n- The ID must be a positive, non-zero integer.\n\
+    \n### Flow Description\n1. **Parameter Extraction**: Retrieves the 'Security Policy\
+    \ ID' from the action input parameters.\n2. **Validation**: Checks that the ID\
+    \ is a non-empty string and validates that it represents a positive integer greater\
+    \ than zero.\n3. **API Execution**: Initializes the Infoblox APIManager and sends\
+    \ a DELETE request to the security policies endpoint using the validated ID.\n\
+    4. **Result Reporting**: Returns a success status if the policy is removed or\
+    \ fails the action if an error occurs (e.g., policy not found or network error)."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -696,15 +1602,13 @@ remove_security_policy:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Removes a specified security policy from Infoblox Threat Defense
-      and DDI using its unique identifier. This action communicates with the Infoblox
-      API via a DELETE request to remove the policy resource, which can be used to
-      manage security configurations or unblock indicators. It requires a valid Security
-      Policy ID as input and confirms the deletion upon success.
-    external_data_mutation_explanation: Deletes a security policy resource from the
-      Infoblox Threat Defense system, permanently removing that policy's configuration.
+    external_data_mutation_explanation: >-
+      Removes a security policy resource from the Infoblox Threat Defense system using
+      a DELETE request.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -720,9 +1624,37 @@ remove_security_policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 update_custom_list:
+  ai_description: >-
+    ### General Description Updates the metadata and configuration of an existing
+    Custom List in Infoblox Threat Defense. This action allows for the modification
+    of settings such as the list's name, description, threat levels, and tags. It
+    follows a 'read-modify-write' pattern by first fetching the current state of the
+    list from Infoblox to ensure that any parameters not specified by the user remain
+    unchanged. ### Parameters Description | Parameter | Type | Mandatory | Description
+    | | :--- | :--- | :--- | :--- | | Custom List ID | String | Yes | The unique numerical
+    identifier for the custom list to be updated. Must be a positive integer. | |
+    Name | String | No | The new name for the custom list. If not provided, the existing
+    name is kept. | | Description | String | No | The new description for the custom
+    list. Use the keyword 'empty' to remove the existing description. | | Confidence
+    Level | DDL | No | The confidence level to assign to the list (High, Medium, Low).
+    | | Threat Level | DDL | No | The threat level to assign to the list (High, Medium,
+    Low, Info). | | Tags | String | No | A JSON object string representing tags (e.g.,
+    {'key': 'value'}). Use the keyword 'empty' to remove existing tags. | ### Additional
+    Notes - This action performs a partial update logic internally by merging user
+    inputs with existing data before sending a PUT request. - The 'empty' keyword
+    is specifically supported for the Description and Tags fields to allow for clearing
+    data. ### Flow Description 1. **Parameter Initialization:** The action extracts
+    the integration configuration and validates that the provided Custom List ID is
+    a positive integer. 2. **Current State Retrieval:** It fetches the existing data
+    for the specified Custom List from Infoblox to identify current values for all
+    fields. 3. **Payload Construction:** A new payload is built by merging provided
+    parameters with the existing data. If a field like 'Name' is empty, it inherits
+    the existing value. It processes the 'empty' keyword to nullify descriptions or
+    tags. 4. **External Mutation:** A PUT request is dispatched to the Infoblox API
+    to update the Custom List resource. 5. **Output Generation:** Upon success, the
+    updated list details are added to the action results in JSON format and displayed
+    in a 'Custom List Details' data table.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -730,17 +1662,13 @@ update_custom_list:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Updates an existing custom list in Infoblox Threat Defense based
-      on a specific Custom List ID. This action allows for modifying properties such
-      as the name, description, confidence level, threat level, and associated tags.
-      It intelligently performs partial updates by first fetching the current list
-      configuration from the platform and then merging it with the provided parameters,
-      ensuring that any fields not explicitly specified by the user remain unchanged.
-    external_data_mutation_explanation: Modifies the configuration and metadata of
-      a named custom list on the Infoblox platform using a PUT request to the specified
-      list ID.
+    external_data_mutation_explanation: >-
+      Updates the configuration of an existing custom list (name, description, levels,
+      tags) in Infoblox via a PUT request.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -756,9 +1684,56 @@ update_custom_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 update_custom_list_items:
+  ai_description: >-
+    ### General Description
+
+    Updates the items within an existing custom list in Infoblox Threat Defense. This
+    action allows users to dynamically manage list memberships by adding or removing
+    specific network indicators such as IPv4 addresses, IPv6 addresses, and domains.
+    It is useful for automated containment or allowing known safe indicators.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Custom List ID | String | Yes | The unique identifier for the custom list that
+    needs to be updated. must be a non-negative integer. |
+
+    | Action | DDL | Yes | The operation to perform on the items. Choose 'Add' to
+    insert new items or 'Remove' to delete existing items. |
+
+    | Items | String | Yes | A comma-separated string containing the items (IPs, CIDRs,
+    or Domains) to be processed. |
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: Extracts integration settings and action-specific
+    inputs (ID, action type, and items string).
+
+    2. **Input Validation**: Validates the Custom List ID as a positive integer. It
+    then splits the comma-separated items string and performs regex-based validation
+    to ensure each entry is a valid IPv4 address, IPv6 address, or domain name.
+
+    3. **External API Call**: Executes a PATCH request to the Infoblox endpoint `/api/atcfw/v1/named_lists/{custom_list_id}/items`.
+    The payload is constructed to place indicators into either the `inserted_items_described`
+    or `deleted_items_described` fields based on the selected action.
+
+    4. **Result Handling**: Captures the counts of added, removed, or updated items
+    from the API response.
+
+    5. **Completion**: Outputs a summary message to the case wall and attaches the
+    full JSON response as a result object for downstream playbooks.
+
+
+    ### Additional Notes
+
+    This action does not run on entities; it relies entirely on the manually provided
+    parameters.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -766,16 +1741,13 @@ update_custom_list_items:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Updates indicator items within a specified Infoblox custom list.
-      The action allows for adding or removing items such as IPv4 addresses, IPv6
-      addresses, CIDRs, or domain names from a list identified by its ID. It performs
-      a PATCH request to the Infoblox API to modify the list contents and returns
-      a summary of the added, removed, or updated items. This is useful for dynamically
-      managing threat intelligence lists used in security policies.
-    external_data_mutation_explanation: Adds or removes indicator items (IPs, CIDRs,
-      or domains) from an existing custom named list in Infoblox.
+    external_data_mutation_explanation: >-
+      Updates the configuration of custom lists in Infoblox by adding or removing
+      network indicators (IPs, CIDRs, Domains).
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -791,27 +1763,79 @@ update_custom_list_items:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 update_network_list:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing network list in Infoblox Threat Defense with a new name, items
+    (IP addresses/CIDRs), or description. This action allows for partial updates;
+    if a parameter is left blank, the action retrieves the current configuration from
+    Infoblox and preserves the existing value. It is useful for maintaining dynamic
+    network lists used in security policies.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Network List ID** | string | Yes | The unique identifier of the network list
+    to update. Must be a positive integer. |
+
+    | **Name** | string | No | The new name for the network list. If not provided,
+    the current name is kept. |
+
+    | **Items** | string | No | A comma-separated list of items (e.g., IPv4, IPv6,
+    or CIDRs) to include in the list. This replaces the existing items. |
+
+    | **Description** | string | No | A new description for the network list. Use
+    the keyword `empty` to remove the current description. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Infoblox API manager using the
+    integration configuration (API Root, API Key).
+
+    2. **Parameter Extraction**: It extracts and validates the `Network List ID` and
+    other optional parameters.
+
+    3. **Data Retrieval**: The action calls the Infoblox API to fetch the current
+    state of the specified network list to ensure that unprovided parameters are not
+    overwritten with null values.
+
+    4. **Payload Construction**: It merges the provided updates with the existing
+    data. If the `Description` parameter is set to `empty`, the description is cleared.
+
+    5. **API Update**: It executes a `PUT` request to the Infoblox endpoint `/api/atcfw/v1/network_lists/{network_list_id}`
+    to apply the changes.
+
+    6. **Output**: The action returns the updated network list details in JSON format
+    and creates a data table on the Case Wall named "Network List Details".
+
+
+    ### Additional Notes
+
+    - This action does not work on entities in the case scope; it operates strictly
+    based on the provided **Network List ID** parameter.
+
+    - If updating the `Items`, the provided list replaces the entire existing set
+    of items for that network list.
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: false
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Updates an existing network list in Infoblox Threat Defense with
-      a new name, description, or set of network items (such as IP addresses or CIDRs).
-      The action first retrieves the current state of the specified network list to
-      ensure only provided changes are applied, while maintaining existing values
-      for omitted parameters. It supports removing the description by using the keyword
-      'empty' and provides a detailed data table of the updated list's properties.
-    external_data_mutation_explanation: Modifies the configuration of an existing
-      network list in Infoblox Threat Defense by updating its name, description, or
-      member items via a PUT request.
+    external_data_mutation_explanation: >-
+      Updates the configuration (name, description, or list of items) of an existing
+      network list on the Infoblox Threat Defense platform via a PUT request.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -827,9 +1851,82 @@ update_network_list:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 update_security_policy:
+  ai_description: >-
+    Modifies an existing security policy's configurations or linked lists in Infoblox
+    Threat Defense. This action allows users to update various aspects of a security
+    policy, including its name, description, associated network lists, forwarding
+    policies (DFPs), roaming device groups, security rules, and specific security
+    features like safe search or DNS rebinding protection. It also supports updating
+    policy tags and advanced parameters through JSON objects.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Security Policy ID | string | True | Specify the ID of the security policy to
+    update. Must be a positive integer. |
+
+    | Policy Name | string | False | Specify the updated name for the security policy.
+    |
+
+    | Description | string | False | Specify an updated description. Use the keyword
+    `empty` to remove the existing description. |
+
+    | Network Lists | string | False | Comma-separated network list IDs to associate
+    (e.g., "123, 456"). Use `empty` to remove association. |
+
+    | DFPS | string | False | Comma-separated Default Forwarding Policies to update.
+    Use `empty` to remove. |
+
+    | Roaming Device Groups | string | False | Comma-separated Roaming Device Group
+    IDs (e.g., "789"). Use `empty` to remove. |
+
+    | Rules | string | False | A JSON array of rule objects containing keys like `action`,
+    `type`, `data`, `policy_name`, and `redirect_name`. Use `empty` to remove rules.
+    |
+
+    | Safe Search | ddl | False | Enable (True) or disable (False) safe search filtering.
+    |
+
+    | Block DNS Rebinding | ddl | False | Enable (True) or disable (False) DNS rebinding
+    attack protection. |
+
+    | Tags | string | False | A JSON object string representing tags for categorization.
+    |
+
+    | Additional Parameters | string | False | A JSON object containing advanced settings
+    such as `precedence`, `access_codes`, `doh_enabled`, etc. |
+
+
+    ### Additional Notes
+
+    - The action performs a partial update; any parameters left blank will retain
+    their existing values in the security policy.
+
+    - The `Rules`, `Tags`, and `Additional Parameters` inputs must be valid JSON strings.
+
+
+    ### Flow Description
+
+    1. **Validation:** The action validates the mandatory `Security Policy ID` to
+    ensure it is a valid integer.
+
+    2. **Retrieval:** It fetches the existing security policy configuration from Infoblox
+    to merge current data with the new updates.
+
+    3. **Payload Construction:** It constructs the update payload, prioritizing provided
+    parameters and falling back to existing data for empty inputs. Special keywords
+    like `empty` are handled to clear fields.
+
+    4. **Execution:** It sends a `PUT` request to the Infoblox API to apply the changes
+    to the specified policy.
+
+    5. **Reporting:** Upon success, the updated policy details are added to the action
+    result JSON and displayed in a data table named "Security Policy Details".
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -837,19 +1934,14 @@ update_security_policy:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Modifies an existing security policy's configurations or linked lists
-      in Infoblox Threat Defense. The action takes a Security Policy ID and allows
-      updating various attributes including the policy name, description, associated
-      network lists, roaming device groups, security rules, safe search settings,
-      and DNS rebinding protection. It fetches the current state of the policy before
-      applying updates to ensure consistency and supports the 'empty' keyword to remove
-      existing values from specific fields. The results, including the updated policy
-      details, are returned as a JSON and a data table.
-    external_data_mutation_explanation: Updates the configuration of a security policy
-      in Infoblox, which can alter network access controls, security rules, and DNS
-      filtering behavior.
+    external_data_mutation_explanation: >-
+      Updates the configuration of a security policy on the Infoblox server via a
+      PUT request, potentially changing security rules, list associations, and feature
+      toggles.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -865,5 +1957,3 @@ update_security_policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false

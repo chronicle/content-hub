@@ -1,4 +1,28 @@
 AddCommentToModelBreach:
+  ai_description: "### General Description\nThe **Add Comment To Model Breach** action\
+    \ allows analysts to programmatically append notes or comments to a specific model\
+    \ breach (alert) within the Darktrace platform. This is primarily used for synchronizing\
+    \ documentation between Google SecOps and Darktrace, ensuring that investigative\
+    \ notes or automated findings are recorded in the source system.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| **Model Breach ID** | String | Yes | The unique identifier\
+    \ (pbid) of the model breach in Darktrace to which the comment should be added.\
+    \ |\n| **Comment** | String | Yes | The actual text content of the comment you\
+    \ wish to post to the Darktrace model breach. |\n\n### Additional Notes\n- This\
+    \ action interacts with the Darktrace API via a POST request.\n- If the provided\
+    \ **Model Breach ID** does not exist in Darktrace, the action will fail with a\
+    \ specific 'not found' error message.\n- This action does not automatically iterate\
+    \ over entities in the case; it requires the specific breach ID to be passed as\
+    \ a parameter.\n\n### Flow Description\n1. **Initialization**: The action retrieves\
+    \ integration configuration (API Root, Tokens) and action parameters (**Model\
+    \ Breach ID** and **Comment**).\n2. **Connectivity**: It initializes the Darktrace\
+    \ Manager to establish a connection with the API.\n3. **API Execution**: The action\
+    \ sends a POST request to the `/modelbreaches/{model_breach_id}/comments` endpoint\
+    \ with the comment payload.\n4. **Result Processing**: \n    - If successful,\
+    \ the API response is added to the execution results.\n    - If the breach ID\
+    \ is missing, a `NotFoundException` is caught, and a user-friendly error is returned.\n\
+    5. **Completion**: The action terminates with a success or failure status and\
+    \ an informative output message."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -6,14 +30,13 @@ AddCommentToModelBreach:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Adds a comment to a specific model breach in Darktrace. This action
-      utilizes the Darktrace API to post user-defined text to a model breach identified
-      by its unique ID, facilitating documentation and collaboration directly within
-      the Darktrace platform.
-    external_data_mutation_explanation: Performs a POST request to the Darktrace API
-      to add a new comment to a specific model breach record.
+    external_data_mutation_explanation: >-
+      Adds a new comment/message to a model breach record within the external Darktrace
+      system via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -29,27 +52,52 @@ AddCommentToModelBreach:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 EnrichEntities:
+  ai_description: "### General Description\nThis action enriches specific entity types\
+    \ (IP Addresses, Hostnames, Mac Addresses, and URLs) using threat intelligence\
+    \ and device context retrieved from Darktrace. It identifies whether an entity\
+    \ corresponds to an internal device or an external endpoint and retrieves relevant\
+    \ metadata such as OS, device labels, and ASN information.\n\n### Parameters Description\n\
+    \n| Parameter | Default Value | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- | :--- |\n| Fetch Connection Data | true | boolean | No | If enabled,\
+    \ the action fetches additional information about network connections related\
+    \ to internal Darktrace endpoints. |\n| Max Hours Backwards | 24 | string | No\
+    \ | The number of hours to look back when fetching connection data. If a value\
+    \ less than 1 is provided, it defaults to 24. |\n| Create Endpoint Insight | true\
+    \ | boolean | No | If enabled, the action generates a SOAR entity insight containing\
+    \ formatted device details (Hostname, IP, MAC, OS, etc.). |\n\n### Additional\
+    \ Notes\n- For **URL** entities, the action extracts the domain portion to perform\
+    \ the lookup.\n- The action distinguishes between internal Darktrace devices (retrieved\
+    \ via `/devices`) and external endpoints (retrieved via `/endpointdetails`).\n\
+    - Enrichment data is prefixed with \"Dark\" in the entity's additional properties.\n\
+    \n### Flow Description\n1. **Filter Entities**: The action identifies supported\
+    \ entities (ADDRESS, HOSTNAME, MACADDRESS, URL) from the target list.\n2. **Manager\
+    \ Initialization**: Connects to the Darktrace API using the provided credentials\
+    \ (Root, Token, Private Token).\n3. **Data Retrieval**: For each entity, it queries\
+    \ Darktrace based on the entity type:\n    - **IP/MAC**: Queries device information\
+    \ or endpoint details.\n    - **Hostname**: Searches for a matching device to\
+    \ resolve its MAC or IP for further enrichment.\n    - **URL**: Parses the domain\
+    \ and fetches endpoint details.\n4. **Connection Enrichment**: If `Fetch Connection\
+    \ Data` is enabled and a Device ID (did) is found, it retrieves recent connection\
+    \ logs.\n5. **Internal Mutation**: \n    - Updates the entity's `additional_properties`\
+    \ with flat enrichment data.\n    - Adds CSV tables to the entity for \"Interacted\
+    \ Devices\" or \"Connection Data\".\n    - Creates a formatted HTML insight if\
+    \ `Create Endpoint Insight` is enabled.\n6. **Finalize**: Updates the entities\
+    \ in the SOAR environment and provides a JSON result of the raw data."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: true
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
-    description: Enriches IP Address, Hostname, MAC Address, and URL entities with
-      endpoint and connection intelligence from Darktrace. The action retrieves device
-      metadata such as OS, device labels, and internal identifiers, as well as geographic
-      details including ASN and country for external endpoints. It can optionally
-      fetch historical connection data (e.g., external domains, internal device interactions)
-      for a specified number of hours. Results are used to mark entities as enriched,
-      update additional properties with a 'Dark' prefix, generate entity insights,
-      and create detailed data tables for connection analysis.
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      The action updates SOAR entities with enrichment properties, adds data tables,
+      and creates entity insights based on data fetched from Darktrace.
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - ADDRESS
@@ -69,9 +117,73 @@ EnrichEntities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ExecuteCustomSearch:
+  ai_description: >-
+    ### General Description
+
+    Executes a custom search query within the Darktrace platform to retrieve security
+    events or activity logs based on user-defined criteria. This action allows for
+    flexible data retrieval by supporting various time-based filters, including absolute
+    ranges and ranges relative to the current alert's occurrence time. The results
+    are returned as a structured JSON object containing hits found by the Darktrace
+    query engine.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query** | String | Yes | The specific search query to be executed in Darktrace.
+    |
+
+    | **Time Frame** | DDL | No | Determines the search window. Options include predefined
+    offsets (e.g., 'Last Hour', 'Last Week'), alert-relative ranges (e.g., '30 Minutes
+    Around Alert Time'), or 'Custom' for manual input. |
+
+    | **Start Time** | String | No | The start timestamp for the search in ISO 8601
+    format. This is required if the 'Time Frame' is set to 'Custom'. |
+
+    | **End Time** | String | No | The end timestamp for the search in ISO 8601 format.
+    If left empty when using 'Custom' time frame, the current system time is used.
+    |
+
+    | **Max Results To Return** | String | No | Specifies the maximum number of results
+    (hits) to retrieve. Defaults to 50 if not specified or if a value less than 1
+    is provided. |
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction**: The action retrieves integration configuration (API
+    credentials) and user-provided search parameters.
+
+    2.  **Time Range Calculation**: Based on the selected 'Time Frame', the action
+    calculates the start and end timestamps. For alert-relative options, it extracts
+    the 'StartTime' and 'EndTime' from the current alert's additional properties.
+
+    3.  **Request Preparation**: The query parameters (query, timeframe, and limits)
+    are converted into a JSON structure and Base64 encoded to comply with Darktrace's
+    advanced search API requirements.
+
+    4.  **API Execution**: The action performs a GET request to the Darktrace `advanced_search`
+    endpoint using the encoded query.
+
+    5.  **Data Processing**: The response is parsed, and the resulting hits are extracted
+    into a structured JSON list.
+
+    6.  **Reporting**: The hits are added to the action results, and a summary message
+    is generated indicating whether results were successfully found.
+
+
+    ### Additional Notes
+
+    - If **'Custom'** is selected for the **Time Frame**, the **Start Time** parameter
+    must be populated, otherwise the action will fail.
+
+    - If the calculated **End Time** is in the future, it is automatically capped
+    to the current system time.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -79,15 +191,11 @@ ExecuteCustomSearch:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Executes custom search queries within Darktrace to retrieve event
-      hits based on a specified query and timeframe. The action supports various time
-      range presets such as 'Last Hour', 'Alert Time Till Now', and offsets around
-      the alert time, or custom ISO 8601 timestamps. It leverages the Darktrace advanced
-      search API to return detailed hit data as a JSON result for investigation and
-      analysis without altering external system states.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -103,9 +211,73 @@ ExecuteCustomSearch:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ListEndpointEvents:
+  ai_description: >-
+    ### General Description
+
+    The **List Endpoint Events** action retrieves the most recent events related to
+    specific endpoints (IP, Hostname, or MAC Address) from Darktrace. This action
+    is primarily used for investigation and threat hunting, allowing security analysts
+    to gather historical context about endpoint behavior, such as connections, unusual
+    activity, or model breaches, within a specific timeframe.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Event Type** | String | Yes | A comma-separated list of event types to retrieve.
+    Supported values: `connection`, `unusualconnection`, `newconnection`, `notice`,
+    `devicehistory`, `modelbreach`. |
+
+    | **Time Frame** | DDL | Yes | The relative time window for the search (e.g.,
+    'Last Hour', 'Last 24 Hours'). If 'Custom' is selected, the 'Start Time' must
+    be provided. |
+
+    | **Start Time** | String | No | The beginning of the search window in ISO 8601
+    format. Mandatory only if 'Time Frame' is set to 'Custom'. |
+
+    | **End Time** | String | No | The end of the search window in ISO 8601 format.
+    If omitted in 'Custom' mode, it defaults to the current time. |
+
+    | **Max Events To Return** | Integer | No | The maximum number of events to return
+    per event type. Defaults to 50. |
+
+
+    ### Additional Notes
+
+    - Events are returned in the **UTC** timezone.
+
+    - The action first attempts to resolve the entity to a Darktrace Device ID (`did`)
+    before querying for events. If the device is not found in Darktrace, no events
+    will be returned for that entity.
+
+    - Either a relative 'Time Frame' or a 'Custom' time range (with 'Start Time')
+    must be configured for the action to execute successfully.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action validates configuration parameters (API credentials)
+    and user-provided action parameters.
+
+    2. **Timeframe Calculation**: It converts the selected 'Time Frame' or 'Custom'
+    strings into Unix timestamps required by the Darktrace API.
+
+    3. **Entity Processing**: The action iterates through all supported entities (`ADDRESS`,
+    `HOSTNAME`, `MacAddress`) in the current scope.
+
+    4. **Device Identification**: For each entity, it queries the Darktrace API to
+    find a matching device and retrieve its internal `did` (Device ID).
+
+    5. **Event Retrieval**: For every successfully identified device, the action loops
+    through the requested `Event Types` and fetches the latest events up to the specified
+    limit.
+
+    6. **Result Generation**: Found events are formatted into data tables and attached
+    to the case wall. A full JSON result is also generated for downstream playbooks.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: true
@@ -113,16 +285,11 @@ ListEndpointEvents:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Lists the latest events related to an endpoint in Darktrace for IP
-      Address, Hostname, and MAC Address entities. The action retrieves various event
-      types, including connections, unusual connections, notices, device history,
-      and model breaches, based on a specified timeframe and result limit. It performs
-      a lookup to identify the specific device ID in Darktrace before fetching associated
-      logs. The results are presented as individual data tables for each entity and
-      event type and are also available as raw JSON data for downstream processing.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - ADDRESS
@@ -141,9 +308,58 @@ ListEndpointEvents:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 ListSimilarDevices:
+  ai_description: >-
+    ### General Description
+
+    The **List Similar Devices** action identifies and retrieves a list of devices
+    in Darktrace that exhibit similar behavior or characteristics to a specified endpoint
+    entity. This investigative action is useful for identifying related assets or
+    potential lateral movement targets by leveraging Darktrace's internal similarity
+    logic.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Expected Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Devices To Return | Integer | No | Specifies the maximum number of similar
+    devices to return for each identified entity. Defaults to 50 if not provided.
+    Must be a positive integer. |
+
+
+    ### Additional Notes
+
+    - This action supports **IP Address**, **Hostname**, and **Mac Address** entities.
+
+    - The action performs an initial lookup to find the Darktrace-specific device
+    ID (`did`) before querying for similar devices.
+
+    - If the "Max Devices To Return" parameter is set to 0 or a negative number, the
+    action will fail with an error message.
+
+
+    ### Flow Description
+
+    1. **Credential Initialization**: The action retrieves API credentials (API Root,
+    Token, and Private Token) from the integration configuration.
+
+    2. **Connectivity Test**: Verifies the connection to the Darktrace instance.
+
+    3. **Entity Selection**: Filters the target entities in the case to find supported
+    types: Address, Hostname, and MacAddress.
+
+    4. **Device Identification**: For each supported entity, the action queries Darktrace
+    to find the specific device profile and its internal identifier (`did`).
+
+    5. **Similarity Query**: Uses the found `did` to request a list of similar devices
+    from the Darktrace API, limited by the user-defined threshold.
+
+    6. **Data Output**: For each successful entity, the action generates a detailed
+    data table containing the similar devices' IP, MAC, OS, Hostname, and visibility
+    timestamps, and attaches the full raw data as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -151,16 +367,11 @@ ListSimilarDevices:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Identifies and lists devices within Darktrace that exhibit similar
-      behavior to the provided IP, Hostname, or MAC Address entities. The action first
-      resolves each entity to its corresponding Darktrace device ID and then retrieves
-      a list of similar endpoints based on the 'Max Devices To Return' parameter.
-      The resulting data, including IP addresses, MAC addresses, OS, and hostnames
-      of similar devices, is added to the case as entity tables and a structured JSON
-      result.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
   entity_usage:
     entity_scopes:
       - ADDRESS
@@ -179,9 +390,56 @@ ListSimilarDevices:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: true
 Ping:
+  ai_description: >-
+    ### General Description
+
+    This action tests the connectivity to the Darktrace server to ensure that the
+    integration configuration parameters (API Root, API Token, and API Private Token)
+    are correct and that the SOAR can communicate with the external API.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Darktrace API (e.g., https://darktrace-instance.com).
+    |
+
+    | API Token | String | Yes | The public API token used for authentication. |
+
+    | API Private Token | String | Yes | The private API token used to generate HMAC
+    signatures for requests. |
+
+    | Verify SSL | Boolean | No | If enabled, verifies the SSL certificate of the
+    Darktrace server. Defaults to false. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the mandatory connection credentials
+    (API Root, API Token, and Private Token) from the integration's configuration
+    settings.
+
+    2. **Manager Instantiation**: A Darktrace Manager is initialized, which handles
+    the complex HMAC signature generation required by the Darktrace API using the
+    Private Token and current UTC timestamp.
+
+    3. **Connectivity Test**: The action calls the `/status` endpoint of the Darktrace
+    API to verify the service availability and credential validity.
+
+    4. **Result Reporting**: If the API responds successfully, the action returns
+    a completion status. If the connection fails (e.g., 401 Unauthorized, 404 Not
+    Found, or network timeout), the action reports a failure with the specific error
+    message.
+
+
+    ### Additional Notes
+
+    This action does not run on entities and is primarily used for integration health
+    checks and troubleshooting connection issues.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -189,13 +447,11 @@ Ping:
     can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Tests connectivity to the Darktrace server using the provided API
-      configuration. It validates the API Root, API Token, and API Private Token by
-      performing an authenticated GET request to the Darktrace /status endpoint to
-      ensure successful communication and authorization.
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -211,9 +467,25 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
 UpdateModelBreachStatus:
+  ai_description: "### General Description\nUpdates the status of a specific model\
+    \ breach in Darktrace to either 'Acknowledged' or 'Unacknowledged'. This action\
+    \ allows security analysts to manage the state of breaches directly from the Google\
+    \ SecOps platform, ensuring the status remains synchronized between the two systems.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| Status | DDL | Yes | Specifies the new status\
+    \ for the model breach. Supported values: `Acknowledged`, `Unacknowledged`. |\n\
+    | Model Breach ID | String | Yes | The unique identifier of the Darktrace model\
+    \ breach that needs a status update. |\n\n### Flow Description\n1. **Authentication**:\
+    \ Initializes the Darktrace manager using the API Root, API Token, and API Private\
+    \ Token from the integration configuration.\n2. **State Check**: Fetches the current\
+    \ status of the model breach using the `Model Breach ID`. If the breach is already\
+    \ in the requested status, the action completes with a message indicating no changes\
+    \ were needed.\n3. **Status Update**: \n    - If the requested status is `Acknowledged`,\
+    \ the action sends a POST request to Darktrace's acknowledgement endpoint.\n \
+    \   - If the requested status is `Unacknowledged`, it sends a POST request to\
+    \ the unacknowledgement endpoint.\n4. **Completion**: Validates the response from\
+    \ Darktrace and returns a success message confirming the update."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -221,15 +493,13 @@ UpdateModelBreachStatus:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    description: Updates the acknowledgement status of a specific model breach in
-      Darktrace. The action retrieves the current state of the breach using the Darktrace
-      API to verify if an update is necessary, then performs a POST request to set
-      the status to either 'Acknowledged' or 'Unacknowledged' based on the provided
-      Model Breach ID and Status parameters.
-    external_data_mutation_explanation: Updates the acknowledgement status (Acknowledged/Unacknowledged)
-      of a model breach directly in the Darktrace platform.
+    external_data_mutation_explanation: >-
+      Updates the acknowledgement status of a model breach in the Darktrace platform
+      via POST requests to the /acknowledge or /unacknowledge endpoints.
     fetches_data: true
     internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
   entity_usage:
     entity_scopes: [ ]
     filters_by_additional_properties: false
@@ -245,5 +515,3 @@ UpdateModelBreachStatus:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  tags:
-    is_enrichment: false
