@@ -1,0 +1,217 @@
+Ping:
+  ai_description: >-
+    ## General Description
+
+    The **Ping** action for Azure DevOps is designed to test the connectivity and
+    authentication between Google SecOps and a specified Azure DevOps instance. It
+    serves as a utility tool to verify that the configuration parameters provided
+    (Personal Access Token, Organization, and Base URL) are correct and that the system
+    can successfully communicate with the Azure DevOps API.
+
+
+    ## Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Personal Access Token** | String | Yes | The Azure DevOps Personal Access
+    Token (PAT) used for authentication. This is retrieved from the integration's
+    configuration settings. |
+
+    | **Organization** | String | Yes | The name of the Azure DevOps organization
+    to connect to. This is retrieved from the integration's configuration settings.
+    |
+
+    | **Base URL** | String | Yes | The base URL of the Azure DevOps service (e.g.,
+    `https://dev.azure.com`). This is retrieved from the integration's configuration
+    settings. |
+
+
+    ## Additional Notes
+
+    * This action does not process or require any entity inputs.
+
+    * It primarily uses the `azure-devops` Python library to establish a connection
+    and verify access by attempting to list projects.
+
+    * The action's success is determined by whether it can successfully initialize
+    a core client and execute a `get_projects()` call.
+
+
+    ## Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the connection details (PAT,
+    Organization, and Base URL) from the integration configuration.
+
+    2. **Authentication Setup**: It initializes a `BasicAuthentication` object using
+    the provided Personal Access Token.
+
+    3. **Connection Establishment**: It creates a connection to the Azure DevOps instance
+    using the formatted Base URL and Organization name.
+
+    4. **Connectivity Verification**: The action attempts to retrieve the core client
+    and call the `get_projects()` method to ensure the API is reachable and credentials
+    are valid.
+
+    5. **Result Reporting**: If the call succeeds, it returns a 'Connected successfully'
+    message. If an exception occurs, it captures the error and reports that the connection
+    failed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Trigger Azure Build:
+  ai_description: >-
+    ### General Description
+
+    This action triggers an Azure DevOps build pipeline for a specific build definition
+    and monitors its execution status until completion. It is designed to integrate
+    CI/CD workflows into incident response, allowing for automated deployments or
+    testing based on security events. The action is asynchronous, meaning it initiates
+    the build and then periodically checks the status until a final result (Success,
+    Failure, etc.) is reached.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Build Definition Id | The unique identifier of the pipeline definition in Azure
+    DevOps that you wish to trigger. | String | Yes |
+
+    | Build Variables | A JSON-formatted string containing the variables and parameters
+    required by the pipeline. | Code | Yes |
+
+
+    ### Additional Notes
+
+    - This action requires valid Azure DevOps integration configuration, including
+    Organization, Project, and a Personal Access Token (PAT).
+
+    - The action will remain in an 'In Progress' state until the Azure DevOps build
+    finishes or an error occurs.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves integration settings (URL, PAT, Org, Project)
+    and user-provided parameters (Build ID and Variables).
+
+    2. **Triggering**: It sends an HTTP POST request to the Azure DevOps Build API
+    to initiate a new build.
+
+    3. **Build Identification**: Upon success, it captures the unique Build ID from
+    the response.
+
+    4. **Asynchronous Monitoring**: The action enters an async loop, periodically
+    calling the `query_job` function.
+
+    5. **Status Polling**: In each poll, it sends an HTTP GET request to check the
+    current status and result of the specific Build ID.
+
+    6. **Finalization**: Once the build result is no longer 'none' (e.g., Succeeded,
+    Failed, Canceled), the action completes and returns the final build status to
+    the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a new build process (pipeline execution) within the Azure DevOps environment.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait Until Web Resource Is Up:
+  ai_description: "### General Description\nThis action waits until a specified web\
+    \ resource is accessible. It performs an HTTP GET request to the provided URL\
+    \ and checks if the response is successful (status codes 2xx or 3xx). Because\
+    \ the action is configured as asynchronous, if the resource is unreachable or\
+    \ returns an error, the action will return an 'In Progress' status, signaling\
+    \ the Google SecOps platform to retry the check at a later time. Once the resource\
+    \ returns a successful response, the action transitions to 'Completed'.\n\n###\
+    \ Parameters Description\n\n| Parameter Name | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| URL | string | True | The full URL of the\
+    \ web resource to monitor (e.g., https://example.com). |\n\n### Additional Notes\n\
+    - This action uses a 5-second timeout for the network request.\n- If the URL is\
+    \ invalid or the connection fails, the action treats the resource as 'down' and\
+    \ continues to poll (if retries are configured in the platform).\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The action retrieves the mandatory `URL` parameter\
+    \ from the input.\n2. **Resource Check**: It sends an HTTP GET request to the\
+    \ specified URL.\n3. **Evaluation**: It checks the `resp.ok` property of the response\
+    \ to determine if the web server returned a successful status code.\n4. **Status\
+    \ Update**: \n    - If the resource is **up**, the action sets the execution state\
+    \ to `EXECUTION_STATE_COMPLETED`.\n    - If the resource is **down** or an exception\
+    \ occurs, the action sets the execution state to `EXECUTION_STATE_INPROGRESS`,\
+    \ allowing for future retries."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

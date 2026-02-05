@@ -16,15 +16,18 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
+import anyio
 import yaml
 from rich.progress import TaskID, track
 
 from mp.core import constants
+from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
+from mp.core.utils import folded_string_representer
 
-from .data_models.action_ai_metadata import ActionAiMetadata
 from .prompt_constructors.built import BuiltPromptConstructor
 from .prompt_constructors.source import SourcePromptConstructor
 from .utils import llm, paths
@@ -33,8 +36,12 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import AsyncIterator, Callable
 
-    import anyio
     from rich.progress import Progress
+
+    from mp.core.data_models.integrations.action.metadata import (
+        BuiltActionMetadata,
+        NonBuiltActionMetadata,
+    )
 
 
 logger: logging.Logger = logging.getLogger("mp.describe_action")
@@ -52,19 +59,16 @@ class ActionDescriptionResult(NamedTuple):
 
 
 class RichParams(NamedTuple):
-    """Parameters for rich progress reporting and callbacks."""
-
     on_action_done: Callable[[], None] | None = None
     progress: Progress | None = None
     task_id: TaskID | None = None
 
 
 class DescriptionParams(NamedTuple):
-    """Parameters required to construct an action prompt."""
-
     integration: anyio.Path
     integration_name: str
     action_name: str
+    action_file_name: str
     status: IntegrationStatus
 
 
@@ -125,6 +129,7 @@ class DescribeAction:
         actions: set[str],
         *,
         src: pathlib.Path | None = None,
+        dst: pathlib.Path | None = None,
         override: bool = False,
     ) -> None:
         self.integration_name: str = integration
@@ -132,6 +137,9 @@ class DescribeAction:
         self.integration: anyio.Path = paths.get_integration_path(integration, src=src)
         self.actions: set[str] = actions
         self.override: bool = override
+        self.dst: pathlib.Path | None = dst
+
+        self._action_name_to_file_stem: dict[str, str] = {}
 
     async def describe_actions(
         self,
@@ -153,9 +161,12 @@ class DescribeAction:
 
         actions_to_process: set[str] = await self._prepare_actions(status, metadata)
         if not actions_to_process:
-            logger.info(
-                "All actions in %s already have descriptions. Skipping.", self.integration_name
-            )
+            if not self.actions:
+                await self._save_metadata(metadata)
+            else:
+                logger.info(
+                    "All actions in %s already have descriptions. Skipping.", self.integration_name
+                )
             return
 
         if len(actions_to_process) == 1:
@@ -198,9 +209,8 @@ class DescribeAction:
             self.actions = await self._get_all_actions(status)
 
         if not self.override:
-            original_count: int = len(self.actions)
-            self.actions = {action for action in self.actions if action not in metadata}
-            skipped_count: int = original_count - len(self.actions)
+            actions_to_process = {action for action in self.actions if action not in metadata}
+            skipped_count: int = len(self.actions) - len(actions_to_process)
             if skipped_count > 0:
                 if skipped_count == 1:
                     logger.info(
@@ -213,6 +223,7 @@ class DescribeAction:
                         skipped_count,
                         self.integration_name,
                     )
+            return actions_to_process
 
         return self.actions
 
@@ -246,7 +257,9 @@ class DescribeAction:
             ]
             for coro in asyncio.as_completed(tasks):
                 results.extend(await coro)
+
             progress.remove_task(task_id)
+
         else:
             rich_params = RichParams(on_action_done)
             tasks: list[asyncio.Task] = [
@@ -349,10 +362,15 @@ class DescribeAction:
         """
         prompts: list[str] = []
         for action_name in actions:
+            if action_name not in self._action_name_to_file_stem:
+                # Fallback: assume the file stem is the action name (legacy support)
+                self._action_name_to_file_stem[action_name] = action_name
+
             params = DescriptionParams(
                 integration=self.integration,
                 integration_name=self.integration_name,
                 action_name=action_name,
+                action_file_name=self._action_name_to_file_stem[action_name],
                 status=status,
             )
             constructor: _PromptConstructor = _create_prompt_constructor(params)
@@ -382,66 +400,68 @@ class DescribeAction:
     async def _get_all_actions(self, status: IntegrationStatus) -> set[str]:
         actions: set[str] = set()
         if status.is_built:
-            path: anyio.Path = status.out_path / constants.OUT_ACTION_SCRIPTS_DIR
+            await self._get_all_built_actions(status.out_path, actions)
         else:
-            path: anyio.Path = self.integration / constants.ACTIONS_DIR
-
-        if await path.exists():
-            async for file in path.glob("*.py"):
-                if file.name != "__init__.py":
-                    actions.add(file.stem)
+            await self._get_all_non_built_actions(actions)
         return actions
 
-    async def describe_action(
-        self, action_name: str, status: IntegrationStatus
-    ) -> ActionAiMetadata | None:
-        """Describe an action of a given integration.
+    async def _get_all_built_actions(self, out_path: anyio.Path, actions: set[str]) -> None:
+        path: anyio.Path = out_path / constants.OUT_ACTIONS_META_DIR
+        if await path.exists():
+            async for file in path.glob(f"*{constants.ACTIONS_META_SUFFIX}"):
+                content: str = await file.read_text(encoding="utf-8")
+                try:
+                    data: BuiltActionMetadata = json.loads(content)
+                    name: str = data["Name"]
+                    self._action_name_to_file_stem[name] = file.stem
+                    actions.add(name)
+                except (json.JSONDecodeError, KeyError):
+                    logger.warning("Failed to parse built action metadata %s", file.name)
 
-        Returns:
-            ActionAiMetadata | None: The AI-generated metadata for the action,
-                or None if description failed.
-
-        """
-        params = DescriptionParams(
-            integration=self.integration,
-            integration_name=self.integration_name,
-            action_name=action_name,
-            status=status,
-        )
-        constructor: _PromptConstructor = _create_prompt_constructor(params)
-        prompt: str = await constructor.construct()
-        if not prompt:
-            logger.warning("Could not construct prompt for action %s", action_name)
-            return None
-
-        async with llm.create_llm_session() as gemini:
-            return await gemini.send_message(
-                prompt,
-                response_json_schema=ActionAiMetadata,
-                raise_error_if_empty_response=True,
-            )
+    async def _get_all_non_built_actions(self, actions: set[str]) -> None:
+        path: anyio.Path = self.integration / constants.ACTIONS_DIR
+        if await path.exists():
+            async for file in path.glob(f"*{constants.YAML_SUFFIX}"):
+                content: str = await file.read_text(encoding="utf-8")
+                try:
+                    data: NonBuiltActionMetadata = yaml.safe_load(content)
+                    name: str = data["name"]
+                    self._action_name_to_file_stem[name] = file.stem
+                    actions.add(name)
+                except (yaml.YAMLError, KeyError):
+                    logger.warning("Failed to parse non-built action metadata %s", file.name)
 
     async def _load_metadata(self) -> dict[str, Any]:
-        resource_ai_dir: anyio.Path = (
-            self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
-        )
+        resource_ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
+        metadata: dict[str, Any] = {}
+
         if await metadata_file.exists():
             content: str = await metadata_file.read_text()
-            try:
-                return yaml.safe_load(content) or {}
-            except yaml.YAMLError:
-                return {}
+            with contextlib.suppress(yaml.YAMLError):
+                metadata = yaml.safe_load(content) or {}
 
-        return {}
+        if self.dst:
+            dst_file: anyio.Path = anyio.Path(self.dst) / constants.ACTIONS_AI_DESCRIPTION_FILE
+            if await dst_file.exists():
+                content: str = await dst_file.read_text()
+                with contextlib.suppress(yaml.YAMLError):
+                    dst_metadata = yaml.safe_load(content) or {}
+
+                metadata.update(dst_metadata)
+
+        return metadata
 
     async def _save_metadata(self, metadata: dict[str, Any]) -> None:
-        resource_ai_dir: anyio.Path = (
-            self.integration / constants.RESOURCES_DIR / constants.AI_FOLDER
-        )
-        await resource_ai_dir.mkdir(parents=True, exist_ok=True)
-        metadata_file: anyio.Path = resource_ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
-        await metadata_file.write_text(yaml.dump(metadata))
+        if self.dst:
+            save_dir: anyio.Path = anyio.Path(self.dst)
+        else:
+            save_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
+
+        await save_dir.mkdir(parents=True, exist_ok=True)
+        metadata_file: anyio.Path = save_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
+        yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
+        await metadata_file.write_text(yaml.safe_dump(metadata))
 
 
 def _create_prompt_constructor(
@@ -455,10 +475,18 @@ def _create_prompt_constructor(
     """
     if params.status.is_built:
         return BuiltPromptConstructor(
-            params.integration, params.integration_name, params.action_name, params.status.out_path
+            params.integration,
+            params.integration_name,
+            params.action_name,
+            params.action_file_name,
+            params.status.out_path,
         )
     return SourcePromptConstructor(
-        params.integration, params.integration_name, params.action_name, params.status.out_path
+        params.integration,
+        params.integration_name,
+        params.action_name,
+        params.action_file_name,
+        params.status.out_path,
     )
 
 

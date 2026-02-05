@@ -1,0 +1,361 @@
+Custom Query:
+  ai_description: >-
+    ### General Description
+
+    Executes a custom search query against the Flashpoint API. This action provides
+    flexibility by allowing users to specify a raw JSON query body and a target API
+    endpoint path, enabling access to various Flashpoint intelligence datasets beyond
+    standard enrichment actions.
+
+
+    ### Parameters Description
+
+
+    | Parameter Name | Expected Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query Content** | Code (JSON) | Yes | The JSON-formatted body of the search
+    query. This typically includes fields like `query`, `limit`, `start_date`, and
+    `search_tags`. |
+
+    | **New Query URL** | String | Yes | The specific API endpoint path to append
+    to the Flashpoint base URL (e.g., `/all/search` or `/indicators/attribute`). |
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves the Flashpoint API key from the configuration
+    and the user-provided `Query Content` and `New Query URL` from the action parameters.
+
+    2. **Preparation**: It initializes the Flashpoint Manager and prepares a POST
+    request where the `Query Content` is parsed as a JSON payload.
+
+    3. **Execution**: The action sends the POST request to the concatenated URL (Base
+    API + `New Query URL`).
+
+    4. **Result Processing**: Upon a successful response, the raw JSON results from
+    Flashpoint are attached to the action results for use in downstream playbook tasks.
+
+
+    ### Additional Notes
+
+    * This action is intended for advanced users who are familiar with the Flashpoint
+    API schema.
+
+    * While the underlying request uses the HTTP POST method, it is functionally a
+    retrieval (read-only) action used to pass complex query parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+IOC_Enrichment:
+  ai_description: >-
+    Enriches indicator entities using the Flashpoint Intelligence platform to retrieve
+    threat intelligence data. This action queries the Flashpoint API for specific
+    indicator attributes, flattens the resulting data, and maps it directly to the
+    entity's properties within Google SecOps.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Limit | string | No | The maximum number of result objects to return for each
+    entity. Defaults to '100'. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the Flashpoint API key from the integration configuration
+    and the 'Limit' parameter from the action inputs.
+
+    2. **Entity Iteration**: Iterates through all target entities provided in the
+    current context.
+
+    3. **External API Query**: For each entity, it calls the Flashpoint `/indicators/attribute`
+    endpoint using the entity's identifier as the query.
+
+    4. **Data Enrichment**: If a report is found, the action:
+        * Attaches the raw JSON report to the entity as an attachment.
+        * Flattens the first result in the report and adds a 'FlashPoint' prefix to
+    all keys.
+        * Updates the entity's `additional_properties` with the flattened data.
+        * Sets the entity's status to `is_enriched = True` and `is_suspicious = True`.
+    5. **Insight Generation**: Creates a SOAR insight for the entity, marking it as
+    suspicious based on Flashpoint data.
+
+    6. **Finalization**: Aggregates all JSON results and ends the action, providing
+    a summary of enriched entities and those not found in Flashpoint.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: true
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes:
+    - ADDRESS
+    - DOMAIN
+    - FILEHASH
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Indicators Custom Query:
+  ai_description: >-
+    ### General Description
+
+    Performs a custom query against the Flashpoint Indicators API to retrieve specific
+    threat intelligence data. This action allows users to search for indicators of
+    compromise (IOCs), events, or simple indicator lists based on various filtering
+    criteria such as keywords, tags, dates, and entity types. The results are returned
+    as a JSON object, facilitating further analysis within Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Indicator Type | ddl | Yes | Specifies the structure of data to retrieve: 'simple'
+    (simplified list), 'attribute' (specific IOCs), or 'event' (groupings of IOCs).
+    |
+
+    | Query | string | No | The specific search query string used to filter results
+    (e.g., 'malicious'). |
+
+    | Search Tags | string | No | Comma-separated list of keywords or tags to search
+    for (e.g., 'malware, ransomware'). |
+
+    | Entity Types | string | No | Comma-separated MISP entity types to filter for
+    (e.g., 'url,domain,ip-src'). |
+
+    | Limit | string | No | The maximum number of result objects to return. Default
+    is 10. |
+
+    | Start Date | string | No | Retrieves values created after this timestamp (ISO
+    8601 format). |
+
+    | End Date | string | No | Retrieves values created before this timestamp (ISO
+    8601 format). |
+
+    | Sort By Time | ddl | No | Determines if results are presented in 'Ascending'
+    or 'Descending' chronological order. |
+
+
+    ### Additional Notes
+
+    This action is a standalone query tool and does not iterate over existing case
+    entities. It communicates with the Flashpoint API via GET requests to fetch data
+    without modifying any external records.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the API Key from the integration configuration
+    and retrieves all action-specific parameters from the user input.
+
+    2. **Manager Setup**: Initializes the FlashpointManager to handle authentication
+    and session management.
+
+    3. **API Interaction**: Executes a GET request to the Flashpoint `/indicators/{type}`
+    endpoint, applying filters for limit, date range, tags, query, and sorting.
+
+    4. **Result Processing**: Receives the JSON response from Flashpoint. If data
+    is found, it attaches the raw JSON to the action results and completes successfully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is designed to test\
+    \ the connectivity between Google SecOps and the Flashpoint API. Its primary purpose\
+    \ is to verify that the configured credentials (API Key) are valid and that the\
+    \ network connection to the Flashpoint service is functional.\n\n### Parameters\n\
+    This action does not have any input parameters. It relies solely on the integration's\
+    \ global configuration parameters (e.g., API Key).\n\n### Flow Description\n1.\
+    \ **Initialization**: The action extracts the **API Key** from the Flashpoint\
+    \ integration configuration.\n2. **Manager Setup**: It initializes the `FlashpointManager`\
+    \ with the provided credentials and proxy settings (if applicable).\n3. **Connectivity\
+    \ Check**: The action calls the `test_connectivity` method, which executes a sample\
+    \ `GET` request to the Flashpoint `/all/search` endpoint.\n4. **Result Reporting**:\
+    \ \n    - If the API call is successful and returns a valid response, the action\
+    \ returns a success status and a 'Connected successfully' message.\n    - If the\
+    \ API call fails or returns an error, the action returns a failure status and\
+    \ a 'The Connection failed' message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Run Query:
+  ai_description: >-
+    ### General Description
+
+    The **Run Query** action allows users to execute custom queries against the Flashpoint
+    platform to retrieve specific threat intelligence data, such as indicator sightings,
+    forum posts, or credential leaks. It acts as a flexible search interface within
+    Google SecOps, enabling analysts to pivot on specific data points or retrieve
+    bulk information based on complex search criteria.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query** | String | Yes | The primary search string. Use Flashpoint query syntax
+    (e.g., `+basetypes:+indicator`). |
+
+    | **Results count limit** | String | No | Limits the number of records returned.
+    Defaults to 100. |
+
+    | **Sort By** | String | No | Determines the order of results. Format: `field:order`
+    (e.g., `posted_at:desc,title:asc`). |
+
+    | **Tags** | String | No | A comma-separated list of tags to filter the results
+    (e.g., `+tag_1, +tag_2`). |
+
+    | **Date Range** | String | No | Filters results by a specific time frame using
+    Lucene-style syntax (e.g., `[now-1y TO now]`). |
+
+
+    ### Additional Notes
+
+    - This action does not target specific entities in the environment; it is a standalone
+    search utility.
+
+    - The results are returned as a raw JSON object, which can be used by downstream
+    playbook tasks for further processing.
+
+
+    ### Flow Description
+
+    1. **Extraction:** The action retrieves the API Key from the integration configuration
+    and the query parameters from the user input.
+
+    2. **Initialization:** It initializes the `FlashpointManager` to handle communication
+    with the external Flashpoint API.
+
+    3. **Execution:** The action sends a request to the Flashpoint search endpoints
+    using the provided query, filters (tags, dates), and sorting instructions.
+
+    4. **Result Processing:** Upon receiving a successful response, the action attaches
+    the raw JSON data to the action results and provides a success message to the
+    Case Wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

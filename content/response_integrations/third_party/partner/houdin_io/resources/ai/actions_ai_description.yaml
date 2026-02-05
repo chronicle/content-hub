@@ -1,0 +1,236 @@
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    This action enriches multiple entity types using the Houdin.io platform. It supports
+    scanning Public IPv4/IPv6 addresses, URLs, Domains, and various File Hashes (MD5,
+    SHA1, SHA256). The action leverages Houdin's multi-scanner capabilities to aggregate
+    threat intelligence from sources like VirusTotal, URLScan, and AbuseIPDB, specifically
+    extracting risk scores and AI-generated analysis summaries to provide a high-level
+    security posture for the identified artifacts.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **scanOn** | Multi-choice | No | Defines the specific third-party scanners Houdin
+    should utilize. Options include: `vt`, `urlscan`, `alienvault`, `abuseipdb`, `triage`,
+    `mesmer`, `servicenow`. If left empty, Houdin uses its default scanning configuration.
+    |
+
+
+    ### Additional Notes
+
+    - **Internal IP Exclusion:** The action automatically skips internal (non-global)
+    IP addresses to prevent unnecessary scanning of private infrastructure.
+
+    - **Compatibility:** Ensure the script timeout in the Google SecOps IDE is adjusted
+    appropriately, as this action performs polling for scan results which can take
+    time depending on the selected scanners.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering:** The action iterates through all target entities and filters
+    for compatible types: Domains, URLs, File Hashes, and Global (External) IP Addresses.
+
+    2. **Scan Initiation:** For each compatible entity, a scan is launched via the
+    Houdin.io API using the scanners specified in the `scanOn` parameter.
+
+    3. **Result Polling:** The script enters a polling loop to check the status of
+    each scan ID until results are ready or the retry limit is reached.
+
+    4. **Data Extraction:** It extracts the `globalScore` and AI `summary` from the
+    'Mesmer' scanner results and identifies which scanning sources were utilized.
+
+    5. **Internal Enrichment:** It updates the entity's additional properties in Google
+    SecOps with the threat score, AI analysis, and source list.
+
+    6. **Finalization:** The action updates the entities globally in the case and
+    attaches the full raw JSON result for further investigation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the entities' additional properties with threat scores, AI analysis
+      summaries, and analysis source information retrieved from Houdin.io.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes:
+    - ADDRESS
+    - DOMAIN
+    - FILEHASH
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Houdin.io API to ensure that the integration is
+    properly configured and can reach the external service. This action is used to
+    verify credentials and network access during initial setup or troubleshooting.
+
+
+    ### Parameters Description
+
+    This action does not have any action-specific parameters. It uses the following
+    Integration Configuration parameters:
+
+    | Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Key | String | Yes | The API key used for authentication with Houdin.io.
+    |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Houdin.io API endpoint. Defaults to False. |
+
+
+    ### Additional Notes
+
+    The action performs a POST request to the `/ping` endpoint of the Houdin.io API.
+    If the server returns a 500 error, it will retry once before failing.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the integration configuration parameters
+    (API Key and Verify SSL).
+
+    2. **Client Setup**: Initializes the HoudinManager with the provided credentials.
+
+    3. **Connectivity Check**: Executes the `test_connectivity` method, which sends
+    a heartbeat POST request to the Houdin.io `/ping` endpoint.
+
+    4. **Status Handling**: If the response is successful (HTTP 200), the action concludes
+    that the connection is established. If the response indicates failure or a timeout
+    occurs, the action reports the error and fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Scan Artifact:
+  ai_description: >-
+    ### General Description
+
+    This action launches an asynchronous scan on a specified artifact (IP, URL, Domain,
+    or File Hash) using the Houdin.io platform and retrieves the results. It is designed
+    to aggregate threat intelligence from multiple sources supported by Houdin.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | artifact | string | Yes | The specific indicator to be scanned. Supported formats
+    include IPv4, IPv6, URL, Domain, MD5, SHA1, and SHA256. |
+
+    | scanOn | multi-choice | No | A list of specific scanning engines to be used
+    by Houdin, such as VirusTotal, URLScan, AlienVault, or AbuseIPDB. |
+
+
+    ### Additional Notes
+
+    - The action is asynchronous (`is_async: true`), meaning it will poll the external
+    service until the scan is complete.
+
+    - Users should ensure the script timeout in Google SecOps is sufficient to accommodate
+    scanning and polling durations.
+
+    - This action does not automatically iterate through case entities; it operates
+    on the specific string provided in the 'artifact' parameter.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves the API Key from the integration configuration
+    and the artifact/scanner preferences from the action parameters.
+
+    2. **Initialization**: It initializes the `HoudinManager` to facilitate communication
+    with the Houdin.io API.
+
+    3. **Launch**: It sends a POST request to Houdin to initiate a new scan for the
+    provided artifact.
+
+    4. **Polling**: The action enters a polling loop, sending GET requests to check
+    the status of the scan until completion or timeout.
+
+    5. **Results**: Once the scan is finished, the comprehensive result data is retrieved
+    and attached to the action execution as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action performs a POST request to the Houdin.io API to create/launch a new
+      scan job record on the platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

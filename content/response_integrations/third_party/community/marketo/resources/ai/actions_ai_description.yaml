@@ -1,0 +1,362 @@
+Create lead:
+  ai_description: >-
+    ### General Description\nThis action creates a new lead in Marketo using user
+    details provided as input parameters. It utilizes the Marketo REST API to submit
+    lead information including email, first name, last name, and country.\n\n### Parameters
+    Description\n\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |
+    :--- | :--- |\n| Email | string | Yes | The email address of the new lead you
+    want to create. |\n| First Name | string | Yes | The first name of the new lead
+    you want to create. |\n| Last Name | string | Yes | The last name of the new lead
+    you want to create. |\n| Country | string | Yes | The country of the new lead
+    you want to create. |\n\n### Additional Notes\nThis action does not interact with
+    entities from the Google SecOps case. It relies entirely on the manually provided
+    parameters. The lead creation is performed with the 'createOnly' action, meaning
+    it will not update existing leads if the email already exists.\n\n### Flow Description\n1.
+    **Initialization**: Retrieves integration credentials (Client Id, Client Secret,
+    Munchkin Id) and action parameters (Email, First Name, Last Name, Country).\n2.
+    **Client Setup**: Initializes the Marketo REST client.\n3. **Execution**: Sends
+    a request to Marketo's `create_update_leads` endpoint using the `createOnly` strategy
+    for the provided user data.\n4. **Status Check**: Evaluates the response. If the
+    response contains no 'reasons' (errors), it considers the lead created successfully.\n5.
+    **Output**: Returns the lead ID on success or provides detailed error reasons
+    on failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new lead record in the Marketo marketing automation system via a POST
+      request to the Marketo REST API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Lead By Email Param:
+  ai_description: >-
+    ### General Description
+
+    Retrieves lead information from Marketo for a specific email address provided
+    as a manual parameter. This action is used to verify the existence of a user in
+    Marketo and fetch their associated lead profile data, such as lead IDs and other
+    CRM attributes.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Email | string | True | The email address of the user you want to get the details
+    for. The value is converted to lowercase before searching. |
+
+
+    ### Additional Notes
+
+    This action does not run on case entities. It relies entirely on the 'Email' parameter
+    provided in the action configuration. If the lead is found, the action returns
+    a success state; otherwise, it returns a failure state.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts Marketo integration configuration (Client ID,
+    Client Secret, Munchkin ID) and the 'Email' action parameter.
+
+    2. **Client Setup**: Initializes the Marketo Python Client using the provided
+    credentials.
+
+    3. **Data Retrieval**: Executes a query to Marketo using the `get_multiple_leads_by_filter_type`
+    method, filtering by the 'email' type.
+
+    4. **Result Processing**: Checks if lead details were returned. If found, it extracts
+    the lead ID and marks the action as successful.
+
+    5. **Output**: Returns the raw lead data as a JSON result and provides a human-readable
+    summary in the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Lead By Entity Email:
+  ai_description: >-
+    ### General Description
+
+    Enriches User entities with marketing lead data by querying the Marketo platform.
+    This action takes existing User entities that have email addresses as identifiers,
+    looks them up in the Marketo database, and retrieves specific profile details
+    such as First Name, Last Name, and Lead ID. This is primarily used to provide
+    security analysts with additional context regarding the identity and role of a
+    user involved in an alert.
+
+
+    ### Parameters Description
+
+    This action does not have any specific action-level parameters. It relies on the
+    global integration configuration for connectivity.
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action uses only integration-level configuration (Client
+    Id, Client Secret, Munchkin Id). |
+
+
+    ### Additional Notes
+
+    *   The action specifically filters for entities of type **USER**.
+
+    *   The entity identifier must be a valid email format (e.g., user@domain.com)
+    to be processed. If the identifier is not an email, the entity is skipped.
+
+    *   Successful enrichment updates the entity's 'Additional Properties' and sets
+    the 'is_enriched' flag to true.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action initializes the Marketo API client using credentials
+    (Client Id, Client Secret, Munchkin Id) stored in the integration settings.
+
+    2.  **Entity Filtering**: The logic iterates through all target entities, verifying
+    if they are of type 'USER' and if their identifier matches a standard email regular
+    expression.
+
+    3.  **External Lookup**: For each valid email entity, the action calls the Marketo
+    API (`get_multiple_leads_by_filter_type`) to search for a corresponding lead profile.
+
+    4.  **Data Extraction**: If a lead is found, the action extracts the first name,
+    last name, email, and Lead ID from the Marketo response.
+
+    5.  **SOAR Update**: The extracted fields are added to the entity's additional
+    properties. The action then updates the entities within the SOAR platform.
+
+    6.  **Results Reporting**: A JSON result is created containing the enriched data
+    and a count of leads found, followed by a summary message indicating success or
+    failure for each entity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity and credentials between
+    Google SecOps and the **Marketo** instance. It ensures that the provided API credentials
+    (Client ID, Client Secret, and Munchkin ID) are valid and that the Marketo service
+    is reachable from the environment.
+
+
+    ### Parameters Description
+
+
+    | Parameter Name | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **None** | This action does not require any input parameters. It utilizes the
+    global integration configuration. | N/A | N/A |
+
+
+    ### Flow Description
+
+    1.  **Configuration Extraction**: The action retrieves the `Client Id`, `Client
+    Secret`, and `Munchkin Id` from the Marketo integration configuration.
+
+    2.  **Client Initialization**: It initializes the `MarketoClient` using the retrieved
+    credentials.
+
+    3.  **Connectivity Test**: The action executes a test API call (`get_lead_by_id`)
+    with a dummy ID of `1` to verify if the API responds correctly.
+
+    4.  **Completion**: If the API call succeeds without an exception, the action
+    concludes with a success status.
+
+
+    ### Additional Notes
+
+    - This action does not process any case entities.
+
+    - It is primarily used during the initial setup of the integration or for troubleshooting
+    communication issues.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Request Campaign:
+  ai_description: >-
+    ### General Description
+
+    This action triggers a specific marketing campaign in Marketo for a designated
+    lead. It allows security analysts or marketing teams to programmatically initiate
+    campaign workflows, potentially for automated responses to user-related security
+    events (e.g., sending educational material after a phishing simulation).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Campaign Id | string | Yes | The unique numerical identifier of the Marketo
+    campaign to be executed. |
+
+    | Lead Id | string | Yes | The unique numerical identifier of the lead (user)
+    for whom the campaign should be triggered. |
+
+    | Tokens Json | string | No | A JSON-formatted string containing key-value pairs
+    representing tokens to be passed to the campaign. Note: Key names containing 'password'
+    are case-sensitive, while others are converted to lowercase. |
+
+
+    ### Additional Notes
+
+    - This action uses the `marketo-rest-python` client to interact with the Marketo
+    REST API.
+
+    - The `Tokens Json` parameter must be a valid JSON string if provided; otherwise,
+    the action may fail during the parsing stage.
+
+    - No entities from the Google SecOps case are used; the action relies entirely
+    on the provided manual parameters.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the Marketo configuration (Client ID, Client
+    Secret, Munchkin ID) and the action parameters (Campaign ID, Lead ID, Tokens JSON).
+
+    2. **Token Processing:** Parses the `Tokens Json` string. It iterates through
+    the dictionary to lowercase values, except for those where the key contains the
+    string 'password'.
+
+    3. **Client Initialization:** Authenticates and initializes the `MarketoClient`
+    using the provided credentials.
+
+    4. **Campaign Execution:** Calls the `request_campaign` method on the Marketo
+    API for the specified `Lead Id` and `Campaign Id` with the processed tokens.
+
+    5. **Completion:** Returns a success message if the campaign request is successfully
+    accepted by Marketo, or raises an exception if the API call fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers the execution of a campaign workflow in Marketo for a specific lead,
+      which initiates external marketing or communication processes.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,2940 @@
+Add Alert Scoring Information:
+  ai_description: >-
+    ### General Description
+
+    This action adds alert scoring information to the current alert context in Google
+    SecOps. It allows security analysts or automated playbooks to record specific
+    check results (e.g., a file reputation check or a user behavior analysis) and
+    assign them a severity and category. The action automatically calculates a cumulative
+    risk score for the alert based on these entries using a weighted conversion logic
+    (e.g., 5 Low severities promote the score to Medium). The resulting data is stored
+    within the alert's custom properties, enabling dynamic risk-based prioritization
+    and decision-making within playbooks.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Name** | String | Yes | The name of the specific check or verification performed
+    (e.g., 'Malicious File Check'). |
+
+    | **Description** | String | Yes | A detailed description of the check performed
+    and why it was scored. |
+
+    | **Severity** | DDL | Yes | The severity level of this specific entry. Options:
+    Informational, Low, Medium, High, Critical. |
+
+    | **Category** | String | Yes | The functional category for the check (e.g., 'Email',
+    'Endpoint', 'Network'). Entries are grouped by category. |
+
+    | **Source** | String | No | Optional. Specifies the part of the alert the score
+    was derived from, such as a specific filename, URL, or user. |
+
+
+    ### Flow Description
+
+    1. **Extraction**: Retrieves the check details (Name, Description, Category, Severity,
+    Source) from the action parameters.
+
+    2. **State Retrieval**: Fetches the existing scoring data structure from the alert's
+    internal context property (`ALERT_SCORE_INFO`).
+
+    3. **Entry Creation**: Constructs a new scoring object with a numerical weight
+    mapped to the selected severity.
+
+    4. **Aggregation**: Appends the new entry to the existing list, grouping it by
+    the provided category and sorting the entries within categories by severity.
+
+    5. **Recursive Scoring**: Calculates a 'Category Score' and an overall 'Alert
+    Score' using defined thresholds: 5 Low = 1 Medium, 3 Medium = 1 High, 2 High =
+    1 Critical.
+
+    6. **Context Update**: Saves the updated JSON data, the calculated numerical alert
+    score, and the text-based severity back to the alert's properties.
+
+    7. **Output**: Returns the full updated scoring structure as a JSON object for
+    use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action performs internal logic only and does not communicate with external
+    APIs.
+
+    - The calculated alert score persists throughout the lifecycle of the alert, allowing
+    multiple actions to contribute to the final risk assessment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the alert's custom context properties 'ALERT_SCORE_INFO', 'ALERT_SCORE',
+      and 'ALERT_SEVERITY' to track and calculate cumulative risk scores.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Comment to Entity Log:
+  ai_description: >-
+    ### General Description
+
+    This action adds a specific comment to the internal Entity Log for every entity
+    currently in scope within the Google SecOps (Chronicle) Entity Explorer. It is
+    primarily used for manual or automated documentation of findings or status updates
+    directly on the entity objects themselves within the SOAR platform.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **User** | user | Yes | The username/author name that will be displayed as the
+    creator of the comment in the Entity Log. |
+
+    | **Comment** | content | Yes | The text content that will be added to the log
+    for each entity. |
+
+
+    ### Additional Notes
+
+    This action performs internal data mutation by updating the entity's history/log
+    records within Google SecOps. It does not interact with external third-party services.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the SDK environment and extracts
+    the `User` and `Comment` parameters.
+
+    2. **Entity Iteration**: The script retrieves all `target_entities` available
+    in the current playbook scope.
+
+    3. **Comment Injection**: For each entity, it invokes the `add_comment_to_entity`
+    API method, passing the entity identifier, type, environment, author, and the
+    comment content.
+
+    4. **Logging and Completion**: It compiles a summary message of all comments added
+    and finishes the execution with a success status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Adds a comment to the internal entity log/history for each entity within the
+      Google SecOps platform.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes:
+    - ADDRESS
+    - DOMAIN
+    - FILEHASH
+    - HOSTNAME
+    - USERUNIQNAME
+    - GENERICENTITY
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Or Update Alert Additional Data:
+  ai_description: "### General Description\nThis action adds or updates the `additional_data`\
+    \ field of the current alert in Google SecOps. It allows for persistent storage\
+    \ of metadata or context throughout a playbook's lifecycle by merging new information\
+    \ into a structured JSON object associated with the alert. It supports appending\
+    \ to lists, updating dictionaries, or storing raw strings.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Json Fields | String | Yes | The data to be added or updated. This can be a\
+    \ JSON-formatted string representing a Dictionary or a List, or simple free text.\
+    \ |\n\n### Additional Notes\n- If the input is a JSON List, it is appended (extended)\
+    \ to the existing `list` key in the alert data.\n- If the input is a JSON Dictionary,\
+    \ it is merged (updated) into the existing `dict` key in the alert data.\n- If\
+    \ the input is a string (or fails JSON parsing), it is stored in the `data` key\
+    \ of the alert data.\n- The action ensures a consistent structure containing `list`,\
+    \ `dict`, and `data` keys within the alert's additional data.\n\n### Flow Description\n\
+    1. **Input Parsing**: The action retrieves the `Json Fields` parameter and attempts\
+    \ to parse it as a JSON object (List or Dictionary). If parsing fails, it treats\
+    \ the input as a raw string.\n2. **State Retrieval**: It fetches the current `additional_data`\
+    \ from the alert. If no data exists, it initializes a default structure: `{\"\
+    dict\": {}, \"list\": [], \"data\": \"\"}`.\n3. **Data Merging**: \n    - If the\
+    \ input is a List, it extends the alert's `list` field.\n    - If the input is\
+    \ a Dictionary, it updates the alert's `dict` field.\n    - Otherwise, it overwrites\
+    \ the alert's `data` field with the input.\n4. **Update**: The action calls the\
+    \ internal SOAR API to save the modified JSON object back to the alert's additional\
+    \ data field.\n5. **Completion**: It returns the full accumulated JSON data as\
+    \ the action result."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_data' JSON field associated with the current alert in
+      the Google SecOps SOAR platform.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Append to Context Value:
+  ai_description: "### General Description\nThe **Append to Context Value** action\
+    \ is a utility tool designed to manage internal state within a Google SecOps environment.\
+    \ It allows users to store and update information by appending values to context\
+    \ properties at different levels of visibility: Alert, Case, or Global. This is\
+    \ primarily used for accumulating data, building lists (e.g., a collection of\
+    \ observed hostnames), or tracking state across different playbook steps.\n\n\
+    ### Parameters Description\n| Parameter | Type | Mandatory | Default | Description\
+    \ |\n| :--- | :--- | :--- | :--- | :--- |\n| **Scope** | DDL | Yes | Alert | The\
+    \ level at which the context property is stored. Options are `Alert` (specific\
+    \ to the current alert), `Case` (specific to the whole case), or `Global` (accessible\
+    \ system-wide). |\n| **Key** | String | Yes | - | The unique identifier or name\
+    \ for the context property to be modified or created. |\n| **Value** | String\
+    \ | Yes | - | The string value to be appended to the context property. |\n| **Delimiter**\
+    \ | String | Yes | `,` | The character or string used to separate the existing\
+    \ value from the newly appended value if the key already exists. |\n\n### Additional\
+    \ Notes\n- If the property key does not exist in the selected scope, the action\
+    \ will create it and set the value without adding a delimiter.\n- The action automatically\
+    \ strips leading/trailing double quotes from the resulting value before returning\
+    \ it.\n- This action does not interact with external APIs; it only modifies internal\
+    \ SOAR storage.\n\n### Flow Description\n1. **Parameter Extraction:** The action\
+    \ identifies the scope (Alert, Case, or Global), the target key, the value to\
+    \ add, and the delimiter.\n2. **Context Lookup:** It checks if the specified **Key**\
+    \ already exists within the chosen **Scope**.\n3. **Value Concatenation:** \n\
+    \    - If the key exists: It retrieves the current value and appends the new **Value**\
+    \ using the **Delimiter**.\n    - If the key does not exist: It initializes the\
+    \ key with the provided **Value**.\n4. **Update Storage:** The action saves the\
+    \ updated string back into the SOAR context management system.\n5. **Completion:**\
+    \ Returns a success message and the final concatenated string as the action result."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates or creates internal context properties at the Alert, Case, or Global
+      scope by appending new values to existing property keys using a specified delimiter.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Assign Case to User:
+  ai_description: >-
+    ### General Description
+
+    This action assigns a specific user to a case within the Google SecOps SOAR platform.
+    It facilitates workflow automation by ensuring cases are routed to the correct
+    analyst or administrator for investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Case Id | String | Yes | The unique identifier of the case to be reassigned.
+    Note: The metadata description mentions 'Case to merge with', but the action logic
+    performs an assignment. |
+
+    | Assign To | String | Yes | The identifier (e.g., username or email) of the user
+    who will be assigned to the case. Defaults to '@Admin'. |
+
+    | Alert Id | String | Yes | The unique identifier of the alert associated with
+    the case. |
+
+
+    ### Additional Notes
+
+    This action uses internal SOAR API calls to modify case metadata. It does not
+    operate on entity scopes (IPs, Hostnames, etc.) and instead relies on specific
+    ID parameters.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves 'Case Id', 'Assign To', and 'Alert Id'
+    from the user input parameters.
+
+    2. **Assignment Logic**: It invokes the `assign_case_to_user` utility from the
+    `TIPCommon` library, which performs a REST API call to the internal Google SecOps
+    SOAR endpoint.
+
+    3. **Result Handling**: The response from the assignment API call is logged to
+    the action log for auditing.
+
+    4. **Termination**: The action concludes with a success status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'Assignee' field of a case within Google SecOps SOAR via an internal
+      API call.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Attach Playbook to Alert:
+  ai_description: >-
+    ### General Description
+
+    This action attaches specified playbooks or blocks to a particular alert within
+    a Google SecOps case. It allows for bulk attachment of multiple playbooks by providing
+    a comma-separated list and includes logic to prevent or allow duplicate attachments
+    based on configuration.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Default Value | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Playbook Name | String | True | - | A comma-separated list of the names of playbooks
+    or blocks to be attached to the alert. |
+
+    | Allow Duplicates | Boolean | False | true | If set to true, the action allows
+    the same playbook to be attached multiple times to the alert. If false, it will
+    skip playbooks already present. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the `Playbook Name` and `Allow Duplicates`
+    parameters.
+
+    2. **Validation**: It parses the comma-separated list of playbook names and removes
+    whitespace.
+
+    3. **Duplicate Check**: The action retrieves a list of workflows already attached
+    to the current alert using the `get_workflow_instance_card` API.
+
+    4. **Execution**: It iterates through the requested playbook names. If a playbook
+    is already attached and `Allow Duplicates` is false, it is skipped. Otherwise,
+    it attempts to attach the playbook using the internal SOAR SDK method `attach_workflow_to_case`.
+
+    5. **Completion**: The action summarizes which playbooks were successfully attached,
+    which were skipped as duplicates, and which failed due to errors (e.g., incorrect
+    spelling).
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Attaches new workflow/playbook instances to the specified alert within the Google
+      SecOps platform.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Attach Playbook to All Case Alerts:
+  ai_description: "### General Description\nThis action attaches a specified playbook\
+    \ to every alert within a given case in Google SecOps. It is primarily used to\
+    \ ensure that a consistent automated response or manual task list is applied to\
+    \ all components of an investigation. \n\n### Parameters\n| Parameter | Type |\
+    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Playbook Name |\
+    \ String | True | The name of the playbook (workflow) that should be attached\
+    \ to every alert in the current case. |\n\n### Flow Description\n1. **Retrieve\
+    \ Parameter**: The action identifies the name of the playbook to be attached from\
+    \ the input parameters.\n2. **Iterate Alerts**: The script iterates through the\
+    \ collection of alerts associated with the current case context.\n3. **Attach\
+    \ Workflow**: For each alert found, the action calls the internal system method\
+    \ to attach the specified playbook using the case ID and the alert's unique identifier.\n\
+    4. **Status Reporting**: Once the loop completes, the action returns a success\
+    \ message if the last attachment operation succeeded, or a failure message otherwise."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Attaches a specific playbook/workflow to all alerts associated with a case within
+      Google SecOps.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Buffer:
+  ai_description: >-
+    ### General Description
+
+    The **Buffer** action is a utility tool designed to facilitate the transfer and
+    transformation of data within a playbook. It accepts a JSON-formatted string and
+    a specific result value, then parses the JSON to provide it as structured output
+    data. This is particularly useful for taking raw string data from previous steps
+    and converting it into a format that subsequent actions can easily reference using
+    JSON paths.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **JSON** | string | No | A JSON-formatted string that the action will attempt
+    to parse and return as structured JSON results. |
+
+    | **ResultValue** | string | No | A string that will be returned as the main script
+    result value of the action, often used for playbook transitions and logic branching.
+    |
+
+
+    ### Flow Description
+
+    1. **Input Retrieval:** The action retrieves the `JSON` and `ResultValue` parameters
+    provided by the user.
+
+    2. **JSON Parsing:** If the `JSON` parameter is provided, the action attempts
+    to deserialize the string into a Python object.
+
+    3. **Structured Output:** Upon successful parsing, the data is added to the action's
+    result JSON using `add_result_json` and `add_json`, making it available for downstream
+    playbook tasks.
+
+    4. **Error Handling:** If the JSON parsing fails, an error message is captured
+    to be included in the final output message.
+
+    5. **Completion:** The action concludes by returning the specified `ResultValue`
+    and an execution message summarizing whether the inputs were successfully processed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Change Case Name:
+  ai_description: >-
+    ### General Description
+
+    This action changes the name (title) of a case within Google SecOps SOAR. It is
+    primarily used to standardize case naming or update a case's title dynamically
+    based on incident logic or alert data.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | New Name | string | No | The new name that will be assigned to the case. |
+
+    | Only If First Alert | boolean | No | If set to `true`, the action will only
+    rename the case if it is executed on the chronologically first alert in the case.
+    Defaults to `false`. |
+
+
+    ### Flow Description
+
+    1. **Alert Sorting**: The action retrieves all alerts within the current case
+    and sorts them by their `detected_time` to identify the chronological order.
+
+    2. **Validation**: If the `Only If First Alert` parameter is enabled, the action
+    compares the current alert's identifier against the identifier of the first alert
+    in the sorted list.
+
+    3. **Rename Execution**: If the validation passes (or is not required), the action
+    uses the `rename_case` utility from `TIPCommon` to update the case title in the
+    Google SecOps SOAR platform using the provided `New Name` value.
+
+    4. **Reporting**: The action concludes by providing an output message confirming
+    whether the case title was changed or if the operation was skipped due to the
+    alert sequence logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Changes the title/name of the case record within the Google SecOps SOAR platform.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Check Entities Fields In Text:
+  ai_description: "### General Description\nThe **Check Entities Fields In Text**\
+    \ action is a utility tool designed to validate and compare data stored within\
+    \ entity attributes against external text strings or event data. It provides high\
+    \ flexibility by using Regular Expressions (RegEx) to both identify relevant fields\
+    \ within an entity's `additional_properties` and to extract or transform the values\
+    \ for comparison. This is primarily used for cross-referencing indicators or attributes\
+    \ found in alert context with specific fields on entities in the scope.\n\n###\
+    \ Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---\
+    \ | :--- | :--- | :--- |\n| `SearchInData` | string | Yes | A JSON array of objects\
+    \ `[{\"Data\": \"...\", \"RegEx\": \"...\"}]`. This represents the reference text\
+    \ to search in. The `RegEx` field allows extracting specific sub-strings from\
+    \ the `Data` field for comparison. |\n| `FieldsInput` | string | Yes | A JSON\
+    \ array describing the entity fields to evaluate. Users can specify a `FieldName`\
+    \ or a `RegexForFieldName` to match multiple fields, and a `RegexForFieldValue`\
+    \ to parse the value before comparison. |\n| `ShouldEnrichEntity` | string | No\
+    \ | If provided, this string serves as a key name. If a match is found, the entity\
+    \ will be enriched with a property of this name set to `True`. |\n| `IsCaseSensitive`\
+    \ | boolean | No | Determines if the string comparison between the entity field\
+    \ value and the search data should respect character casing. |\n\n### Flow Description\n\
+    1. **Input Parsing**: The action parses the `FieldsInput` and `SearchInData` JSON\
+    \ strings into Python objects and retrieves configuration for enrichment and case\
+    \ sensitivity.\n2. **Entity Traversal**: Iterates through all entities in the\
+    \ current scope (`target_entities`).\n3. **Field Extraction**: For each entity,\
+    \ it scans `additional_properties`. It identifies fields matching the provided\
+    \ `FieldName` or `RegexForFieldName`. \n4. **Value Transformation**: If `RegexForFieldValue`\
+    \ is defined, it applies the regex to the identified field values to extract specific\
+    \ parts for comparison.\n5. **Reference Data Preparation**: Processes the `SearchInData`\
+    \ by applying the provided `RegEx` to the input strings to prepare the final values\
+    \ to search against.\n6. **Comparison**: Compares the extracted entity field values\
+    \ with the prepared search data. A match is recorded if an entity value exists\
+    \ within the search strings.\n7. **Internal Mutation**: If matches are found and\
+    \ `ShouldEnrichEntity` is configured, the action updates the entity objects with\
+    \ the new property and calls the update method in Google SecOps.\n8. **Output\
+    \ Generation**: Produces a detailed JSON result mapping entity identifiers to\
+    \ the comparison logic results and outputs a summary message of successful matches."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      The action updates the 'additional_properties' of entities within the Google
+      SecOps case if a match is found and the 'ShouldEnrichEntity' parameter is provided.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes:
+    - GENERICENTITY
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Check List Subset:
+  ai_description: >-
+    ### General Description This utility action checks if a 'Subset' list of items
+    is entirely contained within an 'Original' list. It is designed for logic branching
+    in playbooks, allowing users to verify memberships without external API calls.
+    ### Parameters | Parameter | Type | Mandatory | Description | | :--- | :--- |
+    :--- | :--- | | Original | String | Yes | The reference list to check against.
+    Supports JSON-formatted lists (e.g., ["a", "b"]) or comma-separated strings (e.g.,
+    a, b). | | Subset | String | Yes | The list of items to verify. Supports JSON-formatted
+    lists or comma-separated strings. | ### Flow Description 1. **Data Extraction**:
+    The action retrieves the 'Original' and 'Subset' strings from the input parameters.
+    2. **Parsing Logic**: It attempts to parse each input as a JSON list. If JSON
+    parsing fails, it falls back to splitting the string by commas, stripping whitespace,
+    and converting numeric strings to integers. 3. **Set Comparison**: The action
+    converts both lists into Python sets and performs a subset comparison (Subset
+    is a subset of Original). 4. **Result Reporting**: The action concludes with a
+    descriptive message and returns a boolean result (True if all items are present,
+    False otherwise). ### Additional Notes This action is purely computational and
+    does not interact with external services or modify any Google SecOps entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Convert Into Simulated Case:
+  ai_description: "### General Description\nThis action converts raw alert data into\
+    \ a format suitable for the Google SecOps (Chronicle) Case Simulator. It is designed\
+    \ to facilitate the creation of simulated cases by extracting JSON data stored\
+    \ within an entity's `SourceFileContent` property, applying transformations, and\
+    \ either pushing the result to the simulator or attaching it to the case wall\
+    \ for manual download.\n\n### Parameters Description\n| Parameter Name | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Push to Simulated\
+    \ Cases | Boolean | No | When set to `true`, the action will automatically import\
+    \ the generated case data into the SOAR Simulator. Default is `false`. |\n| Save\
+    \ JSON as Case Wall File | Boolean | No | When set to `true`, the action will\
+    \ encode the case data as a `.case` file and attach it to the Case Wall. Default\
+    \ is `true`. |\n| Override Alert Name | String | No | Provides a way to manually\
+    \ specify the name of the resulting alert/case, which is useful for tracking or\
+    \ separation. |\n| Full path name | Boolean | No | If enabled, the action constructs\
+    \ a descriptive case name using the format: `SourceSystemName_DeviceProduct_Name`.\
+    \ Default is `false`. |\n\n### Additional Notes\n* The action expects the first\
+    \ entity in the current alert to contain a property named `SourceFileContent`\
+    \ which holds the raw JSON payload.\n* It automatically maps specific event fields\
+    \ like `DeviceEventClassId` to the raw data fields to ensure compatibility with\
+    \ standard simulation formats.\n\n### Flow Description\n1. **Initialization**:\
+    \ Retrieves the action parameters and identifies the first entity of the current\
+    \ alert.\n2. **Data Extraction**: Attempts to load JSON data from the `SourceFileContent`\
+    \ additional property of the target entity.\n3. **Transformation**: Iterates through\
+    \ the events in the data to normalize naming conventions (specifically handling\
+    \ `DeviceEventClassId`) and updates the overall case name based on the `Override\
+    \ Alert Name` or `Full path name` parameters.\n4. **Internal Mutation**: \n  \
+    \  - If `Push to Simulated Cases` is enabled, it uses the `import_simulator_custom_case`\
+    \ utility to create a case in the simulator.\n    - If `Save JSON as Case Wall\
+    \ File` is enabled, it base64 encodes the JSON and uploads it as an attachment\
+    \ to the case wall.\n5. **Completion**: Returns the generated JSON as the script\
+    \ result and provides a status message indicating which operations were performed."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      This action can create new cases in the SOAR Simulator and add file attachments
+      to the case wall.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes:
+    - GENERICENTITY
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Entities with Separator:
+  ai_description: "### General Description\nThis action creates one or multiple entities\
+    \ from a provided string and adds them to the current Google SecOps alert. It\
+    \ allows for bulk creation by splitting a string of identifiers using a custom\
+    \ separator (e.g., a comma or semicolon). The action also supports adding custom\
+    \ enrichment data to the newly created entities via a JSON object, with an optional\
+    \ prefix for the keys. \n\n### Parameters\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| Entities Identifiers | string | True | A\
+    \ string containing the identifier or identifiers of the entities to be created\
+    \ (e.g., '10.0.0.1, 10.0.0.2'). |\n| Entity Type | entity_type | True | The Siemplify\
+    \ entity type to assign to the new entities (e.g., HOSTNAME, USERNAME, ADDRESS).\
+    \ |\n| Is Internal | boolean | False | If set to true, the created entities will\
+    \ be marked as part of the internal network. Defaults to false. |\n| Entities\
+    \ Separator | string | True | The character used to split the 'Entities Identifiers'\
+    \ string. Defaults to a comma (','). |\n| Enrichment JSON | code | False | A JSON\
+    \ string containing key-value pairs to be added as enrichment data to the created\
+    \ entities. |\n| PrefixForEnrichment | string | False | An optional prefix to\
+    \ be prepended to the keys within the 'Enrichment JSON' data. |\n\n### Additional\
+    \ Notes\n- If the 'Entity Type' is set to 'ADDRESS', the action performs a validation\
+    \ check to ensure the provided identifier is a valid IP address format.\n- The\
+    \ action checks for existing entities within the alert to prevent the creation\
+    \ of duplicate identifiers.\n\n### Flow Description\n1. **Input Parsing**: The\
+    \ action retrieves the input string and splits it into a list of identifiers based\
+    \ on the 'Entities Separator'.\n2. **Validation & Deduplication**: For each identifier,\
+    \ the action checks if it already exists within the alert's entity list. If the\
+    \ type is 'ADDRESS', it validates the IP format.\n3. **Enrichment Preparation**:\
+    \ If 'Enrichment JSON' is provided, it is parsed and optionally prefixed.\n4.\
+    \ **Entity Creation**: The action calls the internal SDK method to create each\
+    \ new entity within the case, applying the specified properties (internal status,\
+    \ enrichment data, etc.).\n5. **Reporting**: The action returns a summary of created,\
+    \ failed, and (if applicable) enriched entities."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Creates new entity objects and adds them to the current Google SecOps alert
+      within the platform. It also attaches provided enrichment data to these entities.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Entity Relationships:
+  ai_description: >-
+    ### General Description
+
+    This action creates new entities or uses existing ones to establish relationships
+    (links) within a Google SecOps case. It allows for bulk creation and linking based
+    on provided identifiers and types. The action is particularly useful for building
+    a visual graph of related entities (e.g., linking a malicious process to a specific
+    user or host) and can optionally enrich these entities with additional properties
+    via JSON.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Entity Identifier(s) | string | Yes | A single identifier or a delimited list
+    of identifiers for the entities you want to create or use as the primary side
+    of the relationship. |
+
+    | Entity Identifier(s) Type | entity_type | Yes | The Siemplify entity type (e.g.,
+    USERUNIQNAME, HOSTNAME) for the identifiers provided in the 'Entity Identifier(s)'
+    parameter. |
+
+    | Connect As | ddl | Yes | Specifies the relationship direction relative to the
+    target: 'Source', 'Destination', or 'Linked' (bidirectional/undirected). |
+
+    | Target Entity Type | entity_type | Yes | The entity type of the existing entities
+    in the current alert that should be linked to the new identifiers. |
+
+    | Target Entity Identifier(s) | string | No | A list of specific identifiers of
+    the target type to link to. If left empty, the action will link to all entities
+    of 'Target Entity Type' found in the current alert. |
+
+    | Enrichment JSON | string | No | A JSON string containing key-value pairs that
+    will be added to the 'additional_properties' of the newly created or linked entities.
+    |
+
+    | Separator Character | string | No | The character used to split the lists in
+    'Entity Identifier(s)' and 'Target Entity Identifier(s)'. Defaults to a comma
+    (,). |
+
+
+    ### Additional Notes
+
+    - This action requires Siemplify version 5.6 or higher.
+
+    - If 'Target Entity Identifier(s)' is not provided, the action automatically targets
+    all entities of the specified 'Target Entity Type' already present in the alert.
+
+    - The action includes a short delay (3 seconds) before applying enrichment to
+    ensure the SOAR platform has processed the newly created entities.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves all parameters and splits the identifier
+    strings into lists using the specified separator.
+
+    2. **Target Identification**: It scans the current alert's entities to find those
+    that match the 'Target Entity Type' and (optionally) the 'Target Entity Identifier(s)'.
+
+    3. **Entity Creation and Linking**: It iterates through the 'Entity Identifier(s)'
+    and uses internal API calls to ensure the entities exist and creates the relationship
+    based on the 'Connect As' direction.
+
+    4. **Data Refresh**: The action reloads the case data to capture the state of
+    the newly created entities.
+
+    5. **Enrichment (Optional)**: If 'Enrichment JSON' is provided, it updates the
+    'additional_properties' of the relevant entities and saves the changes back to
+    the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Creates new entities and establishes relationship links between entities within
+      the Google SecOps case environment.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Siemplify Task:
+  ai_description: >-
+    ### General Description
+
+    This action creates and assigns a new task to a specific user or role within the
+    context of the current Google SecOps case. It is used to orchestrate manual workflows
+    by ensuring that specific investigative or remediation steps are documented and
+    tracked with defined deadlines (SLAs).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | SLA (in minutes) | String | No | The amount of time (in minutes) the assigned
+    user/role has to respond to the task. Defaults to 480 if not specified. |
+
+    | Task Content | Content | Yes | The detailed instructions or information relevant
+    to the task. |
+
+    | Assign To | User | Yes | The specific user or role the task will be assigned
+    to. Defaults to Admin. |
+
+    | Task Title | String | No | The title/subject of the task. This field is supported
+    for Siemplify version 6.0.0.0 and higher. |
+
+    | Due Date | String | No | The specific deadline for the task in ISO8601 format.
+    If provided, this takes priority over the SLA parameter. |
+
+
+    ### Additional Notes
+
+    - Either the "Due Date" or the "SLA (in minutes)" parameter must be configured
+    for the action to successfully calculate the task deadline.
+
+    - If both "Due Date" and "SLA (in minutes)" are provided, the "Due Date" parameter
+    will be used to set the deadline.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action extracts the task content, assignment
+    target, and deadline parameters (SLA or Due Date).
+
+    2. **Validation:** Ensures that at least one deadline-related parameter (Due Date
+    or SLA) is present.
+
+    3. **Deadline Computation:** Calculates the task's expiration time as a Unix epoch
+    timestamp in milliseconds. It either parses the provided ISO8601 Due Date or adds
+    the specified SLA minutes to the current system time.
+
+    4. **Task Creation:** Checks the Google SecOps system version to determine the
+    correct API call (v5 or v6) and creates the task, linking it to the current Case
+    ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      This action creates a new task object within the Google SecOps case, assigning
+      it to a specific user or role and setting a deadline.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+DNS Lookup:
+  ai_description: >-
+    ### General Description
+
+    Performs DNS lookups on provided entities to retrieve DNS records or reverse DNS
+    (PTR) entries. This action allows security analysts to query specific DNS servers
+    (e.g., internal DNS or public servers like 1.1.1.1) to verify domain mappings
+    and IP reputations. It supports forward lookups for hostname entities with configurable
+    record types and reverse lookups for IP address entities.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | DNS Servers | string | True | A single IP address or a comma-separated list
+    of DNS server IP addresses to be used for the query (e.g., '1.1.1.1, 8.8.8.8').
+    |
+
+    | Data Type | ddl | True | The specific DNS record type to query for Hostname
+    entities. Defaults to 'ANY'. Supported types include A, AAAA, MX, TXT, CNAME,
+    etc. |
+
+
+    ### Additional Notes
+
+    - For **IP Address** entities, the action automatically performs a reverse DNS
+    lookup to find PTR records, regardless of the 'Data Type' parameter.
+
+    - For **Hostname** entities, the action uses the specified 'Data Type' to perform
+    the lookup.
+
+    - The action iterates through all provided DNS servers for each entity.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the comma-separated list of DNS servers and the
+    desired record type from the action parameters.
+
+    2. **Entity Filtering**: Identifies supported entities (ADDRESS and HOSTNAME)
+    from the target entities list.
+
+    3. **Address Processing**: For each IP Address entity, the script performs a reverse
+    DNS lookup (PTR) against each specified DNS server.
+
+    4. **Hostname Processing**: For each Hostname entity, the script creates a DNS
+    query for the selected 'Data Type' and sends it to each specified DNS server via
+    UDP.
+
+    5. **Data Collection**: Aggregates all found records, including the record type,
+    response data, and the specific DNS server that provided the answer, into a JSON
+    result object.
+
+    6. **Finalization**: Updates the action status and provides the JSON output for
+    downstream playbook tasks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delay Playbook:
+  ai_description: >-
+    ### General Description
+
+    This action provides a mechanism to pause or delay the execution of a playbook
+    for a specific duration. It is an asynchronous action that calculates a target
+    timestamp based on user-provided time increments (Seconds, Minutes, Hours, Days)
+    and keeps the playbook in an 'In Progress' state until that time is reached.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Seconds | string | Yes | The number of seconds to delay. Defaults to '0'. |
+
+    | Minutes | string | Yes | The number of minutes to delay. Defaults to '1'. |
+
+    | Hours | string | Yes | The number of hours to delay. Defaults to '0'. |
+
+    | Days | string | Yes | The number of days to delay. Defaults to '0'. |
+
+
+    ### Additional Notes
+
+    - All time parameters are treated as additive. For example, setting Minutes to
+    '1' and Seconds to '30' results in a total delay of 90 seconds.
+
+    - If all parameters are set to '0' (or values that result in a timestamp in the
+    past), the action completes immediately.
+
+    - The action uses the `arrow` library for UTC-based time calculations and supports
+    various ISO and standard date formats during its asynchronous 'wait' phase.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action reads the `Seconds`, `Minutes`, `Hours`, and
+    `Days` parameters from the input.
+
+    2. **Target Calculation**: It calculates a `target_date` by shifting the current
+    UTC time forward by the specified duration.
+
+    3. **Initial Check**: In the `main` function, it compares the current time with
+    the `target_date`. If the target has already passed, the action completes immediately.
+
+    4. **Asynchronous Pause**: If the `target_date` is in the future, the action returns
+    an `EXECUTION_STATE_INPROGRESS` status and stores the `target_date` in the `additional_data`
+    field.
+
+    5. **Periodic Verification**: The Google SecOps SOAR platform periodically invokes
+    the `wait` function. This function retrieves the stored `target_date` and re-evaluates
+    it against the current UTC time.
+
+    6. **Completion**: Once the current time is greater than or equal to the `target_date`,
+    the action sets the execution state to `EXECUTION_STATE_COMPLETED`, allowing the
+    playbook to proceed to the next step.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delay Playbook Synchronous:
+  ai_description: >-
+    ### General Description: Pauses the playbook execution for a short duration, effectively
+    delaying subsequent steps in the workflow. It is designed for synchronous execution
+    with a limit of 30 seconds. ### Parameters: | Parameter | Type | Mandatory | Description
+    | | :--- | :--- | :--- | :--- | | Seconds | string | Yes | The number of seconds
+    to delay the playbook execution. Valid range is 0 to 30 seconds. | ### Additional
+    Notes: For delays longer than 30 seconds, use 'Delay Playbook V2'. ### Flow Description:
+    1. The action extracts the 'Seconds' input parameter. 2. It validates that the
+    value is a positive number within the allowed range (0 to 30 seconds). 3. It calculates
+    the target completion time. 4. It enters a synchronous loop using 'time.sleep'
+    until the current time reaches the target time. 5. It completes and returns a
+    message indicating the delay has finished.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delay Playbook V2:
+  ai_description: "### General Description\nThis action temporarily pauses the execution\
+    \ of a playbook for a specific period or until a scheduled time determined by\
+    \ a Cron expression. It is implemented as an asynchronous action, allowing Google\
+    \ SecOps to suspend processing and resume once the target duration has elapsed.\
+    \ This is primarily used for operational delays, such as waiting for a human process\
+    \ to complete or spacing out automated actions.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Seconds | string | No | The number of seconds to delay the playbook. Defaults\
+    \ to 0. |\n| Minutes | string | No | The number of minutes to delay the playbook.\
+    \ Defaults to 1. |\n| Hours | string | No | The number of hours to delay the playbook.\
+    \ Defaults to 0. |\n| Days | string | No | The number of days to delay the playbook.\
+    \ Defaults to 0. |\n| Cron Expression | string | No | A standard cron expression\
+    \ (e.g., '0 12 * * *'). If provided, this value takes precedence over the relative\
+    \ time parameters (Seconds/Minutes/Hours/Days), and the playbook will resume at\
+    \ the next occurrence defined by the expression. |\n\n### Additional Notes\n-\
+    \ This action is asynchronous (`is_async: true`). It yields execution back to\
+    \ the SOAR platform and resumes via a callback mechanism.\n- Either a combination\
+    \ of duration parameters or a Cron Expression should be provided. If both are\
+    \ present, the Cron Expression is used.\n- The action uses UTC time for all calculations.\n\
+    \n### Flow Description\n1. **Extraction**: The action retrieves input parameters\
+    \ including time offsets and the Cron Expression.\n2. **Target Calculation**:\
+    \ \n   - If a **Cron Expression** is provided, the action calculates the next\
+    \ valid timestamp using the `croniter` library.\n   - If no Cron Expression is\
+    \ provided, it calculates a target timestamp by adding the specified **Days, Hours,\
+    \ Minutes, and Seconds** to the current UTC time.\n3. **Initial State Check**:\
+    \ The action compares the current time to the target timestamp.\n   - If the target\
+    \ time has already passed, the action finishes immediately with a `COMPLETED`\
+    \ state.\n   - If the target time is in the future, the action sets the state\
+    \ to `INPROGRESS` and stores the target timestamp in the action's `additional_data`\
+    \ field.\n4. **Asynchronous Waiting**: During the callback phase (`wait` function),\
+    \ the action retrieve the stored target timestamp from the execution context.\
+    \ It continues to report `INPROGRESS` until the current UTC time reaches or exceeds\
+    \ the target timestamp, at which point it returns `COMPLETED`."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Extract URL Domain:
+  ai_description: >-
+    ### General Description
+
+    Extracts the domain and suffix from URLs or entity identifiers using the Public
+    Suffix List logic. This action processes both a user-provided list of URLs and
+    existing entities within the Google SecOps case. It identifies the root domain
+    and can optionally include subdomains based on configuration. This is useful for
+    normalizing identifiers or preparing data for further threat intelligence lookups.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Separator | string | Yes | The string used to separate multiple entries in the
+    'URLs' parameter (default is a comma). |
+
+    | URLs | string | No | A list of one or more URLs or strings to process directly,
+    separated by the defined 'Separator'. |
+
+    | Extract subdomain | boolean | No | When set to True, the action extracts the
+    full subdomain along with the domain and suffix. Defaults to False. |
+
+
+    ### Additional Notes
+
+    - The action enriches existing entities by adding a new field 'siemplifytools_extracted_domain'
+    to their additional properties if a valid domain can be extracted from the entity's
+    identifier.
+
+    - If an entity identifier or a provided URL does not contain a valid domain (e.g.,
+    a file hash), it will be ignored for enrichment but logged as a failure in the
+    JSON results.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves action parameters including the list of URLs,
+    the separator, and the subdomain extraction toggle.
+
+    2. **Parameter Processing**: If the 'URLs' parameter is populated, the script
+    splits the string by the separator and extracts the domain for each URL using
+    local parsing logic.
+
+    3. **Entity Enrichment**: Iterates through all target entities in the case, attempting
+    to extract domains from their identifiers.
+
+    4. **Data Update**: Successfully parsed domains are added to the entities' 'additional_properties'
+    dictionary.
+
+    5. **Internal Update**: Calls the internal API to update the modified entities
+    in the Google SecOps environment.
+
+    6. **Result Generation**: Produces a JSON output containing a mapping of all processed
+    strings to their extracted domains or error messages.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' of entities within the Google SecOps case
+      to include the 'siemplifytools_extracted_domain' field.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes:
+    - GENERICENTITY
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Find First Alert:
+  ai_description: "### General Description\nThis action determines if the alert currently\
+    \ being processed is the chronologically first alert within the associated case.\
+    \ It is a utility tool used for workflow branching or logic that depends on identifying\
+    \ the initial trigger of a case.\n\n### Parameters Description\nThis action does\
+    \ not require any input parameters.\n\n### Additional Notes\n- The action compares\
+    \ the current alert's unique identifier against a sorted list of all alerts in\
+    \ the case.\n- If the current alert is the first one, the action returns the alert\
+    \ identifier as the result.\n- If the current alert is not the first one, the\
+    \ action returns the string `false` as the result.\n\n### Flow Description\n1.\
+    \ **Data Retrieval**: The action accesses the full list of alerts associated with\
+    \ the current case through the Google SecOps SDK.\n2. **Sorting**: It sorts the\
+    \ alerts list in ascending order based on their `creation_time` attribute.\n3.\
+    \ **Identification**: It identifies the earliest alert (the first element in the\
+    \ sorted list).\n4. **Comparison**: The action compares the `identifier` of the\
+    \ `current_alert` context with the `identifier` of the earliest alert identified\
+    \ in the previous step.\n5. **Completion**: \n    - If they match, it terminates\
+    \ and returns the alert identifier.\n    - If they do not match, it terminates\
+    \ and returns the string `false`."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Case Data:
+  ai_description: >-
+    ### General Description
+
+    The **Get Case Data** action retrieves comprehensive metadata and content from
+    a specific Google SecOps SOAR case. It aggregates various data points including
+    comments, entity information, insights, playbook execution history, alert details,
+    and raw event data. This action is primarily used for programmatically accessing
+    case context for use in subsequent playbook logic or for external reporting.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Case Id | String | No | The unique identifier of the case to query. If left
+    blank, the action defaults to the current case ID where the playbook is running.
+    |
+
+    | Fields to Return | String | No | A comma-separated list of specific JSON keys
+    to retrieve (e.g., "identifier, priority"). If omitted, the action returns the
+    full case data object. Supports nested pathing using the delimiter. |
+
+    | Nested Keys Delimiter | String | No | The character used to navigate nested
+    JSON structures (e.g., using `.` allows pathing like `alerts.0.name`). Default
+    value is `.`. Note: This cannot be a comma (`,`). |
+
+
+    ### Additional Notes
+
+    - If the `Fields to Return` parameter is used, the action will only include the
+    specified keys in the final JSON output. If a requested field is not found, it
+    will be noted in the output message.
+
+    - The action automatically decodes and fetches the full content of insights that
+    are stored as references/blobs.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** Validates input parameters, ensuring the `Nested
+    Keys Delimiter` is not a comma.
+
+    2.  **Data Retrieval:** Calls the internal SOAR API to fetch the full case overview
+    and details.
+
+    3.  **Data Transformation:** Normalizes the case data into a standard JSON format.
+
+    4.  **Field Filtering:** If `Fields to Return` is provided, the script traverses
+    the JSON object to extract only the requested fields based on the specified delimiter.
+
+    5.  **Insight Enrichment:** Fetches all insights associated with the case. If
+    an insight contains a pointer to a data blob (indicated by `<% %>` syntax), the
+    action makes an internal API call to retrieve and decode the base64-encoded content.
+
+    6.  **Final Output:** Consolidates the filtered case data and processed insights
+    into a single JSON object and attaches it to the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Case SLA:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves the Service Level Agreement (SLA) and Critical SLA expiration
+    times for the current Google SecOps case. It extracts these values from the case
+    overview and presents them in both raw Unix timestamp format and a human-readable
+    string format based on a provided template.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | DateTime Format | String | Yes | Specify the Python strftime format (e.g., `%Y-%m-%d
+    %H:%M:%S`) in which the SLA expiration times will be displayed. Defaults to `%Y-%m-%d
+    %H:%M:%S`. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `DateTime Format` configuration.
+
+    2. **Data Retrieval**: It calls the internal SOAR API to get case overview details
+    for the current `case_id`.
+
+    3. **SLA Extraction**: The script identifies the `slaExpirationTime` and `criticalExpirationTime`
+    from the case data, checking both case-level and stage-level attributes.
+
+    4. **Transformation**: Unix timestamps are converted into formatted strings using
+    the specified date-time format.
+
+    5. **Output**: The action returns a JSON object containing raw Unix and formatted
+    timestamps, and provides a summary message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Certificate Details:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves and analyzes SSL/TLS certificate details for a specified
+    URL. It connects to the target host over port 443 to fetch the certificate, providing
+    critical security information such as validity periods, issuer details, and potential
+    misconfigurations (e.g., self-signed or expired certificates).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Url to check | String | Yes | The hostname or URL from which to retrieve the
+    SSL certificate. Default value is 'expired.badssl.com'. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on SOAR entities directly; it relies solely on
+    the provided URL parameter.
+
+    - The connection is established specifically over port 443 using TLS 1.2 or higher.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action extracts the 'Url to check' from the input parameters.
+
+    2. **Connection**: It initiates a TCP socket connection to the target host on
+    port 443.
+
+    3. **Certificate Retrieval**: It wraps the socket with an SSL context to perform
+    a handshake and retrieves the peer certificate in binary (DER) format.
+
+    4. **Parsing**: The binary certificate is loaded into an X.509 object to extract
+    fields including the Common Name (CN), Subject Alternative Names (SAN), and Issuer
+    Name.
+
+    5. **Analysis**: The code calculates whether the certificate is currently expired
+    (based on the system time) and checks if it is self-signed by comparing the subject
+    and issuer names.
+
+    6. **Output**: The analyzed data, including expiration dates and days remaining,
+    is returned as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Context Value:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a stored value associated with a specific key from a defined scope within
+    the Google SecOps environment. This utility action allows playbooks to access
+    and reuse data that was previously saved at the Alert, Case, or Global context
+    levels.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Scope** | ddl | Yes | The context level from which to retrieve the value.
+    Options include `Alert` (specific to the current alert), `Case` (shared across
+    all alerts in the case), or `Global` (available environment-wide). |
+
+    | **Key** | string | Yes | The name of the key/property to retrieve. |
+
+
+    ### Additional Notes
+
+    - If the requested key is not found in the specified scope, the action will complete
+    successfully with a descriptive message but the result value will be empty.
+
+    - The action automatically strips surrounding double quotes from the retrieved
+    value for cleaner data handling in subsequent playbook steps.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action reads the `Scope` and `Key` parameters provided
+    by the user.
+
+    2. **Logic Selection**: Based on the `Scope` value:
+        - **Alert**: Calls the SDK to fetch the property from the active alert's context.
+        - **Case**: Calls the SDK to fetch the property from the case-level context.
+        - **Global**: Calls a helper function to retrieve the property from the shared
+    global context (using the 'GLOBAL' identifier).
+    3. **Data Sanitization**: If a value is returned, it removes any leading or trailing
+    double-quote characters.
+
+    4. **Execution Completion**: The action concludes by outputting the retrieved
+    value as the script result and logging a success or 'not found' message to the
+    case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Current Time:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves the current local system date and time and formats it based
+    on a user-defined format string. It serves as a utility tool within playbooks
+    to generate timestamps for logging, comparison, or documentation purposes.
+
+
+    ### Parameters Description
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Datetime Format | string | Yes | Determines the format of the output string.
+    It uses standard Python `strftime` formatting codes (e.g., `%d/%m/%Y %H:%M`).
+    |
+
+
+    ### Additional Notes
+
+    This action does not require any entities to run and does not interact with external
+    APIs or modify any internal Google SecOps data. It strictly uses the execution
+    environment's system clock.
+
+
+    ### Flow Description
+
+    1. **Extract Parameter**: The action retrieves the user-provided `Datetime Format`
+    string.
+
+    2. **Capture Time**: It retrieves the current date and time from the system using
+    the Python `datetime` library.
+
+    3. **Format Output**: It applies the provided format string to the current timestamp.
+
+    4. **Finalize**: The formatted timestamp is printed to the execution log and returned
+    as the action's result value.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Email Templates:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves email templates from the Google SecOps (Chronicle) SOAR
+    platform. It is used to fetch existing email configurations, which can then be
+    utilized in automated workflows or playbooks for communication tasks.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Template Type | Dropdown (DDL) | Yes | Specifies the category of templates to
+    retrieve. Options are **HTML** (for HTML-formatted templates) or **Standard**
+    (for basic text templates). |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action reads the `Template Type` provided by
+    the user.
+
+    2. **Fetch Templates**: It interacts with the internal SOAR API using `get_email_template`
+    to retrieve all defined email templates in the system.
+
+    3. **Filtering Logic**: The script iterates through the list of templates and
+    applies a filter based on the `type` property of the template (e.g., 'HtmlFormat'
+    for HTML or 'Template' for Standard).
+
+    4. **Result Generation**: The matching templates are collected into a JSON array
+    and returned as the action's result.
+
+
+    ### Additional Notes
+
+    This action does not operate on case entities; it functions as a utility to query
+    system-level configurations.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Integration Instances:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a comprehensive list of all installed integration instances associated
+    with the current environment and the global scope (wildcard) within Google SecOps.
+    This action is primarily used for administrative workflows or dynamic playbooks
+    that need to verify which tools are currently configured and available.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action queries internal system data using the `TIPCommon` library. It specifically
+    looks for instances in the environment where the action is executed as well as
+    those marked with a global ('*') scope to ensure a complete list is returned.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the SOAR SDK and sets the internal
+    script name.
+
+    2. **Environment Scoping**: It defines a search list consisting of the current
+    execution environment and the global environment identifier.
+
+    3. **Data Retrieval**: It iterates through the search list, calling the `get_installed_integrations_of_environment`
+    function for each environment to fetch integration metadata.
+
+    4. **Result Processing**: The retrieved integration objects are converted into
+    JSON format and aggregated into a single list.
+
+    5. **Final Output**: The aggregated list is attached to the action results as
+    `JsonResult` under the key `instances` and the action completes successfully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Original Alert Json:
+  ai_description: >-
+    ### General Description
+
+    This action extracts the original raw alert JSON data from the metadata of an
+    entity within Google SecOps. It specifically targets the source data payload that
+    was ingested during the alert creation process, which is often stored in a specific
+    entity property. This allows analysts to view the unmapped, raw details of the
+    alert for deeper investigation.
+
+
+    ### Parameters Description
+
+    - There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    - This action assumes that the raw alert data is stored in the `SourceFileContent`
+    key within the `additional_properties` dictionary of the first entity associated
+    with the alert.
+
+    - The action is designed to work with connectors that populate this specific field
+    during the ingestion phase.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The script initializes the Siemplify action context with
+    the `get_source_file` flag enabled to ensure access to the source content.
+
+    2. **Entity Access**: The script retrieves the first entity (`entities[0]`) from
+    the current alert's entity list.
+
+    3. **Property Extraction**: It looks up the `SourceFileContent` property in the
+    `additional_properties` of that entity.
+
+    4. **JSON Parsing**: The retrieved string is parsed into a JSON object using the
+    standard `json` library.
+
+    5. **Output**: The parsed JSON object is added to the action's result data (`add_result_json`)
+    and the action concludes by displaying the content in the technical details section.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes:
+    - GENERICENTITY
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Siemplify Users:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of all user accounts configured within the Google
+    SecOps (formerly Siemplify) platform. It provides detailed metadata for each user,
+    allowing for administrative auditing, reporting, or dynamic lookup of platform
+    members during playbook execution.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Hide Disabled Users | Boolean | No | If set to `true` (default), the action
+    will exclude users who are marked as disabled/inactive in the system. If `false`,
+    all users are returned regardless of their status. |
+
+
+    ### Additional Notes
+
+    This is a system-level action that does not operate on specific entities (like
+    IPs or Hostnames). It queries the internal SOAR API directly.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action reads the `Hide Disabled Users` configuration
+    to determine the filter criteria.
+
+    2. **Internal API Request**: It invokes the internal `get_siemplify_user_details`
+    method to fetch user data from the platform's database.
+
+    3. **Data Transformation**: The raw user objects are converted into a serializable
+    JSON format.
+
+    4. **Result Attachment**: The list of users is attached to the action results
+    under the `siemplifyUsers` key and displayed in the execution output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Lock Playbook:
+  ai_description: >-
+    ### General Description
+
+    The **Lock Playbook** action is a synchronization utility designed to manage the
+    execution flow of playbooks within a single case containing multiple alerts. It
+    ensures that the current playbook pauses its execution until all playbooks associated
+    with the chronologically preceding alert in the case have reached a completed
+    status. This is critical for maintaining order in scenarios where actions must
+    be performed sequentially across different alerts.
+
+
+    ### Parameters
+
+    There are no user-configurable parameters for this action.
+
+
+    ### Flow Description
+
+    1.  **Alert Sorting**: The action retrieves all alerts belonging to the current
+    case and sorts them by their creation timestamp.
+
+    2.  **Position Identification**: It determines the index of the current alert
+    within the sorted list.
+
+    3.  **Sequential Logic**:
+        *   **First Alert**: If the current alert is the first in the case, the action
+    completes immediately, allowing the playbook to proceed.
+        *   **Subsequent Alerts**: If the alert is not the first, the action identifies
+    the alert immediately preceding it in the timeline.
+    4.  **Status Check**: The action queries the internal SOAR API to check the status
+    of all workflow (playbook) instances for the previous alert.
+
+    5.  **Execution State Management**:
+        *   If any playbook from the previous alert is incomplete (e.g., in progress
+    or pending), the action sets itself to an 'In Progress' state, causing the playbook
+    to wait.
+        *   Once all preceding playbooks are verified as 'Completed', the action finishes,
+    releasing the lock and allowing the current playbook to continue.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Look-A-Like Domains:
+  ai_description: >-
+    ### General Description
+
+    Compares DOMAIN entities against a list of internal domains defined for the specific
+    environment within Google SecOps. It identifies potential typosquatting or 'look-alike'
+    domains by calculating the Levenshtein distance (edit distance) between the entity
+    and the organization's known domains. If a similarity is detected, the action
+    flags the domain as suspicious and provides context about the matching internal
+    domain.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    - The action uses a hardcoded threshold where a distance of 1, 2, or 3 is considered
+    a 'look-alike'.
+
+    - Comparisons are environment-aware; entities are only checked against domains
+    mapped to the case's environment.
+
+
+    ### Flow Description
+
+    1. **Fetch Internal Domains**: Retrieves the list of internal domain aliases from
+    the SOAR environment configuration using the `get_domain_alias` API.
+
+    2. **Filter Entities**: Identifies all DOMAIN entities within the current scope.
+
+    3. **Similarity Analysis**: For each DOMAIN entity, the action calculates the
+    `nltk.edit_distance` against the fetched internal domains.
+
+    4. **Identification**: A match is confirmed if the distance is greater than or
+    equal to 1 (not an exact match) and less than 4.
+
+    5. **Internal Enrichment**: For matching domains, it sets the `is_suspicious`
+    attribute to `True` and adds the matching internal domain to the entity's `additional_properties`
+    under the key `look_a_like_domain`.
+
+    6. **Update**: Persists the changes to the entities within Google SecOps.
+
+    7. **Reporting**: Generates a JSON result mapping each analyzed entity to its
+    look-alike matches and posts a summary message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'is_suspicious' status and the 'additional_properties' dictionary
+      of DOMAIN entities found to be similar to internal domains.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes:
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Normalize Entity Enrichment:
+  ai_description: >-
+    ### General Description
+
+    This action standardizes and normalizes entity enrichment data within Google SecOps
+    by mapping existing entity properties to new, standardized keys. It allows users
+    to ensure consistent naming conventions for attributes retrieved from various
+    external sources, making it easier to use this data in subsequent playbook steps
+    or dashboards.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Normalization Data | String | Yes | A JSON-formatted array of objects. Each
+    object must contain `entitiy_field_name` (the current property key to be renamed)
+    and `new_name` (the desired standardized key). |
+
+
+    ### Additional Notes
+
+    - If a source field defined in `entitiy_field_name` is found in the entity's `additional_properties`,
+    its value is copied to a new property with the name specified in `new_name`.
+
+    - If a source field is missing and the `new_name` key does not already exist on
+    the entity, the action initializes the `new_name` key with an empty string value.
+
+    - This action does not remove the original properties; it creates or updates standardized
+    versions of them.
+
+
+    ### Flow Description
+
+    1. **Input Parsing**: The action retrieves and parses the `Normalization Data`
+    JSON string into a list of mapping pairs.
+
+    2. **Entity Iteration**: It iterates through all entities currently targeted by
+    the action.
+
+    3. **Property Mapping**: For each entity, it checks the `additional_properties`
+    dictionary for the presence of the source keys defined in the mapping.
+
+    4. **Standardization**: It creates or updates keys in the `additional_properties`
+    dictionary based on the provided mapping logic.
+
+    5. **Internal Update**: The action updates the entities within the Google SecOps
+    environment to persist the changes.
+
+    6. **Result Reporting**: It returns a count of the total number of entities that
+    were processed and updated.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' of entities within the SOAR case by adding
+      or standardizing property keys based on a provided mapping.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes:
+    - GENERICENTITY
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+
+    The **Ping** action is a utility designed to verify the connectivity and operational
+    status of the Google SecOps (formerly Siemplify) integration. It serves as a heartbeat
+    check to ensure that the environment is correctly configured and that the action
+    runner can execute scripts successfully.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+
+    * This action is primarily used for troubleshooting connectivity issues or as
+    a placeholder/test step within playbooks.
+
+    * It does not interact with any external APIs or process case entities.
+
+
+    ### Flow Description
+
+
+    1.  **Initialization**: The action initializes the Siemplify SDK environment.
+
+    2.  **Connectivity Confirmation**: The script executes a termination command with
+    a hardcoded success message.
+
+    3.  **Completion**: The action returns a success status with the result value
+    "Siemplify is connected".
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Re-Attach Playbook:
+  ai_description: >-
+    ### General Description
+
+    This action facilitates the manual or automated resetting of a playbook's execution
+    state within a specific case. It is designed to 'clean' the history of a playbook
+    by removing its previous results and metadata from the backend databases and then
+    re-attaching it to the case to trigger a fresh execution. This is particularly
+    useful for troubleshooting failed playbooks or re-running logic after environmental
+    changes.
+
+
+    ### Parameters Description
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Playbook Name | playbook_name | Yes | The exact name of the playbook that will
+    be removed from the case, purged from the database, and then re-attached for execution.
+    |
+
+
+    ### Additional Notes
+
+    * **Integration Dependency:** This action requires the **PostgreSQL** integration
+    to be installed and configured with an instance name of 'Siemplify' pointing to
+    the SOAR's backend databases (`siemplify_orchestration_db` and `siemplify_system_db`).
+
+    * **Execution Impact:** The action performs hard deletes on `WorkflowInstances`
+    and `ActionResults` tables in the backend database. Use with caution as this data
+    cannot be recovered within the SOAR UI once deleted.
+
+
+    ### Flow Description
+
+    1.  **Configuration Retrieval:** The action identifies the PostgreSQL integration
+    instance named 'Siemplify' to obtain connection credentials for the backend databases.
+
+    2.  **Workflow Identification:** It queries the `WorkflowInstances` table in the
+    `siemplify_orchestration_db` to find active or completed instances of the specified
+    playbook associated with the current case.
+
+    3.  **Data Purging:** For every instance found, the action executes SQL DELETE
+    commands to remove the playbook's metadata from the `WorkflowInstances` table
+    and its associated execution results from the `ActionResults` table in the `siemplify_system_db`.
+
+    4.  **Re-attachment:** Once the database is cleaned, it utilizes the SOAR REST
+    API to re-attach the playbook to the case, effectively starting the playbook logic
+    from the beginning.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action performs SQL DELETE operations directly on the PostgreSQL database
+      tables (WorkflowInstances and ActionResults) to purge historical execution data.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action re-attaches a playbook to the current case using the internal SOAR
+      API, which triggers a new execution flow within the platform.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Text:
+  ai_description: >-
+    ### General Description
+
+    This action provides utility functionality to search for specific strings or patterns
+    within a provided text block. It is designed to assist in logic branching within
+    playbooks, allowing users to verify if specific keywords or complex regular expression
+    patterns exist within input data like logs, email headers, or descriptions.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Text | string | Yes | The source text string that will be searched. |
+
+    | Search For | string | No | A literal string to search for within the Text. |
+
+    | Search For Regex | string | No | A comma-delimited list of regular expressions
+    (e.g., "[0-9]{3}", "error.*") used to search the text. Patterns should be wrapped
+    in double quotes. |
+
+    | Case Sensitive | boolean | No | Determines if the search should distinguish
+    between uppercase and lowercase characters. Defaults to false. |
+
+
+    ### Additional Notes
+
+    *   **Validation:** Either the 'Search For' parameter or the 'Search For Regex'
+    parameter must be populated for the action to run. If neither is provided, the
+    action will fail.
+
+    *   **Regex Support:** The regex search supports multiline searching and respects
+    the 'Case Sensitive' toggle.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action retrieves the input text, search string,
+    regex list, and case sensitivity preference.
+
+    2.  **Input Validation:** It checks if at least one search criterion (literal
+    string or regex) is defined.
+
+    3.  **Literal Search:** If 'Search For' is provided, the action performs a standard
+    substring search within the input text, applying case sensitivity logic as configured.
+
+    4.  **Regex Search:** If 'Search For Regex' is provided, the action splits the
+    list, cleans the patterns, and iterates through them using the Python `re` module
+    to find matches.
+
+    5.  **Result Aggregation:** If any match is found, the action sets the result
+    value to 'true' and populates a JSON object with details of the matches found
+    for auditing and downstream playbook use.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set Context Value:
+  ai_description: >-
+    Sets a key and value in a specific context (Alert, Case, or Global) within Google
+    SecOps. This action is a utility designed to persist data that can be retrieved
+    later in a playbook's lifecycle or across different alerts within the same case
+    or global scope.
+
+
+    ### Parameters
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Value | The specific data or string value to store. | string | Yes |
+
+    | Key | The identifier name under which the value will be saved. | string | Yes
+    |
+
+    | Scope | Determines the visibility and persistence of the data. Options are 'Case',
+    'Alert', or 'Global'. | ddl | Yes |
+
+
+    ### Flow Description
+
+    1. **Extract Input:** The action retrieves the 'Scope', 'Key', and 'Value' parameters
+    provided by the user.
+
+    2. **Context Routing:** Based on the 'Scope' selection, the action selects the
+    appropriate SDK method to store the data.
+
+    3. **Persistence:** If 'Alert' is selected, it uses `set_alert_context_property`.
+    If 'Case', it uses `set_case_context_property`. If 'Global', it utilizes a global
+    identifier to set a system-wide property.
+
+    4. **Finalization:** The action concludes by outputting a confirmation message
+    that the context has been successfully updated.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      The action modifies internal context variables (Alert, Case, or Global context
+      properties) within the Google SecOps environment to store and pass information
+      between playbook steps.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Spell Check String:
+  ai_description: >-
+    ### General Description
+
+    The **Spell Check String** action provides utility-based text analysis by checking
+    the spelling of a provided input string. It identifies misspelled words, suggests
+    corrections, and calculates an overall accuracy score. This action is useful for
+    sanitizing user-provided text or logs before further processing in a playbook.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **String** | String | Yes | The input text string to be checked for spelling
+    errors. |
+
+
+    ### Additional Notes
+
+    - This action does not interact with external APIs; it uses a local Python library
+    for spell checking.
+
+    - This action does not operate on entities; it operates on a string provided directly
+    via parameters.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action extracts the input string from the parameters.
+
+    2. **Preprocessing**: It removes punctuation and splits the string into a list
+    of individual words.
+
+    3. **Analysis**: It identifies misspelled words using the `spellchecker` library.
+
+    4. **Correction**: For each identified error, it attempts to find the most likely
+    correction and reconstructs a 'corrected' version of the input string.
+
+    5. **Calculation**: It calculates the accuracy percentage based on the ratio of
+    correctly spelled words to the total word count.
+
+    6. **Output**: The action returns the accuracy percentage as the main result and
+    adds a detailed JSON object to the case, containing the list of errors and the
+    corrected text.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unflatten JSON:
+  ai_description: >-
+    ### General Description
+
+    This action converts a flattened JSON object into a nested, hierarchical structure.
+    Flattened JSONs often use delimiters (like underscores or dots) to represent nested
+    keys within a single string (e.g., `"user_info_name": "John"` becomes `{"user_info":
+    {"name": "John"}}`). This utility is particularly useful for restructuring data
+    returned by APIs that do not support nested formats or for normalizing logs before
+    further processing.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **JSON Object** | string | Yes | The flattened JSON string that needs to be
+    unflattened. |
+
+    | **Delimiter** | string | No | The specific character used to separate keys in
+    the flattened structure. If left empty, the action will automatically split keys
+    using any non-alphanumeric character (anything that is not a letter, number, or
+    underscore). |
+
+
+    ### Additional Notes
+
+    - If a key token is strictly numeric (e.g., `"data_0_id"`), the action will interpret
+    this as an array index and create a list structure rather than a dictionary.
+
+    - The action includes error handling for invalid JSON input strings.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extract the `JSON Object` string and the optional `Delimiter`
+    from the action parameters.
+
+    2. **Parsing**: Parse the input string into a Python dictionary or list using
+    standard JSON decoding.
+
+    3. **Unflattening Process**: Iterate through the keys of the input data. For each
+    key, split it into tokens based on the provided delimiter or the default alphanumeric
+    regex.
+
+    4. **Recursive Reconstruction**: Dynamically build a nested structure (dictionaries
+    or lists) based on the extracted tokens. Numeric tokens trigger the creation of
+    list elements.
+
+    5. **Completion**: Output the final nested object into the action results (`JsonResult`).
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Alert Score:
+  ai_description: "### General Description\nUpdates the score of an alert within Google\
+    \ SecOps by a specified integer value. This action is used to dynamically adjust\
+    \ threat or priority scores during playbook execution based on logic or findings\
+    \ from other actions.\n\n### Parameters Description\n\n| Parameter | Description\
+    \ | Type | Mandatory | \n| :--- | :--- | :--- | :--- | \n| Input | The integer\
+    \ value (provided as a string) to increment or decrement the alert score by. Negative\
+    \ values will decrease the score. | String | Yes |\n\n### Flow Description\n1.\
+    \ **Extract Input**: Retrieves the `Input` value from the action parameters.\n\
+    2. **Fetch Current Score**: Retrieves the current value of the `ALERT_SCORE` property\
+    \ from the alert context.\n3. **Normalize Data**: Converts the current score to\
+    \ an integer, defaulting to 0 if the property is missing or empty.\n4. **Calculate\
+    \ New Score**: Adds the input value to the current score.\n5. **Update Context**:\
+    \ Saves the newly calculated score back to the `ALERT_SCORE` alert context property.\n\
+    6. **Finalize**: Returns the updated score as the action result and provides a\
+    \ status message.\n\n### Additional Notes\n- This action specifically targets\
+    \ the internal alert context property `ALERT_SCORE` and does not interact with\
+    \ external APIs or entity attributes directly."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'ALERT_SCORE' property within the alert's internal context to reflect
+      changes in priority or risk assessment.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Case Description:
+  ai_description: >-
+    ### General Description
+
+    Updates the description of the current case within Google SecOps. This action
+    allows analysts or automated playbooks to dynamically modify the case overview,
+    providing updated context or summarizing findings as the investigation progresses.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Case Description | String | Yes | The new text that will replace the current
+    description of the case. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the provided 'Case Description'
+    from the input parameters.
+
+    2. **Context Retrieval:** The action identifies the unique identifier (Case ID)
+    of the case in which it is running.
+
+    3. **Case Update:** The action calls the internal Google SecOps API (`change_case_description`)
+    to update the case's description field with the new value.
+
+    4. **Finalization:** The action concludes and returns a success message to the
+    case wall indicating the update was successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      This action modifies the metadata of the current case record within Google SecOps
+      by overwriting its description field.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait for Playbook to Complete:
+  ai_description: >-
+    ### General Description
+
+    This action is a synchronization utility used within Google SecOps playbooks.
+    It pauses the execution of the current playbook until another specified playbook
+    or block, running on the same alert, has reached a terminal state (Completed,
+    Failed, or Terminated). This is particularly useful for managing dependencies
+    between parallel execution paths or ensuring that a specific initialization or
+    containment block has finished before proceeding.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Playbook Name | String | True | The exact name of the playbook or block whose
+    completion is required before the current action finishes. |
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves the target 'Playbook Name' from the action parameters.
+
+    2. **Status Retrieval:** Queries the Google SecOps API (using `get_workflow_instance_card`)
+    to find all workflow instances associated with the current alert group.
+
+    3. **Matching:** Iterates through the retrieved workflow instances to find a match
+    for the specified 'Playbook Name'.
+
+    4. **Status Evaluation:**
+        * If the target is **Completed**, **Failed**, or **Terminated**, the action
+    completes successfully, effectively 'releasing' the lock.
+        * If the target is **In Progress**, **Pending in Queue**, or **Pending for
+    User**, the action returns an 'In Progress' status. Because the action is marked
+    as asynchronous (`is_async: true`), the SOAR platform will automatically retry
+    the action after a delay.
+        * If the target playbook is **not found** for the alert, the action completes
+    (assuming no lock is needed).
+    5. **Completion:** Once a terminal state is detected, the action ends and the
+    playbook flow continues to the next step.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

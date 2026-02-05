@@ -19,7 +19,7 @@ import io
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, overload
 
 from google import genai
 from google.genai.errors import ClientError
@@ -40,17 +40,18 @@ from google.genai.types import (
     ToolListUnion,
     UrlContext,
 )
+from pydantic import Field
 from tenacity import (
     after_log,
     retry,
-    retry_if_not_exception_type,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
 
 import mp.core.config
 
-from .llm_sdk import LlmConfig, LlmSdk, T_Schema
+from .sdk import LlmConfig, LlmSdk, T_Schema
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -72,9 +73,13 @@ class GeminiConfig(LlmConfig):
     dangerous_content: str = "OFF"
     hate_speech: str = "OFF"
     harassment: str = "OFF"
-    google_search: bool = True
-    url_context: bool = True
-    use_thinking: bool = True
+    google_search: Annotated[bool, Field(description="Whether to use Google Search")] = True
+    url_context: Annotated[bool, Field(description="Whether to use URL Context")] = True
+    use_thinking: Annotated[bool, Field(description="Whether to use thinking mode")] = True
+    request_response_validation: Annotated[
+        bool,
+        Field(description="Whether to add a response validate instruction in the system prompt"),
+    ] = True
 
     @property
     def api_key(self) -> str:
@@ -99,7 +104,7 @@ class GeminiConfig(LlmConfig):
         raise ApiKeyNotFoundError(msg) from None
 
 
-class Gemini(LlmSdk[GeminiConfig, T_Schema]):
+class Gemini(LlmSdk[GeminiConfig]):
     def __init__(self, config: GeminiConfig) -> None:
         super().__init__(config)
         self.client: AsyncClient = genai.client.Client(api_key=self.config.api_key).aio
@@ -117,18 +122,48 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
     ) -> None:
         await self.close()
 
+    @overload
+    async def send_message(
+        self,
+        prompt: str,
+        /,
+        *,
+        raise_error_if_empty_response: Literal[True],
+        response_json_schema: type[T_Schema],
+    ) -> T_Schema: ...
+
+    @overload
+    async def send_message(
+        self,
+        prompt: str,
+        /,
+        *,
+        raise_error_if_empty_response: Literal[False],
+        response_json_schema: type[T_Schema],
+    ) -> T_Schema | Literal[""]: ...
+
+    @overload
+    async def send_message(
+        self,
+        prompt: str,
+        /,
+        *,
+        raise_error_if_empty_response: bool,
+        response_json_schema: None = None,
+    ) -> str: ...
+
     @retry(
-        retry=retry_if_not_exception_type(ClientError),
-        stop=stop_after_attempt(4),
+        retry=retry_if_exception_type(ClientError),
+        stop=stop_after_attempt(10),
         wait=wait_exponential(),
-        after=after_log(logger, logging.DEBUG),
+        after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
     )
     async def send_message(
         self,
         prompt: str,
         /,
         *,
-        raise_error_if_empty_response: bool = False,
+        raise_error_if_empty_response: bool,
         response_json_schema: type[T_Schema] | None = None,
     ) -> T_Schema | str:
         """Send a message to the LLM and get a response.
@@ -191,31 +226,13 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         """Clean the session history."""
         self.content = Content(role="user", parts=[])
 
-    def add_system_prompts_to_session(self, *prompts: str) -> None:
-        """Add system prompts to the session.
-
-        This can only be done if there are no other registered prompts yet
-        """
-        if self.content.parts:
-            return
-
-        self.content.parts = []
-        for prompt in prompts:
-            self.content.parts.append(Part.from_text(text=prompt))
-
-    @retry(
-        retry=retry_if_not_exception_type(ClientError),
-        stop=stop_after_attempt(4),
-        wait=wait_exponential(),
-        after=after_log(logger, logging.DEBUG),
-    )
     async def send_bulk_messages(
         self,
         prompts: list[str],
         /,
         *,
         response_json_schema: type[T_Schema] | None = None,
-    ) -> list[Any] | tuple[Any] | list[T_Schema | str]:
+    ) -> list[T_Schema | str]:
         """Send multiple messages to the LLM and get responses.
 
         Args:
@@ -241,10 +258,10 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=retry_if_not_exception_type(ClientError),
-        stop=stop_after_attempt(4),
+        retry=retry_if_exception_type(ClientError),
+        stop=stop_after_attempt(10),
         wait=wait_exponential(),
-        after=after_log(logger, logging.DEBUG),
+        after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
     )
     async def _send_single_message_independent(
         self,
@@ -454,6 +471,15 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
         tools: ToolListUnion = self._get_tools()
         safety_settings: list[SafetySetting] = self._get_safety_settings()
         thinking_config: ThinkingConfig | None = self._get_thinking_config()
+        system_prompt: str = self.system_prompt
+        if self.config.request_response_validation:
+            system_prompt = (
+                f"{system_prompt}"
+                " Before providing the final results, perform a mental validation pass."
+                " Check for schema inconsistencies and factual inaccuracies."
+                " If you find an error, correct it in the final output."
+            )
+
         return GenerateContentConfig(
             temperature=self.config.temperature,
             response_mime_type=response_mime_type,
@@ -461,6 +487,7 @@ class Gemini(LlmSdk[GeminiConfig, T_Schema]):
             response_json_schema=response_json_schema,
             tools=tools,
             safety_settings=safety_settings,
+            system_instruction=system_prompt,
         )
 
     def _get_safety_settings(self) -> list[SafetySetting]:

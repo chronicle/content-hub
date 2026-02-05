@@ -1,0 +1,300 @@
+Convert File:
+  ai_description: >-
+    ### General Description
+
+    Converts files between PNG and PDF formats locally on a Remote Agent. This utility
+    action is used to transform file formats for further processing or visualization
+    within a workflow. It requires the integration to be deployed on a **Remote Agent**
+    because it interacts directly with the local file system and requires specific
+    system binaries.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Input File Format | DDL | Yes | The format of the source file. Supported options:
+    `PNG`, `PDF`. |
+
+    | Input File Path | String | Yes | The full absolute path to the file on the Remote
+    Agent's file system that needs to be converted. |
+
+    | Output File Format | DDL | Yes | The target format for conversion. Supported
+    options: `PNG`, `PDF`. |
+
+
+    ### Additional Notes
+
+    - **Remote Agent Dependency**: This action will only function when executed on
+    a Remote Agent. It will raise an error if run in the cloud environment.
+
+    - **Poppler Requirement**: For `PDF` to `PNG` conversion, the Remote Agent host
+    must have `poppler-utils` (specifically `pdftoppm`) installed.
+
+    - **Input/Output Logic**: The action requires that the input format and output
+    format be different; converting a file to its own format is not supported.
+
+
+    ### Flow Description
+
+    1. **Environment Validation**: Checks if the script is running on a Remote Agent.
+
+    2. **Parameter Validation**: Verifies that the source file exists at the provided
+    path and that the requested conversion formats are valid and distinct.
+
+    3. **Output Path Generation**: Creates a destination file path in the system's
+    temporary directory, appending a timestamp to the original filename to prevent
+    collisions.
+
+    4. **Conversion Execution**:
+        - **PDF to PNG**: Uses the `pdf2image` library to convert the PDF pages into
+    image objects and saves the first page as a PNG.
+        - **PNG to PDF**: Uses the `Pillow` (PIL) library to open the image, convert
+    it to the RGB color space, and save it as a PDF file.
+    5. **Result Reporting**: Provides a JSON result containing the new file path and
+    the output format, signaling success or failure based on the creation of the output
+    file.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+OCR Image:
+  ai_description: "### General Description\nThe **OCR Image** action performs Optical\
+    \ Character Recognition (OCR) to extract text from image files. It is primarily\
+    \ used to automate the processing of visual data, such as screenshots of error\
+    \ messages, phishing emails, or documents, converting them into machine-readable\
+    \ text for further analysis within a playbook. \n\n### Parameters Description\n\
+    | Parameter Name | Description | Type | Mandatory | Default Value |\n| :--- |\
+    \ :--- | :--- | :--- | :--- |\n| **Base64 Encoded Image** | The base64 encoded\
+    \ string of the image file to be processed. | String | No | None |\n| **File Path**\
+    \ | The absolute path to the image file on the Remote Agent's file system. | String\
+    \ | No | None |\n\n### Additional Notes\n*   **Requirement:** This action **must**\
+    \ be executed on a Remote Agent. The Remote Agent must have the `tesseract-ocr`\
+    \ package installed (`apt-get install -y tesseract-ocr`).\n*   **Parameter Logic:**\
+    \ Either the `Base64 Encoded Image` or the `File Path` must be provided. If both\
+    \ are supplied, the action prioritizes the `Base64 Encoded Image`.\n\n### Flow\
+    \ Description\n1.  **Environment Check:** The action verifies it is running on\
+    \ a Remote Agent.\n2.  **Validation:** It ensures that at least one image source\
+    \ (Base64 or File Path) is provided.\n3.  **Image Processing:**\n    *   If a\
+    \ **Base64 string** is provided, the action decodes it and writes it to a temporary\
+    \ PNG file.\n    *   If a **File Path** is provided, it uses the existing file.\n\
+    4.  **OCR Execution:** The action opens the image using the PIL (Pillow) library\
+    \ and passes it to the Tesseract OCR engine via the `pytesseract` wrapper.\n5.\
+    \  **Output:** The extracted text is cleaned (whitespace stripped) and returned\
+    \ in the `JsonResult` under the key `extracted_text`."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    and environment readiness for the **Image Utilities** integration. It specifically
+    validates that the action is running on a Remote Agent and that critical system
+    dependencies like Tesseract OCR and Playwright browser binaries are correctly
+    installed and functional.
+
+
+    ### Parameters
+
+    This action does not require any input parameters.
+
+
+    ### Flow Description
+
+    1. **Execution Environment Check**: The action first validates that it is executing
+    on a Google SecOps Remote Agent, which is a requirement for this integration.
+
+    2. **Tesseract OCR Check**: It verifies the installation of the Tesseract OCR
+    engine by attempting to retrieve its version information via the `pytesseract`
+    library.
+
+    3. **Playwright Check**: It verifies that the Playwright library and its associated
+    Chromium binaries are functional by attempting to launch and then immediately
+    close a headless browser instance.
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and initial setup validation.
+    If dependencies are missing, the action returns detailed error messages providing
+    step-by-step instructions on how to install the necessary components within the
+    Remote Agent container.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Rasterize Content:
+  ai_description: >-
+    Converts vector or complex content (URLs, HTML, or Email) into fixed bitmap images
+    (PNG) or PDF documents using a headless browser. This action is primarily used
+    for visual evidence collection or document conversion within a SOAR workflow.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Input Type | DDL | Yes | Specifies if the input is a 'URL', 'HTML' code, or
+    'Email' body content. |
+
+    | URLs or Body | String | Yes | The actual content to process (comma-separated
+    URLs or the raw HTML/Email string). |
+
+    | Output Type | DDL | No | The format of the result: 'PNG', 'PDF', or 'Both'.
+    Default is 'PNG'. |
+
+    | Export Method | DDL | No | Determines how to deliver the output: 'Case Attachment',
+    'File Path', or 'Both'. Default is 'Case Attachment'. |
+
+    | Width | String | Yes | The browser viewport width in pixels. Default is '1920'.
+    |
+
+    | Height | String | Yes | The browser viewport height in pixels. Default is '1080'.
+    |
+
+    | Full Screen | Boolean | Yes | If true, renders the entire page length instead
+    of just the viewport. |
+
+    | Timeout | String | No | Max seconds (up to 120) for the browser to wait for
+    the page to load. |
+
+    | Wait For | DDL | No | The lifecycle event to wait for before capturing (e.g.,
+    NETWORK_IDLE). |
+
+    | Wait for Selector | String | No | A CSS selector that must appear on the page
+    before the capture occurs. |
+
+
+    ### Additional Notes
+
+    - **Remote Agent Required**: This action MUST run on a Remote Agent because it
+    requires Playwright and browser binaries installed in the environment.
+
+    - If 'Full Screen' is enabled, the 'Height' parameter is ignored as the browser
+    automatically calculates the scroll height.
+
+
+    ### Flow Description
+
+    1. **Validation**: Checks if the action is running on a Remote Agent and validates
+    all input constraints (ranges and DDL values).
+
+    2. **Preparation**: Parses the input data based on the selected 'Input Type'.
+    Multiple URLs are handled sequentially.
+
+    3. **Browser Initialization**: Launches a headless Chromium instance via Playwright
+    with specific viewport settings.
+
+    4. **Rendering**: Navigates to the URL or injects the HTML/Email content into
+    the browser page. It waits for the specified event (e.g., Network Idle) or a CSS
+    selector if provided.
+
+    5. **Capture**: Generates the PNG screenshot and/or the PDF document.
+
+    6. **Export**: Uploads the resulting files as Case Attachments and/or provides
+    the local file paths in the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action can add files as attachments to the current Google SecOps case depending
+      on the 'Export Method' parameter.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

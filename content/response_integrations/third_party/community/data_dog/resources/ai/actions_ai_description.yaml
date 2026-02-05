@@ -1,0 +1,647 @@
+Get Beautiful Metric:
+  ai_description: >-
+    ### General Description
+
+    This action calculates statistical metrics for a given set of DataDog timeseries
+    points. It does not fetch data directly from the DataDog API; instead, it processes
+    a JSON-formatted 'Series' object (typically obtained from a preceding search or
+    metric retrieval action). It analyzes the provided data points to derive aggregations
+    like sum, average, minimum, and maximum, providing a summarized view of the metric's
+    behavior over a specific timeframe.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Series | code (JSON) | Yes | A JSON-formatted string representing a DataDog
+    timeseries series object. It must contain the `pointlist` key (a list of [timestamp,
+    value] pairs) along with metadata like `start`, `end`, and `unit`. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts DataDog configuration (API Key, APP Key) and the
+    input `Series` parameter.
+
+    2. **Parsing**: Converts the input `Series` JSON string into a Python dictionary.
+
+    3. **Validation**: Checks if the `pointlist` key exists within the series data.
+
+    4. **Statistical Calculation**: Iterates through the points to extract numeric
+    values and calculates the following:
+        * **Sum**: The total value of all points in the series.
+        * **Average**: The arithmetic mean of the values.
+        * **Minimum**: The lowest value found in the series.
+        * **Maximum**: The highest value found in the series.
+    5. **Output**: Populates a JSON result object with the calculated statistics and
+    original metadata (start time, end time, aggregation type, expression, and unit)
+    and adds it to the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Event Details:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed information for a specific event from DataDog using
+    its unique Event ID. It is primarily used to fetch contextual data about an alert
+    or incident observed in DataDog to assist in investigation within Google SecOps.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | string | Yes | The unique identifier of the DataDog event you want
+    to retrieve details for. |
+
+
+    ### Additional Notes
+
+    This action does not run on entities; it requires a specific Event ID provided
+    as an action parameter. The retrieved data is returned as a JSON object.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action extracts the DataDog API Key and Application Key
+    from the integration configuration, along with the 'Event ID' from the action
+    parameters.
+
+    2. **Initialization**: It initializes the DataDog manager using the provided credentials.
+
+    3. **API Call**: The action performs a GET request to the DataDog API endpoint
+    (`/api/v1/events/{event_id}`) to fetch the event's metadata.
+
+    4. **Processing**: If data is found, it logs the success and prepares the JSON
+    result.
+
+    5. **Completion**: The action attaches the event details as a JSON result and
+    terminates with a success message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Events:
+  ai_description: >-
+    ### General Description
+
+    The **Get Events** action retrieves a list of events from DataDog based on a specified
+    time range and filtering criteria. This action is primarily used for investigation
+    and auditing, allowing users to pull event data directly into Google SecOps for
+    correlation and analysis. It interacts with the DataDog V1 Events API.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Sources** | string | Yes | The sources to retrieve the events from. For example,
+    use 'alert' to see events from triggered monitors. |
+
+    | **Start Time** | string | Yes | The start time of the event search window in
+    Unix timestamp format. |
+
+    | **End Time** | string | Yes | The end time of the event search window in Unix
+    timestamp format. |
+
+    | **Priority** | ddl | No | Filters the events by priority. Options include: `all`,
+    `normal`, `low`. Default is `all`. |
+
+    | **Tags** | string | No | A comma-separated list of tags to filter the events.
+    Default is 'monitor'. |
+
+    | **Unaggregated** | boolean | No | If `True`, retrieves the full list of events.
+    If `False`, retrieves an aggregated list. Default is `True`. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities (like IP or Hostname) but
+    rather performs a global search within the DataDog environment based on the provided
+    time and source parameters.
+
+    - Both **Start Time** and **End Time** must be provided in Unix epoch format (seconds).
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the DataDog API and APP keys from the integration
+    configuration.
+
+    2. **Parameter Extraction**: Retrieves search filters including sources, time
+    range, tags, priority, and aggregation preference from the action parameters.
+
+    3. **API Interaction**: Calls the DataDog `get_datadog_events` method, which sends
+    a GET request to the `/api/v1/events` endpoint with the specified query parameters.
+
+    4. **Data Processing**: If events are found, they are logged and added to the
+    action's JSON results.
+
+    5. **Completion**: The action terminates, returning the fetched events as a JSON
+    object and setting the result value to `True` if data was successfully retrieved.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Logs:
+  ai_description: >-
+    ### General Description
+
+    The **Get Logs** action retrieves logs from Datadog for one or more specified
+    Kubernetes namespaces within a defined time range. It allows security analysts
+    to pull diagnostic or security-related log data directly into Google SecOps for
+    investigation. The action interacts with the Datadog Logs API (v1) to fetch a
+    list of logs based on a namespace query.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Namespace** | String | Yes | A comma-separated list of Kubernetes namespaces
+    to retrieve logs for (e.g., `prod-web, kube-system`). |
+
+    | **Start Time** | String | Yes | The start timestamp for the log search (e.g.,
+    `2020-02-02T02:02:02Z`). Supports Datadog-compatible time formats. |
+
+    | **End Time** | String | Yes | The end timestamp for the log search (e.g., `2020-02-02T02:02:02Z`).
+    Supports Datadog-compatible time formats. |
+
+
+    ### Flow Description
+
+    1.  **Configuration Extraction:** The action extracts the Datadog API and APP
+    keys from the integration settings.
+
+    2.  **Input Parsing:** It retrieves the `Namespace`, `Start Time`, and `End Time`
+    parameters. The `Namespace` string is split by commas into a list of individual
+    namespaces.
+
+    3.  **Data Retrieval:** For each namespace in the list:
+        *   It calls the Datadog Manager to execute a POST request against the `/api/v1/logs-queries/list`
+    endpoint.
+        *   The query is specifically formatted as `kube_namespace:{namespace}`.
+    4.  **Result Aggregation:** If logs are found for a namespace, they are added
+    to a cumulative JSON result object. Success or failure (not found) messages are
+    tracked for each namespace.
+
+    5.  **Completion:** The action returns the aggregated JSON data containing logs
+    for all successfully queried namespaces and updates the case wall with the execution
+    summary.
+
+
+    ### Additional Notes
+
+    *   The action does not target entities in the case; it relies entirely on the
+    provided namespace parameters.
+
+    *   Although the Datadog API uses a POST request for log retrieval, this is a
+    read-only operation and does not mutate external data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Metric Snapshot Graph:
+  ai_description: >-
+    ### General Description\nThis action retrieves a metric snapshot graph from Datadog
+    based on a specified query and time range. It allows analysts to visualize metric
+    data directly within Google SecOps for investigation and monitoring purposes.\n\n###
+    Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---
+    | :--- | :--- | :--- |\n| Query | string | Yes | The Datadog metric query for
+    the snapshot (e.g., 'avg:aws.rds.cpuutilization{cloud_env:production}by{dbinstanceidentifier}').
+    |\n| Start Time | string | Yes | The beginning of the time range for the snapshot
+    in Unix timestamp format. |\n| End Time | string | Yes | The end of the time range
+    for the snapshot in Unix timestamp format. |\n\n### Additional Notes\nThere are
+    no additional configuration notes for this action. This action does not interact
+    with entities.\n\n### Flow Description\n1. **Authentication**: The action initializes
+    the Datadog Manager using the configured API Key and APP Key.\n2. **Parameter
+    Extraction**: It retrieves the Query, Start Time, and End Time parameters provided
+    by the user.\n3. **Request Snapshot**: The action calls the Datadog API's snapshot
+    endpoint to generate a graph URL based on the provided parameters.\n4. **Handle
+    Results**: If successful, it adds the snapshot URL as a clickable link in the
+    action results and attaches the full JSON response from Datadog.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Metric Timeseries Points:
+  ai_description: >-
+    ### General Description
+
+    The **Get Metric Timeseries Points** action allows users to retrieve specific
+    metrics timeseries data from Datadog based on a provided query and a time range.
+    This is useful for analyzing performance trends, investigating spikes in resource
+    usage, or correlating system metrics with security events directly within Google
+    SecOps.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | String | Yes | The Datadog metric query to execute (e.g., `avg:aws.rds.dbload{dbinstanceidentifier:db}by{dbinstanceidentifier}`).
+    |
+
+    | Start Time | String | Yes | The start time of the timeseries points in Unix
+    timestamp format (e.g., `1400000470`). |
+
+    | End Time | String | Yes | The end time of the timeseries points in Unix timestamp
+    format (e.g., `1610557457`). |
+
+
+    ### Additional Notes
+
+    - This action does not operate on Siemplify entities; it uses the specific query
+    string provided in the parameters to fetch data directly from Datadog.
+
+    - Ensure that the timestamps provided are in Unix format (seconds).
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action extracts the API Key and APP Key from the integration
+    configuration and the Query, Start Time, and End Time from the action parameters.
+
+    2. **Initialization**: It initializes the Datadog Manager with the provided credentials.
+
+    3. **API Request**: The action sends a GET request to the Datadog API v1 Query
+    endpoint (`/api/v1/query`) with the specified query and time range.
+
+    4. **Validation**: It checks if the response status is 'ok' and if the returned
+    data contains any timeseries series.
+
+    5. **Output**: The retrieved metrics data is added as a JSON result to the action,
+    and a success or failure message is returned to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Pod Metric:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves performance metrics and process information for one or more
+    specified Kubernetes Pods from Datadog. It is designed to provide a snapshot of
+    resource utilization (CPU and Memory) and a list of active processes within a
+    defined time window. This data is essential for troubleshooting performance issues,
+    identifying resource-heavy pods, or investigating suspicious process activity
+    within a cluster.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Type | Mandatory | Additional Notes |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Pod Name | A comma-separated list of Pod names (namespaces) to query metrics
+    for. | String | Yes | The code splits this string by commas and strips whitespace
+    for each entry. |
+
+    | Start Time | The start of the metric query window in Unix timestamp format (e.g.,
+    1507040000). | String | Yes | Must be a valid Unix epoch time. |
+
+    | End Time | The end of the metric query window in Unix timestamp format (e.g.,
+    1610557457). | String | Yes | Must be a valid Unix epoch time. |
+
+
+    ### Additional Notes
+
+    - This action does not interact with SOAR entities directly; it relies entirely
+    on the provided parameters.
+
+    - Results are returned as a structured JSON object containing CPU series, memory
+    series, and process lists for each pod.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the API Key and APP Key from the integration configuration.
+
+    2. **Parameter Extraction**: Retrieves the list of Pod names and the specified
+    time range from the action parameters.
+
+    3. **Iterative Fetching**: For each Pod name provided:
+        - **CPU Metrics**: Calls the Datadog API to query `kubernetes.cpu.system.total`
+    for the pod.
+        - **Memory Metrics**: Calls the Datadog API to query `kubernetes.memory.usage_pct`
+    for the pod.
+        - **Processes**: Calls the Datadog API to retrieve processes associated with
+    the `pod_name` tag.
+    4. **Data Aggregation**: Compiles the retrieved metrics and processes into a pod-specific
+    dictionary.
+
+    5. **Output**: Appends the aggregated data to the action's JSON results and provides
+    a summary message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get RDS Metric:
+  ai_description: >-
+    ### General Description
+
+    The **Get RDS Metric** action retrieves AWS RDS performance metrics from Datadog
+    for specific database instances. It collects data regarding CPU utilization, freeable
+    memory, and free storage space for a specified time range, enabling analysts to
+    investigate the resource health of database instances associated with an alert
+    or investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Database Instance Identifier | String | Yes | A comma-separated list of AWS
+    RDS database instance identifiers to query (e.g., `database-1, database-2`). |
+
+    | Start Time | String | Yes | The start time of the metric window in Unix timestamp
+    format (e.g., `1507040000`). |
+
+    | End Time | String | Yes | The end time of the metric window in Unix timestamp
+    format (e.g., `1610557457`). |
+
+
+    ### Flow Description
+
+    1. **Data Extraction**: The action retrieves the Datadog API/APP keys from the
+    integration configuration and extracts the target database identifiers and time
+    window from the action parameters.
+
+    2. **Input Parsing**: The comma-separated string of database identifiers is split
+    into a list for iteration.
+
+    3. **Metrics Querying**: For each database identifier, the action makes three
+    distinct GET requests to the Datadog API:
+        - **CPU**: Queries `avg:aws.rds.cpuutilization`.
+        - **Memory**: Queries `avg:aws.rds.freeable_memory`.
+        - **Storage**: Queries `avg:aws.rds.free_storage_space`.
+    4. **Aggregation**: The action verifies if the API returned valid series data
+    for each metric. Successfully retrieved metrics are aggregated into a result dictionary.
+
+    5. **Output Generation**: The final collection of found and not-found database
+    metrics is added as a JSON result to the action, and the execution ends with a
+    summary message.
+
+
+    ### Additional Notes
+
+    - This action does not run on entities automatically; it requires manual input
+    of database identifiers into the parameter field.
+
+    - The results are provided as raw JSON data (Timeseries points) reflecting the
+    Datadog API response structure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThis action is designed to test the connectivity\
+    \ between Google SecOps and the DataDog platform. It validates the provided API\
+    \ Key and Application (APP) Key by making a request to DataDog's validation endpoint.\
+    \ The primary purpose is to ensure that the integration is correctly configured\
+    \ and the network path to the DataDog API is open.\n\n### Parameters Description\n\
+    This action does not require any input parameters. It utilizes the global integration\
+    \ configuration for authentication.\n\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| N/A | N/A | N/A | There are no action-specific\
+    \ parameters for this action. |\n\n### Flow Description\n1. **Configuration Extraction**:\
+    \ The action retrieves the **API Key** and **APP Key** from the DataDog integration\
+    \ settings.\n2. **Manager Initialization**: It initializes the `DataDogManager`\
+    \ with these credentials, which sets up the necessary request headers.\n3. **API\
+    \ Call**: The action calls the `test_connectivity` method, which sends a GET request\
+    \ to the DataDog validation endpoint (`/api/v1/validate`).\n4. **Result Processing**:\
+    \ It checks the API response for a `valid: true` status. \n5. **Final Output**:\
+    \ If the credentials are valid, it returns a success message and sets the result\
+    \ value to `True`. If invalid or the request fails, it returns a failure message\
+    \ and sets the result value to `False`."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

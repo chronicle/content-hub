@@ -1,0 +1,793 @@
+Create Incident:
+  ai_description: >-
+    ### General Description
+
+    This action creates a new incident in PagerDuty with specified parameters. It
+    is used to programmatically trigger alerts and incident response workflows within
+    the PagerDuty platform directly from Google SecOps. The action requires a PagerDuty
+    service ID, which is typically retrieved from the integration's configuration.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Title | string | Yes | The summary or title of the incident as it will appear
+    in PagerDuty. |
+
+    | Details | string | Yes | Detailed description of the incident, providing context
+    for the responder. |
+
+    | Email | string | Yes | The email address of the PagerDuty user performing the
+    action. This is used in the 'From' header for API authentication/attribution.
+    |
+
+    | Urgency | string | Yes | The urgency level of the incident (e.g., 'high' or
+    'low'). This determines how PagerDuty notifies responders. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on Google SecOps entities (like IPs or Hostnames).
+    It is a standalone utility action.
+
+    - The 'Service ID' used for incident creation is pulled from the integration's
+    configuration settings ('Services' parameter).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the PagerDuty manager using the
+    API token provided in the integration configuration.
+
+    2. **Parameter Retrieval**: It retrieves the Title, Email, Urgency, and Details
+    from the action parameters and the Service ID from the integration configuration.
+
+    3. **API Request**: It sends a POST request to the PagerDuty `/incidents` endpoint
+    with a payload containing the incident details.
+
+    4. **Result Handling**: Upon success, it captures the created incident's JSON
+    data and returns it as a script result. If the API returns an error, the action
+    fails with an error message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new incident record in the PagerDuty platform via a POST request to
+      the /incidents endpoint.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Filtered Incident List:
+  ai_description: >-
+    ### General Description
+
+    The **Filtered Incident List** action retrieves a list of incidents from PagerDuty
+    based on a comprehensive set of filters. It allows analysts to query the PagerDuty
+    platform for specific incidents by status, urgency, user, team, service, or date
+    range. This action is primarily used for searching and auditing incidents within
+    a SOAR workflow without modifying any external data.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Email** | String | Yes | The PagerDuty account email associated with the request.
+    While mandatory in the configuration, it is primarily used for audit logging or
+    required headers in other PagerDuty API operations. |
+
+    | **Since** | String | No | The start date (YYYY-MM-DD) for the incident search
+    range. Maximum range is 6 months. |
+
+    | **Until** | String | No | The end date (YYYY-MM-DD) for the incident search
+    range. |
+
+    | **Urgencies** | Multi-choice | No | Filters results by incident urgency. Options
+    include 'low' or 'high'. |
+
+    | **User_IDS** | String | No | Filters results to specific users. Can accept a
+    single ID or a JSON-formatted list of IDs (e.g., `["P123", "P456"]`). |
+
+    | **Team_IDS** | String | No | Filters results to specific teams. Can accept a
+    single ID or a JSON-formatted list of IDs. |
+
+    | **Service_IDS** | String | No | Filters results to specific services by their
+    unique IDs. |
+
+    | **Incidents_Statuses** | Multi-choice | No | Filters by the current state of
+    the incident: 'triggered', 'acknowledged', or 'resolved'. |
+
+    | **Incident_Key** | String | No | Filters by the specific incident key provided
+    during creation. |
+
+    | **Data_Range** | String | No | An alternative field to specify a timeframe for
+    the search. |
+
+    | **sort_by** | Multi-choice | No | Defines the field and order for sorting results
+    (e.g., incident_number, created_at, resolved_at, urgency, asc, desc). |
+
+    | **Additional_Data** | Multi-choice | No | Specifies extra resource details to
+    include in the response, such as 'users', 'teams', or 'assignees'. |
+
+
+    ### Additional Notes
+
+    - Several parameters (User_IDS, Team_IDS, Service_IDS) are defined as strings
+    but the underlying code is designed to parse them as JSON lists if they are formatted
+    as such (e.g., starting with `[`).
+
+    - This action does not interact with SOAR entities; it is a global utility search
+    action.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action connects to PagerDuty using the provided API
+    token from the integration configuration.
+
+    2. **Parameter Parsing**: It extracts all filter parameters. Multi-choice parameters
+    and specific ID strings are processed to handle both single values and JSON-formatted
+    lists.
+
+    3. **Query Construction**: The action builds a dynamic dictionary of query parameters,
+    excluding any empty or null values to ensure a clean API request.
+
+    4. **API Execution**: It performs a GET request to the PagerDuty `/incidents`
+    endpoint using the constructed query string.
+
+    5. **Output**: The retrieved list of incidents is returned as a JSON object (`JsonResult`)
+    for use in subsequent playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Incident By ID:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed information about a specific PagerDuty incident
+    by its Incident Key. It is designed to fetch the full state of an incident from
+    the PagerDuty platform, allowing users to programmatically access incident metadata
+    such as status, urgency, and service details.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident Key | string | True | The unique identifier (Incident Key) of the PagerDuty
+    incident to retrieve. |
+
+    | Email | string | True | The email address of the user performing the request,
+    which is passed in the 'From' header as required by PagerDuty's API version 2.
+    |
+
+
+    ### Additional Notes
+
+    - This action does not operate on entities within the Google SecOps environment;
+    it relies entirely on the provided input parameters.
+
+    - If no incident matches the provided key, the action will return a successful
+    execution status but indicate that no incident was found.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: Extracts the PagerDuty API token from the integration
+    configuration and retrieves the 'Incident Key' and 'Email' from the action parameters.
+
+    2.  **API Connection**: Initializes the PagerDuty Manager and sets the necessary
+    authentication headers, including the 'From' email header.
+
+    3.  **Data Retrieval**: Performs a GET request to the PagerDuty `/incidents` endpoint.
+
+    4.  **Filtering**: Iterates through the returned incidents to find a match for
+    the specific 'Incident Key' provided.
+
+    5.  **Output**: Adds the incident details to the action result as JSON and provides
+    a success message if the data is found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get User By Email:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed user profile information from PagerDuty based on a provided
+    email address. This action is useful for identifying user roles, contact methods,
+    and team affiliations within PagerDuty during incident investigation or automation.
+    It performs a lookup against the PagerDuty user directory and returns the full
+    JSON representation of the user if a match is found.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Email | string | Yes | The primary email address of the PagerDuty user to retrieve
+    information for. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the PagerDuty manager using the
+    API key defined in the integration configuration.
+
+    2. **Parameter Retrieval**: The mandatory `Email` parameter is extracted from
+    the action's input settings.
+
+    3. **API Query**: A GET request is sent to the PagerDuty `/users` endpoint using
+    the email as a query parameter to filter results.
+
+    4. **Data Verification**: The logic iterates through the API response to ensure
+    an exact match for the provided email address.
+
+    5. **Output Generation**: Upon finding a match, the user's detailed information
+    is added to the action's JSON results. If no user matches the email, the action
+    reports a failure.
+
+
+    ### Additional Notes
+
+    - This action is standalone and does not require or operate on existing SOAR entities
+    (like ADDRESS or USER). it relies strictly on the provided Email parameter.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get User By ID:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed user information from PagerDuty using a specific User ID. This
+    action is primarily used for administrative lookups or incident investigation
+    to identify the attributes, contact methods, and roles associated with a PagerDuty
+    user account.
+
+
+    ### Parameters Description
+
+    | Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | UserID | string | Yes | The unique identifier of the PagerDuty user to be retrieved
+    (e.g., PXXXXXX). |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the connection to PagerDuty using
+    the API token provided in the integration configuration.
+
+    2. **Parameter Retrieval**: It extracts the `UserID` from the action's input parameters.
+
+    3. **API Request**: The script performs a GET request to the PagerDuty API endpoint
+    `/users/{userID}` to fetch the user profile.
+
+    4. **Data Handling**: If the user is found, the script extracts the user object
+    and outputs a success message including the user's email address.
+
+    5. **Result Output**: The fetched user data is attached as a JSON result to the
+    action execution. If the user ID does not exist or the API call fails, the action
+    reports a failure with an error message.
+
+
+    ### Additional Notes
+
+    This action is a standalone lookup and does not interact with or require entities
+    from the Google SecOps case environment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List All OnCall:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of all currently active on-call shifts from the PagerDuty
+    platform. It is designed to provide visibility into which users are responsible
+    for responding to incidents at any given time.
+
+
+    ### Parameters Description
+
+    There are no input parameters required for this action.
+
+
+    ### Additional Notes
+
+    This is a global action and does not operate on specific entities within a case.
+    It returns a raw JSON array of on-call objects containing user details, schedule
+    associations, and escalation levels.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the PagerDuty manager using the
+    provided API key from the integration configuration.
+
+    2. **API Request**: It performs a GET request to the PagerDuty `/oncalls` endpoint.
+
+    3. **Data Processing**: The action extracts the list of on-call records from the
+    API response.
+
+    4. **Result Reporting**: The retrieved data is attached as a JSON result to the
+    action execution, and the action concludes with a success status if data is retrieved.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Incidents:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of all incidents from the PagerDuty platform. It
+    is designed to provide visibility into current and past incidents managed within
+    PagerDuty by fetching data directly from the service's API.
+
+
+    ### Parameters Description
+
+    There are no input parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the PagerDuty manager using the
+    API key provided in the integration configuration.
+
+    2. **Data Retrieval**: It performs a GET request to the PagerDuty API's incidents
+    endpoint to fetch all available incident records.
+
+    3. **Result Processing**: The retrieved incident data is attached to the action's
+    JSON results for use in subsequent playbook steps.
+
+    4. **Completion**: The action terminates with a success message if incidents are
+    found, or a failure message if an error occurs during the API call.
+
+
+    ### Additional Notes
+
+    Although the metadata description mentions 'hostname Parameters', the script logic
+    currently fetches all incidents without applying hostname-based filtering or utilizing
+    script input parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Users:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a comprehensive list of all users associated with the PagerDuty
+    account. It connects to the PagerDuty API to fetch metadata for every user profile,
+    including names, contact information, and roles. This is primarily a utility and
+    enrichment action used to gain visibility into available responders or to verify
+    user details during an incident response workflow.
+
+
+    ### Parameters Description
+
+    This action does not require any input parameters. It retrieves the global list
+    of users based on the integration's configuration (API Key).
+
+
+    ### Additional Notes
+
+    Note: While the metadata description in the configuration file mentions 'hostname
+    Parameters', the actual code implementation does not utilize any input parameters
+    and performs a global fetch of all users from the PagerDuty endpoint. No entity
+    context is required for this action to run.
+
+
+    ### Flow Description
+
+    1.  **Authentication**: The action initializes the `PagerDutyManager` using the
+    API token provided in the integration configuration.
+
+    2.  **API Retrieval**: It executes a GET request to the `/users` endpoint of the
+    PagerDuty REST API.
+
+    3.  **Data Processing**: The action parses the response and extracts the list
+    of user objects.
+
+    4.  **Result Delivery**: The retrieved list of users is attached to the action
+    results as a JSON object (`JsonResult`), and the execution status is updated to
+    completed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic utility designed to verify the connectivity between
+    Google SecOps and the PagerDuty API. Its primary purpose is to ensure that the
+    provided API credentials are valid and that the network environment allows for
+    communication with the PagerDuty service.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | api_key | String | Yes | The API key used for authentication. This is retrieved
+    from the integration's configuration settings rather than being passed as a direct
+    action parameter. |
+
+
+    ### Additional Notes
+
+    This action does not require any input entities and does not produce any enrichment
+    data or insights. It is typically used for troubleshooting or during the initial
+    setup of the PagerDuty integration to confirm that the API key has the necessary
+    permissions to access the `/abilities` endpoint.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves the mandatory `api_key` from the PagerDuty
+    integration configuration.
+
+    2. **Initialization**: It initializes the PagerDuty API client (`PagerDutyManager`)
+    using the extracted credentials.
+
+    3. **Connection Test**: The action calls the `test_connectivity` method, which
+    sends an authenticated GET request to the PagerDuty `/abilities` endpoint.
+
+    4. **Result Verification**: If the API returns a success status code (200 OK),
+    the action completes successfully; otherwise, it raises an exception to indicate
+    a connection failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Run Response Play:
+  ai_description: >-
+    ### General Description\nRuns a specified PagerDuty response play on a target
+    incident. This action allows security teams to trigger automated response workflows
+    defined in PagerDuty directly from Google SecOps. Note: This action is marked
+    as deprecated.\n\n### Parameters Description\n| Parameter | Type | Mandatory |
+    Description |\n| :--- | :--- | :--- | :--- |\n| Email | string | Yes | The email
+    address of the user performing the action. This is included in the PagerDuty API
+    'From' header to identify the requester. |\n| Response ID | string | Yes | The
+    unique identifier of the response play to be executed. |\n| Incident_ID | string
+    | Yes | The identifier of the PagerDuty incident where the response play will
+    be applied. |\n\n### Flow Description\n1. **Initialization**: The action retrieves
+    the PagerDuty API key from the integration configuration and extracts the Email,
+    Response ID, and Incident ID from the action parameters.\n2. **API Interaction**:
+    The action connects to the PagerDuty API and sends a POST request to the `/response_plays/{response_play_id}/run`
+    endpoint.\n3. **Execution**: PagerDuty executes the logic of the specified response
+    play (such as notifying responders or adding services) against the provided incident
+    ID.\n4. **Result Reporting**: The action captures the API response, adds it as
+    a JSON result to the SecOps action, and completes with a success or failure status.\n\n###
+    Additional Notes\n- This action is **Deprecated**.\n- This action does not run
+    on entities; it operates based on manual input for the Incident and Response Play
+    identifiers.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates the execution of a Response Play in PagerDuty, which typically triggers
+      automated workflows, notifications, or changes the state of the specified incident
+      in the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Snooze Incident:
+  ai_description: >-
+    ### General Description
+
+    The **Snooze Incident** action allows users to temporarily snooze a specific incident
+    in PagerDuty. Snoozing an incident prevents it from escalating or sending notifications
+    for a defined period, allowing responders to focus on other tasks. This action
+    retrieves and returns the updated incident information upon successful execution.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Email | The email address of the PagerDuty user performing the action. This
+    is used for the 'From' header in the API request to identify the requester. |
+    String | Yes |
+
+    | IncidentID | The unique identifier of the PagerDuty incident to snooze. | String
+    | Yes |
+
+
+    ### Additional Notes
+
+    - The snooze duration is currently hardcoded to **3600 seconds (1 hour)** within
+    the integration logic.
+
+    - This action does not operate on Google SecOps entities; it requires manual input
+    of the Incident ID.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Initializes the PagerDuty Manager using the API token provided
+    in the integration configuration.
+
+    2. **Parameter Extraction**: Retrieves the `Email` and `IncidentID` from the action
+    parameters.
+
+    3. **API Interaction**: Executes a POST request to the PagerDuty `/incidents/{incident_id}/snooze`
+    endpoint with a fixed duration of 3600 seconds.
+
+    4. **Data Handling**: Capture the JSON response from PagerDuty containing the
+    updated incident status.
+
+    5. **Completion**: Adds the incident data to the action's JSON results and returns
+    a success message to the Case Wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of an incident in PagerDuty to 'snoozed', which temporarily
+      pauses notifications and escalation logic for that specific incident.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

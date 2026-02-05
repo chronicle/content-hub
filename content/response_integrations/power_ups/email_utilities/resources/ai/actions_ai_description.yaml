@@ -1,0 +1,442 @@
+Analyze EML Headers:
+  ai_description: >-
+    ### General Description
+
+    This action extracts and performs a security analysis on email headers provided
+    either as a Base64-encoded EML string or a structured JSON list of headers. It
+    identifies discrepancies between key identity headers (like 'From', 'Return-Path',
+    and 'Reply-To') and flags the presence of headers often associated with suspicious
+    or automated emails.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Base64 EML | string | No | The Base64-encoded string representing the content
+    of an EML file. |
+
+    | Header List | string | No | A JSON-formatted string containing a list of email
+    headers (e.g., `[["From", "user@example.com"], ["Subject", "Hello"]]`). |
+
+
+    ### Additional Notes
+
+    * At least one of the two parameters (**Base64 EML** or **Header List**) must
+    be provided for the action to execute successfully. If both are provided, the
+    **Base64 EML** takes precedence.
+
+    * This action does not perform external DNS lookups or SPF/DKIM/DMARC verification;
+    it focuses on logical consistency and the presence of specific header patterns.
+
+
+    ### Flow Description
+
+    1. **Input Parsing**: The action decodes the Base64 EML content using the `email`
+    library or parses the provided JSON header list.
+
+    2. **Header Normalization**: It constructs a dictionary of headers, handling duplicate
+    header keys (like multiple 'Received' headers) by indexing them.
+
+    3. **Metadata Extraction**: It utilizes regular expressions to extract domain
+    names and IP addresses from the 'Received' header chain.
+
+    4. **Security Analysis**: The action evaluates the headers against several rules:
+        * Comparing 'Return-Path' to 'From' and 'X-Original-Sender'.
+        * Comparing 'Reply-To' to 'From'.
+        * Checking for the existence of headers like 'X-Distribution', 'Bcc', and
+    'X-UIDL'.
+        * Validating the existence and format of the 'Message-ID'.
+        * Verifying 'X-Authenticated-User' against the 'From' address.
+    5. **Scoring and Reporting**: It generates a score-based analysis result, includes
+    color-coded status indicators (HTML snippets), and formats the final analysis
+    into a JSON result and an HTML table.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Analyze Headers:
+  ai_description: >-
+    ### General Description
+
+    Analyzes email headers provided as a JSON object to perform comprehensive security
+    validation and enrichment. This action evaluates authentication protocols including
+    SPF, DKIM, DMARC, and ARC to verify sender authenticity and message integrity.
+    It parses the email's relay path (hops), checking each relay server against multiple
+    Real-time Blocklists (RBLs) using `pydnsbl`, and enriches the identified IP addresses
+    with geographic location (via Db-Ip) and WHOIS information (via IPWhois). The
+    results provide a detailed overview of the email's origin, infrastructure reputation,
+    and authentication status.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Headers JSON | string | True | A JSON-formatted string containing the email
+    headers to be analyzed. Expected format is a dictionary of header keys and values.
+    |
+
+
+    ### Flow Description
+
+    1. **Extraction**: Retrieve the `Headers JSON` parameter and parse it into a Python
+    dictionary.
+
+    2. **Metadata Parsing**: Extract core email attributes such as `From`, `To`, `Subject`,
+    `Message-ID`, and `Date`.
+
+    3. **Domain Analysis**: Extract the sender's domain and parent domain using `tldextract`.
+
+    4. **Authentication Validation**: Validate SPF, DMARC, and MX records using the
+    `checkdmarc` library. Perform cryptographic verification for DKIM and ARC signatures.
+
+    5. **Hop Analysis**: Parse the `Received` headers to identify the sequence of
+    mail servers (hops) the email passed through.
+
+    6. **Enrichment**: For each server in the hop path, perform an RBL check, retrieve
+    WHOIS data, and fetch geolocation details (City, Country, Region, Coordinates).
+
+    7. **SPF Strength Check**: Determine if the SPF record is configured with a 'hard
+    fail' or 'soft fail' mechanism to evaluate policy strength.
+
+    8. **Reporting**: Aggregate all findings into a structured result JSON and attach
+    a visual representation of the headers to the Case Wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Parse Base64 Email:
+  ai_description: "Parses Base64-encoded email files (EML or MSG format) to extract\
+    \ structured metadata, content, and attachments. This action serves as a utility\
+    \ to deconstruct email blobs into a machine-readable JSON format, facilitating\
+    \ downstream analysis or automated playbooks. \n\n### General Description\nThe\
+    \ action decodes a provided Base64 string and identifies whether it represents\
+    \ an Outlook MSG file or a standard EML file. It then extracts comprehensive information,\
+    \ including headers (To, From, Subject, CC, Date), body content (Text and HTML),\
+    \ and any file attachments. A key feature is its ability to recursively parse\
+    \ nested email attachments and identify 'observed' indicators of compromise (IOCs)\
+    \ such as URLs, domains, email addresses, and IP addresses found within the email\
+    \ bodies or headers.\n\n### Parameters Description\n\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| EML/MSG Base64 String | Content\
+    \ | Yes | The Base64-encoded string of the EML or MSG file to be parsed. |\n|\
+    \ Stop Transport At Header | String | No | A specific header field name where\
+    \ the action should stop processing transport/routing headers. |\n| Blacklisted\
+    \ Headers | String | No | A comma-separated list of headers to be excluded from\
+    \ the final output. |\n| Use Blacklist As Whitelist | Boolean | No | If set to\
+    \ 'true', the 'Blacklisted Headers' list will instead function as a whitelist,\
+    \ meaning only those headers will be included. Default is 'false'. |\n\n### Flow\
+    \ Description\n1.  **Input Decoding:** Decodes the Base64 input string into raw\
+    \ bytes.\n2.  **Format Identification:** Checks if the content is an OLE file\
+    \ (MSG) or a standard EML file.\n3.  **Core Parsing:** \n    *   For **MSG**:\
+    \ Uses `extract_msg` and `MsOxMessage` to extract properties.\n    *   For **EML**:\
+    \ Uses the `eml_parser` library.\n4.  **Header Filtering:** Applies the blacklist/whitelist\
+    \ logic to the extracted headers based on user configuration.\n5.  **Recursive\
+    \ Processing:** Iterates through attachments; if an attachment is another email\
+    \ (nested), it recursively parses it.\n6.  **IOC Extraction:** Scans headers and\
+    \ body text using regex and specialized extractors to identify IPs, Domains, URLs,\
+    \ and Email addresses.\n7.  **Result Aggregation:** Consolidates all parsed data\
+    \ into a single JSON object and attaches it to the action results.\n\n### Additional\
+    \ Notes\nThis action is a standalone utility and does not iterate over or modify\
+    \ entities currently present in the Google SecOps case. It relies entirely on\
+    \ the provided Base64 input."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Parse Case Wall Email:
+  ai_description: >-
+    Parses EML or MSG email files attached to a Google SecOps case wall to extract
+    metadata, body content, and nested attachments. The action retrieves the email
+    file directly from the alert or case evidence, parses its structure, and provides
+    a comprehensive breakdown of headers (To, From, Subject, CC, BCC), transport hops
+    (Received headers), and observed indicators.
+
+
+    ### Flow Description:
+
+    1. **Attachment Retrieval:** Identifies and downloads .eml or .msg files from
+    the case wall or alert evidence, prioritizing the original email attachment.
+
+    2. **Email Parsing:** Deconstructs the email to extract headers, plain text/HTML
+    body content, and nested files.
+
+    3. **Entity Creation:** Based on configuration, creates User entities for senders/recipients
+    and Email Subject entities, establishing directional relationships between them.
+
+    4. **Indicator Extraction:** Scans the body and subject for observed indicators
+    (URLs, IPs, Emails, Hashes) and creates corresponding entities in Google SecOps.
+
+    5. **Attachment Handling:** Optionally extracts nested attachments from within
+    the email and uploads them back to the case wall as new evidence.
+
+    6. **Data Linking:** Updates existing FILENAME entities with attachment identifiers
+    and populates entity properties with extracted metadata (MD5, SHA256, etc.).
+
+    7. **Result Generation:** Returns a detailed JSON object containing the full parsed
+    structure for further automation steps.
+
+
+    ### Parameters Description:
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Create Entities | Boolean | False | When enabled, creates User entities for
+    the 'To' and 'From' headers and an Email Subject entity. |
+
+    | Exclude Entities Regex | String | False | A regular expression used to filter
+    out specific entities from being created in the case. |
+
+    | Original EML Only | Boolean | False | If true, the action only processes the
+    primary EML file and ignores other attached emails. |
+
+    | Create Observed Entities | DDL | False | Specifies which types of indicators
+    (URLs, IPs, Emails, Hashes, or All) to extract and create as entities from the
+    body. |
+
+    | Save Attachments to Case Wall | Boolean | False | If enabled, any files found
+    inside the parsed email will be uploaded to the case wall as new attachments.
+    |
+
+    | Fang Entities | Boolean | False | If enabled, converts defanged indicators (e.g.,
+    example[.]com) into standard fanged format during extraction. |
+
+    | Custom Entity Regexes | JSON | False | A JSON object defining custom regular
+    expressions to extract specific data types from the email body and subject. |
+
+
+    ### Additional Notes:
+
+    - This action is primarily used for phishing analysis or automated ingestion of
+    forwarded emails.
+
+    - The action requires an EML or MSG file to be present on the Case Wall or Alert
+    Evidence to function. If multiple are present and 'Original EML Only' is false,
+    it will process the first valid match found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates new entities (User, Email Subject, URL, IP, Hash, Filename) within Google
+      SecOps, establishes entity relationships, uploads extracted nested attachments
+      to the case wall, and updates entity properties with metadata.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Parse EML Base64 Blob:
+  ai_description: >-
+    Parses a base64 encoded EML blob to extract email metadata and content. This action
+    is designed to decode a provided base64 string, interpret it as an EML file structure,
+    and return structured JSON data containing headers, bodies, and information about
+    nested email attachments.
+
+
+    ### Parameters
+
+    | Parameter Name | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Base64 EML Blob | A base64 encoded string of an EML file that needs to be parsed.
+    | string | Yes |
+
+
+    ### Flow Description
+
+    1. **Decoding:** The action starts by decoding the provided base64 string into
+    a raw EML text format.
+
+    2. **Metadata Extraction:** It parses the EML headers to extract essential metadata,
+    including the sender, recipients (To, CC, BCC), subject, and date.
+
+    3. **Content Extraction:** The script recursively traverses the email parts to
+    retrieve the plain text body and the HTML body.
+
+    4. **Nested Email Detection:** It inspects multipart segments to identify nested
+    email attachments. If found, these nested EMLs are also parsed, and their content
+    is base64 encoded and included in the results.
+
+    5. **Result Aggregation:** All extracted data, including headers and bodies for
+    the main email and any nested emails, are aggregated into a JSON structure and
+    returned as the action result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify connectivity between
+    Google SecOps (Chronicle) and the Email Utilities integration. Its primary purpose
+    is to act as a heartbeat check, ensuring that the integration is properly configured
+    and that the environment is capable of executing actions.
+
+
+    ### Parameters
+
+    There are no parameters required for this action.
+
+
+    ### Additional Notes
+
+    This action is purely for connectivity testing. It does not interact with any
+    external email services or process any case data.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The script initializes the SiemplifyAction module to establish
+    context within the SOAR environment.
+
+    2. **Execution:** The script performs no logic other than confirming execution
+    capability.
+
+    3. **Termination:** The action concludes by calling the end method with a success
+    status and a confirmation message: 'Siemplify is connected'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
