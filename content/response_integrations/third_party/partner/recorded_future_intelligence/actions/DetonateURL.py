@@ -187,14 +187,10 @@ def main(is_first_run: bool):
         else:
             pending_urls = (
                 entity_name
-                for entity_name, submission in submit_action.action_context[
-                    "submissions"
-                ].items()
+                for entity_name, submission in submit_action.action_context["submissions"].items()
                 if submission.get("pending_submissions", [])
             )
-            output_message = (
-                f"Waiting for results for the following urls: {','.join(pending_urls)}"
-            )
+            output_message = f"Waiting for results for the following urls: {','.join(pending_urls)}"
             action_result = ActionResult(
                 result_value=json.dumps(action_context),
                 output_message=output_message,

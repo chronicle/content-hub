@@ -7,20 +7,16 @@
 # using the foregoing.                                                        #
 ###############################################################################
 
-from __future__ import annotations
-
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_action_param, extract_configuration_param
-
-from ..core.constants import (
+from constants import (
     DEFAULT_DEVICE_VENDOR,
-    ENRICH_IOC_SCRIPT_NAME,
+    ENRICH_IOC_SOAR_SCRIPT_NAME,
     PROVIDER_NAME,
 )
-from ..core.exceptions import RecordedFutureUnauthorizedError
-from ..core.RecordedFutureCommon import RecordedFutureCommon
+from RecordedFutureCommon import RecordedFutureCommon
+from SiemplifyAction import SiemplifyAction
+from SiemplifyDataModel import EntityTypes
+from SiemplifyUtils import output_handler
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 SUPPORTED_ENTITIES = [
     EntityTypes.HOSTNAME,
@@ -35,18 +31,14 @@ SUPPORTED_ENTITIES = [
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    siemplify.script_name = ENRICH_IOC_SCRIPT_NAME
+    siemplify.script_name = ENRICH_IOC_SOAR_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     api_url = extract_configuration_param(
-        siemplify,
-        provider_name=PROVIDER_NAME,
-        param_name="ApiUrl",
+        siemplify, provider_name=PROVIDER_NAME, param_name="ApiUrl"
     )
     api_key = extract_configuration_param(
-        siemplify,
-        provider_name=PROVIDER_NAME,
-        param_name="ApiKey",
+        siemplify, provider_name=PROVIDER_NAME, param_name="ApiKey"
     )
     verify_ssl = extract_configuration_param(
         siemplify,
@@ -61,20 +53,6 @@ def main():
         param_name="CollectiveInsights",
         default_value=True,
         input_type=bool,
-    )
-
-    threshold = extract_action_param(
-        siemplify,
-        param_name="Risk Score Threshold",
-        is_mandatory=True,
-        input_type=int,
-    )
-    include_links = extract_action_param(
-        siemplify,
-        param_name="Include Links",
-        default_value=False,
-        input_type=bool,
-        print_value=True,
     )
     collective_insights_action = extract_action_param(
         siemplify,
@@ -92,28 +70,20 @@ def main():
     )
 
     recorded_future_common = RecordedFutureCommon(
-        siemplify,
-        api_url,
-        api_key,
+        siemplify=siemplify,
+        api_url=api_url,
+        api_key=api_key,
         verify_ssl=verify_ssl,
     )
 
     try:
-        recorded_future_common.enrich_common_logic(
-            SUPPORTED_ENTITIES,
-            threshold,
-            ENRICH_IOC_SCRIPT_NAME,
-            include_links,
-            collective_insights_enabled,
+        recorded_future_common.enrich_soar_logic(
+            entity_types=SUPPORTED_ENTITIES,
+            collective_insights_enabled=collective_insights_enabled,
         )
-
-    except RecordedFutureUnauthorizedError as e:
-        output_message = f"Unauthorized - please check your API token and try again. {e}"
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
     except Exception as e:
         siemplify.LOGGER.error(
-            f"General error performing action {ENRICH_IOC_SCRIPT_NAME}",
+            "General error performing action {}".format(ENRICH_IOC_SOAR_SCRIPT_NAME)
         )
         siemplify.LOGGER.exception(e)
 
