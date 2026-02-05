@@ -248,7 +248,9 @@ class DescribeAction:
             ]
             for coro in asyncio.as_completed(tasks):
                 results.extend(await coro)
+
             progress.remove_task(task_id)
+
         else:
             rich_params = RichParams(on_action_done)
             tasks: list[asyncio.Task] = [

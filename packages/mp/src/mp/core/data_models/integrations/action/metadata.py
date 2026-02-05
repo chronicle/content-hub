@@ -179,7 +179,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             )
             action_metadata_json["dynamic_results_metadata"] = drms_with_json_contents
 
-            ai_fields: AiFields = _get_ai_fields(action_metadata_json["name"], path)
+            ai_fields: AiFields = _get_ai_fields(p.stem, path)
             action_metadata_json["ai_description"] = ai_fields.description
             action_metadata_json["ai_categories"] = [c.value for c in ai_fields.categories]
 
@@ -364,15 +364,19 @@ AI_CATEGORY_TO_DEF_AI_CATEGORY: dict[str, ActionAiCategories] = {
 }
 
 
-def _get_ai_fields(action_name: str, path: Path) -> AiFields:
-    ai_resources: Path = path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
-    actions_desc: Path = ai_resources / mp.core.constants.ACTIONS_AI_DESCRIPTION_FILE
+def _get_ai_fields(action_file_name: str, integration_path: Path) -> AiFields:
     empty_results: AiFields = AiFields(description=None, categories=[])
+    actions_desc: Path = (
+        integration_path
+        / mp.core.constants.RESOURCES_DIR
+        / mp.core.constants.AI_DIR
+        / mp.core.constants.ACTIONS_AI_DESCRIPTION_FILE
+    )
     if not actions_desc.exists():
         return empty_results
 
     content: dict[str, Any] = yaml.safe_load(actions_desc.read_text(encoding="utf-8"))
-    action_content: dict[str, Any] | None = content.get(action_name)
+    action_content: dict[str, Any] | None = content.get(action_file_name)
     if action_content is None:
         return empty_results
 
