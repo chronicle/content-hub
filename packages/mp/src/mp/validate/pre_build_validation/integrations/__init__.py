@@ -14,8 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from .collection import get_integration_pre_build_validations
 from .connectors_documentation_link_validation import ConnectorsHasDocumentationLinkValidation
 from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
@@ -32,37 +31,21 @@ from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation
 from .version_bump_validation import VersionBumpValidation
 
-if TYPE_CHECKING:
-    from mp.validate.pre_build_validation import Validator
-
-
-def get_integration_pre_build_validations() -> list[Validator]:
-    """Get a list of all available pre-build validations.
-
-    Returns:
-        A list of all `Validator` instances.
-
-    """
-    return _get_non_priority_validations() + _get_priority_validations()
-
-
-def _get_non_priority_validations() -> list[Validator]:
-    return [
-        UvLockValidation(),
-        VersionBumpValidation(),
-        RequiredDevDependenciesValidation(),
-        NoCustomComponentsInIntegrationValidation(),
-        NoDisabledComponentsInIntegrationValidation(),
-        IntegrationHasPingActionValidation(),
-        IntegrationHasMappingRulesIfHasConnectorValidation(),
-        SslParameterExistsInIntegrationValidation(),
-        SslParameterExistsInConnectorsValidation(),
-        IntegrationHasDocumentationLinkValidation(),
-        ConnectorsHasDocumentationLinkValidation(),
-        PythonVersionValidation(),
-        FieldsValidation(),
-    ]
-
-
-def _get_priority_validations() -> list[Validator]:
-    return [IntegrationFileStructureValidation(), DependencyProviderValidation()]
+__all__: list[str] = [
+    "ConnectorsHasDocumentationLinkValidation",
+    "DependencyProviderValidation",
+    "FieldsValidation",
+    "IntegrationFileStructureValidation",
+    "IntegrationHasDocumentationLinkValidation",
+    "IntegrationHasMappingRulesIfHasConnectorValidation",
+    "IntegrationHasPingActionValidation",
+    "NoCustomComponentsInIntegrationValidation",
+    "NoDisabledComponentsInIntegrationValidation",
+    "PythonVersionValidation",
+    "RequiredDevDependenciesValidation",
+    "SslParameterExistsInConnectorsValidation",
+    "SslParameterExistsInIntegrationValidation",
+    "UvLockValidation",
+    "VersionBumpValidation",
+    "get_integration_pre_build_validations",
+]

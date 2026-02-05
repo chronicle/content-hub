@@ -1,9 +1,9 @@
 # `mp test`
 
-## Description
-Run pre-build integration tests. This command executes integration tests to validate the functionality of your integrations before they are built.
+Run pre-build integration tests.
 
 ## Usage
+
 ```bash
 mp test [OPTIONS]
 ```
@@ -12,17 +12,17 @@ mp test [OPTIONS]
 
 | Option | Shorthand | Description | Type | Default |
 | :--- | :--- | :--- | :--- | :--- |
-| `--repository` | `-r` | Test all integrations in specified integration repositories | `[RepositoryType]` | `[]` |
-| `--integration` | `-i` | Test a specified integration | `[str]` | `[]` |
-| `--raise-error-on-violations` | | Whether to raise error on lint and type check violations | `bool` | `False` |
-| `--quiet` | | Log less on runtime. | `bool` | `False` |
-| `--verbose` | | Log more on runtime. | `bool` | `False` |
+| `--repository` | `-r` | Test all integrations in specified integration repositories. | `list[RepositoryType]` | `[]` |
+| `--integration` | `-i` | Test specified integrations. | `list[str]` | `[]` |
+| `--raise-error-on-violations` | | Whether to raise an error on lint and type check violations. | `bool` | `False` |
+| `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
 
 ## Examples
 
-### Test a specific integration
+### Test specific integrations
 ```bash
-mp test --integration my_integration
+mp test --integration my_integration --integration another_integration
 ```
 
 ### Test all commercial integrations
