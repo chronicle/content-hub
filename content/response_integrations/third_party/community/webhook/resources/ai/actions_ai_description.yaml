@@ -1,42 +1,55 @@
-CreateToken:
+Create Token:
   ai_description: >-
-    Creates a unique webhook token on a remote service and generates a corresponding
-    webhook URL. This action is primarily used for testing or establishing temporary
-    endpoints that return specific content when accessed.
+    ### General Description
+
+    Creates a new webhook token and generates a unique, accessible URL. This action
+    allows users to specify the default content and content type that the URL will
+    present when visited, making it useful for creating mock endpoints or receiving
+    callbacks from external services.
 
 
-    ### Parameters
+    ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
+    | Name | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Default Content | string | Yes | The content that will be presented to the user/system
-    when the generated webhook URL is clicked. |
+    | Default Content | String | Yes | The actual content or message body that will
+    be served by the webhook URL. |
 
-    | Default Content Type | string | Yes | The MIME type of the content (e.g., `text/html`,
-    `text/plain`). |
+    | Default Content Type | String | Yes | The MIME type of the content (e.g., `text/html`
+    or `application/json`). |
 
-    | Timeout | string | No | The number of seconds (up to 10) the server should wait
-    before returning a response, useful for testing timeout logic. |
+    | Timeout | String | No | An optional value (max 10 seconds) defining how long
+    the server should wait before returning the response to a requester. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves the base URL from the integration
-    configuration and initializes the `WebhookManager`.
+    1. **Initialization**: The action retrieves the base URL from the Webhook integration
+    configuration.
 
-    2. **Parameter Extraction**: It extracts the 'Default Content', 'Default Content
-    Type', and 'Timeout' parameters from the action configuration.
+    2. **Parameter Processing**: It extracts the 'Default Content', 'Default Content
+    Type', and 'Timeout' values provided by the user.
 
-    3. **Token Creation**: The action sends a POST request to the external service's
-    `/token` endpoint with the specified payload (content, type, timeout).
+    3. **API Interaction**: The action calls the `WebhookManager.create_token` method,
+    which sends a POST request to the external service's `/token` endpoint with the
+    specified payload.
 
-    4. **URL Construction**: It retrieves the unique UUID from the service response
-    and constructs a full `webhookURL`.
+    4. **Response Handling**: It captures the unique UUID returned by the service
+    and constructs the final public Webhook URL.
 
-    5. **Completion**: The action returns the JSON metadata and the generated URL
-    as the result.
+    5. **Completion**: The resulting JSON (including the URL and token details) is
+    added to the action results, and the execution status is updated to completed.
+
+
+    ### Additional Notes
+
+    - This action does not use or interact with entities (such as IPs or Hostnames)
+    from the Google SecOps case.
+
+    - The external service is assumed to handle the lifecycle and storage of the created
+    token.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -45,14 +58,14 @@ CreateToken:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new webhook token and endpoint on the external service via a POST
-      request.
+      Creates a new webhook resource (token and endpoint) on the target external system
+      via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -66,43 +79,38 @@ CreateToken:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-DeleteToken:
+Delete Token:
   ai_description: >-
     ### General Description
 
     Deletes a specific Webhook token from the external Webhook service using its unique
-    identifier. This action effectively revokes the token and makes the corresponding
-    webhook URL inaccessible.
+    identifier. This action effectively makes the webhook URL associated with that
+    token inaccessible and removes the token configuration from the service.
 
 
     ### Parameters Description
 
-    | Parameter | Description | Type | Mandatory |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Token ID | The unique identifier of the token to be deleted. | string | Yes
-    |
+    | Token ID | String | Yes | The unique identifier (ID) of the webhook token that
+    needs to be deleted. Default value is '111'. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the `WebhookManager` using the base
-    URL provided in the integration configuration.
+    1. **Initialization**: The action retrieves the integration configuration (Base
+    URL) and extracts the mandatory `Token ID` parameter.
 
-    2. **Parameter Extraction**: It extracts the `Token ID` provided by the user.
+    2. **External Interaction**: The script utilizes the `WebhookManager` to send
+    an HTTP DELETE request to the specific token endpoint (e.g., `{BaseURL}/token/{TokenID}`).
 
-    3. **Execution**: It calls the `delete_token` method in the manager, which sends
-    a DELETE request to the external API endpoint.
+    3. **Validation**: The action checks the response from the external service to
+    ensure the deletion was successful.
 
-    4. **Finalization**: The action reports whether the deletion was successful and
-    returns the API response status code.
-
-
-    ### Additional Notes
-
-    This action does not operate on SOAR entities and requires the manual input of
-    a Token ID. It performs a destructive operation on the external system.
+    4. **Finalization**: The script returns a success status and an output message
+    confirming the deletion or detailing any errors encountered during the process.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -111,14 +119,14 @@ DeleteToken:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Performs a DELETE request to the external Webhook service to remove a specific
-      token, rendering the associated endpoint unusable.
+      Performs an HTTP DELETE request to the external Webhook service to remove a
+      specific token, making the associated endpoint permanently inaccessible.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -132,15 +140,16 @@ DeleteToken:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-GetWebhookResponse:
+Get Webhook Response:
   ai_description: >-
     ### General Description
 
-    This action retrieves request data from a specific Webhook URL using a provided
-    Token ID. It is designed to work asynchronously, allowing a playbook to wait for
-    external interactions, such as a user clicking a link or an external system sending
-    a callback notification. The action can either wait for a specific duration or
-    until the first request is detected.
+    The **Get Webhook Response** action retrieves request logs for a specific webhook
+    endpoint identified by a **Token ID**. It is an asynchronous action designed to
+    monitor activity on a generated URL, often used to capture user interaction or
+    callbacks from external systems. It interacts with an external Webhook service
+    to fetch metadata about HTTP requests (headers, payload, source IP) sent to that
+    specific token.
 
 
     ### Parameters Description
@@ -149,51 +158,47 @@ GetWebhookResponse:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Pending Condition** | DDL | Yes | Determines the wait logic. 'TimeFrame' waits
-    for the full duration specified; 'AwaitClick' waits until the first request is
-    received. |
+    | **Token ID** | String | Yes | The unique identifier of the webhook token to
+    monitor. |
 
-    | **TimeFrame** | String | Yes | The number of minutes to wait before fetching
-    results (relevant only when 'TimeFrame' is selected as the Pending Condition).
-    |
+    | **Pending Condition** | DDL | Yes | Defines the wait logic: `TimeFrame` (wait
+    for a set duration before returning all data) or `AwaitClick` (complete as soon
+    as at least one request is detected). |
 
-    | **Responses To Retrieve** | DDL | Yes | Determines if the action should return
-    'All' requests captured or only the 'Latest' one. |
+    | **TimeFrame** | String | Yes | The duration in minutes to wait before fetching
+    data if the 'TimeFrame' condition is selected. |
 
-    | **Token ID** | String | Yes | The unique identifier for the webhook token to
-    query for requests. |
+    | **Responses To Retrieve** | DDL | Yes | Specifies whether to return `All` recorded
+    requests or only the `Latest` one. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the Token ID, response preference,
-    and wait conditions from the input parameters.
+    1. **Initialization:** The action extracts the Token ID and configuration parameters.
 
-    2. **Conditional Logic**:
-        * **TimeFrame Mode**: On the first run, it records the start time. On subsequent
-    runs, it checks if the specified minutes have elapsed. Once the time is up, it
-    calls the Webhook API to fetch requests.
-        * **AwaitClick Mode**: The action immediately checks for existing requests.
-    If data is found, it completes; otherwise, it remains 'In Progress' and polls
-    in subsequent intervals.
-    3. **Data Retrieval**: The action performs a GET request to the Webhook service
-    for the specified Token ID.
+    2. **Execution State Management:**
+       - If **TimeFrame** is selected: The action records the start time. On subsequent
+    runs, it checks if the duration has elapsed. If not, it returns an 'IN_PROGRESS'
+    state.
+       - If **AwaitClick** is selected: The action immediately checks for requests.
+    If the request list is empty, it returns an 'IN_PROGRESS' state.
+    3. **Data Retrieval:** Once the condition (time elapsed or data present) is met,
+    the action queries the Webhook manager to fetch request details.
 
-    4. **Filtering**: It automatically filters out automated requests generated by
-    Slackbots (based on the User-Agent header) to ensure only relevant interactions
-    are captured.
+    4. **Filtering:** The action automatically filters out requests originating from
+    'Slack' user agents (e.g., link previews) to reduce noise.
 
-    5. **Completion**: Depending on the 'Responses To Retrieve' setting, it slices
-    the data (latest vs. all) and returns the JSON result to the SOAR platform.
+    5. **Output:** The retrieved request data is formatted into the action's JSON
+    results, and the action is marked as 'COMPLETED'.
 
 
     ### Additional Notes
 
-    * This is an **Asynchronous** action. It will cause the playbook execution to
-    pause until the conditions are met.
+    - This action does not run on entities; it relies entirely on the manually provided
+    **Token ID** parameter.
 
-    * Although the Webhook manager contains 'delete' and 'create' methods, this specific
-    action only uses the 'GET' method for retrieval.
+    - Because it is asynchronous, the action may remain in the 'In Progress' queue
+    for several minutes depending on the configured TimeFrame.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -207,7 +212,7 @@ GetWebhookResponse:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -225,45 +230,37 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity between the
-    Google SecOps platform and the configured Webhook service. It ensures that the
-    integration can successfully reach the target URL and receive a valid response,
-    confirming that the communication channel is open and the provided configuration
-    is correct.
+    Tests connectivity to the Webhook service to ensure the integration is properly
+    configured and the target URL is reachable. This is a standard health-check action
+    used to verify that the SOAR can communicate with the external Webhook endpoint.
 
 
     ### Parameters Description
 
-    This action does not require any input parameters. It relies entirely on the configuration
-    settings defined at the integration level.
+    There are no parameters for this action. The connectivity test relies entirely
+    on the 'URL' provided in the integration's general configuration.
 
 
     ### Additional Notes
 
-    - This action performs a simple HTTP GET request to the base URL.
-
-    - It is primarily used during initial setup or troubleshooting to validate that
-    the integration is functional.
-
-    - If the request fails for any reason (e.g., timeout, 404, 500), the action will
-    report a failure state with the specific error message.
+    This action performs a simple GET request to the base URL defined in the integration
+    configuration to validate the connection.
 
 
     ### Flow Description
 
-    1. **Initialization**: The script initializes the Siemplify action context and
-    retrieves the global 'URL' parameter from the integration configuration.
+    1.  **Retrieve Configuration:** The script fetches the integration configuration,
+    specifically extracting the base URL.
 
-    2. **Manager Setup**: A `WebhookManager` instance is created using the retrieved
-    base URL.
+    2.  **Initialize Manager:** A WebhookManager instance is created using the base
+    URL.
 
-    3. **Connectivity Check**: The action invokes the `test_connectivity` method,
-    which sends an HTTP GET request to the base URL.
+    3.  **Connectivity Test:** The script calls the `test_connectivity` method, which
+    executes an HTTP GET request to the base URL.
 
-    4. **Validation**: The script checks if the response is successful (using `raise_for_status`).
-
-    5. **Completion**: The action terminates, returning a success message if the connection
-    was established or an error message if the connection failed.
+    4.  **Process Response:** If the request is successful (HTTP status code 2xx),
+    the action returns success. If an error occurs (e.g., timeout, 404, 500), an error
+    message is generated and the action fails.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -277,7 +274,7 @@ Ping:
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

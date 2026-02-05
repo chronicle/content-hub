@@ -1,12 +1,12 @@
-GatherRemoteAgentDatapoints:
+Gather Remote Agent Datapoints:
   ai_description: >-
     ### General Description
 
-    This action is a diagnostic utility designed to gather comprehensive technical
-    datapoints from a Chronicle Remote Agent. It is primarily used for troubleshooting
-    and support purposes, allowing administrators to inspect the health, configuration,
-    and error logs of the agent and its associated integrations/connectors directly
-    from the Google SecOps interface.
+    Gather diagnostic information and logs from a Google SecOps Remote Agent. This
+    action acts as a support tool to troubleshoot issues related to the agent's performance,
+    environment, or specific integration/connector failures. It aggregates system-level
+    data, environment configurations, and log excerpts from the agent machine to provide
+    a comprehensive view of its state.
 
 
     ### Parameters Description
@@ -15,36 +15,50 @@ GatherRemoteAgentDatapoints:
 
     | :--- | :--- | :--- | :--- |
 
-    | IntegrationName | String | Yes | The name of the specific integration for which
-    you want to analyze logs and configuration (e.g., 'VirusTotal'). |
+    | **IntegrationName** | string | Yes | The name of the integration for which logs
+    and data points need to be collected. |
 
-    | ConnectorName | String | No | The specific name of the connector within the
-    integration to gather targeted logs for. If omitted, the action focuses on general
-    integration and agent logs. |
+    | **ConnectorName** | string | No | The specific name of a connector within the
+    integration to narrow down log collection. If provided, the action will attempt
+    to find and parse specific connector runner logs. |
+
+
+    ### Additional Notes
+
+    - This action does not process entities. It is a utility tool that operates based
+    on integration and connector names provided as script parameters.
+
+    - The action executes local system commands (like `uptime`, `free`, `lscpu`) on
+    the machine where the agent is installed. Sensitive information like tokens, keys,
+    and hostnames are filtered out from the collected environment variables.
 
 
     ### Flow Description
 
-    1.  **Configuration Extraction**: Retrieves the `IntegrationName` and `ConnectorName`
+    1. **Configuration Extraction**: Retrieves the target `IntegrationName` and `ConnectorName`
     from the action parameters.
 
-    2.  **Agent Metadata Collection**: Reads the `agent_status.json` file to identify
-    installed integrations and versions, and retrieves the system time and OpenSSL
-    version.
+    2. **Agent Status Collection (CASI)**: Reads the `agent_status.json` file to retrieve
+    agent details, versions, and current system time/timezone.
 
-    3.  **System Performance Profiling**: Executes shell commands (`lscpu`, `uptime`,
-    `free`) to collect CPU architecture, system load, and memory utilization data.
+    3. **System Load Collection (CALI)**: Executes system commands to gather CPU architecture
+    (`lscpu`), system uptime/load average (`uptime`), and memory usage (`free -h`).
 
-    4.  **Environment and File Audit**: Captures non-sensitive environment variables
-    and performs a directory listing (`ls -lart`) of the agent's working directory
-    to verify file permissions and existence.
+    4. **Environment Check**: Retrieves environment variables and filters out potentially
+    sensitive data containing keys or tokens.
 
-    5.  **Log Parsing**: Scans the main agent log (`agent.log`) and specific connector
-    runner logs for error patterns (e.g., `- agent - ERROR`). It captures a defined
-    limit of the most recent error snippets.
+    5. **File System Inspection (CFI)**: Lists the contents of the agent's working
+    directory to verify file permissions and existence.
 
-    6.  **Reporting**: Aggregates all collected information and outputs it to the
-    action's execution logs (logger).
+    6. **Agent Log Parsing (CSAL)**: Scans the primary `agent.log` for error signatures
+    and captures the most recent occurrences.
+
+    7. **Integration Log Parsing**: If an integration and connector name are specified,
+    the action locates the corresponding integration folders and parses the `connectors_runner.log`
+    for specific execution errors.
+
+    8. **Data Logging**: All gathered information is written to the Siemplify log
+    for analysis by administrators or support teams.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -58,7 +72,7 @@ GatherRemoteAgentDatapoints:
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

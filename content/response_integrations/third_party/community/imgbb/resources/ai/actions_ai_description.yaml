@@ -1,107 +1,194 @@
 Ping:
   ai_description: >-
-    Tests the connectivity between Google SecOps and the Imgbb service. This action
-    is primarily used to verify that the integration's configuration (specifically
-    the API Key) is correct and that the network path to the Imgbb API is open.
+    ### General Description
+
+    The **Ping** action is designed to test and verify the connectivity between Google
+    SecOps and the Imgbb service. It ensures that the provided API key and network
+    configurations are correct by attempting a sample image upload to the Imgbb API.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action. It relies solely on the global integration
+    configuration (specifically the **API Key**).
+
+
+    ### Additional Notes
+
+    - This action performs a real POST request to the Imgbb API endpoint (`/1/upload`).
+
+    - It uses a hardcoded base64 string representing a placeholder image to perform
+    the connectivity test.
+
+    - The uploaded test image is set to expire after 600 seconds (10 minutes).
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action retrieves the **API Key** from the
+    Imgbb integration settings.
+
+    2. **URL Construction:** It constructs the Imgbb API upload URL including the
+    API key and a 600-second expiration parameter.
+
+    3. **Connectivity Request:** The action sends a POST request to the Imgbb API
+    containing a dummy base64-encoded image.
+
+    4. **Status Validation:** It checks the HTTP response status. If the request is
+    successful, it confirms connectivity; otherwise, it raises an exception.
+
+    5. **Result Reporting:** The action concludes by reporting a success message to
+    the Google SecOps interface.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action performs a POST request to the Imgbb API to upload a dummy image
+      file as a means of testing the connection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Upload Image From Base64:
+  ai_description: >-
+    ### General Description
+
+    This action uploads an image provided in base64 format to the Imgbb hosting service.
+    It facilitates the conversion of local image data into a publicly accessible (though
+    temporary) URL, which is then returned to Google SecOps for use in reports or
+    subsequent automation steps.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Image in base64 | The base64 encoded string of the image you wish to upload
+    to Imgbb. | String | Yes |
+
+
+    ### Additional Notes
+
+    - The uploaded image is configured with a hardcoded expiration of 600 seconds
+    (10 minutes) within the API request.
+
+    - This action does not process or rely on any entities (e.g., Hostnames, IPs)
+    from the case; it operates purely on the provided parameter.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The script fetches the Imgbb API key and SSL verification
+    settings from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the `Image in base64` string provided
+    by the user.
+
+    3. **External API Call**: A POST request is sent to `api.imgbb.com` containing
+    the base64 data.
+
+    4. **Response Processing**: The script parses the JSON response to retrieve the
+    hosted image URL.
+
+    5. **Output Generation**: The image URL is added as a link to the action results,
+    and the full response is attached as JSON for further reference.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Uploads image data to Imgbb's external servers to create a new hosted image
+      resource.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Upload Image From File Path:
+  ai_description: >-
+    ### General Description
+
+    Uploads an image from a specified local file path to the Imgbb hosting service.
+    This action is designed to facilitate the sharing of local image artifacts (like
+    screenshots or captured visuals) by converting them into base64 format, uploading
+    them to the cloud, and returning a publicly accessible URL.
 
 
     ### Parameters
 
-    There are no parameters for this action.
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Image File Path | The full system path to the image file that needs to be uploaded
+    to Imgbb. | String | Yes |
 
 
     ### Flow Description
 
-    1. **Retrieve Configuration**: The action fetches the 'API Key' from the Imgbb
-    integration settings.
+    1. **Configuration Retrieval**: The script retrieves the API Key and SSL verification
+    settings from the Imgbb integration configuration.
 
-    2. **Endpoint Construction**: It builds the target API URL for the version 1 upload
-    endpoint, including the API key and a default expiration of 600 seconds.
+    2. **File Processing**: It opens the image file located at the provided path,
+    reads the binary data, and encodes it into a base64 string.
 
-    3. **Test Request**: The action performs an HTTP POST request to Imgbb. It sends
-    a hardcoded sample base64 image string as the payload to simulate a real upload.
+    3. **API Interaction**: Sends a POST request to the Imgbb API (`/1/upload`) containing
+    the base64 image data. The request includes a hardcoded expiration parameter set
+    to 600 seconds.
 
-    4. **Status Verification**: It checks the response status code using `raise_for_status()`.
-    If the request fails, an exception is raised.
+    4. **Data Extraction**: Parses the JSON response from Imgbb to extract the direct
+    URL (`data.url`) of the hosted image.
 
-    5. **Completion**: If the request succeeds, the action terminates with a success
-    message indicating connectivity is established.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      The action performs an HTTP POST request to the Imgbb upload endpoint, which
-      creates a temporary image resource on the Imgbb servers to verify the connection.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-UploadImageFromBase64:
-  ai_description: >-
-    ### General Description
-
-    The **Upload Image From Base64** action uploads an image provided in base64 format
-    to the Imgbb image hosting service. This action is designed to convert raw image
-    data into a publicly accessible URL, which is then returned to the Google SecOps
-    platform as a link and a JSON result. This is useful for sharing screenshots or
-    visual evidence gathered during an investigation.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Image in base64** | String | Yes | The base64 encoded string of the image
-    you want to upload. |
+    5. **Output Processing**: Updates the action results with the image URL, adds
+    a clickable link titled "Image URL link" to the action UI, and provides the full
+    JSON result for downstream logic.
 
 
     ### Additional Notes
 
-    * **Expiration**: The action is configured to set an expiration time of 600 seconds
-    (10 minutes) for the uploaded image on the Imgbb server.
+    * The uploaded image is temporary and will expire after 10 minutes (600 seconds)
+    as per the hardcoded API request parameters.
 
-    * **Connectivity**: Requires an active API Key for Imgbb and network access to
-    `api.imgbb.com`.
-
-
-    ### Flow Description
-
-    1. **Setup**: Retrieves the Imgbb API Key and SSL verification settings from the
-    integration configuration.
-
-    2. **Parameter Extraction**: Extracts the base64 image string provided in the
-    action parameters.
-
-    3. **External Request**: Sends a multipart/form-data POST request to the Imgbb
-    upload API with the image data.
-
-    4. **Response Processing**: Parses the JSON response from Imgbb to extract the
-    generated image URL.
-
-    5. **Result Reporting**: Adds the resulting image URL as a clickable link to the
-    action output and stores the data in the result JSON for use in subsequent playbook
-    steps.
+    * The action requires that the environment executing the script has file system
+    read permissions for the provided path.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -110,89 +197,14 @@ UploadImageFromBase64:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads an image file to the Imgbb hosting service, which creates a new resource
-      (the image) on their servers.
-    fetches_data: false
+      Uploads a new image file to the Imgbb hosting service, creating a new hosted
+      resource on their infrastructure.
+    fetches_data: true
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-UploadImageFromFilePath:
-  ai_description: >-
-    ### General Description
-
-    The **Upload Image From File Path** action allows users to upload a local image
-    file to the Imgbb hosting service. This is particularly useful for taking locally
-    stored visual evidence (like screenshots or logs saved as images) and generating
-    a shareable URL that can be referenced within a case or shared with other systems.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Image File Path** | The absolute file path on the local system of the image
-    you would like to upload to Imgbb. | String | Yes |
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action retrieves the Imgbb API Key and SSL
-    verification preferences from the integration's configuration settings.
-
-    2. **File Conversion**: The script reads the file from the specified `Image File
-    Path` and converts the binary data into a base64-encoded string.
-
-    3. **External Upload**: It sends an HTTP POST request to the Imgbb API. The request
-    includes the base64 string and a hardcoded expiration parameter (600 seconds).
-
-    4. **Data Extraction**: The action parses the JSON response from Imgbb to extract
-    the unique URL assigned to the uploaded image.
-
-    5. **SOAR Integration**: Finally, it adds the image URL as a clickable link in
-    the action results and includes the full details in the JSON result block for
-    use in subsequent playbook steps.
-
-
-    ### Additional Notes
-
-    * **Expiration**: Uploaded images are set to expire and be deleted from Imgbb
-    after 600 seconds (10 minutes).
-
-    * **Entity Usage**: This action does not operate on SOAR entities (like IP addresses
-    or Hostnames); it relies entirely on the provided string input for the file path.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Uploads a new image file to the Imgbb service, creating a temporary hosted resource
-      on their platform.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

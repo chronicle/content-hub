@@ -1,89 +1,91 @@
-create_host_record:
+Create Host Record:
   ai_description: >-
-    Adds a new host record to the Infoblox NIOS instance, allowing for the management
-    of IP addresses and hostnames within the IPAM environment. This action supports
-    the creation of both IPv4 and IPv6 address associations and can automatically
-    generate corresponding DNS records (A, AAAA, and PTR) if the DNS configuration
-    is enabled.
+    ### General Description
+
+    Adds a host record to Infoblox NIOS with associated IPv4 and IPv6 addresses. This
+    action is primarily used for IP Address Management (IPAM) and DNS inventory maintenance.
+    When the `Configure for DNS` parameter is enabled, the action automatically creates
+    corresponding A/AAAA and PTR DNS records within the specified DNS view.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Name | String | Yes | The FQDN of the host (e.g., `server1.auth.threat.zone`).
-    It must be part of an existing DNS zone. |
+    | **Name** | String | Yes | The FQDN of the host (e.g., `server1.example.com`).
+    It must belong to an existing DNS zone in Infoblox. |
 
-    | IPv4 Addresses | String | No | A JSON array of IPv4 objects. Example: `[{"ipv4addr":"192.168.1.100","mac":"00:11:22:33:44:55","configure_for_dhcp":true}]`.
+    | **IPv4 Addresses** | String | No | A JSON array of IPv4 address objects. Format:
+    `[{"ipv4addr":"192.168.1.100","mac":"00:11:22:33:44:55","configure_for_dhcp":true}]`.
     |
 
-    | IPv6 Addresses | String | No | A JSON array of IPv6 objects. Example: `[{"ipv6addr":"2001:db8::1"}]`.
+    | **IPv6 Addresses** | String | No | A JSON array of IPv6 address objects. Format:
+    `[{"ipv6addr":"2001:db8::1"}]`. |
+
+    | **View** | String | No | The DNS view where the record will reside. Defaults
+    to `default`. |
+
+    | **Comment** | String | No | Descriptive notes to be attached to the host record.
     |
 
-    | View | String | No | The DNS view where the record will reside. Defaults to
-    `default`. |
+    | **Aliases** | String | No | A comma-separated list of CNAME aliases for the
+    host. |
 
-    | Comment | String | No | Optional notes or description for the host record. |
+    | **Configure for DNS** | Boolean | No | If `true` (default), the host record
+    will include associated DNS records. If `false`, only the host record is created
+    without DNS records. |
 
-    | Aliases | String | No | Comma-separated list of CNAME aliases for the host.
-    |
+    | **Extended Attributes** | String | No | Comma-separated key/value pairs for
+    Infoblox Extended Attributes (e.g., `Site=New York,Dept=IT`). |
 
-    | Configure for DNS | Boolean | No | If true (default), Infoblox creates associated
-    DNS records. If false, only the IPAM host record is created. |
-
-    | Extended Attributes | String | No | Comma-separated key/value pairs for Infoblox
-    Extended Attributes (e.g., `Site=New York,Dept=IT`). |
-
-    | Additional Parameters | String | No | A JSON object containing extra API parameters
-    supported by the Infoblox `/record:host` endpoint. |
+    | **Additional Parameters** | String | No | A JSON object containing any additional
+    API-supported parameters (e.g., `{"use_ttl":true}`). |
 
 
     ### Additional Notes
 
-    - Either `IPv4 Addresses` or `IPv6 Addresses` should be provided to make the host
-    record useful, though the API may allow creation without them depending on your
-    Infoblox version and configuration.
+    - Either `IPv4 Addresses` or `IPv6 Addresses` should typically be provided to
+    make the host record functional, though the API might allow creation without them
+    depending on your Infoblox configuration.
 
-    - The `Additional Parameters` field must be a valid JSON object string.
+    - The `Extended Attributes` must follow the `Key=Value` format separated by commas.
 
 
     ### Flow Description
 
-    1. **Initialization**: Collects API credentials and action parameters from the
-    SOAR environment.
+    1. **Initialization:** Retrieves integration configuration (API root, credentials)
+    and action parameters.
 
-    2. **Validation**: Validates that the mandatory `Name` is provided and ensures
-    that `IPv4 Addresses`, `IPv6 Addresses`, and `Additional Parameters` are formatted
-    as valid JSON.
+    2. **Validation:** Validates that the `Name` is provided, ensures IP address objects
+    are in valid JSON format, and parses the `Extended Attributes` and `Additional
+    Parameters`.
 
-    3. **Parsing**: Converts the `Aliases` and `Extended Attributes` strings into
-    the format required by the Infoblox WAPI.
+    3. **API Interaction:** Sends a POST request to the Infoblox `/record:host` endpoint
+    with the constructed payload.
 
-    4. **API Execution**: Sends a POST request to the Infoblox NIOS API (`/record:host`)
-    to create the host record.
+    4. **Result Processing:** If the record is created successfully, the action retrieves
+    the created object details.
 
-    5. **Reporting**: Parses the API response, creates a data table in the SOAR UI
-    showing the new record's details (Reference ID, IP addresses, View), and attaches
-    the raw JSON result for further automation steps.
+    5. **Output:** Formats the created host data into a CSV-style data table named
+    "Hosts" for the case wall and provides a success message.
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: false
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new host record and optionally associated DNS A, AAAA, and PTR records
-      in the Infoblox NIOS database.
-    fetches_data: true
+      Creates a new host record and potentially multiple DNS resource records (A,
+      AAAA, PTR) within the Infoblox NIOS IPAM/DNS system.
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -97,85 +99,571 @@ create_host_record:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-create_response_policy_zone:
+Create RPZ A Rule:
   ai_description: >-
     ### General Description
 
-    This action creates a new Response Policy Zone (RPZ) in Infoblox NIOS to define
-    custom DNS responses. RPZs are used to modify DNS response behavior, such as redirection
-    or blocking, based on the queried domain. This is essential for implementing DNS-based
-    security controls like sinkholing and threat prevention.
+    The **Create RPZ A Rule** action allows users to create a Response Policy Zone
+    (RPZ) Substitute rule within Infoblox NIOS. This specific rule type maps either
+    a domain name (A record) or an IPv4 address to a substitute IPv4 address, which
+    is typically used for DNS redirection or to block access to malicious destinations
+    by redirecting them to a sinkhole.
 
 
     ### Parameters Description
 
-    | Parameter | Mandatory | Type | Description |
+
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | FQDN | Yes | String | The name of the DNS zone in Fully Qualified Domain Name
-    format. |
+    | **Object Type** | DDL | Yes | Defines whether the rule is for a 'Domain Name'
+    or an 'IP Address'. This determines the specific Infoblox API endpoint used. |
 
-    | Substitute Name | No | String | The alternative name of the redirect target
-    used for substitute response policy zones. |
+    | **Name** | String | Yes | The name of the rule (e.g., the domain or trigger).
+    |
 
-    | Comment | No | String | A descriptive comment for the zone. |
+    | **RP Zone** | String | Yes | The specific Response Policy Zone where this rule
+    will be added. |
 
-    | RPZ Policy | No | DDL | The override policy for the zone. Options: DISABLED,
-    GIVEN, NODATA, NXDOMAIN, PASSTHRU, SUBSTITUTE. Default is 'GIVEN'. |
+    | **IPv4 Address** | String | Yes | The substitute IPv4 address that DNS queries
+    will resolve to. |
 
-    | RPZ Severity | No | DDL | The severity level of the zone. Options: CRITICAL,
-    MAJOR, WARNING, INFORMATIONAL. Default is 'MAJOR'. |
+    | **Comment** | String | No | An optional descriptive comment for the record.
+    |
 
-    | RPZ Type | No | DDL | The type of Response Policy Zone. Options: FEED, FIREEYE,
-    LOCAL. Default is 'LOCAL'. |
+    | **Additional Parameters** | String | No | A JSON object string allowing for
+    advanced Infoblox configuration parameters. |
 
-    | Fireeye Rule Mapping | No | String | A JSON object containing rules to map FireEye
-    alerts to the zone. |
 
-    | Additional Parameters | No | String | A JSON object containing any additional
+    ### Additional Notes
+
+    - This action performs a mutation by creating a record in the external Infoblox
+    system.
+
+    - The action automatically validates that the provided `IPv4 Address` follows
+    the correct IPv4 format before sending the request.
+
+    - If the `Name` does not already end with the `RP Zone` string, the action will
+    automatically append it to form a valid FQDN for the rule.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization:** The action retrieves integration configuration
+    and extracts user-provided parameters, including the object type, name, zone,
+    and substitution IP.
+
+    2. **Validation:** It ensures that the name, zone, and IPv4 address are non-empty
+    and that the IPv4 address is technically valid. It also parses the `Additional
+    Parameters` if provided as JSON.
+
+    3. **API Interaction:** Based on the `Object Type` selection, the action selects
+    the appropriate Infoblox API path (`record:rpz:a` for domains or `record:rpz:a:ipaddress`
+    for IPs) and sends a POST request to create the rule.
+
+    4. **Outcome Processing:** Upon a successful response from Infoblox, the action
+    generates a data table named 'RPZ A Rule' for the case UI and attaches the full
+    JSON response as a result. If the creation fails, an error state is returned.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new RPZ Substitute A rule record in the Infoblox NIOS DNS configuration
+      via a POST request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create RPZ AAAA Rule:
+  ai_description: >-
+    ### General Description
+
+    Creates an RPZ (Response Policy Zone) AAAA rule in Infoblox NIOS. This action
+    maps a domain name or an IPv6 address to a substitute IPv6 address for the purpose
+    of DNS redirection or security blocking. It allows security teams to dynamically
+    update DNS response policies to mitigate threats by redirecting traffic intended
+    for malicious IPv6 endpoints or domains.
+
+
+    ### Parameters Description
+
+
+    | Name | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Object Type | The type of the object for which to create the record. Options
+    are 'Domain Name' or 'IP Address'. | String (DDL) | Yes |
+
+    | Name | Specify the name of the rule (e.g., the FQDN of the domain). | String
+    | Yes |
+
+    | RP Zone | The target Response Policy Zone to assign the rule to. | String |
+    Yes |
+
+    | IPv6 Address | The substitute IPv6 address that will be used for redirection.
+    | String | Yes |
+
+    | Comment | An optional descriptive comment for the rule. | String | No |
+
+    | Additional Parameters | A JSON object containing additional key-value pairs
+    for advanced rule configuration. | String (JSON) | No |
+
+
+    ### Additional Notes
+
+    - The action specifically validates that the 'IPv6 Address' parameter conforms
+    to the IPv6 standard.
+
+    - If 'Object Type' is 'IP Address', the action creates a specific 'aaaa:ipaddress'
+    record type; otherwise, it defaults to a standard 'aaaa' RPZ record.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration and action parameters,
+    including authentication details and rule specifications.
+
+    2. **Validation**: It validates the mandatory strings (Name, RP Zone) and ensures
+    the provided IPv6 Address is valid. It also attempts to parse the 'Additional
+    Parameters' if provided as JSON.
+
+    3. **API Request**: Based on the 'Object Type', it identifies the correct Infoblox
+    WAPI endpoint and performs a POST request to create the RPZ AAAA rule.
+
+    4. **Output Generation**: Upon successful creation, the action adds the raw JSON
+    response to the result and constructs a data table (CSV) containing details like
+    Reference ID, Name, and IPv6 Address to be displayed in the SOAR interface.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new AAAA rule within a Response Policy Zone (RPZ) on the Infoblox
+      NIOS server, which modifies active DNS response behavior.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create RPZ CNAME Rule:
+  ai_description: >-
+    ### General Description
+
+    This action adds a CNAME rule to an existing Response Policy Zone (RPZ) in Infoblox
+    NIOS. It allows administrators to override DNS behavior for specific objects such
+    as domain names or IP addresses. The action can be used to block domains (returning
+    'No data' or 'No such domain'), pass through requests, or substitute a domain
+    with another. It interacts with the Infoblox WAPI via POST requests to create
+    the specific rule record based on the selected object type.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Name** | string | Yes | The rule name in FQDN format (e.g., 'malicious.com').
+    |
+
+    | **RP Zone** | string | Yes | The target Response Policy Zone where the rule
+    will be added. |
+
+    | **Rule Type** | ddl | Yes | The behavior of the rule. Options: `Block (No data)`,
+    `Block (No such domain)`, `Passthru`, or `Substitute (Domain name)`. |
+
+    | **Object Type** | ddl | Yes | The type of object the rule applies to. Options:
+    `Domain Name`, `IP Address`, or `Client IP Address`. |
+
+    | **Substitute Name** | string | No | The substitute domain name to assign. **Mandatory**
+    if `Rule Type` is set to `Substitute (Domain name)`. |
+
+    | **Comment** | string | No | An optional comment describing the rule for audit
+    purposes. |
+
+    | **View** | string | No | The DNS view where the records are located. Defaults
+    to `default`. |
+
+    | **Additional Parameters** | string | No | A JSON object containing extra parameters
+    to be passed to the Infoblox API request. |
+
+
+    ### Additional Notes
+
+    - If `Rule Type` is `Substitute (Domain name)`, the `Substitute Name` parameter
+    must be provided, and the `Object Type` must be `Domain Name` (it is not supported
+    for IP-based object types).
+
+    - The action automatically formats the rule name by appending the RP Zone if it
+    is not already present.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves configuration (API credentials) and action
+    parameters (Rule Name, Zone, Rule Type, etc.).
+
+    2. **Validation:** Validates that mandatory strings are non-empty and checks that
+    the `Additional Parameters` (if provided) is a valid JSON object.
+
+    3. **API Call Construction:** Determines the correct Infoblox API endpoint based
+    on the `Object Type` and sets the `canonical` DNS value based on the chosen `Rule
+    Type` (e.g., '*' for Block No Data).
+
+    4. **Execution:** Sends a POST request to the Infoblox NIOS server to create the
+    rule.
+
+    5. **Result Handling:** If successful, it parses the response, adds the raw JSON
+    to the results, and creates a data table summarizing the new rule's details. If
+    it fails, it returns an error message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new CNAME rule record within a Response Policy Zone (RPZ) in the Infoblox
+      NIOS system, which modifies DNS resolution behavior for the specified domain
+      or IP.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create RPZ MX Rule:
+  ai_description: "### General Description\nThe **Create RPZ MX Rule** action adds\
+    \ a mail exchange (MX) override rule to a specified Response Policy Zone (RPZ)\
+    \ in Infoblox NIOS. This action is used to manage DNS response policies by defining\
+    \ how mail exchanger records should be handled for specific domains within a security\
+    \ zone, allowing for redirection or blocking of mail traffic.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| **Name** | string | Yes | The name of the rule to be created.\
+    \ |\n| **RP Zone** | string | Yes | The name of the Response Policy Zone where\
+    \ the rule will be assigned. |\n| **Mail Exchanger** | string | Yes | The host\
+    \ name of the mail exchanger for the rule. |\n| **Preference** | string | Yes\
+    \ | An integer value representing the preference for the MX rule. Must be between\
+    \ 0 and 65535. |\n| **Comment** | string | No | An optional comment or description\
+    \ for the rule. |\n| **Additional Parameters** | string | No | A JSON object containing\
+    \ additional parameters supported by the Infoblox WAPI for the `record:rpz:mx`\
+    \ object. |\n\n### Additional Notes\n- The `Preference` parameter is passed as\
+    \ a string but must represent a valid non-negative integer. If the value exceeds\
+    \ 65535, the action will fail validation.\n- The `Additional Parameters` must\
+    \ be a valid JSON dictionary if provided.\n\n### Flow Description\n1.  **Initialization**:\
+    \ The action retrieves integration configuration (API root, credentials) and extracts\
+    \ the user-provided parameters.\n2.  **Validation**: It validates that mandatory\
+    \ strings (**Name**, **RP Zone**, **Mail Exchanger**) are provided and that the\
+    \ **Preference** is a valid integer within the allowed range (0-65535).\n3.  **API\
+    \ Call**: The action constructs a request body including the rule name, zone,\
+    \ mail exchanger host, and preference, then sends a `POST` request to the Infoblox\
+    \ NIOS WAPI.\n4.  **Result Processing**: \n    - If successful, it returns the\
+    \ raw JSON response from Infoblox.\n    - It generates a data table named \"RPZ\
+    \ MX Rule\" containing details such as the Reference ID, Object Type, Name, and\
+    \ Preference.\n5.  **Finalization**: The action ends with a success message confirming\
+    \ the rule creation or an error message if the operation fails."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new MX (Mail Exchange) override rule within a Response Policy Zone
+      in the external Infoblox NIOS system via a POST request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create RPZ NAPTR Rule:
+  ai_description: >-
+    Adds a Naming Authority Pointer (NAPTR) override rule in a Response Policy Zone
+    (RPZ) within Infoblox NIOS to control DNS-based service discovery. This action
+    is used to manipulate DNS responses by substituting or redirecting queries based
+    on the NAPTR record logic.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | string | Yes | Specify the name of the rule to be created. |
+
+    | RP Zone | string | Yes | The name of the Response Policy Zone where the rule
+    will be assigned. |
+
+    | Order | string | Yes | Defines the sequence of rule application when multiple
+    rules exist (must be a non-negative integer). |
+
+    | Preference | string | Yes | The preference value for the NAPTR record, determining
+    which record to use when multiple have the same order (must be a non-negative
+    integer). |
+
+    | Replacement | string | Yes | The replacement field for the NAPTR record, specifying
+    the next domain name to look up. |
+
+    | Comment | string | No | Optional description or note for the rule. |
+
+    | Additional Parameters | string | No | A JSON object containing extra WAPI parameters
+    for the creation of the record. |
+
+
+    ### Flow Description
+
+    1. **Validation:** The action validates that mandatory strings (Name, RP Zone,
+    Replacement) are not empty and ensures 'Order' and 'Preference' are valid integers
+    within the allowed range (0-65535).
+
+    2. **Parameter Preparation:** It processes the 'Additional Parameters' (if provided)
+    as a JSON object and formats the rule name by appending the RP Zone if necessary.
+
+    3. **API Interaction:** The action authenticates with Infoblox NIOS and sends
+    a POST request to the `/record:rpz:naptr` endpoint with the rule configuration.
+
+    4. **Result Processing:** Upon success, the action returns the raw JSON response
+    from Infoblox and constructs a data table summarizing the created rule's properties
+    for the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new NAPTR record in the Infoblox NIOS Response Policy Zone (RPZ) configuration
+      via a POST request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create RPZ PTR Rule:
+  ai_description: "### General Description\nThe **Create RPZ PTR Rule** action allows\
+    \ users to create a reverse DNS (PTR) lookup override rule within a specific Response\
+    \ Policy Zone (RPZ) in Infoblox NIOS. This is used to intercept and provide custom\
+    \ responses for reverse DNS queries (mapping IP addresses to domain names) for\
+    \ security or policy enforcement purposes.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **RP Zone**\
+    \ | string | Yes | The name of the Response Policy Zone where the rule will be\
+    \ created. |\n| **PTR DName** | string | Yes | The target domain name to be returned\
+    \ for the reverse lookup. |\n| **Name** | string | No | The name of the rule object.\
+    \ If not provided, at least one IP address must be supplied. |\n| **Comment**\
+    \ | string | No | A descriptive comment for the new rule. |\n| **IPv4 Address**\
+    \ | string | No | The IPv4 address associated with the substitute rule. Validated\
+    \ as a proper IPv4 format. |\n| **IPv6 Address** | string | No | The IPv6 address\
+    \ associated with the substitute rule. Validated as a proper IPv6 format. |\n\
+    | **Additional Parameters** | string | No | A JSON string containing extra key-value\
+    \ pairs to be sent to the Infoblox API (e.g., TTL, view). |\n\n### Additional\
+    \ Notes\n*   **Validation Logic**: The action requires that at least one of the\
+    \ following parameters is provided: `Name`, `IPv4 Address`, or `IPv6 Address`.\
+    \ If all three are empty, the action will fail.\n*   The action performs format\
+    \ validation on `IPv4 Address` and `IPv6 Address` to ensure they comply with network\
+    \ standards before making the API call.\n*   The `Additional Parameters` field\
+    \ must be a valid JSON object string.\n\n### Flow Description\n1.  **Parameter\
+    \ Extraction**: Retrieves connection details (API Root, Credentials) and user-provided\
+    \ parameters (RP Zone, PTR DName, etc.).\n2.  **Validation**: Validates that required\
+    \ strings are non-empty, checks that at least one identifying field (Name/IP)\
+    \ is present, and ensures IP address formats are correct.\n3.  **API Interaction**:\
+    \ Establishes a session with Infoblox NIOS and sends a `POST` request to the PTR\
+    \ record endpoint (`/record:rpz:ptr`) with the prepared data payload.\n4.  **Result\
+    \ Processing**: \n    *   On success, it returns the raw JSON response from Infoblox.\n\
+    \    *   Constructs a data table (CSV) containing the Reference ID, Object Type,\
+    \ Name, and PTR DName of the newly created rule for display in the SOAR UI.\n\
+    5.  **Termination**: Finalizes the action with a success message or an error log\
+    \ if the creation fails."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new Response Policy Zone (RPZ) PTR rule record in the Infoblox NIOS
+      server via a POST request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create RPZ SRV Rule:
+  ai_description: >-
+    ### General Description
+
+    Adds a Service (SRV) record override rule in a Response Policy Zone (RPZ) within
+    Infoblox NIOS. This action is used to manage service-based DNS lookups by defining
+    specific targets, ports, priorities, and weights for services within a managed
+    zone.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Name** | string | Yes | Specify the name of the rule. |
+
+    | **Priority** | string | Yes | The priority of the Substitute (SRV Record) Rule
+    (Integer 0-65535). |
+
+    | **RP Zone** | string | Yes | The name of the response policy zone in which the
+    record will reside. |
+
+    | **Port** | string | Yes | The port of the Substitute (SRV Record) Rule (Integer
+    0-65535). |
+
+    | **Target** | string | Yes | The target host associated with the SRV record.
+    |
+
+    | **Weight** | string | Yes | The weight of the Substitute (SRV Record) Rule (Integer
+    0-65535). |
+
+    | **Comment** | string | No | Optional text associated with the record for documentation.
+    |
+
+    | **Additional Parameters** | string | No | A JSON object containing additional
     Infoblox WAPI parameters to include in the creation request. |
 
 
-    ### Additional Notes
-
-    - Either provide just the mandatory FQDN or include complex configurations via
-    the `Fireeye Rule Mapping` and `Additional Parameters` fields, which must be valid
-    JSON objects.
-
-    - This action performs a state change (creation) on the Infoblox appliance.
-
-
     ### Flow Description
 
-    1. **Parameter Initialization:** Retrieves integration configuration (API root,
-    credentials) and extracts action parameters provided by the user.
+    1.  **Parameter Extraction:** The action retrieves all configuration and action
+    parameters, including connection details and SRV record specifications.
 
-    2. **Validation:** Checks that the FQDN is not empty and validates that `Fireeye
-    Rule Mapping` and `Additional Parameters` (if provided) are valid JSON dictionaries.
+    2.  **Validation:** It validates that mandatory strings are provided and ensures
+    that `Priority`, `Port`, and `Weight` are valid non-negative integers within the
+    allowed range (0-65535). It also attempts to parse `Additional Parameters` as
+    a valid JSON dictionary.
 
-    3. **API Request:** Initializes the APIManager and executes a POST request to
-    the Infoblox WAPI `/zone_rp` endpoint with the zone's configuration data.
+    3.  **API Execution:** It connects to the Infoblox NIOS API and performs a `POST`
+    request to the `/record:rpz:srv` endpoint with the processed data.
 
-    4. **Outcome Processing:** Upon successful creation, the script parses the API
-    response into a result JSON and generates a UI data table labeled 'RP Zone' for
-    the Google SecOps case wall.
+    4.  **Reporting:** If successful, the action returns the full API response as
+    JSON and creates a data table named 'RPZ SRV Rule' in the Google SecOps case wall
+    containing the details of the created record. If the API returns an error, the
+    action fails and provides a descriptive error message.
+
+
+    ### Additional Notes
+
+    This action does not run on entities and relies entirely on user-provided input
+    parameters.
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: false
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new Response Policy Zone (RPZ) object in the Infoblox NIOS instance,
-      which modifies the system's DNS response configuration.
+      Creates a new Service (SRV) record in a specified Response Policy Zone (RPZ)
+      on the Infoblox NIOS server using a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -189,670 +677,919 @@ create_response_policy_zone:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-create_rpz_a_rule:
+Create RPZ TXT Rule:
   ai_description: >-
     ### General Description
 
-    Creates an RPZ (Response Policy Zone) Substitute rule in Infoblox NIOS. This rule
-    allows for mapping a domain name (A record) or an IPv4 address to a substitute
-    IPv4 address, which is commonly used for DNS redirection or blocking of malicious
-    traffic.
+    Adds a TXT record rule in a Response Policy Zone (RPZ) within Infoblox NIOS to
+    associate specific text data with a DNS response. This action is typically used
+    for providing descriptive information or security-related metadata for DNS queries
+    handled by the RPZ.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
-
-    | Object Type | DDL | Yes | Specifies whether the rule is for an 'IP Address'
-    or a 'Domain Name'. Allowed values: 'IP Address', 'Domain Name'. |
-
-    | Name | String | Yes | The name of the rule (e.g., the FQDN or IP being redirected).
-    |
-
-    | RP Zone | String | Yes | The name of the Response Policy Zone where this rule
-    will be assigned. |
-
-    | IPv4 Address | String | Yes | The substitute IPv4 address that the target will
-    resolve to. |
-
-    | Comment | String | No | An optional comment to describe the rule's purpose in
-    the Infoblox record. |
-
-    | Additional Parameters | String | No | A JSON object string used to provide extra
-    Infoblox API parameters during rule creation. |
-
-
-    ### Additional Notes
-
-    - The action performs internal validation on the 'IPv4 Address' parameter to ensure
-    it is a valid IPv4 address before sending the request to Infoblox.
-
-    - The 'Object Type' determines the specific Infoblox WAPI object type used (`record:rpz:a`
-    for Domain Names and `record:rpz:a:ipaddress` for IP Addresses).
-
-
-    ### Flow Description
-
-    1. **Initialization**: Collects integration configuration (API root, credentials)
-    and extracts user-provided action parameters.
-
-    2. **Validation**: Ensures mandatory fields are populated, validates that the
-    'IPv4 Address' parameter follows valid networking standards, and verifies that
-    'Additional Parameters' is valid JSON.
-
-    3. **Request Preparation**: Sets the Infoblox API identifier and record type based
-    on whether the user selected 'Domain Name' or 'IP Address' as the Object Type.
-
-    4. **Execution**: Invokes the Infoblox API via a POST request to create the specified
-    RPZ rule.
-
-    5. **Results Processing**: Parses the API response, stores the raw JSON result,
-    and generates a data table (CSV format) summarizing the created rule for display
-    in the Google SecOps interface.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new Response Policy Zone (RPZ) A rule in Infoblox NIOS, modifying
-      the external DNS configuration and resolution behavior for the environment.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-create_rpz_aaaa_rule:
-  ai_description: >-
-    ### General Description
-
-    Creates a Response Policy Zone (RPZ) AAAA substitute rule in Infoblox NIOS. This
-    action maps a domain name or an IPv6 address to a specific substitute IPv6 address,
-    which is typically used for DNS redirection or blocking purposes within a managed
-    network.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Object Type | DDL | Yes | Determines the type of record to create. Options are
-    'Domain Name' or 'IP Address'. |
-
-    | Name | String | Yes | The name of the rule (e.g., the FQDN or IP segment). |
 
     | RP Zone | String | Yes | The target Response Policy Zone where the rule will
     be assigned. |
 
-    | IPv6 Address | String | Yes | The substitute IPv6 address that will be returned
-    by the DNS server for this rule. |
+    | Name | String | Yes | The name/identifier of the rule being created. |
+
+    | Text | String | Yes | The actual text content to be associated with the DNS
+    TXT record. |
+
+    | Comment | String | No | A descriptive comment for the rule in the Infoblox system.
+    |
+
+    | Additional Parameters | String | No | A JSON-formatted string containing any
+    additional API parameters supported by the Infoblox 'record:rpz:txt' object. |
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction**: Retrieves the RP Zone, Name, Text, and optional
+    Comment/Additional Parameters from the action input.
+
+    2.  **Validation**: Ensures mandatory strings are not empty and validates that
+    'Additional Parameters' (if provided) is a valid JSON object.
+
+    3.  **API Interaction**: Formulates a POST request to the Infoblox WAPI (`/record:rpz:txt`
+    endpoint). It automatically constructs the rule name to ensure it aligns with
+    the specified RP Zone.
+
+    4.  **Result Processing**: Parses the API response to confirm the record creation.
+    If successful, it generates a data table titled 'RPZ TXT Rule' containing the
+    reference ID, name, text, and zone details.
+
+    5.  **Status Reporting**: Returns a success message to the case wall if the rule
+    is created; otherwise, it reports a failure status with error details.
+
+
+    ### Additional Notes
+
+    This action does not run on specific entities but functions as a standalone management
+    command within the Infoblox integration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: true
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new TXT record rule within the Response Policy Zone configuration
+      on the Infoblox NIOS server.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Response Policy Zone:
+  ai_description: >-
+    ### General Description
+
+    Creates a new Response Policy Zone (RPZ) within Infoblox NIOS to define custom
+    DNS responses and policies. This action allows security teams to programmatically
+    define how DNS queries are handled, enabling mechanisms like DNS sinkholing or
+    redirection based on threat intelligence or internal requirements.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | FQDN | string | Yes | The fully qualified domain name of the DNS zone to be
+    created. |
+
+    | Substitute Name | string | No | An alternative name for the redirect target,
+    used when the policy is set to SUBSTITUTE. |
+
+    | Comment | string | No | Descriptive text or notes for the Response Policy Zone.
+    |
+
+    | RPZ Policy | ddl | No | The override policy for the zone. Options: DISABLED,
+    GIVEN (default), NODATA, NXDOMAIN, PASSTHRU, SUBSTITUTE. |
+
+    | RPZ Severity | ddl | No | The severity level associated with the zone. Options:
+    CRITICAL, MAJOR (default), WARNING, INFORMATIONAL. |
+
+    | RPZ Type | ddl | No | The type of RPZ being created. Options: FEED, FIREEYE,
+    LOCAL (default). |
+
+    | Fireeye Rule Mapping | string | No | A JSON object string containing rules for
+    mapping FireEye alerts to the zone. |
+
+    | Additional Parameters | string | No | A JSON object string containing any extra
+    parameters required by the Infoblox WAPI during zone creation. |
+
+
+    ### Additional Notes
+
+    - If providing 'Fireeye Rule Mapping' or 'Additional Parameters', ensure they
+    are valid JSON object strings; otherwise, the action will fail during validation.
+
+    - The 'FQDN' must be unique within the target Infoblox view.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves Infoblox connection parameters (API Root, Username,
+    Password) and extracts action parameters from the SOAR environment.
+
+    2. **Validation**: Checks that the 'FQDN' is provided and validates that 'Fireeye
+    Rule Mapping' and 'Additional Parameters' (if provided) are properly formatted
+    as JSON objects.
+
+    3. **API Interaction**: Establishes a session with the Infoblox NIOS server and
+    sends a POST request to the `/zone_rp` endpoint with the specified configuration.
+
+    4. **Result Processing**: Captures the API response. If successful, it parses
+    the created zone data into a result JSON and a data table named 'RP Zone'.
+
+    5. **Completion**: Updates the action status to completed or failed based on the
+    API response and logs the final status message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new Response Policy Zone configuration in the external Infoblox NIOS
+      instance, which modifies the DNS response behavior of the appliance.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+DHCP Lease Lookup:
+  ai_description: >-
+    ### General Description
+
+    Retrieves DHCP lease details from Infoblox NIOS. This action allows security analysts
+    to perform lookups on DHCP lease history and current state using various filters
+    such as IP addresses, hardware MAC addresses, hostnames, and fingerprints. It
+    is primarily used for identifying the specific device or user associated with
+    a network address at a given point in time.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **IP Address** | String | No | The IPv4 or IPv6 address of the lease to retrieve.
+    |
+
+    | **Hardware** | String | No | The MAC address for IPv4 leases. Supports exact
+    or regex search. |
+
+    | **Hostname** | String | No | The hostname sent via DHCP option 12. Supports
+    exact or regex search. |
+
+    | **IPv6 DUID** | String | No | The IPv6 DUID identifier for IPv6 leases. Supports
+    exact or regex search. |
+
+    | **Protocol** | DDL | No | Filters results by protocol: 'Both' (default), 'IPv4',
+    or 'IPv6'. |
+
+    | **Fingerprint** | String | No | DHCP client fingerprint; supports case-insensitive
+    or regex search. |
+
+    | **Username** | String | No | The user associated with the lease request; supports
+    case-insensitive or regex search. |
+
+    | **Limit** | String | No | Maximum number of objects to return (default is 100).
+    |
+
+
+    ### Additional Notes
+
+    While all parameters are marked as optional in the configuration, the action requires
+    at least one search criteria to be provided to the Infoblox API to return meaningful
+    data. The results are limited to a maximum of 20 records for the visual data table,
+    though the full result set up to the 'Limit' is provided in the JSON output.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: Extracts integration credentials and action parameters.
+
+    2.  **Validation**: Validates that 'Limit' is a positive integer and that the
+    'IP Address' (if provided) follows valid IPv4 or IPv6 formatting.
+
+    3.  **API Interaction**: Initiates a GET request to the Infoblox WAPI `/lease`
+    endpoint using the provided search filters. The action handles pagination automatically
+    to respect the 'Limit' parameter.
+
+    4.  **Data Processing**: Converts raw API response data into structured models,
+    extracting fields like binding state, lease end times, and network details.
+
+    5.  **Output**: Returns the full results in JSON format and populates a 'DHCP
+    Lease Lookup Data' table in the SOAR interface for quick review.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete RPZ Rule:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specific Response Policy Zone (RPZ) rule from the Infoblox NIOS server
+    using its unique reference ID. This action is record-type agnostic, meaning it
+    can delete any RPZ rule (A, AAAA, CNAME, MX, PTR, TXT, etc.) as long as the correct
+    internal reference identifier is provided. It is primarily used for remediation
+    tasks, such as removing temporary blocks or cleaning up DNS security policies.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Reference ID | String | Yes | The internal Infoblox reference identifier (e.g.,
+    `record:rpz:cname/ZG5zLmJpbmRfcmVjX2NuYW1lJGRlZmF1bHQucnB6LmNvbS5leGFtcGxlLmNvbQ`)
+    of the rule to be deleted. |
+
+
+    ### Additional Notes
+
+    - This action performs a destructive operation (DELETE) on the external Infoblox
+    system.
+
+    - If the provided Reference ID is not found, the action will fail and report that
+    the item does not exist.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves Infoblox connection details (API Root, Username,
+    Password) from the integration configuration.
+
+    2. **Parameter Extraction**: Captures the mandatory `Reference ID` provided by
+    the user.
+
+    3. **Validation**: Checks that the `Reference ID` is a non-empty string.
+
+    4. **Execution**: Sends a DELETE request to the Infoblox WAPI for the specific
+    object reference.
+
+    5. **Completion**: If the API returns a success status, the action completes with
+    a success message; otherwise, it handles errors (like 404 Not Found) and reports
+    them to the Google SecOps platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Performs a DELETE request to the Infoblox NIOS WAPI to permanently remove a
+      DNS RPZ rule from the server configuration.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete Response Policy Zone:
+  ai_description: >-
+    ### General Description
+
+    Removes an existing Response Policy Zone (RPZ) from Infoblox NIOS using a provided
+    reference ID. This action is designed to decommission or clean up specific DNS
+    policy zones in the Infoblox environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Reference ID | String | Yes | The unique reference identifier of the response
+    policy zone to be deleted. |
+
+
+    ### Additional Notes
+
+    This action does not run on entities; it requires the specific Reference ID of
+    the zone object within Infoblox.
+
+
+    ### Flow Description
+
+    1. **Setup**: The action initializes the API manager using the integration's configuration
+    parameters (API Root, credentials, and SSL settings).
+
+    2. **Extraction**: Retrieves the `Reference ID` from the action input parameters
+    and validates that it is not empty.
+
+    3. **Execution**: Communicates with the Infoblox WAPI to perform a `DELETE` operation
+    on the object corresponding to the reference ID.
+
+    4. **Error Handling**: Catch specific Infoblox exceptions, such as when the item
+    is not found (404), and provides informative error messages.
+
+    5. **Reporting**: Returns a success message if the deletion is confirmed or a
+    failure status if an error occurs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes an existing Response Policy Zone configuration from the Infoblox NIOS
+      server using a DELETE request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Response Policy Zone Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves configuration details for Response Policy Zones (RPZ) from Infoblox
+    NIOS. This action is designed to perform lookups and audit the status and configuration
+    of DNS policy zones based on filters like FQDN, DNS view, or comments. It returns
+    data in both a raw JSON format and a structured data table for easy viewing within
+    the case.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | FQDN | string | No | The name of the DNS zone in Fully Qualified Domain Name
+    (FQDN) format. If provided, filters the search to this specific zone. |
+
+    | View | string | No | The name of the DNS view in which the zone resides (e.g.,
+    'external', 'internal'). Defaults to 'default'. |
+
+    | Comment | string | No | Filter string to match against the comment field of
+    the RPZ. Supports partial matches. |
+
+    | Limit | string | No | The maximum number of zone objects to return. Must be
+    a positive integer. Defaults to '100'. |
+
+
+    ### Additional Notes
+
+    - If no zones match the provided criteria, the action will return a successful
+    status with a message stating that no results were found.
+
+    - The action utilizes pagination to handle large datasets, though it is limited
+    by the 'Limit' parameter and a hardcoded maximum for the table display.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization:** Extracts configuration parameters (API Root,
+    credentials) and action parameters (FQDN, View, Comment, Limit).
+
+    2. **Validation:** Validates the 'Limit' parameter to ensure it is a non-negative,
+    non-zero integer.
+
+    3. **API Interaction:** Connects to the Infoblox NIOS WAPI and performs a GET
+    request to the `/zone_rp` endpoint, applying the provided filters and pagination
+    settings.
+
+    4. **Data Processing:** Parses the retrieved zone data using the `RPZone` data
+    model.
+
+    5. **Output Generation:** Appends the full raw data to the Action JSON results
+    and constructs a 'Response Policy Zones' data table displaying key fields such
+    as Reference ID, FQDN, Policy, Severity, and Type.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+IP Lookup:
+  ai_description: >-
+    ### General Description
+
+    Retrieves IP Address Management (IPAM) information from Infoblox NIOS for a specific
+    IP address, network, or IP range. This action allows analysts to query the Infoblox
+    database to identify the status, ownership, MAC addresses, and extended attributes
+    associated with network infrastructure. It supports both IPv4 and IPv6 protocols
+    and can filter results based on device status (Active, Used, Unused) and custom
+    extended attributes.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **IP Address** | String | No | The specific IP address (e.g., "192.168.1.1")
+    to retrieve information for. Cannot be used with Network or Range parameters.
+    |
+
+    | **Network** | String | No | The network in FQDN or CIDR format (e.g., "192.168.1.0/24").
+    Cannot be used with IP Address or Range parameters. |
+
+    | **From IP** | String | No | The start of an IP range. Must be used with 'To
+    IP'. |
+
+    | **To IP** | String | No | The end of an IP range. Must be used with 'From IP'.
+    |
+
+    | **Limit** | String | No | Maximum number of objects to return. Default is 100.
+    |
+
+    | **Status** | DDL | No | Filters results by IP status: All (default), Active,
+    Used, or Unused. |
+
+    | **Extended Attributes** | String | No | Comma-separated key/value filters for
+    Infoblox extended attributes (e.g., "Site=New York"). |
+
+
+    ### Additional Notes
+
+    *   **Search Constraint**: Users must provide exactly one of the following search
+    methods: a single `IP Address`, a `Network` CIDR, or a range defined by `From
+    IP` and `To IP`. Providing more than one method or none at all will result in
+    a failure.
+
+    *   **Output**: The action returns raw JSON data and populates an "IP Lookup Data"
+    table in the Google SecOps case wall, showing up to 20 records.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction**: Retrieves input parameters and validates that exactly
+    one search criterion (IP, Network, or Range) is provided.
+
+    2.  **Input Validation**: Validates IP/Network formats and ensures 'Limit' is
+    a valid positive integer.
+
+    3.  **API Execution**: Determines the correct Infoblox WAPI endpoint (IPv4 vs
+    IPv6) and executes a paginated GET request using the provided filters and extended
+    attributes.
+
+    4.  **Data Processing**: Parses the raw API response into structured data models,
+    flattening complex fields like extended attributes for reporting.
+
+    5.  **Output Generation**: Attaches the full JSON results to the action and constructs
+    a CSV-formatted data table for visual display on the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Host Info:
+  ai_description: "### General Description\nThis action retrieves detailed host records\
+    \ from Infoblox NIOS based on specific search criteria such as hostname, IPv4/IPv6\
+    \ addresses, or extensible attributes. It is primarily used for investigative\
+    \ purposes to gather DNS and network-related metadata for specific hosts, including\
+    \ A/AAAA records, PTR records, and associated DNS view information.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Name | String | No | The specific hostname of the record to\
+    \ search for. |\n| IPv4 Address | String | No | The IPv4 address associated with\
+    \ the host record. |\n| IPv6 Address | String | No | The IPv6 address associated\
+    \ with the host record. |\n| Extended Attributes | String | No | A comma-separated\
+    \ list of key/value pairs (e.g., \"Site=New York\") to filter records based on\
+    \ Infoblox extensible attributes. |\n| Limit | String | No | The maximum number\
+    \ of host records to return. Defaults to 100 if not specified. |\n\n### Additional\
+    \ Notes\n- This action does not process entities from the case context automatically;\
+    \ all search criteria must be provided via the action parameters.\n- At least\
+    \ one filter parameter (Name, IPv4, IPv6, or Extended Attributes) should be provided\
+    \ to narrow down the search, although the action will attempt to list records\
+    \ based on the limit if none are provided.\n- The action supports pagination and\
+    \ will display up to the first 20 records in a data table for quick reference.\n\
+    \n### Flow Description\n1.  **Parameter Extraction**: The action extracts the\
+    \ search criteria (Name, IP addresses, Extended Attributes) and the result limit\
+    \ from the user input.\n2.  **Validation**: It validates that provided IP addresses\
+    \ follow standard IPv4/IPv6 formats and that the 'Limit' is a valid positive integer.\n\
+    3.  **API Query**: It calls the Infoblox WAPI (`/record:host`) using the provided\
+    \ filters and handles pagination to retrieve the requested number of records.\n\
+    4.  **Result Processing**: \n    - The full raw JSON response is added to the\
+    \ action results.\n    - If hosts are found, a summary table containing key fields\
+    \ (Name, View, Zone, IPs, etc.) is created and added to the case wall.\n    -\
+    \ If no records match the criteria, a message is returned to the user."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Network Info:
+  ai_description: >-
+    ### General Description
+
+    Lists defined IPv4 and IPv6 networks and subnets within the Infoblox IPAM (IP
+    Address Management) system. This action allows security analysts to retrieve detailed
+    network metadata, including network views, containers, utilization statistics,
+    and authority information. It supports filtering by specific CIDR blocks or custom
+    extended attributes defined in the Infoblox environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Network | string | No | The network address in CIDR notation (e.g., "192.168.1.0/24").
+    If provided, the action filters for this specific network. |
+
+    | Limit | string | No | Maximum number of objects to be returned by the API. Defaults
+    to "100". Value must be a positive integer. |
+
+    | Extended Attributes | string | No | A comma-separated list of key/value pairs
+    used to filter networks based on Infoblox extended attributes (e.g., "Site=New
+    York,Region=North"). |
+
+
+    ### Additional Notes
+
+    - If no parameters are provided, the action will return a list of networks up
+    to the specified limit.
+
+    - The action produces a data table named "Networks" containing key fields such
+    as Reference ID, Network, Network View, and Utilization.
+
+    - Full raw data is attached to the action results as a JSON object.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts integration configuration (API Root, credentials)
+    and action parameters (`Network`, `Limit`, `Extended Attributes`).
+
+    2. **Validation**: Validates that the `Limit` is a positive integer and that the
+    `Network` (if provided) follows a valid CIDR format.
+
+    3. **API Interaction**: Connects to the Infoblox NIOS WAPI and performs a GET
+    request to the `/network` endpoint using the specified filters and a pagination
+    mechanism.
+
+    4. **Data Transformation**: Parses the returned JSON into internal `Network` data
+    models and prepares a flat structure for table display.
+
+    5. **Result Generation**: Adds the full JSON response to the action results and
+    populates a data table (truncated to a maximum of 20 records) for the SOAR interface.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify connectivity between Google SecOps and the Infoblox NIOS\
+    \ server. Its primary purpose is to validate that the integration configuration\
+    \ (API Root, Username, and Password) is correct and that the Infoblox WAPI service\
+    \ is reachable from the SOAR environment.\n\n### Parameters Description\n\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| N/A | N/A\
+    \ | N/A | This action does not require any input parameters. It uses the global\
+    \ integration configuration. |\n\n### Additional Notes\n- This action is intended\
+    \ for connectivity testing and does not process or require entities.\n- The connectivity\
+    \ check is performed by requesting the WAPI schema from the Infoblox server.\n\
+    \n### Flow Description\n1. **Setup**: The action initializes the SDK and retrieves\
+    \ the global integration configuration parameters (API Root, Username, and Password).\n\
+    2. **API Interaction**: It initializes the `APIManager` and calls the `test_connectivity`\
+    \ method.\n3. **Network Request**: The manager executes a `GET` request to the\
+    \ Infoblox schema endpoint (`/wapi/v2.13.1/?_schema`).\n4. **Outcome**: \n   \
+    \ - If the request returns a successful status code, the action completes with\
+    \ a success message and a `True` result.\n    - If a connection error, authentication\
+    \ error, or timeout occurs, the action catches the exception, logs the details,\
+    \ and returns a failure status."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search RPZ Rule:
+  ai_description: "### General Description\r\nThe **Search RPZ Rule** action enables\
+    \ users to search for specific Response Policy Zone (RPZ) rules within an Infoblox\
+    \ NIOS instance. It allows for targeted querying of various DNS record types (e.g.,\
+    \ A, AAAA, CNAME, MX, TXT) that are managed within Response Policy Zones. This\
+    \ action is useful for identifying existing blocklists, passthru rules, or substitutions\
+    \ configured in the DNS security layer.\r\n\r\n### Parameters Description\r\n\r\
+    \n| Parameter | Type | Mandatory | Description |\r\n| :--- | :--- | :--- | :---\
+    \ |\r\n| **Object Type** | DDL | Yes | The type of Infoblox RPZ record to search\
+    \ for (e.g., `record:rpz:a`, `record:rpz:cname`, `record:rpz:txt`). |\r\n| **Rule\
+    \ Name** | String | No | The full name of the rule to search for, typically formatted\
+    \ as `name.zone`. |\r\n| **Output Fields** | String | No | A comma-separated list\
+    \ of Infoblox record fields to include in the results (e.g., `comment`, `disable`).\
+    \ |\r\n| **Limit** | String | No | The maximum number of rule objects to return.\
+    \ Defaults to 100 if not specified. |\r\n\r\n### Additional Notes\r\n- This action\
+    \ is a utility search and **does not process or require entities** from the current\
+    \ SOAR case scope.\r\n- The action automatically includes default fields (`name`,\
+    \ `view`) in the output even if custom fields are requested.\r\n\r\n### Flow Description\r\
+    \n1. **Initialization**: The action extracts connection settings and user-defined\
+    \ search parameters, including the specific RPZ object type and optional rule\
+    \ name.\r\n2. **Validation**: The `Limit` parameter is validated to ensure it\
+    \ is a positive integer.\r\n3. **API Query**: The action sends a paginated `GET`\
+    \ request to the Infoblox WAPI. It targets the endpoint corresponding to the selected\
+    \ `Object Type` and applies the `Rule Name` filter if provided.\r\n4. **Data Processing**:\
+    \ Retrieved rules are parsed into a structured format. Up to 20 records are formatted\
+    \ into a data table for immediate viewing.\r\n5. **Completion**: The action returns\
+    \ the full result set as JSON and displays a summary message indicating the number\
+    \ of rules found."
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update RPZ CNAME Rule:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing Response Policy Zone (RPZ) CNAME rule within Infoblox NIOS.
+    This action allows security administrators to modify the DNS resolution behavior
+    for specific domain names or IP addresses. It supports various rule types including
+    passing through queries, blocking with 'No Such Domain' (NXDOMAIN) or 'No Data'
+    (NODATA), and substituting domain names for redirection. This is primarily used
+    for DNS-based containment and traffic redirection strategies.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Reference ID | String | Yes | The unique reference ID of the existing RPZ rule
+    to be updated. |
+
+    | Rule Type | DDL | Yes | The desired behavior for the rule. Options: `Passthru`,
+    `Block (No such Domain)`, `Block (No data)`, `Substitute (Domain name)`. |
+
+    | Name | String | Yes | The rule name in FQDN (Fully Qualified Domain Name) format.
+    |
+
+    | RP Zone | String | Yes | The Response Policy Zone associated with the rule.
+    |
 
     | Comment | String | No | An optional description or note for the rule. |
 
-    | Additional Parameters | String | No | A JSON-formatted string containing additional
-    Infoblox API fields to include in the creation request. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on SOAR entities; it relies entirely on the provided
-    input parameters.
-
-    - The 'IPv6 Address' parameter is strictly validated for correct IPv6 syntax before
-    the request is sent.
-
-    - 'Additional Parameters' must be a valid JSON object string if provided.
-
-
-    ### Flow Description
-
-    1. **Initialization:** Extracts and validates input parameters, ensuring that
-    required strings are non-empty and the IPv6 address is valid.
-
-    2. **Type Selection:** Determines the correct Infoblox API endpoint and record
-    type (record:rpz:aaaa or record:rpz:aaaa:ipaddress) based on the 'Object Type'
-    selection.
-
-    3. **API Interaction:** Constructs the payload (including name, zone, address,
-    and optional comments/additional parameters) and sends a POST request to the Infoblox
-    NIOS WAPI.
-
-    4. **Result Processing:** If successful, it parses the response into a JSON object
-    and generates a data table named 'RPZ AAAA Rule' for visibility in the SOAR UI.
-
-    5. **Completion:** Returns a success or failure message based on the API response
-    status.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new RPZ AAAA record (substitute rule) in the external Infoblox NIOS
-      system via a POST request.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-create_rpz_cname_rule:
-  ai_description: >-
-    Adds a CNAME rule to an existing Response Policy Zone (RPZ) in Infoblox NIOS to
-    override DNS behavior. This action allows for DNS firewalling capabilities such
-    as blocking domains, passing through specific traffic, or redirecting (substituting)
-    a domain to a different name. The action supports rules targeting Domain Names,
-    IP Addresses, or Client IP Addresses.
-
-
-    ### Flow Description:
-
-    1. **Initialization:** Retrieves Infoblox connection details and action parameters
-    including the rule name, zone, and rule logic.
-
-    2. **Validation:** Ensures mandatory fields like 'Name' and 'RP Zone' are provided
-    and validates that 'Additional Parameters' is a valid JSON object.
-
-    3. **Logic Mapping:** Determines the target API endpoint based on the 'Object
-    Type' and calculates the 'canonical' value based on the 'Rule Type' (e.g., setting
-    '*' for 'Block (No data)' or the provided substitute domain for 'Substitute').
-
-    4. **Execution:** Performs a POST request to Infoblox NIOS to create the CNAME
-    record.
-
-    5. **Output:** Formats the resulting rule data into a JSON result and a data table
-    for the case wall.
-
-
-    ### Parameters Description:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Name | string | Yes | The rule name in FQDN format. |
-
-    | RP Zone | string | Yes | The Response Policy Zone to assign the rule to. |
-
-    | Rule Type | ddl | Yes | The type of rule logic: 'Passthru', 'Block (No such
-    domain)', 'Substitute (Domain name)', or 'Block (No data)'. |
-
-    | Object Type | ddl | Yes | Specifies if the rule applies to a 'Domain Name',
-    'IP Address', or 'Client IP Address'. |
-
-    | Substitute Name | string | No | The substitute domain name to assign. Mandatory
-    only if Rule Type is 'Substitute (Domain name)'. |
-
-    | Comment | string | No | A textual comment to associate with the rule. |
-
-    | View | string | No | The DNS view in which the record is located (Default is
-    'default'). |
-
-    | Additional Parameters | string | No | A JSON object containing extra parameters
-    supported by the Infoblox WAPI for RPZ rules. |
-
-
-    ### Additional Notes:
-
-    - If 'Rule Type' is set to 'Substitute (Domain name)', the 'Substitute Name' parameter
-    must be populated.
-
-    - The 'Substitute (Domain name)' rule type is only valid for 'Domain Name' objects,
-    not for IP-based objects.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new CNAME rule within a Response Policy Zone (RPZ) on the Infoblox
-      NIOS server via a POST request, which modifies the active DNS security policy.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-create_rpz_mx_rule:
-  ai_description: >-
-    ### General Description
-
-    The **Create RPZ MX Rule** action creates a Mail Exchange (MX) override rule within
-    a specified Response Policy Zone (RPZ) on an Infoblox NIOS server. This action
-    allows security teams to redirect or manipulate mail traffic for specific domains
-    at the DNS level, typically used for blocking malicious mail servers or redirecting
-    traffic to security gateways.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Name** | String | Yes | The name of the rule (FQDN). If the zone name is not
-    included, the action appends it automatically. |
-
-    | **RP Zone** | String | Yes | The name of the Response Policy Zone where the
-    rule should be added. |
-
-    | **Mail Exchanger** | String | Yes | The domain name of the mail exchanger for
-    this rule. |
-
-    | **Preference** | String | Yes | An integer (0-65535) representing the priority
-    of the mail exchanger. Lower values have higher priority. |
-
-    | **Comment** | String | No | A descriptive comment to attach to the record in
-    Infoblox. |
-
-    | **Additional Parameters** | String | No | A JSON string containing additional
-    valid Infoblox WAPI parameters to be included in the request body. |
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action retrieves integration credentials and extracts
-    all action parameters, including the MX rule details.
-
-    2. **Validation:** It validates that mandatory strings are provided, checks that
-    the `Preference` is a valid integer within the allowed range (0-65535), and ensures
-    `Additional Parameters` is valid JSON.
-
-    3. **Request Preparation:** The rule name is formatted (ensuring the zone suffix
-    exists) and the API payload is constructed.
-
-    4. **Execution:** A POST request is sent to the Infoblox WAPI (`/record:rpz:mx`
-    endpoint).
-
-    5. **Reporting:** Upon success, the action adds the raw JSON response to the result,
-    generates a data table named 'RPZ MX Rule' containing the rule details, and provides
-    a success message.
-
-
-    ### Additional Notes
-
-    - If the `Name` parameter does not end with the `RP Zone` string, the action will
-    automatically append `. <RP Zone>` to ensure the record is correctly placed within
-    the DNS hierarchy.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new MX (Mail Exchange) record within a Response Policy Zone on the
-      Infoblox NIOS server using a POST request.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-create_rpz_naptr_rule:
-  ai_description: "### General Description\nThis action adds a Naming Authority Pointer\
-    \ (NAPTR) override rule in a Response Policy Zone (RPZ) within Infoblox NIOS.\
-    \ NAPTR records are primarily used for DNS-based service discovery and to map\
-    \ domain names to URIs or other domain names using regular expressions. This action\
-    \ allows security administrators to control how these records are handled within\
-    \ an RPZ, facilitating redirection or blocking of specific service discovery attempts.\n\
-    \n### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
-    \ | :--- | :--- |\n| Name | string | Yes | The name of the rule to be created.\
-    \ |\n| RP Zone | string | Yes | The FQDN of the Response Policy Zone where the\
-    \ rule will be assigned. |\n| Order | string | Yes | An integer (0-65535) defining\
-    \ the sequence of rule application. Lower values are processed first. |\n| Preference\
-    \ | string | Yes | An integer (0-65535) defining the order of rules with the same\
-    \ 'Order' value. |\n| Replacement | string | Yes | The replacement domain name\
-    \ or URI for the NAPTR record. |\n| Comment | string | No | An optional description\
-    \ for the rule. |\n| Additional Parameters | string | No | A JSON object string\
-    \ containing extra Infoblox WAPI parameters for the record. |\n\n### Flow Description\n\
-    1. **Initialization**: The action retrieves Infoblox configuration (API Root,\
-    \ Username, Password) and action parameters.\n2. **Validation**: \n    - Ensures\
-    \ mandatory strings (`Name`, `RP Zone`, `Replacement`) are non-empty.\n    - Validates\
-    \ `Order` and `Preference` are valid non-negative integers between 0 and 65535.\n\
-    \    - Validates `Additional Parameters` is a properly formatted JSON object if\
-    \ provided.\n3. **API Interaction**: Calls the Infoblox WAPI to create a `record:rpz:naptr`\
-    \ object via a POST request.\n4. **Data Processing**: Converts the API response\
-    \ into a structured JSON result and creates a CSV-formatted data table for display.\n\
-    5. **Completion**: Returns a success message if the rule is created; otherwise,\
-    \ it reports a failure."
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new NAPTR (Naming Authority Pointer) record within the specified Infoblox
-      Response Policy Zone (RPZ).
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-create_rpz_ptr_rule:
-  ai_description: "Adds a reverse DNS lookup override (PTR record) in a specific Response\
-    \ Policy Zone (RPZ) within Infoblox NIOS. This action allows security teams to\
-    \ redirect or block reverse DNS queries by creating substitute PTR records.\n\n\
-    ### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
-    \ | :--- | :--- |\n| PTR DName | String | Yes | The domain name of the RPZ substitute\
-    \ rule object of the PTR record. |\n| RP Zone | String | Yes | The zone to assign\
-    \ the rule to (e.g., 'rpz.local'). |\n| Name | String | No | The name of the RPZ\
-    \ Substitute rule object of the PTR record. |\n| Comment | String | No | A descriptive\
-    \ comment for the rule. |\n| IPv4 Address | String | No | The IPv4 address of\
-    \ the substitute rule. |\n| IPv6 Address | String | No | The IPv6 address of the\
-    \ substitute rule. |\n| Additional Parameters | String | No | A JSON object containing\
-    \ additional parameters for the Infoblox WAPI request. |\n\n### Additional Notes\n\
-    - **Mandatory Requirements**: While 'Name', 'IPv4 Address', and 'IPv6 Address'\
-    \ are marked as non-mandatory in the configuration, the logic requires that **at\
-    \ least one** of these three parameters must be provided to create the rule.\n\
-    - **Address Validation**: The action performs strict validation on provided IPv4\
-    \ and IPv6 addresses to ensure they are correctly formatted before sending the\
-    \ request to Infoblox.\n\n### Flow Description\n1. **Initialization**: Retrieves\
-    \ Infoblox connection parameters (API Root, Username, Password) and extracts action-specific\
-    \ parameters.\n2. **Validation**: \n    - Ensures 'PTR DName' and 'RP Zone' are\
-    \ provided.\n    - Validates that at least one identifying field (Name, IPv4,\
-    \ or IPv6) is present.\n    - Checks the format of 'IPv4 Address' and 'IPv6 Address'\
-    \ if provided.\n    - Parses 'Additional Parameters' if provided as a JSON string.\n\
-    3. **API Interaction**: Uses the `APIManager` to perform a POST request to the\
-    \ Infoblox `record:rpz:ptr` endpoint with the constructed payload.\n4. **Reporting**:\
-    \ \n    - Adds the raw API response to the action's JSON results.\n    - Generates\
-    \ a data table containing the Reference ID, Object Type, Name, and PTR DName of\
-    \ the newly created rule for visibility in the case wall.\n    - Returns a success\
-    \ message if the rule is created successfully."
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      This action performs a POST request to the Infoblox NIOS WAPI to create a new
-      'record:rpz:ptr' object, which modifies the DNS configuration within the specified
-      Response Policy Zone.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-create_rpz_srv_rule:
-  ai_description: "Adds an SRV (Service) record override in a Response Policy Zone\
-    \ (RPZ) within Infoblox NIOS. This action is used for service-based DNS lookups,\
-    \ allowing security teams to redirect or block specific service discovery traffic\
-    \ at the DNS level.\n\n### Parameters\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Name | String | Yes | The name of the SRV\
-    \ rule. |\n| Priority | String | Yes | The priority of the Substitute (SRV Record)\
-    \ Rule. Must be an integer between 0 and 65535. |\n| RP Zone | String | Yes |\
-    \ The name of the response policy zone where the record will reside. |\n| Port\
-    \ | String | Yes | The port associated with the SRV Rule. Must be an integer between\
-    \ 0 and 65535. |\n| Target | String | Yes | The hostname of the machine providing\
-    \ the service (Target). |\n| Weight | String | Yes | The weight of the Substitute\
-    \ (SRV Record) Rule. Must be an integer between 0 and 65535. |\n| Comment | String\
-    \ | No | A descriptive comment for the record. |\n| Additional Parameters | String\
-    \ | No | A JSON object containing advanced/optional WAPI parameters for the creation\
-    \ request. |\n\n### Additional Notes\n- The **Priority**, **Port**, and **Weight**\
-    \ parameters are provided as strings but must represent valid integers within\
-    \ the standard port/priority range (0-65535).\n- The action automatically appends\
-    \ the `RP Zone` to the `Name` if it is not already present to form the full FQDN\
-    \ required by Infoblox.\n\n### Flow Description\n1. **Initialization**: Collects\
-    \ Infoblox integration credentials and retrieves action parameters.\n2. **Validation**:\
-    \ \n   - Validates that mandatory string fields (Name, RP Zone, Target) are non-empty.\n\
-    \   - Converts and validates Priority, Port, and Weight as non-negative integers\
-    \ up to 65535.\n   - Parses `Additional Parameters` JSON if provided.\n3. **API\
-    \ Execution**: Sends a POST request to the Infoblox WAPI (`/record:rpz:srv`) to\
-    \ create the new SRV record.\n4. **Result Processing**: If successful, it constructs\
-    \ a data table summarizing the new rule's details (Reference ID, Object Type,\
-    \ Name, Target, Port, Priority, Weight) and attaches the full JSON response."
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new 'record:rpz:srv' entry in the specified Infoblox Response Policy
-      Zone, effectively altering DNS response behavior for the target service.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-create_rpz_txt_rule:
-  ai_description: >-
-    Adds a TXT record rule in a Response Policy Zone (RPZ) within Infoblox NIOS. This
-    action allows security administrators to associate specific text data with DNS
-    responses, often used for providing descriptive information or policy triggers
-    in response to DNS queries.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | RP Zone | string | Yes | The specific Response Policy Zone to assign the rule
-    to. |
-
-    | Name | string | Yes | The name of the rule record. The action automatically
-    appends the RP Zone name to this value. |
-
-    | Text | string | Yes | The actual text data to be associated with the TXT record.
+    | Substitute Name | String | No | The target domain name to use for redirection.
+    This is mandatory only if the 'Rule Type' is set to `Substitute (Domain name)`.
     |
 
-    | Comment | string | No | A descriptive comment for the rule record. |
-
-    | Additional Parameters | string | No | A JSON-formatted string containing additional
-    Infoblox WAPI parameters for advanced configuration. |
-
-
-    ### Flow Description
-
-    1. **Validation**: The action validates that the 'RP Zone', 'Name', and 'Text'
-    parameters are provided and non-empty. It also validates that 'Additional Parameters',
-    if provided, is a valid JSON object.
-
-    2. **Name Construction**: It formats the record name by ensuring the 'Name' parameter
-    ends with the 'RP Zone' suffix.
-
-    3. **API Interaction**: It initiates a POST request to the Infoblox WAPI endpoint
-    `/record:rpz:txt` with the record details.
-
-    4. **Result Processing**: If successful, it returns the raw JSON response from
-    Infoblox and constructs a data table (CSV) containing the Reference ID, Object
-    Type, Name, RP Zone, and the Text content of the newly created rule.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new TXT record rule within the Infoblox NIOS Response Policy Zone
-      (RPZ) configuration via the WAPI.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-delete_response_policy_zone:
-  ai_description: >-
-    Deletes a specific Response Policy Zone (RPZ) from an Infoblox NIOS instance using
-    its unique reference ID. This action is primarily used for containment cleanup
-    or policy management, allowing security administrators to programmatically remove
-    DNS policy zones that are no longer required.
-
-
-    ### General Description
-
-    This action performs a hard deletion of a Response Policy Zone in Infoblox NIOS.
-    It requires the internal Infoblox reference ID (Object Reference) of the zone
-    to execute the deletion request via the Infoblox WAPI.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Reference ID | String | Yes | The unique object reference of the response policy
-    zone to be deleted (e.g., `zone_rp/ZG5zLnpvbmUkLl9kZWZhdWx0LnJwei5jb20:rpz.com/default`).
+    | View | String | No | The DNS view where the record is located. Defaults to `default`.
     |
 
+    | Additional Parameters | String | No | A JSON-formatted string containing extra
+    key-value pairs to be passed to the Infoblox API call. |
+
 
     ### Additional Notes
 
-    - Either this action or similar management actions should be used with caution,
-    as deleting a zone is irreversible through the API.
+    - If `Rule Type` is set to `Substitute (Domain name)`, the `Substitute Name` parameter
+    must be provided, and the action will fail if the rule's reference ID indicates
+    it is an IP-based rule (as substitution for domain names only applies to domain-based
+    CNAME rules).
 
-    - The action will fail with a specific error message if the provided Reference
-    ID does not exist in the Infoblox system.
+    - If the rule type is `Passthru` and the rule is a Client IP rule, the canonical
+    value is automatically set to `rpz-passthru`.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify context and retrieves
-    Infoblox integration parameters (API Root, Credentials).
+    1. **Initialization**: Retrieves Infoblox integration credentials and extracts
+    action parameters from the environment.
 
-    2. **Parameter Extraction**: It extracts and validates the mandatory `Reference
-    ID` from the action inputs.
+    2. **Validation**: Checks that mandatory strings (`Reference ID`, `Name`, `RP
+    Zone`) are present and validates that `Additional Parameters` is a valid JSON
+    object if provided.
 
-    3. **API Interaction**: It utilizes the `APIManager` to send a `DELETE` request
-    to the Infoblox WAPI endpoint associated with the specific reference ID.
+    3. **Logic Determination**: Evaluates the `Rule Type` to set the appropriate `canonical`
+    value (e.g., empty for NXDOMAIN, `*` for NODATA, or the provided substitute domain).
 
-    4. **Error Handling**: The script catches `ItemNotFoundException` if the ID is
-    invalid and provides a descriptive error. It also handles general `InfobloxException`
-    or connection issues.
+    4. **API Execution**: Sends a `PUT` request to the Infoblox NIOS WAPI using the
+    `Reference ID` to update the rule configuration.
 
-    5. **Completion**: The action terminates by reporting a success message if the
-    deletion was confirmed by the external system or a failure message detailing the
-    error.
+    5. **Result Processing**: Captures the updated rule details, adds them to the
+    action's JSON results, and constructs a data table for the user interface.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -861,684 +1598,14 @@ delete_response_policy_zone:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes an existing Response Policy Zone (RPZ) from the Infoblox NIOS server
-      using a DELETE request to the WAPI.
+      Updates the configuration of an existing RPZ CNAME rule in the Infoblox NIOS
+      system, changing its DNS response behavior (e.g., blocking or redirection).
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-delete_rpz_rule:
-  ai_description: >-
-    Deletes a rule from a specified Response Policy Zone (RPZ) in Infoblox NIOS using
-    its unique reference ID. This action interacts with the Infoblox WAPI to perform
-    a hard deletion of the DNS policy record, supporting all RPZ record types (A,
-    AAAA, CNAME, MX, etc.) by targeting the specific object reference.
-
-
-    ### Parameters
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Reference ID | string | Yes | The unique object reference (e.g., `record:rpz:cname/ZG5zLmJpbmRfY25hbWUkLl9kZWZhdWx0LmNvbS5leGFtcGxlLmFwcDphcHAtMS5leGFtcGxlLmNvbQ`)
-    of the RPZ rule to be deleted. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: Retrieves integration configuration (API Root, Username,
-    Password) and extracts the mandatory 'Reference ID' parameter.
-
-    2. **Validation**: Ensures the 'Reference ID' is a non-empty string.
-
-    3. **API Execution**: Initializes the Infoblox API Manager and sends a `DELETE`
-    request to the specific endpoint associated with the provided Reference ID.
-
-    4. **Error Handling**: Specifically catches `ItemNotFoundException` if the rule
-    does not exist, and general `InfobloxException` for API errors, returning a failure
-    status if the deletion cannot be completed.
-
-    5. **Completion**: Updates the action status and provides a success message upon
-    successful removal of the record.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Performs a DELETE request to the Infoblox WAPI to permanently remove a DNS RPZ
-      rule from the external system.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-dhcp_lease_lookup:
-  ai_description: >-
-    ### General Description
-
-    Retrieves DHCP lease details from Infoblox NIOS based on various search criteria
-    such as IP address, MAC address (Hardware), hostname, or associated username.
-    This action allows security analysts to identify the owner or device history of
-    a specific network address by querying the Infoblox DHCP database. It supports
-    both IPv4 and IPv6 protocols and provides results in both raw JSON and a structured
-    data table format.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Address | string | No | The IPv4 or IPv6 address to look up in the lease
-    database. |
-
-    | Hardware | string | No | The MAC address for IPv4 leases. Supports exact or
-    regex-based searches. |
-
-    | Hostname | string | No | The hostname sent via DHCP option 12. Supports exact
-    or regex-based searches. |
-
-    | IPv6 DUID | string | No | The IPv6 DHCP Unique Identifier (DUID) for IPv6 leases.
-    Supports exact or regex-based searches. |
-
-    | Protocol | ddl | No | Restricts the search to a specific protocol: 'IPv4', 'IPv6',
-    or 'Both' (default). |
-
-    | Fingerprint | string | No | The DHCP client fingerprint. Supports case-insensitive
-    or regex-based searches. |
-
-    | Username | string | No | The username associated with the DHCP lease request.
-    Supports case-insensitive or regex-based searches. |
-
-    | Limit | string | No | The maximum number of objects to return. Defaults to 100
-    if not specified. |
-
-
-    ### Additional Notes
-
-    - This action does not automatically run on entities from the context; it relies
-    on the parameters provided in the action configuration.
-
-    - Regex searches are supported by Infoblox for fields like Hardware, Hostname,
-    Fingerprint, and Username using the '~' operator internally.
-
-
-    ### Flow Description
-
-    1. **Input Validation**: The action validates that the 'Limit' parameter is a
-    positive integer and verifies that the 'IP Address' (if provided) follows a valid
-    IPv4 or IPv6 format.
-
-    2. **API Interaction**: It constructs a GET request to the Infoblox WAPI `/lease`
-    endpoint, applying the provided filters (e.g., address, hardware, hostname).
-
-    3. **Pagination**: If the number of results exceeds the internal page size, the
-    action uses Infoblox pagination logic to retrieve up to the specified 'Limit'.
-
-    4. **Data Formatting**: The retrieved lease records (containing fields like binding
-    state, client hostname, and hardware address) are mapped to a flat data model.
-
-    5. **Output Generation**: The action adds the full JSON response to the execution
-    results and generates a data table (limited to 20 records) for display in the
-    case wall.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-get_response_policy_zone_details:
-  ai_description: >-
-    ### General Description  Retrieves configuration details for specified Response
-    Policy Zones (RPZ) from Infoblox NIOS. This action allows users to filter results
-    by FQDN, DNS view, and comments, providing both raw JSON data and a formatted
-    table of the zone configurations.  ### Parameters Description  | Parameter | Type
-    | Mandatory | Default | Description | | :--- | :--- | :--- | :--- | :--- | | FQDN
-    | String | No | None | The name of the DNS zone in FQDN format. | | View | String
-    | No | default | The name of the DNS view in which the zone resides (e.g., 'external').
-    | | Comment | String | No | None | Comment used to filter the zones (supports
-    partial match). | | Limit | String | No | 100 | Maximum number of objects to be
-    returned. |  ### Additional Notes  - If no filters are provided, the action will
-    return all available RP zones up to the specified limit. - The results table displays
-    a maximum of 20 records (defined by MAX_TABLE_RECORDS) for performance reasons,
-    while the JSON result contains the full set of retrieved objects. - The 'Limit'
-    parameter must be a positive integer.  ### Flow Description  1. **Parameter Initialization**:
-    The action extracts the FQDN, View, Comment, and Limit parameters from the input.
-    2. **Validation**: Validates the 'Limit' parameter to ensure it is a positive
-    integer greater than zero. 3. **API Query**: Connects to the Infoblox NIOS WAPI
-    and performs a GET request to the 'zone_rp' endpoint with the specified filter
-    criteria. 4. **Output Generation**: Parses the returned zone data into a JSON
-    result and a human-readable data table, then completes the action with a summary
-    message.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-ip_lookup:
-  ai_description: >-
-    Performs IPAM (IP Address Management) lookups within Infoblox NIOS to retrieve
-    detailed information about IP addresses, networks, or IP ranges. The action allows
-    for granular searching based on status and extended attributes, providing visibility
-    into lease information, MAC addresses, and network associations.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Limit | string | No | Maximum number of objects to be returned (Default is 100).
-    |
-
-    | IP Address | string | No | Specific IP address to retrieve information for.
-    Cannot be used with Network or From/To IP. |
-
-    | Network | string | No | Network in FQDN/CIDR format (e.g., 192.168.1.0/24).
-    Cannot be used with IP Address or From/To IP. |
-
-    | From IP | string | No | Starting IP of a range. Must be used with 'To IP'. |
-
-    | To IP | string | No | Ending IP of a range. Must be used with 'From IP'. |
-
-    | Status | ddl | No | Filters results by IP device status: All, Active, Used,
-    or Unused. |
-
-    | Extended Attributes | string | No | Comma-separated key/value filter for Infoblox
-    extended attributes (e.g., 'Site=New York'). |
-
-
-    ### Additional Notes
-
-    - **Mutual Exclusivity:** Users must provide exactly one of the following: a specific
-    'IP Address', a 'Network', or a range defined by 'From IP' and 'To IP'. Providing
-    multiple or none will result in a failure.
-
-    - **IPv4/IPv6 Support:** The action automatically detects and uses the appropriate
-    Infoblox API endpoint based on the format of the input parameters.
-
-
-    ### Flow Description
-
-    1. **Parameter Initialization:** Retrieves integration configuration (API root,
-    credentials) and action-specific search parameters.
-
-    2. **Input Validation:** Ensures that the search criteria are valid and mutually
-    exclusive (e.g., verifying CIDR format for networks or validating IP formats).
-
-    3. **API Interaction:** Connects to the Infoblox NIOS instance and performs a
-    paginated GET request using the `ip_lookup` method.
-
-    4. **Data Processing:** Maps the raw API response to the `IPLookup` data model,
-    extracting key fields such as MAC Address, DHCP details, and Usage status.
-
-    5. **Output Generation:** Appends the full raw JSON to the action results and
-    constructs a formatted data table for the case wall.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-list_host_info:
-  ai_description: "### General Description\nThe **List Host Info** action retrieves\
-    \ detailed host records from Infoblox NIOS. It allows users to search for host\
-    \ objects based on various criteria such as hostname, IPv4 address, IPv6 address,\
-    \ or specific extensible attributes. The action is primarily used for network\
-    \ reconnaissance and asset identification, providing data such as DNS views, zones,\
-    \ configuration status, and all associated IP records.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | **IPv4 Address** | String | No | Filters results by a specific IPv4 address\
-    \ associated with the host record. |\n| **Name** | String | No | Filters results\
-    \ by the hostname (FQDN) of the record. |\n| **IPv6 Address** | String | No |\
-    \ Filters results by a specific IPv6 address associated with the host record.\
-    \ |\n| **Extended Attributes** | String | No | A comma-separated string of key/value\
-    \ pairs (e.g., \"Site=New York\") used to filter hosts based on custom Infoblox\
-    \ attributes. |\n| **Limit** | String | No | Specifies the maximum number of objects\
-    \ to return. Defaults to 100. |\n\n### Additional Notes\n- This action does not\
-    \ automatically run on entities in the Google SecOps case scope; it relies strictly\
-    \ on the provided input parameters.\n- If multiple filters are provided (e.g.,\
-    \ Name and IPv4), the external system typically treats them as an AND condition.\n\
-    - The results table displays up to a hardcoded maximum of 20 records for readability,\
-    \ while the full JSON output contains all retrieved records up to the specified\
-    \ limit.\n\n### Flow Description\n1. **Initialization**: The action extracts integration\
-    \ configuration (API credentials) and action parameters (filters and limits).\n\
-    2. **Validation**: It validates that the `Limit` is a positive integer and verifies\
-    \ the format of provided IPv4/IPv6 addresses.\n3. **Request Construction**: The\
-    \ `APIManager` builds a GET request to the `/record:host` endpoint, applying the\
-    \ provided filters and pagination logic.\n4. **Data Retrieval**: The action fetches\
-    \ host records, handling potential API rate limits with a retry mechanism.\n5.\
-    \ **Output Generation**: \n    - The raw response is added as a JSON result.\n\
-    \    - A formatted CSV data table is created containing key fields like Reference\
-    \ ID, Name, DNS View, and associated IP addresses."
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-list_network_info:
-  ai_description: >-
-    Lists defined IPv4/IPv6 networks and subnets within Infoblox IPAM. This action
-    allows users to retrieve a list of network objects based on specific CIDR notation
-    or custom filtering criteria via extended attributes.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Network | String | No | The network address in CIDR notation (e.g., "192.168.1.0/24").
-    If provided, the action filters results to match this specific network. |
-
-    | Limit | String | No | Maximum number of network objects to be returned. Default
-    value is "100". |
-
-    | Extended Attributes | String | No | A comma-separated key/value formatted filter
-    for extended attributes (e.g., "Site=New York,Department=IT"). Used for advanced
-    filtering of network objects. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Infoblox API manager and extracts
-    configuration and action parameters.
-
-    2. **Validation**: It validates that the 'Limit' is a positive integer and that
-    the 'Network' parameter (if provided) follows a valid CIDR format.
-
-    3. **Data Retrieval**: The action performs a GET request to the Infoblox NIOS
-    WAPI `/network` endpoint, applying filters for the specific network and any provided
-    extended attributes.
-
-    4. **Processing**: It processes the API response, converting raw data into a structured
-    format.
-
-    5. **Output**: Results are added to the action's JSON results. If networks are
-    found, a data table titled "Networks" is created containing the top 20 records
-    (defined by MAX_TABLE_RECORDS), showing details such as Reference ID, Network,
-    Network View, and Utilization.
-
-
-    ### Additional Notes
-
-    - This action does not interact with SOAR entities; it relies entirely on input
-    parameters to perform lookups.
-
-    - Pagination is handled internally by the API manager based on the provided limit.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-ping:
-  ai_description: >-
-    ### General Description
-
-    The **Ping** action is a utility designed to verify the connectivity between Google
-    SecOps and the Infoblox NIOS server. It ensures that the provided credentials
-    and API root are correct and that the network path to the Infoblox WAPI (Web API)
-    is open.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **API Root** | String | Yes | The base URL of the Infoblox NIOS server (e.g.,
-    `https://192.168.1.10`). |
-
-    | **Username** | String | Yes | The username used to authenticate with the Infoblox
-    NIOS server. |
-
-    | **Password** | String | Yes | The password used to authenticate with the Infoblox
-    NIOS server. |
-
-    | **Verify SSL** | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the Infoblox server. (Defaults to False in the script logic). |
-
-
-    ### Additional Notes
-
-    - This action does not interact with any entities in a case. It is typically used
-    during initial setup or for troubleshooting integration health.
-
-    - It specifically targets the `/?_schema` endpoint of the Infoblox WAPI to confirm
-    a successful handshake.
-
-
-    ### Flow Description
-
-    1. **Parameter Initialization:** The script retrieves the integration configuration
-    parameters including API Root, Username, and Password.
-
-    2. **Manager Setup:** An instance of the `APIManager` is created using the provided
-    connectivity details.
-
-    3. **Connectivity Test:** The `test_connectivity` method is called, which performs
-    a GET request to the Infoblox schema endpoint.
-
-    4. **Result Handling:** If the request is successful, the action returns a success
-    message and a boolean result of `True`. If an exception occurs (e.g., authentication
-    failure or timeout), it catches the error and returns a failure message with a
-    boolean result of `False`.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-search_rpz_rule:
-  ai_description: "### General Description\nSearches for a specific Response Policy\
-    \ Zone (RPZ) rule within Infoblox NIOS by its name and object type. This action\
-    \ is used to retrieve detailed information about existing rules, such as CNAME,\
-    \ A, AAAA, MX, and TXT records within an RPZ, allowing analysts to verify configuration\
-    \ or identify existing policies.\n\n### Parameters Description\n\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Object\
-    \ Type** | DDL | Yes | The Infoblox object type to search for (e.g., `record:rpz:cname`,\
-    \ `record:rpz:a`). |\n| **Rule Name** | String | No | The full rule name to search\
-    \ for (usually formatted as `name.zone`). |\n| **Output Fields** | String | No\
-    \ | A comma-separated list of additional fields to include in the response (e.g.,\
-    \ `address`, `comment`). Default fields like `name` and `view` are always included.\
-    \ |\n| **Limit** | String | No | Maximum number of objects to be returned. Defaults\
-    \ to 100. |\n\n### Additional Notes\n- The action uses a paginated search to retrieve\
-    \ results from the Infoblox WAPI.\n- A maximum of 20 records will be displayed\
-    \ in the SOAR UI data table for readability, though all results are included in\
-    \ the raw JSON output.\n- Default fields `name` and `view` are automatically appended\
-    \ to any custom fields provided in the `Output Fields` parameter.\n\n### Flow\
-    \ Description\n1. **Parameter Initialization**: The action retrieves integration\
-    \ credentials and extracts the user-provided search criteria (Object Type, Rule\
-    \ Name, Output Fields, and Limit).\n2. **Validation**: The `Limit` parameter is\
-    \ validated to ensure it is a positive integer. \n3. **API Interaction**: The\
-    \ action sends a GET request to the Infoblox NIOS API targeting the specific `Object\
-    \ Type` with the `Rule Name` filter.\n4. **Data Processing**: Retrieved results\
-    \ are parsed into a standardized format. \n5. **Output Generation**: The raw JSON\
-    \ results are added to the action result, and a summary data table titled \"RPZ\
-    \ Rules\" is created for the case wall if any matches are found."
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-update_rpz_cname_rule:
-  ai_description: >-
-    ### General Description
-
-    Updates an existing Response Policy Zone (RPZ) CNAME rule in Infoblox NIOS. This
-    action allows users to modify the configuration of established DNS rules, including
-    changing the rule type (e.g., switching from blocking to passthrough), updating
-    the rule name, or adding comments. It is primarily used to adjust DNS-level security
-    policies dynamically based on evolving threat intelligence or administrative requirements.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Reference ID | String | Yes | The unique reference identifier of the existing
-    RPZ rule to be updated. |
-
-    | Rule Type | DDL | Yes | Specifies the new behavior for the rule. Options include:
-    'Passthru', 'Block (No such Domain)', 'Block (No data)', and 'Substitute (Domain
-    name)'. |
-
-    | Name | String | Yes | The name of the rule in FQDN format. |
-
-    | RP Zone | String | Yes | The name of the Response Policy Zone where the rule
-    is located. |
-
-    | Comment | String | No | An optional description or administrative note for the
-    rule. |
-
-    | Substitute Name | String | No | The domain name to substitute for the original
-    query. **Mandatory** if 'Rule Type' is set to 'Substitute (Domain name)'. |
-
-    | View | String | No | The DNS view in which the records are located. Defaults
-    to 'default'. |
-
-    | Additional Parameters | String | No | A JSON object string containing extra
-    Infoblox WAPI parameters to include in the update request. |
-
-
-    ### Additional Notes
-
-    - If 'Rule Type' is set to 'Substitute (Domain name)', the action will fail if
-    'Substitute Name' is not provided.
-
-    - The action automatically formats the rule name using the 'Name' and 'RP Zone'
-    parameters to ensure FQDN consistency.
-
-    - This action uses a 'PUT' request, meaning it modifies state in the Infoblox
-    NIOS environment.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Extracts the API configuration and action parameters, validating
-    that mandatory fields like 'Reference ID', 'Name', and 'RP Zone' are present.
-
-    2. **Rule Logic Calculation**: Determines the 'canonical' value for the CNAME
-    record based on the selected 'Rule Type'. For example, it sets canonical to '*'
-    for 'Block (No data)' or uses the 'Substitute Name' for substitution rules.
-
-    3. **API Execution**: Calls the Infoblox WAPI via a PUT request to the rule's
-    specific reference URL with the updated parameters.
-
-    4. **Result Processing**: If the update is successful, it converts the returned
-    JSON data into a flat structure for a SOAR data table and populates the action
-    result.
-
-    5. **Completion**: Ends the action with a success message containing the Reference
-    ID or logs an error if the rule update fails or the reference ID is not found.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Updates an existing RPZ CNAME rule configuration in Infoblox NIOS via a PUT
-      request, which modifies DNS resolution behavior for specific records.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

@@ -2,30 +2,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity between Google
-    SecOps and the **Spell Checker** integration. Its primary purpose is to confirm
-    that the integration configuration is correct and that the system can successfully
-    execute actions within this integration namespace.
+    Verifies the connectivity and configuration of the Spell Checker integration.
+    This action is typically used during the initial setup or for troubleshooting
+    to ensure that the integration is responsive and properly initialized within the
+    Google SecOps environment.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    There are no parameters configured for this action.
+    There are no parameters for this action.
 
 
     ### Additional Notes
 
-    This action does not process entities, call external APIs, or use the `SpellCheckerManager`
-    logic. It is a standard 'Health Check' action.
+    This action is a simple 'Ping' test. It does not perform any text analysis, nor
+    does it interact with the SpellCheckerManager or any external web services. It
+    serves strictly as a heartbeat check.
 
 
     ### Flow Description
 
-    1. **Initialize Context**: The action initializes the Siemplify action module
-    to interface with the SOAR platform.
+    1. **Initialization**: The action initializes the SiemplifyAction object to interface
+    with the Google SecOps platform.
 
-    2. **Terminate with Success**: The script immediately ends the execution, returning
-    a static string 'Spell Checker is connected' and a boolean success status of `True`.
+    2. **Status Reporting**: The action immediately terminates and returns a success
+    message stating 'Spell Checker is connected', confirming the integration is operational.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -39,7 +40,7 @@ Ping:
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -53,14 +54,15 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-SpellingCheck:
+Spelling Check:
   ai_description: >-
     ### General Description
 
-    The **Spelling Check** action identifies misspelled words within a provided text
-    string and suggests potential corrections based on word frequency and a predefined
-    allowlist. It is a utility-focused action used to validate the accuracy of text
-    data, such as logs, descriptions, or email bodies, within a playbook flow.
+    This action analyzes a provided block of text to identify potential spelling errors
+    and suggest likely corrections based on word frequency. It uses a local spell-checking
+    engine with an augmented dictionary of technology-related terms (e.g., 'siemplify',
+    'saas', 'playbook'). The action is primarily intended for cleaning up notes, descriptions,
+    or logs within a case.
 
 
     ### Parameters Description
@@ -69,45 +71,54 @@ SpellingCheck:
 
     | :--- | :--- | :--- | :--- |
 
-    | Input | String | No | The text string that will be analyzed by the Spell Checker.
-    If left empty, the action will likely process an empty string and return zero
-    results. |
+    | Input | String | No | The raw text to be checked for spelling errors. If left
+    empty, the action will likely process an empty string and return zero mistakes.
+    |
+
+
+    ### Additional Notes
+
+    - This action does not interact with external APIs; it uses a local library and
+    dictionary.
+
+    - It automatically filters out emails and URLs to prevent them from being flagged
+    as spelling errors.
+
+    - The result includes both a JSON object and a human-readable data table.
 
 
     ### Flow Description
 
-    1.  **Text Sanitization**: The action retrieves the input text and applies regex
-    patterns to remove special characters and symbols, while retaining letters, spaces,
-    parentheses, and '@' symbols.
+    1. **Text Preprocessing**: The action cleans the 'Input' text by removing special
+    characters, newlines, and carriage returns using regular expressions.
 
-    2.  **Tokenization**: The sanitized text is split into individual words. The action
-    filters out potential false positives like email addresses (containing '@') and
-    URLs (containing 'http').
+    2. **Tokenization**: The cleaned text is split into individual words. Any tokens
+    containing '@' (emails) or 'http' (URLs) are filtered out.
 
-    3.  **Spell Checking**: The word list is compared against a dictionary provided
-    by the `pyspellchecker` library and a custom allowlist (containing tech-specific
-    terms like 'siemplify', 'playbook', and 'saas').
+    3. **Validation**: The remaining words are checked against a local dictionary
+    (including a custom allowlist of technical terms) to identify unknown words.
 
-    4.  **Suggestion Generation**: For every word identified as misspelled, the action
-    generates a list of likely candidates for the correct spelling.
+    4. **Suggestion Generation**: For every unknown word, the engine generates a list
+    of potential candidates for the correct spelling.
 
-    5.  **Reporting**: The results are compiled into a JSON object and a Data Table
-    named "Found spelling mistakes," displaying the original misspelled word alongside
-    its recommended corrections.
+    5. **Reporting**: The action builds a JSON result map and a data table titled
+    'Found spelling mistakes' which maps original words to their recommended corrections.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: false
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      The action adds a data table named 'Found spelling mistakes' to the action's
+      results inside the SOAR platform.
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

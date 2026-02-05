@@ -1,21 +1,43 @@
-change_policy_state:
+Change Policy State:
   ai_description: >-
-    ### General Description Enables or disables a specific authentication policy within
-    the Silverfort platform. This action provides a quick mechanism to toggle the
-    active state of a policy without altering its underlying configuration, allowing
-    security teams to dynamically manage security controls during incident response.
-    ### Parameters Description | Parameter Name | Type | Mandatory | Description |
-    | :--- | :--- | :--- | :--- | | Policy ID | String | Yes | The unique identifier
-    of the Silverfort policy to be updated. | | Enable Policy | Boolean | Yes | Specifies
-    the target state: true to enable the policy, false to disable it. | ### Flow Description
-    1. **Parameter Extraction**: The action retrieves the mandatory Policy ID and
-    the target Enable Policy boolean state from the user input. 2. **API Client Setup**:
-    Initializes the Silverfort Policy API client using the integration configuration.
-    3. **State Modification**: Sends a POST request to the Silverfort changePolicyState
-    endpoint to update the policy's status. 4. **Result Processing**: Captures the
-    success or failure of the operation and updates the action's result JSON and output
-    message. ### Additional Notes This action is a direct management operation and
-    does not process or rely on entities within the SOAR case environment.
+    ### General Description
+
+    This action toggles the operational state (enabled or disabled) of a specific
+    authentication policy within the Silverfort platform. It is designed for orchestration
+    tasks where policies need to be quickly activated or deactivated in response to
+    security events or maintenance windows without altering the policy's underlying
+    configuration.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Policy ID** | string | Yes | The unique identifier of the authentication policy
+    in Silverfort that you wish to modify. |
+
+    | **Enable Policy** | boolean | Yes | Determines the target state. Set to `true`
+    to enable the policy, or `false` to disable it. |
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action retrieves the mandatory `Policy ID` and
+    the boolean `Enable Policy` flag from the SOAR environment.
+
+    2.  **Client Initialization:** It initializes an authenticated Policy API client
+    using the Silverfort integration credentials (API Root, External API Key, and
+    Policies App User credentials).
+
+    3.  **API Execution:** The action sends a POST request to the Silverfort `/v1/public/change_policy_state`
+    endpoint, passing the policy identifier and the desired boolean state (converted
+    to a lowercase string as required by the API).
+
+    4.  **Result Handling:** Upon a successful API response, the action constructs
+    a JSON result containing the policy ID and its new status, and outputs a confirmation
+    message to the case wall.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -24,14 +46,14 @@ change_policy_state:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Modifies the 'enabled' state of an authentication policy in the Silverfort platform
-      via a POST request to the management API.
+      Updates the 'enabled' or 'disabled' state of an authentication policy in the
+      Silverfort management console via an API POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -45,59 +67,56 @@ change_policy_state:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-get_entity_risk:
+Get Entity Risk:
   ai_description: >-
     ### General Description
 
-    The **Get Entity Risk** action retrieves real-time risk intelligence for a specific
-    user or resource from the Silverfort platform. It allows security analysts to
-    fetch critical risk metrics, including numerical risk scores, severity classifications
-    (Low, Medium, High, Critical), and specific risk factors contributing to the score.
-    This data helps in making informed decisions during incident response, such as
-    determining if an identity should be subjected to stricter authentication policies.
+    This action retrieves risk information for a specific user or resource from Silverfort.
+    It provides detailed security context, including the current risk score, severity
+    level (e.g., Low, Medium, High, Critical), and specific risk factors. This information
+    helps analysts understand the threat level associated with a specific identity
+    or resource within the environment.
 
 
     ### Parameters Description
 
+    | Parameter Name | Description | Type | Mandatory | Additional Notes |
 
-    | Parameter Name | Type | Mandatory | Description |
+    | :--- | :--- | :--- | :--- | :--- |
 
-    | :--- | :--- | :--- | :--- |
+    | **User Principal Name** | The user principal name (e.g., user@domain.com). |
+    string | No | Either this or **Resource Name** must be provided to identify the
+    target. |
 
-    | User Principal Name | string | No* | The unique identity of the user (e.g.,
-    `user@domain.com`). |
-
-    | Resource Name | string | No* | The name of the non-user resource/asset to investigate.
-    |
+    | **Resource Name** | The name for non-user entities/resources. | string | No
+    | Either this or **User Principal Name** must be provided. |
 
 
     ### Additional Notes
 
-    *   **Conditional Mandatary:** While both parameters are marked as optional in
-    the configuration, the action logic requires that **either** the `User Principal
-    Name` or the `Resource Name` must be provided. If both are empty, the action will
-    fail with a validation error.
+    - To function correctly, the integration must be configured with valid **Risk
+    App User ID** and **Risk App User Secret**.
 
-    *   This action is read-only and does not modify any risk levels or settings within
-    Silverfort.
+    - The action requires at least one identifier (User Principal Name or Resource
+    Name) to execute; if both are missing, the action will fail with a validation
+    error.
 
 
     ### Flow Description
 
-    1.  **Parameter Extraction:** The action retrieves the `User Principal Name` and
-    `Resource Name` from the input settings.
+    1. **Extraction**: The action extracts the provided `User Principal Name` or `Resource
+    Name` from the input parameters.
 
-    2.  **Validation:** It verifies that at least one identifier has been provided;
-    otherwise, it raises a `SilverfortInvalidParameterError`.
+    2. **Validation**: It ensures that at least one of the two identifiers is present.
 
-    3.  **API Client Initialization:** The script initializes the `RiskApiClient`
-    using the integration's API root and credentials (JWT-based authentication).
+    3. **Authentication**: The action initializes the Silverfort Risk API client,
+    generating a JWT token based on the Risk App credentials.
 
-    4.  **Data Retrieval:** A GET request is sent to the Silverfort `/v1/public/getEntityRisk`
-    endpoint with the provided entity identifiers.
+    4. **Data Retrieval**: It makes a GET request to the Silverfort API (`/v1/public/getEntityRisk`)
+    using the provided identifier.
 
-    5.  **Output Generation:** The retrieved risk details (score, severity, risk factors)
-    are parsed into a structured JSON object and returned as the action result.
+    5. **Result Processing**: The retrieved risk data (score, severity, and factors)
+    is parsed and returned as a JSON result for further use in playbooks.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -111,7 +130,7 @@ get_entity_risk:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -125,49 +144,41 @@ get_entity_risk:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-get_policy:
+Get Policy:
   ai_description: >-
-    ### General Description
-
-    The **Get Policy** action retrieves comprehensive information about a specific
-    authentication policy from Silverfort. This includes configuration details such
-    as associated users, groups, network sources, destinations, and action settings
-    (e.g., allow, block, or MFA). This action is useful for auditing existing policies
-    or verifying configurations as part of an investigation.
+    Retrieves detailed information about a specific Silverfort authentication policy
+    based on its unique Policy ID. This action provides full visibility into the policy's
+    configuration, including assigned users, groups, source/destination settings,
+    and enforcement actions.
 
 
-    ### Parameters Description
+    ### Parameters
 
+    | Parameter Name | Description | Type | Mandatory | Default Value |
 
-    | Parameter | Type | Mandatory | Description |
+    | :--- | :--- | :--- | :--- | :--- |
 
-    | :--- | :--- | :--- | :--- |
-
-    | Policy ID | String | Yes | The unique identifier of the Silverfort policy to
-    be retrieved. |
+    | Policy ID | The unique identifier of the authentication policy to retrieve.
+    | String | True | None |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action extracts the `Policy ID` provided by the
-    user from the input parameters.
+    1. **Parameter Extraction:** The action extracts the mandatory `Policy ID` from
+    the input parameters.
 
-    2. **Client Initialization**: It initializes a connection to the Silverfort Policies
-    API using the configured integration credentials.
+    2. **Client Initialization:** It initializes the Silverfort Policy API client
+    using the configured integration credentials (API Root, External API Key, and
+    Policies App User credentials).
 
-    3. **Data Retrieval**: It sends a GET request to the Silverfort API to fetch the
-    detailed configuration of the specified policy.
+    3. **API Request:** The action sends a GET request to the Silverfort API (`/v2/public/policies/{policy_id}`)
+    to fetch the specific policy configuration.
 
-    4. **Result Processing**: The action parses the retrieved policy data, populates
-    the action's JSON results with the configuration details, and generates a success
-    message containing the policy name and ID.
+    4. **Data Processing:** The retrieved policy object is converted into a structured
+    JSON format.
 
-
-    ### Additional Notes
-
-    This action is a read-only operation and does not perform any modifications to
-    the Silverfort environment. It does not run on specific entities but rather on
-    a provided Policy ID.
+    5. **Output Generation:** The action returns the JSON data to the SOAR environment
+    and provides a success message identifying the policy name and ID.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -181,7 +192,7 @@ get_policy:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -195,51 +206,48 @@ get_policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-get_service_account:
+Get Service Account:
   ai_description: >-
     ### General Description
 
-    The **Get Service Account** action retrieves detailed metadata and security attributes
-    for a specific service account from the Silverfort Identity Security platform
-    using its unique Global Unique Identifier (GUID). This action provides visibility
-    into a service account's risk level, predictability, protection status, and other
-    critical identity-related data points.
+    Fetches comprehensive information about a specific service account from Silverfort
+    using its unique GUID. This action allows analysts to retrieve critical attributes
+    such as risk level, predictability, protection status, and authentication patterns
+    for targeted investigation.
 
 
     ### Parameters Description
 
-    | Parameter | Description | Type | Mandatory |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Service Account GUID | The unique identifier (GUID) of the service account you
-    wish to retrieve information for. | string | True |
-
-
-    ### Additional Notes
-
-    This action is purely informational and does not perform any changes to the service
-    account or the Silverfort environment. It requires the 'Service Accounts API'
-    credentials to be configured within the Silverfort integration settings.
+    | Service Account GUID | String | Yes | The unique GUID of the service account
+    in Silverfort that you want to retrieve details for. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action extracts the provided `Service Account
-    GUID` from the input.
+    1. **Parameter Extraction**: Retrieves the provided Service Account GUID from
+    the action inputs.
 
-    2. **Authentication**: It initializes an authenticated session specifically for
-    the Silverfort Service Accounts API using JWT-based authentication.
+    2. **API Interaction**: Initiates a GET request to the Silverfort Service Accounts
+    API using authenticated credentials (including a JWT token generated from the
+    App User ID and Secret).
 
-    3. **API Request**: The action sends a GET request to the Silverfort backend using
-    the service account's GUID.
+    3. **Data Retrieval**: Fetches the account's details, including metadata like
+    UPN, domain, risk score, and privilege status.
 
-    4. **Data Processing**: Upon a successful response, the action parses the service
-    account attributes (e.g., UPN, risk, predictability, protection status).
+    4. **Result Processing**: Converts the retrieved data into a JSON format for use
+    in downstream automation or UI display and generates a status message confirming
+    successful retrieval.
 
-    5. **Output Generation**: The detailed service account data is saved as a JSON
-    result, and a success message containing the account's display name and GUID is
-    returned.
+
+    ### Additional Notes
+
+    This action requires the **Service Accounts App User ID** and **Service Accounts
+    App User Secret** to be configured in the integration settings to facilitate the
+    required JWT authentication for the Service Accounts API.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -253,7 +261,7 @@ get_service_account:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -267,261 +275,14 @@ get_service_account:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-list_policies:
+List Policies:
   ai_description: >-
     ### General Description
 
-    The **List Policies** action retrieves a list of all authentication policies configured
-    in Silverfort. It allows users to filter the returned data by specifying a list
-    of desired fields, providing visibility into the security posture and access controls
-    defined within the Silverfort platform.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Fields** | String | No | A comma-separated list of specific fields to include
-    in the response. If left empty, all available fields are returned. Available fields
-    include: `enabled`, `policyName`, `authType`, `protocols`, `policyType`, `allUsersAndGroups`,
-    `usersAndGroups`, `allDevices`, `sources`, `allDestinations`, `destinations`,
-    `action`, `MFAPrompt`, `all`, `bridgeType`. |
-
-
-    ### Additional Notes
-
-    - If invalid fields are provided in the `Fields` parameter, the action logs a
-    warning and ignores the invalid entries while still attempting to fetch valid
-    fields.
-
-    - This action does not run on specific entities but retrieves global configuration
-    data from the Silverfort environment.
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action initializes the Silverfort Policy API client
-    using the provided integration credentials.
-
-    2. **Parameter Extraction:** It extracts the `Fields` parameter from the action
-    configuration.
-
-    3. **Validation:** If fields are specified, the action validates them against
-    a known list of supported policy index fields.
-
-    4. **API Call:** The action makes a request to the Silverfort `/v2/public/policies/index`
-    endpoint to fetch the policy data.
-
-    5. **Processing:** The retrieved policy list is converted into a structured JSON
-    format.
-
-    6. **Completion:** The action reports the total count of policies retrieved and
-    attaches the full details to the JSON results.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-list_service_accounts:
-  ai_description: >-
-    ### General Description
-
-    This action lists service accounts from Silverfort, providing details about their
-    attributes, risk scores, and protection status. It is primarily used for auditing
-    service accounts within the environment or for retrieving specific account identifiers
-    (GUIDs) needed for subsequent management actions.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Page Size** | String | No | The number of results to return per page (1-100).
-    Defaults to 50 if not specified. |
-
-    | **Page Number** | String | No | The specific page number of results to retrieve.
-    Defaults to 1. |
-
-    | **Fields** | String | No | A comma-separated list of specific attributes to
-    include in the response (e.g., `guid, display_name, risk`). If left empty, all
-    available fields are returned. |
-
-
-    ### Additional Notes
-
-    - This action requires the **Service Accounts App User ID** and **Service Accounts
-    App User Secret** to be configured in the Silverfort integration settings.
-
-    - The action automatically validates the provided `Fields` against the supported
-    Silverfort API schema and will ignore any invalid field names while logging a
-    warning.
-
-    - This action does not target specific entities in a case; it performs a global
-    query against the Silverfort platform.
-
-
-    ### Flow Description
-
-    1.  **Parameter Extraction**: The action parses the `Page Size`, `Page Number`,
-    and `Fields` inputs.
-
-    2.  **Field Validation**: It splits the `Fields` string into a list and compares
-    it against the supported constants (`SA_INDEX_FIELDS`).
-
-    3.  **Authentication**: A secure session is established using the JWT authenticator
-    specifically for the Service Accounts API.
-
-    4.  **API Request**: A POST request is sent to the `/v1/public/serviceAccounts/index`
-    endpoint with the pagination and field filtering criteria.
-
-    5.  **Result Processing**: The retrieved list of service accounts is converted
-    to a JSON object and attached to the action results for use in downstream playbook
-    tasks.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-ping:
-  ai_description: >-
-    ### General Description
-
-    The **Ping** action is a diagnostic utility designed to verify connectivity between
-    Google SecOps and the Silverfort Identity Security platform. It validates the
-    configuration settings by testing the External API Key and individual credentials
-    for the Risk, Service Accounts, and Policies API modules. This ensures that the
-    integration is properly authenticated and capable of performing subsequent actions.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not have any input parameters. It relies
-    solely on the integration's configuration settings (API Root, API Key, and module-specific
-    credentials). |
-
-
-    ### Additional Notes
-
-    - The action identifies which Silverfort API modules (Risk, Service Accounts,
-    Policies) have credentials configured in the integration settings and tests only
-    those that are provided.
-
-    - It requires at least one set of API credentials (Risk, Service Accounts, or
-    Policies) to be configured; otherwise, it will return an error.
-
-    - Connectivity is tested using lightweight, non-mutating API calls (e.g., listing
-    a single service account or fetching policy names).
-
-
-    ### Flow Description
-
-    1.  **Initialization**: The action initializes the Silverfort base client and
-    retrieves integration configuration parameters.
-
-    2.  **Configuration Check**: It identifies which API types (Risk, Service Accounts,
-    Policies) have valid credentials configured.
-
-    3.  **Connectivity Testing**: For each configured API type, the action instantiates
-    a specific client and executes a `test_connectivity` method:
-        - **Risk API**: Attempts a GET request to the `getEntityRisk` endpoint.
-        - **Service Accounts API**: Attempts a POST request to list service accounts
-    with a page size of 1.
-        - **Policies API**: Attempts a GET request to retrieve policy rule names and
-    IDs.
-    4.  **Result Aggregation**: The action tracks which connections succeeded and
-    which failed.
-
-    5.  **Output**: It returns a success message if all configured APIs connect successfully,
-    or a partial success/failure message detailing the status of each module.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-update_entity_risk:
-  ai_description: >-
-    ### General Description
-
-    Updates risk information for a specific user in Silverfort. This action allows
-    security analysts to manually or programmatically set a risk level for a user
-    based on external threat intelligence or internal security events. It targets
-    a specific user via their User Principal Name (UPN) and applies a risk score with
-    a defined severity and expiration timeframe.
+    Retrieves a comprehensive list of authentication policies from the Silverfort
+    Identity Security platform. This action provides visibility into policy configurations,
+    including their states, types, and associated protocols. Users can optionally
+    specify a subset of fields to return, allowing for focused data retrieval.
 
 
     ### Parameters
@@ -530,66 +291,44 @@ update_entity_risk:
 
     | :--- | :--- | :--- | :--- |
 
-    | User Principal Name | string | Yes | The user principal name (e.g., user@domain.com)
-    for which the risk will be updated. |
-
-    | Risk Type | ddl | Yes | The specific category of risk to update. Options include:
-    `activity_risk`, `malware_risk`, `data_breach_risk`, and `custom_risk`. |
-
-    | Severity | ddl | Yes | The severity level of the risk being assigned. Options
-    include: `low`, `medium`, `high`, and `critical`. |
-
-    | Valid For Hours | string | Yes | Specifies how long (in hours) the risk indicator
-    should remain valid in the Silverfort system. Must be a positive integer. |
-
-    | Description | string | Yes | A descriptive note explaining the reason for the
-    risk update. |
-
-
-    ### Additional Notes
-
-    - This action interacts with the Silverfort Risk API.
-
-    - The 'Valid For Hours' parameter is passed as a string but is treated as a positive
-    integer internally for the API request.
+    | Fields | string | No | A comma-separated list of attributes to include in the
+    response (e.g., `policyName, enabled, action`). If empty, all supported fields
+    are returned. Supported fields: `enabled`, `policyName`, `authType`, `protocols`,
+    `policyType`, `allUsersAndGroups`, `usersAndGroups`, `allDevices`, `sources`,
+    `allDestinations`, `destinations`, `action`, `MFAPrompt`, `all`, `bridgeType`.
+    |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves all mandatory parameters from
-    the user input, including the UPN, risk type, severity, validity duration, and
-    description.
+    1. **Extraction**: Parses the optional `Fields` parameter from the action configuration.
 
-    2. **Validation**: It validates that the risk type and severity match allowed
-    Silverfort values and ensures that the 'Valid For Hours' is a positive integer.
+    2. **Validation**: Compares the user-provided fields against a predefined list
+    of valid policy attributes (`POLICY_INDEX_FIELDS`). Any invalid fields are logged
+    as warnings and ignored.
 
-    3. **API Client Initialization**: It initializes an authenticated Silverfort Risk
-    API client using the integration's credentials.
+    3. **API Request**: Authenticates and sends a POST request to the Silverfort `/v2/public/policies/index`
+    endpoint with the specified field list.
 
-    4. **Data Modeling**: It constructs a `RiskUpdate` object containing the severity,
-    duration, and description, mapping it to the specified risk type.
+    4. **Result Processing**: Converts the API response into a structured JSON result
+    containing the list of policies.
 
-    5. **API Request**: It sends a POST request to the Silverfort `/v1/public/updateEntityRisk`
-    endpoint for the specified UPN.
-
-    6. **Result Handling**: Upon a successful update, the action generates a success
-    message and populates the JSON result with the details of the updated risk profile.
+    5. **Reporting**: Returns a summary message indicating the total number of policies
+    successfully retrieved.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Updates the risk profile, severity, and expiration for a specific user within
-      the Silverfort Identity Security platform via a POST request.
-    fetches_data: false
+    external_data_mutation_explanation: null
+    fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -603,15 +342,15 @@ update_entity_risk:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-update_policy:
+List Service Accounts:
   ai_description: >-
     ### General Description
 
-    The **Update Policy** action allows users to modify existing authentication policies
-    within the Silverfort platform. This action is primarily used for management and
-    response scenarios, such as enabling/disabling a policy or dynamically adjusting
-    its scope by adding or removing specific users, groups, network sources, and destination
-    targets.
+    This action retrieves a paginated list of service accounts from Silverfort. It
+    is used to discover and audit service accounts within an environment, providing
+    visibility into their attributes, risk levels, and protection status. Analysts
+    can filter the output to return specific fields of interest and navigate through
+    results using pagination.
 
 
     ### Parameters Description
@@ -620,76 +359,62 @@ update_policy:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Policy ID** | String | Yes | The unique identifier of the Silverfort policy
-    to be updated. |
+    | Page Size | String | No | The number of results to retrieve per page. Must be
+    between 1 and 100. Defaults to 50. |
 
-    | **Enabled** | Boolean | No | If provided, toggles the policy state to enabled
-    (True) or disabled (False). |
+    | Page Number | String | No | The specific page number of the results to retrieve.
+    Defaults to 1. |
 
-    | **Add Users and Groups** | String | No | A JSON array string representing users
-    or groups to add to the policy. Expected format: `[{"identifierType": "upn", "identifier":
-    "user@domain.com", "displayName": "User Name", "domain": "domain.com"}]`. |
-
-    | **Remove Users and Groups** | String | No | A JSON array string representing
-    users or groups to remove from the policy. Same format as 'Add Users and Groups'.
-    |
-
-    | **Add Sources** | String | No | A JSON array string representing network sources
-    (IPs) to add to the policy. Expected format: `[{"identifierType": "ip", "identifier":
-    "10.0.0.1", "displayName": "Server Name"}]`. |
-
-    | **Remove Sources** | String | No | A JSON array string representing network
-    sources to remove from the policy. Same format as 'Add Sources'. |
-
-    | **Add Destinations** | String | No | A JSON array string representing destination
-    targets to add to the policy. Expected format: `[{"identifierType": "hostname",
-    "identifier": "server.domain.com", "displayName": "Server", "domain": "domain.com",
-    "services": ["rdp"]}]`. |
-
-    | **Remove Destinations** | String | No | A JSON array string representing destination
-    targets to remove from the policy. Same format as 'Add Destinations'. |
+    | Fields | String | No | A comma-separated list of specific attributes to include
+    in the response (e.g., 'guid, upn, risk, protected'). If empty, all available
+    fields are returned. |
 
 
     ### Additional Notes
 
-    - All "Add" and "Remove" parameters expect a valid JSON array of objects. Failure
-    to provide correctly formatted JSON will result in a validation error.
+    - This action does not require or operate on specific entities (like IPs or Users)
+    within a case; it performs a global query against the Silverfort Service Accounts
+    API.
 
-    - This action does not rely on SOAR entities and instead uses explicit parameter
-    inputs for the Policy ID and modification details.
+    - Supported fields for the 'Fields' parameter include: guid, display_name, sources_count,
+    destinations_count, number_of_authentications, risk, predictability, protected,
+    upn, dn, spn, comment, owner, type, domain, category, creation_date, highly_privileged,
+    interactive_login, broadly_used, suspected_brute_force, and repetitive_behavior.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the mandatory Policy ID and any optional
-    update parameters from the input.
+    1. **Parameter Extraction**: The action parses the 'Page Size', 'Page Number',
+    and 'Fields' inputs from the SOAR environment.
 
-    2. **Validation and Parsing**: The action validates and parses the JSON strings
-    for users, groups, sources, and destinations into structured objects used by the
-    Silverfort API.
+    2. **Field Validation**: It cleans the 'Fields' input and validates them against
+    the list of known-valid Silverfort service account attributes. Invalid fields
+    are logged as warnings and ignored.
 
-    3. **API Execution**: A `PATCH` request is made to the Silverfort Policies API
-    v2 to update the specified policy with the new configuration.
+    3. **API Request**: The action initiates an authenticated POST request to the
+    Silverfort `/v1/public/serviceAccounts/index` endpoint with the pagination and
+    field selection payload.
 
-    4. **Output**: The action returns a success message and a JSON object containing
-    the updated policy ID and status.
+    4. **Result Processing**: It receives the JSON response containing the list of
+    service accounts and total count.
+
+    5. **Output Generation**: The action stores the complete results in the JSON result
+    object and provides a summary message indicating how many accounts were retrieved
+    for the requested page.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Updates authentication policy configurations in Silverfort, including changing
-      the enabled state and modifying access control lists (users, groups, sources,
-      and destinations).
-    fetches_data: false
+    external_data_mutation_explanation: null
+    fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -703,84 +428,165 @@ update_policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-update_sa_policy:
+Ping:
   ai_description: >-
     ### General Description
 
-    Updates the protection policy for a specific Service Account within Silverfort.
-    This action is used to manage security controls such as blocking violations, SIEM
-    logging, and defining allowlists for sources, destinations, and protocols. It
-    is primarily a management or containment action used to harden or adjust the security
-    posture of service accounts based on identified risks.
+    The **Ping** action is a diagnostic utility designed to verify connectivity between
+    Google SecOps and the Silverfort Identity Security platform. It validates the
+    configuration settings, ensuring that the provided **External API Key** is valid
+    and that the orchestrator can communicate with the specific Silverfort API modules
+    (Risk, Service Accounts, and Policies) based on the configured credentials.
 
 
     ### Parameters Description
 
+    This action primarily relies on integration-level configuration parameters rather
+    than action-specific inputs. The following parameters must be configured in the
+    Silverfort integration settings for this action to function:
 
-    | Parameter | Type | Mandatory | Description |
+
+    | Parameter Name | Expected Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Service Account GUID | string | Yes | The unique identifier (GUID) of the service
-    account to update. |
+    | **API Root** | String | Yes | The base URL of your Silverfort instance (e.g.,
+    `https://<your-instance>.silverfort.io`). |
 
-    | Enabled | boolean | No | Toggle to enable or disable the policy. |
+    | **External API Key** | String | Yes | The primary API key used for header-based
+    authentication across all Silverfort APIs. |
 
-    | Block | boolean | No | Toggle to enable or disable blocking for policy violations.
-    |
+    | **Verify SSL** | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Silverfort API endpoint. Defaults to `True`. |
 
-    | Send to SIEM | boolean | No | Toggle to enable or disable sending policy-related
-    logs to a SIEM. |
+    | **Risk App User ID / Secret** | String | No | Credentials required to test connectivity
+    to the Risk API module. |
 
-    | Risk Level | ddl | No | The risk level threshold (low, medium, high). |
+    | **Service Accounts App User ID / Secret** | String | No | Credentials required
+    to test connectivity to the Service Accounts API module. |
 
-    | Allow All Sources | boolean | No | If true, all source points are allowed, ignoring
-    the specific allowlist. |
-
-    | Allow All Destinations | boolean | No | If true, all destination points are
-    allowed, ignoring the specific allowlist. |
-
-    | Protocols | string | No | Comma-separated list of protocols to allow (e.g.,
-    'Kerberos, ldap, ntlm'). |
-
-    | Add Allowed Sources | string | No | JSON array of source objects to add (e.g.,
-    '[{"key": "1.1.1.1", "key_type": "ip"}]'). |
-
-    | Remove Allowed Sources | string | No | JSON array of source objects to remove
-    from the allowlist. |
-
-    | Add Allowed Destinations | string | No | JSON array of destination objects to
-    add to the allowlist. |
-
-    | Remove Allowed Destinations | string | No | JSON array of destination objects
-    to remove from the allowlist. |
-
-
-    ### Flow Description
-
-    1. **Extraction**: The action retrieves all parameters, including the mandatory
-    Service Account GUID and optional policy configuration flags.
-
-    2. **Validation**: Validates that the provided `Risk Level` and `Protocols` match
-    the supported enums in Silverfort.
-
-    3. **JSON Parsing**: Converts the string-based JSON arrays for 'Add/Remove Allowed
-    Sources/Destinations' into structured endpoint objects.
-
-    4. **API Interaction**: Initiates a POST request to the Silverfort Service Accounts
-    API (`/v1/public/serviceAccounts/policy/{guid}`) with the new configuration payload.
-
-    5. **Completion**: Returns a success message and a JSON result containing the
-    updated GUID and status if the operation succeeds.
+    | **Policies App User ID / Secret** | String | No | Credentials required to test
+    connectivity to the Policies API module. |
 
 
     ### Additional Notes
 
-    - This action does not automatically identify service accounts from the alert
-    context; it requires a specific `Service Account GUID` to be provided as an input.
+    * At least one set of module-specific credentials (Risk, Service Accounts, or
+    Policies) must be configured along with the External API Key for the action to
+    attempt a connection.
 
-    - The endpoint JSON parameters must strictly follow the format `[{"key": "value",
-    "key_type": "type"}]` or the action will fail during the parsing stage.
+    * The action will report a "Partial Success" if some configured APIs connect successfully
+    while others fail.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the global integration parameters,
+    including the API Root and various credentials.
+
+    2. **Configuration Validation:** It checks if any API modules (Risk, Service Accounts,
+    or Policies) have been configured with both an App User ID and Secret.
+
+    3. **Connectivity Testing:** For each configured module, the action initializes
+    a specific API client and attempts a lightweight request (e.g., listing a single
+    policy or checking risk for a dummy user) to verify the credentials and network
+    path.
+
+    4. **Result Aggregation:** The action collects the status of each connection attempt.
+
+    5. **Final Output:** It returns a consolidated message indicating which APIs connected
+    successfully and which failed, setting the `is_success` result based on whether
+    at least one connection was successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Entity Risk:
+  ai_description: >-
+    ### General Description
+
+    The **Update Entity Risk** action allows security analysts to manually or automatically
+    update the risk profile of a specific user within the Silverfort Identity Security
+    platform. By providing a User Principal Name (UPN), a risk category, and a severity
+    level, this action enables the dynamic adjustment of a user's risk posture based
+    on external threat intelligence or security incidents detected within Google SecOps.
+    This updated risk information can subsequently trigger Silverfort's adaptive authentication
+    policies.
+
+
+    ### Parameters Description
+
+    | Parameter | Expected Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **User Principal Name** | string | Yes | The UPN (e.g., `user@domain.com`) of
+    the user whose risk needs to be updated. |
+
+    | **Risk Type** | ddl | Yes | The category of risk to apply. Options include:
+    `activity_risk`, `malware_risk`, `data_breach_risk`, or `custom_risk`. |
+
+    | **Severity** | ddl | Yes | The risk level to assign. Options include: `low`,
+    `medium`, `high`, or `critical`. |
+
+    | **Valid For Hours** | string | Yes | An integer value representing how long
+    (in hours) the risk indicator should remain active. Must be a positive integer.
+    |
+
+    | **Description** | string | Yes | A brief explanation or context for why the
+    risk level is being updated. |
+
+
+    ### Additional Notes
+
+    - This action requires the **Risk App User ID** and **Risk App User Secret** to
+    be configured in the Silverfort integration settings to generate the necessary
+    JWT authentication tokens.
+
+    - The action performs validation on the `Valid For Hours` parameter to ensure
+    it is a positive integer before attempting the API call.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction**: The action retrieves all five mandatory parameters
+    from the SOAR environment.
+
+    2.  **Validation**: It validates that the `Risk Type` and `Severity` match supported
+    Silverfort values and that the duration is positive.
+
+    3.  **Authentication**: It initializes a `RiskApiClient` using a JWT-authenticated
+    session.
+
+    4.  **API Interaction**: It constructs a JSON payload containing the user identity
+    and the risk update details and sends a POST request to the Silverfort `/v1/public/updateEntityRisk`
+    endpoint.
+
+    5.  **Output**: The action returns a success message and a JSON object containing
+    the updated risk details for use in downstream playbook steps.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -789,15 +595,172 @@ update_sa_policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the security policy configuration for a service account in Silverfort,
-      modifying settings like blocking behavior, SIEM logging, and allowed network
-      paths.
+      Updates a user's risk score and status within the Silverfort Identity Security
+      platform, which can directly affect their ability to authenticate or access
+      resources.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Policy:
+  ai_description: >-
+    Updates an existing authentication policy in Silverfort. This action allows for
+    comprehensive modification of policy settings, including its active status and
+    the specific users, groups, network sources, and destination resources associated
+    with it.
+
+
+    ### Parameters
+
+    | Parameter | Mandatory | Type | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Policy ID | Yes | String | The unique identifier of the policy to be modified.
+    |
+
+    | Enabled | No | Boolean | Enable or disable the policy state. |
+
+    | Add Users and Groups | No | String | JSON array of users/groups to add to the
+    policy. Format: `[{"identifierType": "upn", "identifier": "user@domain.com", "displayName":
+    "User Name", "domain": "domain.com"}]` |
+
+    | Remove Users and Groups | No | String | JSON array of users/groups to remove
+    from the policy. Format: same as Add Users and Groups. |
+
+    | Add Sources | No | String | JSON array of sources to add to the policy. Format:
+    `[{"identifierType": "ip", "identifier": "10.0.0.1", "displayName": "Server"}]`
+    |
+
+    | Remove Sources | No | String | JSON array of sources to remove from the policy.
+    Format: same as Add Sources. |
+
+    | Add Destinations | No | String | JSON array of destinations to add to the policy.
+    Format: `[{"identifierType": "hostname", "identifier": "server.domain.com", "displayName":
+    "Server", "domain": "domain.com", "services": ["rdp"]}]` |
+
+    | Remove Destinations | No | String | JSON array of destinations to remove from
+    the policy. Format: same as Add Destinations. |
+
+
+    ### Additional Notes
+
+    - All array parameters (Users, Sources, Destinations) expect a JSON-formatted
+    string as input.
+
+    - If a parameter is left blank, that specific part of the policy remains unchanged.
+
+
+    ### Flow Description
+
+    1. **Extract and Validate:** The action extracts the mandatory Policy ID and optional
+    modification parameters from the configuration.
+
+    2. **JSON Parsing:** It parses the JSON strings for users, groups, sources, and
+    destinations into structured objects for the Silverfort API.
+
+    3. **API Client Initialization:** Initializes the Silverfort Policies API client
+    using the configured credentials and JWT authentication.
+
+    4. **Update Execution:** Sends a PATCH request to the Silverfort backend to apply
+    the requested changes to the specified policy.
+
+    5. **Completion:** Returns a success message and JSON result indicating the policy
+    was updated.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies the configuration of authentication policies within the Silverfort
+      platform, including the enabled/disabled status and the lists of associated
+      users, groups, network sources, and destination resources.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update SA Policy:
+  ai_description: >-
+    ### General Description Updates the protection policy for a service account in
+    Silverfort. This action allows security administrators to modify specific policy
+    settings such as enforcement state (blocking), SIEM logging, risk level thresholds,
+    and communication protocols. It also supports granular updates to the allowed
+    sources and destinations through addition and removal operations. ### Parameters
+    | Parameter | Mandatory | Type | Description | | :--- | :--- | :--- | :--- | |
+    Service Account GUID | Yes | String | The GUID of the service account whose policy
+    is being updated. | | Enabled | No | Boolean | Determines if the policy is active.
+    | | Block | No | Boolean | If true, Silverfort will block policy violations. |
+    | Send to SIEM | No | Boolean | If true, logs are forwarded to the configured
+    SIEM. | | Risk Level | No | DDL | Sets the risk threshold (low, medium, high).
+    | | Allow All Sources | No | Boolean | If true, ignores the source allowlist and
+    permits all sources. | | Allow All Destinations | No | Boolean | If true, ignores
+    the destination allowlist and permits all destinations. | | Protocols | No | String
+    | Comma-separated list of allowed protocols (Kerberos, ldap, ntlm). | | Add Allowed
+    Sources | No | String | JSON array of source objects to add to the allowlist.
+    | | Remove Allowed Sources | No | String | JSON array of source objects to remove
+    from the allowlist. | | Add Allowed Destinations | No | String | JSON array of
+    destination objects to add to the allowlist. | | Remove Allowed Destinations |
+    No | String | JSON array of destination objects to remove from the allowlist.
+    | ### Additional Notes This action operates on a specific Service Account GUID
+    provided as a parameter rather than automatically iterating over case entities.
+    Source and destination parameters must follow a specific JSON format containing
+    'key' and 'key_type' fields. ### Flow Description 1. Extract action parameters
+    including the mandatory Service Account GUID and optional policy configuration
+    flags. 2. Validate input values for 'Risk Level' and 'Protocols' against the supported
+    Silverfort constants. 3. Parse JSON-formatted strings for adding or removing sources
+    and destinations into internal endpoint data models. 4. Initialize the Silverfort
+    Service Account API client. 5. Perform a POST request to the Silverfort API to
+    update the policy configuration for the specified service account. 6. Output a
+    success message and update the action results with the operation status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of a Service Account protection policy in Silverfort,
+      modifying parameters like blocking, risk thresholds, and allowlists.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

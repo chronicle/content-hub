@@ -1,69 +1,40 @@
-EnrichEntities:
-  ai_description: >-
-    ### General Description
-
-    Enriches Hostname and URL entities with WHOIS information using the WHOIS XML
-    API. This action retrieves registrant details (such as organization and contact
-    info) and attaches the full WHOIS record as a JSON result. It is designed to assist
-    analysts in identifying domain ownership and registration history during investigations.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Description | Expected Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Key | The API key used for authenticating requests to the WHOIS XML API
-    service. | String | Yes |
-
-
-    ### Additional Notes
-
-    - This action only processes Hostname entities that are not marked as internal
-    to avoid external lookups on local infrastructure.
-
-    - The action updates the entity's 'Additional Properties' with registrant data
-    found in the WHOIS record.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Extracts the API Key from the integration's configuration.
-
-    2. **Entity Filtering**: Iterates through the target entities in the case, identifying
-    those of type URL or non-internal Hostname.
-
-    3. **External API Call**: For each eligible entity, it sends a GET request to
-    the WHOIS XML API to fetch domain registration data.
-
-    4. **Data Extraction**: Parses the API response to retrieve registrant details
-    from the `WhoisRecord` object.
-
-    5. **Internal Update**: Enriches the entity within the SOAR platform by adding
-    the extracted registrant details to the entity's additional properties.
-
-    6. **JSON Result Creation**: Collects the raw API response for each entity and
-    attaches it as a JSON result to the action.
-
-    7. **Finalization**: Updates all enriched entities in the system and returns a
-    summary message indicating the number of successfully processed entities.
+Enrich Entities:
+  ai_description: "### General description\nEnriches Hostname and URL entities using\
+    \ the Whois XML API. The action retrieves comprehensive registration data (WHOIS)\
+    \ for the specified entities, providing visibility into ownership and registration\
+    \ details which are then attached to the entities for further analysis.\n\n###\
+    \ Parameters description\n| Parameter | Description | Type | Mandatory | \n| :---\
+    \ | :--- | :--- | :--- |\n| None | This action does not have any action-specific\
+    \ parameters. It relies on the 'API Key' provided in the integration configuration.\
+    \ | N/A | No |\n\n### Flow description\n1. **Initialization**: The action retrieves\
+    \ the global 'API Key' from the integration configuration.\n2. **Entity Filtering**:\
+    \ It iterates through target entities, identifying external Hostnames (is_internal\
+    \ set to false) and URLs.\n3. **API Interaction**: For each qualifying entity,\
+    \ it sends a GET request to the Whois XML API service to fetch WHOIS records.\n\
+    4. **Data Extraction**: The script extracts 'registrant' details from the response.\n\
+    5. **Internal Update**: It updates the entities' additional properties with the\
+    \ extracted registrant information and marks them for update.\n6. **Finalization**:\
+    \ It pushes the updated entity data back to Google SecOps and returns the full\
+    \ raw JSON response for the entire batch.\n\n### Additional notes\nThis action\
+    \ ignores internal Hostnames to prevent API overhead on local infrastructure assets."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' attribute of Hostname and URL entities with
+      registrant information from WHOIS records.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - HOSTNAME
-      - DestinationURL
+    - HOSTNAME
+    - DestinationURL
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -77,58 +48,47 @@ EnrichEntities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-GetDomainDetails:
+Get Domain Details:
   ai_description: >-
     ### General Description
 
-    Fetches comprehensive registration and ownership details for a specific domain
-    name using the WHOIS XML API. This action is designed to provide security analysts
-    with domain intelligence, including registrar information, creation dates, and
-    contact details, which are essential for investigating suspicious domains or verifying
-    ownership.
+    Retrieves comprehensive registration details for a specific domain name using
+    the WHOIS XML API. This action provides raw WHOIS data, including registrar details,
+    creation dates, expiration dates, and registrant information, as a JSON result
+    for further use in automation playbooks.
 
 
     ### Parameters Description
-
 
     | Parameter Name | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Domain Name | string | True | The specific domain (e.g., example.com) to retrieve
-    WHOIS data for. Defaults to google.com if not specified. |
+    | Domain Name | String | Yes | The specific domain (e.g., 'google.com') to fetch
+    WHOIS records for. |
 
-    | Check availability | boolean | False | If set to true, the API will include
-    domain availability status in the response. |
-
-
-    ### Additional Notes
-
-    This action is parameter-driven and does not automatically iterate over entities
-    present in the Google SecOps case. It requires the 'Domain Name' parameter to
-    be explicitly provided or mapped from another source. The results are returned
-    as a JSON object, which can be accessed by subsequent playbook steps.
+    | Check availability | Boolean | No | Determines whether to check if the domain
+    is currently available for purchase. Defaults to 'false'. |
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The script extracts the API Key from the 'WHOIS
-    XML API' integration settings.
+    1. **Initialization**: Retrieves the API Key from the integration configuration.
 
-    2. **Parameter Extraction**: Retrieves the 'Domain Name' and the 'Check availability'
-    flag from the action inputs.
+    2. **Input Processing**: Extracts the 'Domain Name' and 'Check availability' settings
+    from the action parameters.
 
-    3. **URL Construction**: Builds the API request URL for the WhoisService, appending
-    the domain name and the availability check preference as query parameters.
+    3. **External Call**: Performs an HTTP GET request to the WHOIS XML API endpoint
+    with the specified domain and parameters.
 
-    4. **Data Retrieval**: Executes an HTTP GET request to the WHOIS XML API.
+    4. **Result Integration**: Appends the resulting JSON data from the API response
+    to the action's execution results and context details.
 
-    5. **Result Processing**: Captures the JSON response and attaches it to the action
-    results using both `add_result_json` and `add_json` (under the key 'WhoisDetails')
-    for availability in the SOAR context.
 
-    6. **Action Completion**: Ends the execution with a success message containing
-    the queried domain.
+    ### Additional Notes
+
+    This action uses manual string input for the domain rather than automatically
+    iterating over entities in the case context.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -142,7 +102,7 @@ GetDomainDetails:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -158,44 +118,41 @@ GetDomainDetails:
     filters_by_modification_time: false
 Ping:
   ai_description: >-
-    ### General description
+    ### General Description
 
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the WHOIS XML API service. Its primary purpose is to ensure that the integration
-    is correctly configured and that the provided credentials have the necessary permissions
-    to access the API.
-
-
-    ### Parameters description
-
-    There are no action-specific input parameters for this action. It utilizes the
-    global configuration parameters defined at the integration level:
-
-    * **API Key**: The authentication token used to authorize requests to the WHOIS
-    XML API.
+    Verifies connectivity to the WHOIS XML API service by performing a test lookup
+    for a static domain (google.com). This action is primarily used to validate that
+    the provided API Key and network configurations are correct and that the SOAR
+    platform can communicate with the external API.
 
 
-    ### Additional notes
+    ### Parameters Description
 
-    This action does not interact with or process any entities. It is a utility action
-    used for troubleshooting and initial configuration validation.
+    There are no parameters for this action. It utilizes the global 'API Key' defined
+    in the integration configuration settings.
 
 
-    ### Flow description
+    ### Additional Notes
 
-    1. **Configuration Extraction**: The action retrieves the **API Key** from the
-    integration's global settings.
+    - The action hardcodes the domain 'google.com' for the connectivity test.
 
-    2. **Test Request**: It constructs a request URL for a sample domain lookup (`google.com`)
-    to test the service availability.
+    - If the API returns a 'ApiKey authenticate failed' message, the action will raise
+    an exception indicating bad credentials.
 
-    3. **API Interaction**: Executes an HTTP GET request to the WHOIS XML API endpoint.
 
-    4. **Credential Validation**: Inspects the response body for specific error messages,
-    such as "ApiKey authenticate failed", to identify credential issues.
+    ### Flow Description
 
-    5. **Completion**: If the request is successful and authenticated, the action
-    concludes with a "Successful Connection" message.
+    1. **Configuration Retrieval**: Retrieves the 'API Key' from the integration's
+    shared configuration.
+
+    2. **API Request**: Performs a GET request to the WHOIS XML API 'WhoisService'
+    endpoint.
+
+    3. **Response Validation**: Parses the response content to check for authentication
+    failure strings.
+
+    4. **Execution Completion**: If the request succeeds and credentials are valid,
+    it reports a successful connection.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -204,12 +161,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

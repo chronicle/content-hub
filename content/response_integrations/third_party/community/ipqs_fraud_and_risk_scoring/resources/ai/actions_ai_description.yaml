@@ -1,73 +1,48 @@
-EnrichDomain:
-  ai_description: >-
-    ### General Description
-
-    This action enriches Domain (Hostname) entities using the IPQualityScore (IPQS)
-    Fraud and Risk Scoring service. It performs real-time scans using machine learning
-    models to identify phishing links, malware URLs, viruses, and parked domains.
-    The action retrieves detailed intelligence, including risk scores, domain age,
-    and server information, to help analysts determine the reputation of a domain.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Strictness | DDL | Yes | Sets the scanning strictness level (0, 1, or 2). Higher
-    levels perform more rigorous checks but may result in more false positives. |
-
-    | Fast | Boolean | No | When enabled, the API uses lighter analysis to provide
-    faster response times. |
-
-
-    ### Additional Notes
-
-    - This action specifically targets `HOSTNAME` entities.
-
-    - The action updates the entity's 'suspicious' flag if the IPQS risk score exceeds
-    predefined thresholds.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Extracts the API Key from the integration configuration
-    and retrieves the `Strictness` and `Fast` parameters.
-
-    2. **Entity Filtering**: Identifies all `HOSTNAME` entities within the current
-    context.
-
-    3. **External API Interaction**: For each domain, it sends a POST request to the
-    IPQS URL API endpoint with the configured strictness and speed settings.
-
-    4. **Risk Scoring**: Evaluates the returned risk score and threat flags (malware,
-    phishing, suspicious).
-
-    5. **Data Enrichment**: Updates the SOAR entity with additional properties (e.g.,
-    Domain Rank, DNS Valid, Domain Age) and creates a detailed data table for the
-    entity.
-
-    6. **Insight Generation**: Generates a case insight with a risk verdict (e.g.,
-    CLEAN, LOW RISK, HIGH RISK).
-
-    7. **Completion**: Updates the entities in the SOAR system and returns a summary
-    JSON result of the operation.
+Enrich Domain:
+  ai_description: "### General Description\nThis action enriches Domain (HOSTNAME)\
+    \ entities by scanning them through the IPQualityScore (IPQS) URL scanner. It\
+    \ utilizes machine learning models to identify phishing, malware, and parked domains\
+    \ in real-time, providing detailed risk scores and categorical intelligence.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| Strictness | DDL | Yes | Controls the intensity\
+    \ of the URL scan. Higher levels (1 or 2) provide stricter checks but may result\
+    \ in higher false-positive rates. Default is 0. |\n| Fast | Boolean | No | If\
+    \ enabled, the API performs lighter analysis for faster response times. |\n\n\
+    ### Flow Description\n1. **Setup**: Extracts the IPQS API Key from the integration\
+    \ configuration and retrieves the 'Strictness' and 'Fast' parameters.\n2. **Entity\
+    \ Filtering**: Filters the target entities to process only those of type HOSTNAME.\n\
+    3. **API Interaction**: Queries the IPQS URL API endpoint for each domain entity,\
+    \ passing the strictness level and fast-scan preference.\n4. **Risk Evaluation**:\
+    \ Analyzes the returned 'risk_score', 'malware', and 'phishing' indicators to\
+    \ determine a verdict (e.g., CLEAN, HIGH RISK, CRITICAL).\n5. **SOAR Enrichment**:\
+    \ \n    *   Adds detailed scan results to the entity's 'additional_properties'\
+    \ with an 'IPQualityScore' prefix.\n    *   Populates a data table for the entity\
+    \ with attributes like 'Domain Age', 'Risk Score', and 'Category'.\n    *   Creates\
+    \ a case insight containing the IPQS verdict.\n    *   Sets the entity's 'is_enriched'\
+    \ status to true.\n    *   Updates the 'is_suspicious' flag if the risk score\
+    \ or malware/phishing indicators exceed predefined thresholds.\n6. **Completion**:\
+    \ Updates the entities in the SOAR and provides a summary message of the enrichment\
+    \ process.\n\n### Additional Notes\n- While the underlying manager supports various\
+    \ entity types (IP, Email, Phone), this specific action is scoped exclusively\
+    \ to HOSTNAME entities."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
     can_create_insight: true
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      This action updates entity attributes (is_enriched, is_suspicious), adds custom
+      enrichment properties, creates data tables, and generates case insights based
+      on the reputation data retrieved from IPQualityScore.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - HOSTNAME
+    - HOSTNAME
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -81,14 +56,13 @@ EnrichDomain:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-EnrichEmail:
+Enrich Email:
   ai_description: >-
-    Enriches Email addresses (typically associated with User entities) using the IPQualityScore
-    (IPQS) API to provide real-time reputation scoring and validation. This action
-    performs hundreds of syntax and DNS checks, determines if the email inbox exists,
-    and identifies if the address is associated with disposable mail services, fraud,
-    or abuse. It calculates a risk score and updates the entity's status within Google
-    SecOps accordingly.
+    Enriches email address entities using the IPQualityScore (IPQS) API to provide
+    real-time reputation scoring and validation. This action performs syntax and DNS
+    checks, determines if the mailbox exists, and identifies disposable or temporary
+    mail services. It assesses risk based on historical fraudulent behavior and abuse
+    patterns associated with the email address.
 
 
     ### Parameters
@@ -97,41 +71,39 @@ EnrichEmail:
 
     | :--- | :--- | :--- | :--- |
 
-    | Abuse Strictness | DDL | Yes | Sets the strictness level (0, 1, or 2) for machine
-    learning pattern recognition of abusive email addresses. |
+    | Abuse Strictness | DDL | Yes | Sets the strictness level (0, 1, 2) for machine
+    learning pattern recognition regarding the 'recent_abuse' data point. |
 
-    | Fast | Boolean | No | If enabled, the API skips SMTP checks to increase execution
-    speed. |
+    | Fast | Boolean | No | When enabled, skips SMTP checks with the mail provider
+    to increase API response speed. |
 
-    | Timeout in seconds | String | No | Maximum number of seconds to wait for a response
-    from the mail service provider (Default: 7). |
+    | Timeout in seconds | String | No | The maximum number of seconds (default is
+    7) to wait for a reply from a mail service provider. |
 
-    | Suggest Domain | Boolean | No | If enabled, the API checks for potential typos
-    in the email domain and suggests corrections. |
+    | Suggest Domain | Boolean | No | If enabled, analyzes the domain for potential
+    typos and suggests corrections to popular mail services. |
 
 
     ### Flow Description
 
-    1. **Initialization:** Retrieves the API Key from the integration configuration
-    and extracts the action parameters (Strictness, Fast mode, Timeout, and Domain
-    Suggestion).
+    1. **Extraction**: Retrieves API configuration and action parameters including
+    abuse strictness, performance flags, and timeout settings.
 
-    2. **Entity Selection:** Identifies User entities in the current context that
-    match a standard email address format using regex.
+    2. **Entity Filtering**: Identifies target entities of type `USER` that match
+    a standard email address regex pattern.
 
-    3. **External Request:** Sends a POST request to the IPQS Email API for each valid
-    email identifier with the configured parameters.
+    3. **External Query**: For each valid email entity, sends a POST request to the
+    IPQS Email Validation API with the configured strictness and speed settings.
 
-    4. **Risk Evaluation:** Analyzes the response data, including fraud scores, disposable
-    status, and deliverability, to determine a risk verdict (e.g., Clean, Low Risk,
-    High Risk, or Invalid).
+    4. **Risk Assessment**: Analyzes the API response (fraud score, disposable flag,
+    validity status) to determine a risk verdict ranging from 'CLEAN' to 'CRITICAL'.
 
-    5. **Internal Update:** Enriches the entity in Google SecOps with detailed IPQS
-    metadata, updates its suspicious status if thresholds are met, creates a detailed
-    Case Insight, and adds a results table to the entity.
+    5. **Internal Enrichment**: Updates the entity's additional properties with IPQS
+    metadata, sets the `is_suspicious` flag based on risk thresholds, and attaches
+    a detailed data table and case insight with the findings.
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: true
     can_mutate_external_data: false
     can_mutate_internal_data: true
@@ -139,13 +111,14 @@ EnrichEmail:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with reputation data, sets the entity suspicious
-      flag based on risk scores, and creates case insights.
+      Updates entity properties with enrichment data, sets the entity's suspicious
+      flag based on risk scores, and creates case insights and data tables within
+      the SOAR platform.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - USERUNIQNAME
+    - USERUNIQNAME
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -159,69 +132,36 @@ EnrichEmail:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-EnrichIp:
-  ai_description: >-
-    ### General Description
-
-    Enriches IP Address entities using the IPQualityScore (IPQS) Fraud and Risk Scoring
-    API. This action performs real-time lookups to determine risk levels based on
-    fraud scores and over 20 data points including proxy, VPN, and TOR detection,
-    ISP information, and geolocation data. It helps security analysts identify risky
-    users, malicious bots, and fraudulent transactions associated with an IP address.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Strictness | DDL | Yes | Determines the depth and strictness of the query (0,
-    1, or 2). Higher values take longer but provide deeper forensic analysis. |
-
-    | User Agent | String | No | Optional browser user-agent string to check if the
-    user is a bot or running an invalid browser. |
-
-    | User Language | String | No | Optional language header to assist in evaluating
-    the user's fraud score. |
-
-    | Fast | Boolean | No | If enabled, skips certain time-consuming forensic checks
-    to speed up the API response. |
-
-    | Mobile | Boolean | No | Forces the API to treat the lookup as a mobile device
-    connection. |
-
-    | Allow Public Access Points | Boolean | No | Bypasses checks for IP addresses
-    belonging to schools, research institutions, and corporate connections. |
-
-    | Lighter Penalties | Boolean | No | Skips certain denylists to reduce false positives
-    for sensitive audiences. |
-
-
-    ### Flow Description
-
-    1. **Extraction**: The action retrieves the API key from the integration settings
-    and collects all user-defined parameters such as Strictness and forensic flags.
-
-    2. **Entity Filtering**: It identifies all IP Address (`ADDRESS`) entities within
-    the current case context.
-
-    3. **API Query**: For each IP, it sends a POST request to the IPQS IP endpoint,
-    including the forensic parameters and user metadata (Agent/Language).
-
-    4. **Scoring and Verdict**: The action parses the API response and calculates
-    a risk verdict (e.g., CLEAN, SUSPICIOUS, HIGH RISK, CRITICAL) based on the returned
-    `fraud_score`.
-
-    5. **Internal Enrichment**: For each successful lookup, the action:
-        - Updates the entity's `additional_properties` with prefixes like 'IPQualityScore'.
-        - Adds an enrichment data table to the entity containing geo-location and
-    ISP details.
-        - Creates a Case Insight summarizing the IPQS verdict.
-        - Sets the entity's `is_suspicious` flag to true if the fraud score exceeds
-    specific thresholds.
-    6. **Finalization**: Updates the entities in the SOAR and returns a JSON result
-    of all enriched data.
+Enrich IP:
+  ai_description: "### General Description\nThis action performs real-time IP address\
+    \ enrichment using the IPQualityScore (IPQS) API. It retrieves a wide range of\
+    \ threat intelligence data, including fraud scores, proxy/VPN/TOR detection, ISP\
+    \ information, and geographical data. This data helps security analysts identify\
+    \ risky users, malicious bots, or fraudulent transactions.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Strictness | DDL | Yes | Determines the depth of forensic checks (0, 1, or 2).\
+    \ Higher values are more thorough but may increase false positives and processing\
+    \ time. |\n| User Agent | String | No | Optional browser user-agent string to\
+    \ help identify bots or invalid browsers. |\n| User Language | String | No | Optional\
+    \ language header to assist in calculating the fraud score. |\n| Fast | Boolean\
+    \ | No | If enabled, the API skips certain time-consuming forensic checks for\
+    \ faster processing. |\n| Mobile | Boolean | No | If enabled, treats the lookup\
+    \ as a request from a mobile device. |\n| Allow Public Access Points | Boolean\
+    \ | No | Bypasses checks for educational institutions, schools, and corporate\
+    \ connections. |\n| Lighter Penalties | Boolean | No | Skips specific denylists\
+    \ to reduce false positives for sensitive audiences. |\n\n### Flow Description\n\
+    1. **Initialization:** The action extracts the API key and various forensic parameters\
+    \ from the user configuration.\n2. **Entity Selection:** It identifies and processes\
+    \ all IP Address (`ADDRESS`) entities within the current scope.\n3. **API Query:**\
+    \ For each IP address, it sends a request to the IPQS API including the forensic\
+    \ settings (strictness, fast mode, etc.).\n4. **Risk Scoring:** The action evaluates\
+    \ the returned `fraud_score` to determine a risk level (Clean, Suspicious, Moderate,\
+    \ High, or Critical).\n5. **Data Integration:** \n   - Updates the entity's additional\
+    \ properties with the retrieved metadata (ISP, ASN, Location).\n   - Marks entities\
+    \ as 'Suspicious' if the fraud score exceeds defined thresholds.\n   - Generates\
+    \ a detailed data table and a case insight summarizing the IPQS verdict.\n6. **Finalization:**\
+    \ Updates the entities in Google SecOps and provides a summary of the enrichment\
+    \ results."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -236,7 +176,7 @@ EnrichIp:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - ADDRESS
+    - ADDRESS
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -250,61 +190,33 @@ EnrichIp:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-EnrichPhone:
-  ai_description: >-
-    ### General Description
-
-    Enriches **Phone Number** entities using the IPQualityScore (IPQS) service. This
-    action verifies phone number validity worldwide, identifies carrier and line type
-    (e.g., VOIP, mobile, landline), and provides a fraud risk score to help identify
-    suspicious, disposable, or inactive numbers.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Strictness | DDL | Yes | Determines the depth of the reputation check (0, 1,
-    or 2). Higher strictness provides more thorough analysis but may increase the
-    false-positive rate. |
-
-    | Country | String | No | Optional comma-separated list of country codes (e.g.,
-    US, UK) suspected to be associated with the phone number to enhance validation
-    accuracy. |
-
-
-    ### Flow Description
-
-    1. **Extraction**: The action retrieves the API key from the integration configuration
-    and the 'Strictness' and 'Country' parameters from the action settings.
-
-    2. **Entity Filtering**: It identifies all `PHONENUMBER` entities within the current
-    alert or case context.
-
-    3. **External Query**: For each phone number, it performs a POST request to the
-    IPQS Phone Validation API, passing the strictness level and country hints.
-
-    4. **Risk Assessment**: The action processes the API response to calculate a risk
-    verdict (Clean, Low, Moderate, High, Critical, or Suspicious) based on the `fraud_score`,
-    `valid` status, and `active` status.
-
-    5. **Internal Update**: It enriches the entities by adding metadata (carrier,
-    region, timezone, etc.) to their additional properties and marks the entity as
-    'suspicious' if the risk score meets specific thresholds.
-
-    6. **Reporting**: It generates a detailed data table and a case insight in Google
-    SecOps containing the IPQS verdict and reputation details.
-
-
-    ### Additional Notes
-
-    - Either a single phone number entity or multiple phone number entities must be
-    present in the case for this action to perform enrichment.
-
-    - The action specifically targets the `PHONENUMBER` entity type and will ignore
-    other types like IP or URL.
+Enrich Phone:
+  ai_description: "### General Description\nEnriches Phone Number entities using the\
+    \ IPQualityScore (IPQS) Fraud and Risk Scoring service. This action verifies phone\
+    \ numbers globally to retrieve details such as carrier name, line type (e.g.,\
+    \ mobile, VOIP, landline), and active status. It evaluates phone number reputation\
+    \ using a fraud score and provides a risk analysis to detect disposable or abusive\
+    \ numbers associated with online fraud.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Strictness\
+    \ | DDL | Yes | Determines how in-depth/strict the reputation check is. Options\
+    \ are '0', '1', or '2'. Higher strictness increases the depth of analysis but\
+    \ may lead to higher false-positive rates. |\n| Country | String | No | A comma-separated\
+    \ list of suspected country codes associated with the phone number to improve\
+    \ validation accuracy. |\n\n### Additional Notes\n- This action specifically targets\
+    \ **PHONENUMBER** entities.\n- The action assigns a risk verdict (Clean, Low Risk,\
+    \ Moderate Risk, High Risk, or Critical) based on the Fraud Score and active status\
+    \ returned by the API.\n\n### Flow Description\n1. **Initialization:** Retrieves\
+    \ the API Key from the configuration and the 'Strictness' and 'Country' parameters\
+    \ from the action settings.\n2. **Entity Filtering:** Filters the case's target\
+    \ entities to process only those identified as 'PHONENUMBER'.\n3. **API Interaction:**\
+    \ Queries the IPQS Phone Validation API for each identified phone number entity,\
+    \ passing the strictness and optional country data.\n4. **Risk Scoring:** Analyzes\
+    \ the API response, calculating a risk verdict based on the `fraud_score`, `valid`\
+    \ status, and `active` status of the number.\n5. **Data Enrichment:** \n   - Updates\
+    \ the entity's 'Additional Properties' with detailed metadata (Carrier, Line Type,\
+    \ Region, etc.).\n   - Marks the entity as 'Suspicious' if the risk verdict meets\
+    \ defined thresholds.\n   - Generates an Entity Table and a Case Insight containing\
+    \ the IPQS analysis summary."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -315,14 +227,13 @@ EnrichPhone:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates internal entity attributes including 'additional_properties' (with carrier
-      and risk metadata), 'is_enriched', and 'is_suspicious' status based on the IPQS
-      fraud score analysis.
+      Updates Google SecOps entities with enrichment properties, sets entity suspicious
+      status based on risk scores, and creates internal case insights and data tables.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - PHONENUMBER
+    - PHONENUMBER
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -336,30 +247,37 @@ EnrichPhone:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-EnrichUrl:
-  ai_description: "Scans and enriches URL entities in real-time using IPQualityScore's\
-    \ machine learning models to detect phishing, malware, and suspicious domains.\
-    \ The action provides risk scores, category classification, and reputation data.\n\
-    \n### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
-    \ | :--- | :--- |\n| Strictness | DDL | Yes | Determines the scanning depth (0,\
-    \ 1, or 2). Higher strictness may increase false-positive rates but provides more\
-    \ sensitive detection. |\n| Fast | Boolean | No | When enabled, the API uses lighter\
-    \ checks to provide faster response times. |\n\n### Flow Description\n1. **Initialization:**\
-    \ Retrieves the API key and action parameters (Strictness and Fast) from the environment\
-    \ and action configuration.\n2. **Entity Selection:** Identifies and targets URL\
-    \ entities within the current context.\n3. **External API Interaction:** Sends\
-    \ a request to the IPQualityScore API for each URL to retrieve real-time threat\
-    \ intelligence including risk scores and threat classification.\n4. **Data Processing:**\
-    \ Evaluates the API response to determine if the URL is high-risk (malware, phishing,\
-    \ or high risk score).\n5. **Internal Mutation:** \n    * Creates a detailed data\
-    \ table for each entity.\n    * Generates a case insight with the IPQS verdict.\n\
-    \    * Updates the entity's additional properties with prefix 'IPQualityScore'.\n\
-    \    * Sets the entity as suspicious and enriched based on the findings.\n6. **Finalization:**\
-    \ Updates all processed entities in Google SecOps and returns a summarized JSON\
-    \ result."
+Enrich URL:
+  ai_description: "### General Description\nThis action enriches URL entities using\
+    \ the IPQualityScore (IPQS) Fraud and Risk Scoring service. It performs real-time\
+    \ scans of links and domains to detect phishing, malware, and parked domains.\
+    \ By leveraging machine learning models, the action retrieves risk scores and\
+    \ various intelligence points such as domain age, ISP information, and reputation\
+    \ data to determine if a URL is malicious.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Strictness\
+    \ | DDL | Yes | Determines the scanning strictness (0, 1, or 2). Higher levels\
+    \ may increase the detection rate but also the false-positive rate. |\n| Fast\
+    \ | Boolean | No | If enabled, the API performs lighter checks for a faster response\
+    \ time. |\n\n### Additional Notes\n- The action identifies URLs as suspicious\
+    \ if the IPQS risk score exceeds specific thresholds or if specific malware/phishing\
+    \ flags are returned by the provider.\n- It updates the entity's internal attributes\
+    \ and adds a detailed data table and insight to the case for analysts.\n\n###\
+    \ Flow Description\n1. **Initialization**: Retrieves the API Key from the integration\
+    \ configuration and the 'Strictness' and 'Fast' parameters from the action settings.\n\
+    2. **Entity Filtering**: Identifies URL entities within the current context.\n\
+    3. **API Interaction**: For each URL, sends a POST request to the IPQualityScore\
+    \ URL endpoint with the configured strictness and speed settings.\n4. **Data Processing**:\
+    \ Parses the JSON response to extract risk scores, domain metadata, and security\
+    \ flags (e.g., phishing, malware).\n5. **Risk Evaluation**: Calculates a verdict\
+    \ (e.g., Clean, Moderate Risk, High Risk, Critical) based on the risk score and\
+    \ security flags.\n6. **Enrichment and Reporting**: \n    - Adds an entity data\
+    \ table containing URL metadata.\n    - Creates a Case Insight summarizing the\
+    \ IPQS verdict.\n    - Updates the entity's 'is_enriched' status and sets 'is_suspicious'\
+    \ if applicable.\n    - Populates the entity's additional properties with prefix-based\
+    \ intelligence data."
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: false
+    can_create_case_wall_logs: true
     can_create_insight: true
     can_mutate_external_data: false
     can_mutate_internal_data: true
@@ -367,13 +285,14 @@ EnrichUrl:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates URL entity attributes with reputation details, marks entities as enriched,
-      and sets the suspicious flag based on the risk score calculated by IPQS.
+      Updates entity properties with threat intelligence, sets 'is_suspicious' and
+      'is_enriched' flags, and creates case insights and data tables within Google
+      SecOps.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - DestinationURL
+    - DestinationURL
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -389,42 +308,41 @@ EnrichUrl:
     filters_by_modification_time: false
 Ping:
   ai_description: >-
+    The Ping action is a utility designed to verify the connectivity between the Google
+    SecOps platform and the IPQualityScore (IPQS) API. It serves as a diagnostic tool
+    to ensure that the provided API Key is valid and that the network path to the
+    IPQS servers is open.
+
+
     ### General Description
 
-    The **Ping** action is a utility designed to verify connectivity between the Google
-    SecOps (Chronicle) instance and the **IPQualityScore (IPQS)** API. It ensures
-    that the provided API Key is valid and that the network configuration allows communication
-    with the IPQS servers. This is typically used as a health check during the initial
-    setup of the integration.
+    This action performs a test request to the IPQualityScore 'email' validation endpoint
+    using a hardcoded support email address. The success or failure of this request
+    determines whether the integration is correctly configured and operational. It
+    does not process any case entities.
 
 
     ### Parameters
 
-    This action does not have any input parameters.
+    There are no action-specific parameters for this action. It relies solely on the
+    'API Key' provided in the integration's configuration.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval:** The action extracts the `API Key` from the integration
-    configuration.
+    1. **Configuration Extraction:** The action retrieves the 'API Key' from the integration
+    settings.
 
-    2. **Test Payload Initialization:** It creates a test payload using a default
-    email address (`support@ipqualityscore.com`) to simulate a request.
+    2. **Request Preparation:** It constructs a payload using a default email address
+    (`support@ipqualityscore.com`) to test the API endpoint.
 
-    3. **API Connectivity Check:** It calls the IPQS API `email` endpoint via a POST
-    request.
+    3. **API Interaction:** It sends a POST request to the IPQS email endpoint via
+    the `IPQSManager`.
 
-    4. **Response Validation:** It evaluates the `success` field in the API response.
+    4. **Validation:** The action checks the 'success' field in the API response.
 
-    5. **Completion:** If the connection is successful, it returns a success status.
-    If the API returns an error (e.g., invalid key), the action fails and provides
-    the error message from the vendor.
-
-
-    ### Additional Notes
-
-    This action is purely for connectivity testing and does not process entities from
-    the current alert or case.
+    5. **Reporting:** If successful, it returns a completion status; otherwise, it
+    reports a failure with the specific error message provided by the API.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -438,7 +356,7 @@ Ping:
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

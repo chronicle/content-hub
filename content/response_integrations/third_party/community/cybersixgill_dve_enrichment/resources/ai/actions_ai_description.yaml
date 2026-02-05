@@ -1,30 +1,54 @@
-EnrichCve:
-  ai_description: "Enriches CVE entities using Cybersixgill\u2019s Dynamic Vulnerability\
-    \ Exploit (DVE) Score and threat intelligence gathered from the deep and dark\
-    \ web. This action provides security teams with deep visibility into vulnerability\
-    \ impacts, including NVD data, CVSS scores, and exploitability metrics.\n\n###\
-    \ Parameters Description\n\n| Parameter Name | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Client Id | String | Yes | The API Client\
-    \ ID for Cybersixgill authentication (defined at integration level). |\n| Client\
-    \ Secret | String | Yes | The API Client Secret for Cybersixgill authentication\
-    \ (defined at integration level). |\n\n*Note: There are no action-specific parameters;\
-    \ it utilizes the integration's global configuration and the CVE identifier from\
-    \ target entities.*\n\n### Flow Description\n\n1.  **Authentication**: Establishes\
-    \ a connection to the Cybersixgill API using the provided Client ID and Secret.\n\
-    2.  **Entity Selection**: Identifies all entities of type `CVE` within the current\
-    \ alert scope.\n3.  **Data Retrieval**: Queries Cybersixgill for DVE scores, NVD\
-    \ metadata (publication date, modified date, link), and CVSS (2.0/3.1) severity/scores\
-    \ for each CVE.\n4.  **Internal Mutation (Enrichment)**: Updates the CVE entities'\
-    \ additional properties with the retrieved data (prefixed with 'Cybersixgill')\
-    \ and marks them as enriched.\n5.  **Insight Generation**: Creates a detailed\
-    \ Case Insight for each CVE summarizing the vulnerability's status and risk scores.\n\
-    6.  **Tabular Reporting**: Generates a data table attached to the entity containing\
-    \ a structured overview of the vulnerability attributes.\n7.  **JSON Output**:\
-    \ Adds the raw enrichment data to the action result for downstream automation\
-    \ logic."
+Enrich CVE:
+  ai_description: >-
+    ### General Description
+
+    The Enrich CVE action retrieves Cyber Intelligence from Cybersixgill's Dynamic
+    Vulnerability Exploit (DVE) database for CVE entities within a case. It provides
+    security teams with context regarding vulnerability trending status, Proof of
+    Concept (POC) exploit details, and dynamic reputation scores to help prioritize
+    remediation efforts.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Expected Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Client Id | The API Client ID for Cybersixgill authentication. | String | Yes
+    |
+
+    | Client Secret | The API Client Secret for Cybersixgill authentication. | String
+    | Yes |
+
+
+    ### Additional Notes
+
+    This action specifically targets entities identified as CVE types. It adds a variety
+    of custom attributes to the entity's additional properties, prefixed with 'Cybersixgill'.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the Cybersixgill
+    API using the provided Client ID and Secret.
+
+    2. **Entity Filtering**: It identifies all CVE entities available in the current
+    case context.
+
+    3. **Intelligence Retrieval**: For each CVE entity, the action queries the Cybersixgill
+    DVE API to fetch current and historical scores, exploitability probability, and
+    NVD (National Vulnerability Database) metadata.
+
+    4. **Data Processing**: The retrieved data is parsed into a human-readable insight
+    format and a structured data table.
+
+    5. **Internal Update**: The action updates the SOAR entities with new properties,
+    creates a case insight detailing the vulnerability metrics, and attaches a data
+    table for deeper analysis.
   capabilities:
     can_create_case_comments: false
-    can_create_case_wall_logs: true
+    can_create_case_wall_logs: false
     can_create_insight: true
     can_mutate_external_data: false
     can_mutate_internal_data: true
@@ -32,13 +56,14 @@ EnrichCve:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity 'additional_properties' with vulnerability data, creates case
-      insights, and attaches data tables to entities within Google SecOps.
+      The action updates internal entity properties by adding Cybersixgill DVE attributes,
+      sets the 'is_enriched' flag on entities, creates case insights, and generates
+      entity data tables within the Google SecOps platform.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - CVE
+    - CVE
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -56,53 +81,38 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility tool designed to verify the connectivity between
-    Google SecOps and the Cybersixgill API. It ensures that the integration is properly
-    configured and that the provided credentials (Client ID and Client Secret) are
-    valid for establishing a secure connection.
+    The Ping action is a diagnostic utility used to verify the connectivity between
+    the Google SecOps platform and the Cybersixgill environment. It ensures that the
+    provided API credentials (Client ID and Client Secret) are valid and that the
+    network connection to the Cybersixgill API is functional.
 
 
     ### Parameters Description
 
-    This action does not require any input parameters from the user at runtime. It
-    relies entirely on the global integration configuration parameters:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Client Id** | String | Yes | The unique identifier provided by Cybersixgill
-    for API access. |
-
-    | **Client Secret** | String | Yes | The secret key associated with the Client
-    ID used for authentication. |
+    This action does not have any input parameters. It relies solely on the integration's
+    global configuration for authentication.
 
 
     ### Flow Description
 
-    1.  **Credential Retrieval**: The action extracts the `Client Id` and `Client
-    Secret` from the Cybersixgill integration settings.
+    1. **Credential Extraction**: The action retrieves the `Client Id` and `Client
+    Secret` from the integration configuration.
 
-    2.  **Manager Initialization**: It initializes the `SixgillEnrichManager` with
-    the retrieved credentials.
+    2. **Client Initialization**: It initializes the `SixgillEnrichManager` which
+    sets up the base communication client.
 
-    3.  **Authentication Attempt**: The manager utilizes the `SixgillBaseClient` to
-    request an access token from the Cybersixgill authentication endpoint.
+    3. **Connectivity Test**: It executes the `test_connectivity` method, which attempts
+    to authenticate with the Cybersixgill API and retrieve an access token.
 
-    4.  **Connectivity Validation**: If an access token is successfully returned,
-    the action considers the connection established.
-
-    5.  **Result Reporting**: The action ends by returning a success message if the
-    connection is verified or an error message detailing the failure if the authentication
-    or network request fails.
+    4. **Result Reporting**: Based on the success or failure of the token retrieval,
+    it returns a status message and boolean result to the SOAR interface.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup of the integration or for
-    troubleshooting communication issues. It does not process or enrich any entities
-    within a case.
+    This action is typically used during the initial setup or for troubleshooting
+    purposes to confirm that the integration can communicate with the external service
+    provider.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -116,7 +126,7 @@ Ping:
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

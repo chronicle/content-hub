@@ -2,78 +2,53 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action tests the connectivity and configuration for the GitSync integration.
-    It verifies communication with both the Google SecOps (Chronicle) SOAR API and
-    the target Git repository (e.g., GitHub, GitLab, Bitbucket). This action ensures
-    that the credentials, repository URLs, and network settings (including SSL and
-    SSH fingerprints) are correctly configured before performing synchronization tasks.
+    The **Ping** action for the GitSync integration is designed to verify connectivity
+    between the Google SecOps (Chronicle SOAR) environment and the configured Git
+    repository. It serves as a diagnostic tool to ensure that the integration is correctly
+    configured and can communicate with both the internal SOAR API and the external
+    Git server.
 
 
     ### Parameters Description
 
-    | Parameter | Expected Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Repo URL** | String | Yes | The URL of the Git repository. Supports both SSH
-    and HTTP/HTTPS formats. |
-
-    | **Branch** | String | Yes | The name of the Git branch to verify connectivity
-    with. |
-
-    | **Git Server Fingerprint** | String | No | Optional SSH host key fingerprint
-    (SHA256 or MD5) to verify the Git server's identity. |
-
-    | **Git Password/Token/SSH Key** | Password | Yes | The authentication credential
-    for the Git server. Can be a password, API token, or a base64-encoded SSH private
-    key. |
-
-    | **Git Username** | String | No | The username used for Git authentication. Defaults
-    to 'None'. |
-
-    | **Commit Author** | String | No | The author identity for commits, formatted
-    as `Name <email@example.com>`. |
-
-    | **SOAR Username** | String | No | The username used to authenticate against
-    the Chronicle SOAR API. |
-
-    | **SOAR Password** | Password | No | The password used to authenticate against
-    the Chronicle SOAR API. |
-
-    | **Siemplify Verify SSL** | Boolean | Yes | Whether to verify SSL certificates
-    when connecting to the Chronicle SOAR API. |
-
-    | **Git Verify SSL** | Boolean | Yes | Whether to verify SSL certificates when
-    connecting to the Git server via HTTPS. |
+    This action does not have any action-level parameters. It relies entirely on the
+    **Integration Configuration Parameters** (e.g., Repo URL, Git Username, Git Password/Token/SSH
+    Key, etc.) to perform the connectivity test.
 
 
     ### Additional Notes
 
-    - This action is a diagnostic utility and does not modify any data in the Git
-    repository or Google SecOps.
+    - Either a Git password/token or an SSH key must be configured in the integration
+    settings for the Git connectivity check to succeed.
 
-    - The **Commit Author** must strictly follow the format `Name <email@address.com>`
-    or the action will fail validation.
+    - If a **Git Server Fingerprint** is provided in the configuration, the action
+    will perform an additional security check to verify the SSH host key of the Git
+    server.
+
+    - The **Commit Author** parameter must follow the standard format: `Name <email@example.com>`.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction:** The action retrieves integration-level configuration
-    parameters for Git and SOAR credentials.
+    1. **Initialization:** Extracts all necessary credentials and configuration settings
+    from the GitSync integration instance.
 
-    2. **Author Validation:** Validates the `Commit Author` parameter against a specific
-    regex pattern to ensure Git compatibility.
+    2. **Validation:** Validates the `Commit Author` parameter format using a regex
+    to ensure it is valid for future git operations.
 
-    3. **SOAR Connectivity Test:** Uses the `SiemplifyApiClient` to attempt a connection
-    to the Chronicle SOAR API by fetching the system version.
+    3. **Manager Setup:** Initializes the `GitSyncManager`, which prepares the API
+    client for SOAR and the Git client (using the Dulwich library).
 
-    4. **Git Repository Test:** Initializes the Git client (cloning or pulling metadata)
-    to verify access to the specified repository and branch.
+    4. **SOAR Connectivity Test:** Calls the internal `test_connectivity` function,
+    which attempts to retrieve the SOAR system version to verify the local API connection.
 
-    5. **Fingerprint Verification:** If a `Git Server Fingerprint` is provided, it
-    performs a specific SSH handshake check to verify the remote server's host key.
+    5. **Git Connectivity Test:** If a `Git Server Fingerprint` is provided, the action
+    connects to the remote Git server to fetch the head tree and verify the host's
+    SSH fingerprint. If no fingerprint is provided, it skips this specific verification
+    but confirms the manager could be initialized.
 
-    6. **Final Status:** Returns `True` if all connectivity checks pass.
+    6. **Result Reporting:** Ends the action with a success result if all connectivity
+    checks pass.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -87,7 +62,7 @@ Ping:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

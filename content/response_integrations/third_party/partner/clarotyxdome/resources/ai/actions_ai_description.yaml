@@ -1,27 +1,53 @@
-Add vulnerabilities:
+AddVulnerabilities:
   ai_description: >-
-    ### General Description This action enriches entities by adding vulnerability
-    information retrieved from Claroty xDome. It identifies devices based on their
-    IP address or MAC address and fetches associated vulnerability details, such as
-    CVE IDs, risk scores, and descriptions, to provide a detailed view of the entity
-    security posture. ### Parameters Description | Parameter | Type | Mandatory |
-    Description | | :--- | :--- | :--- | :--- | | xdomeHost | string | Yes | The Base
-    URL for the Claroty xDome instance (e.g., https://xdome.claroty.com). | | xdomeApiToken
-    | string | Yes | API token for authenticating to the Claroty xDome instance. |
-    | Verify SSL | string | No | Enable (true) or disable (false) SSL certificate
-    validation for API connections. | ### Flow Description 1. **Configuration Extraction**:
-    Retrieves the host URL, API token, and SSL verification settings from the action
-    configuration. 2. **Entity Identification**: Iterates through target entities
-    and evaluates the identifier. If it is not a direct UID, the action queries the
-    xDome '/api/v1/devices/' endpoint using the IP or MAC address to retrieve the
-    device UID. 3. **Vulnerability Retrieval**: Uses the device UID to query the '/api/v1/device_vulnerability_relations/'
-    endpoint for all associated vulnerability details. 4. **Internal Data Update**:
-    Populates the entity 'additional_properties' with vulnerability data, sets the
-    'is_enriched' flag to true, and marks the entity as vulnerable if matches are
-    found. 5. **Finalization**: Updates the entities in the case and returns a JSON
-    summary of the enriched data. ### Additional Notes This action supports IPv4,
-    IPv6, and MAC addresses. It identifies devices dynamically and filters out retired
-    assets in the xDome environment.
+    ### General Description
+
+    This action enriches entities within Google SecOps by fetching vulnerability information
+    from a Claroty xDome instance. It identifies devices based on their IP address,
+    MAC address, or unique xDome UID and retrieves a detailed list of associated vulnerabilities.
+    The retrieved data includes vulnerability names, CVE IDs, risk scores, and remediation
+    recommendations, which are then attached to the entities as additional properties.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | xdomeHost | String | True | The base URL for the Claroty xDome instance (e.g.,
+    `https://example.xdome.claroty.com`). |
+
+    | xdomeApiToken | String | True | The API token used for authenticating requests
+    to the Claroty xDome API. |
+
+    | Verify SSL | Boolean | False | Enables or disables SSL certificate validation
+    for API connections. Default is true. |
+
+
+    ### Flow Description
+
+    1.  **Configuration Extraction:** The action retrieves the xDome host, API token,
+    and SSL verification settings from the integration parameters.
+
+    2.  **Identifier Identification:** For each target entity, the action determines
+    if the identifier is a potential xDome UID, an IP address (v4 or v6), or a MAC
+    address.
+
+    3.  **Device Lookup:** If the identifier is an IP or MAC address, the action performs
+    a search against the xDome `/api/v1/devices/` endpoint to find the corresponding
+    device UID.
+
+    4.  **Vulnerability Retrieval:** Once a device UID is obtained, the action queries
+    the `/api/v1/device_vulnerability_relations/` endpoint to fetch all known vulnerabilities
+    for that device.
+
+    5.  **Entity Enrichment:** The vulnerability data, including counts and risk details,
+    is mapped to the entity's `additional_properties`. The entity is marked as enriched.
+
+    6.  **Internal Update:** The action updates the entities within Google SecOps
+    to persist the new metadata and provides a summary of successful and failed enrichments
+    in the action output.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -32,14 +58,15 @@ Add vulnerabilities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' attribute of entities with vulnerability
-      data and sets the 'is_enriched' flag.
+      Updates the entity's 'additional_properties' with vulnerability data and sets
+      the 'is_enriched' flag to true.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - ADDRESS
-      - MacAddress
+    - ADDRESS
+    - MacAddress
+    - GENERICENTITY
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -53,140 +80,45 @@ Add vulnerabilities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Enrich xDome asset information:
+EnrichAlerts:
   ai_description: >-
     ### General Description
 
-    This action enriches IP Address and MAC Address entities using Claroty xDome.
-    It queries the xDome API to retrieve detailed asset information, including device
-    category, risk scores, manufacturer details, and vulnerability data. The retrieved
-    information is then mapped to the entity's additional properties within Google
-    SecOps, providing security analysts with contextual insights into the assets involved
-    in an alert.
+    Enriches a Google SecOps (Chronicle) alert with detailed metadata and MITRE ATT&CK
+    information retrieved from Claroty xDome. The action uses a specific Claroty Alert
+    ID to query the external system and maps the returned attributes directly to the
+    alert context in Google SecOps.
 
 
     ### Parameters Description
+
 
     | Parameter | Description | Type | Mandatory |
 
     | :--- | :--- | :--- | :--- |
 
-    | xdomeHost | The base URL for the Claroty xDome instance (e.g., https://your-instance.claroty.com).
-    | String | True |
-
-    | xdomeApiToken | The API token used for authenticating requests to the Claroty
-    xDome instance. | String | True |
+    | clarotyAlertId | The unique alert ID from Claroty xDome used to fetch specific
+    alert details. | string | True |
 
 
     ### Flow Description
 
-    1.  **Initialization**: The action extracts the Claroty xDome host and API token
-    from the configuration parameters.
+    1.  **Configuration Extraction**: Retrieves Claroty xDome connection details (Host
+    and API Token) from the integration settings.
 
-    2.  **Entity Filtering**: It iterates through the target entities in the case
-    and filters for those of type `ADDRESS` or `MACADDRESS`.
+    2.  **External Query**: Executes a POST request to the Claroty xDome API `/api/v1/alerts/`
+    using a filter to find the alert matching the provided `clarotyAlertId`.
 
-    3.  **Identifier Validation**: For each valid entity, it performs a regex check
-    to ensure the identifier is a valid IPv4, IPv6, or MAC address format.
+    3.  **Data Extraction**: Parses the API response to extract fields such as alert
+    name, type, category, status, and MITRE technique IDs/names (Enterprise or ICS).
 
-    4.  **Asset Query**: It performs a POST request to the Claroty xDome `/api/v1/devices/`
-    endpoint to find assets matching the entity's IP or MAC address.
-
-    5.  **Vulnerability Retrieval**: If a matching asset is found, the action takes
-    the unique ID (`uid`) and performs a second query to the `/api/v1/device_vulnerability_relations/`
-    endpoint to fetch associated vulnerabilities.
-
-    6.  **Data Processing**: The action processes the device details and vulnerability
-    lists, calculating a total vulnerability count and generating a summary of the
-    top CVEs.
-
-    7.  **Enrichment**: The resulting data (e.g., `Claroty_device_type`, `Claroty_risk_score`,
-    `vulnerability_count`) is added to the entity's `additional_properties`.
-
-    8.  **Update**: The entities are updated in the Google SecOps platform with the
-    new enrichment data.
-
-
-    ### Additional Notes
-
-    - The action only processes the first matching device found in xDome for a specific
-    identifier.
-
-    - Enrichment is marked as successful only if the entity type is supported and
-    a matching device is found in the xDome database.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes:
-      - ADDRESS
-      - MacAddress
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-EnrichAlerts:
-  ai_description: >-
-    ### General Description
-
-    This action enriches a Google SecOps alert using data retrieved from Claroty xDome.
-    By providing a specific Claroty Alert ID, the action fetches comprehensive alert
-    metadata, including status, description, and MITRE ATT&CK mapping, and attaches
-    this information directly to the current alert in Google SecOps.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | clarotyAlertId | String | Yes | The unique identifier of the alert within the
-    Claroty xDome platform used to retrieve specific alert details. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: Connects to the Claroty xDome host using the configured
-    host URL and API token.
-
-    2. **Data Retrieval**: Performs a filtered POST request against the Claroty `/api/v1/alerts/`
-    endpoint to fetch detailed metadata for the provided `clarotyAlertId`.
-
-    3. **Property Enrichment**: Iterates through the Claroty alert fields (such as
-    alert name, class, and status) and adds them to the Siemplify alert's `additional_properties`
+    4.  **Internal Mutation (Enrichment)**:
+        *   Maps Claroty fields to the Google SecOps alert's `additional_properties`
     with a `Claroty_` prefix.
-
-    4. **MITRE Mapping**: Specifically extracts MITRE ATT&CK enterprise or ICS tactics
-    and techniques from the Claroty response and updates the Siemplify alert's `security_result`
-    field to improve threat classification visibility.
-
-    5. **Result Finalization**: Returns a success status and a JSON summary containing
-    the full alert data from Claroty.
-
-
-    ### Additional Notes
-
-    This action operates on the current alert object rather than iterating over specific
-    entities (like IP addresses or Hostnames) in the case scope.
+        *   Updates the `security_result` field of the alert with MITRE Tactic and
+    Technique names/IDs.
+    5.  **Result Reporting**: Adds the raw JSON alert data to the action results and
+    provides a summary of the enrichment status on the case wall.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -197,13 +129,12 @@ EnrichAlerts:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the current alert's additional properties with Claroty alert metadata
-      and populates MITRE ATT&CK tactics and techniques within the security result
-      field.
+      Updates the current alert's 'additional_properties' and 'security_result' fields
+      with enriched metadata and MITRE ATT&CK information retrieved from Claroty xDome.
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -217,15 +148,15 @@ EnrichAlerts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Ping:
+EnrichXDomeAssetInformation:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Claroty xDome instance using the provided credentials.
-    This action ensures that the Google SecOps platform can communicate with the Claroty
-    xDome API by attempting an authenticated request to the alerts endpoint. It is
-    primarily used during integration setup to verify that the Host and API Token
-    are correctly configured.
+    This action enriches IP Address and MAC Address entities with comprehensive asset
+    information retrieved from a Claroty xDome instance. It provides deep visibility
+    into the device's technical specifications, risk posture, and associated vulnerabilities,
+    enabling security analysts to better understand the context of an alert involving
+    industrial or IoT assets.
 
 
     ### Parameters Description
@@ -234,42 +165,108 @@ Ping:
 
     | :--- | :--- | :--- | :--- |
 
-    | xdomeHost | String | Yes | The base URL of the Claroty xDome instance (e.g.,
-    `https://instance.xdome.claroty.com`). This is extracted from the integration
-    configuration. |
+    | `xdomeHost` | String | Yes | The base URL of the Claroty xDome instance (e.g.,
+    `https://example.xdome.claroty.com`). |
 
-    | xdomeApiToken | String | Yes | The Bearer token used for authentication with
-    the Claroty xDome API. This is extracted from the integration configuration. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the host. Default is typically determined by the environment configuration.
-    |
+    | `xdomeApiToken` | String | Yes | The API token used for authenticating requests
+    to the Claroty xDome API. |
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: The action retrieves the host URL, API token,
-    and SSL verification preference from the integration's configuration parameters.
+    1.  **Identify Entities:** The action iterates through the target entities, specifically
+    looking for `ADDRESS` (IP) and `MacAddress` types.
 
-    2. **API Request**: Performs a POST request to the `/api/v1/alerts/` endpoint
-    of Claroty xDome. The request includes a payload with a `limit` of 1 to minimize
-    data transfer while verifying the validity of the credentials and the reachability
-    of the service.
+    2.  **Filter Validation:** It uses regular expressions to determine if the identifier
+    is a valid IPv4, IPv6, or MAC address.
 
-    3. **Connectivity Validation**: Analyzes the HTTP response status code. If the
-    request returns a successful status (2xx), the action reports a successful connection.
+    3.  **Asset Retrieval:** It queries the Claroty xDome `/api/v1/devices/` endpoint
+    to find device records matching the entity's identifier.
 
-    4. **Error Handling**: If an exception occurs (e.g., timeout, 401 Unauthorized,
-    404 Not Found), the error is caught, logged, and a failure message is returned.
+    4.  **Vulnerability Retrieval:** For the first matching device found, it performs
+    a secondary query to `/api/v1/device_vulnerability_relations/` using the device's
+    unique ID (`uid`) to fetch all associated vulnerabilities.
+
+    5.  **Data Processing:** The action aggregates asset details (such as risk score,
+    manufacturer, and device category) and summarizes the top vulnerabilities and
+    total vulnerability count.
+
+    6.  **Enrichment:** The gathered information is added to the entity's `additional_properties`,
+    and the entity is marked as enriched within Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes:
+    - ADDRESS
+    - MacAddress
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Test connectivity to Claroty xDome to ensure that the provided connection parameters
+    (Host and API Token) are valid and the service is reachable. This action is typically
+    used for troubleshooting or initial setup validation.
 
 
-    ### Additional Notes
+    ### Parameters description
 
-    - This action does not process any case entities and does not modify any data
-    within Claroty xDome or Google SecOps.
+    | Parameter | Type | Mandatory | Description |
 
-    - It uses a POST method for querying alerts, which is a standard pattern for the
-    Claroty xDome API search functionality.
+    | :--- | :--- | :--- | :--- |
+
+    | xdomeHost | String | Yes | The base URL/host of the Claroty xDome instance (e.g.,
+    https://example.xdome.claroty.com). |
+
+    | xdomeApiToken | String | Yes | The API Token used for Bearer authentication.
+    |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the xDome host. |
+
+
+    ### Additional notes
+
+    This action is a utility for verifying integration configuration and does not
+    require or process any entities.
+
+
+    ### Flow description
+
+    1. **Initialize Parameters**: The action extracts the `xdomeHost`, `xdomeApiToken`,
+    and `Verify SSL` settings from the integration's configuration.
+
+    2. **Connectivity Test**: It constructs a POST request to the Claroty xDome alerts
+    endpoint (`/api/v1/alerts/`) with a limit of 1 result.
+
+    3. **Validation**: The action attempts to execute the request with a 10-second
+    timeout and checks if the response status is successful.
+
+    4. **Result Reporting**: It returns an execution state of completed and a success
+    message if the connection is established, or an execution state of failed with
+    the error details if the connection fails.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -278,12 +275,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

@@ -1,10 +1,10 @@
-CreateContent:
+Create Content:
   ai_description: >-
     ### General Description
 
-    This action inserts text content into a specific Google Document at defined character
-    offsets. It is designed to automate the process of appending or injecting information
-    into documentation using the Google Docs API.
+    This action inserts text content into a specific Google Document using the Google
+    Docs API. It allows for bulk text insertion at specified indices within the document
+    body by processing a JSON-formatted list of items.
 
 
     ### Parameters Description
@@ -13,37 +13,41 @@ CreateContent:
 
     | :--- | :--- | :--- | :--- |
 
-    | Document Id | The unique identifier of the target Google Document, which can
-    be extracted from the document's URL. | String | Yes |
+    | Document Id | The unique identifier of the Google Document, typically found
+    in the URL (e.g., https://docs.google.com/document/d/{YourDocumentId}/). | string
+    | True |
 
-    | Json | A JSON-formatted string containing an array of items to insert. Each
-    item must specify an `index` (the character position) and the `text` to be inserted.
-    | String/Code | Yes |
+    | Json | A JSON-formatted string containing an array of items. Each item must
+    specify an `index` (the character offset where the text should be inserted) and
+    the `text` to be inserted. | code | True |
 
 
     ### Additional Notes
 
-    * The character indices provided in the JSON input must be valid within the document's
-    current length to avoid errors.
+    - This action uses the `batchUpdate` method of the Google Docs API, allowing multiple
+    insertions in a single request.
 
-    * This action requires valid Google Service Account credentials with appropriate
-    access to the Google Drive/Docs API.
+    - The `index` refers to the character offset in the document. Incorrect indices
+    may result in API errors if they fall outside document bounds or within specific
+    structural elements.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts the integration's credentials and the action's
-    input parameters (Document ID and JSON payload).
+    1. **Extract Configuration:** Retrieves the service account credentials from the
+    integration settings.
 
-    2. **Request Construction**: Parses the provided JSON string and iterates through
-    the `items` list to build a collection of `insertText` requests compatible with
-    the Google Docs `batchUpdate` method.
+    2. **Extract Parameters:** Collects the target `Document Id` and the `Json` payload
+    from the action input.
 
-    3. **API Execution**: Initializes the `GoogleDocsManager` and executes the batch
-    update against the specified document.
+    3. **Parse Content:** Deserializes the JSON string and iterates through the provided
+    items to construct a list of `insertText` requests.
 
-    4. **Result Handling**: Captures the API response, attaches it as a JSON result
-    to the action, and completes the execution with a success message.
+    4. **Execute Request:** Initializes the Google Docs Manager and sends a `batchUpdate`
+    request to the Google Docs API with the constructed insertion logic.
+
+    5. **Output Results:** Returns the JSON response from the API and completes the
+    action with a success status.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -52,14 +56,14 @@ CreateContent:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Inserts text content into a Google Document at specified indices using the batchUpdate
-      API call.
+      Inserts new text content into an existing Google Document at specified character
+      indices.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -73,14 +77,13 @@ CreateContent:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-CreateDocument:
+Create Document:
   ai_description: >-
     ### General Description
 
-    Creates a new Google Document in the connected Google Drive account and manages
-    access permissions for specified users. This action is designed to automate the
-    creation of documentation, reports, or shared incident response notes directly
-    from a playbook.
+    This action creates a new document in Google Docs and manages sharing permissions
+    for specific users. It allows security analysts to automate the creation of investigation
+    reports or shared documentation during an incident response process.
 
 
     ### Parameters Description
@@ -89,40 +92,40 @@ CreateDocument:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Title** | String | Yes | The title of the document to be created. Default
-    value is 'New Document'. |
+    | Title | string | True | The document title of the document you would like to
+    create. |
 
-    | **Role** | DDL | Yes | The access level granted to the provided emails. Options
-    include 'owner' (full control), 'writer' (can comment/edit), or 'reader' (view
-    only). |
+    | Role | ddl | True | The permission level to grant. Options are: **owner** (full
+    control), **writer** (can comment/edit), or **reader** (view only). |
 
-    | **Emails** | String | Yes | A semi-colon (`;`) separated list of email addresses
-    of the users who should be granted access to the document. |
+    | Emails | string | True | A semicolon-separated list of email addresses (e.g.,
+    `user1@gmail.com;user2@gmail.com`) to which the specified role will be assigned.
+    |
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes the Google Docs and Drive services
-    using the provided Service Account credentials.
+    1. **Configuration Extraction:** The action retrieves service account credentials
+    and input parameters (Title, Role, and Emails) from the Google SecOps environment.
 
-    2. **Resource Creation**: It calls the Google Docs API to create a new document
-    using the specified **Title**.
+    2. **Document Creation:** It interacts with the Google Docs API to create a new,
+    empty document with the provided title.
 
-    3. **Permission Assignment**: The action parses the **Emails** string into individual
-    addresses and iterates through them. For each email, it calls the Google Drive
-    API to create a permission entry with the selected **Role**.
+    3. **Permission Management:** The action parses the semicolon-separated list of
+    emails and uses the Google Drive API to assign the selected role to each user
+    for the newly created document.
 
-    4. **Result Processing**: It retrieves the full metadata of the created file from
-    Google Drive.
+    4. **Metadata Retrieval:** It fetches the full metadata of the created file from
+    Google Drive to provide a comprehensive response.
 
-    5. **Output**: The metadata of the new document is attached to the action results
-    for use in subsequent playbook steps.
+    5. **Completion:** The action returns the document's unique ID and metadata as
+    the JSON result and concludes the execution.
 
 
     ### Additional Notes
 
-    This action does not operate on existing SOAR entities; it generates a new external
-    resource based on the provided input parameters.
+    - Ensure the service account associated with the 'Credentials Json' has the necessary
+    Google Drive and Google Docs API scopes enabled.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -131,14 +134,14 @@ CreateDocument:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      This action creates a new file in the user's Google Drive and modifies file-level
-      access control lists (ACLs) by adding permissions for specified email addresses.
-    fetches_data: false
+      The action creates a new document in Google Docs and modifies file permissions
+      within Google Drive for the specified email addresses.
+    fetches_data: true
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -156,39 +159,41 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity between Google SecOps and the Google Docs API. This action
-    verifies that the integration configuration and credentials (service account)
-    are correctly set up and have the necessary permissions to communicate with the
-    Google Drive and Google Docs services.
+    Verifies the connectivity between Google SecOps and the Google Docs and Google
+    Drive APIs. This action is used to ensure that the provided service account credentials
+    are valid and that the integration can successfully communicate with Google services.
 
 
     ### Parameters Description
 
-    This action does not have any action-specific parameters. It relies on the global
-    integration configuration for authentication.
+    | Parameter | Type | Mandatory | Description |
 
+    | :--- | :--- | :--- | :--- |
 
-    ### Flow Description
-
-    1.  **Credential Retrieval**: Extracts the `Credentials Json` from the integration's
-    global configuration.
-
-    2.  **Manager Initialization**: Instantiates the `GoogleDocsManager`, which writes
-    the credentials to a temporary file and initializes the Google Drive and Google
-    Docs API clients.
-
-    3.  **Connectivity Test**: Executes a `list` request on the Google Drive API (filtering
-    for JPEG images) to confirm that the API responds and authentication is successful.
-
-    4.  **Reporting**: Ends the action with a success message if the API call completes
-    without error.
+    | None | N/A | No | This action does not take any input parameters. It uses the
+    integration's global configuration (Credentials Json) for authentication. |
 
 
     ### Additional Notes
 
-    The action requires a valid Service Account JSON with the `https://www.googleapis.com/auth/drive.file`
-    scope. While the connectivity test lists files, it does not modify or download
-    any actual content.
+    This action requires the 'Credentials Json' parameter to be correctly configured
+    in the integration settings to function.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify SDK and extracts the
+    service account credentials from the integration configuration.
+
+    2. **Authentication**: It initializes a connection to both Google Docs (v1) and
+    Google Drive (v3) using the service account credentials.
+
+    3. **Connectivity Test**: It performs a test API call to the Google Drive service
+    to list files. This verifies that the API key is active and has the necessary
+    permissions.
+
+    4. **Result Reporting**: The action concludes with a success message if the API
+    call is successful, or an error if the connection fails.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -197,12 +202,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -216,17 +221,93 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-RemoveContent:
+Remove Content:
   ai_description: >-
     ### General Description
 
-    The **Remove Content** action enables the deletion of specified text segments
-    from a Google Document based on character indices. This action is designed to
-    programmatically manage document content, allowing for automated redaction or
-    structured modification via the Google Docs API.
+    Removes specific content from a Google Document by specifying the document ID
+    and the character offset ranges to be deleted. This action is useful for automated
+    document redaction or content cleanup within Google SecOps workflows.
 
 
     ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Document Id** | The unique identifier of the Google Document, found in the
+    document's URL (e.g., `https://docs.google.com/document/d/{DocumentId}/`). | string
+    | Yes |
+
+    | **Json** | A JSON-formatted string containing a list of items with `start_index`
+    and `end_index`. These indices represent the character offsets in the document
+    body to be removed. | code | Yes |
+
+
+    ### Flow Description
+
+    1.  **Extract Configuration:** Retrieves the service account credentials from
+    the integration settings.
+
+    2.  **Extract Parameters:** Gathers the target `Document Id` and the `Json` payload
+    defining the removal ranges.
+
+    3.  **Parse Request:** Iterates through the provided JSON items to construct a
+    list of `deleteContentRange` requests formatted for the Google Docs API.
+
+    4.  **Execute Mutation:** Uses the `GoogleDocsManager` to send a `batchUpdate`
+    request to the Google Docs API to perform the deletions.
+
+    5.  **Output Results:** Returns the API response as a JSON result and completes
+    the action with a success message.
+
+
+    ### Additional Notes
+
+    - Most elements in a Google Doc body have a `startIndex` and `endIndex`. Users
+    must ensure the indices are valid for the specific document version to avoid API
+    errors.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes text and content ranges from an external Google Document via the Google
+      Docs API batchUpdate method.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Replace Content:
+  ai_description: >-
+    ### General Description
+
+    Replaces specific text content within a Google Document. This action interacts
+    with the Google Docs API to perform bulk 'search and replace' operations based
+    on a provided JSON configuration. It is useful for automating document updates,
+    such as template filling or correcting specific terms across files.
+
+
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
@@ -235,38 +316,38 @@ RemoveContent:
     | Document Id | string | Yes | The unique identifier for the Google Document,
     typically found in the URL between '/d/' and '/edit/'. |
 
-    | Json | code | Yes | A JSON structure specifying the content ranges to remove.
-    It must contain an 'items' array, where each object has a 'start_index' and 'end_index'
-    representing the character offsets. |
-
-
-    ### Additional Notes
-
-    - Character indices are zero-based offsets from the beginning of the document
-    body.
-
-    - This action requires a service account with edit permissions to the target document.
-
-    - The 'Json' parameter follows the Google Docs API 'deleteContentRange' request
-    format.
+    | Json | code | Yes | A JSON-formatted string containing an 'items' array. Each
+    item must include `text_to_search`, `text_to_replace`, and `match_case` (boolean
+    string) keys. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Google Docs and Drive managers
-    using service account credentials.
+    1.  **Extraction**: Retrieves the service account credentials from the integration
+    configuration and the Document ID and replacement JSON from the action parameters.
 
-    2. **Input Processing**: It extracts the Document ID and the JSON string containing
-    the ranges to be deleted.
+    2.  **Parsing**: Deserializes the input JSON string and iterates through the 'items'
+    list to construct a batch of `replaceAllText` request objects for the Google Docs
+    API.
 
-    3. **Request Mapping**: The action parses the input JSON and constructs a list
-    of 'deleteContentRange' operations.
+    3.  **Authentication**: Initializes the Google Docs service using the provided
+    service account credentials.
 
-    4. **Execution**: It performs a 'batchUpdate' call to the Google Docs API to execute
-    all deletion requests in a single transaction.
+    4.  **Execution**: Sends a `batchUpdate` request to the Google Docs API for the
+    specified document ID, applying all search-and-replace operations in a single
+    call.
 
-    5. **Result Handling**: The response from the Google Docs API is returned as a
-    JSON result, and the action concludes with a success message.
+    5.  **Output**: Returns the API response as JSON and provides a success message
+    indicating the content was replaced.
+
+
+    ### Additional Notes
+
+    - This action does not operate on SOAR entities; it requires a direct Document
+    ID as input.
+
+    - The 'Json' parameter must strictly follow the expected schema (an 'items' array)
+    to avoid parsing errors.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -275,95 +356,14 @@ RemoveContent:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes specific character ranges from a Google Document via the Google Docs
-      API batchUpdate method.
-    fetches_data: false
-    internal_data_mutation_explanation: 'null'
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-ReplaceContent:
-  ai_description: >-
-    ### General Description
-
-    This action modifies the content of a specific Google Document by replacing defined
-    text strings with replacement text. It utilizes the Google Docs API `batchUpdate`
-    functionality to perform bulk find-and-replace operations in a single request,
-    supporting case-sensitive matching.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Document Id | string | Yes | The unique identifier of the target Google Document.
-    This ID is extracted from the document's URL (e.g., `https://docs.google.com/document/d/{DocumentId}/`).
-    |
-
-    | Json | code | Yes | A JSON string containing an `items` array. Each item must
-    include `text_to_search`, `text_to_replace`, and `match_case` (string: "true"/"false").
-    This defines the specific transformations to apply. |
-
-
-    ### Flow Description
-
-    1. **Extraction**: Retrieves service account credentials from the integration
-    configuration and parameters (`Document Id`, `Json`) from the action input.
-
-    2. **Parsing**: Parses the input JSON string to extract the list of replacement
-    items.
-
-    3. **Request Construction**: Iterates through the items and constructs a list
-    of `replaceAllText` request objects formatted for the Google Docs API, including
-    case-sensitivity settings.
-
-    4. **Execution**: Initializes the `GoogleDocsManager` and sends a `batchUpdate`
-    request to the Google Docs API for the specified `Document Id`.
-
-    5. **Completion**: Records the API response as JSON and concludes the action with
-    a success message.
-
-
-    ### Additional Notes
-
-    * The `Json` parameter must strictly follow the expected schema (an object with
-    an `items` key containing the search/replace logic) to avoid runtime errors.
-
-    * This action requires service account credentials with sufficient permissions
-    (the scope `https://www.googleapis.com/auth/drive.file` is used) to modify the
-    target document.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Modifies the text content within an external Google Document by executing find-and-replace
-      operations via the Google Docs API.
+      Updates the text content of a Google Document by performing search-and-replace
+      operations via the Google Docs batchUpdate API.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

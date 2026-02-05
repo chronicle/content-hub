@@ -1,30 +1,50 @@
 Ping:
-  ai_description: "### General Description\nThe Ping action is designed to verify\
-    \ the connectivity and health status of the Superna Eyeglass Zero Trust API. It\
-    \ serves as a diagnostic tool to ensure that the Google SecOps environment can\
-    \ successfully communicate with the Superna appliance using the provided credentials\
-    \ and network configuration.\n\n### Parameters Description\n| Parameter | Type\
-    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| api_token | String\
-    \ | Yes | The API key/token used to authenticate requests against the Superna\
-    \ Zero Trust API. This is retrieved from the integration configuration. |\n| eyeglass_ip\
-    \ | String | Yes | The IP address or hostname of the Superna Eyeglass appliance.\
-    \ |\n| Verify SSL | Boolean | No | Determines whether the action should verify\
-    \ the SSL certificate of the Superna appliance. Defaults to False. |\n\n### Additional\
-    \ Notes\n- This action does not require or process any entities (IPs, Hosts, etc.)\
-    \ from the alert context.\n- It specifically targets the `/sera/v1/healthcheck`\
-    \ endpoint.\n- The action handles various network exceptions including timeouts,\
-    \ connection errors, and HTTP errors to provide descriptive feedback in the SOAR\
-    \ interface.\n\n### Flow Description\n1. **Configuration Extraction:** The action\
-    \ retrieves the `api_token`, `eyeglass_ip`, and SSL verification settings from\
-    \ the integration configuration.\n2. **URL Construction:** It builds the target\
-    \ API URL by combining the protocol, provided IP, and the hardcoded health check\
-    \ endpoint path.\n3. **Request Execution:** A GET request is sent to the Superna\
-    \ appliance with the appropriate headers (API key and JSON content types).\n4.\
-    \ **Response Handling:** \n    - If successful, it captures the response body\
-    \ and marks the execution as completed.\n    - If a timeout, connection error,\
-    \ or HTTP error occurs, it catches the exception and logs a specific failure message.\n\
-    5. **Action Completion:** The action finishes by reporting the status and the\
-    \ raw API response (or error details) back to the case wall."
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity and verifies the health of the Superna Eyeglass Zero Trust
+    API. This action is primarily used to ensure that the integration configuration
+    is correct and that the remote service is reachable.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | api_token | String | Yes | The API key used for authentication with the Superna
+    Eyeglass server. |
+
+    | eyeglass_ip | String | Yes | The IP address or hostname of the Superna Eyeglass
+    server. |
+
+    | Verify SSL | Boolean | No | Determines if the action should verify the SSL certificate
+    of the server. Defaults to False. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action extracts the API token, Eyeglass IP,
+    and SSL verification settings from the integration's configuration parameters.
+
+    2. **URL Construction**: It constructs the target API endpoint URL using the provided
+    Eyeglass IP and the health check route `/sera/v1/healthcheck`.
+
+    3. **Connectivity Request**: Executes an authenticated GET request to the Superna
+    Eyeglass server with a 30-second timeout.
+
+    4. **Error Handling**: The script monitors for specific exceptions including timeouts,
+    connection errors, and HTTP errors (e.g., 401 Unauthorized or 404 Not Found).
+
+    5. **Status Reporting**: Returns the execution state (COMPLETED, FAILED, or TIMEDOUT)
+    along with the response text or error details to the SOAR platform.
+
+
+    ### Additional Notes
+
+    - This action is a diagnostic utility and does not process or interact with specific
+    entities such as IPs or File Hashes from the case.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -36,9 +56,9 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -52,129 +72,46 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-SupernaSnapshotCriticalNasData:
+Superna Snapshot Critical NAS Data:
   ai_description: >-
     ### General Description
 
-    Triggers a 'Cyber Snapshot' for critical NAS (Network Attached Storage) data using
-    the Superna Eyeglass Zero Trust API. This action is designed to initiate data
-    collection or protection workflows for specific paths identified as critical within
-    the Superna environment, typically as a response to ransomware threats.
-
-
-    ### Parameters Description
-
-    This action does not have any input parameters. It relies entirely on the integration's
-    configuration settings:
-
-    * **api_token**: The API key used for authentication with the Superna Eyeglass
-    API.
-
-    * **eyeglass_ip**: The IP address or hostname of the Superna Eyeglass server.
-
-    * **Verify SSL**: A boolean flag determining whether to verify the SSL certificate
-    of the Superna Eyeglass server.
-
-
-    ### Additional Notes
-
-    * This action performs a **POST** request to the external system, which initiates
-    a snapshot operation. This is considered a mutation of external data as it creates
-    a new state/record (a snapshot) in Superna.
-
-    * All credentials and connection details are managed at the integration configuration
-    level, making the action itself parameter-less for the user during playbook execution.
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The script extracts the API token, Eyeglass IP,
-    and SSL verification settings from the SupernaZeroTrust integration configuration.
-
-    2. **Endpoint Construction**: It formats the target API URL using the provided
-    Eyeglass IP and the specific ransomware critical paths route.
-
-    3. **API Interaction**: The script executes a POST request to the Superna Eyeglass
-    server, passing the API key in the headers.
-
-    4. **Outcome Reporting**: The action captures the response from the server. If
-    successful, it returns the snapshot data as a JSON result. It includes comprehensive
-    error handling for timeouts, connection issues, and HTTP errors to ensure the
-    SOAR workflow can respond to communication failures.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Initiates a snapshot process of critical NAS data on the Superna Eyeglass server
-      via a POST request to the /ransomware/criticalpaths endpoint.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_scopes: [ ]
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-SupernaZeroTrustUserLockout:
-  ai_description: >-
-    ### General Description
-
-    This action facilitates the lockout of a suspected user from all Superna-protected
-    Network Attached Storage (NAS). It is designed to mitigate threats such as ransomware
-    by programmatically revoking user permissions and applying 'deny read' permissions
-    to SMB shares through the Superna Eyeglass Zero Trust API.
+    Triggers a snapshot of critical NAS data via the Superna Zero Trust platform.
+    This action is designed to protect critical storage paths from ransomware threats
+    by initiating an immediate snapshot on the Superna Eyeglass server.
 
 
     ### Parameters Description
 
 
-    | Parameter | Mandatory | Type | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | UserName | True | String | The identifier of the user to be locked out. Must
-    be provided in 'domain\\username' or 'user@domain' format. |
+    | api_token | String | Yes | The API key used for authentication with the Superna
+    Eyeglass API. This is typically configured at the integration level. |
+
+    | eyeglass_ip | String | Yes | The IP address or hostname of the Superna Eyeglass
+    instance. This is typically configured at the integration level. |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Superna Eyeglass server. Defaults to `False`. |
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves connection details, including
-    the Eyeglass IP, API Token, and SSL verification settings, from the integration
-    configuration.
+    1. **Configuration Extraction**: The action retrieves the API token, Eyeglass
+    IP, and SSL verification preference from the integration configuration.
 
-    2. **Input Processing**: The provided `UserName` is extracted from the action
-    parameters and URL-encoded to ensure safe transmission via HTTP.
+    2. **URL Construction**: It formats the connection string using the provided Eyeglass
+    IP and the specific ransomware critical paths endpoint (`/sera/v2/ransomware/criticalpaths`).
 
-    3. **Request Construction**: The action constructs the full API URL for the Superna
-    lockout endpoint using the Eyeglass IP and encoded username.
+    3. **API Execution**: The action performs a POST request to the external Superna
+    service to trigger the snapshot.
 
-    4. **Execution**: An authenticated POST request is sent to the Superna Eyeglass
-    server to trigger the lockout mechanism.
-
-    5. **Result Handling**: The action evaluates the response from the server. It
-    handles various scenarios including successful execution, timeouts, connection
-    errors, and HTTP errors, updating the action result accordingly.
-
-
-    ### Additional Notes
-
-    This action does not iterate over entities but rather operates on a single user
-    provided via the `UserName` parameter.
+    4. **Response Processing**: The action captures the API response, handles potential
+    network errors (timeouts, connection issues, or HTTP errors), and returns the
+    execution status to the Google SecOps case.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -183,14 +120,15 @@ SupernaZeroTrustUserLockout:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates user permissions on Superna-protected NAS storage and applies deny read
-      permissions to SMB shares.
+      This action initiates a snapshot process for critical NAS data on the Superna
+      storage management platform, which creates new recovery points in the external
+      system.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -204,23 +142,45 @@ SupernaZeroTrustUserLockout:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-SupernaZeroTrustUserUnLock:
+Superna Zero Trust User Lockout:
   ai_description: >-
-    ### General Description This action unlocks a user that was previously locked
-    out from Superna protected NAS storage via the Superna Eyeglass Zero Trust API.
-    It facilitates rapid recovery of user access after security incidents or accidental
-    lockouts. ### Parameters Description | Parameter Name | Expected Type | Mandatory
-    | Description | | :--- | :--- | :--- | :--- | | UserName | String | Yes | The
-    name of the user to be unlocked. Expected formats are 'domain\\username' or 'username@domain'.
-    This value is URL-encoded before being sent to the API. | ### Flow Description
-    1. **Initialization**: The action retrieves integration configuration parameters
-    including the Eyeglass IP, API token, and SSL verification settings. 2. **Parameter
-    Extraction**: It extracts the mandatory `UserName` parameter and applies URL-encoding
-    to ensure compatibility with the REST API endpoint. 3. **API Call**: Constructs
-    a POST request to the `/sera/v2/ransomware/unlock/` endpoint using the configured
-    Eyeglass IP and API key. 4. **Response Handling**: The action captures the response
-    from the Superna Eyeglass server. It specifically handles success, timeouts, connection
-    errors, and HTTP errors to determine the final execution state in Google SecOps.
+    ### General Description
+
+    This action facilitates the lockout of a suspected user from all Superna-protected
+    Network Attached Storage (NAS) systems. It serves as a rapid response mechanism
+    to mitigate security threats, such as ransomware, by programmatically resolving
+    user permissions and applying 'deny read' permissions to SMB shares through the
+    Superna Eyeglass Zero Trust API.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | UserName | String | Yes | The identifier of the user to be locked out. The expected
+    format is `domain\username` or `user@domain`. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action starts by extracting the `api_token`,
+    `eyeglass_ip`, and SSL verification settings from the integration configuration.
+
+    2. **Target Identification:** Retrieves the `UserName` parameter provided by the
+    user and URL-encodes it for safe API transmission.
+
+    3. **Request Construction:** Constructs the specific Superna Zero Trust API endpoint
+    for the lockout action using the Eyeglass IP and the encoded username.
+
+    4. **API Execution:** Sends an authenticated POST request to the external Superna
+    service. This request instructs the system to revoke the user's access rights
+    across protected NAS storage.
+
+    5. **Exception Handling & Reporting:** The action monitors the request for timeouts,
+    connection failures, or HTTP errors. It then reports the outcome (success or failure)
+    back to the Google SecOps interface with the raw response data.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -229,14 +189,89 @@ SupernaZeroTrustUserUnLock:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Communicates with the Superna Eyeglass Zero Trust API to change the status of
-      a user from locked to unlocked within the Superna ransomware protection module.
-    fetches_data: true
+      This action performs a POST request to the Superna Eyeglass Zero Trust API which
+      triggers a lockout process, changing user permissions and access state on external
+      NAS storage systems.
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Superna Zero Trust User Un Lock:
+  ai_description: >-
+    ### General Description
+
+    This action unlocks a user account that was previously locked out from all Superna-protected
+    NAS storage. It is used to restore access for a specific user via the Superna
+    Zero Trust (Eyeglass) API.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **UserName** | string | Yes | The name of the user to unlock, provided in the
+    format `domain\username` or `username@domain`. |
+
+
+    ### Additional Notes
+
+    - This action requires the **api_token** and **eyeglass_ip** to be correctly configured
+    in the integration settings.
+
+    - The action utilizes a POST request to the Superna Eyeglass server, which effectively
+    changes the security state of the user account on the storage system.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action retrieves configuration parameters including
+    the API token, Eyeglass server IP, and SSL verification preference.
+
+    2. **Parameter Preparation:** The provided `UserName` is extracted and URL-encoded
+    to ensure safe transmission in the API endpoint.
+
+    3. **API Request:** A POST request is constructed and sent to the Superna Zero
+    Trust endpoint (`/sera/v2/ransomware/unlock/{user}`).
+
+    4. **Response Handling:** The action captures the server response, handling various
+    scenarios such as successful execution, timeouts, connection errors, and HTTP
+    errors.
+
+    5. **Completion:** The final status and result (response text) are reported back
+    to Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action performs a POST request to the Superna Eyeglass server to unlock
+      a previously locked user account on the protected NAS storage.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

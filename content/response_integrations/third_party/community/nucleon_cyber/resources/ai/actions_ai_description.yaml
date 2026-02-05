@@ -2,11 +2,10 @@ GetIPs:
   ai_description: >-
     ### General Description
 
-    This action retrieves a list of active threat intelligence data from the Nucleon
-    Cyber API. It specifically queries the 'Active Threats' feed to provide recently
-    collected cyber intelligence data, typically used for threat hunting or populating
-    watchlists. The action outputs the results as a raw JSON object for use in downstream
-    playbook logic.
+    The **GetIPs** action retrieves a list of recently collected cyber intelligence
+    data from the Nucleon Cyber Active Threats API. It is designed to fetch a feed
+    of active threats for general situational awareness or for use in subsequent playbook
+    logic, providing raw data in a structured JSON format.
 
 
     ### Parameters Description
@@ -15,40 +14,37 @@ GetIPs:
 
     | :--- | :--- | :--- | :--- |
 
-    | limit | string | True | Specifies the maximum number of threat intelligence
-    records to retrieve from the API feed. Default is '10'. |
-
-
-    ### Additional Notes
-
-    - This action does not require or operate on specific entities (like IPs or Domains)
-    within the case; it fetches a global feed based on the provided credentials and
-    limit.
-
-    - Authentication requires a valid Username, Password, Client Name, and Client
-    ID configured in the integration settings.
+    | **limit** | String | Yes | Specifies the maximum number of threat results to
+    return from the API. The default value is "10". |
 
 
     ### Flow Description
 
-    1. **Credential Retrieval**: The action extracts the API credentials (Username,
-    Password, Client Name, Client ID) from the integration configuration.
+    1.  **Authentication**: The action extracts integration-level configuration (Username,
+    Password, Client Name, and Client ID) and the action-level parameter (**limit**).
 
-    2. **Parameter Processing**: It retrieves the 'limit' parameter to determine the
-    size of the data request.
+    2.  **API Request**: It performs a POST request to the Nucleon Cyber Active Threats
+    endpoint (`https://api.nucleoncyber.com/feed/activethreats`) using Basic Authentication
+    and passing the client details and limit in the request body.
 
-    3. **External API Call**: Sends a POST request to the Nucleon Cyber feed endpoint
-    (`https://api.nucleoncyber.com/feed/activethreats`) containing the client identifiers
-    and result limit.
+    3.  **Validation**: The script checks for a successful HTTP 200 response and validates
+    that the API did not return an authentication failure message in the response
+    body.
 
-    4. **Authentication Validation**: Checks the HTTP status code and response content
-    for authentication failures or invalid API keys.
+    4.  **Data Processing**: It extracts the `data` field from the API response.
 
-    5. **Data Extraction**: Parses the JSON response to isolate the 'data' section
-    containing threat intelligence records.
+    5.  **Output**: The collected threat data is saved into the action's result JSON
+    and displayed in the context details for use by other actions in a playbook.
 
-    6. **Result Output**: Publishes the extracted threat data as both a JSON result
-    for playbook steps and a formatted JSON output for the action context.
+
+    ### Additional Notes
+
+    *   This action does **not** operate on specific entities (e.g., IPs, Domains)
+    within a case. Instead, it pulls a general feed of data from the Nucleon Cyber
+    service.
+
+    *   While the action uses an HTTP POST method, it is functionally a data retrieval
+    operation and does not modify any state in the Nucleon Cyber platform.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -60,9 +56,9 @@ GetIPs:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: true
+    enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -80,10 +76,12 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity and authentication
-    between Google SecOps and the NucleonCyber API. It ensures that the integration's
-    configuration parameters, such as credentials and client identifiers, are correct
-    and that the external service is reachable.
+    The Ping action is designed to verify the connectivity between Google SecOps and
+    the NucleonCyber API. It tests the validity of the provided credentials (Username,
+    Password, Client Name, and Client ID) by making a test request to the NucleonCyber
+    Active Threats feed endpoint. This is typically used during the initial setup
+    or troubleshooting phase to ensure the integration can communicate with the external
+    service.
 
 
     ### Parameters Description
@@ -93,35 +91,35 @@ Ping:
     | :--- | :--- | :--- | :--- |
 
     | **limit** | String | Yes | Specifies the number of results to request during
-    the connectivity test. This is used to validate the API's response to query parameters.
-    Default value is '5'. |
+    the connectivity test. While this is a connectivity check, the API endpoint requires
+    this parameter to process the request. Default value is '5'. |
 
 
     ### Additional Notes
 
-    - This action does not interact with or enrich any entities in the environment.
+    - This action does not process or return threat data; it only confirms if a successful
+    connection (HTTP 200) can be established.
 
-    - It uses Basic Authentication (Username and Password) along with specific Client
-    ID and Client Name parameters defined in the integration settings.
-
-    - Successful execution confirms that the API endpoint is active and the credentials
-    provided are valid.
+    - If the API returns any status code other than 200, the action will raise an
+    exception indicating bad credentials or a connection error.
 
 
     ### Flow Description
 
-    1. **Extraction**: The action retrieves integration-level configuration parameters
-    (Username, Password, Client Name, Client ID) and the action-specific 'limit' parameter.
+    1. **Configuration Extraction**: The action retrieves the integration's global
+    configuration, including the Username, Password, Client Name, and Client ID.
 
-    2. **Execution**: It performs a POST request to the NucleonCyber 'activethreats'
-    feed endpoint.
+    2. **Parameter Extraction**: The 'limit' parameter is retrieved from the action
+    input.
 
-    3. **Validation**: The script checks the HTTP status code of the response. If
-    the status code is 200, the connection is deemed successful.
+    3. **API Request**: A POST request is dispatched to the NucleonCyber endpoint
+    `https://api.nucleoncyber.com/feed/activethreats` using Basic Authentication and
+    the client details in the request body.
 
-    4. **Completion**: If valid, the action ends with a 'Successful Connection' status.
-    If the status code is not 200, it raises an exception indicating bad credentials
-    or a connection error.
+    4. **Validation**: The script checks if the HTTP response status code is 200.
+
+    5. **Completion**: If successful, the action ends with a 'Successful Connection'
+    status.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -130,12 +128,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

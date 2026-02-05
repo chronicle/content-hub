@@ -1,59 +1,61 @@
-GetAuthenticationLogsForUser:
+Get Authentication Logs for User:
   ai_description: >-
-    Retrieves comprehensive user data and multi-factor authentication (MFA) logs from
-    Duo Security for a specified user within a defined timeframe. This action is designed
-    to assist in security investigations by identifying 'known safe' authentication
-    sources based on a configurable frequency threshold.
+    ### General Description
+
+    Enriches investigations by retrieving Duo user data and authentication logs for
+    a specific username. It specifically identifies frequently used authentication
+    sources (IPs, states, devices) by comparing their occurrence counts against a
+    user-defined threshold. This is useful for distinguishing between established
+    user patterns and anomalous authentication attempts.
 
 
-    ### Parameters
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Authentication Threshold | String | Yes | The minimum number of successful authentications
-    required for an authentication source (IP, device, etc.) to be considered 'known'
-    or 'safe'. Default is 2. |
+    | Authentication Threshold | string | True | The minimum number of successful
+    authentications required for an authentication source to be considered 'known/safe'
+    in the filtered results. |
 
-    | Number Days Back | String | Yes | The number of days prior to the current time
-    to search for authentication logs. Default is 1 day. |
+    | Number Days Back | string | True | The lookback period in days from the current
+    time to retrieve logs. |
 
-    | Username | String | No | The specific Duo username to retrieve data for. While
-    marked as not mandatory in settings, the action logic requires this to identify
-    the target user. |
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval:** Extracts Duo Admin API credentials (Hostname,
-    Secret Key, and Integration Key) from the integration configuration.
-
-    2. **Time Window Calculation:** Calculates the epoch timestamps for the start
-    (current time minus 'Number Days Back') and end of the search window.
-
-    3. **User Identification:** Uses the Duo Admin SDK to fetch user metadata for
-    the provided 'Username' to obtain the unique internal `user_id`.
-
-    4. **Log Retrieval:** Requests authentication logs from Duo for the specific `user_id`
-    within the calculated time window.
-
-    5. **Data Aggregation:** Parses successful authentication events to count occurrences
-    of specific attributes: Access IPs, States, OS versions, Applications, Auth Devices,
-    and Factors.
-
-    6. **Threshold Filtering:** Filters the aggregated counts; any source with fewer
-    successful logins than the 'Authentication Threshold' is removed from the 'known'
-    lists to highlight anomalies.
-
-    7. **Result Generation:** Compiles the raw logs and the processed 'known source'
-    dictionaries into a JSON result for use in subsequent playbook steps.
+    | Username | string | False | The specific Duo username to query. If left empty,
+    the action will terminate with a message indicating no username was provided.
+    |
 
 
     ### Additional Notes
 
-    - The action utilizes a retry mechanism (60-second sleep) if it encounters errors
-    during API calls, typically to handle Duo's rate-limiting.
+    While the 'Username' parameter is marked as not mandatory in the configuration,
+    the action logic requires it to successfully resolve a Duo user ID and fetch logs.
+    This action does not process SOAR entities but operates on the provided string
+    parameter.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Duo Admin API using the Hostname, Secret
+    Key, and Integration Key from the integration configuration.
+
+    2. **User Identification**: Calls the Duo API to find the internal `user_id` corresponding
+    to the provided `Username` string.
+
+    3. **Log Retrieval**: Fetches authentication logs for that user ID covering the
+    number of days specified in the `Number Days Back` parameter.
+
+    4. **Aggregation and Analysis**: Parses the logs to calculate the frequency of
+    specific access attributes, including IP addresses, geographic states, operating
+    systems, and authentication devices.
+
+    5. **Threshold Filtering**: Compares the frequency of these attributes against
+    the `Authentication Threshold`. Only attributes meeting the threshold are retained
+    in the simplified aggregation lists.
+
+    6. **Final Output**: Produces a JSON result containing the raw user data, full
+    logs, and the filtered frequency counts for further analysis.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -67,7 +69,7 @@ GetAuthenticationLogsForUser:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -81,49 +83,45 @@ GetAuthenticationLogsForUser:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-GetTrustMonitorEvents:
+Get Trust Monitor Events:
   ai_description: >-
     ### General Description
 
-    The **Get Trust Monitor Events** action retrieves historical event data from the
-    DUO Trust Monitor. It allows users to query DUO's administrative API to collect
-    security-related events that occurred within a specified number of days preceding
-    the current time.
+    Retrieves Trust Monitor events from Duo Security for a specified time range. This
+    action allows security teams to pull historical security events and suspicious
+    activity logs detected by Duo's Trust Monitor directly into the SOAR platform
+    for analysis and reporting.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Name | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Number Days Back** | String | Yes | The number of days from the current moment
-    to look back and retrieve Trust Monitor events. |
+    | Number Days Back | Number/String | Yes | The duration (in days) to look back
+    from the current time to retrieve events. Defaults to 1. |
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval:** The action extracts the DUO API Hostname, Admin
-    Secret Key, and Admin Integration Key from the integration settings.
+    1. **Authentication**: The action retrieves the Duo Admin API credentials (API
+    Hostname, Admin Secret Key, and Admin Integration Key) from the integration configuration.
 
-    2. **Parameter Processing:** The 'Number Days Back' parameter is converted into
-    a millisecond-based timestamp range relative to the current system time.
+    2. **Time Range Calculation**: It calculates a millisecond timestamp for the current
+    time and a starting timestamp based on the user-provided 'Number Days Back' parameter.
 
-    3. **API Request:** Using the DUO Python SDK, the action authenticates and calls
-    the `get_trust_monitor_events_by_offset` endpoint using the calculated time range.
+    3. **API Query**: Using the Duo Python SDK, it executes a request to the Duo Admin
+    API's Trust Monitor endpoint to fetch events within the calculated time window.
 
-    4. **Result Reporting:** The retrieved events are compiled into a list and added
-    to the action's JSON results for use in downstream playbook steps.
+    4. **Data Output**: The retrieved event data is packaged into a JSON result and
+    attached to the action execution summary.
 
 
     ### Additional Notes
 
-    - This action does not interact with specific entities (like IPs or Users) from
-    the alert context; it performs a global search for events within the specified
-    timeframe.
-
-    - Ensure the provided Admin Integration Key has the appropriate permissions to
-    access Trust Monitor data.
+    This action operates independently of case entities and is designed for broad
+    data retrieval or log collection tasks.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -137,7 +135,7 @@ GetTrustMonitorEvents:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -151,13 +149,13 @@ GetTrustMonitorEvents:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-GetUsersByName:
+Get Users by Name:
   ai_description: >-
     ### General Description
 
-    This action queries the DUO Admin API to retrieve comprehensive information for
-    a specific username. It is used to obtain user identifiers, authentication details,
-    and device data associated with a DUO MFA account within the environment.
+    This action queries the DUO Admin API to retrieve detailed information for a specified
+    username. It provides insights into user attributes, authentication history, and
+    registered devices from the DUO MFA service.
 
 
     ### Parameters Description
@@ -166,31 +164,34 @@ GetUsersByName:
 
     | :--- | :--- | :--- | :--- |
 
-    | Username | String | Yes | The DUO username for which to retrieve data from the
-    Admin API. |
+    | Username | String | Yes | The DUO username to query. This value is used to filter
+    results in the DUO Admin API. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes the DUO Admin API client using the
-    integration's API Hostname, Integration Key, and Secret Key.
+    1. **Authentication:** Retrieves the API Hostname, Admin Secret Key, and Admin
+    Integration Key from the DUO integration configuration.
 
-    2. **Parameter Extraction**: Retrieves the target 'Username' from the action parameters.
+    2. **Parameter Extraction:** Identifies the target `Username` provided in the
+    action parameters.
 
-    3. **API Query**: Calls the DUO SDK method `get_users_by_name` to fetch user-specific
-    records.
+    3. **API Request:** Initializes the DUO Admin API client and calls the `get_users_by_name`
+    endpoint using the specified username.
 
-    4. **Data Aggregation**: Iterates through the returned user data to identify the
-    unique DUO User ID and compiles the full metadata response.
+    4. **Data Extraction:** Parses the response to identify the `user_id` and collects
+    the complete user data object.
 
-    5. **Completion**: Appends the retrieved user details to the action's JSON results
-    and completes the execution.
+    5. **Reporting:** Packages the username, user ID, and full data into a JSON result
+    which is attached to the action output for playbook consumption.
 
 
     ### Additional Notes
 
-    This action does not process entities from the SOAR scope; it operates solely
-    based on the input string provided in the 'Username' parameter.
+    This action does not automatically process entities from the SOAR case; it requires
+    the target username to be provided explicitly via the action parameter. If no
+    user is found, the action will still complete but the resulting data list will
+    be empty.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -204,7 +205,7 @@ GetUsersByName:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -222,52 +223,34 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility designed to verify connectivity between
-    Google SecOps and the Duo Security Auth API. It validates that the provided API
-    Hostname, Secret Key, and Integration Key are correct and that the system can
-    successfully generate the required request signatures to communicate with Duo.
+    Verifies the validity of the DUO Auth API integration credentials and connectivity.
+    This action uses the DUO `/check` endpoint to ensure that the API Hostname, Auth
+    Secret Key, and Auth Integration Key are properly configured and that API signatures
+    are being generated correctly. It serves as a diagnostic tool to confirm the integration
+    is functional.
 
 
     ### Parameters Description
 
-    This action does not utilize action-specific parameters. Instead, it relies on
-    the global integration configuration parameters:
-
-
-    | Parameter | Description | Expected Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Hostname | The Duo API hostname (e.g., api-xxxx.duosecurity.com). | String
-    | Yes |
-
-    | Auth Secret Key | The Secret Key for the Duo Auth API. | String | Yes |
-
-    | Auth Integration Key | The Integration Key for the Duo Auth API. | String |
-    Yes |
-
-
-    ### Additional Notes
-
-    - This action is typically used during the initial setup of the Duo integration
-    or for troubleshooting connectivity issues.
-
-    - It does not process or interact with any entities within the case.
+    There are no action-specific parameters for this action. It relies entirely on
+    the configuration parameters defined at the integration level (API Hostname, Auth
+    Secret Key, and Auth Integration Key).
 
 
     ### Flow Description
 
-    1. **Credential Retrieval**: The script extracts the API Hostname, Auth Secret
-    Key, and Auth Integration Key from the integration's configuration.
+    1. **Configuration Extraction**: The action retrieves the global integration settings,
+    including the API Hostname and authentication keys.
 
-    2. **Client Initialization**: It initializes the Duo Python SDK (`duo_client.Auth`)
-    using the retrieved credentials.
+    2. **Client Initialization**: It initializes a connection to the DUO Auth API
+    using the provided credentials.
 
-    3. **Connectivity Test**: It executes a call to the Duo `/check` endpoint.
+    3. **Validation Call**: It executes a call to the `/check` endpoint, which is
+    a standard DUO API method for verifying credential validity.
 
-    4. **Status Report**: The action returns a success message if the credentials
-    and signature are valid. If an exception occurs (e.g., network timeout, invalid
-    keys), it catches the error and reports a failure status.
+    4. **Status Report**: The action returns a success state if the API responds affirmatively
+    or a failure state with the specific error message if the authentication or connection
+    fails.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -276,12 +259,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

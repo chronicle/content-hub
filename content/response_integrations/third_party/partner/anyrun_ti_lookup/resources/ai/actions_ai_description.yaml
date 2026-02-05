@@ -1,37 +1,33 @@
-anyrun_ti_lookup:
-  ai_description: "### General Description\nPerforms threat intelligence lookups on\
-    \ specified entities or via a raw query using the ANY.RUN Threat Intelligence\
-    \ service. This action retrieves detailed intelligence reports, including threat\
-    \ scores (Malicious, Suspicious, Unknown) and associates them with the case for\
-    \ further investigation.\n\n### Parameters Description\n| Parameter | Description\
-    \ | Type | Mandatory | Default Value |\n| :--- | :--- | :--- | :--- | :--- |\n\
-    | Lookup Depth | The number of days from the current date for which to perform\
-    \ the lookup. | string | Yes | 90 |\n| Query | A raw query string with filters.\
-    \ Supports AND, OR, NOT operators. If provided, the action performs a direct query\
-    \ lookup and ignores the Identifiers and Types parameters. | string | No | N/A\
-    \ |\n| Identifiers | Comma-separated list of entity identifiers (e.g., IPs, Hashes)\
-    \ to lookup. Usually populated by `[Entity.Identifier]`. | string | Yes | [Entity.Identifier]\
-    \ |\n| Types | Comma-separated list of entity types corresponding to the Identifiers.\
-    \ Usually populated by `[Entity.Type]`. | string | Yes | [Entity.Type] |\n\n###\
-    \ Additional Notes\n- If the **Query** parameter is provided, it takes precedence\
-    \ over the **Identifiers** and **Types** parameters.\n- Supported entity types\
-    \ include IP addresses, domains, file hashes, and process paths. Unsupported types\
-    \ will be logged and skipped.\n- Results are attached to the Case Wall as a JSON\
-    \ file and summarized in a Case Wall comment.\n\n### Flow Description\n1. **Initialization**:\
-    \ The action extracts configuration parameters (API Key, SSL verification) and\
-    \ action parameters (Lookup Depth, Query, Identifiers, Types).\n2. **Authentication\
-    \ and Proxy**: Sets up the ANY.RUN connector with the provided API token and optional\
-    \ proxy configuration.\n3. **Query Execution**: \n    - If a **Query** is provided:\
-    \ Performs a raw intelligence lookup using the query string.\n    - If no **Query**\
-    \ is provided: Iterates through the provided **Identifiers** and **Types**, mapping\
-    \ the types to ANY.RUN fields (e.g., `destination_ip`, `url`, `domain_name`).\n\
-    4. **Data Retrieval**: For each target, it fetches intelligence reports from ANY.RUN\
-    \ within the specified lookup depth.\n5. **Internal Mutation**: \n    - Adds a\
-    \ comment to the Case Wall containing a hyperlink to the ANY.RUN analysis page\
-    \ for the artifact.\n    - Encodes and saves the raw JSON intelligence report\
-    \ as an attachment on the Case Wall.\n6. **Final Summary**: Aggregates the results\
-    \ (Type, Value, and Verdict) and posts a comprehensive summary comment to the\
-    \ Case Wall before completing the execution."
+ANYRUN TI Lookup:
+  ai_description: "### General Description\nPerforms threat intelligence lookups using\
+    \ the ANY.RUN TI Lookup service to identify malicious or suspicious activity associated\
+    \ with specific entities or raw search queries. This action is used to enrich\
+    \ investigation data by retrieving summary reports and verdicts directly into\
+    \ the Google SecOps case wall.\n\n### Parameters Description\n| Parameter | Description\
+    \ | Type | Mandatory |\n| :--- | :--- | :--- | :--- |\n| **Lookup Depth** | Specifies\
+    \ the number of days from the current date for which the lookup will be performed.\
+    \ Defaults to 90 days. | String | Yes |\n| **Query** | A raw query string with\
+    \ filters (supports AND, OR, NOT). If provided, this takes precedence over entity\
+    \ identifiers. | String | No |\n| **Identifiers** | A comma-separated list of\
+    \ entity identifiers to look up. Automatically populated by `[Entity.Identifier]`.\
+    \ | String | Yes (if Query is empty) |\n| **Types** | A comma-separated list of\
+    \ entity types corresponding to the identifiers. Automatically populated by `[Entity.Type]`.\
+    \ | String | Yes (if Query is empty) |\n\n### Additional Notes\n- Either a **Query**\
+    \ must be provided, or both **Identifiers** and **Types** must be configured for\
+    \ the action to execute.\n- The action supports the following entity types: `ADDRESS`,\
+    \ `IPSET`, `DestinationURL`, `DOMAIN`, `PROCESS`, and `FILEHASH`.\n- It requires\
+    \ a valid `ANYRUN TI Lookup API KEY` configured in the integration settings.\n\
+    \n### Flow Description\n1. **Initialization**: The action extracts parameters\
+    \ and the API key. It establishes a connection to the ANY.RUN TI Lookup API.\n\
+    2. **Target Identification**: If a **Query** is provided, the action executes\
+    \ a raw intelligence lookup. Otherwise, it iterates through the provided **Identifiers**\
+    \ and matches them against supported **Types**.\n3. **Data Retrieval**: For each\
+    \ target, the action calls the `get_intelligence` method of the ANY.RUN connector.\n\
+    4. **Internal Updates**: \n    - Generates a direct hyperlink to the ANY.RUN analysis\
+    \ page and adds it as a case comment.\n    - Encodes the raw JSON report and attaches\
+    \ it to the Case Wall as a `.json` file.\n5. **Completion**: Aggregates the threat\
+    \ verdicts (e.g., Malicious, Suspicious, Unknown) for all targets and posts a\
+    \ final summary table as a case comment."
   capabilities:
     can_create_case_comments: true
     can_create_case_wall_logs: true
@@ -42,18 +38,18 @@ anyrun_ti_lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action adds informational comments to the case wall and saves intelligence
-      reports as file attachments to the case.
+      The action adds comments to the case and uploads JSON report files as attachments
+      to the case wall.
   categories:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - ADDRESS
-      - IPSET
-      - DestinationURL
-      - DOMAIN
-      - PROCESS
-      - FILEHASH
+    - ADDRESS
+    - IPSET
+    - DestinationURL
+    - DOMAIN
+    - PROCESS
+    - FILEHASH
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -67,62 +63,62 @@ anyrun_ti_lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-ping:
+Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity and authentication between Google SecOps and the ANY.RUN
-    Threat Intelligence Lookup service. This action validates the provided API key
-    and ensures that the system can communicate with the ANY.RUN services, optionally
-    through a proxy server.
+    The **Ping** action is a utility designed to test the connectivity between Google
+    SecOps and the ANY.RUN TI Lookup service. It validates the provided API key and,
+    if configured, verifies that proxy settings are correctly established to reach
+    the external service.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | ANYRUN TI Lookup API KEY | String | Yes | The API key required to authenticate
-    with the ANY.RUN TI Lookup service. |
+    | ANYRUN TI Lookup API KEY | String | Yes | The API key used to authenticate requests
+    to the ANY.RUN TI Lookup service. |
 
-    | Verify SSL | Boolean | No | Determines whether to verify the SSL certificate
-    of the ANY.RUN API server. Default is usually true. |
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the ANY.RUN API endpoint. |
 
-    | Enable proxy | Boolean | No | If checked, the action will attempt to route traffic
-    through a proxy server using the 'Proxy host' and 'Proxy port' parameters. |
+    | Enable proxy | Boolean | No | If enabled, the action will attempt to connect
+    to the service through the specified proxy. |
 
     | Proxy host | String | No | The hostname or IP address of the proxy server. This
-    is required if 'Enable proxy' is enabled. |
+    is required if 'Enable proxy' is set to True. |
 
     | Proxy port | String | No | The port number of the proxy server. This is required
-    if 'Enable proxy' is enabled. |
+    if 'Enable proxy' is set to True. |
 
 
     ### Additional Notes
 
-    - If 'Enable proxy' is set to true, both 'Proxy host' and 'Proxy port' must be
-    configured, or the action will fail with a proxy request error.
+    - This action does not process or require any entities to run.
 
-    - This action does not process any entities; it is purely a system health check.
+    - It is primarily used during the initial setup of the integration to ensure the
+    environment is correctly configured for communication with ANY.RUN.
 
 
     ### Flow Description
 
-    1. **Extraction**: The action retrieves the API key, SSL verification preference,
-    and proxy configuration from the integration settings.
+    1. **Initialization**: The action starts by retrieving the integration configuration,
+    including the API key, SSL verification preference, and proxy settings.
 
-    2. **Proxy Validation**: If a proxy is enabled, the action attempts a connection
-    test specifically for the proxy settings using the `check_proxy` logic.
+    2. **Proxy Validation**: If 'Enable proxy' is checked, the action attempts to
+    initialize a connection through the provided proxy host and port to verify connectivity.
 
-    3. **Authorization Check**: The action initializes a `LookupConnector` and calls
-    the `check_authorization` method to verify the validity of the API token against
-    the ANY.RUN service.
+    3. **Authorization Check**: The action uses the `LookupConnector` to call the
+    `check_authorization` method, which sends a request to ANY.RUN to validate the
+    provided API key.
 
-    4. **Result Reporting**: Based on the success or failure of the connection and
-    authorization steps, it logs the outcome and ends the script with a status of
-    'COMPLETED' (success) or 'FAILED'.
+    4. **Status Reporting**: If the connection and authorization are successful, the
+    action returns an 'Execution Completed' status. If any step fails (e.g., network
+    error or invalid API key), it logs the error and returns an 'Execution Failed'
+    status.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -131,12 +127,12 @@ ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

@@ -1,26 +1,62 @@
 Ping:
-  ai_description: "### General Description\nThe Ping action is used to verify the\
-    \ connectivity between Google SecOps and the Azure DevOps instance. It serves\
-    \ as a diagnostic tool to ensure that the provided credentials (Personal Access\
-    \ Token) and configuration details (Organization and Base URL) are correct and\
-    \ that the network path is open.\n\n### Parameters Description\nThis action does\
-    \ not have any input parameters. It utilizes the following Integration Configuration\
-    \ parameters to establish a connection:\n* **Personal Access Token**: Mandatory.\
-    \ Used for Basic Authentication with Azure DevOps.\n* **Organization**: Mandatory.\
-    \ The specific organization name within the Azure DevOps instance.\n* **Base URL**:\
-    \ Mandatory. The base URL of the Azure DevOps server or cloud service.\n\n###\
-    \ Flow Description\n1. **Credential Extraction**: The script extracts the Personal\
-    \ Access Token, Organization name, and Base URL from the integration configuration.\n\
-    2. **Authentication Setup**: It initializes a Basic Authentication object using\
-    \ the provided token.\n3. **Connection Initialization**: A connection is established\
-    \ using the Azure DevOps Python SDK, targeting the constructed URL based on the\
-    \ Base URL and Organization parameters.\n4. **Connectivity Test**: The action\
-    \ attempts to call `get_projects()` via the core client. This is a read-only request\
-    \ used to validate that the connection is functional and the token has the necessary\
-    \ permissions.\n5. **Result Handling**: \n    * If the call succeeds, the action\
-    \ returns a successful status and a 'Connected successfully' message.\n    * If\
-    \ an exception occurs (e.g., authentication failure or network timeout), the action\
-    \ captures the error and returns a failure message."
+  ai_description: >-
+    ## General Description
+
+    The **Ping** action for Azure DevOps is designed to test the connectivity and
+    authentication between Google SecOps and a specified Azure DevOps instance. It
+    serves as a utility tool to verify that the configuration parameters provided
+    (Personal Access Token, Organization, and Base URL) are correct and that the system
+    can successfully communicate with the Azure DevOps API.
+
+
+    ## Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Personal Access Token** | String | Yes | The Azure DevOps Personal Access
+    Token (PAT) used for authentication. This is retrieved from the integration's
+    configuration settings. |
+
+    | **Organization** | String | Yes | The name of the Azure DevOps organization
+    to connect to. This is retrieved from the integration's configuration settings.
+    |
+
+    | **Base URL** | String | Yes | The base URL of the Azure DevOps service (e.g.,
+    `https://dev.azure.com`). This is retrieved from the integration's configuration
+    settings. |
+
+
+    ## Additional Notes
+
+    * This action does not process or require any entity inputs.
+
+    * It primarily uses the `azure-devops` Python library to establish a connection
+    and verify access by attempting to list projects.
+
+    * The action's success is determined by whether it can successfully initialize
+    a core client and execute a `get_projects()` call.
+
+
+    ## Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the connection details (PAT,
+    Organization, and Base URL) from the integration configuration.
+
+    2. **Authentication Setup**: It initializes a `BasicAuthentication` object using
+    the provided Personal Access Token.
+
+    3. **Connection Establishment**: It creates a connection to the Azure DevOps instance
+    using the formatted Base URL and Organization name.
+
+    4. **Connectivity Verification**: The action attempts to retrieve the core client
+    and call the `get_projects()` method to ensure the API is reachable and credentials
+    are valid.
+
+    5. **Result Reporting**: If the call succeeds, it returns a 'Connected successfully'
+    message. If an exception occurs, it captures the error and reports that the connection
+    failed.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -29,12 +65,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
   categories:
-    enrichment: true
+    enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -48,55 +84,60 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-TriggerAzureBuild:
+Trigger Azure Build:
   ai_description: >-
     ### General Description
 
-    Triggers an Azure DevOps build pipeline for a specified build definition ID and
-    monitors its progress until completion. This action is asynchronous, meaning it
-    initiates the build and then periodically polls the Azure DevOps API to track
-    the status (e.g., inProgress, completed) and the final result (e.g., succeeded,
-    failed).
+    This action triggers an Azure DevOps build pipeline for a specific build definition
+    and monitors its execution status until completion. It is designed to integrate
+    CI/CD workflows into incident response, allowing for automated deployments or
+    testing based on security events. The action is asynchronous, meaning it initiates
+    the build and then periodically checks the status until a final result (Success,
+    Failure, etc.) is reached.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
+    | Parameter | Description | Type | Mandatory |
 
     | :--- | :--- | :--- | :--- |
 
-    | Build Definition Id | String | Yes | The unique identifier of the build definition
-    (pipeline) you wish to trigger. |
+    | Build Definition Id | The unique identifier of the pipeline definition in Azure
+    DevOps that you wish to trigger. | String | Yes |
 
-    | Build Variables | Code | Yes | A JSON-formatted string representing the variables
-    and values to be passed into the pipeline execution. |
+    | Build Variables | A JSON-formatted string containing the variables and parameters
+    required by the pipeline. | Code | Yes |
 
 
     ### Additional Notes
 
-    This action requires the 'Azure DevOps' integration to be configured with valid
-    'Project', 'Organization', 'Personal Access Token', and 'Base URL' parameters.
-    Because it is an asynchronous action, it will remain in an 'In Progress' state
-    within Google SecOps until the Azure build reaches a terminal state.
+    - This action requires valid Azure DevOps integration configuration, including
+    Organization, Project, and a Personal Access Token (PAT).
+
+    - The action will remain in an 'In Progress' state until the Azure DevOps build
+    finishes or an error occurs.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves Azure DevOps configuration (URL, Org, Project,
-    PAT) and action parameters (Build ID, Variables).
+    1. **Extraction**: The action retrieves integration settings (URL, PAT, Org, Project)
+    and user-provided parameters (Build ID and Variables).
 
-    2. **Trigger Build**: Sends a POST request to the Azure DevOps REST API to initiate
-    a new build execution.
+    2. **Triggering**: It sends an HTTP POST request to the Azure DevOps Build API
+    to initiate a new build.
 
-    3. **Asynchronous Tracking**: Captures the `build_id` from the response and transitions
-    to the `query_job` phase.
+    3. **Build Identification**: Upon success, it captures the unique Build ID from
+    the response.
 
-    4. **Status Polling**: Periodically sends GET requests to fetch the current status
-    and result of the specific `build_id`.
+    4. **Asynchronous Monitoring**: The action enters an async loop, periodically
+    calling the `query_job` function.
 
-    5. **Completion**: Once the build result is no longer 'none', the action completes.
-    It marks the task as 'Succeeded' if the build status is `succeeded` or `partiallySucceeded`,
-    and 'Failed' otherwise.
+    5. **Status Polling**: In each poll, it sends an HTTP GET request to check the
+    current status and result of the specific Build ID.
+
+    6. **Finalization**: Once the build result is no longer 'none' (e.g., Succeeded,
+    Failed, Canceled), the action completes and returns the final build status to
+    the case.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -105,13 +146,13 @@ TriggerAzureBuild:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers the execution of a build pipeline within the Azure DevOps environment.
+      Triggers a new build process (pipeline execution) within the Azure DevOps environment.
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -125,28 +166,28 @@ TriggerAzureBuild:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-WaitUntilWebResourceIsUp:
-  ai_description: >-
-    ### General Description\nChecks if a specific web resource is available by sending
-    an HTTP GET request to a provided URL. This action is primarily used in asynchronous
-    workflows to pause playbook execution until a target service is reachable and
-    returning a successful response.\n\n### Parameters Description\n| Parameter |
-    Usage | Expected Type | Mandatory | Description |\n| :--- | :--- | :--- | :---
-    | :--- |\n| URL | Target URL for the availability check. | String | Yes | Specifies
-    the full URL (including protocol, e.g., https://) of the web resource to monitor.
-    |\n\n### Additional Notes\n- The action defines a successful response as any HTTP
-    status code below 400.\n- It utilizes a fixed 5-second timeout for the network
-    request.\n- If the resource is unreachable or returns an error status code, the
-    action sets the execution state to 'In Progress', allowing the Google SecOps async
-    mechanism to retry the check.\n- Note: The internal script logic includes a placeholder
-    for content validation ('should_include_content') that is not currently exposed
-    through the action parameters.\n\n### Flow Description\n1. **Parameter Extraction**:
-    Retrieves the target URL from the action configuration.\n2. **Network Probing**:
-    Attempts to perform an HTTP GET request to the specified URL.\n3. **Status Evaluation**:
-    Checks if the response was successful (resp.ok).\n4. **Execution Control**: If
-    the resource is up, the action completes with a 'Success' status. If the resource
-    is down or an exception occurs, the action remains 'In Progress' to trigger a
-    later retry.
+Wait Until Web Resource Is Up:
+  ai_description: "### General Description\nThis action waits until a specified web\
+    \ resource is accessible. It performs an HTTP GET request to the provided URL\
+    \ and checks if the response is successful (status codes 2xx or 3xx). Because\
+    \ the action is configured as asynchronous, if the resource is unreachable or\
+    \ returns an error, the action will return an 'In Progress' status, signaling\
+    \ the Google SecOps platform to retry the check at a later time. Once the resource\
+    \ returns a successful response, the action transitions to 'Completed'.\n\n###\
+    \ Parameters Description\n\n| Parameter Name | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| URL | string | True | The full URL of the\
+    \ web resource to monitor (e.g., https://example.com). |\n\n### Additional Notes\n\
+    - This action uses a 5-second timeout for the network request.\n- If the URL is\
+    \ invalid or the connection fails, the action treats the resource as 'down' and\
+    \ continues to poll (if retries are configured in the platform).\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The action retrieves the mandatory `URL` parameter\
+    \ from the input.\n2. **Resource Check**: It sends an HTTP GET request to the\
+    \ specified URL.\n3. **Evaluation**: It checks the `resp.ok` property of the response\
+    \ to determine if the web server returned a successful status code.\n4. **Status\
+    \ Update**: \n    - If the resource is **up**, the action sets the execution state\
+    \ to `EXECUTION_STATE_COMPLETED`.\n    - If the resource is **down** or an exception\
+    \ occurs, the action sets the execution state to `EXECUTION_STATE_INPROGRESS`,\
+    \ allowing for future retries."
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -158,9 +199,9 @@ WaitUntilWebResourceIsUp:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: true
+    enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false

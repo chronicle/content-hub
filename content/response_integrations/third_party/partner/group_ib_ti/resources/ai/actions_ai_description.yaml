@@ -1,70 +1,66 @@
-get_collection_info_async:
+Get-Collection-Info-Async:
   ai_description: >-
     ### General Description
 
-    This action facilitates the extraction of threat intelligence data from the Group-IB
-    TI (Threat Intelligence) database based on a selected collection. It is designed
-    to run asynchronously and is specifically optimized for periodic (e.g., daily)
-    updates by tracking the state of fetched data using sequence numbers. The action
-    allows for either raw data retrieval or normalized output through a mapping parser.
-    Notably, this action does not process or depend on any entities within the Google
-    SecOps case; it uses the action trigger simply to initiate a bulk data pull from
-    the Group-IB API.
+    This action retrieves threat intelligence data from the Group-IB TI (Threat Intelligence)
+    database based on a specified collection. It is designed to work asynchronously
+    and supports incremental updates by tracking sequence numbers from previous runs,
+    making it ideal for scheduled playbooks that require the latest threat context
+    without duplicates. The action does not process specific entities from the alert;
+    instead, it uses the chosen collection as a source of global threat data.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Collection | DDL | Yes | Determines the specific Group-IB TI feed to download
-    (e.g., `apt/threat`, `malware/cnc`, `suspicious_ip/tor_node`). |
+    | Enable mapping parser | Boolean | No | If true, the action transforms raw JSON
+    data into a structured format based on the integration's internal mapping configuration.
+    If false, raw items are returned. |
 
-    | Portion limit | DDL | Yes | Controls the number of data portions (chunks) retrieved
-    from the TI Portal API in a single execution. Defaults to 100. |
+    | Collection | DDL | Yes | Specifies the Group-IB TI database collection to download
+    (e.g., 'apt/threat', 'malware/cnc', 'attacks/phishing_group'). |
 
-    | Start date | String | No | The starting point for data retrieval in `YYYY-MM-DD`
-    format. This is used if no previous execution state (timestamp) is found. |
+    | Start date | String | No | The date (YYYY-MM-DD) to start downloading data if
+    no previous sequence number is found in the system's storage. Defaults to 1 day
+    back if omitted. |
 
-    | Enable mapping parser | Boolean | No | If enabled (true), the action will parse
-    and normalize the raw API response using predefined mapping keys. If disabled
-    (false), it returns the raw JSON items. |
+    | Portion limit | DDL | Yes | Controls the volume of data fetched by limiting
+    the number of response portions processed in a single execution. |
 
 
     ### Additional Notes
 
-    - **Incremental Fetching:** The action uses `fetch_timestamp` to determine where
-    the previous run left off. If no timestamp exists and no `Start date` is provided,
-    the action defaults to fetching data from 1 day ago.
+    - This action 'ignores' entities in the sense that it doesn't enrich them directly;
+    it fetches bulk TI data which can then be used by downstream logic.
 
-    - **Entity Agnostic:** This action ignores any entities present in the environment
-    or case. It is strictly a data-fetching utility.
+    - The action uses internal state management (timestamps/sequence numbers) to ensure
+    only new data since the last run is retrieved.
 
-    - **Rate Limiting:** The script includes intentional `time.sleep` calls to maintain
-    active API sessions and prevent rate-limiting issues during large data transfers.
+    - The execution is asynchronous, which is suitable for long-running data retrieval
+    tasks.
 
 
     ### Flow Description
 
-    1.  **Configuration & Initialization:** The action initializes the Group-IB connector
-    and retrieves user-defined parameters including the target collection and portion
-    limits.
+    1. **Initialization**: Sets up the Group-IB TI poller and extracts user parameters.
 
-    2.  **State Management:** It checks for a stored timestamp (sequence update number)
-    to resume data collection. If missing, it calculates a starting point based on
-    the `Start date` or a 1-day default offset.
+    2. **Sequence Tracking**: Checks the internal SOAR storage for a 'fetched_ts'
+    (sequence number). If found, it resumes fetching from that point. If not, it uses
+    the 'Start date' or a default of 1 day ago to identify the starting sequence number
+    from the API.
 
-    3.  **API Interaction:** The action initializes a sequence-based update generator
-    from the Group-IB TI poller for the chosen collection.
+    3. **Data Fetching**: Creates an update generator for the selected collection
+    and retrieves data in portions from the Group-IB TI API.
 
-    4.  **Data Processing Loop:** The action iterates through the generator's portions.
-    If `Enable mapping parser` is true, each portion is transformed into a normalized
-    structure; otherwise, raw item dicts are extracted.
+    4. **Parsing**: If mapping is enabled, it iterates through the portions and applies
+    the integration's parsing logic to structure the data. Otherwise, it collects
+    raw items.
 
-    5.  **Result Delivery:** The aggregated results are packaged into a JSON object,
-    added to the action results, and the execution status is marked as completed.
+    5. **Completion**: Aggregates the results into a JSON object and ends the action,
+    providing the fetched data for playbook use.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -78,7 +74,7 @@ get_collection_info_async:
   categories:
     enrichment: true
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -92,134 +88,51 @@ get_collection_info_async:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-get_graph_info:
+Get-Graph-Info:
   ai_description: >-
     ### General Description
 
-    This action retrieves WHOIS and graph intelligence for Domain and IP Address entities
-    from the Group-IB Threat Intelligence service. It is designed to enrich indicators
-    by providing contextual data regarding network relationships and registration
-    details, which is then returned as a JSON result for further analysis in playbooks.
+    This action retrieves graph-related threat intelligence information from Group-IB
+    TI, specifically targeting infrastructure relationships and WHOIS data for IP
+    addresses and domains. It helps analysts understand the broader context of an
+    entity by mapping its connections within the Group-IB Threat Intelligence graph.
 
 
     ### Parameters Description
 
-    This action does not require any input parameters. It operates directly on the
-    entities present in the current Google SecOps context.
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action initializes the Group-IB TI connector using
-    the provided integration credentials (API Login, Key, and URL).
-
-    2. **Entity Gathering:** It collects all entities available in the target context.
-
-    3. **Validation and Filtering:** Each entity is validated using an internal utility.
-    The action specifically filters for and processes only entities identified as
-    an IP address or a Domain.
-
-    4. **Data Retrieval:** For each valid entity, a GET request is sent to the Group-IB
-    `/utils/graph/` endpoint (specifically `/utils/graph/ip` or `/utils/graph/domain`).
-
-    5. **Result Aggregation:** The retrieved graph data is aggregated into a single
-    JSON object, mapped by entity type (e.g., `ip_results` or `domain_results`).
-
-    6. **Finalization:** The aggregated JSON is added to the action results, and the
-    task is marked as completed.
+    There are no input parameters for this action.
 
 
     ### Additional Notes
 
-    - The action includes a one-second sleep interval between API requests to ensure
-    compliance with API rate limits.
+    - The action only processes entities identified as IP addresses or domains.
 
-    - Supported entity types are strictly limited to IP Addresses and Domains; other
-    entity types will be ignored during processing.
-  capabilities:
-    can_create_case_comments: false
-    can_create_case_wall_logs: false
-    can_create_insight: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: 'null'
-    fetches_data: true
-    internal_data_mutation_explanation: 'null'
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_scopes:
-      - ADDRESS
-      - DOMAIN
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-get_ti_search_info:
-  ai_description: >-
-    ### General Description
+    - It performs a series of API requests to the `utils/graph/` endpoint of the Group-IB
+    TI service.
 
-    The **Get-TI-Search-Info** action searches for comprehensive threat intelligence
-    data within the Group-IB Threat Intelligence (TI) database. It is designed to
-    work with various entity types, including Domains, IP Addresses, File Hashes,
-    Bank Cards, and Emails. The action performs a global search to identify which
-    specific TI collections (e.g., APT threats, compromised accounts, malware CnC)
-    contain data relevant to the target entities and then retrieves and aggregates
-    those records.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Enable mapping parser | Boolean | No | If set to `true`, the action uses internal
-    mapping keys to structure and clean the raw API response. If `false`, the raw
-    JSON items from the Group-IB API are returned. Default is `false`. |
-
-
-    ### Additional Notes
-
-    - **Rate Limiting**: The script includes hardcoded 1-second pauses (`time.sleep(1)`)
-    between API calls to ensure compliance with API activity constraints.
-
-    - **Data Volume**: The action is configured to fetch a maximum of 3000 items per
-    collection per entity.
-
-    - **Supported Types**: Specifically recognizes MD5, SHA1, and SHA256 hashes, IPv4
-    addresses, domains, emails, and credit card numbers via the `EntityValidator`.
+    - Results are returned as a raw JSON object attached to the action results.
 
 
     ### Flow Description
 
-    1. **Initialization**: Sets up the Group-IB TI connector and retrieves the user-defined
-    parsing preference.
+    1. **Initialization**: Connects to the Group-IB TI API using configured credentials
+    (API Login, Key, and URL).
 
-    2. **Entity Detection**: Iterates through target entities and utilizes the `EntityValidator`
-    to determine the specific search type (e.g., 'hash', 'ip', 'email', 'cardInfo.number').
+    2. **Entity Gathering**: Retrieves the list of entities associated with the current
+    alert or case context.
 
-    3. **Collection Discovery**: For each entity, it performs a global search to find
-    all API paths (collections) that have matching data.
+    3. **Validation & Filtering**: Validates the type of each entity using the `EntityValidator`.
+    Only entities identified as 'ip' or 'domain' are processed; others are logged
+    and skipped.
 
-    4. **Data Retrieval**: Iterates through discovered collections and queries the
-    Group-IB TI poller using entity-specific query syntax (e.g., `ip:1.1.1.1`).
+    4. **Data Extraction**: For each valid entity, the action sends a GET request
+    to the Group-IB TI graph utility endpoint.
 
-    5. **Processing**: Fetched items are either parsed via the mapping configuration
-    or collected as raw dictionaries based on the `Enable mapping parser` parameter.
+    5. **Result Compilation**: Aggregates the API responses into a structured JSON
+    object, separated by entity type (e.g., `ip_results`, `domain_results`).
 
-    6. **Final Output**: Aggregates all found feeds into a structured JSON result
-    categorized by collection name and attaches it to the action execution result.
+    6. **Completion**: Attaches the final JSON result to the SOAR action output and
+    marks the execution as completed.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -234,11 +147,8 @@ get_ti_search_info:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - ADDRESS
-      - DOMAIN
-      - FILEHASH
-      - CREDITCARD
-      - USERUNIQNAME
+    - ADDRESS
+    - DOMAIN
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -252,74 +162,67 @@ get_ti_search_info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-get_ti_search_info_by_collection:
+Get-TI-Search-Info:
   ai_description: >-
     ### General Description
 
-    The **Get-TI-Search-Info-By-Collection** action allows users to query the Group-IB
-    Threat Intelligence (TI) database for specific indicators across various specialized
-    collections. It supports searching for Domain names, IP Addresses, URLs, File
-    Hashes, Bank Cards, and Email addresses. The action is designed to enrich security
-    investigations by retrieving relevant threat data, such as actor associations,
-    malware configurations, or leak information, depending on the selected collection.
+    The **Get-TI-Search-Info** action searches the Group-IB Threat Intelligence (TI)
+    database for specific entity types, including Domains, IP Addresses, File Hashes,
+    Bank Cards, and Email Addresses. It identifies which Group-IB collections (e.g.,
+    APT threats, malware configs, compromised accounts) contain relevant data for
+    the provided entities and retrieves the associated threat intelligence. The action
+    allows users to choose between receiving raw JSON data or structured data parsed
+    through a predefined mapping system.
 
 
     ### Parameters Description
+
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Collection | DDL | Yes | Determines which Group-IB TI database partition to
-    search. Examples include `apt/threat`, `malware/cnc`, `compromised/bank_card_group`,
-    and `ioc/common`. |
-
-    | Enable mapping parser | Boolean | No | If set to `true`, the action uses a predefined
-    mapping schema to structure the raw JSON output into human-readable fields. If
-    `false` (default), raw data is returned. |
-
-    | Search tag | String | No | Allows for targeted searching by prefixing the query
-    with a specific field (e.g., providing `domain` as a tag will format the query
-    as `q=domain:<entity_identifier>`). |
+    | Enable mapping parser | Boolean | No | If set to **true**, the action parses
+    the raw API response using predefined mapping keys to provide a more structured
+    and human-readable output. If **false** (default), the action returns the raw
+    dictionary items from the API. |
 
 
     ### Additional Notes
 
-    - This action processes all supported entities found in the current case context.
+    - This action acts as a search/retrieval tool and does not update SOAR entity
+    attributes (like 'is_suspicious') or create insights automatically. Results are
+    stored in the action's execution JSON for use in subsequent playbook steps.
 
-    - It implements a small delay (`time.sleep(1)`) between API requests to respect
-    rate limits.
-
-    - The results are added as a JSON object to the action results for use in subsequent
-    playbook steps.
+    - The action utilizes a custom validator to determine the entity type based on
+    the identifier string, supporting specific patterns for IP, Domain, Hash, Email,
+    and Credit Card numbers.
 
 
     ### Flow Description
 
-    1. **Initialization:** The action extracts the user-defined parameters (`Collection`,
-    `Mapping Parser`, `Search Tag`) and initializes the Group-IB TI poller using provided
-    credentials.
+    1. **Initialization**: The script initializes the action and extracts the configuration
+    parameters, including the mapping parser flag.
 
-    2. **Entity Categorization:** It iterates through all target entities in the case
-    and uses an internal validator to determine their type (e.g., mapping a string
-    to an IP, Domain, or File Hash).
+    2. **Entity Validation**: It iterates through the target entities in the case
+    and uses the `EntityValidator` to identify the specific type (IP, domain, hash,
+    email, or card) for each entity identifier.
 
-    3. **Query Construction:** For each valid entity, the action builds a search query.
-    If a `Search tag` is provided, it is appended to the entity identifier (e.g.,
-    `tag:value`); otherwise, the raw identifier is used.
+    3. **Global Search**: For each valid entity, it performs a global search across
+    the Group-IB TI API to discover which specific data collections (apiPaths) contain
+    information about that entity.
 
-    4. **Data Retrieval:** The action sends a request to the specified Group-IB TI
-    `Collection` using the constructed query.
+    4. **Data Retrieval**: It loops through the discovered collections and fetches
+    records using a query formatted for the specific entity type (e.g., `ip:8.8.8.8`).
 
-    5. **Parsing:** Based on the `Enable mapping parser` setting, the action either
-    applies a structural mapping to the returned data or keeps it in its raw JSON
-    format.
+    5. **Data Parsing**: Based on the 'Enable mapping parser' parameter, it either
+    applies the mapping logic to structure the records or extracts the raw data.
 
-    6. **Aggregation:** All retrieved feeds are aggregated into a single JSON result
-    set.
+    6. **Aggregation**: All results from various collections and entities are aggregated
+    into a single JSON result object.
 
-    7. **Output:** The final JSON data is attached to the action execution context,
-    and the action completes.
+    7. **Completion**: The final JSON result is attached to the action output, and
+    the task is marked as completed.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -334,12 +237,12 @@ get_ti_search_info_by_collection:
     enrichment: true
   entity_usage:
     entity_scopes:
-      - ADDRESS
-      - CREDITCARD
-      - DestinationURL
-      - DOMAIN
-      - FILEHASH
-      - USERUNIQNAME
+    - ADDRESS
+    - DOMAIN
+    - FILEHASH
+    - CREDITCARD
+    - USERUNIQNAME
+    - DestinationURL
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -353,51 +256,153 @@ get_ti_search_info_by_collection:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-ping:
+Get-TI-Search-Info-By-Collection:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity between Google SecOps and the Group-IB Threat Intelligence
-    (TI) platform. This action verifies that the configured credentials (API Login,
-    API Key, and API URL) are valid and that the service is reachable. Beyond a simple
-    heartbeat, it retrieves a comprehensive list of all threat intelligence collections
-    that the current subscription is authorized to access, which is useful for troubleshooting
-    and verifying account permissions.
+    The **Get-TI-Search-Info-By-Collection** action searches the Group-IB Threat Intelligence
+    (TI) database for detailed information across a wide variety of collections (e.g.,
+    APT threats, phishing, malware C2, compromised accounts). It allows for targeted
+    searches using specific entity identifiers like IP addresses, domains, URLs, file
+    hashes, and credit card numbers. The action retrieves contextual threat data which
+    can be used to enrich investigation cases within Google SecOps.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Mandatory | Type | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | None | N/A | No | This action does not take any input parameters and relies
-    solely on the integration's global configuration. |
+    | **Collection** | Yes | DDL | Specifies the Group-IB TI collection to query (e.g.,
+    `apt/threat`, `malware/cnc`, `compromised/bank_card_group`). |
 
+    | **Enable mapping parser** | No | Boolean | If set to `true`, the action uses
+    predefined mapping keys to structure the raw API response. Default is `false`
+    (returns raw items). |
 
-    ### Additional Notes
-
-    - The action provides a detailed list of available collections in the JSON results,
-    allowing users to see which feeds (e.g., APT, phishing, malware) they can query
-    in subsequent actions.
-
-    - This action is typically used as a first step to ensure the integration is correctly
-    configured.
+    | **Search tag** | No | String | Allows prefixing the search query with a specific
+    tag (e.g., `domain:`) to perform targeted field searches. If empty, a general
+    query is performed. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Google SecOps SDK and sets up
-    the Group-IB connectivity adapter using global integration parameters.
+    1.  **Initialization**: Sets up the Group-IB TI connector using configured API
+    credentials and identifies the target collection and search parameters.
 
-    2. **API Request**: It sends a GET request to the Group-IB `user/granted_collections`
+    2.  **Entity Identification**: Scans target entities in the current case and identifies
+    supported types (IP, Domain, Hash, URL, Email, or Credit Card) using a custom
+    validator.
+
+    3.  **Query Construction**: For each valid entity, it constructs a search query
+    string. If a **Search tag** is provided, it formats the query as `tag:identifier`;
+    otherwise, it searches by identifier alone.
+
+    4.  **Data Retrieval**: Iterates through the specified TI collection via a data
+    poller, fetching relevant feeds from the Group-IB database.
+
+    5.  **Processing**: Based on the **Enable mapping parser** setting, it either
+    extracts specific mapped fields or collects raw data items from the response.
+
+    6.  **Output**: Aggregates the results into a single JSON object and attaches
+    it to the action result for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action acts as a search engine against Group-IB's vast TI collections and
+    does not automatically update entity attributes or add insights unless explicitly
+    configured in a playbook using the JSON output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_case_wall_logs: false
+    can_create_insight: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_scopes:
+    - ADDRESS
+    - DOMAIN
+    - FILEHASH
+    - DestinationURL
+    - CREDITCARD
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a utility designed to verify the connectivity between Google
+    SecOps and the Group-IB Threat Intelligence (TI) platform. Beyond a simple heartbeat
+    check, it retrieves a comprehensive list of the data collections (feeds) available
+    under the current user's subscription, providing visibility into what threat intelligence
+    data can be accessed by other actions within the integration.
+
+
+    ### Parameters Description
+
+    This action does not have any input parameters. It relies entirely on the global
+    integration configuration for authentication and connectivity.
+
+
+    | Parameter | Use | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    *   The action uses the `user/granted_collections` endpoint to validate credentials
+    and fetch metadata.
+
+    *   The output includes a JSON object (`JsonResult`) containing the names and
+    details of accessible collections.
+
+    *   Failure usually indicates incorrect credentials (API login or API key) or
+    a network/firewall issue preventing access to the Group-IB API URL.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action initializes the Google SecOps base class and
+    sets the script name.
+
+    2.  **Configuration Retrieval**: It fetches the 'API login', 'API key', and 'API
+    URL' from the integration's global settings.
+
+    3.  **Connection Setup**: Initializes the GIBConnector and creates an action poller
+    adapted for Group-IB TI.
+
+    4.  **API Request**: Executes a GET request to the `user/granted_collections`
     endpoint.
 
-    3. **Result Processing**: It captures the API response containing the list of
-    accessible collections and adds it to the action's JSON results.
+    5.  **Result Processing**: Captures the JSON response from the API and adds it
+    to the action results.
 
-    4. **Finalization**: If the request is successful, it returns a 'Connection Established'
-    message and sets the execution state to completed.
+    6.  **Finalization**: Logs the connection status and terminates the execution
+    with a success message if the API responds, or a failure message if an exception
+    occurs.
   capabilities:
     can_create_case_comments: false
     can_create_case_wall_logs: false
@@ -409,9 +414,9 @@ ping:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: true
+    enrichment: false
   entity_usage:
-    entity_scopes: [ ]
+    entity_scopes: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
