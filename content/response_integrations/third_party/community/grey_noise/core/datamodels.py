@@ -19,10 +19,6 @@ class BaseModel:
         """Return raw data as JSON."""
         return self.raw_data
 
-    # def to_csv(self) -> Dict[str, Any]:
-    #     """Return flattened data for CSV export."""
-    #     return dict_to_flat(self.to_json())
-
 
 class CVEResult(BaseModel):
     """CVE lookup result model with essential fields only."""

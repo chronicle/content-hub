@@ -3,7 +3,7 @@ from __future__ import annotations
 from greynoise.exceptions import RateLimitError, RequestFailure
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
+from soar_sdk.SiemplifyUtils import output_handler
 
 from ..core.api_manager import APIManager
 from ..core.constants import (

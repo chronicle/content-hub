@@ -3,7 +3,7 @@ import re
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from .constants import INTEGRATION_NAME, INVALID_CVE_FORMAT_ERROR
-from .greynoise_exceptions import InvalidIntegerException, InvalidGranularityException
+from .greynoise_exceptions import InvalidIntegerException
 
 
 def get_integration_params(siemplify):
@@ -405,6 +405,20 @@ def generate_ip_lookup_insight(data, ip_address):
             "color:white; border-radius:4px; font-size:13px; "
             "font-weight:bold;'>BUSINESS SERVICE</span>"
         )
+        if bsi.get("trust_level"):
+            trust_level = str(bsi.get("trust_level"))
+            trust_colors = {
+                "1": "background:#27ae60; color:white",
+                "2": "background:#f39c12; color:white",
+            }
+            trust_style = trust_colors.get(
+                trust_level, "background:#95a5a6; color:white"
+            )
+            content += (
+                f"<span style='padding:4px 12px; {trust_style}; "
+                f"border-radius:4px; font-size:13px; font-weight:bold;'>"
+                f"TRUST LEVEL: {trust_level}</span>"
+            )
 
     content += "</div>"
 
@@ -794,10 +808,18 @@ def generate_quick_ip_insight(data, ip_address):
     )
 
     if bsi.get("trust_level"):
+        trust_level = str(bsi.get("trust_level"))
+        trust_colors = {
+            "1": "background:#27ae60; color:white",
+            "2": "background:#f39c12; color:white",
+        }
+        trust_style = trust_colors.get(
+            trust_level, "background:#95a5a6; color:white"
+        )
         content += (
-            "<div style='padding:4px 8px; background:rgba(128,128,128,0.15); "
-            "border-radius:3px; display:inline-block; font-size:12px;'>"
-            f"<strong>Trust Level:</strong> {bsi.get('trust_level')}</div>"
+            f"<span style='padding:4px 12px; {trust_style}; "
+            f"border-radius:4px; font-size:13px; font-weight:bold;'>"
+            f"TRUST LEVEL: {trust_level}</span>"
         )
 
     content += "</div>"

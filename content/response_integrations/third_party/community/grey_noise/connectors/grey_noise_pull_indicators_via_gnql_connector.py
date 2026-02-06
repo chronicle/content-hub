@@ -17,7 +17,6 @@ from ..core.constants import (
     MAX_CONNECTOR_RESULTS,
     TEST_MODE_MAX_RESULTS,
 )
-from ..core.utils import validate_integer_param
 
 # ==============================================================================
 # This connector retrieves threat intelligence data from GreyNoise using GNQL

@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 
 from greynoise.exceptions import RateLimitError, RequestFailure
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -193,7 +192,7 @@ def main():
         siemplify.LOGGER.exception(e)
 
     finally:
-        siemplify.result.add_result_json(json.dumps({"data": all_data}))
+        siemplify.result.add_result_json({"data": all_data})
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}")
