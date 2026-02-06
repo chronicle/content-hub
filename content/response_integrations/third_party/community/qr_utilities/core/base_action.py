@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os.path
 from abc import ABC
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import requests
@@ -33,7 +33,7 @@ class QrUtilitiesBaseAction(Action, ABC):
             logger=self.logger,
         )
 
-    def save_temp_file(self, filename: str, content: bytes | str) -> str:
+    def save_temp_file(self, filename: str, content: bytes | str) -> Path:
         """Saves content to file in temporary directory
 
         Args:
@@ -43,11 +43,12 @@ class QrUtilitiesBaseAction(Action, ABC):
         Returns:
             str: Path to temporary file
         """
-        temp_folder = self.soar_action.get_temp_folder_path()
-        file_path = os.path.join(temp_folder, filename)
+        temp_folder = Path(self.soar_action.get_temp_folder_path())
+        file_path = temp_folder / filename
         mode = "wb" if isinstance(content, bytes) else "w"
         with open(file_path, mode) as f:
             f.write(content)
+
         return file_path
 
     @property

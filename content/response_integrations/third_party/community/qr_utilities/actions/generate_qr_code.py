@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_action_param
@@ -87,7 +88,7 @@ class GenerateQrCode(QrUtilitiesBaseAction):
         attachment_name = (
             f"qr_code_{sanitize_string(self.params.data[:20])}.{self.params.image_format}"
         )
-        attachment_path = self.save_temp_file(attachment_name, qr_code_bytes)
+        attachment_path: Path = self.save_temp_file(attachment_name, qr_code_bytes)
         json_result = {
             "qr_image_base64_blob": base64.b16encode(qr_code_bytes).decode("utf-8"),
             "size": self.params.size,
@@ -99,7 +100,7 @@ class GenerateQrCode(QrUtilitiesBaseAction):
             "case_attachment_name": attachment_name,
         }
         self.json_results = json_result
-        self.soar_action.add_attachment(attachment_path)
+        self.soar_action.add_attachment(str(attachment_path))
         self.result_value = True
         self.output_message = (
             f"Successfully generated QR code for '{self.params.data}' and attached it to the case."
