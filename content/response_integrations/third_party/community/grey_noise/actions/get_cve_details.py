@@ -80,7 +80,10 @@ def main():
 
                     entity.is_enriched = True
                     successful_entities.append(entity)
-                    json_results.append(cve_response)
+
+                    json_results.append(
+                        {"Entity": cve_id, "EntityResult": cve_response}
+                    )
 
                     # Create Insight
                     insight_html = generate_cve_insight(cve_response, cve_id)

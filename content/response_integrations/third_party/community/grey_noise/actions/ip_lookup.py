@@ -41,8 +41,8 @@ def process_entity_response(
     """
     ip_address = entity.identifier
     result = IPLookupResult(response)
-    json_results.append(response)
-    
+    json_results.append({"Entity": ip_address, "EntityResult": response})
+
     if result.is_found():
         entity.additional_properties.update(result.get_enrichment_data())
         entity.is_enriched = True

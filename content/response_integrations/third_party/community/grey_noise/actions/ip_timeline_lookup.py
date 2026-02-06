@@ -98,7 +98,12 @@ def main():
 
                     entity.is_enriched = True
                     successful_entities.append(entity)
-                    json_results.append(timeline_response)
+                    json_results.append(
+                        {
+                            "Entity": ip_address,
+                            "EntityResult": timeline_response,
+                        }
+                    )
 
                     # Create Insight
                     insight_html = generate_timeline_insight(timeline_response, ip_address)

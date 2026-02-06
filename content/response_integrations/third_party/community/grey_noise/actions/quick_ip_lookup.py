@@ -78,7 +78,7 @@ def process_ip_lookups(greynoise_manager, ip_entities, siemplify):
             ips_without_noise_data.append(ip_address)
             siemplify.LOGGER.info(f"No noise data found for IP: {ip_address}")
 
-        json_results.append(response)
+        json_results.append({"Entity": ip_address, "EntityResult": response})
 
     # Build output message
     if ips_with_noise_data:
