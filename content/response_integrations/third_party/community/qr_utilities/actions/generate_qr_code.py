@@ -3,9 +3,7 @@ from __future__ import annotations
 import base64
 from typing import TYPE_CHECKING
 
-from TIPCommon.data_models import CaseWallAttachment
 from TIPCommon.extraction import extract_action_param
-from TIPCommon.rest.soar_api import save_attachment_to_case_wall
 
 from ..core.base_action import QrUtilitiesBaseAction
 from ..core.constants import (
@@ -22,8 +20,6 @@ from ..core.utils import sanitize_string
 
 if TYPE_CHECKING:
     from typing import NoReturn
-
-    from TIPCommon.types import SingleJson
 
 
 class GenerateQrCode(QrUtilitiesBaseAction):
@@ -88,8 +84,10 @@ class GenerateQrCode(QrUtilitiesBaseAction):
             background_color=self.params.background_color,
         )
 
-        attchment_name = f"qr_code_{sanitize_string(self.params.data[:20])}.{self.params.image_format}"
-        attachment_path = self.save_temp_file(attchment_name, qr_code_bytes)
+        attachment_name = (
+            f"qr_code_{sanitize_string(self.params.data[:20])}.{self.params.image_format}"
+        )
+        attachment_path = self.save_temp_file(attachment_name, qr_code_bytes)
         json_result = {
             "qr_image_base64_blob": base64.b16encode(qr_code_bytes).decode("utf-8"),
             "size": self.params.size,
@@ -98,12 +96,14 @@ class GenerateQrCode(QrUtilitiesBaseAction):
             "margin": self.params.margin,
             "foreground_color": self.params.foreground_color,
             "background_color": self.params.background_color,
-            "case_attachment_name": attchment_name,
+            "case_attachment_name": attachment_name,
         }
         self.json_results = json_result
         self.soar_action.add_attachment(attachment_path)
         self.result_value = True
-        self.output_message = f"Successfully generated QR code for '{self.params.data}' and attached it to the case."
+        self.output_message = (
+            f"Successfully generated QR code for '{self.params.data}' and attached it to the case."
+        )
         self.soar_action.remove_temp_folder()
 
 

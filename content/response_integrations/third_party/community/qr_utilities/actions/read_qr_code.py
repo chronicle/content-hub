@@ -46,7 +46,9 @@ class ReadQrCode(QrUtilitiesBaseAction):
         if first_data:
             self.output_message = f"Successfully decoded QR code. Data: {first_data}"
         else:
-            self.output_message = "Successfully read QR code, but no data was found in the primary symbol."
+            self.output_message = (
+                "Successfully read QR code, but no data was found in the primary symbol."
+            )
 
         self.result_value = True
 

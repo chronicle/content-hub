@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 import requests
 
 from ..constants import ENDPOINTS
-from ..exceptions import InvalidRequestParametersError, QrUtilitiesHTTPError
+from ..exceptions import QrUtilitiesHTTPError
 
 if TYPE_CHECKING:
     pass

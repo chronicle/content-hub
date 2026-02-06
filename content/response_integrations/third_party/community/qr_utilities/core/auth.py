@@ -38,6 +38,7 @@ def build_auth_params(soar_action: SiemplifyAction) -> SessionAuthenticationPara
         ),
     )
 
+
 def get_authenticated_session(
     session_parameters: SessionAuthenticationParameters,
 ) -> Session:
