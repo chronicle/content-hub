@@ -13,24 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
-
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
-
+from datetime import datetime, timezone
+from TIPCommon.rest.custom_types import HttpMethod
 from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG
 from TIPCommon.exceptions import NotSupportedPlatformVersion
-from TIPCommon.rest.custom_types import HttpMethod
-
+from .base_soar_api import BaseSoarApi
 from ...consts import DATAPLANE_1P_HEADER
 from ...utils import temporarily_remove_header
-from .base_soar_api import BaseSoarApi
 
 if TYPE_CHECKING:
     import requests
-
-    from TIPCommon.types import SingleJson
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 
 class LegacySoarApi(BaseSoarApi):
@@ -94,7 +89,6 @@ class LegacySoarApi(BaseSoarApi):
         """Get federation cases using legacy API"""
         endpoint = "/federation/cases"
         params = {"continuationToken": self.params.continuation_token}
-
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def patch_federation_cases(self) -> requests.Response:
@@ -196,7 +190,8 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def _get_all_integration_instances(self) -> list[SingleJson]:
-        """Private helper method to fetch all integration instances from the API.
+        """
+        Private helper method to fetch all integration instances from the API.
         This encapsulates the common API call logic.
         """
         endpoint = "/integrations/GetOptionalIntegrationInstances"
@@ -486,13 +481,11 @@ class LegacySoarApi(BaseSoarApi):
         all_cases: list[SingleJson] = []
         current_page = 0
         page_size = 1000
-
         start_time_s = self.params.start_time / 1000.0
-        start_dt_object = datetime.fromtimestamp(start_time_s, tz=UTC)
+        start_dt_object = datetime.fromtimestamp(start_time_s, tz=timezone.utc)
         start_time_iso = start_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-
         end_time_s = self.params.end_time / 1000.0
-        end_dt_object = datetime.fromtimestamp(end_time_s, tz=UTC)
+        end_dt_object = datetime.fromtimestamp(end_time_s, tz=timezone.utc)
         end_time_iso = end_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         while True:
             endpoint = "/search/CaseSearchEverything?format=camel"
@@ -504,15 +497,48 @@ class LegacySoarApi(BaseSoarApi):
                 "requestedPage": current_page,
                 "timeRangeFilter": self.params.time_range_filter,
             }
-
             response = self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
-
             results = response.json().get("results")
-
             if not results:
                 break
-
             all_cases.extend(results)
             current_page += 1
-
         return all_cases
+
+    def get_case_close_comment(self, case_id):
+        """Get case closure comment"""
+        endpoint = "/dynamic-cases/GetCaseWallActivities?format=camel"
+        payload = {
+            "pageSize": 20,
+            "searchTerm": "",
+            "requestedPage": 0,
+            "caseId": case_id,
+            "alert": "ALL",
+            "users": [],
+            "activities": [1],
+            "order": "desc",
+        }
+        response = self._make_request(
+            method=HttpMethod.POST, endpoint=endpoint, json_payload=payload
+        )
+        response.raise_for_status()
+        case_activities = response.json()
+        close_activity = next(
+            filter(
+                lambda x: x.get("activityKind", 0) == 9,
+                case_activities.get("objectsList", []),
+            ),
+            {},
+        )
+        if not close_activity:
+            return ""
+        close_comment = next(
+            filter(
+                lambda x: x.startswith("Comment:"),
+                close_activity.get("description", "").split("\n"),
+            ),
+            "",
+        )
+        if not close_comment:
+            return ""
+        return close_comment.removeprefix("Comment:").strip()
