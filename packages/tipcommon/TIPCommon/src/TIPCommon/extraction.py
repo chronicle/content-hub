@@ -59,10 +59,18 @@ def extract_script_param(
         )
 
     #  =========== start validation logic =====================
-    value = SiemplifyVaultUtils.extract_vault_param(
-        input_dictionary.get(param_name),
-        siemplify.context.vault_settings
-    )
+
+    context = getattr(siemplify, "context", None)
+    vault_settings = getattr(context, "vault_settings", None) if context else None
+    vault_settings = vault_settings or getattr(siemplify, "vault_settings", None)
+
+    if vault_settings is None:
+        value = input_dictionary.get(param_name)
+    else:
+        value = SiemplifyVaultUtils.extract_vault_param(
+            input_dictionary.get(param_name),
+            vault_settings
+        )
 
     if not value:
         if is_mandatory:
