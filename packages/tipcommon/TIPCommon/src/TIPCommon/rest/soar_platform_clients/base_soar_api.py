@@ -13,17 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
-
 from typing import TYPE_CHECKING
-
 from TIPCommon.data_models import Container
 from TIPCommon.utils import get_sdk_api_uri
 
 if TYPE_CHECKING:
     import requests
-
     from TIPCommon.rest.custom_types import HttpMethod
     from TIPCommon.types import ChronicleSOAR, SingleJson
 
@@ -33,10 +29,8 @@ class BaseSoarApi:
 
     def __init__(self, chronicle_soar: ChronicleSOAR) -> None:
         """Initialize the BaseSoarApi.
-
         Args:
             chronicle_soar: The ChronicleSOAR SDK object.
-
         """
         self.chronicle_soar = chronicle_soar
         self.params = Container()
@@ -55,10 +49,8 @@ class BaseSoarApi:
             "params": params,
             "json": json_payload,
         }
-
         if headers:
             request_kwargs["headers"] = headers
-
         response = self.chronicle_soar.session.request(
             method.value,
             url,

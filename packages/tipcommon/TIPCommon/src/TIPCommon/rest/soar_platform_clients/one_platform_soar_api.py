@@ -13,23 +13,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
-
 from typing import TYPE_CHECKING
-
+import json
 from TIPCommon.rest.custom_types import HttpMethod
-
-from ...consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
-from ...utils import escape_odata_literal, safe_json_for_204, temporarily_remove_header
 from .base_soar_api import BaseSoarApi
+from ...consts import DEFAULT_1P_PAGE_SIZE, DATAPLANE_1P_HEADER
+from ...utils import escape_odata_literal, temporarily_remove_header, safe_json_for_204
 
 if TYPE_CHECKING:
     import requests
-
-    from TIPCommon.types import SingleJson
-
-
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 _PAGE_SIZE = 1000
 
 
@@ -50,7 +44,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         }
         if getattr(self.chronicle_soar, "alert_id", None):
             payload["alertIdentifier"] = self.chronicle_soar.alert_id
-
         endpoint = f"/cases/{self.params.case_id}/comments"
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
@@ -68,22 +61,20 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_full_case_details(self) -> requests.Response:
-        """Get full case details using explicit expand parameters.
-
+        """
+        Get full case details using explicit expand parameters.
         Expand behavior:
             - case_expand controls /cases endpoint
             - alert_expand controls /caseAlerts endpoint when case_type="alert"
         """
         case_type = self.params.case_type
         case_id = self.params.case_id
-
         if case_type == "alert":
             params = self._build_expand_params(getattr(self.params, "alert_expand", None))
             endpoint = f"/cases/{case_id}/caseAlerts"
         else:
             params = self._build_expand_params(getattr(self.params, "case_expand", None))
             endpoint = f"/cases/{case_id}"
-
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def get_case_insights(self) -> requests.Response:
@@ -118,7 +109,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/legacyFederatedCases:legacyBatchPatchFederatedCases"
         headers = {"AppKey": self.params.api_key} if self.params.api_key else None
         payload = {"cases": self.params.cases_payload}
-
         return self._make_request(
             HttpMethod.POST,
             endpoint,
@@ -138,7 +128,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def pause_alert_sla(self) -> requests.Response:
         """Pause alert sla"""
         alert = self.get_case_alerts().json()
-        alert_id = alert.get("caseAlerts")[0].get("id")
+        alert_id = alert.get("items")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:pauseSla"
         payload = {
             "message": self.params.message,
@@ -148,7 +138,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def resume_alert_sla(self) -> requests.Response:
         """Resume alert sla"""
         alert = self.get_case_alerts().json()
-        alert_id = alert.get("caseAlerts")[0].get("id")
+        alert_id = alert.get("items")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:resumeSla"
         payload = {
             "message": self.params.message,
@@ -176,12 +166,11 @@ class OnePlatformSoarApi(BaseSoarApi):
             endpoint,
             params=params,
         ).json()
-
         return response.get("caseAlerts", [])
 
     def get_case_overview_details(self) -> SingleJson:
-        """Get full case overview including case details and alert cards.
-
+        """
+        Get full case overview including case details and alert cards.
         Expand is explicitly controlled by:
             - self.params.case_expand
             - self.params.alert_expand
@@ -241,7 +230,6 @@ class OnePlatformSoarApi(BaseSoarApi):
             f"/integrations/{self.params.integration_identifier}/integrationInstances/"
             f"{self.params.instance_id}"
         )
-
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_integration_instance_details_by_name(self) -> SingleJson:
@@ -249,7 +237,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances"
         instance_name = escape_odata_literal(self.params.instance_display_name)
         query_params = {"$filter": f"displayName eq '{instance_name}'"}
-
         return self._make_request(HttpMethod.GET, endpoint, params=query_params)
 
     def get_users_profile(self) -> requests.Response:
@@ -274,10 +261,9 @@ class OnePlatformSoarApi(BaseSoarApi):
         case_id = self.params.case_id
         alert_data = self.get_alert_id_by_alert_identifier()
         if alert_data.status_code == 204:
-            alert_data._content = b"{}"
+            setattr(alert_data, "_content", b"{}")
             return alert_data
-
-        alert_id = alert_data.json()["caseAlerts"][0].get("id")
+        alert_id = alert_data.json()["items"][0].get("id")
         endpoint = f"/cases/{case_id}/caseAlerts/{alert_id}/involvedEvents:formatted"
         return self._make_request(HttpMethod.GET, endpoint)
 
@@ -302,26 +288,18 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = self.params.list_entities_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    def _paginate_results(self, initial_endpoint: str, root_response_key: str) -> list[SingleJson]:
-        """Handles paginated API requests, managing tokens and aggregating results.
+    def _paginate_results(self, initial_endpoint: str) -> list:
+        """
+        Handles paginated API requests, managing tokens and aggregating results.
         Avoids infinite loops by using a controlled loop condition.
-
-        Args:
-            initial_endpoint (str): The initial API endpoint to fetch data from.
-            root_response_key (str): The key in the response JSON where records are stored.
-
-        Returns:
-            list[SingleJson]: A list of all records retrieved across paginated responses.
         """
         all_records = []
         next_token = None
         current_endpoint = initial_endpoint
-
         while True if next_token is None else bool(next_token):
             endpoint_with_token = (
                 f"{current_endpoint}&pageToken={next_token}" if next_token else current_endpoint
             )
-
             response_data = {}
             try:
                 response = self._make_request(HttpMethod.GET, endpoint_with_token)
@@ -330,14 +308,11 @@ class OnePlatformSoarApi(BaseSoarApi):
             except Exception as e:
                 print(f"Error fetching page: {e}")
                 break
-
-            current_records = response_data.get(root_response_key, [])
+            current_records = response_data.get("custom_lists", response_data.get("items", []))
             all_records.extend(current_records)
-
             next_token = response_data.get("nextPageToken")
             if not next_token:
                 break
-
         return all_records
 
     def _build_tracking_list_filter_string(
@@ -346,82 +321,64 @@ class OnePlatformSoarApi(BaseSoarApi):
         entity_id: str | None,
         environment: str | None = None,
     ) -> str:
-        """Builds the OData filter string for tracking list records.
-
+        """
+        Builds the OData filter string for tracking list records.
         The filter structure is: [environment AND] [category OR block AND]
         [entityIdentifier].
         """
         filter_parts = []
-
         if environment:
             filter_parts.append(f"environments eq '[\"{environment}\"]'")
-
         if category_names:
             if isinstance(category_names, str):
                 category_names = [name.strip() for name in category_names.split(",")]
-
             if category_names:
                 category_filters = [f"category eq '{name}'" for name in category_names]
-
                 category_or_block = " or ".join(category_filters)
                 category_filter_string = f"({category_or_block})"
-
                 filter_parts.append(category_filter_string)
-
         if entity_id:
             filter_parts.append(f"entityIdentifier eq '{entity_id}'")
-
         if not filter_parts:
             return ""
-
         return " and ".join(filter_parts)
 
     def get_traking_list_record(self) -> SingleJson:
-        """Get traking list record and handles pagination with combined filters.
-
+        """
+        Get traking list record and handles pagination with combined filters.
         The filter combines environment (AND) with category (OR, grouped)
         and entityIdentifier (AND).
         """
         category_names = self.params.category_name
         entity_id = self.params.entity_id
-
         filter_string = self._build_tracking_list_filter_string(category_names, entity_id)
-
         base_endpoint = "/system/settings/customLists"
-
         if filter_string:
             initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
-
-        return self._paginate_results(
-            initial_endpoint=initial_endpoint, root_response_key="customLists"
-        )
+        return self._paginate_results(initial_endpoint)
 
     def get_traking_list_records_filtered(self) -> SingleJson:
-        """Get all tracking list records, filtering by environment AND optional
+        """
+        Get all tracking list records, filtering by environment AND optional
         category/entity
         filters, and handles pagination.
         """
-        environment = self.params.environment or self.chronicle_soar.environment
-
+        environment = (
+            self.params.environment if self.params.environment else self.chronicle_soar.environment
+        )
         category_names = self.params.category_name
         entity_id = self.params.entity_id
-
         filter_string = self._build_tracking_list_filter_string(
             category_names, entity_id, environment=environment
         )
-
         base_endpoint = "/system/settings/customLists"
-
         if filter_string:
             initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
-
-        return self._paginate_results(
-            initial_endpoint=initial_endpoint, root_response_key="customLists"
-        )
+        return self._paginate_results(initial_endpoint)
 
     def execute_bulk_assign(self) -> requests.Response:
         """Execute bulk assign"""
@@ -466,7 +423,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         request_payload = {"caseId": case_id}
         if message:
             request_payload["message"] = message
-
         return self._make_request(HttpMethod.POST, endpoint, json_payload=request_payload)
 
     def resume_case_sla(self, case_id: int) -> requests.Response:
@@ -529,95 +485,79 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_case_wall_records(self) -> requests.Response:
-        """Get case wall records using 1P API.
-
+        """
+        Get case wall records using 1P API.
         Expand behavior:
             - self.params.wall_expand controls expand query.
             - Uses "expand" query param (not "expand").
         """
         endpoint = f"/cases/{self.params.case_id}/caseWallRecords"
-
         expand = getattr(self.params, "wall_expand", None)
-
         params = {"pageSize": DEFAULT_1P_PAGE_SIZE}
         if expand:
             params["expand"] = ",".join(expand)
-
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def get_entity_expand_cards(self) -> requests.Response:
-        """Get entity expand cards using 1P API.
-
+        """
+        Get entity expand cards using 1P API.
         Expand behavior:
             - self.params.entity_expand controls "expand" query.
         """
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/-/involvedEntities"
-
         expand = getattr(self.params, "entity_expand", None)
         params = self._build_expand_params(expand)
-
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def get_all_case_overview_details(self) -> SingleJson:
-        """Get full case overview including:
+        """
+        Get full case overview including:
             - Case details
             - Alert cards
             - Security events
             - Wall data
             - Entity cards
-
         Expand behavior (explicit and separated):
             - self.params.case_expand   → /cases
             - self.params.alert_expand  → /caseAlerts
             - self.params.wall_expand   → /caseWallRecords
             - self.params.entity_expand → /involvedEntities
-
         No implicit expansion is performed.
         """
         case_data = self.get_case_overview_details()
-
         security_events = self._make_request(
             HttpMethod.GET, f"/cases/{self.params.case_id}/caseAlerts/-/involvedEvents:formatted"
         ).json()
-
         events_by_alert: SingleJson = {}
         for event in security_events:
             alert_id = event.get("alertIdentifier")
             if alert_id:
                 events_by_alert.setdefault(alert_id, []).append(event)
-
         for alert in case_data.get("alertCards", []):
             alert["securityEventCards"] = events_by_alert.get(alert.get("identifier"), [])
-
         wall_response = self.get_case_wall_records()
         wall_data = safe_json_for_204(wall_response, default_for_204={})
         case_data["wallData"] = wall_data.get("caseWallRecords", [])
-
         entity_response = self.get_entity_expand_cards()
         entity_data = safe_json_for_204(entity_response, default_for_204={})
         case_data["involvedEntities"] = entity_data.get("involvedEntities", [])
-
         entity_cards_response = self.get_entity_cards()
         entity_cards_data = safe_json_for_204(entity_cards_response, default_for_204={})
         case_data["entityCards"] = entity_cards_data.get("cards", [])
-
         return case_data
 
     def _build_expand_params(self, expand: list[str] | None) -> dict | None:
-        """Build explicit expand query parameters.
-
+        """
+        Build explicit expand query parameters.
         Rules:
             - None or empty list → no expand query.
             - ["*"] → expand all fields.
             - ["field1", "field2"] → expand selected fields only.
-
         Returns:
             dict | None: {"expand": "a,b"} or None
-
         """
         if not expand:
             return None
-
         return {"expand": ",".join(expand)}
 
     def get_attachments_metadata(self) -> requests.Response:
@@ -737,7 +677,6 @@ class OnePlatformSoarApi(BaseSoarApi):
             ids_filter = ", ".join([str(case_id) for case_id in self.params.case_ids])
             case_ids_filter: str = f"id in ({ids_filter})"
             filter_string += f" and ({case_ids_filter})"
-
         base_endpoint = "/cases"
         initial_endpoint = (
             f"{base_endpoint}?$filter={filter_string}"
@@ -746,4 +685,27 @@ class OnePlatformSoarApi(BaseSoarApi):
             f"&pageSize={_PAGE_SIZE}"
             "&$orderBy=updateTime asc"
         )
-        return self._paginate_results(initial_endpoint=initial_endpoint, root_response_key="cases")
+        return self._paginate_results(initial_endpoint)
+
+    def get_case_close_comment(self, case_id):
+        """Get case closure comment"""
+        endpoint = f"/cases/{case_id}/caseWallRecords"
+        params = {
+            "$filter": "(activityType eq 'CASE_STATUS_CHANGE') and (activityKind eq 'CASE_CLOSED')",
+            "$orderBy": "createTime desc",
+            "$pageSize": 1,
+        }
+        response = self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
+        response.raise_for_status()
+        case_activities = response.json()
+        if case_activities.get("totalSize", 0) < 1:
+            return ""
+        activity_data_json_str = case_activities.get("case_wall_records", [{}])[0].get(
+            "activityDataJson", "{}"
+        )
+        close_activity = json.loads(activity_data_json_str)
+        full_comment = close_activity.get("comment", "")
+        if not full_comment:
+            return ""
+        case_comment = full_comment.split("\n")[0].strip()
+        return case_comment
