@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css?family=Open+Sans:300,400,600");
+
+        html[data-theme="light"] {
+            --background-color: hsl(0, 0%, 100%);
+            --text-color: hsl(237, 12%, 35%);
+            --background-color-2: hsl(0, 0%, 85%);
+        }
+       
+
+        html[data-theme="dark"] {
+            --background-color: hsl(240, 16%, 16%);
+            --text-color: hsl(240, 4%, 71%);
+            --background-color-2: hsl(221, 35%, 20%);
+        }
+
+        html[data-theme="dark-gray"] {
+            --background-color: hsl(221, 35%, 20%);
+            --text-color: hsl(216, 45%, 84%);
+            --background-color-2: hsl(240, 16%, 16%);
+        }
+
+        body {
+            float: left;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            background: var(--background-color);
+            color: var(--text-color);
+            font-family: open sans;
+        }
+
+        ::-webkit-scrollbar {
+            width: 0;
+        }
+        ::-webkit-scrollbar{height:12px;height:var(--scrollbar-size);width:12px;width:var(--scrollbar-size)}::-webkit-scrollbar-thumb{background:#3a4a6c;background-clip:content-box;border:3px solid #0000;border-radius:10px}
+        ::-webkit-scrollbar-track{background-color:#202c44}
+        ::-webkit-scrollbar-corner {
+          background: #202c44;
+            background-color:#202c44;
+        }
+        .mainContainer {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .alertScore {
+            font-size: 40px;
+            font-weight: 500;
+            padding-right: 50px;
+            padding-left: 15px;
+        }
+
+        .scoreInfo {
+            color: hsl(0, 0%, 62%);
+        }
+
+        .scoreLow {
+            color: hsl(187, 100%, 42%)
+        }
+
+        .scoreMedium {
+            color: hsl(66, 70%, 54%)
+        }
+
+        .scoreHigh {
+            color: hsl(45, 100%, 51%)
+        }
+
+        .scoreCritical {
+            color: hsl(4, 90%, 58%)
+        }
+
+
+
+        .description {
+            vertical-align: middle;
+            height: fit-content;
+            margin-right: 25px;
+            text-justify: distribute;
+            flex:1;
+            word-wrap: break-word;
+            width: 0;
+        }
+
+        table {
+            width: 95%;
+            margin: 0 auto;
+            border-collapse: collapse;
+        }
+
+        .headerRow {
+            text-align: left;
+            background-color: var(--background-color-2);
+        }
+
+        th,
+        td {
+            padding: 10px;
+        }
+
+        .dataRow {
+            border-bottom: 1pt solid black;
+        }
+
+        .filter {
+            padding-left: 15px;
+            padding-bottom: 15px;
+            font-weight: bold;
+        }
+
+        #toggle-table {
+            padding-left: 15px;
+            padding-top: 25px;
+            padding-bottom: 15px;
+            font-style: italic;
+        }
+
+        input{
+            width: 75%;
+            background-color:  90%;
+            padding-left: 30px;
+            height: 16px;
+        }
+        
+    </style>
+    <script
+        type="text/javascript"> dataTheme = "dark-gray"; document.documentElement.setAttribute("data-theme", dataTheme); document.documentElement.classList.add("smp-theme-" + dataTheme); </script>
+</head>
+
+<body>
+    <div class="cardContainer" style="font-family: Open Sans, serif; font-size: 12px;">
+        <div class="mainContainer" id="main-container">
+            <div class="alertScore" id="alert-score"></div>
+            <div class="description" id="description"></div>
+        </div>
+        <div class="scoreDetails" id="score-details">
+            <div id="toggle-table"> Hide Details</div>
+            <div  id="table-container">
+                <div class="dataTable" id="data-table">
+
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+    <script> $(document).ready(function () {
+            const alertScore = '[Alert.ALERT_SEVERITY]';
+            const scoreInfo = [Alert.ALERT_SCORE_INFO];
+            let descriptionData = new Map([
+                ["Info", '[Alert.SUMMARY]'],
+                ["Low", '[Alert.SUMMARY]'],
+                ["Medium", '[Alert.SUMMARY]'],
+                ["High", '[Alert.SUMMARY]'],
+                ["Critical", '[Alert.SUMMARY]']
+            ]);
+            let scoreClassMapping = new Map([
+                ["Info", "scoreInfo"],
+                ["Low", "scoreLow"],
+                ["Medium", "scoreMedium"],
+                ["High", "scoreHigh"],
+                ["Critical", "scoreCritical"]
+            ]);
+
+            function renderWidget() {
+
+                function createScoreTable() {
+                    let content = `<table>
+                        <thead>
+                            <tr class="headerRow">
+                                <th> Category </th>
+                                <th> Name </th>
+                                <th> Value </th>
+                                <th> Severity </th>
+                                <th> Description </th>
+                            </tr>
+                        </thead>`;
+                    scoreInfo.forEach(entry => {
+
+                        content += `<tr class="dataRow">
+                            <td rowspan="${entry.score_data.length}"> ${entry.category} </td>`;
+                        let isFirst = true;
+                        entry.score_data.forEach(el => {
+                            if (isFirst) {
+                                content += `<td> ${el.source} </td>
+                                <td> ${el.score_name} </td>
+                                <td class="${scoreClassMapping.get(el.severity)}"> ${el.severity} </td>
+                                <td> ${el.description} </td>`;
+                                isFirst = false;
+                            }
+                            else {
+                                content += `</tr>
+                                <tr class="dataRow">
+                                    <td> ${el.source} </td>
+                                    <td> ${el.score_name} </td>
+                                    <td class="${scoreClassMapping.get(el.severity)}"> ${el.severity} </td>
+                                    <td> ${el.description} </td>`;
+                            };
+
+
+                        });
+
+                    });
+
+                    content += `</tr>
+                    </table>`;
+                    $('#data-table').html(content);
+
+                }
+
+                $('#alert-score').html(alertScore.toUpperCase());
+                $('#alert-score').addClass(scoreClassMapping.get(alertScore));
+                $('#description').html(descriptionData.get(alertScore));
+
+                createScoreTable();
+
+            }
+
+            renderWidget();
+
+            $('#toggle-table').click(function (event) {
+                if ($('#table-container').hasClass('hidden')) {
+                    $('#table-container').removeClass('hidden');
+                    $('#toggle-table').html("Hide Details");
+                }
+                else {
+                    $('#table-container').addClass('hidden');
+                    $('#toggle-table').html("Show Details");
+                };
+            });
+        });
+    </script>
+</body>
+
+</html>
