@@ -60,6 +60,7 @@ def _extract_param_value(
 
     Returns:
         The extracted value.
+
     """
     raw_value: Any | None = input_dictionary.get(param_name)
 
