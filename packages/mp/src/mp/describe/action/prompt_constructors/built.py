@@ -47,9 +47,9 @@ class BuiltPromptConstructor(PromptConstructor):
         manager_names, manager_content = await self._get_managers_names_and_content()
         template: Template = await self.task_prompt
         return template.safe_substitute({
-            "json_file_name": f"{self.action_name}.yaml",
+            "json_file_name": f"{self.action_file_name}.yaml",
             "json_file_content": await self._get_built_action_def_content(),
-            "python_file_name": f"{self.action_name}.py",
+            "python_file_name": f"{self.action_file_name}.py",
             "python_file_content": await self._get_built_action_content(),
             "manager_file_names": manager_names or DEFAULT_FILE_CONTENT,
             "manager_files_content": manager_content or DEFAULT_FILE_CONTENT,
@@ -72,7 +72,7 @@ class BuiltPromptConstructor(PromptConstructor):
         action_def: anyio.Path = (
             self.out_path
             / constants.OUT_ACTIONS_META_DIR
-            / f"{self.action_name}{constants.ACTIONS_META_SUFFIX}"
+            / f"{self.action_file_name}{constants.ACTIONS_META_SUFFIX}"
         )
         if await action_def.exists():
             content: str = await action_def.read_text(encoding="utf-8")
@@ -87,7 +87,7 @@ class BuiltPromptConstructor(PromptConstructor):
 
     async def _get_built_action_content(self) -> str:
         action_script: anyio.Path = (
-            self.out_path / constants.OUT_ACTION_SCRIPTS_DIR / f"{self.action_name}.py"
+            self.out_path / constants.OUT_ACTION_SCRIPTS_DIR / f"{self.action_file_name}.py"
         )
         if await action_script.exists():
             return await action_script.read_text(encoding="utf-8")
