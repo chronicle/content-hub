@@ -70,8 +70,10 @@ class PlaybookDeconstructor:
             except OSError:
                 logger.exception(
                     "Failed to create a file for a step with name '%s'."
-                    " Please verify this type of step name can be created as a file in your system",
+                    " Please verify a file named '%s' can be created in your system and doesn't"
+                    " contain restricted characters like '.', '\\' etc.",
                     step_path.stem,
+                    step_path,
                 )
                 raise
 
