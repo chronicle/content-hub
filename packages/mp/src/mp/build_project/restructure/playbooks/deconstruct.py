@@ -154,7 +154,8 @@ class PlaybookDeconstructor:
             except OSError:
                 logger.exception(
                     "Failed to create a file for a widget with name '%s'."
-                    " Please verify this type of widget title can be created as a file in your system",
+                    " Please verify this type of widget title can be created as a file in your"
+                    " system",
                     widget_path.stem,
                 )
                 raise
