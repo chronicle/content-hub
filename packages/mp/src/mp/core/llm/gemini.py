@@ -74,7 +74,7 @@ class ApiKeyNotFoundError(Exception):
 
 class GeminiConfig(LlmConfig):
     model_name: str = "gemini-3-pro-preview"
-    temperature: float = 0.2
+    temperature: float = 0.0
     sexually_explicit: str = "OFF"
     dangerous_content: str = "OFF"
     hate_speech: str = "OFF"

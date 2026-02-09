@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from mp.core.llm.sdk import LlmConfig, LlmSdk
 
 GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
+GEMINI_TEMPERATURE: float = 0.1
 DESCRIBE_BULK_SIZE: int = 4
 
 T_Schema = TypeVar("T_Schema")
@@ -66,7 +67,7 @@ async def create_llm_session() -> AsyncIterator[LlmSdk[LlmConfig]]:
 
 
 def _create_gemini_config() -> GeminiConfig:
-    return GeminiConfig(model_name=GEMINI_MODEL_NAME)
+    return GeminiConfig(model_name=GEMINI_MODEL_NAME, temperature=GEMINI_TEMPERATURE)
 
 
 async def _get_system_prompt() -> str:
