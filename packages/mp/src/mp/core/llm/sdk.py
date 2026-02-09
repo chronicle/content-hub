@@ -16,12 +16,9 @@ from __future__ import annotations
 
 import abc
 from contextlib import AbstractAsyncContextManager
-from typing import TYPE_CHECKING, Generic, Literal, Self, TypeVar, overload
+from typing import Generic, Literal, TypeVar, overload
 
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    from types import TracebackType
 
 
 class LlmConfig(BaseModel, abc.ABC):
@@ -122,14 +119,3 @@ class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig]):
     def set_system_prompt_to_session(self, prompt: str) -> None:
         """Set the system prompt for the session."""
         self.system_prompt = prompt
-
-    @abc.abstractmethod
-    async def __aenter__(self) -> Self: ...
-
-    @abc.abstractmethod
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None: ...
