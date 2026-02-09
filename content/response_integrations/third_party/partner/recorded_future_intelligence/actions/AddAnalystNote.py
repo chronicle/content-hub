@@ -103,13 +103,9 @@ def main():
         ).document_id
 
     except Exception as err:
-        output_message = (
-            f"Error executing action {ADD_ANALYST_NOTE_SCRIPT_NAME}. Reason: {err}"
-        )
+        output_message = f"Error executing action {ADD_ANALYST_NOTE_SCRIPT_NAME}. Reason: {err}"
         if isinstance(err, RecordedFutureUnauthorizedError):
-            output_message = (
-                "Unauthorized - please check your API token and try again. {}"
-            )
+            output_message = "Unauthorized - please check your API token and try again. {}"
         success = False
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)
