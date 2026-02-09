@@ -24,16 +24,53 @@ class AiCategories(BaseModel):
         bool,
         Field(
             description=(
-                "whether this code is considered an enrich action."
-                " An enrichment action is one that only fetches data and does not modify any"
-                " entities or data outside or inside of Google SecOps. It is okay if it does modify"
-                " entities, create insights or create case wall logs. This means the 'fetches_data'"
-                " field must be true, and the 'can_mutate_external_data' field must be false."
-                " Usually 'can_mutate_internal_data' is false, but determine this based on"
-                " the 'internal_data_mutation_explanation' to make sure it doesn't modify any data"
-                " that isn't allowed. The results of 'can_update_entities', "
-                " 'can_create_insight', and 'can_create_case_wall_logs'"
-                " can either be true or false."
+                """Field Definition: Is Enrichment Action
+
+An Enrichment Action is a specialized task designed to gather supplemental context about alerts or
+entities. To maintain data integrity and security, an action is only classified as "Enrichment" if
+it meets the following criteria:
+
+* Primary Purpose: The action must proactively fetch or retrieve data from an external or internal
+  source.
+
+* External State Preservation: The action must not create, update, or delete data in any external
+  platform. It is strictly "Read-Only" regarding systems outside of Google SecOps.
+
+* Internal State Constraints: The action must not modify existing Google SecOps data, with
+  three specific exceptions. It is permitted only to:
+    1. Add Case Comments.
+    2. Create Case Insights.
+    3. Update Entity fields/attributes (enriching the entity's profile).
+
+Here's a pseudocode example of how to determine whether an action is an enrichment
+action:
+
+```
+def is_enrichment_action(action):
+    # Rule 1: Must fetch data to be considered enrichment
+    if not action.fetches_data:
+        return False
+
+    # Rule 2: Absolute ban on mutating external systems
+    if action.can_mutate_external_data:
+        return False
+
+    # Rule 3: Check for internal mutations
+    if action.can_mutate_internal_data:
+        # Define the only allowed internal mutations
+        allowed_mutations = [
+            action.can_create_insight,
+            action.can_update_entities,
+            action.can_add_comments
+        ]
+
+        # If it modifies internal data NOT in the allowed list, it's not enrichment
+        if action.modifies_other_internal_fields(except_for=allowed_mutations):
+            return False
+
+    # If it passes all checks, it is a valid enrichment action
+    return True
+```"""
             )
         ),
     ]

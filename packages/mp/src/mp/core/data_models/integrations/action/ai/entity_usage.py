@@ -22,11 +22,11 @@ from .entity_types import EntityType  # noqa: TC001
 
 
 class EntityUsage(BaseModel):
-    entity_scopes: Annotated[
+    entity_types: Annotated[
         list[EntityType],
         Field(
             description=(
-                "The scopes/types of the entities the action runs on, if it runs on"
+                "The types of the entities the action runs on, if it runs on"
                 " entities. Use the code and the metadata json to determine this field."
                 " If an action runs on entities it most likely will use the target_entities"
                 " attribute to go over the entities or filter them by type or other"

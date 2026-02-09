@@ -66,8 +66,8 @@ class ActionCapabilities(BaseModel):
     ]
     can_update_entities: Annotated[bool, Field(description="Whether the action updates entities.")]
     can_create_insight: Annotated[bool, Field(description="Whether the action creates insights.")]
-    can_create_case_wall_logs: Annotated[
-        bool, Field(description="Whether the action creates case wall logs.")
+    can_modify_alert_data: Annotated[
+        bool, Field(description="Whether the action can modify data of alerts.")
     ]
     can_create_case_comments: Annotated[
         bool, Field(description="Whether the action creates case comments.")
