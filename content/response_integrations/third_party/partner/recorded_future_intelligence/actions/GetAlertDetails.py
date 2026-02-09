@@ -83,9 +83,7 @@ def main():
         )
 
     except RecordedFutureUnauthorizedError as e:
-        output_message = (
-            f"Unauthorized - please check your API token and try again. {e}"
-        )
+        output_message = f"Unauthorized - please check your API token and try again. {e}"
     except RecordedFutureNotFoundError as e:
         output_message = (
             "Requested Alert ID wasn't found in Recorded Future, "
@@ -93,9 +91,7 @@ def main():
             f"action {GET_ALERT_DETAILS_SCRIPT_NAME}. Reason: {e}"
         )
     except Exception as e:
-        output_message = (
-            f"Error executing action {GET_ALERT_DETAILS_SCRIPT_NAME}. Reason: {e}"
-        )
+        output_message = f"Error executing action {GET_ALERT_DETAILS_SCRIPT_NAME}. Reason: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
