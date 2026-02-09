@@ -58,7 +58,8 @@ class JobParameter:
             if normalized in JobParamType.__members__:
                 return JobParamType[normalized]
             return JobParamType.NULL
-        elif isinstance(type_value, int):
+
+        if isinstance(type_value, int):
             try:
                 return JobParamType(type_value)
             except ValueError:
