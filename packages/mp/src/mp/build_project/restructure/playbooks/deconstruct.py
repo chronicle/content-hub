@@ -188,7 +188,7 @@ def _sanitize_step_filename(filename: str, step_id: str | None = None) -> str:
 
     """
     filename = filename.replace(" ", "_")
-    invalid_chars: str = r'[<>:"/\|?*]'
+    invalid_chars: str = r'[<>:"/\\|?*]'
     sanitized: str = re.sub(invalid_chars, "", filename)
     if step_id:
         return (sanitized + "_" + step_id[:5]).lower()
