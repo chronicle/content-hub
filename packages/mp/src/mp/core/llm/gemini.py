@@ -42,9 +42,11 @@ from google.genai.types import (
 )
 from pydantic import Field
 from tenacity import (
+    RetryCallState,
     after_log,
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
+    retry_if_not_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
@@ -59,6 +61,10 @@ if TYPE_CHECKING:
     from google.genai.client import AsyncClient
 
 
+POLL_BATCH_SLEEP_SEC: int = 10
+SERVER_ERROR_STATUS_CODE: int = 500
+RATE_LIMIT_STATUS_CODE: int = 429
+
 logger: logging.Logger = logging.getLogger("mp.gemini")
 
 
@@ -68,7 +74,7 @@ class ApiKeyNotFoundError(Exception):
 
 class GeminiConfig(LlmConfig):
     model_name: str = "gemini-3-pro-preview"
-    temperature: float = 1.0
+    temperature: float = 0.2
     sexually_explicit: str = "OFF"
     dangerous_content: str = "OFF"
     hate_speech: str = "OFF"
@@ -102,6 +108,28 @@ class GeminiConfig(LlmConfig):
             " set the GEMINI_API_KEY environment variable."
         )
         raise ApiKeyNotFoundError(msg) from None
+
+
+def _log_retry_attempt(retry_state: RetryCallState) -> None:
+    """Log a callback in tenacity when a retry happens."""
+    if retry_state.outcome is None or not retry_state.outcome.failed:
+        return
+
+    delay: int = getattr(retry_state.next_action, "sleep", 0)
+    logger.warning(
+        "Retry attempt #%s failed. Retrying in %s seconds.",
+        retry_state.attempt_number,
+        delay,
+    )
+
+    exception: BaseException | None = retry_state.outcome.exception()
+    logger.debug(" Exception: %s", exception)
+
+
+def _should_retry_exception(e: BaseException) -> bool:
+    return isinstance(e, ClientError) and (
+        e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE
+    )
 
 
 class Gemini(LlmSdk[GeminiConfig]):
@@ -153,10 +181,13 @@ class Gemini(LlmSdk[GeminiConfig]):
     ) -> str: ...
 
     @retry(
-        retry=retry_if_exception_type(ClientError),
+        retry=(
+            retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)
+        ),
         stop=stop_after_attempt(10),
-        wait=wait_exponential(),
+        wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
+        before_sleep=_log_retry_attempt,
     )
     async def send_message(
         self,
@@ -258,10 +289,13 @@ class Gemini(LlmSdk[GeminiConfig]):
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=retry_if_exception_type(ClientError),
+        retry=(
+            retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)
+        ),
         stop=stop_after_attempt(10),
-        wait=wait_exponential(),
+        wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
+        before_sleep=_log_retry_attempt,
     )
     async def _send_single_message_independent(
         self,
@@ -381,7 +415,6 @@ class Gemini(LlmSdk[GeminiConfig]):
             "JOB_STATE_UNSPECIFIED",
         }:
             logger.info("Batch job %s is in state %s, waiting...", batch_job.name, batch_job.state)
-            await asyncio.sleep(10)
             if not batch_job.name:
                 msg: str = "Batch job lost name during polling"
                 raise RuntimeError(msg)
