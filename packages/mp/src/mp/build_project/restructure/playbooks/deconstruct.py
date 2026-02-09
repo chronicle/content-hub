@@ -149,7 +149,15 @@ class PlaybookDeconstructor:
 
         for w in non_built_widgets:
             widget_path: Path = widgets_path / f"{w['title']}{mp.core.constants.YAML_SUFFIX}"
-            mp.core.file_utils.save_yaml(w, widget_path)
+            try:
+                mp.core.file_utils.save_yaml(w, widget_path)
+            except OSError:
+                logger.exception(
+                    "Failed to create a file for a widget with name '%s'."
+                    " Please verify this type of widget title can be created as a file in your system",
+                    widget_path.stem,
+                )
+                raise
 
         for w in self.playbook.widgets:
             widget_path: Path = widgets_path / f"{w.title}.{mp.core.constants.HTML_SUFFIX}"
