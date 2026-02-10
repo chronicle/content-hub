@@ -24,15 +24,13 @@ them onto the main Typer instance.
 from __future__ import annotations
 
 import atexit
-import importlib.metadata
 from typing import Annotated
 
-import rich
 import typer
 
 from mp.core import config as mp_config
 from mp.core.logging_utils import setup_logging
-from mp.core.update_checker import UpdateChecker
+from mp.core.update_checker import UpdateChecker, get_mp_version, print_mp_version
 
 from . import describe
 from .build_project.typer_app import build_app
@@ -70,7 +68,7 @@ def setup(
         typer.Option(
             "--version",
             "-V",
-            callback=_version_callback,
+            callback=print_mp_version,
             is_eager=True,
             help="Show the version of the mp tool.",
         ),
@@ -81,22 +79,8 @@ def setup(
 
     checker: UpdateChecker = UpdateChecker()
     ctx.obj = checker
-    checker.start_background_check(_get_version())
+    checker.start_background_check(get_mp_version())
     atexit.register(checker.print_warning_if_needed)
-
-
-def _version_callback(*, value: bool) -> None:
-    if value:
-        version: str = _get_version()
-        rich.print(f"mp {version}")
-        raise typer.Exit
-
-
-def _get_version() -> str:
-    try:
-        return importlib.metadata.version("mp")
-    except importlib.metadata.PackageNotFoundError:
-        return "unknown"
 
 
 if __name__ == "__main__":

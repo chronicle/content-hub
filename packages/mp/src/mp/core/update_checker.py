@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import importlib.metadata
 import threading
 import tomllib
 from contextlib import suppress
@@ -22,6 +23,7 @@ from typing import Any
 
 import requests
 import rich
+import typer
 from packaging.version import InvalidVersion
 from packaging.version import parse as parse_version
 
@@ -56,7 +58,7 @@ class UpdateChecker:
             self._check_thread.join(timeout=0.5)
 
         if self._new_version:
-            _print_warning(self._new_version)
+            _print_version_warning(self._new_version)
 
     def _check_update_worker(self, current_version: str) -> None:
         with suppress(
@@ -75,13 +77,40 @@ class UpdateChecker:
                 self._new_version = remote_version
 
 
-def _print_warning(remote_version: str) -> None:
+def _print_version_warning(remote_version: str) -> None:
+    current_version: str = get_mp_version()
     message: str = (
         f"\n[bold yellow]WARNING:[/bold yellow] A newer version of mp "
-        f"({remote_version}) is available.\n"
+        f"({current_version} -> {remote_version}) is available.\n"
         f"Run 'mp self update' to update.\n"
     )
     rich.print(message)
+
+
+def print_mp_version(*, value: bool) -> None:
+    """Print the current version of the mp tool.
+
+    Raises:
+        typer.Exit: If the version is printed.
+
+    """
+    if value:
+        version: str = get_mp_version()
+        rich.print(f"mp {version}")
+        raise typer.Exit
+
+
+def get_mp_version() -> str:
+    """Get the current version of mp.
+
+    Returns:
+        str: The current version of mp.
+
+    """
+    try:
+        return importlib.metadata.version("mp")
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
