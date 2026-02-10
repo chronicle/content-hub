@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -64,7 +65,10 @@ class PlaybookDeconstructor:
         step_dir.mkdir(exist_ok=True)
 
         for step in non_built_steps:
-            step_path: Path = step_dir / f"{step['instance_name']}{mp.core.constants.YAML_SUFFIX}"
+            step_path: Path = (
+                step_dir / f"{_sanitize_step_filename(step['instance_name'], step['identifier'])}"
+                f"{mp.core.constants.YAML_SUFFIX}"
+            )
             try:
                 mp.core.file_utils.save_yaml(step, step_path)
             except OSError:
@@ -148,7 +152,10 @@ class PlaybookDeconstructor:
         widgets_path.mkdir(exist_ok=True)
 
         for w in non_built_widgets:
-            widget_path: Path = widgets_path / f"{w['title']}{mp.core.constants.YAML_SUFFIX}"
+            widget_path: Path = (
+                widgets_path
+                / f"{_sanitize_widget_filename(w['title'])}{mp.core.constants.YAML_SUFFIX}"
+            )
             try:
                 mp.core.file_utils.save_yaml(w, widget_path)
             except OSError:
@@ -161,7 +168,44 @@ class PlaybookDeconstructor:
                 raise
 
         for w in self.playbook.widgets:
-            widget_path: Path = widgets_path / f"{w.title}.{mp.core.constants.HTML_SUFFIX}"
+            widget_path: Path = widgets_path / (
+                f"{_sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}"
+            )
             html_content: str = w.data_definition.html_content if w.type is WidgetType.HTML else ""
             if html_content:
                 widget_path.write_text(html_content)
+
+
+def _sanitize_step_filename(filename: str, step_id: str | None = None) -> str:
+    """Sanitizes a filename to be used as a YAML file name.
+
+    Args:
+        filename: The filename to sanitize.
+        step_id: An optional identifier.
+
+    Returns:
+        The sanitized filename.
+
+    """
+    filename = filename.replace(" ", "_")
+    invalid_chars: str = r'[<>:"/\\|?*]'
+    sanitized: str = re.sub(invalid_chars, "", filename)
+    if step_id:
+        return (sanitized + "_" + step_id[:5]).lower()
+    return sanitized.lower()
+
+
+def _sanitize_widget_filename(filename: str) -> str:
+    """Sanitizes a filename to be used as a YAML file name.
+
+    Args:
+        filename: The filename to sanitize.
+
+    Returns:
+        The sanitized filename.
+
+    """
+    invalid_chars: str = r'./<>!@#$%^&*()+={};:~`"'
+    sanitized: str = re.sub(invalid_chars, " ", filename)
+
+    return " ".join(sanitized.split())
