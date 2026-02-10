@@ -187,6 +187,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_fields: AiFields = _get_ai_fields(action_metadata_json["name"], path)
             action_metadata_json["ai_description"] = ai_fields.description
             action_metadata_json["ai_categories"] = [c.value for c in ai_fields.categories]
+            action_metadata_json["entity_types"] = [t.value for t in ai_fields.entity_types]
 
             metadata_object: Self = cls.from_non_built(p.stem, action_metadata_json)
             metadata_objects.append(metadata_object)
