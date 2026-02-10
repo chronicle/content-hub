@@ -50,4 +50,4 @@ def update() -> None:
         logger.info("[green]Successfully updated mp![/green]")
     except unix.FatalCommandError:
         logger.exception("[red]Failed to update mp.[/red]")
-        raise typer.Exit(code=1) from None
+        raise typer.Exit(1) from None
