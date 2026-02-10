@@ -20,6 +20,7 @@ import sys
 import typer
 
 from mp.core import unix
+from mp.telemetry import track_command
 
 UPDATE_URL: str = "git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp"
 
@@ -28,6 +29,7 @@ logger: logging.Logger = logging.getLogger("mp.self")
 
 
 @self_app.command(name="update")
+@track_command
 def update() -> None:
     """Update mp to the latest version.
 
