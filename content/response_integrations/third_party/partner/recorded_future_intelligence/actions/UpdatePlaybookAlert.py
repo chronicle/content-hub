@@ -67,7 +67,7 @@ def main():
 
     category = extract_action_param(
         siemplify,
-        param_name='Playbook Alert Category',
+        param_name="Playbook Alert Category",
         is_mandatory=True,
         print_value=True,
     )
@@ -103,13 +103,12 @@ def main():
         is_mandatory=False,
         print_value=True,
     )
-    pba_status = (
-        pba_status.replace(" ", "") if isinstance(pba_status, str) else pba_status
-    )
+    pba_status = None if pba_status == "None" else pba_status
+    priority = None if priority == "None" else priority
+    reopen_strategy = None if reopen_strategy == "None" else reopen_strategy
+    pba_status = pba_status.replace(" ", "") if isinstance(pba_status, str) else pba_status
     reopen_strategy = (
-        reopen_strategy.replace(" ", "")
-        if isinstance(reopen_strategy, str)
-        else reopen_strategy
+        reopen_strategy.replace(" ", "") if isinstance(reopen_strategy, str) else reopen_strategy
     )
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
@@ -119,12 +118,7 @@ def main():
 
     try:
         if not (
-            assign_to
-            or log_entry
-            or pba_status
-            or priority
-            or result_value
-            or reopen_strategy
+            assign_to or log_entry or pba_status or priority or result_value or reopen_strategy
         ):
             raise Exception(
                 f"Error executing action {UPDATE_PBA_SCRIPT_NAME}."
@@ -147,14 +141,10 @@ def main():
             reopen_strategy=reopen_strategy,
         )
         siemplify.result.add_result_json(updated_alert)
-        output_message += (
-            f"Successfully updated playbook alert {alert_id} in Recorded Future."
-        )
+        output_message += f"Successfully updated playbook alert {alert_id} in Recorded Future."
 
     except Exception as err:
-        output_message = (
-            f"Error executing action {UPDATE_PBA_SCRIPT_NAME}. Reason: {err}"
-        )
+        output_message = f"Error executing action {UPDATE_PBA_SCRIPT_NAME}. Reason: {err}"
         if isinstance(err, RecordedFutureUnauthorizedError):
             output_message = "Unauthorized - please check your API token and try again."
         result_value = False
