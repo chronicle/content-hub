@@ -28,6 +28,7 @@ import mp.core.validators
 from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 
+from .ai.entity_types import EntityType
 from .ai.metadata import ActionAiMetadata
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
@@ -50,6 +51,7 @@ DEFAULT_SIMULATION_DATA: str = '{"Entities": []}'
 class AiFields(NamedTuple):
     description: str | None
     categories: list[ActionAiCategories]
+    entity_types: list[EntityType]
 
 
 class ActionAiCategories(RepresentableEnum):
@@ -72,6 +74,7 @@ class BuiltActionMetadata(TypedDict):
     Version: float
     AIDescription: str | None
     AICategories: NotRequired[list[str] | None]
+    EntitiesTypes: NotRequired[list[str] | None]
 
 
 class NonBuiltActionMetadata(TypedDict):
@@ -90,6 +93,7 @@ class NonBuiltActionMetadata(TypedDict):
     version: NotRequired[float]
     ai_description: NotRequired[str | None]
     ai_categories: NotRequired[list[str]]
+    entities_types: NotRequired[list[str]]
 
 
 class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
@@ -132,6 +136,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ]
     ai_description: str | None
     ai_categories: list[ActionAiCategories]
+    entities_types: list[EntityType]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -223,6 +228,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             version=version,
             ai_description=built.get("AIDescription"),
             ai_categories=[ActionAiCategories(c) for c in built.get("AICategories") or []],
+            entities_types=[EntityType(e) for e in built.get("EntitiesTypes") or []],
         )
 
     @classmethod
@@ -260,6 +266,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
             ai_description=non_built.get("ai_description"),
             ai_categories=[ActionAiCategories(c) for c in non_built.get("ai_categories") or []],
+            entities_types=[EntityType(e) for e in non_built.get("entities_types") or []],
         )
 
     def to_built(self) -> BuiltActionMetadata:
@@ -285,6 +292,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             Version=float(self.version),
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
+            EntitiesTypes=[e.value for e in self.entities_types] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -365,7 +373,7 @@ AI_CATEGORY_TO_DEF_AI_CATEGORY: dict[str, ActionAiCategories] = {
 
 
 def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
-    empty_results: AiFields = AiFields(description=None, categories=[])
+    empty_results: AiFields = AiFields(description=None, categories=[], entity_types=[])
     actions_desc: Path = (
         integration_path
         / mp.core.constants.RESOURCES_DIR
@@ -388,4 +396,5 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
             for category, is_true in ai_meta.categories.model_dump().items()
             if is_true
         ],
+        entity_types=ai_meta.entity_usage.entity_types,
     )
