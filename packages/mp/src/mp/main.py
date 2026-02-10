@@ -49,12 +49,6 @@ app: typer.Typer = typer.Typer()
 
 def main() -> None:
     """Entry point for the `mp` CLI tool."""
-    _init_app()
-    app()
-
-
-def _init_app() -> None:
-    """Register all sub-commands and extensions."""
     app.add_typer(build_app, name="build")
     app.add_typer(check_app)
     app.add_typer(config_app, name="config")
@@ -64,6 +58,7 @@ def _init_app() -> None:
     app.add_typer(validate_app, name="validate")
     app.add_typer(describe.app, name="describe")
     app.add_typer(self_app, name="self")
+    app()
 
 
 @app.callback(invoke_without_command=True)
