@@ -21,6 +21,8 @@ import typer
 
 from mp.core import unix
 
+UPDATE_URL: str = "git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp"
+
 self_app: typer.Typer = typer.Typer(help="Manage the mp tool itself.")
 logger: logging.Logger = logging.getLogger("mp.self")
 
@@ -41,7 +43,7 @@ def update() -> None:
         "pip",
         "install",
         "--upgrade",
-        "git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp",
+        UPDATE_URL,
     ]
     try:
         unix.execute_command_and_get_output(command, [])

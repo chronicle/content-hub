@@ -22,6 +22,7 @@ from typing import Any
 
 import requests
 import rich
+from packaging.version import InvalidVersion
 from packaging.version import parse as parse_version
 
 PYPROJECT_URL: str = (
@@ -58,7 +59,13 @@ class UpdateChecker:
             _print_warning(self._new_version)
 
     def _check_update_worker(self, current_version: str) -> None:
-        with suppress(Exception):
+        with suppress(
+            requests.RequestException,
+            requests.HTTPError,
+            tomllib.TOMLDecodeError,
+            KeyError,
+            InvalidVersion,
+        ):
             response: requests.Response = requests.get(PYPROJECT_URL, timeout=TIMEOUT_SECONDS)
             response.raise_for_status()
             data: dict[str, Any] = tomllib.loads(response.text)
