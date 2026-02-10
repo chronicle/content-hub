@@ -48,7 +48,7 @@ app: typer.Typer = typer.Typer()
 
 
 def main() -> None:
-    """Entry point for the `mp` CLI tool."""
+    """Entry point for the `mp` CLI tool, initializing all sub-applications."""
     app.add_typer(build_app, name="build")
     app.add_typer(check_app)
     app.add_typer(config_app, name="config")
