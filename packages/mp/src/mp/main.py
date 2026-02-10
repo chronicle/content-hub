@@ -77,10 +77,6 @@ def setup(
 ) -> None:
     """Set up mp tool and add the version command."""
     setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
-    
-    # Check for updates
-    from mp.core.update_checker import check_for_updates
-    check_for_updates(_get_version())
 
 
 def _version_callback(*, value: bool) -> None:
