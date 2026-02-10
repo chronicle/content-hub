@@ -81,4 +81,6 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "-d",
     "all",
     "override",
+    "--version",
+    "-V",
 }

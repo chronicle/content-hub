@@ -23,6 +23,10 @@ them onto the main Typer instance.
 
 from __future__ import annotations
 
+import importlib.metadata
+import logging
+from typing import Annotated
+
 import typer
 
 from mp.core import config as mp_config
@@ -37,12 +41,17 @@ from .format.typer_app import format_app
 from .run_pre_build_tests.typer_app import test_app
 from .validate.typer_app import validate_app
 
+app: typer.Typer = typer.Typer()
+
 
 def main() -> None:
     """Entry point for the `mp` CLI tool, initializing all sub-applications."""
-    setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
+    _init_app()
+    app()
 
-    app: typer.Typer = typer.Typer()
+
+def _init_app() -> None:
+    """Register all sub-commands and extensions."""
     app.add_typer(build_app, name="build")
     app.add_typer(check_app)
     app.add_typer(config_app, name="config")
@@ -51,7 +60,38 @@ def main() -> None:
     app.add_typer(dev_env_app, name="dev-env")
     app.add_typer(validate_app, name="validate")
     app.add_typer(describe.app, name="describe")
-    app()
+
+
+@app.callback(invoke_without_command=True)
+def setup(
+    *,
+    _version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-V",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show the version of the mp tool.",
+        ),
+    ] = False,
+) -> None:
+    """Set up mp tool and add the version command."""
+    setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
+
+
+def _version_callback(*, value: bool) -> None:
+    if value:
+        version: str = _get_version()
+        typer.echo(f"mp {version}")
+        raise typer.Exit
+
+
+def _get_version() -> str:
+    try:
+        return importlib.metadata.version("mp")
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
 
 
 if __name__ == "__main__":
