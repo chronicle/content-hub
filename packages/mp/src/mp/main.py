@@ -30,6 +30,7 @@ import typer
 
 from mp.core import config as mp_config
 from mp.core.logging_utils import setup_logging
+from mp.core.update_checker import check_for_updates_background, print_update_warning_if_needed
 
 from . import describe
 from .build_project.typer_app import build_app
@@ -38,6 +39,7 @@ from .config.typer_app import config_app
 from .dev_env.typer_app import dev_env_app
 from .format.typer_app import format_app
 from .run_pre_build_tests.typer_app import test_app
+from .self_update.typer_app import self_app
 from .validate.typer_app import validate_app
 
 app: typer.Typer = typer.Typer()
@@ -46,7 +48,10 @@ app: typer.Typer = typer.Typer()
 def main() -> None:
     """Entry point for the `mp` CLI tool, initializing all sub-applications."""
     _init_app()
-    app()
+    try:
+        app()
+    finally:
+        print_update_warning_if_needed()
 
 
 def _init_app() -> None:
@@ -59,6 +64,7 @@ def _init_app() -> None:
     app.add_typer(dev_env_app, name="dev-env")
     app.add_typer(validate_app, name="validate")
     app.add_typer(describe.app, name="describe")
+    app.add_typer(self_app, name="self")
 
 
 @app.callback(invoke_without_command=True)
@@ -78,11 +84,14 @@ def setup(
     """Set up mp tool and add the version command."""
     setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
 
+    check_for_updates_background(_get_version())
+
 
 def _version_callback(*, value: bool) -> None:
     if value:
         version: str = _get_version()
         typer.echo(f"mp {version}")
+        check_for_updates_background(_get_version())
         raise typer.Exit
 
 
