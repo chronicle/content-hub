@@ -82,9 +82,8 @@ OUT_CONNECTORS_META_DIR: str = "Connectors"
 OUT_JOBS_META_DIR: str = "Jobs"
 OUT_WIDGETS_META_DIR: str = "Widgets"
 
-AI_FOLDER: str = "ai"
+AI_DIR: str = "ai"
 ACTIONS_AI_DESCRIPTION_FILE: str = "actions_ai_description.yaml"
-AI_META_JSON_FILE: str = "actions_ai_metadata.json"
 
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"
@@ -141,39 +140,41 @@ PYTHON_VERSION_FILE: str = ".python-version"
 
 MS_IN_SEC: int = 1_000
 
-SDK_MODULES: frozenset[str] = frozenset({
-    "SiemplifyVaultCyberArkPam",
-    "CaseAlertsProvider",
-    "FileRetentionManager",
-    "GcpTokenProvider",
-    "MockConnector",
-    "MockRunner",
-    "OtelLoggingUtils",
-    "OverflowManager",
-    "PersistentFileStorageMixin",
-    "ScriptResult",
-    "Siemplify",
-    "SiemplifyAction",
-    "SiemplifyAddressProvider",
-    "SiemplifyBase",
-    "SiemplifyCaseWallDataModel",
-    "SiemplifyConnectors",
-    "SiemplifyConnectorsDataModel",
-    "SiemplifyConstants",
-    "SiemplifyDataModel",
-    "SiemplifyExtensionTypesBase",
-    "SiemplifyJob",
-    "SiemplifyLogger",
-    "SiemplifyLogicalOperator",
-    "SiemplifyPublisherUtils",
-    "SiemplifySdkConfig",
-    "SiemplifyTransformer",
-    "SiemplifyUtils",
-    "SiemplifyVault",
-    "SiemplifyVaultUtils",
-    "SimulatedCasesCreator",
-    "VaultProviderFactory",
-})
+SDK_MODULES: frozenset[str] = frozenset(
+    {
+        "SiemplifyVaultCyberArkPam",
+        "CaseAlertsProvider",
+        "FileRetentionManager",
+        "GcpTokenProvider",
+        "MockConnector",
+        "MockRunner",
+        "OtelLoggingUtils",
+        "OverflowManager",
+        "PersistentFileStorageMixin",
+        "ScriptResult",
+        "Siemplify",
+        "SiemplifyAction",
+        "SiemplifyAddressProvider",
+        "SiemplifyBase",
+        "SiemplifyCaseWallDataModel",
+        "SiemplifyConnectors",
+        "SiemplifyConnectorsDataModel",
+        "SiemplifyConstants",
+        "SiemplifyDataModel",
+        "SiemplifyExtensionTypesBase",
+        "SiemplifyJob",
+        "SiemplifyLogger",
+        "SiemplifyLogicalOperator",
+        "SiemplifyPublisherUtils",
+        "SiemplifySdkConfig",
+        "SiemplifyTransformer",
+        "SiemplifyUtils",
+        "SiemplifyVault",
+        "SiemplifyVaultUtils",
+        "SimulatedCasesCreator",
+        "VaultProviderFactory",
+    }
+)
 
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",
@@ -203,83 +204,6 @@ MAX_PARAMETERS_LENGTH: int = 50
 PARAM_NAME_MAX_LENGTH: int = 150
 PARAM_NAME_MAX_WORDS: int = 13
 MINIMUM_SCRIPT_VERSION: float = 1.0
-# language=regexp
-SCRIPT_DISPLAY_NAME_REGEX: str = (
-    r"^[a-zA-Z0-9-\s]+$"
-    # Excluded scripts that already have issues with their name
-    r"|^IOC_Enrichment$"
-)
-# language=regexp
-SCRIPT_IDENTIFIER_REGEX: str = (
-    r"^[a-zA-Z0-9-_]+$"
-    # Excluded integrations that already have blank spaces in their identifier
-    r"|^Bitdefender GravityZone$"
-    r"|^Cybersixgill Actionable Alerts$"
-    r"|^Full Contact$"
-    r"|^IPQS Fraud and Risk Scoring$"
-    r"|^Cybersixgill DVE Feed$"
-    r"|^Google Safe Browsing$"
-    r"|^WHOIS XML API$"
-    r"|^Google Docs$"
-    r"|^AWS - EC2$"
-    r"|^Google Sheets$"
-    r"|^Google Drive$"
-    r"|^Bandura Cyber$"
-    r"|^Luminar IOCs and Leaked Credentials$"
-    r"|^Docker Hub$"
-    r"|^Azure DevOps$"
-    r"|^Cybersixgill Darkfeed$"
-    r"|^Cybersixgill DVE Enrichment$"
-    r"|^Spell Checker$"
-    r"|^Cybersixgill Darkfeed Enrichment$"
-    r"|^Workflow Tools$"
-)
-# language=regexp
-PARAM_DISPLAY_NAME_REGEX: str = (
-    r"^[a-zA-Z0-9-'\s]+$"
-    # Excluded parameters that already have issues with their name
-    r"|^Verify SSL Ceritifcate\?$"
-    r"|^Git Password/Token/SSH Key$"
-    r"|^EML/MSG Base64 String$"
-    r"|^Country\(For multiple countries, provide comma-separated values\)$"
-    r"|^Entity Identifier\(s\)$"
-    r"|^logzio_security_token$"
-    r"|^logzio_region$"
-    r"|^minimum_score$"
-    r"|^api_token$"
-    r"|^eyeglass_ip$"
-    r"|^API_Key$"
-    r"|^Alert_ID$"
-    r"|^Queue_State$"
-    r"|^logzio_operations_token$"
-    r"|^logzio_custom_endpoint$"
-    r"|^api_key$"
-    r"|^fields_to_search$"
-    r"|^severity_threshold$"
-    r"|^Entity Identifier\(s\) Type$"
-    r"|^Target Entity Identifier\(s\)$"
-    r"|^IOC_Enrichment$"
-    r"|^SLA \(in minutes\)$"
-    r"|^raw_json$"
-    r"|^alert_event_id$"
-    r"|^Additional_Data$"
-    r"|^page_size$"
-    r"|^sort_by$"
-    r"|^Data_Range$"
-    r"|^Incident_Key$"
-    r"|^Team_IDS$"
-    r"|^User_IDS$"
-    r"|^Service_IDS$"
-    r"|^Entity_State$"
-    r"|^Incidents_Statuses$"
-    r"|^from_time$"
-    r"|^to_time$"
-    r"|^Incident_ID$"
-    r"|^from_date$"
-    r"|^logzio_token$"
-    r"|^search_term$"
-    r"|^feed_uuid$"
-)
 MAX_SCRIPT_RESULT_NAME_LENGTH: int = 100
 
 # ------------------ Playbooks ------------------
