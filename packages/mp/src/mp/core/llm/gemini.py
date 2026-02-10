@@ -65,7 +65,7 @@ POLL_BATCH_SLEEP_SEC: int = 10
 SERVER_ERROR_STATUS_CODE: int = 500
 RATE_LIMIT_STATUS_CODE: int = 429
 
-logger: logging.Logger = logging.getLogger("mp.gemini")
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ApiKeyNotFoundError(Exception):
