@@ -18,6 +18,9 @@ from typing import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.build_project.restructure.playbooks.deconstruct import (
+    _sanitize_step_filename,  # noqa: PLC2701
+)
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
@@ -131,5 +134,7 @@ def update_step_with_debug_data(
 
         mp.core.file_utils.save_yaml(
             step.to_non_built(),
-            playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
+            playbook_path
+            / mp.core.constants.STEPS_DIR
+            / f"{_sanitize_step_filename(step.instance_name, step.identifier)}.yaml",
         )
