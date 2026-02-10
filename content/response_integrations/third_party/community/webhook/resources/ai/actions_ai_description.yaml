@@ -1,0 +1,258 @@
+Create Token:
+  ai_description: >-
+    ### General Description
+
+    Creates a new webhook token on the Webhook service. This action generates a unique
+    URL that can be used to receive incoming HTTP requests. It is primarily used for
+    testing or setting up temporary endpoints that return specific content when accessed.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Default Content | string | True | The content to be presented when the generated
+    webhook URL is clicked or accessed. |
+
+    | Default Content Type | string | True | The MIME type of the content (e.g., `text/html`
+    or `application/json`) to be returned by the webhook URL. |
+
+    | Timeout | string | False | The number of seconds (0-10) the service should wait
+    before returning a response. This is useful for testing client-side timeouts.
+    |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `Default Content`, `Default
+    Content Type`, and `Timeout` from the user input.
+
+    2. **Manager Initialization**: Initializes the `WebhookManager` using the base
+    URL configured in the integration settings.
+
+    3. **Token Creation**: Sends a POST request to the external service's `/token`
+    endpoint with the provided parameters to generate a new webhook.
+
+    4. **URL Construction**: Appends the returned unique identifier (UUID) to the
+    base URL to create the final `webhookURL`.
+
+    5. **Result Reporting**: Returns the full JSON response from the service and provides
+    the generated URL as the output message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new webhook token and associated configuration on the external Webhook
+      service via a POST request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete Token:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specific Webhook token from the external service using its unique identifier.
+    This action is primarily used to decommission webhook endpoints, making the associated
+    URLs inaccessible and stopping any further data collection or interaction through
+    that specific token.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Type | Mandatory | Default Value |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Token ID | The unique identifier of the token to be deleted. | string | True
+    | 111 |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `Token ID` from the user
+    input and the base URL from the integration configuration.
+
+    2. **Manager Initialization**: Initializes the `WebhookManager` to handle communication
+    with the external API.
+
+    3. **External Deletion**: Executes a `DELETE` request to the external service's
+    endpoint (`/token/{token_id}`).
+
+    4. **Result Handling**: Captures the HTTP status code from the response. If successful,
+    it marks the action as completed and provides a success message; otherwise, it
+    logs the error and fails the action.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a webhook token in the external service, which permanently removes the
+      token and makes its associated endpoint inaccessible.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Webhook Response:
+  ai_description: "### General Description\nThis action fetches request data for a\
+    \ specific webhook URL identified by a Token ID. It is designed to monitor and\
+    \ retrieve incoming HTTP requests sent to a webhook endpoint, allowing for automated\
+    \ response handling or data collection from external systems. The action supports\
+    \ asynchronous execution, meaning it can wait for a specific duration or until\
+    \ a request is actually received before completing.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Pending Condition** | DDL | Yes | Determines the completion logic. `TimeFrame`\
+    \ waits for a set duration before fetching data. `AwaitClick` waits until at least\
+    \ one request is detected before finishing. |\n| **TimeFrame** | String | Yes\
+    \ | The number of minutes to wait for requests if the `Pending Condition` is set\
+    \ to `TimeFrame`. |\n| **Responses To Retrieve** | DDL | Yes | Specifies whether\
+    \ to retrieve `All` captured requests or only the `Latest` one. |\n| **Token ID**\
+    \ | String | Yes | The unique identifier for the webhook token to monitor. |\n\
+    \n### Additional Notes\n- This is an asynchronous action. It will remain in an\
+    \ 'In Progress' state until the specified timeout is reached or a request is received,\
+    \ depending on the `Pending Condition` configuration.\n- The action automatically\
+    \ filters out requests generated by Slack user agents to reduce noise.\n\n###\
+    \ Flow Description\n1. **Initialization**: Retrieves the base URL from the integration\
+    \ configuration and extracts action parameters (Token ID, Condition, Timeframe,\
+    \ and Retrieval choice).\n2. **Condition Check**: \n    - If **TimeFrame** is\
+    \ selected: The action calculates the elapsed time since the first run. It remains\
+    \ 'In Progress' until the specified minutes have passed, then fetches the data.\n\
+    \    - If **AwaitClick** is selected: The action immediately checks for requests.\
+    \ If no requests are found, it remains 'In Progress' and retries in subsequent\
+    \ cycles until data is detected.\n3. **Data Retrieval**: Calls the Webhook API\
+    \ to fetch requests associated with the provided Token ID.\n4. **Filtering**:\
+    \ Processes the retrieved data to remove Slackbot-related requests and, if configured,\
+    \ limits the output to only the most recent request.\n5. **Completion**: Returns\
+    \ the JSON payload of the captured requests and updates the action status to 'Completed'."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Webhook service to verify that the provided URL is reachable
+    and the integration is correctly configured. This is a utility action used to
+    validate the communication path between Google SecOps and the target Webhook endpoint.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    This action relies on the 'URL' parameter defined in the integration's shared
+    configuration. If the URL is missing or malformed in the integration settings,
+    the action will fail.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action retrieves the 'URL' from the Webhook
+    integration configuration.
+
+    2. **Manager Initialization**: It initializes the `WebhookManager` with the base
+    URL.
+
+    3. **Connectivity Check**: The action executes a GET request to the base URL via
+    the `test_connectivity` method.
+
+    4. **Execution Outcome**: If the GET request returns a successful status code,
+    the action completes with a success message. If the request fails or an exception
+    occurs, it returns a failure status with the error details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,277 @@
+Get Authentication Logs for User:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves user profile information and authentication logs from DUO
+    Security for a specific user over a defined lookback period. It is designed to
+    help analysts understand a user's authentication patterns and identify whether
+    a specific authentication source (IP, device, etc.) is frequently used by that
+    user.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Authentication Threshold | String | Yes | The minimum number of successful authentications
+    required for an authentication source (like an IP or device) to be included in
+    the 'known' summary lists. Default is 2. |
+
+    | Number Days Back | String | Yes | The number of days prior to the current time
+    to retrieve logs for. Default is 1 day. |
+
+    | Username | String | No | The DUO username to retrieve logs for. While marked
+    as non-mandatory in configuration, the action requires a valid username to fetch
+    data. |
+
+
+    ### Additional Notes
+
+    - The action uses the DUO Admin API and requires 'API Hostname', 'Admin Secret
+    Key', and 'Admin Integration Key' to be configured in the integration settings.
+
+    - If the DUO API returns a rate-limiting error, the script is designed to wait
+    for 60 seconds and retry the request.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the DUO Admin API
+    using the provided integration credentials.
+
+    2. **User Resolution**: It calls the DUO API to resolve the provided `Username`
+    into a unique `user_id`.
+
+    3. **Log Retrieval**: Using the `user_id`, it fetches authentication logs from
+    the DUO service for the timeframe specified by `Number Days Back`.
+
+    4. **Data Aggregation**: The script iterates through the successful authentication
+    logs, counting occurrences of various attributes such as Access IP, State, OS,
+    Application, Endpoint Key, and Authentication Device.
+
+    5. **Threshold Filtering**: It filters the aggregated counts. Any source that
+    has fewer successful authentications than the `Authentication Threshold` is removed
+    from the summary lists.
+
+    6. **Result Generation**: The action returns a JSON object containing the raw
+    user data, raw authentication logs, and the filtered statistical summaries of
+    the user's authentication behavior.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Trust Monitor Events:
+  ai_description: >-
+    ### General Description
+
+    Retrieves Trust Monitor events from DUO Security for a specified lookback period.
+    This action is designed to fetch security-related events from DUO's Trust Monitor
+    feature, providing visibility into trust-based access decisions and potential
+    security anomalies. It returns the raw event data in JSON format for further processing
+    within a playbook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Number Days Back | String | Yes | The number of days prior to the current time
+    to retrieve events from. The value is converted to an integer and used to calculate
+    the start timestamp for the API query. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the DUO API Hostname, Admin
+    Secret Key, and Admin Integration Key from the integration's shared configuration.
+
+    2. **Parameter Processing**: It extracts the `Number Days Back` parameter and
+    calculates the time range in milliseconds (from 'X' days ago until now).
+
+    3. **API Initialization**: Using the DUO Python SDK, it initializes an Admin API
+    client with the provided credentials.
+
+    4. **Data Retrieval**: It calls the `get_trust_monitor_events_by_offset` method
+    to fetch events within the calculated time window.
+
+    5. **Result Handling**: The retrieved events are packaged into a JSON object and
+    returned as the action's result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Users by Name:
+  ai_description: >-
+    ### General Description
+
+    Queries the DUO Admin API to retrieve detailed information about a specific user
+    based on their username. This action is designed to fetch user-specific metadata,
+    including user IDs and associated device/authentication data, directly from the
+    DUO MFA platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Username | String | Yes | The username of the individual to be queried in the
+    DUO Admin API. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action extracts the API Hostname, Admin Secret Key,
+    and Admin Integration Key from the DUO integration configuration to initialize
+    the DUO Admin SDK client.
+
+    2. **API Query**: It calls the `get_users_by_name` method of the DUO Admin API
+    using the provided `Username` parameter.
+
+    3. **Data Processing**: The script iterates through the returned user data to
+    identify the `user_id` and aggregates the full response into a structured result.
+
+    4. **Output**: The retrieved user information is formatted as a JSON object and
+    returned as the action's result, making it available for downstream playbook logic.
+
+
+    ### Additional Notes
+
+    This action does not process entities from the Google SecOps case context; it
+    relies entirely on the manual `Username` input parameter.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies the connectivity and credentials for the DUO Auth API. This action uses
+    the `/check` endpoint to ensure that the provided API Hostname, Secret Key, and
+    Integration Key are valid and that the request signature is generated correctly.
+    It is primarily used as a health check for the integration.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies solely on the
+    integration's global configuration parameters (API Hostname, Auth Secret Key,
+    and Auth Integration Key).
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: Retrieves the `API Hostname`, `Auth Secret Key`,
+    and `Auth Integration Key` from the DUO integration settings.
+
+    2. **Client Initialization**: Initializes the DUO Auth client using the retrieved
+    credentials.
+
+    3. **Connectivity Check**: Executes the `check()` method against the DUO API's
+    `/check` endpoint.
+
+    4. **Result Reporting**: Returns a success message if the credentials are valid
+    or an error message if the verification fails, setting the execution state to
+    failed in case of an exception.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

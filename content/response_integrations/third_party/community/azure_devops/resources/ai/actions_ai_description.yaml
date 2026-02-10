@@ -1,0 +1,222 @@
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a connectivity test utility for the Azure DevOps integration.
+    Its primary purpose is to verify that the Google SecOps environment can successfully
+    communicate with the Azure DevOps API using the configured credentials and connection
+    details. It serves as a diagnostic tool to ensure the integration is functional
+    before executing more complex workflows.
+
+
+    ### Parameters Description
+
+    This action does not have any input parameters. It utilizes the following configuration
+    parameters defined at the integration level:
+
+    * **Personal Access Token**: The secret token used to authenticate requests to
+    Azure DevOps.
+
+    * **Organization**: The specific Azure DevOps organization name to connect to.
+
+    * **Base URL**: The root URL for the Azure DevOps instance (e.g., https://dev.azure.com).
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the integration or for
+    troubleshooting authentication and network issues. It does not process any entities
+    or modify any data.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The script retrieves the Personal Access Token, Organization,
+    and Base URL from the integration's configuration.
+
+    2. **Authentication Setup**: It initializes a Basic Authentication object using
+    the provided token.
+
+    3. **Connection Initialization**: A connection is established to the Azure DevOps
+    instance using the combined Base URL and Organization path.
+
+    4. **API Verification**: The action attempts to call the `get_projects` method
+    from the Azure DevOps Core Client to verify that the API is reachable and the
+    credentials are valid.
+
+    5. **Status Reporting**: The action returns a success message if the API call
+    completes without error, or an error message detailing the failure if an exception
+    occurs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Trigger Azure Build:
+  ai_description: >-
+    ### General Description
+
+    Triggers a specific pipeline build in Azure DevOps using a build definition ID
+    and custom variables. This action is designed to automate CI/CD workflows or remediation
+    tasks that involve running Azure DevOps pipelines. It operates asynchronously,
+    meaning it initiates the build and then monitors its progress until completion.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Build Definition Id | String | Yes | The unique identifier of the Azure DevOps
+    pipeline (build definition) you want to trigger. |
+
+    | Build Variables | Code (JSON) | Yes | A JSON-formatted string containing the
+    variables to be passed to the pipeline execution. |
+
+
+    ### Additional Notes
+
+    - This action requires the Azure DevOps integration to be configured with a Project,
+    Organization, and Personal Access Token (PAT).
+
+    - The action is asynchronous and will poll the Azure DevOps API until the build
+    reaches a terminal state (e.g., Succeeded, Failed, Canceled).
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves integration configuration (Base URL, Organization,
+    Project, PAT) and action parameters.
+
+    2. **Trigger Build**: Sends a POST request to the Azure DevOps Builds API to queue
+    a new build for the specified definition ID with the provided variables.
+
+    3. **Async Transition**: If the build is successfully queued, the action captures
+    the `build_id` and transitions to an asynchronous polling state.
+
+    4. **Status Monitoring**: The `query_job` function periodically calls the Azure
+    DevOps API to check the current status and result of the build.
+
+    5. **Completion**: The action concludes as 'Completed' if the build succeeds or
+    partially succeeds, and as 'Failed' if the build fails, is canceled, or encounters
+    an error.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a new build execution in Azure DevOps, which creates a new build record
+      and starts a pipeline run.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait Until Web Resource Is Up:
+  ai_description: >-
+    ### General Description
+
+    This action is designed to pause playbook execution until a specific web resource
+    (URL) becomes available. It functions as an asynchronous check, meaning it will
+    repeatedly poll the target URL until a successful response is received.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | URL | String | Yes | The web address of the resource to be monitored. |
+
+
+    ### Flow Description
+
+    1. **Input Retrieval**: The action extracts the URL parameter provided by the
+    user.
+
+    2. **Connectivity Check**: It attempts to reach the URL using an HTTP GET request
+    with a 5-second timeout.
+
+    3. **Success Validation**: The action evaluates the HTTP response. A response
+    is considered successful if the status code is in the 2xx or 3xx range (resp.ok).
+
+    4. **Execution State Handling**: If the check is successful, the action returns
+    a COMPLETED state, allowing the playbook to proceed. If the check fails (e.g.,
+    connection error or 4xx/5xx status), the action returns an INPROGRESS state, which
+    signals the SOAR platform to retry the action later.
+
+
+    ### Additional Notes
+
+    * This action does not process or require any SecOps entities.
+
+    * It is strictly a utility for synchronization and flow control within automated
+    workflows.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
