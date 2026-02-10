@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.widget.metadata import NonBuiltPlaybookWidgetMetadata
 
 
-logger: logging.Logger = logging.getLogger("mp.deconstruct_playbook")
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

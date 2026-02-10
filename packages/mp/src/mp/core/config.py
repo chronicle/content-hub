@@ -27,7 +27,7 @@ from typing import TypeVar
 import typer
 
 import mp.core.constants
-from mp.core.logging_utils import setup_logging
+from mp.core.logger.setup import setup_logging
 
 CONFIG_FILE_NAME: str = ".mp_config"
 CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME

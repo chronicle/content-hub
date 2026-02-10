@@ -25,7 +25,7 @@ from mp.telemetry import track_command
 UPDATE_URL: str = "git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp"
 
 self_app: typer.Typer = typer.Typer(help="Manage the mp tool itself.")
-logger: logging.Logger = logging.getLogger("mp.self")
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @self_app.command(name="update")
