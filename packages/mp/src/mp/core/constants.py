@@ -140,41 +140,39 @@ PYTHON_VERSION_FILE: str = ".python-version"
 
 MS_IN_SEC: int = 1_000
 
-SDK_MODULES: frozenset[str] = frozenset(
-    {
-        "SiemplifyVaultCyberArkPam",
-        "CaseAlertsProvider",
-        "FileRetentionManager",
-        "GcpTokenProvider",
-        "MockConnector",
-        "MockRunner",
-        "OtelLoggingUtils",
-        "OverflowManager",
-        "PersistentFileStorageMixin",
-        "ScriptResult",
-        "Siemplify",
-        "SiemplifyAction",
-        "SiemplifyAddressProvider",
-        "SiemplifyBase",
-        "SiemplifyCaseWallDataModel",
-        "SiemplifyConnectors",
-        "SiemplifyConnectorsDataModel",
-        "SiemplifyConstants",
-        "SiemplifyDataModel",
-        "SiemplifyExtensionTypesBase",
-        "SiemplifyJob",
-        "SiemplifyLogger",
-        "SiemplifyLogicalOperator",
-        "SiemplifyPublisherUtils",
-        "SiemplifySdkConfig",
-        "SiemplifyTransformer",
-        "SiemplifyUtils",
-        "SiemplifyVault",
-        "SiemplifyVaultUtils",
-        "SimulatedCasesCreator",
-        "VaultProviderFactory",
-    }
-)
+SDK_MODULES: frozenset[str] = frozenset({
+    "SiemplifyVaultCyberArkPam",
+    "CaseAlertsProvider",
+    "FileRetentionManager",
+    "GcpTokenProvider",
+    "MockConnector",
+    "MockRunner",
+    "OtelLoggingUtils",
+    "OverflowManager",
+    "PersistentFileStorageMixin",
+    "ScriptResult",
+    "Siemplify",
+    "SiemplifyAction",
+    "SiemplifyAddressProvider",
+    "SiemplifyBase",
+    "SiemplifyCaseWallDataModel",
+    "SiemplifyConnectors",
+    "SiemplifyConnectorsDataModel",
+    "SiemplifyConstants",
+    "SiemplifyDataModel",
+    "SiemplifyExtensionTypesBase",
+    "SiemplifyJob",
+    "SiemplifyLogger",
+    "SiemplifyLogicalOperator",
+    "SiemplifyPublisherUtils",
+    "SiemplifySdkConfig",
+    "SiemplifyTransformer",
+    "SiemplifyUtils",
+    "SiemplifyVault",
+    "SiemplifyVaultUtils",
+    "SimulatedCasesCreator",
+    "VaultProviderFactory",
+})
 
 EXCLUDED_GLOBS: set[str] = {
     "*.pyc",
@@ -211,10 +209,7 @@ MAX_SCRIPT_RESULT_NAME_LENGTH: int = 100
 PLAYBOOKS_DIR_NAME: str = "playbooks"
 PLAYBOOK_BASE_OUT_DIR_NAME: str = "Playbooks"
 
-PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (
-    COMMERCIAL_REPO_NAME,
-    THIRD_PARTY_REPO_NAME,
-)
+PLAYBOOK_REPOSITORY_TYPE: tuple[str, ...] = (COMMERCIAL_REPO_NAME, THIRD_PARTY_REPO_NAME)
 
 PLAYBOOKS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
     COMMERCIAL_REPO_NAME: (COMMERCIAL_REPO_NAME,),
@@ -241,4 +236,4 @@ PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
     "OverviewTemplatesDetails",
     "WidgetTemplates",
     "Definition",
-}
+}    
