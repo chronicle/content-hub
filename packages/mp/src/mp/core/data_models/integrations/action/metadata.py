@@ -74,7 +74,7 @@ class BuiltActionMetadata(TypedDict):
     Version: float
     AIDescription: str | None
     AICategories: NotRequired[list[str] | None]
-    EntitiesTypes: NotRequired[list[str] | None]
+    EntityTypes: NotRequired[list[str] | None]
 
 
 class NonBuiltActionMetadata(TypedDict):
@@ -93,7 +93,7 @@ class NonBuiltActionMetadata(TypedDict):
     version: NotRequired[float]
     ai_description: NotRequired[str | None]
     ai_categories: NotRequired[list[str]]
-    entities_types: NotRequired[list[str]]
+    entity_types: NotRequired[list[str]]
 
 
 class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
@@ -136,7 +136,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ]
     ai_description: str | None
     ai_categories: list[ActionAiCategories]
-    entities_types: list[EntityType]
+    entity_types: list[EntityType]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -228,7 +228,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             version=version,
             ai_description=built.get("AIDescription"),
             ai_categories=[ActionAiCategories(c) for c in built.get("AICategories") or []],
-            entities_types=[EntityType(e) for e in built.get("EntitiesTypes") or []],
+            entity_types=[EntityType(e) for e in built.get("EntityTypes") or []],
         )
 
     @classmethod
@@ -266,7 +266,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
             ai_description=non_built.get("ai_description"),
             ai_categories=[ActionAiCategories(c) for c in non_built.get("ai_categories") or []],
-            entities_types=[EntityType(e) for e in non_built.get("entities_types") or []],
+            entity_types=[EntityType(e) for e in non_built.get("entity_types") or []],
         )
 
     def to_built(self) -> BuiltActionMetadata:
@@ -292,7 +292,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             Version=float(self.version),
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
-            EntitiesTypes=[e.value for e in self.entities_types] or None,
+            EntityTypes=[e.value for e in self.entity_types] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -346,7 +346,7 @@ def _load_json_examples(
     """Load JSON examples from files and return a new list of DRMs with their content.
 
     Returns:
-        A list of non-built DRM dicts, with the json examples content.
+        A list of non-built DRM dicts, with the JSON examples content.
 
     """
     loaded_drms: list[NonBuiltDynamicResultsMetadata] = []
