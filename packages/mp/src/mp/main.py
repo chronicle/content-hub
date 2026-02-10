@@ -23,14 +23,16 @@ them onto the main Typer instance.
 
 from __future__ import annotations
 
+import atexit
 import importlib.metadata
 from typing import Annotated
 
+import rich
 import typer
 
 from mp.core import config as mp_config
 from mp.core.logging_utils import setup_logging
-from mp.core.update_checker import check_for_updates_background, print_update_warning_if_needed
+from mp.core.update_checker import UpdateChecker
 
 from . import describe
 from .build_project.typer_app import build_app
@@ -46,12 +48,9 @@ app: typer.Typer = typer.Typer()
 
 
 def main() -> None:
-    """Entry point for the `mp` CLI tool, initializing all sub-applications."""
+    """Entry point for the `mp` CLI tool."""
     _init_app()
-    try:
-        app()
-    finally:
-        print_update_warning_if_needed()
+    app()
 
 
 def _init_app() -> None:
@@ -69,6 +68,7 @@ def _init_app() -> None:
 
 @app.callback(invoke_without_command=True)
 def setup(
+    ctx: typer.Context,
     *,
     _version: Annotated[
         bool,
@@ -81,17 +81,19 @@ def setup(
         ),
     ] = False,
 ) -> None:
-    """Set up mp tool and add the version command."""
+    """Set up mp tool and initialize background tasks."""
     setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
 
-    check_for_updates_background(_get_version())
+    checker: UpdateChecker = UpdateChecker()
+    ctx.obj = checker
+    checker.start_background_check(_get_version())
+    atexit.register(checker.print_warning_if_needed)
 
 
 def _version_callback(*, value: bool) -> None:
     if value:
         version: str = _get_version()
-        typer.echo(f"mp {version}")
-        check_for_updates_background(_get_version())
+        rich.print(f"mp {version}")
         raise typer.Exit
 
 
