@@ -6,10 +6,11 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
-  validate:
-    name: Run Full Content-Hub Validations
+  validate_commenter:
+    name: Run Content-Hub Validations
     runs-on: ubuntu-latest
 
     steps:
@@ -19,25 +20,63 @@ jobs:
         fetch-depth: 0
         persist-credentials: false
 
+    - name: Check for changes
+      id: filter
+      uses: dorny/paths-filter@v3
+      with:
+        filters: |
+          packages:
+            - 'packages/**'
+            - '.github/workflows/**'
+          google:
+            - 'content/response_integrations/google/**'
+          third_party:
+            - 'content/response_integrations/third_party/**'
+          playbooks:
+            - 'content/playbooks/**'
+
     - name: Set up Python
+      if: steps.filter.outputs.packages == 'true' || steps.filter.outputs.third_party == 'true' || steps.filter.outputs.google == 'true' || steps.filter.outputs.playbooks == 'true'
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
     - name: Install mp package
+      if: steps.filter.outputs.packages == 'true' || steps.filter.outputs.third_party == 'true' || steps.filter.outputs.google == 'true' || steps.filter.outputs.playbooks == 'true'
       run: |
         python -m pip install --upgrade pip
         python -m pip install -e ./packages/mp
 
-    - name: Run Validations
+    - name: Run Full Content-Hub Validations
+      if: steps.filter.outputs.packages == 'true'
       env:
         GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
       run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate --repository all_content --only-pre-build
+        mp validate repository all_content --only-pre-build
+
+    - name: Run Google Integrations Validations
+      if: steps.filter.outputs.google == 'true' && steps.filter.outputs.packages == 'false' && steps.filter.outputs.third_party == 'false'
+      env:
+        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        mp validate repository google --only-pre-build
+
+    - name: Run Third-Party Integrations Validations
+      if: steps.filter.outputs.third_party == 'true' && steps.filter.outputs.packages == 'false'
+      env:
+        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        mp validate repository third_party --only-pre-build
+
+    - name: Run Playbooks Validations
+      if: steps.filter.outputs.playbooks == 'true' && steps.filter.outputs.packages == 'false' && steps.filter.outputs.third_party == 'false' && steps.filter.outputs.google == 'false'
+      env:
+        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        mp validate repository playbooks --only-pre-build
 
     - name: Upload Validation Report
-      if: always()
+      if: always() && (steps.filter.outputs.packages == 'true' || steps.filter.outputs.third_party == 'true' || steps.filter.outputs.google == 'true' || steps.filter.outputs.playbooks == 'true')
       uses: actions/upload-artifact@v4
       with:
         name: validation-report
