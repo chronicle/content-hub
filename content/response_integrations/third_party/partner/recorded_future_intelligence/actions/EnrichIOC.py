@@ -108,9 +108,7 @@ def main():
         )
 
     except RecordedFutureUnauthorizedError as e:
-        output_message = (
-            f"Unauthorized - please check your API token and try again. {e}"
-        )
+        output_message = f"Unauthorized - please check your API token and try again. {e}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     except Exception as e:
