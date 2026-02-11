@@ -1,22 +1,46 @@
-name: Test Content-Hub Third-Party Integrations
+name: Test Content-Hub
 
 on:
   pull_request:
     types: [ opened, synchronize, reopened ]
     paths:
-    - 'content/response_integrations/third_party/**'
-    - '.github/workflows/**'
+    - 'content/**'
     - 'packages/**'
-
+    - '.github/workflows/**'
 
 permissions:
   contents: read
 
 jobs:
-  run-tests:
-    name: Run Integrations Tests
+  changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.filter.outputs.packages }}
+      google: ${{ steps.filter.outputs.google }}
+      third_party: ${{ steps.filter.outputs.third_party }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
+    - name: Check for changes
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          packages:
+            - 'packages/**'
+          google:
+            - 'content/response_integrations/google/**'
+          third_party:
+            - 'content/response_integrations/third_party/**'
+
+
+  test_third_party:
+    name: Test Third-Party Integrations
+    needs: changes
+    if: ${{ needs.changes.outputs.third_party == 'true' || needs.changes.outputs.packages == 'true' }}
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout PR code
       uses: actions/checkout@v4
