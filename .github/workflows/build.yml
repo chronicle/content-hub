@@ -1,0 +1,129 @@
+name: Build Content-Hub
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'content/**'
+      - 'packages/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - 'content/**'
+      - 'packages/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.filter.outputs.packages }}
+      google: ${{ steps.filter.outputs.google }}
+      third_party: ${{ steps.filter.outputs.third_party }}
+      playbooks: ${{ steps.filter.outputs.playbooks }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            packages:
+              - 'packages/**'
+              - '.github/workflows/**'
+            google:
+              - 'content/response_integrations/google/**'
+            third_party:
+              - 'content/response_integrations/third_party/**'
+            playbooks:
+              - 'content/playbooks/**'
+
+  build_google:
+    name: Build Google Integrations
+    needs: changes
+    if: ${{ needs.changes.outputs.google == 'true' || needs.changes.outputs.packages == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install mp package
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+
+      - name: Build Google Integrations
+        shell: bash
+        run: |
+          mp config --root-path . --processes 10 --display-config
+          mp build repository google
+
+  build_third_party:
+    name: Build Third-Party Integrations
+    needs: changes
+    if: ${{ needs.changes.outputs.third_party == 'true' || needs.changes.outputs.packages == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install mp package
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+
+      - name: Build Third-Party Integrations
+        shell: bash
+        run: |
+          mp config --root-path . --processes 10 --display-config
+          mp build repository third_party
+
+  build_playbooks:
+    name: Build Playbooks
+    needs: changes
+    if: ${{ needs.changes.outputs.playbooks == 'true' || needs.changes.outputs.packages == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install mp package
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+
+      - name: Build Playbooks
+        shell: bash
+        run: |
+          mp config --root-path . --processes 10 --display-config
+          mp build repository playbooks
