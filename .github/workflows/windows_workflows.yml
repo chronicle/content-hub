@@ -1,6 +1,7 @@
 name: Windows Workflows
 permissions:
   contents: read
+  pull-requests: read
 on:
   push:
     branches:
@@ -10,8 +11,35 @@ on:
     - '**'
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.filter.outputs.packages }}
+      google: ${{ steps.filter.outputs.google }}
+      third_party: ${{ steps.filter.outputs.third_party }}
+      playbooks: ${{ steps.filter.outputs.playbooks }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Check for changes
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          packages:
+            - 'packages/**'
+            - '.github/workflows/**'
+          google:
+            - 'content/response_integrations/google/**'
+          third_party:
+            - 'content/response_integrations/third_party/**'
+          playbooks:
+            - 'content/playbooks/**'
+
   test-mp-windows:
     name: 1. Test mp Package
+    needs: changes
+    if: ${{ needs.changes.outputs.packages == 'true' }}
     runs-on: windows-latest
     steps:
     - name: Checkout repository
@@ -33,6 +61,8 @@ jobs:
 
   validate-integrations-windows:
     name: 2a. Validate Integrations
+    needs: changes
+    if: ${{ needs.changes.outputs.packages == 'true' || needs.changes.outputs.google == 'true' || needs.changes.outputs.third_party == 'true' }}
     runs-on: windows-latest
     steps:
     - name: Checkout repository
@@ -97,6 +127,8 @@ jobs:
 
   validate-playbooks-windows:
     name: 3a. Validate Playbooks
+    needs: changes
+    if: ${{ needs.changes.outputs.packages == 'true' || needs.changes.outputs.playbooks == 'true' }}
     runs-on: windows-latest
     steps:
     - name: Checkout repository
