@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_action_param
 
-from ..core.base_action import QrUtilitiesBaseAction
+from ..core.base_action import GOQRBaseAction
 from ..core.constants import (
     DEFAULT_BACKGROUND_COLOR,
     DEFAULT_ERROR_CORRECTION,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from typing import NoReturn
 
 
-class GenerateQrCode(QrUtilitiesBaseAction):
+class GenerateQrCode(GOQRBaseAction):
     def __init__(self) -> None:
         super().__init__(GENERATE_QR_CODE_SCRIPT_NAME)
 

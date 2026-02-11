@@ -6,13 +6,13 @@ if TYPE_CHECKING:
     from typing import Any
 
 
-class QrUtilitiesError(Exception):
+class GOQRError(Exception):
     """A custom exception for the QR Utilities integration."""
 
     pass
 
 
-class QrUtilitiesHTTPError(QrUtilitiesError):
+class GOQRHTTPError(GOQRError):
     """A custom exception for HTTP errors in the QR Utilities integration."""
 
     def __init__(self, message: str, status_code: int, *args: Any) -> None:
@@ -20,7 +20,7 @@ class QrUtilitiesHTTPError(QrUtilitiesError):
         self.status_code = status_code
 
 
-class InvalidRequestParametersError(QrUtilitiesError):
+class InvalidRequestParametersError(GOQRError):
     """A custom exception for invalid request parameters."""
 
     pass

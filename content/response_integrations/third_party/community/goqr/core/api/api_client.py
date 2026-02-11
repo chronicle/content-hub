@@ -18,7 +18,7 @@ class ApiParameters(NamedTuple):
     api_root: str
 
 
-class QrUtilitiesApiClient(Apiable):
+class GOQRApiClient(Apiable):
     def __init__(
         self,
         authenticated_session: AuthenticatedSession,

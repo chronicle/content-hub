@@ -7,17 +7,17 @@ from typing import TYPE_CHECKING
 import requests
 from TIPCommon.base.action import Action
 
-from ..core.api.api_client import ApiParameters, QrUtilitiesApiClient
+from ..core.api.api_client import ApiParameters, GOQRApiClient
 from ..core.auth import SessionAuthenticationParameters, build_auth_params
 
 if TYPE_CHECKING:
     pass
 
 
-class QrUtilitiesBaseAction(Action, ABC):
+class GOQRBaseAction(Action, ABC):
     """Base action class."""
 
-    def _init_api_clients(self) -> QrUtilitiesApiClient:
+    def _init_api_clients(self) -> GOQRApiClient:
         """Prepare API client"""
         auth_params: SessionAuthenticationParameters = build_auth_params(self.soar_action)
         session = requests.Session()
@@ -27,7 +27,7 @@ class QrUtilitiesBaseAction(Action, ABC):
             api_root=auth_params.api_root,
         )
 
-        return QrUtilitiesApiClient(
+        return GOQRApiClient(
             authenticated_session=session,
             configuration=api_params,
             logger=self.logger,

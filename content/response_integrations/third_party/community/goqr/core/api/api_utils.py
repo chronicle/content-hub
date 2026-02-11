@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 import requests
 
 from ..constants import ENDPOINTS
-from ..exceptions import QrUtilitiesHTTPError
+from ..exceptions import GOQRHTTPError
 
 if TYPE_CHECKING:
     pass
@@ -40,7 +40,7 @@ def validate_response(
             error_details = response.text
 
         msg = f"{error_msg}: {error} {error_details}"
-        raise QrUtilitiesHTTPError(
+        raise GOQRHTTPError(
             msg,
             status_code=error.response.status_code,
         ) from error
