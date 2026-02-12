@@ -54,8 +54,7 @@ class ScanQrCode(GOQRBaseAction):
 
         if first_symbol.data:
             self.output_message = (
-                "Successfully decoded QR code from provided image content. Data\n"
-                f"{first_symbol.data}"
+                "Successfully decoded QR code from provided image content."
             )
             self.json_results = {
                 "decoded_qr_codes": [result.to_json() for result in decoded_results]
