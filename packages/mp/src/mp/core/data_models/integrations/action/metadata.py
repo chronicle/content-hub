@@ -15,9 +15,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Any, NotRequired, Self, TypedDict
+from typing import Annotated, Any, NamedTuple, NotRequired, Self, TypedDict, cast
 
 import pydantic
+import yaml
 from PIL.GifImagePlugin import TYPE_CHECKING
 
 import mp.core.constants
@@ -25,8 +26,10 @@ import mp.core.file_utils
 import mp.core.utils
 import mp.core.validators
 from mp.core import exclusions
-from mp.core.data_models.abc import ComponentMetadata
+from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 
+from .ai.entity_types import EntityType
+from .ai.metadata import ActionAiMetadata
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
     DynamicResultsMetadata,
@@ -45,6 +48,16 @@ DEFAULT_SCRIPT_RESULT_NAME: str = "is_success"
 DEFAULT_SIMULATION_DATA: str = '{"Entities": []}'
 
 
+class AiFields(NamedTuple):
+    description: str | None
+    categories: list[ActionAiCategories]
+    entity_types: list[EntityType]
+
+
+class ActionAiCategories(RepresentableEnum):
+    ENRICHMENT = "Enrichment"
+
+
 class BuiltActionMetadata(TypedDict):
     Description: str
     DynamicResultsMetadata: list[BuiltDynamicResultsMetadata]
@@ -59,6 +72,9 @@ class BuiltActionMetadata(TypedDict):
     SimulationDataJson: NotRequired[str]
     DefaultResultValue: NotRequired[str | None]
     Version: float
+    AIDescription: str | None
+    AICategories: NotRequired[list[str] | None]
+    EntityTypes: NotRequired[list[str] | None]
 
 
 class NonBuiltActionMetadata(TypedDict):
@@ -75,6 +91,9 @@ class NonBuiltActionMetadata(TypedDict):
     simulation_data_json: NotRequired[str]
     default_result_value: NotRequired[str | None]
     version: NotRequired[float]
+    ai_description: NotRequired[str | None]
+    ai_categories: NotRequired[list[str]]
+    entity_types: NotRequired[list[str]]
 
 
 class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
@@ -115,6 +134,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         pydantic.PositiveFloat,
         pydantic.Field(ge=mp.core.constants.MINIMUM_SCRIPT_VERSION),
     ]
+    ai_description: str | None
+    ai_categories: list[ActionAiCategories]
+    entity_types: list[EntityType]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -153,11 +175,20 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
 
         metadata_objects: list[Self] = []
         for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}"):
-            action_metadata_json: dict[str, Any] = mp.core.file_utils.load_yaml_file(p)
+            action_metadata_json: NonBuiltActionMetadata = cast(
+                "NonBuiltActionMetadata", cast("object", mp.core.file_utils.load_yaml_file(p))
+            )
+
             drms_with_json_contents: list[NonBuiltDynamicResultsMetadata] = _load_json_examples(
                 action_metadata_json["dynamic_results_metadata"], meta_path
             )
             action_metadata_json["dynamic_results_metadata"] = drms_with_json_contents
+
+            ai_fields: AiFields = _get_ai_fields(action_metadata_json["name"], path)
+            action_metadata_json["ai_description"] = ai_fields.description
+            action_metadata_json["ai_categories"] = [c.value for c in ai_fields.categories]
+            action_metadata_json["entity_types"] = [t.value for t in ai_fields.entity_types]
+
             metadata_object: Self = cls.from_non_built(p.stem, action_metadata_json)
             metadata_objects.append(metadata_object)
 
@@ -196,6 +227,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             simulation_data_json=(built.get("SimulationDataJson") or DEFAULT_SIMULATION_DATA),
             default_result_value=built.get("DefaultResultValue"),
             version=version,
+            ai_description=built.get("AIDescription"),
+            ai_categories=[ActionAiCategories(c) for c in built.get("AICategories") or []],
+            entity_types=[EntityType(e) for e in built.get("EntityTypes") or []],
         )
 
     @classmethod
@@ -231,6 +265,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ),
             default_result_value=non_built.get("default_result_value"),
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
+            ai_description=non_built.get("ai_description"),
+            ai_categories=[ActionAiCategories(c) for c in non_built.get("ai_categories") or []],
+            entity_types=[EntityType(e) for e in non_built.get("entity_types") or []],
         )
 
     def to_built(self) -> BuiltActionMetadata:
@@ -254,6 +291,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             SimulationDataJson=self.simulation_data_json,
             DefaultResultValue=self.default_result_value,
             Version=float(self.version),
+            AIDescription=self.ai_description,
+            AICategories=[c.value for c in self.ai_categories] or None,
+            EntityTypes=[e.value for e in self.entity_types] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -307,7 +347,7 @@ def _load_json_examples(
     """Load JSON examples from files and return a new list of DRMs with their content.
 
     Returns:
-        A list of non-built DRM dicts, with the json examples content.
+        A list of non-built DRM dicts, with the JSON examples content.
 
     """
     loaded_drms: list[NonBuiltDynamicResultsMetadata] = []
@@ -326,3 +366,36 @@ def _load_json_examples(
         loaded_drms.append(drm)
 
     return loaded_drms
+
+
+AI_CATEGORY_TO_DEF_AI_CATEGORY: dict[str, ActionAiCategories] = {
+    "enrichment": ActionAiCategories.ENRICHMENT,
+}
+
+
+def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
+    empty_results: AiFields = AiFields(description=None, categories=[], entity_types=[])
+    actions_desc: Path = (
+        integration_path
+        / mp.core.constants.RESOURCES_DIR
+        / mp.core.constants.AI_DIR
+        / mp.core.constants.ACTIONS_AI_DESCRIPTION_FILE
+    )
+    if not actions_desc.exists():
+        return empty_results
+
+    content: dict[str, Any] = yaml.safe_load(actions_desc.read_text(encoding="utf-8"))
+    action_content: dict[str, Any] | None = content.get(action_name)
+    if action_content is None:
+        return empty_results
+
+    ai_meta: ActionAiMetadata = ActionAiMetadata.model_validate(action_content)
+    return AiFields(
+        description=ai_meta.ai_description,
+        categories=[
+            AI_CATEGORY_TO_DEF_AI_CATEGORY[category]
+            for category, is_true in ai_meta.categories.model_dump().items()
+            if is_true
+        ],
+        entity_types=ai_meta.entity_usage.entity_types,
+    )
