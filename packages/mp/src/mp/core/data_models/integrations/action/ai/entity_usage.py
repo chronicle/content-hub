@@ -26,18 +26,43 @@ class EntityUsage(BaseModel):
         list[EntityType],
         Field(
             description=(
-                "The types of the entities the action runs on, if it runs on"
-                " entities. Use the code and the metadata json to determine this field."
-                " If an action runs on entities it most likely will use the target_entities"
-                " attribute to go over the entities or filter them by type or other"
-                " attributes. It is possible that an action doesn't run on entities."
-                " In that case leave this list empty. An action that doesn't use any entity doesn't"
-                " run on a generic entity, but simply it works on other sources of data."
-                " Make sure you check this carefully and distinguish correctly between actions that"
-                " run on/use entities and ones that don't. Then, if it does use entities, make sure"
-                " to check which types of entities (specific ones or all of them). Note that it is"
-                " possible for the code to contain the word 'entity' in some variables, but it"
-                " doesn't always mean it uses entities."
+                """### Entity Types Determination Logic
+
+**Field Definition:** `entity_types` (List of `EntityType`)
+
+This field identifies the specific categories of entities an action processes. It is critical to
+distinguish between actions that perform operations **on** SecOps entities versus actions that
+simply process general data.
+
+#### **1. Assessment Criteria**
+
+* **Presence of Entities:** An action "runs on entities" if it iterates over the `target_entities`
+  attribute or uses entity-specific identifiers to perform its task.
+* **Empty State:** If the action works on other data sources (e.g., fetching a static URL, checking
+  global system status) without referencing specific entities, this list **must be empty**.
+* **Avoid String Matching:** Do not assume an action uses entities just because the variable name
+  `entity` appears in the code. Verify that the logic actually interacts with the SecOps entity
+  object model.
+
+#### **2. Filtering & Scope**
+
+* **Specific Types:** If the code filters entities by type (e.g., `if entity.type == "USER"`), list
+  only those specific types.
+* **Unfiltered (Global) Scope:** If the action processes the `target_entities` list without any
+  type-based filtering, it is considered to run on **all** supported entity types.
+  In this case, include every available `EntityType` from the metadata.
+* **The `GenericEntity` Distinction:** `GenericEntity` is a specific, standalone entity type.
+  Do **not** use it as a placeholder for "all types." Only include it if the action explicitly
+  supports the `GenericEntity` type or if no filters are applied (as part of the full list).
+
+#### **3. Logic Summary Table**
+
+| If the code... | Then `entity_types` should be... |
+| --- | --- |
+| Does not reference `target_entities` | `[]` (Empty List) |
+| Filters for specific types (IP, Host) | Only the specific types identified: `["IP", "HOSTNAME"]` |
+| Processes all entities without any filtering | **All** possible entity types from the metadata |
+| Explicitly checks for "Generic" type only | `["GenericEntity"]` |"""
             )
         ),
     ]

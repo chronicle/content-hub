@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     )
 
 
-logger: logging.Logger = logging.getLogger("mp.describe_action")
+logger: logging.Logger = logging.getLogger(__name__)
 _PromptConstructor: TypeAlias = BuiltPromptConstructor | SourcePromptConstructor
 
 

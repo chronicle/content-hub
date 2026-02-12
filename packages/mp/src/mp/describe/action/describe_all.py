@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-logger: logging.Logger = logging.getLogger("mp.describe_marketplace")
+logger: logging.Logger = logging.getLogger(__name__)
 MAX_ACTIVE_INTEGRATIONS: int = 3
 MAX_ACTIVE_TASKS: int = 3
 

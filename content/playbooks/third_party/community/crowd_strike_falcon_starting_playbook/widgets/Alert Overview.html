@@ -1,0 +1,911 @@
+<!-- Custom Widget / Integration Version when it was updated 43.0 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i"
+        rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css?family=Source Sans Pro"
+        rel="stylesheet"/>
+  <title>Get Detection Details</title>
+</head>
+<style>
+  /* Root Variables */
+  :root {
+    --widget-bg: rgb(33, 44, 68);
+    --widget-font-family: 'Source Sans Pro', sans-serif;
+    --widget-text-color: rgb(255, 255, 255);
+    --widget-scrollbar-size: 12px;
+    --widget-row-highlight-bg: rgb(47 61 91);
+
+
+    --divider-border-colcor: rgb(98, 117, 163);
+    --divider-border-width: 2px;
+
+    /*Logo styles*/
+    --logo-size: 48px;
+    --logo-color: rgb(255, 255, 255);
+    /*Logo styles*/
+
+    --header-title-font: 600 18px/22px var(--widget-font-family);
+    --list-item-key-font: 600 12px/18px var(--widget-font-family);
+    --list-item-value-font: 400 12px/18px var(--widget-font-family);
+    --additional-title-font: 600 16px/18px var(--widget-font-family);
+  }
+
+  /*Normalize CSS */
+  * {
+    margin: 0;
+    padding: 0;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  *:hover, *:focus, *:active {
+    outline: none;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  ol, ul {
+    list-style: none;
+  }
+
+  button,
+  input,
+  textarea {
+    font-family: inherit;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+  }
+
+  input[type="checkbox"] {
+    max-width: 14px;
+    max-height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+  }
+
+  button, a[href] {
+    cursor: pointer;
+  }
+
+  /*Normalize CSS */
+
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 18px;
+    height: 18px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(137, 151, 180, 1);
+    border: 6px solid var(--widget-bg);
+    border-radius: 63px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    border: 4px solid transparent;
+    border-radius: 44px;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background-color: transparent;
+    border-color: transparent;
+  }
+
+  body {
+    font-family: var(--widget-font-family), serif;
+    color: var(--widget-text-color);
+    background-color: var(--widget-bg);
+    overflow: hidden;
+  }
+
+  /*Global styles*/
+  .wrapper {
+    overflow: auto;
+    height: 100vh;
+  }
+
+  .divider-border-style {
+    border: 0;
+    border-color: var(--divider-border-colcor);
+    border-style: solid;
+  }
+
+  .input {
+    width: auto;
+    max-width: 150px;
+    border: 1px solid #6275A3;
+    border-radius: 4px;
+    padding: 4px 8px;
+    background-color: transparent;
+    font-size: 14px;
+    color: var(--widget-text-color);
+  }
+
+  .input::placeholder {
+    color: var(--widget-text-color);
+  }
+
+  .logo {
+    min-width: var(--logo-size);
+    min-height: var(--logo-size);
+    max-width: var(--logo-size);
+    max-height: var(--logo-size);
+    color: var(--logo-color);
+  }
+
+  .tag {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag-item {
+    padding: 2px 12px;
+    background-color: rgb(106, 113, 128);
+    border-radius: 2px;
+  }
+
+  /*Global styles*/
+
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .header-wrapper {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .header-title {
+    font: var(--header-title-font);
+    word-break: break-word;
+    text-transform: uppercase;
+  }
+
+  .header-title-link {
+    display: flex;
+    align-items: center;
+    color: rgb(138 180 248);
+  }
+
+  .header-subtitle {
+    font: 400 14px/18px var(--widget-font-family);
+  }
+
+  .header-events {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .header-events-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+
+  .header-events-label-text {
+    font: 600 12px/16px var(--widget-font-family);
+  }
+
+  .content-events {
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--widget-bg);
+    position: sticky;
+    top: 0;
+    z-index: 99;
+  }
+
+  .content-details-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .content-details-item-key {
+    font: 400 12px/16px var(--widget-font-family);
+    color: var(--widget-text-color);
+  }
+
+  .content-details-item-value {
+    font: 600 12px/16px var(--widget-font-family);
+    color: var(--widget-text-color);
+  }
+
+  .content-details-item-risk-score {
+    display: flex;
+    gap: 4px;
+    padding-right: 4px;
+    border-radius: 2px;
+    border-width: 1px;
+    border-style: solid;
+  }
+
+  .content-details-item-risk-score-value {
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font: 600 12px/12px var(--widget-font-family);
+    color: rgb(22, 22, 37);
+  }
+
+  .content-details-button {
+    font: 600 12px/16px var(--widget-font-family);
+    width: auto;
+    background-color: rgb(98 117 163);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .content-list-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .content-list-wrapper::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100px;
+    background: linear-gradient(to left, rgb(34 43 62), rgba(33, 44, 68, 0));
+    z-index: 9;
+    pointer-events: none;
+  }
+
+  .content-list {
+    display: flex;
+    overflow: auto;
+    counter-reset: item-counter;
+  }
+
+  .content-list-item {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+    min-width: 150px;
+    max-width: 150px;
+    padding: 6px 8px;
+    counter-increment: item-counter;
+  }
+
+  .content-list-item.active {
+    border-bottom-width: var(--divider-border-width);
+  }
+
+  .content-list-item-name {
+    width: 100%;
+    font: 600 14px/20px var(--widget-font-family);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .content-list-item-name::before {
+    content: counter(item-counter) ". ";
+  }
+
+  .content-list-item-timestamp {
+    font: 400 14px/18px var(--widget-font-family);
+  }
+
+  .content-item-button {
+    background-color: rgb(47 61 91);
+    padding: 6px;
+    box-shadow: 0 0 2px rgb(26 32 50);
+    position: sticky;
+    top: 76px;
+    z-index: 9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .content-item-button-text {
+    font: 600 16px/20px var(--widget-font-family);
+  }
+
+  .content-item-button-text::first-letter {
+    text-transform: uppercase;
+  }
+
+  .content-item-button.collapsed .content-item-button-icon {
+    transform: rotateX(180deg);
+  }
+
+  .content-item-body {
+    padding: 0 6px;
+    background-color: rgb(26 32 50);
+  }
+
+  .content-item-body.hidden {
+    display: none;
+  }
+
+  .content-item-body-row {
+    padding: 4px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .content-item-body-row + .content-item-body-row {
+    border-top-width: 1px;
+  }
+
+  .content-item-body-row-key {
+    width: 30%;
+    font: 600 14px/18px var(--widget-font-family);
+    word-break: break-word;
+  }
+
+  .content-item-body-row-value {
+    width: 70%;
+    font: 400 14px/18px var(--widget-font-family);
+    word-break: break-word;
+  }
+
+  .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--widget-bg);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+    width: 100%;
+    max-width: 90%;
+    min-width: 50%;
+    max-height: 90%;
+    border-radius: 8px;
+    z-index: 9999;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-content {
+    overflow: auto;
+  }
+
+  .modal-header {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .modal-title {
+    font: 600 20px/26px var(--widget-font-family);
+    word-wrap: break-word;
+    padding-left: 3px;
+  }
+
+  .modal-close {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .modal-close svg {
+    width: 20px;
+    height: 20px;
+    stroke: #fff;
+  }
+
+  .modal-list {
+    padding-bottom: 4px;
+  }
+
+  .modal-list-title {
+    font: var(--additional-title-font);
+    padding: 8px 6px;
+    background-color: rgb(63 79 115);
+    position: sticky;
+    top: 0;
+    z-index: 9;
+  }
+
+  .modal-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 6px;
+  }
+
+  .modal-list-item:hover {
+    background-color: var(--widget-row-highlight-bg);
+  }
+
+  .modal-list-item + .modal-list-item {
+    margin-top: 6px;
+  }
+
+  .modal-list-item-text {
+    width: 50%;
+    word-break: break-word;
+  }
+
+  .modal-list-item-text-key {
+    font: var(--list-item-key-font);
+    max-width: 300px;
+    text-transform: uppercase;
+  }
+
+  .modal-list-item-text-value {
+    width: 100%;
+    font: var(--list-item-value-font);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+</style>
+<body>
+
+<div class="wrapper" id="wrapper">
+  <div class="header">
+    <div class="header-info" id="headerInfo"></div>
+    <svg class="logo" viewbox="0 0 25 25" x="0px"
+         xml:space="preserve" xmlns="http://www.w3.org/2000/svg" y="0px"
+         fill="currentColor">
+        <path
+          d="M12.4,23l8.3-5.2v-4.6L8.4,20.6L12.4,23z M8.4,20.6V8.9L4,6.3v11.5L8.4,20.6z M4,2v4.3h17V2H4z"></path>
+  </svg>
+  </div>
+  <div class="content-events">
+    <div class="content-list-wrapper">
+      <div class="content-list" id="contentList"></div>
+    </div>
+    <div class="header-events">
+      <input type="text" class="input header-events-search" id="headerFilterInput"
+             placeholder="Filter (regex)"/>
+      <input type="text" class="input header-events-search" id="headerSearchInput"
+             placeholder="Search (regex)"/>
+      <label class="header-events-label" for="headerCheckbox">
+        <input class="header-events-checkbox" type="checkbox" name="checkbox"
+               id="headerCheckbox"/>
+        <span class="header-events-label-text">Important UDM</span>
+      </label>
+    </div>
+  </div>
+  <div class="content-items" id="contentItems"></div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // const actionListData = [{stepInstanceName}.JsonResult];
+    const actionListData = [{stepInstanceName}.JsonResult];
+
+    const specifiedKeys = ["entity.asset.asset_id", "entity.asset.hostname", "entity.asset.ip", "entity.asset.mac", "entity.asset.product_object_id", "entity.file", "entity.group.email_address", "entity.group.product_object_id", "entity.group.windows_sid", "entity.hostname", "entity.resource.name", "entity.resource.product_object_id", "entity.url", "entity.user.email_address", "entity.user.employee_id", "entity.user.product_object_id", "entity.user.userid", "entity.user.windows_sid", "metadata.collected_timestamp", "metadata.threat", "metadata.description", "metadata.event_timestamp", "metadata.event_type", "metadata.ingestion_labels.key", "metadata.ingestion_labels.value", "metadata.product_deployment_id", "metadata.product_event_type", "metadata.product_log_id", "metadata.product_name", "metadata.vendor_name", "network.application_protocol", "network.dns_domain", "network.dns.answers.data", "network.dns.answers.name", "network.dns.answers.type", "network.dns.questions.name", "network.dns.questions.type", "network.email.bcc", "network.email.email.cc", "network.email.from", "network.email.reply_to", "network.email.subject", "network.email.to", "network.ftp.command", "network.http.method", "network.http.referral_url", "network.http.response_code", "network.http.user_agent", "network.ip_protocol", "principal.asset_id", "principal.asset.asset_id", "principal.asset.hostname", "principal.asset.ip", "principal.asset.mac", "principal.cloud.environment", "principal.file.full_path", "principal.file.md5", "principal.file.sha1", "principal.file.sha256", "principal.hostname", "principal.ip", "principal.mac", "principal.process.command_line", "principal.process.file.full_path", "principal.process.parent_process", "principal.process.parent_process.command_line", "principal.process.parent_process.file.full_path", "principal.process.pid", "principal.process.product_specific_process_id", "principal.registry.registry_key", "principal.registry.registry_value_name", "principal.resource.attribute.cloud.project.name", "principal.resource.attribute.cloud.project.resource_subtype", "principal.resource.name", "principal.url", "principal.user.attribute.permissions.name", "principal.user.attribute.permissions.type", "principal.user.attribute.roles.description", "principal.user.attribute.roles.name", "principal.user.email_address", "principal.user.product_object_id", "principal.user.userid", "principal.user.windows_sid", "security_result.action", "security_result.category", "security_result.description", "security_result.detection_fields.key", "security_result.detection_fields.value", "security_result.summary", "security_result.threat_id", "security_result.threat_id_namespace", "security_result.threat_name", "source.asset_id", "source.asset.asset_id", "source.asset.hostname", "source.asset.ip", "source.asset.mac", "source.file.md5", "source.file.sha1", "source.file.sha256", "source.hostname", "source.ip", "source.mac", "source.process.parent_process", "source.process.product_specific_process_id", "source.user.email_address", "source.user.product_object_id", "source.user.userid", "source.user.windows_sid", "target.application", "target.asset_id", "target.asset.asset_id", "target.asset.hostname", "target.asset.ip", "target.asset.mac", "target.cloud.environment", "target.cloud.project.name", "target.file.full_path", "target.file.md5", "target.file.sha1", "target.file.sha256", "target.hostname", "target.ip", "target.mac", "target.port", "target.process.command_line", "target.process.file.full_path", "target.process.parent_process", "target.process.parent_process.command_line", "target.process.parent_process.file.full_path", "target.process.pid", "target.process.product_specific_process_id", "target.registry.registry_key", "target.registry.registry_value_name", "target.resource.name", "target.resource.resource_type", "target.user.email_address", "target.user.product_object_id", "target.user.userid", "target.user.windows_sid"].map(key => key.replace(/[\W_]/g, "").toLowerCase());
+
+    let allGroupedEvents = [];
+    let activeEventData = {};
+    let activeEventItem = null;
+    let searchRegex = null;
+    let filterRegex = null;
+
+    headerCheckbox.addEventListener("change", updateEventExtensionsList);
+    headerSearchInput.addEventListener("input", (event) => handleInputChange(event, "search"));
+    headerFilterInput.addEventListener("input", (event) => handleInputChange(event, "filter"));
+
+    function handleInputChange(event, type) {
+      handleInput(event, regex => {
+        if (type === "search") {
+          searchRegex = regex;
+        } else if (type === "filter") {
+          filterRegex = regex;
+        }
+        processAllGroupedEvents();
+      });
+    }
+
+    function handleInput(event, callback) {
+      try {
+        const value = event.target.value;
+        const regex = value ? new RegExp(value, "i") : null;
+        callback(regex);
+      } catch (e) {
+        console.error("Invalid regex:", e);
+      }
+    }
+
+    function updateGeneralInformation(data) {
+      const detection = data?.detection?.[0];
+      if (!detection) return;
+
+      const {
+        ruleName,
+        description,
+        urlBackToProduct,
+        riskScore,
+        severity,
+      } = detection;
+
+      const tags = data.tags || [];
+      const createdTime = formatDateTime(data.createdTime);
+      const detectionTime = formatDateTime(data.detectionTime);
+      const timeWindowStartTime = formatDateTime(data.timeWindow.startTime);
+      const timeWindowEndTime = formatDateTime(data.timeWindow.endTime);
+
+      let riskScoreDisplay = "N/A";
+      let riskColor = "rgb(178, 182, 189)";
+      let riskText = "N/A"; // Default for no risk
+
+      if (typeof riskScore === "number" && riskScore >= 0 && riskScore <= 100) {
+        riskScoreDisplay = riskScore; // Set the display score
+
+        if (riskScore >= 80 && riskScore <= 100) {
+          riskColor = "rgb(250, 144, 62)";
+          riskText = "HIGH RISK";
+        } else if (riskScore >= 50 && riskScore < 80) {
+          riskColor = "rgb(252, 201, 52)";
+          riskText = "MED RISK";
+        } else if (riskScore > 1 && riskScore < 50) {
+          riskColor = "rgb(120, 217, 236)";
+          riskText = "LOW RISK";
+        } else if (riskScore >= 0 && riskScore <= 1) {
+          riskColor = "rgb(178, 182, 189)";
+          riskText = "NO RISK";
+        }
+      }
+
+      const severityMapping = {
+        INFORMATIONAL: {icon: "<svg width=\"27\" height=\"6\" viewBox=\"0 0 27 6\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"3\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/><circle cx=\"10\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/><circle cx=\"17\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/><circle cx=\"24\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/></svg>"},
+        LOW: {icon: "<svg width=\"27\" height=\"6\" viewBox=\"0 0 27 6\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"3\" cy=\"3\" r=\"3\" fill=\"#78D9EC\"/><circle cx=\"10\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/><circle cx=\"17\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/><circle cx=\"24\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/></svg>"},
+        MEDIUM: {icon: "<svg width=\"27\" height=\"6\" viewBox=\"0 0 27 6\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"3\" cy=\"3\" r=\"3\" fill=\"#FFF371\"/><circle cx=\"10\" cy=\"3\" r=\"3\" fill=\"#FFF371\"/><circle cx=\"17\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/><circle cx=\"24\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/></svg>"},
+        HIGH: {icon: "<svg width=\"27\" height=\"6\" viewBox=\"0 0 27 6\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"3\" cy=\"3\" r=\"3\" fill=\"#FA903E\"/><circle cx=\"10\" cy=\"3\" r=\"3\" fill=\"#FA903E\"/><circle cx=\"17\" cy=\"3\" r=\"3\" fill=\"#FA903E\"/><circle cx=\"24\" cy=\"3\" r=\"3\" fill=\"#B2B6BD\"/></svg>"},
+        CRITICAL: {icon: "<svg width=\"27\" height=\"6\" viewBox=\"0 0 27 6\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"3\" cy=\"3\" r=\"3\" fill=\"#EC453B\"/><circle cx=\"10\" cy=\"3\" r=\"3\" fill=\"#EC453B\"/><circle cx=\"17\" cy=\"3\" r=\"3\" fill=\"#EC453B\"/><circle cx=\"24\" cy=\"3\" r=\"3\" fill=\"#EC453B\"/></svg>"},
+      };
+
+      // Normalize the severity to uppercase
+      const severityUpper = severity?.toUpperCase();
+      const severityDisplay = severity ? severity.charAt(0).toUpperCase() + severity.slice(1).toLowerCase() : "";
+      const severityIcon = severityUpper && severityMapping[severityUpper] ? severityMapping[severityUpper].icon : "";
+
+      headerInfo.innerHTML = `
+        <div class="header-wrapper">
+            <h1 class="header-title">${ruleName}</h1>
+            <a class="header-title-link" href="${urlBackToProduct}" target="_blank">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3.83333 22.5C3.19167 22.5 2.6375 22.2764 2.17083 21.8292C1.72361 21.3625 1.5 20.8083 1.5 20.1667V3.83333C1.5 3.19167 1.72361 2.64722 2.17083 2.2C2.6375 1.73333 3.19167 1.5 3.83333 1.5H12V3.83333H3.83333V20.1667H20.1667V12H22.5V20.1667C22.5 20.8083 22.2667 21.3625 21.8 21.8292C21.3528 22.2764 20.8083 22.5 20.1667 22.5H3.83333ZM9.31667 16.3167L7.68333 14.6833L18.5333 3.83333H14.3333V1.5H22.5V9.66667H20.1667V5.46667L9.31667 16.3167Z" />
+                </svg>
+            </a>
+        </div>
+        <div class="header-wrapper">
+            <div class="content-details-item divider-border-style">
+                <span class="content-details-item-key">Severity:</span>
+                ${severityIcon}
+                <span class="content-details-item-value">${severityDisplay && severityUpper && severityMapping[severityUpper] ? severityDisplay : "N/A"}</span>
+            </div>
+            <div class="content-details-item divider-border-style">
+                <span class="content-details-item-key">Risk Score:</span>
+                 <span class="content-details-item-value">
+                ${typeof riskScore === "number" && riskScore >= 0 && riskScore <= 100
+        ? `
+                    <div class="content-details-item-risk-score" style="border-color: ${riskColor}">
+                        <span class="content-details-item-risk-score-value" style="background-color: ${riskColor}">${riskScoreDisplay}</span>
+                        <span class="content-details-item-value content-details-item-risk-score-text" style="color: ${riskColor}">${riskText}</span>
+                    </div>`
+        : "N/A"}
+            </span>
+            </div>
+            <div class="content-details-item divider-border-style">
+                <span class="content-details-item-key">Start Time - End Time:</span>
+                <span class="content-details-item-value">${timeWindowStartTime} - ${timeWindowEndTime}</span>
+            </div>
+            <div class="content-details-item divider-border-style">
+                <span class="content-details-item-key">Detection Time:</span>
+                <span class="content-details-item-value">${detectionTime}</span>
+            </div>
+            <div class="content-details-item divider-border-style">
+                <span class="content-details-item-key">Created Time:</span>
+                <span class="content-details-item-value">${createdTime}</span>
+            </div>
+            <button class="content-details-button" id="openModal">View More</button>
+        </div>
+        ${description ? `<p class="header-subtitle">${description}</p>` : ""}
+    `;
+
+      openModal.addEventListener("click", () => {
+        const createSection = (title, items) => {
+          if (!items || items.length === 0) return "";
+          return `
+                <div class="modal-list-title">${title}</div>
+                ${items.map(item => `
+                    <div class="modal-list-item">
+                        <span class="modal-list-item-text modal-list-item-text-key">${item.key.replace(/_/g, " ") || "N/A"}</span>
+                        <span class="modal-list-item-text modal-list-item-text-value">${item.value || "N/A"}</span>
+                    </div>`).join("")}`;
+        };
+
+        const formattedTags = tags.length > 0 ? tags.map(tag => `<label class="tag-item">${tag}</label>`).join("") : "N/A";
+
+        const hasAdditionalInfo =
+          (detection.detectionFields && detection.detectionFields.length > 0) ||
+          (detection.ruleLabels && detection.ruleLabels.length > 0) ||
+          (detection.outcomes && detection.outcomes.length > 0) ||
+          (tags.length > 0);
+
+        const content = hasAdditionalInfo ? `
+            ${tags.length > 0 ? `
+            <div class="modal-list">
+                <div class="modal-list-title">Tags</div>
+                <div class="modal-list-item">
+                    <span class="modal-list-item-text modal-list-item-text-key">Tag</span>
+                    <span class="modal-list-item-text modal-list-item-text-value tag">${formattedTags}</span>
+                </div>
+            </div>` : ""}
+            ${createSection("Detection Fields", detection.detectionFields)}
+            ${createSection("Rule Labels", detection.ruleLabels)}
+            ${createSection("Outcomes", detection.outcomes)}
+        ` : "<p>No additional information is available.</p>";
+
+        const modal = document.createElement("div");
+        modal.classList.add("modal");
+        const modalOverlay = document.createElement("div");
+        modalOverlay.classList.add("modal-overlay");
+
+        const modalHeader = document.createElement("div");
+        modalHeader.classList.add("modal-header");
+
+        const modalTitle = document.createElement("h2");
+        modalTitle.classList.add("modal-title");
+        modalTitle.textContent = "Additional Information";
+
+        const closeButton = document.createElement("button");
+        closeButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>`;
+        closeButton.classList.add("modal-close");
+
+        modalHeader.append(modalTitle, closeButton);
+        modal.append(modalHeader);
+
+        const modalContent = document.createElement("div");
+        modalContent.classList.add("modal-content");
+        modalContent.innerHTML = content;
+        modal.append(modalContent);
+
+        document.body.append(modalOverlay, modal);
+
+        closeButton.addEventListener("click", () => {
+          modal.remove();
+          modalOverlay.remove();
+        });
+      });
+    }
+
+    function processFetchedData(data) {
+      allGroupedEvents = data.collectionElements[0].references.map(event => ({
+        eventType: event.event.metadata?.eventType,
+        eventTimestamp: event.event.metadata?.eventTimestamp,
+        groupedData: transformData(event.event),
+      }));
+      processAllGroupedEvents();
+    }
+
+    function flattenObject(obj, parentKey = "") {
+      let result = {};
+      if (obj && typeof obj === "object") {
+        Object.entries(obj).forEach(([key, value]) => {
+          const newKey = parentKey ? `${parentKey}.${key}` : key;
+          if (typeof value === "object" && value !== null) {
+            if (typeof value !== "object") {
+              value.forEach((item, index) => {
+                Object.assign(result, flattenObject(item, `${newKey}.${index}`));
+              });
+            } else {
+              Object.assign(result, flattenObject(value, newKey));
+            }
+          } else {
+            result[newKey] = value;
+          }
+        });
+      }
+      return result;
+    }
+
+    function transformData(data) {
+      const transformedData = {};
+      if (data) {
+        Object.entries(data).forEach(([mainKey, subObject]) => {
+          transformedData[mainKey] = flattenObject(subObject, mainKey);
+        });
+      }
+      return transformedData;
+    }
+
+    function processAllGroupedEvents() {
+      const filteredEvents = allGroupedEvents.filter(event => matchesSearch(event) && matchesFilter(event));
+      if (contentList) {
+        contentList.innerHTML = "";
+        filteredEvents.forEach(event => {
+          const eventsListItem = createEventListItem(event);
+          eventsListItem.addEventListener("click", evt => handleEventItemClick(evt, event, eventsListItem));
+          contentList.appendChild(eventsListItem);
+        });
+
+        if (filteredEvents.length > 0) {
+          handleEventItemClick(null, filteredEvents[0], contentList.firstChild);
+        } else {
+          activeEventData = {};
+          updateEventExtensionsList();
+        }
+      }
+    }
+
+    function matchesSearch(event) {
+      if (!searchRegex) return true;
+
+      return Object.values(event.groupedData).some(group =>
+        Object.entries(group).some(([label, value]) =>
+          searchRegex.test(label) || searchRegex.test(value),
+        ),
+      );
+    }
+
+    function matchesFilter(event) {
+      if (!filterRegex) return true;
+
+      return Object.values(event.groupedData).some(group =>
+        Object.entries(group).some(label => filterRegex.test(label),
+        ),
+      );
+    }
+
+    function createEventListItem(event) {
+      const {eventType, eventTimestamp} = event;
+      const eventsListItem = document.createElement("button");
+      eventsListItem.classList.add("content-list-item", "divider-border-style");
+      eventsListItem.innerHTML = `
+      <span class="content-list-item-name">${eventType}</span>
+      <span class="content-list-item-timestamp">${formatDateTime(eventTimestamp)}</span>
+    `;
+      return eventsListItem;
+    }
+
+    function formatDateTime(dateTime) {
+      if (dateTime != null && dateTime !== "") {
+        const optionsDate = {year: "numeric", month: "2-digit", day: "2-digit"};
+        const optionsTime = {hour: "2-digit", minute: "2-digit", second: "2-digit"};
+        const date = new Date(dateTime);
+        const formattedDate = date.toLocaleDateString("en-CA", optionsDate).replace(/\//g, "-");
+        const formattedTime = date.toLocaleTimeString("en-GB", optionsTime);
+        return `${formattedDate} ${formattedTime}`;
+
+      } else return `N/A`;
+    }
+
+    function handleEventItemClick(_, eventItem, clickedEventElement) {
+      if (!clickedEventElement) return;
+      activeEventData = eventItem;
+      activeEventItem?.classList.remove("active");
+      clickedEventElement.classList.add("active");
+      activeEventItem = clickedEventElement;
+      updateEventExtensionsList();
+      wrapper.scroll({top: 0, behavior: "smooth"});
+    }
+
+    function updateEventExtensionsList() {
+      if (contentItems) {
+        contentItems.innerHTML = "";
+        if (activeEventData?.groupedData) {
+          Object.entries(activeEventData.groupedData).forEach(([key, items]) => {
+            if (headerCheckbox.checked) {
+              const filteredItems = Object.fromEntries(
+                Object.entries(items).filter(([key]) => specifiedKeys.includes(key.replace(/[\W_]/g, "").toLowerCase())),
+              );
+              const eventExtensionsGroup = createEventExtensionsGroup(key, filteredItems);
+              if (eventExtensionsGroup) {
+                contentItems.appendChild(eventExtensionsGroup);
+              }
+            } else {
+              const eventExtensionsGroup = createEventExtensionsGroup(key, items);
+              if (eventExtensionsGroup) {
+                contentItems.appendChild(eventExtensionsGroup);
+              }
+            }
+          });
+        }
+      }
+    }
+
+    function createEventExtensionsGroup(group, items) {
+      if (!Object.keys(items).length) return null;
+      const eventExtensionItem = document.createElement("div");
+      eventExtensionItem.classList.add("content-item");
+
+      const eventExtensionItemBody = document.createElement("div");
+      eventExtensionItemBody.classList.add("content-item-body");
+
+      eventExtensionItem.innerHTML = `
+      <button class="content-item-button">
+        <span class="content-item-button-text">${group}</span>
+        <svg class="content-item-button-icon" width="24" height="25" viewBox="0 0 24 25" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M18.7925 16.2925C18.3824 16.7025 17.7176 16.7025 17.3075 16.2925L12.05 11.0349L6.79246 16.2925C6.38241 16.7025 5.71759 16.7025 5.30754 16.2925C4.89749 15.8824 4.89749 15.2176 5.30754 14.8075L11.3075 8.80754C11.7176 8.39749 12.3824 8.39749 12.7925 8.80754L18.7925 14.8075C19.2025 15.2176 19.2025 15.8824 18.7925 16.2925Z" />
+        </svg>
+      </button>
+    `;
+
+      const button = eventExtensionItem.querySelector("button");
+      button.addEventListener("click", () => {
+        button.classList.toggle("collapsed");
+        eventExtensionItemBody.classList.toggle("hidden");
+      });
+
+      Object.entries(items).forEach(([key, value]) => {
+        if (searchRegex) {
+          const matchesLabel = searchRegex.test(key);
+          const matchesValue = searchRegex.test(value);
+          if (!matchesLabel && !matchesValue) {
+            return;
+          }
+        }
+
+        if (value != null && value !== "") {
+          const singleEventExtensionBody = document.createElement("div");
+          singleEventExtensionBody.classList.add("content-item-body-row", "divider-border-style");
+
+          singleEventExtensionBody.innerHTML = `
+        <span class="content-item-body-row-key">${key}</span>
+        <span class="content-item-body-row-value">${value}</span>
+      `;
+          eventExtensionItemBody.appendChild(singleEventExtensionBody);
+        }
+      });
+
+      if (eventExtensionItemBody.children.length > 0) {
+        eventExtensionItem.appendChild(eventExtensionItemBody);
+        return eventExtensionItem;
+      }
+      return null;
+    }
+
+
+    function initialize(data) {
+      updateGeneralInformation(data);
+      processFetchedData(data);
+    }
+
+    initialize(actionListData);
+  });
+</script>
+</body>
+</html>
