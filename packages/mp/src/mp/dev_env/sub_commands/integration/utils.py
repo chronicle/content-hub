@@ -27,6 +27,7 @@ import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.sub_commands.integration.build import build_integration as build_integration_
 from mp.build_project.sub_commands.repository.build import build_repository
+from mp.core.custom_types import RepositoryType
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.utils import to_snake_case
 
@@ -184,7 +185,7 @@ def build_integrations_custom_repository() -> None:
 
     """
     try:
-        build_repository(["custom"])
+        build_repository([RepositoryType.CUSTOM])
 
     except typer.Exit as e:
         rich.print(f"[red]Build failed: {e}[/red]")

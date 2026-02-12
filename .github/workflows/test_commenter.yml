@@ -1,0 +1,61 @@
+name: Comment Tests Report
+
+on:
+  workflow_run:
+    workflows: [ "Test Content-Hub" ]
+    types: [ completed ]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  comment:
+    name: Comment Test Report
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion != 'success' }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: refs/heads/main
+        persist-credentials: false
+        fetch-depth: 1
+
+    - name: Resolve PR number
+      id: findpr
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { findPullRequestForWorkflowRun } = require('./.github/scripts/resolve_pr.js');
+          const pr = await findPullRequestForWorkflowRun({ github, context });
+          core.setOutput('pr_number', String(pr));
+
+    - name: Download test artifact
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { findAndDownloadArtifact } = require('./.github/scripts/find_artifact.js');
+          await findAndDownloadArtifact({
+            github, context,
+            artifactName: 'test-report',
+            destZipPath: 'artifact.zip'
+          });
+
+    - name: Unzip artifact
+      run: unzip -o artifact.zip -d artifacts
+
+    - name: Post PR comment
+      uses: actions/github-script@v7
+      env:
+        PR_NUMBER: ${{ steps.findpr.outputs.pr_number }}
+      with:
+        script: |
+          const { postComment } = require('./.github/scripts/post_comment.js');
+          await postComment({
+            github, context,
+            prNumber: Number(process.env.PR_NUMBER),
+            title: 'Integration Tests Failed',
+            reportPath: 'artifacts/test_report.md'
+          });

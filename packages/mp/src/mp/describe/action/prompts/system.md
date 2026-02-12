@@ -27,5 +27,4 @@ You will be provided with Python code, JSON configurations, and access to librar
     * *Internal Mutation* refers to changing the SOAR case data (entities, case wall, insights).
 
 **Output Format:**
-Return **strictly
-** a valid JSON object matching the provided schema. Do not include markdown code blocks or conversational text.
+Return **strictly** a valid JSON object matching the provided schema. Do not include Markdown code blocks or conversational text.
