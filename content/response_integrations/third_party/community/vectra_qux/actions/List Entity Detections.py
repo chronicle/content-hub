@@ -109,7 +109,9 @@ def main():
             output_message = f"No detections found for entity ID {entity_id}"
             siemplify.result.add_result_json(json.dumps(detections, indent=4))
         else:
-            output_message = f"Successfully retrieved {len(detections)} detections for entity ID {entity_id}."
+            output_message = (
+                f"Successfully retrieved {len(detections)} detections for entity ID {entity_id}."
+            )
             detections_json = [detection.to_json() for detection in detections]
             siemplify.result.add_result_json(json.dumps(detections_json, indent=4))
             siemplify.result.add_data_table(

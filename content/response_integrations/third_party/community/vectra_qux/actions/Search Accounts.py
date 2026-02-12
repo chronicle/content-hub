@@ -25,14 +25,16 @@ from ..core.VectraQUXManager import VectraQUXManager
 def remove_api_version_from_url(account):
     if account.get("url"):
         account["url"] = (
-            account.get("url", "")
+            account
+            .get("url", "")
             .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
         )
     if account.get("detection_set"):
         account["detection_set"] = [
-            url.replace(API_VERSION_2_5, "")
+            url
+            .replace(API_VERSION_2_5, "")
             .replace(API_VERSION_2_1, "")
             .replace(API_VERSION_2_2, "")
             for url in account.get("detection_set", "")
@@ -250,9 +252,7 @@ def main():
             output_message = "No accounts were found with the provided parameters."
             siemplify.result.add_result_json({})
         else:
-            output_message = (
-                f"Successfully retrieved the details for {len(accounts)} accounts."
-            )
+            output_message = f"Successfully retrieved the details for {len(accounts)} accounts."
 
             mendatory_fields = [
                 "id",

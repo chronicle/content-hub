@@ -321,7 +321,8 @@ class VectraQUXManager:
         return response_list
 
     def get_assignment_list(self, query_params, max_assignment_to_return):
-        """Get a list of assignments based on specified query parameters and up to a specified limit.
+        """Get a list of assignments based on specified query parameters and up to a
+        specified limit.
 
         Args:
             query_params (dict): The query parameters to filter the assignments.
@@ -993,11 +994,7 @@ class VectraQUXManager:
                 if not self._is_duplicate(
                     get_alert_id(
                         entity["id"],
-                        (
-                            entity["last_detection_timestamp"]
-                            if entity_type == "account"
-                            else entity["last_modified"]
-                        ),
+                        entity["_doc_modified_ts"],
                         entity_type,
                     ),
                     existing_ids,
@@ -1036,9 +1033,7 @@ class VectraQUXManager:
         :param start_time: {int} Timestamp for oldest detection  to fetch.
         :return: {unicode} The query for time filter
         """
-        timestamp_field = (
-            "last_detection_timestamp" if entity_type == "account" else "last_modified"
-        )
+        timestamp_field = "_doc_modified_ts"
         return (
             f"{entity_type}.{timestamp_field}:["
             f"{datetime.utcfromtimestamp(start_time / 1000).strftime(VECTRA_DATETIME_FORMAT)} "

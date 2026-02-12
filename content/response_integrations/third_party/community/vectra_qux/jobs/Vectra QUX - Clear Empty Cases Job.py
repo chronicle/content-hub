@@ -59,14 +59,13 @@ def main():
                 all_cases = False
 
         environments = [env.strip() for env in environments.split(",") if env.strip()]
-        product_names = [
-            product.strip() for product in product_names.split(",") if product.strip()
-        ]
+        product_names = [product.strip() for product in product_names.split(",") if product.strip()]
 
         # Check if required fields are provided or not
         if not (environments and product_names):
             raise VectraQUXException(
-                "The required parameter values cannot be empty. Please provide values for the following required parameters: ['Environments', 'Products'].",
+                "The required parameter values cannot be empty. Please provide values "
+                "for the following required parameters: ['Environments', 'Products'].",
             )
 
         cases_last_success_timestamp = get_last_success_time_for_job(
