@@ -30,7 +30,7 @@ class GenerateQrCode(GOQRBaseAction):
     def _extract_action_parameters(self) -> None:
         self.params.data = extract_action_param(
             self.soar_action,
-            param_name="Data",
+            param_name="Content",
             is_mandatory=True,
             print_value=True,
         )
@@ -103,7 +103,7 @@ class GenerateQrCode(GOQRBaseAction):
         self.soar_action.add_attachment(str(attachment_path))
         self.result_value = True
         self.output_message = (
-            f"Successfully generated QR code for '{self.params.data}' and attached it to the case."
+            f"Successfully generated QR code and attached it to the case wall."
         )
         self.soar_action.remove_temp_folder()
 
