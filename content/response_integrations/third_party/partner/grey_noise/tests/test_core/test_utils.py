@@ -3,6 +3,7 @@ Test cases for core/utils.py to improve coverage from 37% to 100%.
 """
 
 from unittest.mock import MagicMock
+import re
 
 import pytest
 from core.greynoise_exceptions import InvalidIntegerException
@@ -229,7 +230,7 @@ class TestGenerateTimelineInsight:
         assert "benign" in result
         assert "suspicious" in result
         assert "8.8.8.8" in result
-        assert "viz.greynoise.io" in result
+        assert re.search(r"https://viz\.greynoise\.io/", result)
 
     def test_generate_timeline_insight_empty_data(self):
         """Test generating insight with empty data."""
@@ -319,7 +320,7 @@ class TestGenerateIPLookupInsight:
         assert "dns" in result
         assert "CVE-2023-1234" in result
         assert "8.8.8.8" in result
-        assert "viz.greynoise.io" in result
+        assert re.search(r"https://viz\.greynoise\.io/", result)
 
     def test_generate_ip_lookup_insight_community_minimal(self):
         """Test generating community IP lookup insight with minimal data - returns NOT FOUND."""
