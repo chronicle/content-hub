@@ -55,4 +55,3 @@ For more detailed information, use the following guides as a reference while you
     * [TIPCommon Reference](/docs/tools_and_sdk/tipcommon_and_envcommon.md)
     * [GitHub Actions](/docs/github_actions.md)
 
-Test change
