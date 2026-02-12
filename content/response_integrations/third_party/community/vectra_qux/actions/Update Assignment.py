@@ -105,9 +105,7 @@ def main():
                 user_id,
                 assignment_id,
             )
-            output_message = (
-                f"Successfully updated assignment-{assignment_id} to user ID-{user_id}"
-            )
+            output_message = f"Successfully updated assignment-{assignment_id} to user ID-{user_id}"
             siemplify.result.add_result_json(json.dumps(response, indent=4))
 
             # add response to csv
@@ -125,7 +123,9 @@ def main():
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     except VectraQUXException as e:
-        output_message = f"Entity not found for the given ID: '{entity_id}'. Please verify the ID and try again."
+        output_message = (
+            f"Entity not found for the given ID: '{entity_id}'. Please verify the ID and try again."
+        )
         status = EXECUTION_STATE_FAILED
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)

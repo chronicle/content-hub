@@ -128,6 +128,9 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltJobMetadata) -> Self:
+        version: float = built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION)
+        version = max(version, mp.core.constants.MINIMUM_SCRIPT_VERSION)
+
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -138,7 +141,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             name=built["Name"],
             parameters=[JobParameter.from_built(param) for param in built["Parameters"]],
             run_interval_in_seconds=built["RunIntervalInSeconds"],
-            version=built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
+            version=version,
         )
 
     @classmethod

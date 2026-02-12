@@ -41,12 +41,19 @@ NAME_MAPPER: dict[str, str] = {
     "format_files": "format",
     "login": "dev-env login",
     "deploy": "dev-env deploy",
+    "build_integration": "build integration",
+    "build_playbook": "build playbook",
+    "build_repository": "build repository",
+    "validate_integration": "validate integration",
+    "validate_playbook": "validate playbook",
+    "validate_repository": "validate repository",
     "push_integration": "dev-env push integration",
     "pull_integration": "dev-env pull integration",
     "push_playbook": "dev-env push playbook",
     "pull_playbook": "dev-env pull playbook",
     "push_custom_integration_repository": "dev-env push custom integration repository",
     "describe_action_with_ai": "describe action",
+    "update": "self update",
 }
 
 ALLOWED_COMMAND_ARGUMENTS: set[str] = {
@@ -75,4 +82,6 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "-d",
     "all",
     "override",
+    "--version",
+    "-V",
 }
