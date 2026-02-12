@@ -179,13 +179,16 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     final_prepared_ids.append((case_id, modification_time))
             except (HTTPError, JSONDecodeError) as e:
                 self.logger.info(
-                    f"Could not retrieve details for new case {case_id}. Skipping. Error: {e}"
+                    f"Could not retrieve details for new case {case_id}. "
+                    f"Skipping. Error: {e}"
                 )
                 self.failed_cases.append((case_id, modification_time))
         self.sorted_modified_ids = final_prepared_ids
         return final_prepared_cases
 
-    def _get_case_ids_by_timestamp(self, ids: list[str] | None = None) -> list[tuple[str, int]]:
+    def _get_case_ids_by_timestamp(
+        self, ids: list[str] | None = None
+    ) -> list[tuple[str, int]]:
         """
         Fetches all relevant case IDs by timestamp range, filters them by tags,
         """
@@ -210,7 +213,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             return filtered_case_ids
         return self._filter_cases_by_tags(cases)
 
-    def _filter_cases_by_tags(self, cases: list[dict[str, any]]) -> list[tuple[str, int]]:
+    def _filter_cases_by_tags(
+        self, cases: list[dict[str, any]]
+    ) -> list[tuple[str, int]]:
         """
         Filters a list of case dictionaries, returning only the IDs of cases
         that contain all of the required tags.
@@ -223,7 +228,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                 if tag_dict and tag_dict.get("displayName")
             }
             case_id = case.get("id")
-            if case_id and all(tag in case_tags_display_names for tag in self.tags_identifiers):
+            if case_id and all(
+                tag in case_tags_display_names for tag in self.tags_identifiers
+            ):
                 filtered_case_ids.append((str(case_id), case["updateTime"]))
         return filtered_case_ids
 
@@ -260,6 +267,11 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Checks if both the alert and the product are closed.
         """
         raise NotImplementedError
+    
+    @abstractmethod
+    def remove_synced_data_from_db(self, job_case, product_details)-> None:
+        """Removes synced data from db"""
+        raise NotImplementedError
 
     @abstractmethod
     def sync_severity(self, source_item, target_item) -> None:
@@ -290,7 +302,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         return []
 
     @nativemethod
-    def sync_case_comments_to_product(self, job_case: JobCase, comments: list[str]) -> None:
+    def sync_case_comments_to_product(
+        self, job_case: JobCase, comments: list[str]
+    ) -> None:
         """Sync case comments to the product."""
         raise NotImplementedError
 
@@ -379,18 +393,23 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             error_message = str(e)
             if "You can not perform this action on a closed alert" in error_message:
                 self.logger.warn(
-                    f"Alert {alert_id} in case {case_id} was already closed on the platform. "
+                    f"Alert {alert_id} in case {case_id} was already closed "
+                    "on the platform. "
                 )
 
     def get_assignee_to_sync(self, job_case: JobCase) -> JobAssigneeResult:
         """Fetches assignee from the product item."""
         if not self._secops_user_list:
             self._secops_user_list = [
-                user.raw_data for user in get_users_profile_cards_with_pagination(self.soar_job)
+                user.raw_data for user in get_users_profile_cards_with_pagination(
+                    self.soar_job
+                )
             ]
         return job_case.get_assignee_to_sync(self._secops_user_list)
 
-    def sync_assignee_to_case(self, user_display_name: str, case_id: str, alert_id: str) -> None:
+    def sync_assignee_to_case(
+        self, user_display_name: str, case_id: str, alert_id: str
+    ) -> None:
         """Sync assignee to the case."""
         self.soar_job.assign_case(user_display_name, case_id, alert_id)
         self.logger.info(f"Successfully synced assignee to case {case_id}.")
@@ -400,12 +419,17 @@ class BaseSyncJob(Job, Generic[ApiClient]):
     ) -> None:
         """Sync severity to the case."""
         try:
-            set_alert_priority(self.soar_job, case_id, alert_identifier, alert_name, new_priority)
+            set_alert_priority(
+                self.soar_job, case_id, alert_identifier, alert_name, new_priority
+            )
             self.logger.info(
-                f"Successfully updated alert {alert_identifier} priority to {new_priority}."
+                f"Successfully updated alert {alert_identifier} priority "
+                f"to {new_priority}."
             )
         except Exception as e:
-            self.logger.error(f"Failed to update priority for alert {alert_identifier}: {e}")
+            self.logger.error(
+                f"Failed to update priority for alert {alert_identifier}: {e}"
+            )
 
     def get_secops_closure_comment(self, job_case: JobCase, sync_info: dict) -> str:
         """Fetches the closure comment for the Case/Alert."""
@@ -416,13 +440,19 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         return comment or "Case or Alert was closed"
 
     # Generic helpers
-    def filter_new_items(self, source_items: list, target_items: list, comparison_key=None) -> list:
+    def filter_new_items(
+            self,
+            source_items: list,
+            target_items: list,
+            comparison_key=None
+        ) -> list:
         """Finds items in source_items that are not present in target_items.
 
         Args:
             source_items (list): List of items from the source system.
             target_items (list): List of items from the target system.
-            comparison_key (callable, optional): Optional function or key to use for comparison.
+            comparison_key (callable, optional): Optional function or 
+            key to use for comparison.
                 For example, lambda x: x['body']. If None, items are compared directly.
 
         Returns:
@@ -435,7 +465,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         # Prepare target set for O(1) lookups
         if comparison_key:
             target_set = {comparison_key(item) for item in target_items}
-            return [item for item in source_items if comparison_key(item) not in target_set]
+            return [
+                item for item in source_items if comparison_key(item) not in target_set
+            ]
         else:
             target_set = set(target_items)
             return [item for item in source_items if item not in target_set]
@@ -449,7 +481,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             self.processed_items = self._read_ids()
             self.job_cases_to_sync = self._get_cases_to_sync()
             case_ids = [job_case.case_detail.id_ for job_case in self.job_cases_to_sync]
-            self.logger.info(f"Found {len(self.job_cases_to_sync)} case ids to sync: {case_ids}")
+            self.logger.info(
+                f"Found {len(self.job_cases_to_sync)} case ids to sync: {case_ids}"
+            )
             for job_case in self.job_cases_to_sync:
                 job_case.case_comments = self.soar_job.fetch_case_comments(
                     case_id=job_case.case_detail.id_,
@@ -464,7 +498,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                 self.sync_status(job_case)
             self.job_completed_successfully = True
         except Exception as e:
-            self.logger.exception(f"An unexpected error occurred during the sync cycle: {e}")
+            self.logger.exception(
+                f"An unexpected error occurred during the sync cycle: {e}"
+            )
             raise
         finally:
             self._finalize_job()
@@ -477,5 +513,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         latest_time = self.current_run_latest_timestamp_ms
         self._save_timestamp_by_unique_id(new_timestamp=latest_time)
         self.logger.info(
-            f"Saving timestamp: {latest_time} [{convert_unixtime_to_datetime(latest_time)}]"
+            f"Saving timestamp: {latest_time} "
+            f"[{convert_unixtime_to_datetime(latest_time)}]"
         )

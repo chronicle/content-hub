@@ -821,7 +821,7 @@ def get_full_case_details(
     results = response.json()
 
     if case_type == "alert" and isinstance(results, dict):
-        alerts_data = results.pop("caseAlerts", results.pop("case_alerts", []))
+        alerts_data = results.pop("caseAlerts", results.pop("case_alrets", []))
         results["alerts"] = alerts_data
 
     return results
