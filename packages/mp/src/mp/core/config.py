@@ -27,7 +27,7 @@ from typing import TypeVar
 import typer
 
 import mp.core.constants
-from mp.core.logging_utils import setup_logging
+from mp.core.logger.setup import setup_logging
 
 CONFIG_FILE_NAME: str = ".mp_config"
 CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
@@ -46,7 +46,7 @@ RUNTIME_SECTION_NAME: str = "RUNTIME"
 PROCESSES_MIN_VALUE: int = 1
 PROCESSES_MAX_VALUE: int = 10
 DEFAULT_PROCESSES_NUMBER: int = 5
-DEFAULT_GEMINI_CONCURRENCY: int = 10
+DEFAULT_GEMINI_CONCURRENCY: int = 5
 DEFAULT_QUIET_VALUE: str = "no"
 DEFAULT_VERBOSE_VALUE: str = "no"
 DEFAULT_MARKETPLACE_PATH: Path = Path.home() / mp.core.constants.REPO_NAME
