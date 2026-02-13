@@ -100,7 +100,9 @@ ASSIGN_ENTITY_API_NAME = "LIST_ASSIGNEMENTS"
 DOWANLOAD_PCAP_API_NAME = "DOWNLOAD_PCAP"
 UPDATE_GROUP_MEMBERS_API_NAME = "UPDATE_GROUP"
 ENTITY_SEARCH_API_NAME = "ENTITY_SEARCH"
-LIST_ENTITY_DETECTIONS_QUERY_PARAM = '?query_string=detection.src_{entity_type}.id:{entity_id} AND detection.state:"{state}"'
+LIST_ENTITY_DETECTIONS_QUERY_PARAM = (
+    '?query_string=detection.src_{entity_type}.id:{entity_id} AND detection.state:"{state}"'
+)
 
 ENDPOINTS = {
     SEARCH_HOSTS_API_NAME: f"{API_VERSION}/{HOSTS}",
@@ -118,11 +120,9 @@ ENDPOINTS = {
     LIST_OUTCOMES_API_NAME: f"{API_VERSION}/{OUTCOMES}",
     MARK_DETECTION_API_NAME: f"{API_VERSION}/{DETECTIONS}",
     ADD_OUTCOME_API_NAME: f"{API_VERSION}/{OUTCOMES}",
-    RESOLVE_ASSIGNMENT_API_NAME: f"{API_VERSION}/{ASSIGNMENTS}"
-    + "/{assignment_id}/resolve",
+    RESOLVE_ASSIGNMENT_API_NAME: f"{API_VERSION}/{ASSIGNMENTS}" + "/{assignment_id}/resolve",
     ADD_NOTE_API_NAME: f"{API_VERSION}" + "/{entity_type}/{entity_id}/notes",
-    REMOVE_NOTE_API_NAME: f"{API_VERSION}"
-    + "/{entity_type}/{entity_id}/notes/{note_id}",
+    REMOVE_NOTE_API_NAME: f"{API_VERSION}" + "/{entity_type}/{entity_id}/notes/{note_id}",
     SEARCH_DETECTIONS_API_NAME: f"{API_VERSION}/{DETECTIONS}",
     DOWANLOAD_PCAP_API_NAME: f"{API_VERSION}/{DETECTIONS}" + "/{detection_id}/pcap",
     UPDATE_GROUP_MEMBERS_API_NAME: f"{API_VERSION}/{GROUPS}" + "/{group_id}",

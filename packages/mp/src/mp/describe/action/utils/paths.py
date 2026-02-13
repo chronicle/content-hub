@@ -29,7 +29,7 @@ from mp.core.file_utils import (
 if TYPE_CHECKING:
     import pathlib
 
-logger: logging.Logger = logging.getLogger("mp.describe_action.paths")
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def get_integration_path(name: str, *, src: pathlib.Path | None = None) -> anyio.Path:

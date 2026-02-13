@@ -80,9 +80,7 @@ def main():
 
         response, assignment_info = vectra_manager.describe_assignment(assignment_id)
 
-        output_message = (
-            f"Successfully retrieved information for assignment ID {assignment_id}."
-        )
+        output_message = f"Successfully retrieved information for assignment ID {assignment_id}."
 
         siemplify.result.add_result_json(json.dumps(response, indent=4))
 
@@ -99,7 +97,10 @@ def main():
         siemplify.LOGGER.exception(e)
     except ItemNotFoundException as e:
         status = EXECUTION_STATE_FAILED
-        output_message = f"Assignment not found for the given ID: '{assignment_id}'. Please verify the ID and try again."
+        output_message = (
+            f"Assignment not found for the given ID: '{assignment_id}'. "
+            f"Please verify the ID and try again."
+        )
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
