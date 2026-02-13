@@ -1,0 +1,83 @@
+name: Test Content-Hub
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    paths:
+    - 'content/**'
+    - 'packages/**'
+    - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      mp: ${{ steps.filter.outputs.mp }}
+      integration_packages: ${{ steps.filter.outputs.integration_packages }}
+      response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
+      response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
+      playbooks: ${{ steps.filter.outputs.playbooks }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for changes
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          mp:
+            - 'packages/mp/**'
+            - '.github/workflows/**'
+          integration_packages:
+            - 'packages/envcommon/**'
+            - 'packages/tipcommon/**'
+            - 'packages/integration_testing/**'
+          response_integrations_google:
+            - 'content/response_integrations/google/**'
+          response_integrations_third_party:
+            - 'content/response_integrations/third_party/**'
+          playbooks:
+            - 'content/playbooks/**'
+
+
+  test_third_party:
+    name: Test Third-Party Integrations
+    needs: changes
+    if: ${{ needs.changes.outputs.response_integrations_third_party == 'true' || needs.changes.outputs.mp == 'true' || needs.changes.outputs.integration_packages == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout PR code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install mp package
+      run: |
+        python -m pip install uv
+        uv pip install --system -e ./packages/mp
+
+    - name: Run integration tests
+      env:
+        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        mp config --root-path . --processes 10 --display-config
+        mp test --repository third_party --raise-error-on-violations
+
+    - name: Upload Test Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-report
+        path: ./artifacts/test_report.md
+        retention-days: 2

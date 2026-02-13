@@ -70,9 +70,7 @@ class RFIndicator(BaseModel):
         self.intelCard = intelCard
         self.criticality = criticality
         self.links = links
-        self.rule_names = [
-            evidence_detail.get("rule") for evidence_detail in evidence_details
-        ]
+        self.rule_names = [evidence_detail.get("rule") for evidence_detail in evidence_details]
         self.evidence_details = evidence_details
 
     def to_csv(self):
@@ -111,8 +109,8 @@ class RFIndicator(BaseModel):
         """Returns Links Details in table format."""
         return [
             {
-                "Entity": entity["name"],
-                "Type": entity["type"],
+                "Entity": entity.name,
+                "Type": entity.type_,
                 "Relationship": section_name,
             }
             for section_name, entities in self.links.items()
@@ -130,9 +128,7 @@ class RFIndicator(BaseModel):
 
     def to_enrichment_data(self):
         """Returns indicator enrichment data with prefix."""
-        clean_enrichment_data = {
-            k: v for k, v in self.get_enrichment_data().items() if v
-        }
+        clean_enrichment_data = {k: v for k, v in self.get_enrichment_data().items() if v}
         return add_prefix_to_dict(clean_enrichment_data, "RF")
 
     def to_json(self):
@@ -282,6 +278,18 @@ class HASH(RFIndicator):
                 "Hash Algorithm": self.hashAlgorithm,
             },
         ]
+
+
+class HashReport(BaseModel):
+    """Hash from Malware Report."""
+
+    def __init__(self, raw_data, sha256, found, reports_summary, start_date, end_date):
+        super(HashReport, self).__init__(raw_data)
+        self.id = sha256
+        self.found = found
+        self.reports_summary = reports_summary
+        self.start_date = start_date
+        self.end_date = end_date
 
 
 class Alert(BaseModel):
@@ -480,10 +488,7 @@ class PlaybookAlert(BaseModel):
         ):
             try:
                 rules = " | ".join(
-                    [
-                        rule["name"]
-                        for rule in assessment.get("evidence", {}).get("data", [])
-                    ],
+                    [rule["name"] for rule in assessment.get("evidence", {}).get("data", [])],
                 )
                 new_chunk = chunk.format(
                     assessment["risk_rule"],
@@ -547,9 +552,7 @@ class PlaybookAlert(BaseModel):
         """
         hashes_html = []
         for hash_ in (
-            event.get("panel_evidence_summary", {})
-            .get("exposed_secret", {})
-            .get("hashes", [])
+            event.get("panel_evidence_summary", {}).get("exposed_secret", {}).get("hashes", [])
         ):
             try:
                 hashes_html.append(chunk.format(hash_["algorithm"], hash_["hash"]))
@@ -588,9 +591,7 @@ class PlaybookAlert(BaseModel):
         """
         av_html = []
         for prop in (
-            event.get("panel_evidence_summary", {})
-            .get("compromised_host", {})
-            .get("antivirus", [])
+            event.get("panel_evidence_summary", {}).get("compromised_host", {}).get("antivirus", [])
         ):
             try:
                 av_html.append(chunk.format(prop))

@@ -139,7 +139,7 @@ def main(is_test_run):
     )
     update_on_entity_change = extract_connector_param(
         siemplify,
-        "Entity Added or Removed",
+        "Entity Added",
         is_mandatory=False,
         input_type=bool,
     )
@@ -186,7 +186,7 @@ def main(is_test_run):
         "reopened": update_on_reopened,
         "priority_increase": update_on_priority_increase,
         "new_assessment": update_on_new_assessment,
-        "entity_change": update_on_entity_change,
+        "entity_added": update_on_entity_change,
     }
 
     try:

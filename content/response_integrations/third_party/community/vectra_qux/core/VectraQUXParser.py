@@ -38,11 +38,7 @@ class VectraQUXParser:
             state=data.get("state"),
             threat=data.get("threat"),
             severity=data.get("severity"),
-            last_timestamp=(
-                data.get("last_detection_timestamp")
-                if entity_type == "account"
-                else data.get("last_modified")
-            ),
+            last_timestamp=data.get("_doc_modified_ts"),
             detection_set=data.get("detection_set", []),
             tags=data.get("tags", []),
             assignment=data.get("assignment", {}),

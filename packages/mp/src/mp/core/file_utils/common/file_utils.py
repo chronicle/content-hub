@@ -135,7 +135,7 @@ def save_yaml(data: Mapping[str, Any] | Sequence[Mapping[str, Any]], path: Path)
 
     """
     try:
-        yaml_content = yaml.dump(data, indent=4, sort_keys=False)
+        yaml_content: str = yaml.safe_dump(data, indent=4, sort_keys=False)
         path.write_text(yaml_content, encoding="utf-8")
 
     except OSError as e:

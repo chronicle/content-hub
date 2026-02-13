@@ -93,7 +93,9 @@ def main():
         # Removing Note From the given Entity ID
         vectra_manager.remove_note(entity_type, entity_id, note_id)
 
-        output_message = f'Successfully deleted note "{note_id}" from {entity_type} with ID "{entity_id}"'
+        output_message = (
+            f'Successfully deleted note "{note_id}" from {entity_type} with ID "{entity_id}"'
+        )
 
     except VectraQUXException as e:
         output_message = f"{e}"

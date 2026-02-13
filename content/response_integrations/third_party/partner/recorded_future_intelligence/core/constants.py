@@ -26,6 +26,8 @@ ENRICH_HOST_SCRIPT_NAME = f"{PROVIDER_NAME} - Enrich Host"
 ENRICH_IP_SCRIPT_NAME = f"{PROVIDER_NAME} - Enrich IP"
 ENRICH_URL_SCRIPT_NAME = f"{PROVIDER_NAME} - Enrich URL"
 ENRICH_IOC_SCRIPT_NAME = f"{PROVIDER_NAME} - Enrich IOC"
+ENRICH_IOC_SOAR_SCRIPT_NAME = f"{PROVIDER_NAME} - Enrich IOCs Bulk"
+SEARCH_HASH_SCRIPT_NAME = f"{PROVIDER_NAME} - Search Hash Malware Intelligence"
 GET_ALERT_DETAILS_SCRIPT_NAME = f"{PROVIDER_NAME} - Get Alert Details"
 GET_PBA_DETAILS_SCRIPT_NAME = f"{PROVIDER_NAME} - Get Playbook Alert Details"
 ADD_ANALYST_NOTE_SCRIPT_NAME = f"{PROVIDER_NAME} - Add Analyst Note"
@@ -36,9 +38,7 @@ UPDATE_PBA_SCRIPT_NAME = f"{PROVIDER_NAME} - Update Playbook Alert"
 # Connector
 CONNECTOR_NAME = "Recorded Future - Security Alerts Connector"
 PLAYBOOK_ALERT_CONNECTOR_NAME = "Recorded Future - Playbook Alerts Connector"
-PLAYBOOK_ALERT_TRACKING_CONNECTOR_NAME = (
-    "Recorded Future - Playbook Alerts Tracking Connector"
-)
+PLAYBOOK_ALERT_TRACKING_CONNECTOR_NAME = "Recorded Future - Playbook Alerts Tracking Connector"
 DEFAULT_TIME_FRAME = 0
 CONNECTOR_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 CI_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -50,6 +50,14 @@ STORED_IDS_LIMIT = 3000
 ALERT_ID_FIELD = "id"
 CSV_DELIMETER = ","
 
+# Ping requirement
+PING_IP = "8.8.8.8"
+
+# Collective Insights
+CI_DETECTION_TYPE = "playbook"
+CI_INCIDENT_TYPE = "google-secops-threat-detection"
+
+# Enrichment
 DEFAULT_THRESHOLD = 25
 DEFAULT_SCORE = 0
 SUPPORTED_ENTITY_TYPES_ENRICHMENT = [
@@ -62,6 +70,14 @@ SUPPORTED_ENTITY_TYPES_ENRICHMENT = [
 ]
 SUPPORTED_ENTITY_TYPES_RELATED_ENTITIES = ["ADDRESS", "FILEHASH", "CVE", "HOSTNAME"]
 ENRICHMENT_DATA_PREFIX = "RF"
+ENTITY_TYPE_ENRICHMENT_MAP = {
+    EntityTypes.ADDRESS: "ip",
+    EntityTypes.DOMAIN: "domain",
+    EntityTypes.HOSTNAME: "domain",
+    EntityTypes.FILEHASH: "hash",
+    EntityTypes.URL: "url",
+    EntityTypes.CVE: "vulnerability",
+}
 
 ENTITY_IP = "entity_ips"
 ENTITY_DOMAIN = "entity_domains"
@@ -122,6 +138,13 @@ PLAYBOOK_ALERT_PRIORITIES = ["Informational", "Moderate", "High"]
 
 DATETIME_ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 DATETIME_READABLE_FORMAT = "%m/%d/%Y %H:%M:%S"
+
+ENTITY_CHANGE_CASES = [
+    "dns_change",
+    "screenshot_mentions_change",
+    "entities_change",
+    "related_entities_change",
+]
 
 # HTML Text
 INSIKT_VULNERABILITY_NOTE_HTML = """
