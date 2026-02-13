@@ -54,18 +54,32 @@ class MockActionOutput:
 
     @property
     def errors(self) -> str:
+        """Get the action's error output."""
         return self._err.getvalue()
 
     def flush(self) -> None:
+        """Clear the output and error streams."""
         self._out.truncate(0)
         self._out.seek(0)
         self._err.truncate(0)
         self._err.seek(0)
 
     def get_out_io(self) -> io.StringIO:
+        """Get the output stream.
+
+        Returns:
+            The output stream.
+
+        """
         return self._out
 
     def get_err_io(self) -> io.StringIO:
+        """Get the error stream.
+
+        Returns:
+            The error stream.
+
+        """
         return self._err
 
 
@@ -98,16 +112,35 @@ class MockConnectorOutput:
 
     @property
     def errors(self) -> str:
+        """Get the connector's error output.
+
+        Returns:
+            The error stream content.
+
+        """
         return self._err.getvalue()
 
     def flush(self) -> None:
+        """Clear the output and error streams."""
         self._out.truncate(0)
         self._out.seek(0)
         self._err.truncate(0)
         self._err.seek(0)
 
     def get_out_io(self) -> io.StringIO:
+        """Get the output stream.
+
+        Returns:
+            The output stream.
+
+        """
         return self._out
 
     def get_err_io(self) -> io.StringIO:
+        """Get the error stream.
+
+        Returns:
+            The error stream.
+
+        """
         return self._err

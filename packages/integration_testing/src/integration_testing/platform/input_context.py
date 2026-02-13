@@ -25,6 +25,19 @@ if TYPE_CHECKING:
 
 
 def get_mock_input_context(context: SingleJson | None) -> bytes:
+    """Generate mock input context as encoded JSON bytes.
+
+    Parameters
+    ----------
+    context : SingleJson | None
+        Partial context to merge with default context.
+
+    Returns
+    -------
+    bytes
+        JSON-encoded mock input context with UTF-8 signature.
+
+    """
     full_context: ScriptContext = _fill_missing_context(context)
     return json.dumps(full_context.to_json()).encode("utf-8-sig")
 
