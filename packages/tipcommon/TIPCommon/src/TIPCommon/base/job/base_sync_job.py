@@ -24,6 +24,7 @@ from ...consts import (
     JOB_SYNC_LIMIT,
     UNIX_FORMAT,
     CASE_ALERTS_LIMIT,
+    TAGS,
 )
 from ..interfaces import ApiClient
 from ...data_models import CaseDetails
@@ -56,16 +57,16 @@ class BaseSyncJob(Job, Generic[ApiClient]):
     ):
         super().__init__(name=job_name)
         self.tags_identifiers: list[str] = tags_identifiers
-        self.context_identifier = context_identifier
-        self.sync_limit = JOB_SYNC_LIMIT
-        self.product_alerts_limit = CASE_ALERTS_LIMIT
+        self.context_identifier: str = context_identifier
+        self.sync_limit: int = JOB_SYNC_LIMIT
+        self.product_alerts_limit: int = CASE_ALERTS_LIMIT
         self.processed_items: SyncData = {}
         self.last_run_time: int = 0
         self.current_run_latest_timestamp_ms: int = 0
         self.job_cases_to_sync: list[JobCase] = []
-        self.failed_cases: list[str] = []
+        self.failed_cases: list[JobCase] = []
         self._secops_user_list: list[dict] = []
-        self.job_completed_successfully = False
+        self.job_completed_successfully: bool = False
         self._cached_unix_now: int = 0
 
     def get_last_run_time(self) -> int:
@@ -104,7 +105,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
     def _remove_synced_entries(
         self,
-        synced_list: list[tuple],
+        synced_list: list[tuple[str, int]],
     ) -> None:
         """Removes successfully synced alerts from the tracking dictionary."""
         for case_id, alert_id in synced_list:
@@ -194,7 +195,8 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         return final_prepared_cases
 
     def _get_case_ids_by_timestamp(
-        self, ids: list[str] | None = None
+        self,
+        ids: list[str] | None = None
     ) -> list[tuple[str, int]]:
         """
         Fetches all relevant case IDs by timestamp range, filters them by tags,
@@ -221,7 +223,8 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         return self._filter_cases_by_tags(cases)
 
     def _filter_cases_by_tags(
-        self, cases: list[dict[str, any]]
+        self,
+        cases: list[dict[str, any]]
     ) -> list[tuple[str, int]]:
         """
         Filters a list of case dictionaries, returning only the IDs of cases
@@ -301,7 +304,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
     @nativemethod
     def modified_synced_case_ids_by_product(
-        self, product_ids: list[str], case_ids: list[tuple[str, int]]
+        self,
+        product_ids: list[str], 
+        case_ids: list[tuple[str, int]]
     ) -> list[tuple[str, int]]:
         """
         Fetches modified synced case IDs based on the modified product IDs.
@@ -310,7 +315,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
     @nativemethod
     def sync_case_comments_to_product(
-        self, job_case: JobCase, comments: list[str]
+        self,
+        job_case: JobCase,
+        comments: list[str]
     ) -> None:
         """Sync case comments to the product."""
         raise NotImplementedError
@@ -349,7 +356,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         product_tag_prefix: str,
         case_tag_prefix: str,
         product_properties_key: str = None,
-        product_tags_key: str = "tags",
+        product_tags_key: str = TAGS,
     ) -> JobTagsResult:
         """Fetches tags from both the case and the product item."""
         return job_case.get_tags_to_sync(
@@ -390,7 +397,12 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         return get_user_by_id(self.soar_job, job_case.case_detail.assigned_user)
 
     def sync_product_status_to_case(
-        self, case_id: str, alert_id: str, reason: str, root_cause: str, comment: str
+        self,
+        case_id: str,
+        alert_id: str,
+        reason: str,
+        root_cause: str,
+        comment: str
     ) -> None:
         """Sync product status to the case."""
         try:
@@ -415,14 +427,21 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         return job_case.get_assignee_to_sync(self._secops_user_list)
 
     def sync_assignee_to_case(
-        self, user_display_name: str, case_id: str, alert_id: str
+        self,
+        user_display_name: str,
+        case_id: str,
+        alert_id: str
     ) -> None:
         """Sync assignee to the case."""
         self.soar_job.assign_case(user_display_name, case_id, alert_id)
         self.logger.info(f"Successfully synced assignee to case {case_id}.")
 
     def sync_severity_to_case(
-        self, case_id: str, alert_identifier: str, alert_name: str, new_priority: str
+        self,
+        case_id: str,
+        alert_identifier: str,
+        alert_name: str,
+        new_priority: str
     ) -> None:
         """Sync severity to the case."""
         try:
@@ -446,40 +465,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             comment = sync_info.get("comment")
         return comment or "Case or Alert was closed"
 
-    # Generic helpers
-    def filter_new_items(
-            self,
-            source_items: list,
-            target_items: list,
-            comparison_key=None
-        ) -> list:
-        """Finds items in source_items that are not present in target_items.
-
-        Args:
-            source_items (list): List of items from the source system.
-            target_items (list): List of items from the target system.
-            comparison_key (callable, optional): Optional function or 
-            key to use for comparison.
-                For example, lambda x: x['body']. If None, items are compared directly.
-
-        Returns:
-            list: A list of items present in source_items but missing in target_items.
-        """
-        if not source_items:
-            return []
-        if not target_items:
-            return list(source_items)
-        # Prepare target set for O(1) lookups
-        if comparison_key:
-            target_set = {comparison_key(item) for item in target_items}
-            return [
-                item for item in source_items if comparison_key(item) not in target_set
-            ]
-        else:
-            target_set = set(target_items)
-            return [item for item in source_items if item not in target_set]
-
-    def _perform_job(self):
+    def _perform_job(self) -> None:
         """Perform the main flow of the job"""
         try:
             self._cached_unix_now = unix_now()
@@ -512,7 +498,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         finally:
             self._finalize_job()
 
-    def _finalize_job(self):
+    def _finalize_job(self) -> None:
         """Perform final steps before the job script ends"""
         self._write_ids(self.processed_items)
         if self.job_completed_successfully and len(self.sorted_modified_ids) > 0:
