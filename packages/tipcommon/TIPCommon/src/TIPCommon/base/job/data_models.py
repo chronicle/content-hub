@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+
 import hashlib
-from typing import NamedTuple, Any
+from typing import NamedTuple
 from dataclasses import dataclass, field
 from ...data_models import AlertCard, CaseDataStatus, CaseDetails, JobParamType
 from ...types import SingleJson
@@ -23,14 +24,14 @@ from ...consts import JOB_MAX_TAG_LEN, JOB_MIN_TAG_LEN
 class JobParameter:
     """A general script parameter object.
     Attributes:
-        full_dict (dict[str, Any]): The original dict received from the API.
+        full_dict (dict[str, any]): The original dict received from the API.
         id (int | None): The parameter's ID.
         is_mandatory (bool):
             Whether the parameter is mandatory or not.
             (prioritized over 'value' in playbooks).
         name (str | None): The parameter's name.
         type (ActionParamType): The type of the parameter.
-        value (Any):
+        value (any):
             The default value of the parameter
             (prioritized over 'default_value' in manual actions).
     """
@@ -47,7 +48,7 @@ class JobParameter:
             input_dict.get("name", "No name found!"),
         )
         self.type_ = self._parse_job_param_type(input_dict.get("type", -1))
-        self.value: Any = input_dict.get("value")
+        self.value: any = input_dict.get("value")
 
     def _parse_job_param_type(self, type_value: str | int) -> JobParamType:
         """Parses and returns the JobParamType from a string or integer value."""
@@ -102,11 +103,11 @@ class SyncMetadata:
 
 class JobStatusResult(NamedTuple):
     alerts_to_close_in_soar: list[tuple[AlertCard, SyncMetadata]]
-    incidents_to_close_in_product: list[dict[str, Any]]
+    incidents_to_close_in_product: list[dict[str, any]]
 
 
 class JobAssigneeResult(NamedTuple):
-    target_user: dict[str, Any] | None
+    target_user: dict[str, any] | None
     alert: AlertCard | None
 
 
@@ -173,7 +174,7 @@ class JobCase:
         self,
         incident_id: str,
         comment: str,
-        product_key="id",
+        product_key: str = "id",
     ) -> None:
         """Adds a product comment to the corresponding incident in the case."""
         product_comments = [comment]
@@ -269,14 +270,18 @@ class JobCase:
 
         return results
 
-    def _is_valid_secops_comment(self, comment: SingleJson, product_comment_prefix: str) -> bool:
+    def _is_valid_secops_comment(
+        self,
+        comment: SingleJson,
+        product_comment_prefix: str
+    ) -> bool:
         """
         Checks if a Google SecOps comment should be synced to product.
         """
         content: str = comment.get("comment", "") or ""
         return bool(content.strip()) and not content.startswith(product_comment_prefix)
 
-    def _is_valid_product_comment(self, comment, case_comment_prefix: str) -> bool:
+    def _is_valid_product_comment(self, comment: str, case_comment_prefix: str) -> bool:
         """ "
         Checks if a product comment is valid or not.
         """
@@ -286,7 +291,9 @@ class JobCase:
     def get_case_comments_hashes(self) -> list[str]:
         """Get hashes of all case comments."""
         return [
-            self._generate_string_hash(comment["comment"] or "") for comment in self.case_comments
+            self._generate_string_hash(
+                comment["comment"] or ""
+            ) for comment in self.case_comments
         ]
 
     def get_product_comments_hashes(self) -> list[str]:
@@ -296,7 +303,9 @@ class JobCase:
             if not hasattr(alert, "incident") or alert.incident is None:
                 continue
             for comment in alert.incident.comments:
-                comments_hashes.append(self._generate_string_hash(comment.message or ""))
+                comments_hashes.append(
+                    self._generate_string_hash(comment.message or "")
+                )
         return comments_hashes
 
     def _generate_string_hash(self, text: str) -> str:
@@ -304,7 +313,10 @@ class JobCase:
         return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
 
     def get_product_tags_to_sync_to_products(
-        self, product_properties_key=None, tags_key="tags", tags_name="name"
+        self,
+        product_properties_key: str | None = None,
+        tags_key="tags",
+        tags_name="name"
     ) -> tuple[list[SingleJson], list[str]]:
         """Get product map dict with the comments to be synced to all product ids."""
         all_tags = self.__get_all_product_tags(
@@ -326,7 +338,10 @@ class JobCase:
         return incident_to_update_tags, all_tags
 
     def __get_all_product_tags(
-        self, product_properties_key=None, tags_key="tags", tags_name="name"
+        self,
+        product_properties_key: str | None = None,
+        tags_key="tags",
+        tags_name="name"
     ) -> list[str]:
         """Get all product tags from the case alerts."""
         all_tags = set()
@@ -350,11 +365,16 @@ class JobCase:
     def __get_all_case_tags(self) -> list[str]:
         """Get all case tags."""
         return [
-            tag["displayName"] if "displayName" in tag else tag for tag in self.case_detail.tags
+            tag[
+                "displayName"
+            ] if "displayName" in tag else tag for tag in self.case_detail.tags
         ]
 
     def product_tags(
-        self, product_properties_key=None, tags_key="tags", tags_name="name"
+        self,
+        product_properties_key: str | None = None,
+        tags_key="tags",
+        tags_name="name"
     ) -> list[str]:
         """Get all product tags from the case alerts."""
         return self.__get_all_product_tags(
@@ -472,13 +492,16 @@ class JobCase:
         source_prefix: str,
     ) -> list[str]:
         """
-        Identifies tags to be removed from the destination system based on source prefix.
+        Identifies tags to be removed from the destination system based on 
+        source prefix.
         """
         source_tags_prefixed = {f"{source_prefix}{tag.strip()}" for tag in source_tags}
         return [
             dest_tag
             for dest_tag in destination_tags
-            if dest_tag.startswith(source_prefix) and dest_tag not in source_tags_prefixed
+            if dest_tag.startswith(
+                source_prefix
+            ) and dest_tag not in source_tags_prefixed
         ]
 
     def _is_tag_valid(
@@ -515,7 +538,9 @@ class JobCase:
             )
         else:
             target_user = next(
-                (user for user in secops_users if user.get("userFullName") == meta.assignee),
+                (user for user in secops_users if user.get(
+                    "userFullName") == meta.assignee
+                ),
                 None,
             )
         return JobAssigneeResult(target_user, first_open_alert)
@@ -555,11 +580,20 @@ class JobCase:
     def _is_case_closed(self) -> bool:
         return self.case_detail.status == CaseDataStatus.CLOSED
 
-    def _should_close_alert_in_secops(self, alert, meta, closed_status: str) -> bool:
+    def _should_close_alert_in_secops(
+        self,
+        alert: AlertCard,
+        meta: SyncMetadata,
+        closed_status: str
+    ) -> bool:
         return meta.status == closed_status and alert.status.lower() != "close"
 
     def _should_close_alert_in_product(
-        self, alert, meta, is_case_closed: bool, closed_status: str
+        self,
+        alert: AlertCard,
+        meta: SyncMetadata,
+        is_case_closed: bool,
+        closed_status: str
     ) -> bool:
         if meta.status == closed_status:
             return False
@@ -568,7 +602,10 @@ class JobCase:
         )
 
     def _build_product_closure_payload(
-        self, alert, meta, is_case_closed: bool
+        self,
+        alert: AlertCard,
+        meta: SyncMetadata,
+        is_case_closed: bool
     ) -> SingleJson:
         payload = {
             "alert": alert,

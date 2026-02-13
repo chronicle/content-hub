@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from abc import abstractmethod
 import itertools
 import json
@@ -70,7 +71,8 @@ class BaseSyncJob(Job, Generic[ApiClient]):
     def get_last_run_time(self) -> int:
         """
         Retrieves the last successful run time of the job.
-        If it's the first run, it calculates a start time based on 'Max Hours Backwards'.
+        If it's the first run, it calculates a start time based on 
+        'Max Hours Backwards'.
         """
         return self._get_job_last_success_time(
             offset_with_metric={"hours": self.params.max_hours_backwards},
@@ -131,8 +133,10 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             synced_incident_ids: Iterator[str] = itertools.chain.from_iterable(
                 self.processed_items.values()
             )
-            modified_synced_case_ids_by_product = self.modified_synced_case_ids_by_product(
-                synced_incident_ids, sorted_modified_ids
+            modified_synced_case_ids_by_product = (
+                self.modified_synced_case_ids_by_product(
+                    synced_incident_ids, sorted_modified_ids
+                )
             )
             sorted_modified_ids = merge_and_sort(
                 sorted_modified_ids, modified_synced_case_ids_by_product
@@ -171,7 +175,10 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                         break
                 case_details.alerts = list(reversed(case_details.alerts))
                 total_alerts_accumulated += alert_count
-                job_case = JobCase(case_detail=case_details, modification_time=modification_time)
+                job_case = JobCase(
+                    case_detail=case_details,
+                    modification_time=modification_time
+                )
                 incident_ids = self._extract_product_ids_from_case(job_case)
                 if incident_ids:
                     self.processed_items[case_id] = incident_ids
@@ -269,7 +276,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         raise NotImplementedError
     
     @abstractmethod
-    def remove_synced_data_from_db(self, job_case, product_details)-> None:
+    def remove_synced_data_from_db(self, job_case: JobCase, product_details) -> None:
         """Removes synced data from db"""
         raise NotImplementedError
 
@@ -314,8 +321,8 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         job_case: JobCase,
         product_comment_prefix: str,
         case_comment_prefix: str,
-        product_comment_key="message",
-        product_incident_key="name",
+        product_comment_key: str = "message",
+        product_incident_key: str = "name",
     ) -> None:
         """Fetches comments from both the case and the product item."""
         comments_to_sync = job_case.get_comments_to_sync(
@@ -342,7 +349,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         product_tag_prefix: str,
         case_tag_prefix: str,
         product_properties_key: str = None,
-        product_tags_key="tags",
+        product_tags_key: str = "tags",
     ) -> JobTagsResult:
         """Fetches tags from both the case and the product item."""
         return job_case.get_tags_to_sync(
