@@ -1,0 +1,239 @@
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches compatible entities (Public IPv4/IPv6, URL, Domain, and File Hashes)
+    by scanning them through the Houdin.io platform. This action leverages various
+    third-party scanners and Houdin's proprietary AI analysis to provide threat scores
+    and summaries directly within Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **scanOn** | Multi-choice | No | An array of specific scanners to use (e.g.,
+    vt, urlscan, mesmer, abuseipdb, etc.). If left empty, Houdin uses its default
+    scanner set. |
+
+
+    ### Additional Notes
+
+    - The action is asynchronous and may require adjusting the script timeout in the
+    Google SecOps IDE to account for scanning and polling time.
+
+    - IP addresses are only processed if they are public (global); internal IP addresses
+    are ignored.
+
+    - Supported File Hash types include MD5, SHA1, and SHA256.
+
+
+    ### Flow Description
+
+    1. **Filter Entities:** Identifies compatible entities from the target list, specifically
+    URLs, Domains, Filehashes, DestinationURLs, and Public IP addresses.
+
+    2. **Launch Scans:** Initiates a scan request for each compatible entity on Houdin.io
+    using the specified (or default) scanners.
+
+    3. **Poll Results:** Polls the Houdin.io API to retrieve the completed scan results
+    for each initiated scan ID.
+
+    4. **Enrich Entities:** Extracts threat scores (Mesmer global score), AI-generated
+    analysis summaries, and the list of sources used for the analysis.
+
+    5. **Update SOAR:** Updates the entities' additional properties in Google SecOps
+    with the retrieved data and attaches the full JSON result to the action.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with Houdin-io threat scores, AI analysis
+      summaries, and analysis sources.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DOMAIN
+    - FILEHASH
+    - DestinationURL
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a utility designed to verify the connectivity between the
+    Google SecOps (Chronicle) environment and the Houdin.io API. It ensures that the
+    provided credentials (API Key) are valid and that the network path to the service
+    is open. This action is typically used during the initial setup of the integration
+    or for troubleshooting communication issues.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **API Key** | String | Yes | The unique API key required to authenticate requests
+    with the Houdin.io platform. |
+
+    | **Verify SSL** | Boolean | No | Determines whether the action should verify
+    the SSL certificate of the Houdin.io API endpoint. Defaults to `False`. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities and is independent of the alert context.
+
+    - It uses a `POST` request to the `/ping` endpoint of the Houdin.io API to validate
+    the connection.
+
+    - The action includes a retry mechanism that attempts the connection up to two
+    times in case of a 500 Internal Server Error from the API.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the `API Key` and `Verify SSL` settings
+    from the integration configuration.
+
+    2. **Manager Setup**: An instance of the `HoudinManager` is created using the
+    provided configuration.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    sends an authenticated `POST` request to the Houdin.io ping endpoint.
+
+    4. **Validation**: The logic checks the HTTP response status. A `200 OK` status
+    indicates a successful connection.
+
+    5. **Completion**: If successful, the action returns a result value of `true`
+    and an output message "Connection Established". If the connection fails or an
+    exception occurs, it returns `false` with the error details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Scan Artifact:
+  ai_description: >-
+    ### General Description
+
+    The **Scan Artifact** action allows users to submit a specific artifact (such
+    as an IP address, URL, Domain, or File Hash) to the Houdin.io platform for analysis.
+    It initiates a scan using selected scanners and waits for the results to be generated
+    before returning them to Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | artifact | String | Yes | The specific artifact to be scanned. Supported formats
+    include IPv4, IPv6, URL, Domain, MD5, SHA1, and SHA256. |
+
+    | scanOn | Multi-choice | No | A list of specific scanners to be utilized by Houdin.io
+    (e.g., VirusTotal, URLScan, AlienVault). If left empty, default scanners are used.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the API key from the integration configuration
+    and the artifact/scanner details from the action parameters.
+
+    2. **Scan Launch**: A POST request is sent to the Houdin.io API to initiate a
+    scan for the provided artifact.
+
+    3. **Polling**: The script enters a polling loop, sending GET requests to check
+    the status of the scan ID. It waits for the scan to reach a completed state.
+
+    4. **Data Retrieval**: Once the scan is finished, the full result payload is retrieved.
+
+    5. **Output**: The results are attached to the action output as JSON for use in
+    subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action is marked as asynchronous in metadata but performs synchronous polling
+    within the script logic. Ensure the script timeout in the Google SecOps IDE is
+    sufficient to account for scan durations.
+
+    - This action does not automatically process entities from the case; the artifact
+    must be provided as a direct input parameter.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new scan job on the Houdin.io platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,318 @@
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is designed to test and validate the connectivity between Google
+    SecOps and a user's Logz.io accounts. It verifies the validity of both Security
+    and Operations tokens by making authenticated requests to the Logz.io 'whoami'
+    API endpoint. This ensures that the integration is correctly configured and capable
+    of communicating with the external service.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | logzio_security_token | String | Yes | The API token associated with the Logz.io
+    Security account. |
+
+    | logzio_operations_token | String | Yes | The API token associated with the Logz.io
+    Operations account. |
+
+    | logzio_region | String | No | The geographical region where the Logz.io account
+    is hosted (e.g., 'us', 'eu'). If left empty or set to '-', it defaults to the
+    US region. |
+
+    | logzio_custom_endpoint | String | No | An optional custom URL to override the
+    standard Logz.io API base URL. |
+
+
+    ### Additional Notes
+
+    - This action does not process or require any entities to run.
+
+    - It performs a connectivity check for two distinct tokens (Security and Operations)
+    and will fail if either token is invalid or if the API is unreachable.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** The action retrieves the Security token, Operations
+    token, region, and optional custom endpoint from the integration settings.
+
+    2. **Token Validation:** It performs a basic check to ensure the tokens are non-empty
+    strings.
+
+    3. **Endpoint Construction:** The script determines the correct API URL based
+    on the provided region or custom endpoint, appending the `v1/account-management/whoami`
+    suffix.
+
+    4. **Connectivity Test:** It sends a GET request to the Logz.io API for each token.
+
+    5. **Response Verification:** The action checks for a HTTP 200 status code. If
+    successful, it logs the account name returned by Logz.io. If any request fails
+    or returns a non-200 status, the action reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+json-adapter:
+  ai_description: >-
+    ### General Description
+
+    The `json-adapter` action is a utility designed to transform raw JSON log data,
+    specifically from Logz.io, into a standardized format compatible with Google SecOps
+    (Chronicle) playbooks. It extracts specific fields from a provided JSON structure
+    and maps them to a consistent schema containing `entityType` and `entityIdentifier`.
+    This is primarily used to prepare data for subsequent playbook steps that require
+    a specific JSON structure to iterate over or process.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | `fields_to_search` | String | Yes | A comma-separated list of keys (fields)
+    to look for within each log entry in the provided JSON. |
+
+    | `raw_json` | String | Yes | The raw JSON data to be processed. The action expects
+    a specific structure: a root object containing a `results` key, which holds an
+    array of log objects (e.g., `{"results": [{"field1": "value1"}]}`). |
+
+
+    ### Additional Notes
+
+    - This action does not interact with external APIs; it processes the data provided
+    directly in the `raw_json` parameter.
+
+    - The action will only return a success status (`EXECUTION_STATE_COMPLETED`) if
+    at least one of the requested fields is found within the provided JSON data.
+
+    - It does not operate on SecOps entities but rather on raw string/JSON input.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the `fields_to_search` and `raw_json`
+    from the input parameters.
+
+    2. **Data Parsing:** It parses the `raw_json` string into a JSON object and splits
+    the `fields_to_search` into a list of individual field names.
+
+    3. **Transformation Logic:** It iterates through the list of logs found under
+    the `results` key in the input JSON. For each log, it checks if any of the specified
+    search fields exist.
+
+    4. **Mapping:** If a field is found, it creates a new object mapping the field
+    name to `entityType` and the field value to `entityIdentifier`.
+
+    5. **Result Generation:** The transformed objects are collected into a results
+    list. If the list is not empty, the final JSON is added to the action's result
+    output, and the action completes successfully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+logzio-get-logs-by-event-id:
+  ai_description: >-
+    ### General Description
+
+    The **Logzio - Get Logs By Event Id** action retrieves the specific logs that
+    triggered a security event within a Logz.io security account. This action is essential
+    for incident investigation, allowing analysts to see the raw log data associated
+    with an alert directly within Google SecOps. The logs are returned as a comprehensive
+    JSON list and are also added as insights to the case for immediate visibility.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | `alert_event_id` | String | Yes | The unique GUID of the security event in Logz.io
+    that you wish to investigate. |
+
+    | `page_size` | String | No | Controls the number of results per page (1 to 1000).
+    Defaults to 25. If an invalid value is provided, it reverts to the default. |
+
+
+    ### Additional Notes
+
+    - The action automatically handles pagination to ensure all logs associated with
+    the event ID are retrieved, using concurrent requests for efficiency.
+
+    - The action requires a valid Logz.io Security Token and Region (or Custom Endpoint)
+    to be configured in the integration settings.
+
+
+    ### Flow Description
+
+    1.  **Configuration Extraction:** Retrieves the Logz.io API token, region, and
+    optional custom endpoint from the integration settings.
+
+    2.  **Endpoint Determination:** Constructs the appropriate Logz.io API URL based
+    on the provided region or custom endpoint.
+
+    3.  **Initial Fetch:** Executes a POST request to the Logz.io search API using
+    the `alert_event_id` to retrieve the first page of logs and determine the total
+    number of available logs.
+
+    4.  **Concurrent Pagination:** If multiple pages of logs exist, the action uses
+    a thread pool to fetch all remaining pages simultaneously.
+
+    5.  **Data Aggregation:** Combines all retrieved logs into a single list.
+
+    6.  **Result Injection:** Adds the aggregated logs as a JSON result to the action
+    output.
+
+    7.  **Insight Creation:** Iterates through the logs and creates Case Insights
+    in Google SecOps to provide a summary of the triggering events.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates case insights within Google SecOps based on the logs retrieved
+      from Logz.io.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+logzio-search-logs:
+  ai_description: >-
+    Searches logs in a Logz.io operations account using Lucene syntax. This action
+    allows users to query log data within a specific time range and retrieve a defined
+    number of results for analysis within the SOAR platform.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | query | string | No | A search query written in valid Lucene syntax. Defaults
+    to '*' (match all) if not provided. |
+
+    | size | string | No | Number of log results to retrieve per query. Limited to
+    a maximum of 1000 logs. |
+
+    | from_time | string | Yes | The earliest time to search. Supports Unix timestamps,
+    relative time (e.g., '5 minutes ago'), or specific date formats. |
+
+    | to_time | string | No | The latest time to search. If left empty, the search
+    will include logs up to the current time (unless 'from_time' is relative). |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action fetches the Logz.io API token, region,
+    and optional custom endpoint from the integration settings.
+
+    2. **Parameter Validation:** It validates the requested result size (clamping
+    it between 1 and 1000) and parses the 'from' and 'to' time strings into Unix timestamps.
+
+    3. **Request Construction:** A JSON request body is built containing the Lucene
+    query and the timestamp range filter.
+
+    4. **API Execution:** The action performs a POST request to the Logz.io Search
+    API endpoint.
+
+    5. **Data Processing:** If successful, the action extracts the source log data
+    from the API response and attaches it as a JSON result to the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,587 @@
+Community IP Lookup:
+  ai_description: "### General Description\nThe **Community IP Lookup** action queries\
+    \ IP addresses against the GreyNoise Community (Free) API to determine if an IP\
+    \ is associated with known internet 'noise' (opportunistic scanners) or belongs\
+    \ to the GreyNoise RIOT (Rule It Out) dataset, which identifies known-good business\
+    \ services. This action helps analysts quickly distinguish between background\
+    \ noise and targeted threats.\n\n### Parameters Description\n| Parameter Name\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **GN API\
+    \ Key** | String | Yes | The API key used to authenticate with the GreyNoise Community\
+    \ API. This is configured at the integration level. |\n\n### Flow Description\n\
+    1.  **Initialization**: The action extracts the GreyNoise API key from the integration\
+    \ configuration and initializes the GreyNoise client using the 'community' offering.\n\
+    2.  **Entity Filtering**: It identifies all `ADDRESS` (IP) entities within the\
+    \ current context.\n3.  **API Query**: For each valid IP address, the action performs\
+    \ a lookup against the GreyNoise Community API.\n4.  **Data Processing**: \n \
+    \   *   If the IP is identified as **Noise**, the action retrieves classification\
+    \ (e.g., malicious, benign, unknown), name, and last-seen data.\n    *   If the\
+    \ IP is identified as **RIOT**, it retrieves the service name and last-updated\
+    \ timestamp.\n5.  **Internal Updates**: \n    *   Adds a detailed **Entity Insight**\
+    \ to the SOAR platform, formatted as an HTML table, providing the classification\
+    \ and a link to the GreyNoise Visualizer.\n    *   Appends the raw API response\
+    \ to the action's JSON results.\n6.  **Error Handling**: The action gracefully\
+    \ handles invalid routable IPs, authentication failures, and daily rate limits\
+    \ imposed by the free API tier."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds entity insights and JSON results to the case data within Google
+      SecOps.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Context IP Lookup:
+  ai_description: "### General Description\nThe **Context IP Lookup** action enriches\
+    \ IP Address entities by querying the GreyNoise Noise Dataset. Its primary purpose\
+    \ is to determine if an IP address is part of \"internet noise\"\u2014opportunistic\
+    \ scanning activity that is not necessarily targeting a specific organization.\
+    \ This helps analysts distinguish between background noise and targeted attacks\
+    \ by providing classification and metadata for observed IPs.\n\n### Parameters\
+    \ Description\n| Parameter Name | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| **GN API Key** | String | Yes | The API key used to authenticate\
+    \ with the GreyNoise service. This is a configuration-level parameter extracted\
+    \ from the integration settings. |\n\n### Additional Notes\n- This action consumes\
+    \ one GreyNoise search credit per valid IP submitted.\n- Invalid or non-routable\
+    \ IPs are automatically skipped and reported in the final output message.\n\n\
+    ### Flow Description\n1. **Authentication**: Retrieves the GreyNoise API key from\
+    \ the integration configuration and initializes the GreyNoise SDK client.\n2.\
+    \ **Entity Filtering**: Iterates through the target entities and filters for those\
+    \ of type `ADDRESS`.\n3. **Data Retrieval**: For each identified IP, the action\
+    \ queries the GreyNoise API to check if the IP has been \"seen\" in their noise\
+    \ dataset within the last 90 days.\n4. **Insight Generation**: If the IP is found\
+    \ in the dataset, the action generates a detailed HTML insight for the entity.\
+    \ This insight includes the IP's classification (Malicious, Benign, or Unknown),\
+    \ last seen timestamp, organization, and country.\n5. **Result Reporting**: Adds\
+    \ the raw JSON data for each IP to the action results. If an IP is not found,\
+    \ it records a message stating the address has not been observed mass-scanning\
+    \ the internet.\n6. **Finalization**: Aggregates all results into a single JSON\
+    \ object and ends the action with a summary message of processed and skipped entities."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates entity insights to display GreyNoise classification, organization, and
+      country metadata within the Google SecOps case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute GNQL Query:
+  ai_description: >-
+    ### General Description
+
+    Executes a GreyNoise Query Language (GNQL) search against the GreyNoise intelligence
+    database. This action allows users to perform complex searches for IP addresses
+    based on various attributes such as classification, tags, last seen date, and
+    more. It is primarily used for threat hunting or broad intelligence gathering
+    within a workflow.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | query | String | Yes | The GreyNoise Query (GNQL) to execute. For example: `classification:malicious
+    last_seen:1d`. |
+
+    | limit | String | No | The maximum number of results to return. Defaults to 10.
+    |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Retrieves the GreyNoise API key from the integration configuration.
+
+    2. **Initialization**: Sets up the GreyNoise API client with the provided credentials
+    and a specific user agent.
+
+    3. **Execution**: Sends the GNQL query to the GreyNoise API with the specified
+    result limit.
+
+    4. **Error Handling**: Specifically catches authentication failures (401), rate
+    limiting (429), and general request failures, providing descriptive error messages.
+
+    5. **Output**: Returns the raw JSON response from GreyNoise containing the count
+    of matches and the list of IP data.
+
+
+    ### Additional Notes
+
+    * This action consumes 1 Search credit per IP returned by the query.
+
+    * The results are provided as a JSON object under the `query_result` key.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Full IP Lookup:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities by querying the GreyNoise Noise and RIOT (Common
+    Business Services) datasets. This action provides a comprehensive view of an IP's
+    behavior, distinguishing between opportunistic internet scanners (Noise) and known
+    harmless business services (RIOT).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any user-configurable input
+    parameters. |
+
+
+    ### Additional Notes
+
+    This action is efficient as it leverages the GreyNoise 'Quick' lookup to determine
+    which full datasets to query, potentially consuming up to three API credits per
+    IP depending on whether the IP is found in both the Noise and RIOT datasets.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** Extracts the GreyNoise API key from the integration
+    settings.
+
+    2. **Entity Filtering:** Identifies all IP Address entities within the current
+    SOAR context.
+
+    3. **Quick Lookup:** Executes a 'Quick' lookup for each IP to check for its presence
+    in the Noise or RIOT datasets.
+
+    4. **Contextual Enrichment:**
+        - If the IP is identified as 'Noise', the action fetches full IP context including
+    classification (malicious/benign), last seen date, and organization details.
+        - If the IP is identified in the 'RIOT' dataset, the action fetches service
+    details such as the provider name, category, and a trust explanation.
+        - If the IP is in both, it fetches and merges data from both sources.
+    5. **Insight Generation:** Generates detailed HTML-formatted entity insights for
+    Noise and/or RIOT data and attaches the raw results as JSON to the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+IP Similarity Lookup:
+  ai_description: >-
+    ### General Description
+
+    The **IP Similarity Lookup** action enriches IP Address entities by querying the
+    GreyNoise Similarity API to identify other scanning IPs with similar behavior.
+    This action is useful for identifying related infrastructure or broader scanning
+    campaigns. It retrieves a list of similar IPs, their similarity scores, and the
+    specific features (behaviors) they share. Note that this action requires an additional
+    GreyNoise license and consumes one search credit per valid IP submitted.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Default | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | **limit** | string | Yes | 50 | The maximum number of similar IP results to
+    return for each entity. |
+
+    | **minimum_score** | ddl | Yes | 90 | The minimum similarity score (0-100) required
+    for a result to be included. Higher scores indicate more similar behavior. |
+
+
+    ### Flow Description
+
+    1. **Entity Filtering:** The action identifies all `ADDRESS` (IP) entities within
+    the current context.
+
+    2. **Parameter Extraction:** It retrieves the `limit` and `minimum_score` parameters,
+    validating that they are integers.
+
+    3. **GreyNoise Query:** For each valid IP, the action calls the GreyNoise `similar`
+    endpoint using the provided API key and parameters.
+
+    4. **Data Processing:**
+        * If similar IPs are found, the raw data is attached as a JSON result.
+        * An HTML-formatted insight is created for the entity, displaying a table
+    of the top 10 similar IPs, their scores, and shared features.
+        * If no results are found, a message is recorded in the JSON output.
+    5. **Completion:** The action summarizes the processed IPs and reports any invalid
+    or non-routable IPs that were skipped.
+
+
+    ### Additional Notes
+
+    * This action only processes routable IP addresses. Private or invalid IPs will
+    be skipped.
+
+    * The insight table is limited to the first 10 matches for readability, though
+    the full list (up to the `limit`) is available in the JSON results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates entity insights to display similarity data and adds JSON
+      results to the action output.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+IP Timeline Lookup:
+  ai_description: >-
+    ### General Description
+
+    The **IP Timeline Lookup** action retrieves historical daily scanning events for
+    IP Address entities from GreyNoise. It provides visibility into when an IP was
+    observed scanning the internet, its classification (e.g., malicious, benign),
+    and associated tags over a specified period. This action is useful for understanding
+    the long-term behavior of an IP and identifying patterns of activity.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Default | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | **days** | Number | Yes | 30 | The number of days from the current date to retrieve
+    timeline information. |
+
+    | **limit** | Number | Yes | 50 | The maximum number of timeline events to return
+    in the results. |
+
+
+    ### Additional Notes
+
+    * This action requires a GreyNoise license that supports the Timeline API.
+
+    * Each valid IP submitted consumes one GreyNoise search credit.
+
+    * While the parameters are marked as mandatory in the configuration, the script
+    includes fallback logic to use default values (30 days, 50 limit) if extraction
+    fails.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the GreyNoise API key from the integration configuration
+    and initializes the GreyNoise SDK session.
+
+    2. **Entity Filtering**: Filters the target entities to process only those of
+    type `ADDRESS` (IP Addresses).
+
+    3. **Data Retrieval**: For each IP, it calls the GreyNoise `timelinedaily` endpoint
+    using the provided `days` and `limit` constraints.
+
+    4. **Insight Generation**: If scanning activity is found, the action generates
+    an HTML-formatted insight for the entity. This insight includes a table showing
+    the date, classification, and tags for the first 10 events, along with a direct
+    link to the GreyNoise Visualizer.
+
+    5. **Result Processing**: The full JSON response from GreyNoise is attached to
+    the action's results for each IP. If an IP has no events, a specific message is
+    included in the JSON.
+
+    6. **Finalization**: The action concludes by summarizing the processed IPs and
+    listing any invalid or skipped IPs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates entity insights containing a summary of scanning activity
+      and populates the action's result JSON with the retrieved GreyNoise data.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a utility designed to verify the connectivity between Google
+    SecOps and the GreyNoise API. It validates the provided API key, checks the subscription
+    type (Enterprise vs. Community), and ensures the key has not expired.
+
+
+    ### Parameters
+
+    There are no input parameters for this action. It relies on the integration's
+    global configuration (API Key).
+
+
+    ### Flow Description
+
+    1. **Authentication**: Retrieves the `GN API Key` from the integration configuration.
+
+    2. **Connection Test**: Initiates a request to the GreyNoise `test_connection`
+    endpoint.
+
+    3. **Validation**:
+        * Checks if the API key is valid.
+        * For Enterprise keys, it verifies the expiration date against the current
+    date.
+        * Identifies if the key belongs to a Community or Enterprise offering.
+    4. **Outcome**: Returns a success message if the connection is established and
+    the key is valid/active. Otherwise, it reports an authentication failure or expiration.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup or for troubleshooting
+    integration health.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Quick IP Lookup:
+  ai_description: "### General Description\nPerforms a quick lookup for IP addresses\
+    \ using the GreyNoise service. This action is designed to efficiently check if\
+    \ an IP address is known to GreyNoise as \"noise\" (e.g., internet-wide scanners\
+    \ or common crawlers). It is a lightweight alternative to a full context lookup,\
+    \ consuming only one search credit per valid IP.\n\n### Parameters\n| Parameter\
+    \ Name | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| None\
+    \ | N/A | N/A | This action does not take any input parameters. It uses the global\
+    \ \"GN API Key\" from the integration configuration. |\n\n### Flow Description\n\
+    1. **Configuration Retrieval**: The action retrieves the GreyNoise API key from\
+    \ the integration's shared configuration.\n2. **Entity Filtering**: It identifies\
+    \ all entities of type `ADDRESS` (IP addresses) in the current scope.\n3. **External\
+    \ Lookup**: For each identified IP, the action calls the GreyNoise `quick` API\
+    \ endpoint.\n4. **Data Processing**: \n    * If the IP is found, the GreyNoise\
+    \ data is captured.\n    * Invalid or non-routable IPs are tracked and reported\
+    \ as skipped.\n5. **Result Aggregation**: The action compiles all retrieved data\
+    \ into a structured JSON result and provides a summary message of processed and\
+    \ skipped IPs.\n\n### Additional Notes\n* This action consumes 1 GreyNoise search\
+    \ credit per valid IP.\n* It handles API rate limits and authentication failures\
+    \ gracefully, failing the action if the API key is invalid or the limit is reached."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+RIOT IP Lookup:
+  ai_description: "### General Description\nThe **RIOT IP Lookup** action queries\
+    \ the GreyNoise RIOT (Rule It Out) dataset to determine if an IP address belongs\
+    \ to a known, benign business service, such as a CDN, Cloud Provider, or Public\
+    \ DNS. This action helps security analysts identify and filter out 'noise' from\
+    \ trusted sources, allowing them to focus on potentially malicious traffic.\n\n\
+    ### Parameters Description\nThere are no action-specific parameters for this action.\
+    \ It utilizes the global **GN API Key** configured at the integration level to\
+    \ authenticate with the GreyNoise API.\n\n### Flow Description\n1. **Entity Filtering**:\
+    \ The action identifies all `ADDRESS` entities within the current case context.\n\
+    2. **API Query**: For each identified IP address, the action sends a request to\
+    \ the GreyNoise RIOT API.\n3. **Data Processing**: \n    * If the IP is found\
+    \ in the RIOT dataset, the action retrieves metadata including the service name,\
+    \ category, and a trust explanation.\n    * If the IP is not found, it records\
+    \ that the address is not associated with a known common business service.\n4.\
+    \ **Insight Generation**: For IPs confirmed as benign, the action generates a\
+    \ detailed HTML insight containing the service name, category, last update timestamp,\
+    \ and an explanation, along with a link to the GreyNoise Visualizer.\n5. **Result\
+    \ Aggregation**: The action attaches the raw JSON response for each entity to\
+    \ the action results and provides a summary message of processed IPs.\n\n### Additional\
+    \ Notes\n* This action consumes 1 GreyNoise Search credit per valid IP submitted.\n\
+    * Non-routable or invalid IP addresses are skipped and listed in the final execution\
+    \ message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

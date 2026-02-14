@@ -1,0 +1,172 @@
+Check IP Reputation:
+  ai_description: >-
+    ### General Description
+
+    This action enriches IP Address entities by retrieving reputation data from AbuseIPDB.
+    It provides detailed threat intelligence, including abuse confidence scores, country
+    information, ISP details, and reporting history. The action helps security analysts
+    quickly identify malicious IP addresses and automate the initial triage process
+    by marking suspicious entities and generating formatted insights.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Exclude Internal Addresses | Boolean | No | If set to `true` (default), the
+    action will skip any IP entities marked as internal in Google SecOps to conserve
+    API quota. |
+
+    | Suspicious Threshold | String | Yes | An abuse confidence score (0-100). If
+    the IP's score is equal to or higher than this value, the entity is marked as
+    suspicious. Set to 0 to disable this logic. |
+
+    | Create Insight | Boolean | No | If `true` (default), a formatted insight containing
+    the IP's reputation summary will be added to the case for each processed entity.
+    |
+
+    | Max Age in Days | String | Yes | Specifies the time range (in days) for which
+    AbuseIPDB should check for reports. Default is 90 days. |
+
+
+    ### Additional Notes
+
+    - The action specifically targets `ADDRESS` entities.
+
+    - It uses the `AbuseIPDB_` prefix for all custom entity properties added during
+    enrichment.
+
+    - If an IP is not found in the AbuseIPDB database, it will be skipped, and a message
+    will be added to the action output.
+
+
+    ### Flow Description
+
+    1. **Filter Entities:** The action identifies all `ADDRESS` entities in the current
+    scope. If `Exclude Internal Addresses` is enabled, it filters out entities where
+    `is_internal` is true.
+
+    2. **API Lookup:** For each valid entity, it queries the AbuseIPDB API using the
+    provided API key and the `Max Age in Days` parameter.
+
+    3. **Data Mapping:** The retrieved data (confidence score, country, ISP, etc.)
+    is mapped to the entity's `additional_properties` with the prefix `AbuseIPDB_`.
+
+    4. **Suspicious Evaluation:** If the IP's `abuseConfidenceScore` meets or exceeds
+    the `Suspicious Threshold`, the entity's `is_suspicious` flag is set to `true`.
+
+    5. **Insight Creation:** If `Create Insight` is enabled, a detailed HTML-formatted
+    summary is added as an entity insight.
+
+    6. **Update SecOps:** Finally, the action updates the entities in Google SecOps
+    with the new enrichment data and flags.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes including 'is_suspicious', 'is_enriched', and 'additional_properties'.
+      It also creates case insights based on the retrieved reputation data.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    between Google SecOps and the AbuseIPDB API. It ensures that the integration is
+    correctly configured, the API key is valid, and the network path to the service
+    is open.
+
+
+    ### Parameters Description
+
+    This action does not have any input parameters. It relies on the following integration
+    configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Key | String | Yes | The API key used for authentication with the AbuseIPDB
+    service. |
+
+    | Verify SSL | Boolean | No | Specifies whether to verify the SSL certificate
+    of the API endpoint. Defaults to `False`. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the `Api Key` and `Verify
+    SSL` settings from the integration's global configuration.
+
+    2. **Manager Initialization**: It initializes the `AbuseIPDBManager` with the
+    provided credentials.
+
+    3. **Connectivity Test**: The action executes a test by querying the AbuseIPDB
+    'check' endpoint for a hardcoded dummy IP address (`1.1.1.1`).
+
+    4. **Response Validation**: The system checks the API response:
+        * A successful response (HTTP 200) confirms connectivity.
+        * An HTTP 403 error indicates an invalid API key.
+        * An HTTP 204 error indicates that the API rate limit has been reached.
+    5. **Final Output**: The action returns a success message ('Connection Established')
+    and a result value of `true` if successful, or an error message and `false` if
+    the test fails.
+
+
+    ### Additional Notes
+
+    This action is a system-level check and does not process, filter, or enrich any
+    entities associated with a case or alert.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

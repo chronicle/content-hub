@@ -1,0 +1,442 @@
+Create Meeting:
+  ai_description: >-
+    ### General Description
+
+    Creates a scheduled or instant meeting in the Zoom platform for a specified host.
+    This action allows security teams to quickly spin up communication channels during
+    incident response directly from the SOAR platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Meeting Type | DDL | Yes | Specifies if the meeting is 'Instant' (starts immediately)
+    or 'Scheduled'. |
+
+    | Meeting Start Time | String | Yes | The start time for scheduled meetings in
+    GMT format (yyyy-mm-dd hh:mm:ss). |
+
+    | Meeting Topic | String | Yes | The title or subject of the meeting. |
+
+    | Auto Recording Type | DDL | Yes | Configures automatic recording to 'local',
+    'cloud', or 'none'. |
+
+    | Time Zone | String | Yes | The timezone for the meeting (e.g., 'America/New_York').
+    |
+
+    | Meeting Duration | String | Yes | The length of the meeting in minutes. |
+
+    | Host Email Address | String | Yes | The email address of the Zoom user who will
+    host the meeting. |
+
+
+    ### Additional Notes
+
+    - The action requires valid Zoom credentials (either JWT or OAuth) configured
+    in the integration settings.
+
+    - If 'Instant' is selected for the Meeting Type, the start time configuration
+    is typically ignored by the API logic.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves meeting details (topic, type,
+    time, duration, etc.) and the host's email from the input parameters.
+
+    2. **Manager Initialization:** Initializes the Zoom API manager using the provided
+    integration credentials.
+
+    3. **Validation:** Checks if the meeting type and recording type are supported
+    by the integration constants.
+
+    4. **API Interaction:** Sends a POST request to the Zoom `/users/{host_email}/meetings`
+    endpoint with the meeting configuration payload.
+
+    5. **Result Processing:** If successful, it extracts the `join_url` and adds it
+    as a clickable link in the SOAR case. It also returns the full JSON response from
+    Zoom for further use in the playbook.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new meeting resource in the Zoom platform via a POST request to the
+      Zoom API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create User:
+  ai_description: >-
+    ### General Description
+
+    Creates a new user account in the Zoom platform. This action allows administrators
+    to provision users by providing their name, email, and license type directly through
+    the SOAR interface. It includes a pre-check to ensure the user does not already
+    exist before attempting creation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | First Name | String | Yes | The first name of the user to be created. |
+
+    | Last Name | String | Yes | The last name of the user to be created. |
+
+    | Email | String | Yes | The email address of the user to be created. This serves
+    as the unique identifier in Zoom. |
+
+    | User Type | DDL | Yes | The license type assigned to the user. Supported values
+    are 'Basic', 'Licensed', and 'On-prem'. |
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it uses the provided input parameters
+    to perform the operation.
+
+    - If a user with the specified email already exists in the Zoom account, the action
+    will fail with a 'User Already Exists' error.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the First Name, Last Name, Email,
+    and User Type from the input parameters.
+
+    2. **Authentication**: Initializes the Zoom Manager using the integration's configuration
+    (supporting either OAuth or JWT credentials).
+
+    3. **Existence Check**: Performs a GET request to Zoom's `/users/{email}` endpoint
+    to verify if the user already exists.
+
+    4. **User Creation**: If the user is not found, the action sends a POST request
+    to the `/users` endpoint with a payload containing the user's details and the
+    mapped license type code.
+
+    5. **Result Processing**: Upon successful creation, the action captures the API
+    response (user details) and adds it as a JSON result to the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new user account in the Zoom platform via a POST request to the /users
+      endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete User:
+  ai_description: "### General Description\nDeletes a user permanently from the Zoom\
+    \ platform. This action provides the capability to transfer the user's existing\
+    \ data\u2014including future scheduled meetings, past cloud recordings, and future\
+    \ webinars\u2014to another specified Zoom user account before the deletion is\
+    \ finalized.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| Deleted User Email | String | Yes | The\
+    \ email address of the Zoom user account to be permanently deleted. |\n| Transfer\
+    \ Meeting | Boolean | No | If enabled (true), transfers all future meetings scheduled\
+    \ by the user to the recipient specified in 'Transfer Email'. |\n| Transfer Recordings\
+    \ | Boolean | No | If enabled (true), transfers all past cloud recordings associated\
+    \ with the user to the recipient specified in 'Transfer Email'. |\n| Transfer\
+    \ Webinar | Boolean | No | If enabled (true), transfers all future webinars scheduled\
+    \ by the user to the recipient specified in 'Transfer Email'. |\n| Transfer Email\
+    \ | String | No | The email address of the Zoom user who will receive the transferred\
+    \ data. This is required if any of the transfer flags are set to true. |\n\n###\
+    \ Additional Notes\n- The action performs a pre-check to verify if the user actually\
+    \ has meetings, webinars, or recordings before attempting a transfer. If no data\
+    \ is found for a category, the transfer flag for that specific category is ignored.\n\
+    - This action performs a permanent deletion (disassociation) of the user account.\n\
+    \n### Flow Description\n1. **Initialization**: Authenticates with the Zoom API\
+    \ using provided credentials (OAuth or JWT).\n2. **Pre-Deletion Check**: Queries\
+    \ the Zoom API to list the user's meetings, webinars, and recordings to determine\
+    \ if there is data available for transfer.\n3. **Parameter Adjustment**: Automatically\
+    \ sets transfer flags to false if the user has no data in those categories, even\
+    \ if the user requested a transfer.\n4. **Execution**: Sends a DELETE request\
+    \ to the Zoom API endpoint for the specified user, passing the transfer parameters\
+    \ and the recipient email.\n5. **Outcome Reporting**: Returns a success status\
+    \ if the account is deleted or a failure status if the user is not found or an\
+    \ API error occurs."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Permanently deletes a user account from the Zoom platform and modifies the ownership
+      of meetings, recordings, and webinars by transferring them to another user.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches USER entities with detailed profile information retrieved from Zoom.
+    This action identifies users by their email address (entity identifier) and fetches
+    comprehensive data such as user status, department, job title, and account settings
+    from the Zoom API. The retrieved data is then flattened, prefixed with 'Zoom',
+    and attached to the entity's additional properties within Google SecOps.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies on the global
+    integration configuration for authentication (JWT or OAuth).
+
+
+    ### Additional Notes
+
+    - This action specifically targets entities of type **USER**.
+
+    - It uses the entity's identifier as the email address to query the Zoom `/users/{user_email}`
+    endpoint.
+
+    - If an entity is successfully enriched, its `is_enriched` attribute is set to
+    `True`.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Zoom Manager using the integration's
+    configuration parameters (JWT Token or OAuth credentials).
+
+    2. **Entity Filtering**: It iterates through the target entities provided in the
+    context and filters for those of type `USER`.
+
+    3. **Data Retrieval**: For each valid USER entity, it calls the Zoom API to fetch
+    user details using the entity's identifier.
+
+    4. **Data Processing**: The retrieved JSON response is flattened into a single-level
+    dictionary, and all keys are prefixed with 'Zoom' to avoid naming collisions.
+
+    5. **Internal Update**: The processed data is added to the entity's `additional_properties`,
+    and the entity is marked as enriched.
+
+    6. **Finalization**: The action updates the entities in Google SecOps and returns
+    a JSON result containing the raw data for all successfully enriched users.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' of USER entities with Zoom profile data
+      and sets the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Meeting Recording:
+  ai_description: >-
+    ### General Description
+
+    Fetches a specific Zoom meeting recording stored in the cloud using its Meeting
+    ID. This action retrieves comprehensive metadata about the recording, including
+    the sharing URL, file sizes, and recording types.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Meeting ID | String | Yes | The unique identifier of the Zoom meeting for which
+    the recording is being retrieved. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the `Meeting ID` from the action input.
+
+    2. **Authentication:** Establishes a connection to the Zoom API using configured
+    OAuth or JWT credentials.
+
+    3. **Data Retrieval:** Executes a GET request to the Zoom `/meetings/{meeting_id}/recordings`
+    endpoint via the `ZoomManager`.
+
+    4. **Output Generation:**
+        * Extracts the `share_url` to provide as the primary result value.
+        * Adds a direct link to the recording in the SOAR case wall/action results.
+        * Attaches the full JSON metadata of the recording to the action results.
+
+    ### Additional Notes
+
+    This action does not process SOAR entities; it relies solely on the provided Meeting
+    ID parameter. Either a JWT token or OAuth credentials (Account ID, Client ID,
+    Client Secret) must be configured in the integration settings for the action to
+    run.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    This action is designed to test the connectivity between Google SecOps and the
+    Zoom platform. It validates that the provided credentials (either OAuth or JWT)
+    are correct and that the environment can successfully communicate with the Zoom
+    API.
+
+
+    ### Parameters Description
+
+    There are no specific action parameters for this action. It relies entirely on
+    the global integration configuration (JWT Token or OAuth credentials including
+    Account ID, Client ID, and Client Secret).
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the Zoom integration
+    or for troubleshooting connection issues.
+
+    - It requires at least one valid authentication method to be configured in the
+    integration settings.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Zoom Manager using the credentials
+    provided in the integration configuration.
+
+    2. **Authentication**: Depending on the configuration, it either uses a JWT token
+    or performs an OAuth login to obtain an access token.
+
+    3. **Connectivity Test**: It executes a GET request to the Zoom `/users` endpoint
+    to verify that the API responds correctly.
+
+    4. **Result Handling**: If the request is successful, it returns a success message.
+    If any step fails (authentication error, network timeout, or API error), it captures
+    the exception and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
