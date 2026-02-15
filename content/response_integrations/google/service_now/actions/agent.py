@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Never
+from typing import Never
 
 from TIPCommon.base.action import ExecutionState, Markdown
 
 from ..core import constants, exceptions
 from ..core.base_action import BaseAction
-
-if TYPE_CHECKING:
-    from typing import NoReturn
 
 SCRIPT_NAME = "Chronicle - Trigger Investigation"
 CONTEXT_KEY_INVESTIGATION_NAME = "chronicle_investigation_name"
