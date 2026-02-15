@@ -103,7 +103,7 @@ class ActionParameter(
 
         """
         return cls(
-            description=built["Description"],
+            description=built.get("Description") or "",
             is_mandatory=built["IsMandatory"],
             name=built["Name"],
             optional_values=built.get("OptionalValues"),
