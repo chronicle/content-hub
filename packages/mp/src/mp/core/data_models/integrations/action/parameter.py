@@ -54,7 +54,7 @@ OPT_TYPES: set[ActionParamType] = {
 
 
 class BuiltActionParameter(TypedDict):
-    Description: str
+    Description: NotRequired[str]
     IsMandatory: bool
     Name: str
     OptionalValues: list[str] | None

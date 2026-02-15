@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 class BuiltConnectorMetadata(TypedDict):
     Creator: str
     Description: str
-    DocumentationLink: str | None
+    DocumentationLink: NotRequired[str | None]
     Integration: str
     IsConnectorRulesSupported: bool
     IsCustom: bool
