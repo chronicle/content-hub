@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 import itertools
 import json
-from typing import Generic, Iterator
+from typing import Generic, Iterator, Any
 import math
 from requests.exceptions import HTTPError, JSONDecodeError
 from SiemplifyUtils import (
@@ -224,7 +224,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
     def _filter_cases_by_tags(
         self,
-        cases: list[dict[str, any]]
+        cases: list[dict[str, Any]]
     ) -> list[tuple[str, int]]:
         """
         Filters a list of case dictionaries, returning only the IDs of cases

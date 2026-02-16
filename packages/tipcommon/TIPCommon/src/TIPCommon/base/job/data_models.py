@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import hashlib
-from typing import NamedTuple
+from typing import NamedTuple, Any
 from dataclasses import dataclass, field
 from ...data_models import AlertCard, CaseDataStatus, CaseDetails, JobParamType
 from ...types import SingleJson
@@ -24,14 +24,14 @@ from ...consts import JOB_MAX_TAG_LEN, JOB_MIN_TAG_LEN
 class JobParameter:
     """A general script parameter object.
     Attributes:
-        full_dict (dict[str, any]): The original dict received from the API.
+        full_dict (dict[str, Any]): The original dict received from the API.
         id (int | None): The parameter's ID.
         is_mandatory (bool):
             Whether the parameter is mandatory or not.
             (prioritized over 'value' in playbooks).
         name (str | None): The parameter's name.
         type (ActionParamType): The type of the parameter.
-        value (any):
+        value (Any):
             The default value of the parameter
             (prioritized over 'default_value' in manual actions).
     """
@@ -48,7 +48,7 @@ class JobParameter:
             input_dict.get("name", "No name found!"),
         )
         self.type_ = self._parse_job_param_type(input_dict.get("type", -1))
-        self.value: any = input_dict.get("value")
+        self.value: Any = input_dict.get("value")
 
     def _parse_job_param_type(self, type_value: str | int) -> JobParamType:
         """Parses and returns the JobParamType from a string or integer value."""
@@ -103,11 +103,11 @@ class SyncMetadata:
 
 class JobStatusResult(NamedTuple):
     alerts_to_close_in_soar: list[tuple[AlertCard, SyncMetadata]]
-    incidents_to_close_in_product: list[dict[str, any]]
+    incidents_to_close_in_product: list[dict[str, Any]]
 
 
 class JobAssigneeResult(NamedTuple):
-    target_user: dict[str, any] | None
+    target_user: dict[str, Any] | None
     alert: AlertCard | None
 
 
