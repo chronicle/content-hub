@@ -42,3 +42,31 @@ class TestValidations:
     @given(valid_built=ST_VALID_BUILT_INTEGRATION_PARAMETER_DICT)
     def test_valid_built(self, valid_built: BuiltIntegrationParameter) -> None:
         IntegrationParameter.from_built(valid_built)
+
+
+class TestConversions:
+    """
+    Tests for conversions between built, non-built, and the pydantic model.
+    """
+
+    def test_round_trip_preserves_display_name(self) -> None:
+        """
+        Tests that converting from built -> non-built -> built preserves the
+        original `PropertyDisplayName`.
+        """
+        original_built: BuiltIntegrationParameter = {
+            "PropertyName": "param_name",
+            "PropertyDisplayName": "My Display Name",
+            "Value": "default value",
+            "PropertyDescription": "This is a test parameter.",
+            "IsMandatory": True,
+            "PropertyType": 2,
+            "IntegrationIdentifier": "test_integration",
+        }
+
+        # built -> model -> non-built -> model -> built
+        final_built = IntegrationParameter.from_non_built(
+            IntegrationParameter.from_built(original_built).to_non_built()
+        ).to_built()
+
+        assert final_built["PropertyDisplayName"] == original_built["PropertyDisplayName"]
