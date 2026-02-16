@@ -29,6 +29,9 @@ def import_all_integration_modules(integration: pathlib.Path) -> None:
     Args:
         integration: The path to the integration
 
+    Raises:
+        AssertionError: If the integration path does not exist.
+
     """
     if not integration.exists():
         msg: str = f"Cannot find integration {integration.name}"

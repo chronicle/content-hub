@@ -77,7 +77,12 @@ class MockSession(requests.Session, Session[Response], Generic[Request, Response
         self.request_history.clear()
 
     def request(self, method: str, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a general request method."""
+        """Mock a general request method.
+
+        Returns:
+            A mock response object.
+
+        """
         parsed_url: urllib.parse.ParseResult = urllib.parse.urlparse(url)
         request: MockRequest = MockRequest(
             method=HttpMethod(method),
@@ -95,23 +100,48 @@ class MockSession(requests.Session, Session[Response], Generic[Request, Response
         return response
 
     def get(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a GET request."""
+        """Mock a GET request.
+
+        Returns:
+            A mock response object.
+
+        """
         return self.request(HttpMethod.GET.value, url, *args, **kwargs)
 
     def delete(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a DELETE request."""
+        """Mock a DELETE request.
+
+        Returns:
+            A mock response object.
+
+        """
         return self.request(HttpMethod.DELETE.value, url, *args, **kwargs)
 
     def post(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a POST request."""
+        """Mock a POST request.
+
+        Returns:
+            A mock response object.
+
+        """
         return self.request(HttpMethod.POST.value, url, *args, **kwargs)
 
     def put(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a PUT request."""
+        """Mock a PUT request.
+
+        Returns:
+            A mock response object.
+
+        """
         return self.request(HttpMethod.PUT.value, url, *args, **kwargs)
 
     def patch(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a PATCH request."""
+        """Mock a PATCH request.
+
+        Returns:
+            A mock response object.
+
+        """
         return self.request(HttpMethod.PATCH.value, url, *args, **kwargs)
 
     def _do_request(self, method: str, request: Request) -> Response:
