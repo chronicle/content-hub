@@ -15,21 +15,30 @@
 from __future__ import annotations
 
 import atexit
+import json
 import logging
+import logging.config
 import queue
-from logging import Logger
+from logging import Handler, Logger
 from logging.handlers import QueueHandler, QueueListener
+from pathlib import Path
+from typing import Any
 
-from rich.logging import RichHandler
+LOG_CONFIG_FILE_NAME: str = "logger_config.json"
 
 
 def setup_logging(*, verbose: bool = False, quiet: bool = False) -> None:
     """Set up logging for the mp CLI using a queue for async-safe logging."""
-    level: int = _get_logger_level(quiet=quiet, verbose=verbose)
-    root: logging.Logger = logging.getLogger()
-    root.setLevel(level)
+    config_file: Path = Path(__file__).parent / LOG_CONFIG_FILE_NAME
+    config: dict[str, Any] = json.loads(config_file.read_text(encoding="UTF-8"))
 
-    if not any(isinstance(handler, QueueHandler) for handler in root.handlers):
+    level: int = _get_logger_level(quiet=quiet, verbose=verbose)
+    config["loggers"]["root"]["level"] = level
+
+    logging.config.dictConfig(config)
+
+    root: logging.Logger = logging.getLogger()
+    if not any(isinstance(h, QueueHandler) for h in root.handlers):
         _configure_queue_logging(root)
 
     _set_other_noisy_loggers_level(verbose=verbose)
@@ -46,14 +55,19 @@ def _get_logger_level(*, quiet: bool, verbose: bool) -> int:
 
 
 def _configure_queue_logging(root: Logger) -> None:
-    for handler in root.handlers[:]:
+    existing_handlers: list[Handler] = list(root.handlers)
+    for handler in existing_handlers:
         root.removeHandler(handler)
 
     log_queue: queue.Queue = queue.Queue(-1)
-    root.addHandler(QueueHandler(log_queue))
-    rich_handler: RichHandler = RichHandler(rich_tracebacks=True)
+    queue_handler: QueueHandler = QueueHandler(log_queue)
+    root.addHandler(queue_handler)
 
-    listener: QueueListener = QueueListener(log_queue, rich_handler, respect_handler_level=True)
+    listener: QueueListener = QueueListener(
+        log_queue,
+        *existing_handlers,
+        respect_handler_level=True,
+    )
     listener.start()
 
     atexit.register(listener.stop)
