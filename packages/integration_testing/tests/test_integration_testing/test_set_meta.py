@@ -152,7 +152,7 @@ class TestAction:
     def test_integration_config(self) -> None:
         @set_metadata(integration_config_file_path=CONFIG_FILE)
         def do_test() -> None:
-            expected_config = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            expected_config = json.loads(CONFIG_FILE.read_text())
             action: MockAction = MockAction()
             integration_config: SingleJson = action.get_integration_configuration()
 
@@ -287,7 +287,7 @@ class TestJob:
     def test_integration_config(self) -> None:
         @set_metadata(integration_config_file_path=CONFIG_FILE)
         def do_test() -> None:
-            expected_config = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            expected_config = json.loads(CONFIG_FILE.read_text())
             job: MockJob = MockJob()
 
             integration_config: SingleJson = job.get_integration_configuration()

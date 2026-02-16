@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from soar_sdk import SiemplifyUtils
-from TIPCommon.cache import Cache, dump_property_value, row_is_too_long
+from TIPCommon.cache import Cache, _dump_property_value, _row_is_too_long
 
 from integration_testing.set_meta import set_metadata
 
@@ -46,7 +46,7 @@ class TestContext:
         cache: Cache = cache_class(None)
         rows_asserted = 0
 
-        while not row_is_too_long(dump_property_value(cache.content)):
+        while not _row_is_too_long(_dump_property_value(cache.content)):
             cache[str(uuid.uuid4())] = datetime.datetime.now(
                 tz=datetime.UTC,
             ).timestamp()

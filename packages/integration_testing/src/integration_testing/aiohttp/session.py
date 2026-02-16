@@ -70,23 +70,13 @@ class HistoryRecordsList(UserList[HistoryRecord[Request, Response]]):
         start: int = 0,
         stop: int = -1,
     ) -> None:
-        """Assert that all history records path matches given regex.
-
-        Raises:
-            RuntimeError: If not all history records have the expected path regex.
-
-        """
+        """Assert that all history records path matches given regex."""
         if not all(re.search(regex_pattern, hr.request.url.path) for hr in self[start:stop]):
             msg: str = "Not all history records have the expected path regex."
             raise RuntimeError(msg)
 
     def assert_headers(self, headers: dict[str, str], start: int = 0, stop: int = -1) -> None:
-        """Assert that all history records have specific headers set.
-
-        Raises:
-            RuntimeError: If not all history records have the expected headers set.
-
-        """
+        """Assert that all history records have specific headers set."""
         for key, value in headers.items():
             if not all(hr.request.headers.get(key) == value for hr in self[start:stop]):
                 msg: str = "Not all history records have the expected headers set."
@@ -118,21 +108,9 @@ class MockClientSession(aiohttp.ClientSession, Generic[Request, Response, Produc
 
     @nativemethod
     def get_routed_functions(self) -> Iterable[RouteFunction]:
-        """Get the routed functions for this mock session.
-
-        Returns:
-        Iterable[RouteFunction]
-            An iterable of route functions to be used for routing requests.
-
-        Raises:
-        NotImplementedError
-            This method must be implemented by subclasses.
-
-        """
         raise NotImplementedError
 
     def clear_record(self) -> None:
-        """Clear the request history records."""
         self.request_history.clear()
 
     async def request(
@@ -142,12 +120,7 @@ class MockClientSession(aiohttp.ClientSession, Generic[Request, Response, Produc
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> Response:
-        """Mock a general request method.
-
-        Returns:
-            Response: The mock response from the routed function.
-
-        """
+        """Mock a general request method."""
         parsed_url: urllib.parse.ParseResult = urllib.parse.urlparse(url)
         request: MockRequest = MockRequest(
             method=HttpMethod(method),
@@ -165,48 +138,18 @@ class MockClientSession(aiohttp.ClientSession, Generic[Request, Response, Produc
         return response
 
     async def get(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a GET request.
-
-        Returns:
-            Response: The mock response from the routed function.
-
-        """
         return await self.request(HttpMethod.GET.value, url, *args, **kwargs)
 
     async def delete(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a DELETE request.
-
-        Returns:
-            Response: The mock response from the routed function.
-
-        """
         return await self.request(HttpMethod.DELETE.value, url, *args, **kwargs)
 
     async def post(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a POST request.
-
-        Returns:
-            Response: The mock response from the routed function.
-
-        """
         return await self.request(HttpMethod.POST.value, url, *args, **kwargs)
 
     async def put(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a PUT request.
-
-        Returns:
-            Response: The mock response from the routed function.
-
-        """
         return await self.request(HttpMethod.PUT.value, url, *args, **kwargs)
 
     async def patch(self, url: str, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
-        """Mock a PATCH request.
-
-        Returns:
-            Response: The mock response from the routed function.
-
-        """
         return await self.request(HttpMethod.PATCH.value, url, *args, **kwargs)
 
     async def _do_request(self, method: str, request: Request) -> Response:

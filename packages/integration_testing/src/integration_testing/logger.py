@@ -59,12 +59,7 @@ class Logger(LoggerInterface):
 
 
 def get_logger() -> logging.Logger:
-    """Get a python logging logger object.
-
-    Returns:
-        A configured python logging logger object.
-
-    """
+    """Get a python logging logger object."""
     logger: logging.Logger = logging.getLogger(__name__)
     if logger.handlers:
         return logger

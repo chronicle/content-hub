@@ -248,7 +248,7 @@ class TestGetConfigFileJson:
     def test_returns_json_with_str_path(self) -> None:
         file_name: str = "mock.json"
         path: pathlib.Path = pathlib.Path(__file__).parent / file_name
-        expected_content: dict[str, str] = json.loads(path.read_text(encoding="utf-8"))
+        expected_content: dict[str, str] = json.loads(path.read_text())
 
         content: dict[str, str] = common.get_def_file_content(str(path))
 
@@ -257,7 +257,7 @@ class TestGetConfigFileJson:
     def test_returns_json_with_pathlib_path(self) -> None:
         file_name: str = "mock.json"
         path: pathlib.Path = pathlib.Path(__file__).parent / file_name
-        expected_content: dict[str, str] = json.loads(path.read_text(encoding="utf-8"))
+        expected_content: dict[str, str] = json.loads(path.read_text())
 
         content: dict[str, str] = common.get_def_file_content(path)
 

@@ -44,12 +44,7 @@ class MockResponse(requests.Response):
         self.raw.write(self.text)
 
     def __repr__(self) -> str:
-        """Return a string representation of the object.
-
-        Returns:
-            A string representation of the MockResponse object.
-
-        """
+        """Return a string representation of the object."""
         return (
             f"{MockResponse.__name__}("
             f"status_code={self.status_code}, "

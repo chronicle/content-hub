@@ -52,12 +52,6 @@ class MockExternalContext(Generic[_T]):
 
     @property
     def number_of_rows(self) -> int:
-        """Get the number of rows in the external context.
-
-        Returns:
-            The number of rows stored in the context.
-
-        """
         return len(self._rows)
 
     def has_row(self, row: ExternalContextRow[_T] | ExternalContextRowKey) -> bool:
@@ -68,9 +62,6 @@ class MockExternalContext(Generic[_T]):
 
         Returns:
             True if the row exists in the context else False
-
-        Raises:
-            TypeError: If row is neither ExternalContextRow nor ExternalContextRowKey
 
         """
         key: str = _create_key(row.context_type, row.identifier, row.property_key)

@@ -28,12 +28,7 @@ if TYPE_CHECKING:
 def add_routes(
     routes: MutableMapping[HttpMethod, Iterable[UrlPath]],
 ) -> Callable[[RouteFunction], RouteFunction]:
-    """Add routes to a function.
-
-    Returns:
-        A decorator function that adds routes to a RouteFunction.
-
-    """
+    """Add routes to a function."""
 
     def wrapper(fn: RouteFunction) -> RouteFunction:
         _add_routes(routes, fn)
@@ -43,12 +38,7 @@ def add_routes(
 
 
 def get(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
-    """Add a GET route to a function.
-
-    Returns:
-        A decorator function that adds a GET route to a RouteFunction.
-
-    """
+    """Add a GET route to a function."""
 
     def wrapper(fn: RouteFunction) -> RouteFunction:
         routes: dict[HttpMethod, Iterable[UrlPath]] = {HttpMethod.GET: (path,)}
@@ -59,12 +49,7 @@ def get(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
 
 
 def delete(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
-    """Add a DELETE route to a function.
-
-    Returns:
-        A decorator function that adds a DELETE route to a RouteFunction.
-
-    """
+    """Add a DELETE route to a function."""
 
     def wrapper(fn: RouteFunction) -> RouteFunction:
         routes: dict[HttpMethod, Iterable[UrlPath]] = {HttpMethod.DELETE: (path,)}
@@ -75,12 +60,7 @@ def delete(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
 
 
 def post(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
-    """Add a POST route to a function.
-
-    Returns:
-        A decorator function that adds a POST route to a RouteFunction.
-
-    """
+    """Add a POST route to a function."""
 
     def wrapper(fn: RouteFunction) -> RouteFunction:
         routes: dict[HttpMethod, Iterable[UrlPath]] = {HttpMethod.POST: (path,)}
@@ -91,12 +71,7 @@ def post(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
 
 
 def put(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
-    """Add a PUT route to a function.
-
-    Returns:
-        A decorator function that adds a PUT route to a RouteFunction.
-
-    """
+    """Add a PUT route to a function."""
 
     def wrapper(fn: RouteFunction) -> RouteFunction:
         routes: dict[HttpMethod, Iterable[UrlPath]] = {HttpMethod.PUT: (path,)}
@@ -107,12 +82,7 @@ def put(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
 
 
 def patch(path: UrlPath) -> Callable[[RouteFunction], RouteFunction]:
-    """Add a PATCH route to a function.
-
-    Returns:
-        A decorator function that adds a PATCH route to a RouteFunction.
-
-    """
+    """Add a PATCH route to a function."""
 
     def wrapper(fn: RouteFunction) -> RouteFunction:
         routes: dict[HttpMethod, Iterable[UrlPath]] = {HttpMethod.PATCH: (path,)}
