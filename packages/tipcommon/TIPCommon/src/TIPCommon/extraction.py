@@ -13,9 +13,61 @@
 # limitations under the License.
 
 
+from typing import Any
+
+import SiemplifyVaultUtils
+
 from .data_models import ConnectorParameter, ConnectorParamTypes
+from .types import ChronicleSOAR, SingleJson
 from .utils import clean_result
 from .validation import ParameterValidator
+
+
+def _get_vault_settings(siemplify: ChronicleSOAR) -> SingleJson | None:
+    """Retrieves vault settings from the siemplify object.
+
+    Tries to get vault_settings from siemplify.context first,
+    then falls back to siemplify.vault_settings.
+
+    Args:
+        siemplify (ChronicleSOAR): The Siemplify object.
+
+    Returns:
+        The vault settings if available, otherwise None.
+
+    """
+    context: Any | None = getattr(siemplify, "context", None)
+
+    if context:
+        vault_settings: SingleJson | None = getattr(context, "vault_settings", None)
+        if vault_settings:
+            return vault_settings
+
+    return getattr(siemplify, "vault_settings", None)
+
+
+def _extract_param_value(
+    input_dictionary: SingleJson,
+    param_name: str,
+    vault_settings: SingleJson | None,
+) -> Any | None:
+    """Extracts a parameter value, applying vault extraction if available.
+
+    Args:
+        input_dictionary (SingleJson): The input dictionary containing parameters.
+        param_name (str): The parameter name to extract.
+        vault_settings (SingleJson | None): The vault settings, or None if not available.
+
+    Returns:
+        The extracted value.
+
+    """
+    raw_value: Any | None = input_dictionary.get(param_name)
+
+    if vault_settings is None:
+        return raw_value
+
+    return SiemplifyVaultUtils.extract_vault_param(raw_value, vault_settings)
 
 
 def extract_script_param(
@@ -57,7 +109,8 @@ def extract_script_param(
         )
 
     #  =========== start validation logic =====================
-    value = input_dictionary.get(param_name)
+    vault_settings = _get_vault_settings(siemplify)
+    value = _extract_param_value(input_dictionary, param_name, vault_settings)
 
     if not value:
         if is_mandatory:
