@@ -1,21 +1,38 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
-from typing import Never
+import json
+import os
+from collections.abc import Iterator
+from contextlib import suppress
+from typing import Any, Never, TypeAlias
 
-from TIPCommon.base.action import ExecutionState, Markdown
+import vertexai
+from google.cloud.aiplatform_v1beta1.types import StreamQueryReasoningEngineRequest
+from TIPCommon.extraction import extract_action_param
+from vertexai.preview import reasoning_engines
 
-from ..core import constants, exceptions
+from ..core import constants
 from ..core.base_action import BaseAction
 
-SCRIPT_NAME = "Chronicle - Trigger Investigation"
-CONTEXT_KEY_INVESTIGATION_NAME = "chronicle_investigation_name"
-FAILED_TO_OBTAIN_INVESTIGATION_NAME_ERROR = "Failed to obtain an investigation name."
-MISSING_INVESTIGATION_NAME_IN_CONTEXT_ERROR = "Could not find investigation name in alert context."
-NO_INVESTIGATION_FOUND_MESSAGE = "No existing investigation found. Triggering new one..."
-ALERT_NOT_FROM_SIEM_MESSAGE = (
-    "Triage agent couldn't execute this alert as it didn't originate in Google's SIEM detection"
-    " engine."
-)
+SCRIPT_NAME = "ServiceNow Agent"
+AGENT_ID: str = "6615597637095653376"
+
+JsonDict: TypeAlias = dict[str, Any]
+AgentResponse: TypeAlias = JsonDict | list[JsonDict] | str | None
 
 
 def main() -> None:
@@ -26,173 +43,192 @@ class ServiceNowAgent(BaseAction):
     def __init__(self) -> None:
         super().__init__(f"{constants.INTEGRATION_NAME} - {SCRIPT_NAME}")
 
+    def _extract_action_parameters(self) -> None:
+        self.params.prompt = extract_action_param(
+            self.soar_action,
+            param_name="Prompt",
+            print_value=True,
+        )
+        self.params.agent_id = extract_action_param(
+            self.soar_action,
+            param_name="Agent ID",
+            print_value=True,
+        )
+        self.params.project_id = extract_action_param(
+            self.soar_action,
+            param_name="GCP Project ID",
+            print_value=True,
+        )
+        self.params.region = extract_action_param(
+            self.soar_action,
+            param_name="GCP Region",
+            print_value=True,
+        )
+        self.params.user = extract_action_param(
+            self.soar_action,
+            param_name="User",
+            print_value=True,
+        )
+
     def _perform_action(self, _: Never) -> None:
-        alert_id = None
-        current_alert = self.soar_action.current_alert
-        if current_alert and current_alert.additional_properties:
-            alert_id = current_alert.additional_properties.get("SiemAlertId")
+        self._validate_project()
+        self._validate_region()
 
-        if not alert_id:
-            self.logger.info(ALERT_NOT_FROM_SIEM_MESSAGE)
-            self.output_message = ALERT_NOT_FROM_SIEM_MESSAGE
-            self.execution_state = ExecutionState.FAILED
-            return
-
-        if self.is_first_run:
-            self._handle_first_run(alert_id)
-        else:
-            self._handle_polling()
-
-    def _handle_first_run(self, alert_id: str) -> None:
         self.logger.info(
-            "Checking for existing investigations for Alert ID: %s",
-            alert_id,
+            "🔌 Connecting to agent: %s in %s/%s",
+            self.params.agent_id,
+            self.params.project_id,
+            self.params.region,
         )
-        existing_investigations = self.api_client.list_investigations(alert_id)
-        investigation_name = None
-        if existing_investigations:
-            inv = existing_investigations[0]
-            investigation_name = inv.get("name")
-            self.logger.info(
-                "Found existing investigation: %s",
-                investigation_name,
+        vertexai.init(project=self.params.project_id, location=self.params.region)
+
+        resource_name: str = self._get_resource_name()
+        self.logger.info("🔍 Fetching agent: %s", resource_name)
+
+        agent_engine = reasoning_engines.ReasoningEngine(resource_name)
+        self.logger.info("💬 Sending prompt: '%s'", self.params.prompt)
+
+        response_stream = self._send_request(agent_engine, resource_name)
+        self.json_results = self._process_response_stream(response_stream)
+
+    def _get_resource_name(self) -> str:
+        """Construct the full resource name for the agent.
+
+        Returns:
+            The full resource name string.
+
+        """
+        if "/" not in self.params.agent_id:
+            return (
+                f"projects/{self.params.project_id}/"
+                f"locations/{self.params.region}/"
+                f"reasoningEngines/{self.params.agent_id}"
             )
 
-        if investigation_name:
-            self.soar_action.set_alert_context_property(
-                CONTEXT_KEY_INVESTIGATION_NAME,
-                investigation_name,
-            )
-            self._handle_investigation_status(investigation_name)
-        else:
-            self.logger.info(NO_INVESTIGATION_FOUND_MESSAGE)
-            investigation_data = self.api_client.trigger_investigation(alert_id)
-            investigation_name = investigation_data.get("name")
-            if not investigation_name:
-                raise exceptions.AgentError(FAILED_TO_OBTAIN_INVESTIGATION_NAME_ERROR)
+        return self.params.agent_id
 
-            self.output_message = f"Successfully triggered investigation: {investigation_name}"
-            self.soar_action.set_alert_context_property(
-                CONTEXT_KEY_INVESTIGATION_NAME,
-                investigation_name,
-            )
-            self.execution_state = ExecutionState.IN_PROGRESS
+    def _send_request(
+        self,
+        agent_engine: reasoning_engines.ReasoningEngine,
+        resource_name: str,
+    ) -> Iterator[Any]:
+        """Send the request to the agent engine and return the response stream.
 
-    def _handle_polling(self) -> None:
-        investigation_name = self.soar_action.get_alert_context_property(
-            CONTEXT_KEY_INVESTIGATION_NAME,
+        Returns:
+            An iterator over the response chunks.
+
+        """
+        payload = {
+            "message": {"role": "user", "parts": [{"text": self.params.prompt}]},
+            "user_id": self.params.user,
+        }
+        request_json: str = json.dumps(payload)
+
+        req = StreamQueryReasoningEngineRequest(
+            name=resource_name,
+            input={"request_json": request_json},
+            class_method="streaming_agent_run_with_events",
         )
-        if not investigation_name:
-            raise exceptions.AgentError(MISSING_INVESTIGATION_NAME_IN_CONTEXT_ERROR)
-        self.logger.info(
-            "Retrieved investigation name from context: %s",
-            investigation_name,
+
+        return agent_engine.execution_api_client.stream_query_reasoning_engine(request=req)
+
+    def _process_response_stream(self, response_stream: Iterator[Any]) -> AgentResponse:
+        """Process the response stream and print the output.
+
+        Returns:
+            The parsed response from the stream.
+
+        """
+        self.logger.info("\n🤖 Response Stream:")
+        collected_data = []
+
+        for chunk in response_stream:
+            if hasattr(chunk, "data") and chunk.data:
+                try:
+                    data_str = chunk.data.decode("utf-8")
+                    self.logger.debug("Chunk received: %s", data_str)
+                    collected_data.append(data_str)
+                except UnicodeDecodeError:
+                    self.logger.exception("Failed to decode chunk data: %s", chunk.data)
+
+        if not collected_data:
+            self.logger.warning("⚠️ No response chunks received!")
+            return None
+
+        full_response = "".join(collected_data)
+        return self._parse_full_response(full_response)
+
+    def _parse_full_response(self, full_response: str) -> AgentResponse:
+        """Parse the full response string and log it.
+
+        Returns:
+            The parsed JSON objects or the raw response if parsing fails.
+
+        """
+        try:
+            json_objects: list[JsonDict] = []
+            decoder = json.JSONDecoder()
+            pos = 0
+            while pos < len(full_response):
+                full_response_strip = full_response[pos:].strip()
+                if not full_response_strip:
+                    break
+
+                while pos < len(full_response) and full_response[pos].isspace():
+                    pos += 1
+
+                if pos >= len(full_response):
+                    break
+
+                try:
+                    obj, idx = decoder.raw_decode(full_response[pos:])
+                    json_objects.append(obj)
+                    pos += idx
+                except json.JSONDecodeError:
+                    break
+
+            if len(json_objects) == 1:
+                remainder: str = full_response[pos:].strip()
+                if not remainder:
+                    return json_objects[0]
+
+            if json_objects:
+                return {"response": json_objects}
+
+            with suppress(json.JSONDecodeError):
+                return json.loads(full_response)
+
+        except (ValueError, TypeError) as e:  # Catching specific json/parsing errors
+            self.logger.warning("Failed to parse response as JSON: %s", e)
+            self.logger.info(json.dumps({"response": full_response}, indent=2))
+
+        return full_response
+
+    def _validate_project(self) -> None:
+        project_id: str | None = (
+            self.params.project_id
+            or os.environ.get("DEPLOY_GOOGLE_CLOUD_PROJECT")
+            or os.environ.get("GOOGLE_CLOUD_PROJECT")
         )
-        self._handle_investigation_status(investigation_name)
+        if not project_id:
+            msg = "DEPLOY_GOOGLE_CLOUD_PROJECT must be set or passed as an argument"
+            self.logger.error(msg)
+            raise ValueError(msg)
 
-    def _handle_investigation_status(self, investigation_name: str) -> None:
-        self.logger.info(
-            "Checking status for investigation: %s",
-            investigation_name,
+        self.params.project_id = project_id
+
+    def _validate_region(self) -> None:
+        region: str | None = (
+            self.params.region
+            or os.environ.get("DEPLOY_GOOGLE_CLOUD_REGION")
+            or os.environ.get("GOOGLE_CLOUD_REGION")
         )
-        investigation_data = self.api_client.get_investigation_status(
-            investigation_name,
-        )
-        current_status = investigation_data.get("status")
-        if current_status in {
-            "STATUS_PENDING",
-            "IN_PROGRESS",
-            "STATUS_IN_PROGRESS",
-        }:
-            self.output_message = (
-                f"Investigation {investigation_name} is still running (Status: {current_status})"
-            )
-            self.execution_state = ExecutionState.IN_PROGRESS
+        if not region:
+            msg = "DEPLOY_GOOGLE_CLOUD_REGION must be set or passed as an argument"
+            self.logger.error(msg)
+            raise ValueError(msg)
 
-        elif current_status == "STATUS_COMPLETED_SUCCESS":
-            verdict = (investigation_data.get("verdict") or "").replace("_", " ")
-            confidence = (
-                (investigation_data.get("confidence") or "").replace("_", " ").lower().title()
-            )
-            self.output_message = f"Investigation Summary: {verdict} ({confidence})"
-            self.result_value = True
-            self.execution_state = ExecutionState.COMPLETED
-            self.json_results = {
-                "agent_raw_data": investigation_data,
-                "verdict": investigation_data.get("verdict"),
-                "confidence": investigation_data.get("confidence"),
-            }
-            alert_summary = _get_summary_point(investigation_data.get("summary"), -2)
-            investigation_summary = _get_summary_point(investigation_data.get("summary"), -1)
-            if alert_summary and investigation_summary:
-                self.markdowns.append(
-                    Markdown(
-                        title="Alert Summary",
-                        markdown_content=alert_summary,
-                        markdown_name="Alert Summary",
-                    )
-                )
-                self.markdowns.append(
-                    Markdown(
-                        title="Investigation Summary",
-                        markdown_content=investigation_summary,
-                        markdown_name="Investigation Summary",
-                    )
-                )
-            else:
-                self.markdowns.append(
-                    Markdown(
-                        title="Summary",
-                        markdown_content=investigation_data.get("summary"),
-                        markdown_name="Summary",
-                    )
-                )
-            self.markdowns.append(
-                Markdown(
-                    title="Suggested Next Steps",
-                    markdown_content=_format_next_steps_markdown(investigation_data),
-                    markdown_name="Next steps",
-                )
-            )
-        else:
-            self.output_message = f"Investigation ended with non-success status: {current_status}"
-            self.execution_state = ExecutionState.FAILED
-            self.json_results = {"agent_raw_data": investigation_data}
-
-
-def _format_next_steps_markdown(investigation_data):
-    next_steps = investigation_data.get("nextSteps", [])
-    recommended = investigation_data.get("recommendedNextSteps", [])
-
-    lines = []
-
-    # Logic matching the Angular @if / @else if structure
-    if next_steps:
-        for step in next_steps:
-            title = step.get("title", "")
-            if title:
-                suffix = " 🔍" if step.get("type") == "SEARCHABLE" else ""
-                lines.append(f"* {title}{suffix}")
-
-    elif recommended:
-        for step in recommended:
-            lines.append(f"* {step}")
-
-    return "\n".join(lines)
-
-
-def _get_summary_point(text: str, index: int) -> str:
-    if not text:
-        return ""
-
-    # Split by newline and filter lines starting with '*'
-    points = [line.strip() for line in text.strip().split("\n") if line.strip().startswith("*")]
-
-    if len(points) > index:
-        # Remove the '*' (substring(1)) and trim the result
-        return points[index][1:].strip()
-
-    return ""
+        self.params.region = region
 
 
 if __name__ == "__main__":

@@ -15,11 +15,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Any, NamedTuple, NotRequired, Self, TypedDict, cast
+from typing import TYPE_CHECKING, Annotated, Any, NamedTuple, NotRequired, Self, TypedDict, cast
 
 import pydantic
 import yaml
-from PIL.GifImagePlugin import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.file_utils
@@ -58,6 +57,11 @@ class ActionAiCategories(RepresentableEnum):
     ENRICHMENT = "Enrichment"
 
 
+class ActionType(RepresentableEnum):
+    REGULAR = 1
+    AI_AGENT = 2
+
+
 class BuiltActionMetadata(TypedDict):
     Description: str
     DynamicResultsMetadata: list[BuiltDynamicResultsMetadata]
@@ -75,6 +79,7 @@ class BuiltActionMetadata(TypedDict):
     AIDescription: str | None
     AICategories: NotRequired[list[str] | None]
     EntityTypes: NotRequired[list[str] | None]
+    ActionType: NotRequired[int | None]
 
 
 class NonBuiltActionMetadata(TypedDict):
@@ -94,6 +99,7 @@ class NonBuiltActionMetadata(TypedDict):
     ai_description: NotRequired[str | None]
     ai_categories: NotRequired[list[str]]
     entity_types: NotRequired[list[str]]
+    action_type: NotRequired[str]
 
 
 class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
@@ -137,6 +143,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ai_description: str | None
     ai_categories: list[ActionAiCategories]
     entity_types: list[EntityType]
+    action_type: ActionType
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -230,6 +237,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=built.get("AIDescription"),
             ai_categories=[ActionAiCategories(c) for c in built.get("AICategories") or []],
             entity_types=[EntityType(e) for e in built.get("EntityTypes") or []],
+            action_type=ActionType(built.get("ActionType", ActionType.REGULAR)),
         )
 
     @classmethod
@@ -268,6 +276,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=non_built.get("ai_description"),
             ai_categories=[ActionAiCategories(c) for c in non_built.get("ai_categories") or []],
             entity_types=[EntityType(e) for e in non_built.get("entity_types") or []],
+            action_type=ActionType.from_string(non_built.get("action_type", "regular")),
         )
 
     def to_built(self) -> BuiltActionMetadata:
@@ -294,6 +303,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,
+            ActionType=self.action_type.value,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -323,6 +333,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
 
         if self.script_result_name != DEFAULT_SCRIPT_RESULT_NAME:
             non_built["script_result_name"] = self.script_result_name
+
+        if self.action_type != ActionType.REGULAR:
+            non_built["action_type"] = self.action_type.to_string()
 
         mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
