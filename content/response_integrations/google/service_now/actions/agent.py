@@ -120,7 +120,7 @@ class ServiceNowAgent(BaseAction):
             self.params.agent_config_params,
         )
 
-        events: list[JsonDict] = self._send_request(adk_app, self.params)
+        events: list[JsonDict] = self._send_request(adk_app)
         self.json_results = self._parse_agent_events(events)
 
     def _get_resource_name(self) -> str:
