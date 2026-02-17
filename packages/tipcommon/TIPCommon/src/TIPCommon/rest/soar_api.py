@@ -31,11 +31,16 @@ from ..data_models import (
     CustomField,
     CustomFieldValue,
     EmailTemplate,
+    Environment,
     EntityCard,
     EventCard,
     Insight,
+    InternalDomain,
+    IntegrationSetting,
     InstalledIntegrationInstance,
+    OntologyRecord,
     UserDetails,
+    VisualFamily,
 )
 from ..exceptions import InternalJSONDecoderError
 from ..types import ChronicleSOAR, SingleJson
@@ -426,9 +431,6 @@ def get_alert_events(
         "alertIdentifier": alert_identifier,
     }
 
-    chronicle_soar.LOGGER.info(
-        f"Calling endpoint {endpoint} to user profile cards",
-    )
     response = chronicle_soar.session.post(url, json=payload)
     validate_response(response)
 
@@ -490,8 +492,11 @@ def get_integration_full_details(
     api_client.params.integration_identifier = integration_identifier
 
     response = api_client.get_integration_full_details()
-    validate_response(response, validate_json=False)
-    return response.json()
+    try:
+        validate_response(response, validate_json=False)
+        return response.json()
+    except InternalJSONDecoderError:
+        return []
 
 
 def get_integration_instance_details_by_id(
@@ -1650,7 +1655,6 @@ def get_case_activities(
 
     """
     api_client = get_soar_client(chronicle_soar)
-
     api_client.params.case_id = case_id
     api_client.params.query_params = query_params
     response = api_client.get_case_activities()
@@ -1685,3 +1689,1127 @@ def get_cases_by_timestamp_filter(
     api_client.params.case_ids = case_ids or []
     response = api_client.get_cases_by_timestamp_filter()
     return response
+
+
+def get_email_templates(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get email templates
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+
+    Returns:
+        list[SingleJson]: A list of email templates
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_email_template()
+
+    try:
+        validate_response(response, validate_json=True)
+        if isinstance(response.json(), dict):
+            return response.json().get("email_templates", [])
+
+    except InternalJSONDecoderError:
+        return []
+
+    return response.json()
+
+
+def get_system_version(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get System Version"""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_system_version()
+    return response.json()
+
+
+def get_environment_group_names(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get environment group names"""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_environment_group_names()
+    return response.json()
+
+
+def get_env_dynamic_parameters(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get environment dynamic parameters.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+
+    Returns:
+        list[SingleJson]: A list of environment dynamic parameters.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_env_dynamic_parameters()
+    try:
+        validate_response(response, validate_json=True)
+        response_data = response.json()
+        if isinstance(response_data, dict) and "dynamic_parameters" in response_data:
+            return response_data["dynamic_parameters"]
+    except InternalJSONDecoderError:
+        return []
+
+    return response_data
+
+
+def add_dynamic_env_param(
+    chronicle_soar: ChronicleSOAR,
+    param: SingleJson,
+) -> SingleJson:
+    """Add / Update environment dynamic parameters"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.id = param.get("id")
+    api_client.params.name = param.get("name")
+    api_client.params.type = param.get("type", 0)
+    api_client.params.default_value = param.get("defaultValue")
+    api_client.params.optional_json = param.get("optionalValues", [])
+
+    response = api_client.add_dynamic_env_param()
+    return response.json()
+
+
+def install_integration(
+    chronicle_soar: ChronicleSOAR,
+    integration_identifier: str,
+    integration_name: str = "",
+    version: str = "",
+    is_certified: str = "true",
+    override_mapping: bool = True,
+    stage: bool = False,
+) -> SingleJson:
+    """Install integration"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.integration_identifier = integration_identifier
+    api_client.params.integration_name = integration_name
+    api_client.params.version = version
+    api_client.params.is_certified = is_certified
+    api_client.params.override_mapping = override_mapping
+    api_client.params.stage = stage
+
+    response = api_client.install_integration()
+    return response.json()
+
+
+def export_package(
+    chronicle_soar: ChronicleSOAR,
+    integration_identifier: str,
+) -> SingleJson:
+    """Export package"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.integration_identifier = integration_identifier
+
+    response = api_client.export_package()
+    return response.json()
+
+
+def get_integration_instance_settings(
+    chronicle_soar: ChronicleSOAR,
+    instance_id: str,
+    integration_identifier: str,
+) -> list[IntegrationSetting]:
+    """Get integration instance settings.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        instance_id (str): The instance id.
+        integration_identifier (str): The integration identifier.
+
+    Returns:
+        list[IntegrationSetting]: A list of IntegrationSetting objects.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.instance_id = instance_id
+    api_client.params.integration_identifier = integration_identifier
+    response = api_client.get_integration_instance_settings()
+    validate_response(response)
+    response_data = response.json()
+
+    if isinstance(response_data, dict) and "parameters" in response_data:
+        parameters = response_data.get("parameters", [])
+        return [IntegrationSetting.from_json(param) for param in parameters]
+
+    return [IntegrationSetting.from_json(setting) for setting in response_data]
+
+
+def create_integrations_instance(
+    chronicle_soar: ChronicleSOAR,
+    integration_identifier: str,
+    environment: str,
+) -> SingleJson:
+    """Create integrations instance"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.integration_identifier = integration_identifier
+    api_client.params.environment = environment
+    response = api_client.create_integrations_instance()
+    return response.json()
+
+
+def get_domains(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get domains.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+
+    Returns:
+        list[SingleJson]: .A list of domain JSON objects.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_domains()
+    return [InternalDomain.from_json(res).to_json() for res in response]
+
+
+def update_domain(
+    chronicle_soar: ChronicleSOAR,
+    domain_data: SingleJson,
+) -> bool:
+    """Update domain.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        domain_data (SingleJson): The domain data to update.
+
+    Returns:
+        bool: True if the domain was updated successfully, False otherwise.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.domain_data = domain_data
+    response = api_client.update_domain()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def get_environment_names(
+    chronicle_soar: ChronicleSOAR,
+    search_term: str = "",
+    requested_page: int = 0,
+    page_size: int = 100,
+) -> SingleJson:
+    """Get environment names"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.searchTerm = search_term
+    api_client.params.requestedPage = requested_page
+    api_client.params.pageSize = page_size
+    return api_client.get_environment_names()
+
+
+def get_environments(
+    chronicle_soar: ChronicleSOAR,
+    search_term: str = "",
+    requested_page: int = 0,
+    page_size: int = 100,
+) -> list[Environment]:
+    """Get environments"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.searchTerm = search_term
+    api_client.params.requestedPage = requested_page
+    api_client.params.pageSize = page_size
+    response = api_client.get_environments()
+    return [Environment.from_json(res) for res in response]
+
+
+def import_environment(
+    chronicle_soar: ChronicleSOAR,
+    environment_data: SingleJson,
+) -> bool:
+    """Import environment.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        environment_data (SingleJson): The environment data to update.
+
+    Returns:
+        bool: True if the environment was import successfully, False otherwise.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.environment_data = environment_data
+    response = api_client.import_environment()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def save_integration_instance_settings(
+    chronicle_soar: ChronicleSOAR,
+    identifier: str,
+    environment: str,
+    integration_data: SingleJson,
+) -> bool:
+    """Create integrations instance"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.identifier = identifier
+    api_client.params.environment = environment
+    api_client.params.integration_data = integration_data
+    response = api_client.save_integration_instance_settings()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def import_simulated_case(
+    chronicle_soar: ChronicleSOAR,
+    case_data: SingleJson,
+) -> bool:
+    """Import simulated case"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_data = case_data
+    response = api_client.import_simulated_case()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def add_case_tag(
+    chronicle_soar: ChronicleSOAR,
+    case_tag: SingleJson,
+) -> bool:
+    """Import simulated case"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_tag = case_tag
+    response = api_client.add_case_tag()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def add_case_stage(
+    chronicle_soar: ChronicleSOAR,
+    case_stage: SingleJson,
+) -> bool:
+    """Import simulated case"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_stage = case_stage
+    response = api_client.add_case_stage()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def get_case_alert(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get case alert"""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_case_alert()
+    validate_response(response, validate_json=True)
+    return response.json()
+
+
+def add_close_reason(
+    chronicle_soar: ChronicleSOAR,
+    close_reason: SingleJson,
+) -> SingleJson:
+    """Add close reason"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.close_reason = close_reason
+    response = api_client.add_close_reason()
+    try:
+        validate_response(response, validate_json=False)
+        return response.json()
+    except (HTTPError, InternalJSONDecoderError):
+        return {}
+
+
+def get_networks(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get Networks,
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+
+    Returns:
+        list[SingleJson]: A list of networks.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_networks()
+    try:
+        if isinstance(response, dict) and "networks" in response:
+            return response["networks"]
+    except InternalJSONDecoderError:
+        return []
+    return response
+
+
+def update_network(
+    chronicle_soar: ChronicleSOAR,
+    network_data: SingleJson,
+) -> bool:
+    """Update network.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        network_data (SingleJson): The network data to update.
+
+    Returns:
+        bool: True if the network was updated successfully, False otherwise.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.network_data = network_data
+    response = api_client.update_network()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def get_custom_lists(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get custom lists.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+
+    Returns:
+        list[SingleJson]: A list of custom lists.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_custom_lists()
+    try:
+        validate_response(response, validate_json=True)
+        raw_data = response.json()
+        if isinstance(raw_data, dict) and "custom_lists" in raw_data:
+            return raw_data["custom_lists"]
+    except InternalJSONDecoderError:
+        return []
+
+    return raw_data
+
+
+def update_custom_list(
+    chronicle_soar: ChronicleSOAR,
+    tracking_list: SingleJson,
+    tracking_id: str | None,
+) -> bool:
+    """Update custom lists.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        tracking_list (SingleJson): The custom lists data to update.
+        tracking_id (str | None): The tracking id.
+
+
+    Returns:
+        bool: True if the custom lists was updated successfully, False otherwise.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.tracking_list = tracking_list
+    api_client.params.tracking_id = tracking_id
+    response = api_client.update_custom_list()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
+def update_blocklist(
+    chronicle_soar: ChronicleSOAR,
+    blocklist_data: SingleJson,
+) -> SingleJson:
+    """Update blocklist"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.blocklist_data = blocklist_data
+    response = api_client.update_blocklist()
+    try:
+        response = validate_response(response, validate_json=False)
+        return response
+    except (HTTPError, InternalJSONDecoderError):
+        return {}
+
+
+def update_sla_record(
+    chronicle_soar: ChronicleSOAR,
+    sla_data: SingleJson,
+) -> SingleJson:
+    """Update SLA record"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.sla_data = sla_data
+    response = api_client.update_sla_record()
+    validate_response(response, validate_json=False)
+    if (
+        response is None
+        or getattr(response, "status_code", None) == 204
+        or not getattr(response, "text", "").strip()
+    ):
+        return {}
+    try:
+        return safe_json_for_204(response, default_for_204={})
+    except (ValueError, InternalJSONDecoderError):
+        return {}
+
+
+def save_playbook(
+    chronicle_soar: ChronicleSOAR,
+    playbook_data: SingleJson,
+) -> SingleJson:
+    """Save playbook"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.playbook_data = playbook_data
+    response = api_client.save_playbook()
+    return response.json()
+
+
+def get_playbooks_workflow_menu_cards(
+    chronicle_soar: ChronicleSOAR,
+    api_payload: list[int, int],
+) -> list[SingleJson]:
+    """Gets playbooks workflow menu cards.
+
+    Args:
+        chronicle_soar: A ChronicleSOAR SDK object that can make API requests.
+        api_payload: A list containing two integers.
+
+    Returns:
+        list[SingleJson]: A list of playbook workflow menu cards.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.api_payload = api_payload
+    response = api_client.get_playbooks_workflow_menu_cards()
+    validate_response(response)
+    return response.json()
+
+
+def get_playbooks_workflow_menu_cards_with_env(
+    chronicle_soar: ChronicleSOAR,
+    api_payload: list[int, int],
+) -> list[SingleJson]:
+    """Get playbooks workflow menu cards with environment filter.
+    Args:
+        chronicle_soar: A ChronicleSOAR SDK object that can make API requests.
+        api_payload: A list containing two integers.
+
+    Returns:
+        list[SingleJson]: A list of playbook workflow menu cards.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.api_payload = api_payload
+    response = api_client.get_playbooks_workflow_menu_cards_with_env()
+    validate_response(response)
+    return response.json()
+
+
+def get_playbook_workflow_menu_cards_by_identifier(
+    chronicle_soar: ChronicleSOAR,
+    playbook_identifier: str,
+) -> SingleJson:
+    """Get playbook workflow menu cards by identifier.
+    Args:
+        chronicle_soar: A ChronicleSOAR SDK object that can make API requests.
+        playbook_identifier: The identifier of the playbook.
+
+    Returns:
+        SingleJson: Playbook workflow menu cards.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.playbook_identifier = playbook_identifier
+    response = api_client.get_playbook_workflow_menu_cards_by_identifier()
+    validate_response(response)
+    return response.json()
+
+
+def get_playbook_workflow_menu_cards_by_identifier_with_env(
+    chronicle_soar: ChronicleSOAR,
+    playbook_identifier: str,
+) -> SingleJson:
+    """Get playbook workflow menu cards by identifier with environment filter.
+    Args:
+        chronicle_soar: A ChronicleSOAR SDK object that can make API requests.
+        playbook_identifier: The identifier of the playbook.
+
+    Returns:
+        SingleJson: Playbook workflow menu cards.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.playbook_identifier = playbook_identifier
+    response = api_client.get_playbook_workflow_menu_cards_by_identifier_with_env()
+    validate_response(response)
+    return response.json()
+
+
+def get_installed_connectors(
+    chronicle_soar: ChronicleSOAR,
+    connector_instance_id: int | None = None,
+) -> list[SingleJson] | SingleJson:
+    """Get installed connectors.
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+        connector_instance_id (int | None): Connector instance ID
+
+    Returns:
+        list[SingleJson] | SingleJson: Response JSON.
+    """
+    api_clinet = get_soar_client(chronicle_soar)
+    api_clinet.params.connector_instance_id = connector_instance_id
+    response = api_clinet.get_installed_connectors()
+    return response
+
+
+def get_visual_families(
+    chronicle_soar: ChronicleSOAR,
+    include_default_vfs: bool = False,
+) -> list[SingleJson]:
+    """Get visual families from either legacy or 1P, normalized.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): Chronicle SOAR SDK object.
+        include_default_vfs (bool): Whether to include default visual families.
+
+    Returns:
+        list[SingleJson]: Normalized response JSON (legacy-compatible shape).
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_visual_families()
+    validate_response(response, validate_json=True)
+    data = response.json()
+    families: list[VisualFamily] = []
+    if isinstance(data, dict) and "visual_families" in data:
+        families = [VisualFamily.from_json(vf) for vf in data["visual_families"]]
+    else:
+        families = [VisualFamily.from_json(vf) for vf in data]
+
+    if not include_default_vfs:
+        families = [f for f in families if f.is_custom]
+
+    return [f.to_json() for f in families]
+
+
+def get_visual_family_by_id(
+    chronicle_soar: ChronicleSOAR,
+    family_id: int,
+) -> SingleJson:
+    """Get custom visual family by ID.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): Chronicle SOAR SDK object.
+        family_id (int): Visual family ID.
+
+    Returns:
+        SingleJson: Normalized response JSON (legacy-compatible shape).
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.family_id = family_id
+    response = api_client.get_visual_family_by_id()
+    validate_response(response, validate_json=True)
+    family: VisualFamily = VisualFamily.from_json(response.json())
+    return family.to_json()
+
+
+def get_ontology_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get ontology records.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+
+    Returns:
+        list[SingleJson]: Response JSON."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_ontology_records()
+    if not response:
+        return []
+    if isinstance(response, list):
+        records = response
+    elif isinstance(response.json(), dict):
+        records = response.json().get("ontology_records", [])
+    else:
+        records = []
+    return [OntologyRecord.from_json(item).to_json() for item in records]
+
+
+def get_case_tags(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get case tags.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+
+    Returns:
+        list[SingleJson]: Response JSON.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_case_tags()
+
+    if isinstance(response, list):
+        records = response
+    elif isinstance(response.json(), dict):
+        return response.json().get("case_tag_definitions", [])
+    else:
+        records = []
+    return records
+
+def get_case_stages(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get case stages.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+
+    Returns:
+        list[SingleJson]: Response JSON.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_case_stages()
+    try:
+        raw_data = response
+        if not raw_data:
+            return []
+        if isinstance(response, list):
+            return response
+        elif isinstance(raw_data.json(), dict):
+            return raw_data.json().get("case_stage_definitions", [])
+    except InternalJSONDecoderError:
+        return []
+
+    return raw_data.json()
+
+def get_case_close_reasons(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get case close reasons.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+
+    Returns:
+        list[SingleJson]: Response JSON.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_case_close_reasons()
+    validate_response(response, validate_json=True)
+
+    raw_data = response.json()
+    if isinstance(raw_data, dict):
+        return raw_data.get("case_close_definitions", [])
+
+    return raw_data
+
+
+def get_block_lists_details(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get block lists details.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+
+    Returns:
+        list[SingleJson]: Response JSON.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_block_lists_details()
+    validate_response(response, validate_json=True)
+
+    raw_data = response.json()
+    if isinstance(raw_data, dict):
+        return raw_data.get("soar_block_entities", [])
+
+    return raw_data
+
+
+def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get sla records."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_sla_records()
+
+    try:
+        if response is None:
+            return []
+
+        if isinstance(response, list):
+            return response
+
+        if isinstance(response, dict):
+            return response.get("sla_definitions", []) or []
+
+        if hasattr(response, "json"):
+            try:
+                parsed = response.json() or {}
+                return parsed.get("sla_definitions", []) or []
+            except (ValueError, InternalJSONDecoderError):
+                return []
+    except (ValueError, InternalJSONDecoderError):
+        return []
+
+    return []
+
+
+def get_all_model_block_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get all model block records."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_all_model_block_records()
+    try:
+        validate_response(response, validate_json=True)
+        return response.json()
+    except InternalJSONDecoderError:
+        return []
+
+def get_company_logo(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get company logo."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_company_logo()
+    try:
+        validate_response(response, validate_json=True)
+        return response.json()
+    except InternalJSONDecoderError:
+        return {}
+
+def get_case_title_settings(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get case title settings."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_case_title_settings()
+    try:
+        validate_response(response, validate_json=True)
+        return response.json()
+    except InternalJSONDecoderError:
+        return {}
+
+def save_case_title_settings(
+    chronicle_soar: ChronicleSOAR,
+    name: str,
+    display_name: str,
+    value: str,
+    type_: int,
+) -> SingleJson:
+    """Save case title settings."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.name = name
+    api_client.params.display_name = display_name
+    api_client.params.value = value
+    api_client.params.type = type_
+
+    response = api_client.save_case_title_settings()
+    validate_response(response, validate_json=False)
+    return response.json()
+
+def add_or_update_company_logo(
+    chronicle_soar: ChronicleSOAR,
+    company_logo: SingleJson,
+) -> SingleJson:
+    """Add or update company logo."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.company_logo = company_logo
+
+    response = api_client.add_or_update_company_logo()
+    validate_response(response, validate_json=False)
+    return response.json()
+
+
+def attache_workflow_to_case(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_group_identifier: str,
+    alert_identifier: str,
+    wf_name: str,
+    original_wf_identifier: str,
+) -> SingleJson:
+    """Attache workflow to case."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_id = case_id
+    api_client.params.alert_group_identifier = alert_group_identifier
+    api_client.params.alert_identifier = alert_identifier
+    api_client.params.wf_name = wf_name
+    api_client.params.original_wf_identifier = original_wf_identifier
+
+    response = api_client.attache_workflow_to_case()
+    validate_response(response, validate_json=False)
+    return response.json()
+
+def import_custom_case(
+    chronicle_soar: ChronicleSOAR,
+    case_data: SingleJson,
+) -> SingleJson:
+    """Import custom case."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_data = case_data
+
+    response = api_client.import_custom_case()
+    validate_response(response, validate_json=False)
+    return response.json()
+
+def case_search_everything(
+    chronicle_soar: ChronicleSOAR,
+    search_data: SingleJson,
+) -> SingleJson:
+    """Case search everything."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.search_data = search_data
+
+    response = api_client.case_search_everything()
+    validate_response(response, validate_json=False)
+    return response.json()
+
+def get_environment_action_definition(
+    chronicle_soar: ChronicleSOAR,
+    environment_action_data: list[str] | SingleJson,
+) -> SingleJson:
+    """Get environment action definition."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.environment_action_data = environment_action_data
+
+    response = api_client.get_environment_action_definition()
+    validate_response(response, validate_json=False)
+    return response.json()
+
+
+def export_simulated_case(
+    chronicle_soar: ChronicleSOAR,
+    name: str,
+) -> SingleJson:
+    """Export simulated case"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.name = name
+
+    response = api_client.export_simulated_case()
+    validate_response(response, validate_json=False)
+    response = safe_json_for_204(response, default_for_204={})
+    return response
+
+
+def get_case_insights_comment_evidence(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+) -> SingleJson:
+    """Get case attachments.
+
+    Args:
+        chronicle_soar (ChronicleSoar): A chronicle soar SDK object
+        case_id (int): Chronicle SOAR case ID
+
+    """
+    api_client = get_soar_client(chronicle_soar)
+
+    api_client.params.case_id = case_id
+    response = api_client.get_case_insights()
+    try:
+        validate_response(response, validate_json=True)
+    except InternalJSONDecoderError:
+        return {"items": []}
+
+    result_data = response.json()
+    if isinstance(result_data, list):
+        return {"items": result_data}
+
+    return result_data
+
+
+def get_bearer_token(
+    chronicle_soar: ChronicleSOAR, smp_password, smp_username
+) -> str:
+    """Get bearer token."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.smp_password = smp_password
+    api_client.params.smp_username = smp_username
+    response = api_client.get_bearer_token()
+    validate_response(response, validate_json=False)
+    return f"Bearer {response.text}"
+
+
+def update_api_record(
+    chronicle_soar: ChronicleSOAR, api_record: SingleJson
+) -> None:
+    """Update api record."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.api_record = api_record
+    response = api_client.update_api_record()
+    validate_response(response, validate_json=False)
+
+
+def get_store_data(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get store data (integrations + powerups combined)."""
+    api_client = get_soar_client(chronicle_soar)
+
+    response = api_client.get_store_data()
+    return response.get("integrations", response.get("marketplaceIntegrations", []))
+
+
+def import_package(
+    chronicle_soar: ChronicleSOAR, integration_name: str, b64_blob: str
+) -> SingleJson:
+    """Import package."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.integration_name = integration_name
+    api_client.params.b64_blob = b64_blob
+    response = api_client.import_package()
+    validate_response(response, validate_json=False)
+    return response.content
+
+
+def update_ide_item(
+    chronicle_soar: ChronicleSOAR, input_json: SingleJson
+) -> SingleJson:
+    """Update ide item."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.input_json = input_json
+    response = api_client.update_ide_item()
+    validate_response(response, validate_json=True)
+    return response.json()
+
+
+def get_ide_cards(
+    chronicle_soar: ChronicleSOAR,
+    identifier: str | None = None,
+    include_staging: bool = False
+) -> list[SingleJson]:
+    """Get ide cards."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.integration_name = identifier
+    response = api_client.get_ide_cards()
+    validate_response(response, validate_json=True)
+    if include_staging:
+        return response.json()
+    return [x for x in response.json() if not x.get("productionIntegrationIdentifier")]
+
+
+def get_ide_item(
+    chronicle_soar: ChronicleSOAR, item_id: str, item_type: str
+) -> SingleJson:
+    """Get ide item."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.item_id = item_id
+    api_client.params.item_type = item_type
+    response = api_client.get_ide_item()
+    validate_response(response, validate_json=True)
+    return response.json()
+
+
+def add_custom_family(
+    chronicle_soar: ChronicleSOAR, visual_family: SingleJson
+) -> SingleJson:
+    """Add custom family."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.visual_family = visual_family
+    response = api_client.add_custom_family()
+    validate_response(response, validate_json=False)
+    return response.content
+
+
+def get_mapping_rules(
+    chronicle_soar: ChronicleSOAR, source: str, product: str, event_name: str
+) -> SingleJson:
+    """Get mapping rules."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.source = source
+    api_client.params.product = product
+    api_client.params.event_name = event_name
+    response = api_client.get_mapping_rules()
+    validate_response(response, validate_json=True)
+    return response.json()
+
+
+def add_mapping_rules(
+    chronicle_soar: ChronicleSOAR, mapping_rule: SingleJson
+) -> SingleJson:
+    """Add mapping rules."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.mapping_rule = mapping_rule
+    response = api_client.add_mapping_rules()
+    validate_response(response, validate_json=False)
+    return response.content
+
+
+def set_mappings_visual_family(
+    chronicle_soar: ChronicleSOAR,
+    source: str,
+    product: str,
+    event_name: str,
+    visual_family: str,
+) -> bool:
+    """Set mappings visual family."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.source = source
+    api_client.params.product = product
+    api_client.params.event_name = event_name
+    api_client.params.visual_family = visual_family
+    response = api_client.set_mappings_visual_family()
+    validate_response(response, validate_json=False)
+    return True
+
+
+def export_playbooks(
+    chronicle_soar: ChronicleSOAR, definitions: list[str]
+) -> SingleJson:
+    """Export playbooks."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.definitions = definitions
+    response = api_client.export_playbooks()
+    validate_response(response, validate_json=False)
+    return response.content
+
+
+def import_playbooks(
+    chronicle_soar: ChronicleSOAR, playbooks: SingleJson
+) -> SingleJson:
+    """Import playbooks."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.playbooks = playbooks
+    response = api_client.import_playbooks()
+    validate_response(response, validate_json=False)
+    return response.content
+
+
+def create_playbook_category(chronicle_soar: ChronicleSOAR, name: str) -> SingleJson:
+    """Create playbook category."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.name = name
+    response = api_client.create_playbook_category()
+    validate_response(response, validate_json=True)
+    return response.json()
+
+
+def get_playbook_categories(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get playbook categories."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_playbook_categories()
+    validate_response(response, validate_json=True)
+    return response.json()
+
+
+def update_connector(
+    chronicle_soar: ChronicleSOAR, connector_data: SingleJson
+) -> SingleJson:
+    """Update connector."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.connector_data = connector_data
+    response = api_client.update_connector()
+    validate_response(response, validate_json=False)
+    return response
+
+
+def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
+    """Add job."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.job = job
+    response = api_client.add_job()
+    validate_response(response, validate_json=False)
+    return response.content
+
+
+def add_email_template(
+    chronicle_soar: ChronicleSOAR, template: SingleJson
+) -> bool:
+    """Add email template."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.template = template
+    response = api_client.add_email_template()
+    validate_response(response, validate_json=False)
+    return True
+
+
+def get_denylists(chronicle_soar: ChronicleSOAR) -> SingleJson:
+    """Get denylists."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_denylists()
+    validate_response(response, validate_json=True)
+    return response.json()
+
+
+def get_simulated_cases(
+    chronicle_soar: ChronicleSOAR,
+    is_expand: bool = False,
+) -> SingleJson:
+    """Get simulated cases."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.is_expand = is_expand
+    response = api_client.get_simulated_cases()
+    validate_response(response, validate_json=True)
+    return response.json()
