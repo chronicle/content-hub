@@ -13,19 +13,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 from datetime import datetime, timezone
-from TIPCommon.rest.custom_types import HttpMethod
+from typing import TYPE_CHECKING
+
 from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG
 from TIPCommon.exceptions import NotSupportedPlatformVersion
-from .base_soar_api import BaseSoarApi
+from TIPCommon.rest.custom_types import HttpMethod
+
 from ...consts import DATAPLANE_1P_HEADER
 from ...utils import temporarily_remove_header
+from .base_soar_api import BaseSoarApi
 
 if TYPE_CHECKING:
     import requests
-    from TIPCommon.types import ChronicleSOAR, SingleJson
+
+    from TIPCommon.types import SingleJson
 
 
 class LegacySoarApi(BaseSoarApi):
@@ -89,6 +94,7 @@ class LegacySoarApi(BaseSoarApi):
         """Get federation cases using legacy API"""
         endpoint = "/federation/cases"
         params = {"continuationToken": self.params.continuation_token}
+
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def patch_federation_cases(self) -> requests.Response:
@@ -190,8 +196,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def _get_all_integration_instances(self) -> list[SingleJson]:
-        """
-        Private helper method to fetch all integration instances from the API.
+        """Private helper method to fetch all integration instances from the API.
         This encapsulates the common API call logic.
         """
         endpoint = "/integrations/GetOptionalIntegrationInstances"
@@ -481,9 +486,11 @@ class LegacySoarApi(BaseSoarApi):
         all_cases: list[SingleJson] = []
         current_page = 0
         page_size = 1000
+
         start_time_s = self.params.start_time / 1000.0
         start_dt_object = datetime.fromtimestamp(start_time_s, tz=timezone.utc)
         start_time_iso = start_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
         end_time_s = self.params.end_time / 1000.0
         end_dt_object = datetime.fromtimestamp(end_time_s, tz=timezone.utc)
         end_time_iso = end_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
@@ -497,12 +504,17 @@ class LegacySoarApi(BaseSoarApi):
                 "requestedPage": current_page,
                 "timeRangeFilter": self.params.time_range_filter,
             }
+
             response = self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
             results = response.json().get("results")
+
             if not results:
                 break
+
             all_cases.extend(results)
             current_page += 1
+
         return all_cases
 
     def get_case_close_comment(self, case_id):

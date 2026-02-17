@@ -11,18 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
+from typing import Any, NamedTuple
+
 import hashlib
-from typing import NamedTuple, Any
 from dataclasses import dataclass, field
+
+from ...consts import JOB_MAX_TAG_LEN, JOB_MIN_TAG_LEN
 from ...data_models import AlertCard, CaseDataStatus, CaseDetails, JobParamType
 from ...types import SingleJson
-from ...consts import JOB_MAX_TAG_LEN, JOB_MIN_TAG_LEN
 
 
 class JobParameter:
     """A general script parameter object.
+
     Attributes:
         full_dict (dict[str, Any]): The original dict received from the API.
         id (int | None): The parameter's ID.
@@ -34,6 +38,7 @@ class JobParameter:
         value (Any):
             The default value of the parameter
             (prioritized over 'default_value' in manual actions).
+
     """
 
     def __init__(self, input_dict: SingleJson) -> None:
@@ -51,9 +56,9 @@ class JobParameter:
         self.value: Any = input_dict.get("value")
 
     def _parse_job_param_type(self, type_value: str | int) -> JobParamType:
-        """Parses and returns the JobParamType from a string or integer value."""
         if isinstance(type_value, str):
             normalized = type_value.strip().upper()
+
             if normalized in ("INT"):
                 return JobParamType.INTEGER
             if normalized in JobParamType.__members__:
@@ -65,6 +70,7 @@ class JobParameter:
                 return JobParamType(type_value)
             except ValueError:
                 return JobParamType.NULL
+
         return JobParamType.NULL
 
 
@@ -597,6 +603,7 @@ class JobCase:
     ) -> bool:
         if meta.status == closed_status:
             return False
+
         return is_case_closed or (
             alert.status.lower() == "close" and len(self.case_detail.alerts) > 1
         )
@@ -614,4 +621,5 @@ class JobCase:
         }
         if not is_case_closed:
             payload.update(alert.closure_details)
+
         return payload

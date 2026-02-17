@@ -13,26 +13,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
 from TIPCommon.utils import platform_supports_1p_api
+
 from .legacy_soar_api import LegacySoarApi
 from .one_platform_soar_api import OnePlatformSoarApi
 
 if TYPE_CHECKING:
     import requests
+
     from TIPCommon.types import ChronicleSOAR
+
 from typing import Protocol
 
 
 class SoarApiClient(Protocol):
     """Defines the interface for a SOAR API client.
+
     This protocol ensures that any SOAR API client implementation will have
     the necessary methods defined.
     """
 
     def save_attachment_to_case_wall(self) -> requests.Response:
         """Save an attachment to the case wall.
+
         Parameters for the attachment (like case_id, blob, name, etc.)
         are expected to be set on the client instance's `params` attribute
         before calling this method.
@@ -207,11 +215,15 @@ class SoarApiClient(Protocol):
 
 def get_soar_client(chronicle_soar: ChronicleSOAR) -> SoarApiClient:
     """Get the appropriate SOAR API client based on platform support.
+
     Args:
         chronicle_soar: The ChronicleSOAR SDK object.
+
     Returns:
         An instance of a SOAR API client (either OnePlatformSoarApi or LegacySoarApi).
+
     """
     if platform_supports_1p_api():
         return OnePlatformSoarApi(chronicle_soar)
+
     return LegacySoarApi(chronicle_soar)
