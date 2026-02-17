@@ -15,24 +15,45 @@
 from __future__ import annotations
 
 import json
-import os
-from collections.abc import Iterator
-from contextlib import suppress
-from typing import Any, Never, TypeAlias
+from typing import Any, Literal, Never, TypeAlias, TypedDict
 
 import vertexai
-from google.cloud.aiplatform_v1beta1.types import StreamQueryReasoningEngineRequest
-from TIPCommon.extraction import extract_action_param
-from vertexai.preview import reasoning_engines
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
+from vertexai.agent_engines.templates.adk import AdkApp
 
 from ..core import constants
 from ..core.base_action import BaseAction
 
+
 SCRIPT_NAME = "ServiceNow Agent"
-AGENT_ID: str = "6615597637095653376"
+AGENT_ID: str = "5020338206588010496"
+USER_ID: str = "SecOps-123"
 
 JsonDict: TypeAlias = dict[str, Any]
 AgentResponse: TypeAlias = JsonDict | list[JsonDict] | str | None
+
+
+class ToolCall(TypedDict):
+    step: Literal["call"]
+    tool: str
+    args: dict[str, Any]
+
+
+class ToolResponse(TypedDict):
+    step: Literal["result"]
+    tool: str
+    output: Any
+
+
+class AgentMetadata(TypedDict):
+    tools_used: list[Any]
+    usage: dict[str, int]
+    event_count: int
+
+
+class AgentExecutionResult(TypedDict):
+    results: JsonDict | list[Any] | None
+    metadata: AgentMetadata
 
 
 def main() -> None:
@@ -44,36 +65,44 @@ class ServiceNowAgent(BaseAction):
         super().__init__(f"{constants.INTEGRATION_NAME} - {SCRIPT_NAME}")
 
     def _extract_action_parameters(self) -> None:
+        self.params.agent_id = extract_configuration_param(
+            self.soar_action,
+            provider_name=constants.INTEGRATION_NAME,
+            param_name="Agent ID",
+            print_value=True,
+        )
+        self.params.project_id = extract_configuration_param(
+            self.soar_action,
+            provider_name=constants.INTEGRATION_NAME,
+            param_name="GCP Project ID",
+            print_value=True,
+        )
+        self.params.region = extract_configuration_param(
+            self.soar_action,
+            provider_name=constants.INTEGRATION_NAME,
+            param_name="GCP Region",
+            print_value=True,
+        )
+
         self.params.prompt = extract_action_param(
             self.soar_action,
             param_name="Prompt",
             print_value=True,
         )
-        self.params.agent_id = extract_action_param(
+        json_schema: str = extract_action_param(
             self.soar_action,
-            param_name="Agent ID",
+            param_name="Response JSON Schema",
             print_value=True,
         )
-        self.params.project_id = extract_action_param(
+        self.params.response_schema = json.loads(json_schema) if json_schema else None
+        self.params.temperature = extract_action_param(
             self.soar_action,
-            param_name="GCP Project ID",
+            param_name="Model Temperature",
             print_value=True,
-        )
-        self.params.region = extract_action_param(
-            self.soar_action,
-            param_name="GCP Region",
-            print_value=True,
-        )
-        self.params.user = extract_action_param(
-            self.soar_action,
-            param_name="User",
-            print_value=True,
+            input_type=float,
         )
 
     def _perform_action(self, _: Never) -> None:
-        self._validate_project()
-        self._validate_region()
-
         self.logger.info(
             "🔌 Connecting to agent: %s in %s/%s",
             self.params.agent_id,
@@ -81,15 +110,18 @@ class ServiceNowAgent(BaseAction):
             self.params.region,
         )
         vertexai.init(project=self.params.project_id, location=self.params.region)
-
+        client = vertexai.Client(project=self.params.project_id, location=self.params.region)
         resource_name: str = self._get_resource_name()
         self.logger.info("🔍 Fetching agent: %s", resource_name)
+        adk_app: AdkApp = client.agent_engines.get(name=resource_name)
+        self.logger.info(
+            "💬 Sending prompt: '%s' with config params: %s",
+            self.params.prompt,
+            self.params.agent_config_params,
+        )
 
-        agent_engine = reasoning_engines.ReasoningEngine(resource_name)
-        self.logger.info("💬 Sending prompt: '%s'", self.params.prompt)
-
-        response_stream = self._send_request(agent_engine, resource_name)
-        self.json_results = self._process_response_stream(response_stream)
+        events: list[JsonDict] = self._send_request(adk_app, self.params)
+        self.json_results = self._parse_agent_events(events)
 
     def _get_resource_name(self) -> str:
         """Construct the full resource name for the agent.
@@ -107,128 +139,64 @@ class ServiceNowAgent(BaseAction):
 
         return self.params.agent_id
 
-    def _send_request(
-        self,
-        agent_engine: reasoning_engines.ReasoningEngine,
-        resource_name: str,
-    ) -> Iterator[Any]:
+    def _send_request(self, adk_app: AdkApp) -> list[JsonDict]:
         """Send the request to the agent engine and return the response stream.
 
         Returns:
             An iterator over the response chunks.
 
         """
-        payload = {
-            "message": {"role": "user", "parts": [{"text": self.params.prompt}]},
-            "user_id": self.params.user,
-        }
-        request_json: str = json.dumps(payload)
-
-        req = StreamQueryReasoningEngineRequest(
-            name=resource_name,
-            input={"request_json": request_json},
-            class_method="streaming_agent_run_with_events",
+        s: str | None = self.params.response_schema
+        schema: JsonDict | None = json.loads(s) if s is not None else None
+        return list(
+            adk_app.stream_query(
+                message=self.params.prompt,
+                user_id=USER_ID,
+                run_config={
+                    "response_schema": schema,
+                    "temperature": self.params.temperature,
+                },
+            )
         )
 
-        return agent_engine.execution_api_client.stream_query_reasoning_engine(request=req)
+    def _parse_agent_events(self, events: list[JsonDict]) -> AgentExecutionResult:
+        final_result: JsonDict | None = None
+        tools_executed: list[ToolCall | ToolResponse] = []
+        usage_stats: JsonDict = {}
 
-    def _process_response_stream(self, response_stream: Iterator[Any]) -> AgentResponse:
-        """Process the response stream and print the output.
+        for event in events:
+            if usage := event.get("usage_metadata"):
+                usage_stats = usage
 
-        Returns:
-            The parsed response from the stream.
+            parts: list[JsonDict] = event.get("content", {}).get("parts", [])
+            for part in parts:
+                match part:
+                    case {"function_call": {"name": name, "args": args}}:
+                        tools_executed.append(ToolCall(step="call", tool=name, args=args))
 
-        """
-        self.logger.info("\n🤖 Response Stream:")
-        collected_data = []
+                    case {"function_response": {"name": name, "response": response}}:
+                        tools_executed.append(
+                            ToolResponse(step="result", tool=name, output=response)
+                        )
 
-        for chunk in response_stream:
-            if hasattr(chunk, "data") and chunk.data:
-                try:
-                    data_str = chunk.data.decode("utf-8")
-                    self.logger.debug("Chunk received: %s", data_str)
-                    collected_data.append(data_str)
-                except UnicodeDecodeError:
-                    self.logger.exception("Failed to decode chunk data: %s", chunk.data)
+                    case {"text": text}:
+                        try:
+                            final_result = json.loads(text)
+                        except json.JSONDecodeError:
+                            final_result = {
+                                "raw_text": text,
+                                "error": "Invalid JSON",
+                            }
 
-        if not collected_data:
-            self.logger.warning("⚠️ No response chunks received!")
-            return None
+                    case _:
+                        self.logger.error("Unexpected event structure: %s", event)
 
-        full_response = "".join(collected_data)
-        return self._parse_full_response(full_response)
-
-    def _parse_full_response(self, full_response: str) -> AgentResponse:
-        """Parse the full response string and log it.
-
-        Returns:
-            The parsed JSON objects or the raw response if parsing fails.
-
-        """
-        try:
-            json_objects: list[JsonDict] = []
-            decoder = json.JSONDecoder()
-            pos = 0
-            while pos < len(full_response):
-                full_response_strip = full_response[pos:].strip()
-                if not full_response_strip:
-                    break
-
-                while pos < len(full_response) and full_response[pos].isspace():
-                    pos += 1
-
-                if pos >= len(full_response):
-                    break
-
-                try:
-                    obj, idx = decoder.raw_decode(full_response[pos:])
-                    json_objects.append(obj)
-                    pos += idx
-                except json.JSONDecodeError:
-                    break
-
-            if len(json_objects) == 1:
-                remainder: str = full_response[pos:].strip()
-                if not remainder:
-                    return json_objects[0]
-
-            if json_objects:
-                return {"response": json_objects}
-
-            with suppress(json.JSONDecodeError):
-                return json.loads(full_response)
-
-        except (ValueError, TypeError) as e:  # Catching specific json/parsing errors
-            self.logger.warning("Failed to parse response as JSON: %s", e)
-            self.logger.info(json.dumps({"response": full_response}, indent=2))
-
-        return full_response
-
-    def _validate_project(self) -> None:
-        project_id: str | None = (
-            self.params.project_id
-            or os.environ.get("DEPLOY_GOOGLE_CLOUD_PROJECT")
-            or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        return AgentExecutionResult(
+            results=final_result,
+            metadata=AgentMetadata(
+                tools_used=tools_executed, usage=usage_stats, event_count=len(events)
+            ),
         )
-        if not project_id:
-            msg = "DEPLOY_GOOGLE_CLOUD_PROJECT must be set or passed as an argument"
-            self.logger.error(msg)
-            raise ValueError(msg)
-
-        self.params.project_id = project_id
-
-    def _validate_region(self) -> None:
-        region: str | None = (
-            self.params.region
-            or os.environ.get("DEPLOY_GOOGLE_CLOUD_REGION")
-            or os.environ.get("GOOGLE_CLOUD_REGION")
-        )
-        if not region:
-            msg = "DEPLOY_GOOGLE_CLOUD_REGION must be set or passed as an argument"
-            self.logger.error(msg)
-            raise ValueError(msg)
-
-        self.params.region = region
 
 
 if __name__ == "__main__":
