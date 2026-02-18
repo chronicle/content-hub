@@ -127,7 +127,7 @@ def _build_integration_repositories(
         rich.print("Checking for duplicate integrations...")
         raise_errors_for_duplicate_integrations(
             commercial_path=repos.commercial.out_dir,
-            community_path=repos.commercial.out_dir,
+            community_path=repos.community.out_dir,
         )
         rich.print("Done checking for duplicate integrations.")
 
