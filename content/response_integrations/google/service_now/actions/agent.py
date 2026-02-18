@@ -104,20 +104,17 @@ class ServiceNowAgent(BaseAction):
 
     def _perform_action(self, _: Never) -> None:
         self.logger.info(
-            "🔌 Connecting to agent: %s in %s/%s",
-            self.params.agent_id,
-            self.params.project_id,
-            self.params.region,
+            f"🔌 Connecting to agent: {self.params.agent_id} in {self.params.project_id}/"
+            f"{self.params.region}"
         )
         vertexai.init(project=self.params.project_id, location=self.params.region)
         client = vertexai.Client(project=self.params.project_id, location=self.params.region)
         resource_name: str = self._get_resource_name()
-        self.logger.info("🔍 Fetching agent: %s", resource_name)
+        self.logger.info(f"🔍 Fetching agent: {resource_name}")
         adk_app: AdkApp = client.agent_engines.get(name=resource_name)
         self.logger.info(
-            "💬 Sending prompt: '%s' with config params: %s",
-            self.params.prompt,
-            self.params.agent_config_params,
+            f"💬 Sending prompt: '{self.params.prompt}' with config params: "
+            f"{self.params.agent_config_params}",
         )
 
         events: list[JsonDict] = self._send_request(adk_app)
@@ -189,12 +186,12 @@ class ServiceNowAgent(BaseAction):
                             }
 
                     case _:
-                        self.logger.error("Unexpected event structure: %s", event)
+                        self.logger.error(f"Unexpected event structure: {event}")
 
         return AgentExecutionResult(
             results=final_result,
             metadata=AgentMetadata(
-                tools_used=tools_executed, usage=usage_stats, event_count=len(events)
+                tools_used=tools_executed, usage=usage_stats, event_count=len(events),
             ),
         )
 
