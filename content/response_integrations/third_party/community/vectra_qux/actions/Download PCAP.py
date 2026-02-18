@@ -98,9 +98,7 @@ def main():
             base64.b64encode(file_content).decode(),
         )
 
-        output_message = (
-            f"Got the file: {filename} for the detection ID {detection_id}."
-        )
+        output_message = f"Got the file: {filename} for the detection ID {detection_id}."
 
     except InvalidIntegerException as e:
         status = EXECUTION_STATE_FAILED
@@ -110,23 +108,22 @@ def main():
         siemplify.LOGGER.exception(e)
     except FileNotFoundException as e:
         status = EXECUTION_STATE_FAILED
-        output_message = (
-            f"Failed to download file for the detection ID {detection_id}. Error - {e}"
-        )
+        output_message = f"Failed to download file for the detection ID {detection_id}. Error - {e}"
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     except ItemNotFoundException as e:
         status = EXECUTION_STATE_FAILED
-        output_message = f"File not found for detection ID - {detection_id}. Please provide valid detection ID. Error - {e}"
+        output_message = (
+            f"File not found for detection ID - {detection_id}. "
+            f"Please provide valid detection ID. Error - {e}"
+        )
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     except VectraQUXException as e:
         status = EXECUTION_STATE_FAILED
-        output_message = (
-            f"Failed to get detail of the detection ID {detection_id}. Error: {e}"
-        )
+        output_message = f"Failed to get detail of the detection ID {detection_id}. Error: {e}"
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
