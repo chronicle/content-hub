@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import json
+import os
 import time
+from collections.abc import Sequence
 
 # typings used in python2 type-hints which unrecognized by the linter
 import google.auth
@@ -24,6 +26,7 @@ from google.auth import crypt, impersonated_credentials, jwt
 from google.oauth2 import service_account
 
 from ..exceptions import EmptyMandatoryValues, NotFoundError
+from ..types import ChronicleSOAR
 
 # typings used in python2 type-hints which unrecognized by the linter
 from ..utils import is_empty_string_or_none
@@ -355,20 +358,32 @@ def get_impersonated_credentials(
     )
 
 
-def get_secops_siem_tenant_credentials(chronicle_soar, target_scopes=None, quota_project_id=None):
-    # type: (ChronicleSOAR, Sequence[str] | None, str | None) -> impersonated_credentials.Credentials
+def get_secops_siem_tenant_credentials(
+    chronicle_soar: ChronicleSOAR,
+    target_scopes: Sequence[str] | None = None,
+    quota_project_id: str | None = None,
+    fallback_to_env_email: bool = False,
+) -> impersonated_credentials.Credentials:
     """Get the SIEM tenant short-lived service account credentials
     of the SecOps instance
 
     Args:
-        chronicle_soar (TIPCommon.types.ChronicleSOAR):
+        chronicle_soar:
             ChronicleSOAR SDK object
-        target_scopes (Sequence[str] | None):
+        target_scopes:
             Scopes to request during the authorization grant.
-        quota_project_id (str | None):
+        quota_project_id:
             The project ID used for quota and billing.
             This project may be different from the project used to
             create the credentials.
+        fallback_to_env_email:
+            Whether to fall back to the `CHRONICLE_SERVICE_ACCOUNT_EMAIL`
+            environment variable if the email is not found in the SOAR context.
+            Defaults to `False`.
+
+    Raises:
+        NotFoundError:
+            SIEM tenant short-lived service account email not found in SOAR context
 
     Returns:
         impersonated_credentials.Credentials:
@@ -380,6 +395,9 @@ def get_secops_siem_tenant_credentials(chronicle_soar, target_scopes=None, quota
         identifier=OOTB_AUTH_ID_SECOPS,
         property_key=OOTB_AUTH_KEY_SECOPS,
     )
+    if is_empty_string_or_none(siem_sa_email) and fallback_to_env_email:
+        siem_sa_email = os.environ.get("CHRONICLE_SERVICE_ACCOUNT_EMAIL")
+
     if is_empty_string_or_none(siem_sa_email):
         raise NotFoundError(
             "SIEM tenant short-lived service account email not found in SOAR context"
