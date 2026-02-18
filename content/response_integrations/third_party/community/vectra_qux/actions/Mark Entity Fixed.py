@@ -91,13 +91,12 @@ def main():
             output_message = f"No detections found for entity ID {entity_id}"
         else:
             siemplify.LOGGER.info(
-                f"Successfully retrieved {len(detection_ids)} detections for entity ID {entity_id}.",
+                f"Successfully retrieved {len(detection_ids)} detections for "
+                f"entity ID {entity_id}.",
             )
 
             response = vectra_manager.mark_detection_as_fixed(detection_ids)
-            output_message = (
-                f"Successfully marked {len(detection_ids)} detections as fixed"
-            )
+            output_message = f"Successfully marked {len(detection_ids)} detections as fixed"
             siemplify.result.add_result_json(json.dumps(response, indent=4))
 
     except InvalidIntegerException as e:
@@ -107,7 +106,9 @@ def main():
         siemplify.LOGGER.exception(e)
     except ItemNotFoundException as e:
         status = EXECUTION_STATE_FAILED
-        output_message = f"Entity not found for the given ID: '{entity_id}'. Please verify the ID and try again."
+        output_message = (
+            f"Entity not found for the given ID: '{entity_id}'. Please verify the ID and try again."
+        )
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)

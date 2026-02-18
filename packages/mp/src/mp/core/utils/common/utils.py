@@ -28,15 +28,35 @@ from mp.core.custom_types import RepositoryType
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
+    import yaml
+
     from mp.core.custom_types import YamlFileContent
 
-SNAKE_PATTERN_1 = re.compile(r"(.)([A-Z][a-z]+)")
-SNAKE_PATTERN_2 = re.compile(r"([a-z0-9])([A-Z])")
+SNAKE_PATTERN_1: re.Pattern[str] = re.compile(r"(.)([A-Z][a-z]+)")
+SNAKE_PATTERN_2: re.Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
 GIT_STATUS_REGEXP: re.Pattern[str] = re.compile(r"^[ A-Z?!]{2} ")
 ERR_MSG_STRING_LIMIT: int = 256
 TRIM_CHARS: str = " ... "
 
 _T = TypeVar("_T")
+
+
+def folded_string_representer(
+    dumper: yaml.Dumper,
+    data: str,
+    min_str_len: int = 40,
+) -> yaml.ScalarNode:
+    """Apply folded style if the string is long or has newlines in YAML.
+
+    Examples:
+        >>> yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
+
+    Returns:
+        The folded string representation for YAML serialization.
+
+    """
+    style: str | None = ">" if len(data) > min_str_len else None
+    return dumper.represent_scalar(tag="tag:yaml.org,2002:str", value=data.strip(), style=style)
 
 
 def get_python_version_from_version_string(version: str) -> str:
@@ -237,6 +257,32 @@ def to_snake_case(s: str, /) -> str:
     )
 
 
+def is_integration_repo(repositories: list[RepositoryType]) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return (
+        RepositoryType.ALL_CONTENT in repositories
+        or RepositoryType.COMMERCIAL in repositories
+        or RepositoryType.THIRD_PARTY in repositories
+        or RepositoryType.CUSTOM in repositories
+    )
+
+
+def is_playbook_repo(repositories: list[RepositoryType]) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return RepositoryType.ALL_CONTENT in repositories or RepositoryType.PLAYBOOKS in repositories
+
+
+# Deprecated
 def should_preform_integration_logic(
     integrations: Iterable[str],
     repos: Iterable[RepositoryType],
@@ -255,6 +301,7 @@ def should_preform_integration_logic(
     )
 
 
+# Deprecated
 def should_preform_playbook_logic(
     playbooks: Iterable[str], repos: Iterable[RepositoryType]
 ) -> bool:

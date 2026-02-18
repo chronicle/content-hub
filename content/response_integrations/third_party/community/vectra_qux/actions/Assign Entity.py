@@ -92,9 +92,7 @@ def main():
         )
 
         assignment = vectra_manager.assign_entity(entity_id, entity_type, user_id)
-        output_message = (
-            f"Assignment created successfully with ID: {assignment.assignment_id}"
-        )
+        output_message = f"Assignment created successfully with ID: {assignment.assignment_id}"
 
         siemplify.result.add_data_table(
             title="Assign Entity",
