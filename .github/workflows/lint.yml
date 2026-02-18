@@ -30,6 +30,7 @@ jobs:
       package_envcommon: ${{ steps.filter.outputs.package_envcommon }}
       package_tipcommon: ${{ steps.filter.outputs.package_tipcommon }}
       package_integration_testing: ${{ steps.filter.outputs.package_integration_testing }}
+      changed_files: ${{ steps.filter.outputs.files }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -38,6 +39,7 @@ jobs:
       uses: dorny/paths-filter@v3
       id: filter
       with:
+        list-files: 'shell'
         filters: |
           response_integrations_google:
             - 'content/response_integrations/google/**'
@@ -73,12 +75,12 @@ jobs:
         python -m pip install uv
         uv pip install --system -e ./packages/mp
 
-    - name: Run mp Check
+    - name: Run mp Check on changed files
       shell: bash
       run: |
         mp config --root-path . --processes 10 --display-config
         cd content/response_integrations/google
-        mp check --changed-files --raise-error-on-violations --output-format grouped
+        mp check --static-type-check --raise-error-on-violations --output-format grouped ${{ needs.changes.outputs.changed_files }}
 
   lint_third_party:
     name: Lint Third-Party Integrations
@@ -101,12 +103,12 @@ jobs:
         python -m pip install uv
         uv pip install --system -e ./packages/mp
 
-    - name: Run mp Check
+    - name: Run mp Check on changed files
       shell: bash
       run: |
         mp config --root-path . --processes 10 --display-config
         cd content/response_integrations/third_party
-        mp check --changed-files --raise-error-on-violations --output-format grouped
+        mp check --raise-error-on-violations --output-format grouped ${{ needs.changes.outputs.changed_files }}
 
   mp_package_linter:
     name: mp Package Linter
