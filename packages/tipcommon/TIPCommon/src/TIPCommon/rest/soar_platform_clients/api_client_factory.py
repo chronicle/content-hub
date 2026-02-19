@@ -170,6 +170,9 @@ class SoarApiClient(Protocol):
     def get_installed_jobs(self) -> requests.Response:
         """Get installed jobs."""
 
+    def save_or_update_job(self) -> requests.Response:
+        """Save or update job data."""
+
     def get_all_case_overview_details(self) -> requests.Response:
         """Get all case overview details"""
 
