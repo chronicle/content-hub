@@ -369,6 +369,16 @@ class LegacySoarApi(BaseSoarApi):
         endpoint: str = "/jobs/GetInstalledJobs"
         return self._make_request(HttpMethod.GET, endpoint)
 
+    def save_or_update_job(self) -> requests.Response:
+        """Save or update job data using legacy API."""
+        endpoint: str = "/jobs/SaveOrUpdateJobData"
+
+        return self._make_request(
+            HttpMethod.POST,
+            endpoint,
+            json_payload=self.params.job_data,
+        )
+
     def get_all_case_overview_details(self) -> requests.Response:
         """Get case overview details"""
         self.params.format = "camel"

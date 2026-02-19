@@ -153,6 +153,32 @@ def get_installed_jobs(
     return response.json()
 
 
+def save_or_update_job(
+    chronicle_soar: ChronicleSOAR,
+    job_data: SingleJson,
+) -> SingleJson:
+    """Save or update a job.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+        job_data (SingleJson): Job data.
+
+    Returns:
+        (SingleJson): The response JSON from the platform.
+
+    Raises:
+        requests.HTTPError:
+        json.JSONDecodeError:
+
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.job_data = job_data
+    response = api_client.save_or_update_job()
+    validate_response(response)
+
+    return safe_json_for_204(response, default_for_204={})
+
+
 def get_connector_cards(
     chronicle_soar: ChronicleSOAR,
     integration_name: str | None = None,

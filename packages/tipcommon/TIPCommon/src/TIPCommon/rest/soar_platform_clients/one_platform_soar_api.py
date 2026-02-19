@@ -528,6 +528,56 @@ class OnePlatformSoarApi(BaseSoarApi):
             endpoint += f"{self.params.job_instance_id}"
         return self._make_request(HttpMethod.GET, endpoint)
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def save_or_update_job(self) -> requests.Response:
+        """Save or update job data using 1P API.
+
+        Raises:
+            ValueError: If ``job_data`` is missing required fields
+                (``name``, ``parameters``) or if the resource path cannot be parsed.
+        """
+        job_data = self.params.job_data
+
+        resource_path = job_data.get("name")
+        if resource_path is None:
+            raise ValueError(
+                "Job data must include a 'name' field with the resource path. "
+                "Example (1P resource path): "
+                "integrations/{integrationId}/jobs/{jobId}/jobInstances/{instanceId}. "
+                "Cannot determine the PATCH endpoint without the resource path."
+            )
+
+        parameters = job_data.get("parameters")
+        if parameters is None:
+            raise ValueError(
+                "Job data is missing 'parameters' field, Nothing to update."
+        )
+
+        if "instances/" not in resource_path:
+            raise ValueError(
+                f"Cannot parse resource path: {resource_path}. "
+                "Expected to contain 'instances/'. "
+            )
+
+        parts = resource_path.split("instances/")
+        remainder = parts[-1]
+
+        slash_position = remainder.find("/")
+        if slash_position == -1:
+            raise ValueError(
+                f"Cannot parse resource path: {resource_path}. No segment found after "
+                f"instance ID in '{resource_path}'"
+            )
+
+        endpoint = remainder[slash_position:]
+
+        return self._make_request(
+            HttpMethod.PATCH,
+            endpoint,
+            params={"updateMask":"parameters"},
+            json_payload={"parameters": parameters}
+        )
+
     def get_case_wall_records(self) -> requests.Response:
         """Get case wall records using 1P API.
 
