@@ -134,3 +134,38 @@ class DomainToolsParser:
             emails=raw_data.get("emails", []),
             email_domains=raw_data.get("email_domains", [])
         )
+
+    def parse_whois_history(self, raw_data: dict) -> WhoisHistoryModel:
+        history_entries = []
+        for item in raw_data.get("history", []):
+            whois_raw = item.get("whois", {})
+            reg_raw = whois_raw.get("registration", {})
+
+            whois_registration = WhoisRegistration(
+                created=reg_raw.get("created", ""),
+                expires=reg_raw.get("expires", ""),
+                updated=reg_raw.get("updated", ""),
+                registrar=reg_raw.get("registrar", ""),
+                statuses=reg_raw.get("statuses", [])
+            )
+
+            whois_details = WhoisDetails(
+                registrant=whois_raw.get("registrant", ""),
+                registration=whois_registration,
+                name_servers=whois_raw.get("name_servers", []),
+                server=whois_raw.get("server", ""),
+                record=whois_raw.get("record", "")
+            )
+
+            history_entries.append(
+                WhoisHistoryEntry(
+                    date=item.get("date", ""),
+                    is_private=item.get("is_private", 0),
+                    whois=whois_details
+                )
+            )
+
+        return WhoisHistoryModel(
+            record_count=raw_data.get("record_count", 0),
+            history=history_entries
+        )

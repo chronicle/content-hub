@@ -19,9 +19,9 @@ from TIPCommon.transformation import construct_csv, flat_dict_to_csv, dict_to_fl
 
 from ..core.DomainToolsManager import DomainToolsManager
 from ..core.exceptions import DomainToolsManagerError
-from ..core.constants import INTEGRATION_NAME, PARSED_DOMAIN_RDAP_SCRIPT_NAME
+from ..core.constants import INTEGRATION_NAME, WHOIS_HISTORY_SCRIPT_NAME
 from ..core.UtilsManager import extract_domain_from_string
-from ..core.datamodels import ParsedDomainRDAPModel
+from ..core.datamodels import WhoisHistoryModel
 
 
 SUPPORTED_ENTITY_TYPES: list[str] = [
@@ -33,8 +33,8 @@ SUPPORTED_ENTITY_TYPES: list[str] = [
 def main() -> None:
     """Enrich external domain entity with DomainTools threat Intelligence data."""
     siemplify = SiemplifyAction()
-    siemplify.script_name = PARSED_DOMAIN_RDAP_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Get Domain Rdap Started -----------------")
+    siemplify.script_name = WHOIS_HISTORY_SCRIPT_NAME
+    siemplify.LOGGER.info("----------------- Main - Get Whois History Started -----------------")
 
     username: str = extract_configuration_param(
         siemplify,
@@ -84,24 +84,25 @@ def main() -> None:
                 domain: str = extract_domain_from_string(entity.identifier)
                 siemplify.LOGGER.info(f"Processing entity: {entity.identifier}")
 
-                parsed_domain_rdap: ParsedDomainRDAPModel = dt_manager.get_parsed_domain_rdap(domain=domain)
-                domain_rdap_dict = parsed_domain_rdap.to_dict()
-                flattened_domainrdap_data: dict[str, Any] = dict_to_flat(domain_rdap_dict)
-                json_entity_res = {"Entity": entity.identifier, "EntityResult": domain_rdap_dict}
+                dt_whois_history: WhoisHistoryModel = dt_manager.get_whois_history(domain=domain)
+                dt_whois_history_dict = dt_whois_history.to_dict()
 
-                if not parsed_domain_rdap.has_found:
-                    siemplify.LOGGER.info(f"No parsed domain rdap data found for {domain}")
-                    json_entity_res["EntityResult"] = {"status": "No Parsed Domain RDAP record found on this domain"}
+                flattened_whois_data: dict[str, Any] = dict_to_flat(dt_whois_history_dict)
+                json_entity_res = {"Entity": entity.identifier, "EntityResult": dt_whois_history_dict}
+
+                if not dt_whois_history.record_count:
+                    siemplify.LOGGER.info(f"No Whois History data found for {domain}")
+                    json_entity_res["EntityResult"] = {"status": "No Whois History record found on this domain"}
                 else:
                     # create a table result
-                    siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flattened_domainrdap_data))
-                    csv_table_results.append(parsed_domain_rdap.to_table_data())
+                    siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flattened_whois_data))
+                    csv_table_results = dt_whois_history.to_table_data()
 
                 enriched_entities.append(entity)
                 json_results.append(json_entity_res)
 
-                prefixed_domainrdap_data = add_prefix_to_dict_keys(flattened_domainrdap_data, "DT")
-                entity.additional_properties.update(prefixed_domainrdap_data)
+                prefixed_whois_data = add_prefix_to_dict_keys(flattened_whois_data, "DT")
+                entity.additional_properties.update(prefixed_whois_data)
 
                 siemplify.LOGGER.info(f"Successfully enriched {entity.identifier}")
             except Exception as e:
@@ -126,7 +127,7 @@ def main() -> None:
                 )
             # create a summary table for all entities enriched
             if csv_table_results:
-                siemplify.result.add_data_table("DomainTools Parsed Domain RDAP", construct_csv(csv_table_results))
+                siemplify.result.add_data_table("DomainTools Whois History", construct_csv(csv_table_results))
         else:
             output_message = "No entities were enriched."
             result_value = False

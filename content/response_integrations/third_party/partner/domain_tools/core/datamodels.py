@@ -269,3 +269,53 @@ class ParsedDomainRDAPModel(DTBaseModel):
             "EmailDomains": ", ".join(self.email_domains) if self.email_domains else "N/A",
             "Conformance": ", ".join(self.conformance) if self.conformance else "N/A"
         }
+
+
+@dataclass(frozen=True, slots=True)
+class WhoisRegistration:
+    created: str = ""
+    expires: str = ""
+    updated: str = ""
+    registrar: str = ""
+    statuses: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class WhoisDetails:
+    registrant: str = ""
+    registration: WhoisRegistration = field(default_factory=WhoisRegistration)
+    name_servers: list[str] = field(default_factory=list)
+    server: str = ""
+    record: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class WhoisHistoryEntry:
+    date: str = ""
+    is_private: int = 0
+    whois: WhoisDetails = field(default_factory=WhoisDetails)
+
+
+@dataclass(frozen=True, slots=True)
+class WhoisHistoryModel(DTBaseModel):
+    record_count: int = 0
+    history: list[WhoisHistoryEntry] = field(default_factory=list)
+    has_found: bool = True
+
+    def to_table_data(self) -> list[dict]:
+        """
+        Returns a list of rows for the summary data table.
+        whois history is displayed as a multi-row table.
+        """
+        table_rows = []
+        for entry in self.history:
+            reg = entry.whois.registration
+            table_rows.append({
+                "History Date": entry.date,
+                "Registrar": reg.registrar,
+                "Created": reg.created,
+                "Expires": reg.expires,
+                "Registrant": entry.whois.registrant,
+                "Privacy": "Private" if entry.is_private else "Public"
+            })
+        return table_rows

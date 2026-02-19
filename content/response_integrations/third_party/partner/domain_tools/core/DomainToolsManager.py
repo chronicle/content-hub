@@ -15,7 +15,7 @@ from domaintools.exceptions import (
 
 from .exceptions import DomainToolsManagerError
 from .DomainToolsParser import DomainToolsParser
-from .datamodels import IrisInvestigateModel, ParsedDomainRDAPModel
+from .datamodels import IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
 
 
 APP_PARTNER_NAME: str = "Google SecOps SOAR"
@@ -138,3 +138,14 @@ class DomainToolsManager:
             return ParsedDomainRDAPModel(domain=domain, has_found=False)
         except Exception as e:
             raise DomainToolsManagerError(f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}")
+
+    def get_whois_history(self, domain: str):
+        try:
+            self._check_license("parsed-domain-rdap")
+            response = self._api.whois_history(query=domain).response()
+            return self.parser.parse_whois_history(raw_data=response)
+        except NotFoundException:
+            return WhoisHistoryModel(record_count=0)
+        except Exception as e:
+            raise DomainToolsManagerError(f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}")
+
