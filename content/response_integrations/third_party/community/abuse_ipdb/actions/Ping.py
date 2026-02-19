@@ -17,6 +17,7 @@ def main():
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
     # INIT INTEGRATION CONFIGURATION:
+    print("hi")
     api_key = siemplify.extract_configuration_param(siemplify, param_name="Api Key")
     verify_ssl = siemplify.extract_configuration_param(
         siemplify,
