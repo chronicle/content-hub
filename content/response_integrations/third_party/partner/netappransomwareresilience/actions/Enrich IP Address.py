@@ -33,7 +33,7 @@ def main():
         result_value = False
 
     siemplify.LOGGER.info("----------------- RRS - Enrich IP: End -----------------")
-    siemplify.LOGGER.info("\n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(f"Enrich IP output: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}")
     
     # Add result to action output.
     siemplify.result.add_result_json(enrich_results)

@@ -12,6 +12,7 @@ from typing import Any
 
 import requests
 from TIPCommon.oauth import (
+    AuthenticationError,
     OAuthAdapter,
     OauthManager,
     OauthToken,
@@ -131,10 +132,16 @@ class RRSOAuthAdapter(OAuthAdapter):
             signer=self.client_id,
         )
 
-    @staticmethod
     def validate_bad_credentials(response: Response) -> bool:
-        """Validate bad credentials."""
-        return True
+        """Check if the response indicates bad/expired credentials.
+
+        Raises:
+            AuthenticationError: If the response status code is 401 (Unauthorized)
+        """
+        if response.status_code == 401:
+            raise AuthenticationError(
+                f"Bad credentials detected (HTTP 401): {response.text}"
+            )
 
     def prepare_authorized_client(
         self,
@@ -143,5 +150,3 @@ class RRSOAuthAdapter(OAuthAdapter):
     ) -> Any:
         """Set authorization header with the access token."""
         pass
-
-

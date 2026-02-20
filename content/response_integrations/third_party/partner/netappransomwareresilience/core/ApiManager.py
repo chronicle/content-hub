@@ -1,6 +1,6 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from .constants import OAUTH_CONFIG, ENDPOINT_ENRICH_IP, ENDPOINT_ENRICH_STORAGE, ENDPOINT_JOB_STATUS, ENDPOINT_TAKE_SNAPSHOT, ENDPOINT_VOLUME_OFFLINE
+from .constants import OAUTH_CONFIG, ENDPOINT_ENRICH_IP, ENDPOINT_ENRICH_STORAGE, ENDPOINT_JOB_STATUS, ENDPOINT_TAKE_SNAPSHOT, ENDPOINT_VOLUME_OFFLINE, RRS_SERVICE_URL, SSL_VERIFY
 from .auth_manager import RRSOAuthAdapter, RRSOAuthManager
 from .utils import generate_encryption_key, extract_domain_from_uri, build_rrs_url
 from TIPCommon.oauth import CredStorage
@@ -25,13 +25,14 @@ class ApiManager:
         # Get credentials from Integration config
         self.CLIENT_ID = self.siemplify.extract_configuration_param('Integration', "client id")
         self.CLIENT_SECRET = self.siemplify.extract_configuration_param('Integration', "client secret")
-        self.ENDPOINT_URL = self.siemplify.extract_configuration_param('Integration', "SaaS endpoint")
         self.ACCOUNT_ID = self.siemplify.extract_configuration_param('Integration', "account id")
-        self.SSL_VERIFY = self.siemplify.extract_configuration_param('Integration', "Verify SSL").strip().lower() == 'true'
+
+        self.ENDPOINT_URL = RRS_SERVICE_URL
+        self.SSL_VERIFY = SSL_VERIFY
         
         self.DOMAIN = extract_domain_from_uri(self.ENDPOINT_URL)
 
-        self.siemplify.LOGGER.info(f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}")
+        self.siemplify.LOGGER.info(f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}, Account ID={self.ACCOUNT_ID}")
     
         self.token = ""
         
@@ -125,7 +126,7 @@ class ApiManager:
             "ip_address": ip_address
         }
 
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: POST URL={url}, Payload={request_payload}")
+        self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: POST URL={url}")
 
         # Make API call using session (already has Authorization header from auth())
         response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
@@ -273,7 +274,7 @@ class ApiManager:
             "system_id": system_id
         }
 
-        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: POST URL={url}, Payload={request_payload}")
+        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: POST URL={url}")
 
         # Make API call using session (already has Authorization header from __init__)
         response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
@@ -328,7 +329,7 @@ class ApiManager:
             "system_id": system_id
         }
 
-        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: POST URL={url}, Payload={request_payload}")
+        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: POST URL={url}")
 
         # Make API call using session (already has Authorization header from __init__)
         response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)

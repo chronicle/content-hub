@@ -48,28 +48,28 @@ def generate_encryption_key(client_id: str, account_domain: str) -> str:
     return hashlib.sha256(unique_string.encode()).hexdigest()
 
 
-def extract_domain_from_uri(access_token_uri: str) -> str:
+def extract_domain_from_uri(service_url: str) -> str:
     """
-    Extract the domain (netloc) from the access_token_uri.
+    Extract the domain (netloc) from the service_url.
 
     Args:
-        access_token_uri (str): The access token URI from service account JSON
+        service_url (str): The SaaS service url.
 
     Returns:
-        str: The domain part of the URI (e.g., "rubrik-tme-rdp.my.rubrik.com")
+        str: The domain part of the URL (e.g., "api.bluexp.netapp.com")
 
     Raises:
         ValueError: If the URI is invalid or domain cannot be extracted
     """
-    if not access_token_uri or not access_token_uri.strip():
+    if not service_url or not service_url.strip():
         raise ValueError("access_token_uri not present in the Service Account JSON.")
 
-    parsed_uri = urlparse(access_token_uri.strip())
+    parsed_uri = urlparse(service_url.strip())
     domain = parsed_uri.netloc
 
     if not domain:
         raise ValueError(
-            f"Could not extract Rubrik Account domain from access_token_uri: {access_token_uri}"
+            f"Could not extract Rubrik Account domain from service_url: {service_url}"
         )
 
     return domain
