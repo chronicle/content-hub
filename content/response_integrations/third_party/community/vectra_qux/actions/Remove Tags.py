@@ -145,11 +145,21 @@ def main():
         )
 
         if successfully_removed_tags and failed_remove_tags:
-            output_message = f'Successfully removed tag(s):"{", ".join(successfully_removed_tags)}". Unable to remove tag(s):"{", ".join(failed_remove_tags)}" from {entity_type}: "{entity_id}". Check logs for details.'
+            output_message = (
+                f'Successfully removed tag(s):"{", ".join(successfully_removed_tags)}". '
+                f'Unable to remove tag(s):"{", ".join(failed_remove_tags)}" from '
+                f'{entity_type}: "{entity_id}". Check logs for details.'
+            )
         elif not successfully_removed_tags and failed_remove_tags:
-            output_message = f'Failed to remove tag(s):"{", ".join(failed_remove_tags)}" from {entity_type}: "{entity_id}"'
+            output_message = (
+                f'Failed to remove tag(s):"{", ".join(failed_remove_tags)}" from '
+                f'{entity_type}: "{entity_id}"'
+            )
         else:
-            output_message = f'Successfully removed tag(s): "{", ".join(successfully_removed_tags)}" from {entity_type}: "{entity_id}"'
+            output_message = (
+                f'Successfully removed tag(s): "{", ".join(successfully_removed_tags)}" '
+                f'from {entity_type}: "{entity_id}"'
+            )
 
         # Logging
         siemplify.LOGGER.info(output_message)

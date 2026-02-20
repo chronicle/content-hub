@@ -82,9 +82,8 @@ OUT_CONNECTORS_META_DIR: str = "Connectors"
 OUT_JOBS_META_DIR: str = "Jobs"
 OUT_WIDGETS_META_DIR: str = "Widgets"
 
-AI_FOLDER: str = "ai"
+AI_DIR: str = "ai"
 ACTIONS_AI_DESCRIPTION_FILE: str = "actions_ai_description.yaml"
-AI_META_JSON_FILE: str = "actions_ai_metadata.json"
 
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"
@@ -130,6 +129,12 @@ REPO_PACKAGES_CONFIG: dict[str, str] = {
     "EnvironmentCommon": "envcommon",
     "integration_testing": "integration_testing_whls",
 }
+SDK_DEPENDENCIES_INSTALL_NAMES: dict[str, str] = {
+    "dateutil": "python-dateutil",
+    "OpenSSL": "pyopenssl",
+}
+
+SDK_DEPENDENCIES_MIN_VERSIONS: dict[str, str] = {"requests": "2.32.4"}
 
 README_FILE: str = "README.md"
 LOCK_FILE: str = "uv.lock"

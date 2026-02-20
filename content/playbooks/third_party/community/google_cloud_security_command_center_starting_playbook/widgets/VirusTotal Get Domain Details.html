@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"/>
+  <link
+      href="https://www.siemplify.co/wp-content/cache/min/1/wp-content/themes/siemplify/assets/fonts/fonts.min.css?ver=1628709624"
+      rel="stylesheet"/>
+  <style>
+      ::-webkit-scrollbar {
+          width: 12px;
+          height: 12px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+          border-radius: 10px;
+          border: 3px solid transparent;
+          background: hsl(221, 26%, 46%);
+          background-clip: content-box;
+      }
+
+      ::-webkit-scrollbar-track {
+          background-color: transparent;
+      }
+
+      ::-webkit-scrollbar-corner {
+          background-color: transparent;
+      }
+
+      body {
+          float: left;
+          width: 100%;
+          padding: 0;
+          margin: 0;
+          box-sizing: border-box;
+          background-color: #212C44;
+          overflow-y: hidden;
+      }
+
+      .container {
+          width: 100%;
+          display: flex;
+          float: left;
+      }
+
+      p {
+          margin: 0;
+      }
+
+      .invalid-url {
+          width: 100%;
+          border: 0;
+          height: 200px;
+          padding: 0 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+
+      .nothing-found {
+          width: 100%;
+          float: left;
+          padding: 20px 0;
+          text-align: center;
+          color: #fff;
+          font-family: initial;
+          font-weight: 600;
+      }
+
+      .content-iframe {
+          width: 100%;
+          border: 0;
+          height: 100vh;
+      }
+
+      .entities {
+          height: 100vh;
+          float: left;
+          min-width: 180px;
+          min-height: 275px;
+          overflow-y: auto;
+          border-right: 1px solid #576B95;
+      }
+
+      .entities-content {
+          float: left;
+          width: 100%;
+      }
+
+      .widget-text {
+          display: flex;
+          align-items: center;
+      }
+
+      span.container-list-item {
+          font-weight: 400;
+          cursor: pointer;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          padding: 10px;
+          color: #c3d2e8;
+          display: block;
+      }
+
+      span.container-list-item.active {
+          background: #3a4a6c;
+          color: #fff;
+          font-weight: 700;
+      }
+
+      .widget-text table tbody tr th {
+          vertical-align: initial !important;
+          text-align: left;
+          text-transform: capitalize;
+          font-weight: 400;
+          font-size: 14px;
+          line-height: 22px;
+          color: #4e4f63;
+          width: 130px;
+      }
+
+      .widget-text tr td {
+          font-style: normal;
+          font-weight: 600;
+          font-size: 14px;
+          line-height: 18px;
+          color: #0f1029;
+      }
+
+      #content iframe {
+          display: none;
+      }
+
+      #content iframe:first-child {
+          display: block;
+      }
+  </style>
+</head>
+<body>
+<div class="container" id="container" style="font-family: Open Sans, serif; font-size: 12px; color: #fff;">
+  <div class="entities" id="entitiesList"></div>
+  <div class="entities-content">
+    <div class="widget-text" id="content"></div>
+  </div>
+</div>
+<script>
+    window.addEventListener("load", init, false);
+    let entitiesData = new Map();
+    const listElement = document.getElementById("entitiesList");
+    const contentElement = document.getElementById("content");
+    const containerElement = document.getElementById("container");
+    let activeItem;
+
+    const actionListData = [{stepInstanceName}.JsonResult];
+
+    function init() {
+        const replacedData = getReplacedData();
+        const dataExists = !isEmptyArray(replacedData);
+        if (dataExists) {
+            const filteredData = replacedData.filter(([_, __, ___, status]) => status === "success");
+            if (!isEmptyArray(filteredData)) {
+                setEntitiesData(filteredData);
+                setHtml();
+            } else {
+                setNothingFound();
+            }
+        } else {
+            setNothingFound();
+        }
+    }
+
+    function getReplacedData() {
+        return actionListData.results.map(item => [item.Entity, item.EntityResult.widget_url, item.EntityResult.cached_html_widget, item.EntityResult.execution_status]);
+    }
+
+    function setEntitiesData(replacedData) {
+        replacedData.forEach(([entity, widgetUrl, cachedHtmlWidget]) => {
+            entitiesData.set(entity, {widgetUrl, cachedHtmlWidget});
+        });
+    }
+
+    function setHtml() {
+        let validEntitiesData = new Map();
+
+        entitiesData.forEach((value, entity) => {
+            const {widgetUrl, cachedHtmlWidget} = value;
+            if (widgetUrl !== "" || cachedHtmlWidget !== "") {
+                validEntitiesData.set(entity, value);
+            }
+        });
+
+        if (validEntitiesData.size > 0) {
+            entitiesData = validEntitiesData;
+            setListElements();
+            addListenerToListElement();
+            setFirstItemData();
+        } else {
+            setNothingFound();
+        }
+    }
+
+
+    function setListElements() {
+        let listHtml = "";
+        entitiesData.forEach((value, entity) => {
+            listHtml += getListItemHtml(entity);
+        });
+        listElement.innerHTML = listHtml;
+        if (entitiesData.size === 1) {
+            listElement.style.display = 'none';
+        }
+    }
+
+    function addListenerToListElement() {
+        listElement.addEventListener("click", onListClick);
+    }
+
+    function onListClick(event) {
+        const targetElement = event.target;
+        if (targetElement.dataset.hasOwnProperty("id")) {
+            activeItem.classList.remove("active");
+            const entity = event.target.dataset.id;
+            targetElement.classList.add("active");
+            setActiveItem(targetElement);
+            setContent(entity);
+        }
+    }
+
+    function getListItemHtml(entity) {
+        return `<span class="container-list-item" data-id="${entity}">${entity}</span>`;
+    }
+
+    function setContent(entity) {
+        const data = entitiesData.get(entity);
+        const url = data.widgetUrl;
+        let cachedHtmlWidget = data.cachedHtmlWidget.replace(/"/g, "'");
+
+        fetchIframeContent(url)
+            .then(htmlContent => {
+                if (htmlContent.includes('rel="error"')) {
+                    cachedHtmlWidget = modifyHtmlContent(cachedHtmlWidget);
+                    contentElement.innerHTML = `<iframe class="content-iframe" srcdoc="${cachedHtmlWidget}"></iframe>`;
+                } else {
+                    contentElement.innerHTML = `<iframe class="content-iframe" src="${url}"></iframe>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching iframe content:', error);
+                setNothingFound();
+            });
+    }
+
+    function modifyHtmlContent(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const body = doc.querySelector('body');
+        const preElements = body.querySelectorAll('.vt-utils-pre');
+
+        preElements.forEach(element => {
+            element.style.whiteSpace = 'unset';
+        });
+        
+        const children = body.children;
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            const subChildren = child.children;
+            for (let j = 0; j < subChildren.length; j++) {
+                const subChild = subChildren[j];
+                if (subChild.classList.contains('vt-utils-flex')) {
+                    const items = subChild.children;
+                    for (let e = 0; e < items.length; e++) {
+                        const item = items[e];
+                        console.log(item.classList)
+                        if (item.classList.contains('vt-logo-link') &&
+                            item.classList.contains('vt-logo-link--shorter') &&
+                            item.classList.contains('vt-utils-hide') &&
+                            item.classList.contains('show-on-narrower')) {
+                            item.remove();
+                        } else {
+                            item.style.display = 'inline-flex';
+                        }
+                    }
+                }
+            }
+        }
+        const serializer = new XMLSerializer();
+        const modifiedHtml = serializer.serializeToString(doc);
+        return modifiedHtml.replace(/"/g, "'");
+    }
+
+
+    function setNothingFound() {
+        containerElement.innerHTML = '<p class="nothing-found"> <b> No information found in VirusTotal.</b></p>';
+    }
+
+    function setFirstItemData() {
+        const firstKey = entitiesData.keys().next().value;
+        setContent(firstKey);
+        setActiveItem(listElement.children[0]);
+    }
+
+    function setActiveItem(item) {
+        activeItem = item;
+        activeItem.classList.add("active");
+    }
+
+    function isEmptyArray(arr) {
+        return !arr || !arr.length || arr.length === 0;
+    }
+
+    function fetchIframeContent(url) {
+        return new Promise((resolve, reject) => {
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(htmlContent => {
+                    resolve(htmlContent);
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+</script>
+</body>
+</html>
