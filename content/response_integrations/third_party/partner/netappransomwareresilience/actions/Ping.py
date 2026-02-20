@@ -22,7 +22,6 @@ def main():
 
     except Exception as e:
         output_message = f"Failed to connect to the Ransomware Resilience server! {e}"
-        connectivity_result = False
         siemplify.LOGGER.error(f"Connection to API failed, performing action {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED    
@@ -30,7 +29,7 @@ def main():
 
     siemplify.LOGGER.info("----------------- RRS - Test connection: End -----------------")
 
-    siemplify.LOGGER.info("Ping: \n  status: {}\n  result_value: {}\n  output_message: {}".format(status,result_value, output_message))
+    siemplify.LOGGER.info(f"Ping: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}")
     siemplify.end(output_message, result_value, status)
 
 

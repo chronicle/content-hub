@@ -32,7 +32,7 @@ class ApiManager:
         
         self.DOMAIN = extract_domain_from_uri(self.ENDPOINT_URL)
 
-        self.siemplify.LOGGER.info(f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}, Account ID={self.ACCOUNT_ID}")
+        self.siemplify.LOGGER.info(f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}")
     
         self.token = ""
         
@@ -102,20 +102,16 @@ class ApiManager:
 
 
    def enrich_ip(self, ip_address: str) -> list[dict]:
-        """
-        Call the IP enrichment API to get enrichment data for an IP address.
+        """Enrich an IP address with threat intelligence data.
 
         Args:
-            ip_address: IP address to enrich
+            ip_address: IP address to enrich.
 
         Returns:
-            Response data from the enrichment API
+            list[dict]: Response data from the IP enrichment API.
 
-        Example:
-            >>> manager = ApiManager(siemplify)
-            >>> manager.auth()
-            >>> response = manager.enrich_ip("192.168.1.1")
-            >>> print(response)
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
         """
         self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: Enriching IP address: {ip_address}")
 
@@ -137,7 +133,6 @@ class ApiManager:
         # Parse response
         response_data = response.json()
         self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: API call successful. Status: {response.status_code}")
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: Response data: {response_data}")
 
         return response_data
 
@@ -174,7 +169,7 @@ class ApiManager:
             "system_id": system_id
         }
 
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: GET URL={url}, {params=}")
+        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: GET URL={url}")
 
         # Make API call using session (already has Authorization header from __init__)
         response = self.session.get(url, params=params, verify=self.SSL_VERIFY)
@@ -185,7 +180,6 @@ class ApiManager:
         # Parse response
         response_data = response.json()
         self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: API call successful. Status: {response.status_code}")
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: Response data: {response_data}")
 
         return response_data
 
@@ -235,7 +229,6 @@ class ApiManager:
         # Parse response
         response_data = response.json()
         self.siemplify.LOGGER.info(f"ApiManager.check_job_status: API call successful. Status: {response.status_code}")
-        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: Response data: {response_data}")
 
         return response_data
 
@@ -287,7 +280,6 @@ class ApiManager:
         # Parse response
         response_data = response.json()
         self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: API call successful. Status: {response.status_code}")
-        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: Response data: {response_data}")
 
         return response_data
 
@@ -339,6 +331,5 @@ class ApiManager:
         # Parse response
         response_data = response.json()
         self.siemplify.LOGGER.info(f"ApiManager.volume_offline: API call successful. Status: {response.status_code}")
-        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: Response data: {response_data}")
 
         return response_data
