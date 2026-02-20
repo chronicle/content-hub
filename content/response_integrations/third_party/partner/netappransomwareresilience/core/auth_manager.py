@@ -7,9 +7,7 @@ with automatic refresh and encrypted storage.
 from __future__ import annotations
 
 from __future__ import annotations
-
 from typing import Any
-
 import requests
 from TIPCommon.oauth import (
     AuthenticationError,

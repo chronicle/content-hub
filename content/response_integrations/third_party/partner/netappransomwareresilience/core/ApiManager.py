@@ -1,6 +1,6 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from .constants import OAUTH_CONFIG, ENDPOINT_ENRICH_IP, ENDPOINT_ENRICH_STORAGE, ENDPOINT_JOB_STATUS, ENDPOINT_TAKE_SNAPSHOT, ENDPOINT_VOLUME_OFFLINE, RRS_SERVICE_URL, SSL_VERIFY
+from .constants import ENDPOINT_ENRICH_IP, ENDPOINT_ENRICH_STORAGE, ENDPOINT_JOB_STATUS, ENDPOINT_TAKE_SNAPSHOT, ENDPOINT_VOLUME_OFFLINE, RRS_SERVICE_URL, SSL_VERIFY
 from .auth_manager import RRSOAuthAdapter, RRSOAuthManager
 from .utils import generate_encryption_key, extract_domain_from_uri, build_rrs_url
 from TIPCommon.oauth import CredStorage
@@ -58,11 +58,7 @@ class ApiManager:
         if self.is_token_expired:
             self.siemplify.LOGGER.info("ApiManager: Access token is expired or not found")
         
-        self.token = (
-            self.oauth_manager._token.access_token
-            if self.oauth_manager._token and hasattr(self.oauth_manager._token, "access_token")
-            else ""
-        )
+        self.token = self.oauth_manager._token.access_token if self.oauth_manager._token else ""
         
         if not self.token or self.is_token_expired:
             self.siemplify.LOGGER.info(f"ApiManager: generate new token...")
@@ -72,8 +68,7 @@ class ApiManager:
         
         # Setting HTTP session headers
         self.siemplify.LOGGER.info(f"ApiManager: Setting HTTP session headers")
-        self.session.headers.update({"Content-Type": "application/json"})
-        self.session.headers.update({"Authorization": f"Bearer {self.token}"})
+        self.session.headers.update({"Content-Type": "application/json", "Authorization": f"Bearer {self.token}"})
 
 
 
@@ -82,6 +77,12 @@ class ApiManager:
 
         This method refreshes the access token using the credentials,
         saves it to encrypted storage, and updates the session headers.
+
+        Returns:
+            str: The newly generated access token.
+
+        Raises:
+            Exception: If token generation fails (propagated from RRSOAuthAdapter.refresh_token).
         """
         self.siemplify.LOGGER.info("Generating new token")
         
@@ -120,7 +121,6 @@ class ApiManager:
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_ENRICH_IP)
-        # url = f"{self.ENDPOINT_URL}/{self.ACCOUNT_ID}/{ENDPOINT_ENRICH_IP}"
 
         request_payload = {
             "ip_address": ip_address
@@ -149,19 +149,21 @@ class ApiManager:
 
         Extracts storage parameters from action and retrieves enrichment data.
 
-        Returns:
-            Response data from the storage enrichment API
+        Args:
+            agent_id: Console agent ID, extracted from action parameters.
+            system_id: Storage system ID, extracted from action parameters.
 
-        Example:
-            >>> manager = ApiManager(siemplify)
-            >>> response = manager.enrich_storage()
-            >>> print(response)
+        Returns:
+            list[dict]: Response data from the storage enrichment API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
         """
         # Extract parameters from action
         agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
         system_id = self.siemplify.extract_action_param("system_id", print_value=True)
         
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: Enriching storage for agent_id: {agent_id}, system_id: {system_id}")
+        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: Enriching storage for given agent_id and system_id")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_ENRICH_STORAGE)
@@ -194,20 +196,23 @@ class ApiManager:
 
         Extracts job parameters from action and checks job status.
 
-        Returns:
-            Response data from the job status API
+        Args:
+            source: Source identifier (e.g. "rps-agent"), extracted from action parameters.
+            agent_id: Console agent ID, extracted from action parameters.
+            job_id: Job ID to check status for, extracted from action parameters.
 
-        Example:
-            >>> manager = ApiManager(siemplify)
-            >>> response = manager.check_job_status()
-            >>> print(response)
+        Returns:
+            dict: Response data from the job status API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
         """
         # Extract parameters from action
         source = self.siemplify.extract_action_param("source", print_value=True)
         agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
         job_id = self.siemplify.extract_action_param("job_id", print_value=True)
         
-        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: Checking job status for job_id: {job_id}, source: {source}, agent_id: {agent_id}")
+        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: Checking job status for job_id: {job_id}")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_JOB_STATUS)
@@ -219,7 +224,7 @@ class ApiManager:
             "job_id": job_id
         }
 
-        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: GET URL={url}, {params=}")
+        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: GET URL={url}")
 
         # Make API call using session (already has Authorization header from __init__)
         response = self.session.get(url, params=params, verify=self.SSL_VERIFY)
@@ -241,28 +246,25 @@ class ApiManager:
 
         Extracts snapshot parameters from action and triggers snapshot creation.
 
-        Returns:
-            Response data from the snapshot API
+        Args:
+            volume_id: Volume ID to snapshot, extracted from action parameters.
+            agent_id: Console agent ID, extracted from action parameters.
+            system_id: Storage system ID, extracted from action parameters.
 
-        Example:
-            >>> manager = ApiManager(siemplify)
-            >>> response = manager.take_snapshot()
-            >>> print(response)
+        Returns:
+            dict: Response data from the snapshot API.
+
+        Raises:
+            ValueError: If any of volume_id, agent_id, or system_id are missing.
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
         """
         # Extract parameters from action
         volume_id = self.siemplify.extract_action_param("volume_id", print_value=True)
         agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
         system_id = self.siemplify.extract_action_param("system_id", print_value=True)
         
-        # Validate required parameters
-        if not volume_id:
-            raise ValueError("take_snapshot: volume_id parameter is required")
-        if not agent_id:
-            raise ValueError("take_snapshot: agent_id parameter is required")
-        if not system_id:
-            raise ValueError("take_snapshot: system_id parameter is required")
-
-        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}, agent_id: {agent_id}, system_id: {system_id}")
+        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_TAKE_SNAPSHOT)
@@ -296,28 +298,25 @@ class ApiManager:
 
         Extracts volume parameters from action and takes the volume offline.
 
-        Returns:
-            Response data from the volume offline API
+        Args:
+            volume_id: Volume ID to take offline, extracted from action parameters.
+            agent_id: Console agent ID, extracted from action parameters.
+            system_id: Storage system ID, extracted from action parameters.
 
-        Example:
-            >>> manager = ApiManager(siemplify)
-            >>> response = manager.volume_offline()
-            >>> print(response)
+        Returns:
+            dict: Response data from the volume offline API.
+
+        Raises:
+            ValueError: If any of volume_id, agent_id, or system_id are missing.
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
         """
         # Extract parameters from action
         volume_id = self.siemplify.extract_action_param("volume_id", print_value=True)
         agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
         system_id = self.siemplify.extract_action_param("system_id", print_value=True)
         
-        # Validate required parameters
-        if not volume_id:
-            raise ValueError("volume_offline: volume_id parameter is required")
-        if not agent_id:
-            raise ValueError("volume_offline: agent_id parameter is required")
-        if not system_id:
-            raise ValueError("volume_offline: system_id parameter is required")
-
-        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}, agent_id: {agent_id}, system_id: {system_id}")
+        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_VOLUME_OFFLINE)

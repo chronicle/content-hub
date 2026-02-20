@@ -2,9 +2,7 @@ from __future__ import annotations
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED,EXECUTION_STATE_TIMEDOUT
-from ..core.constants import OAUTH_CONFIG
 from ..core.ApiManager import ApiManager
-import requests
 
 
 @output_handler

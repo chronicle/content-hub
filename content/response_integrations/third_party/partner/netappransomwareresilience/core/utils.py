@@ -2,13 +2,10 @@
 from __future__ import annotations
 
 from __future__ import annotations
-
 import hashlib
 from typing import Any, Dict
 from urllib.parse import urlparse
-
 from TIPCommon.smp_time import unix_now
-
 from .constants import DEFAULT_EXPIRY_SECONDS, EXPIRES_IN_KEY
 
 
@@ -38,7 +35,7 @@ def generate_encryption_key(client_id: str, account_domain: str) -> str:
 
     Args:
         client_id: OAuth client ID.
-        account_domain: Rubrik account domain.
+        account_domain: NetApp account domain.
 
     Returns:
         str: SHA-256 hash hex string used for token encryption.
