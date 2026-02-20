@@ -90,7 +90,7 @@ class GenerateQrCode(GOQRBaseAction):
         )
         attachment_path: Path = self.save_temp_file(attachment_name, qr_code_bytes)
         json_result = {
-            "qr_image_base64_blob": base64.b16encode(qr_code_bytes).decode("utf-8"),
+            "qr_image_base64_blob": base64.b64encode(qr_code_bytes).decode("utf-8"),
             "size": self.params.size,
             "format": self.params.image_format,
             "error_correction": self.params.error_correction,
