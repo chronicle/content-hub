@@ -17,6 +17,21 @@ from __future__ import annotations
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
+from TIPCommon.data_models import (
+    BlockRecord,
+    CaseTag,
+    CaseStage,
+    Domain,
+    CustomList,
+    Network,
+    CaseCloseReasons,
+    SlaDefinition,
+    Environment,
+    SimulatedCases,
+)
+
+from TIPCommon.utils import platform_supports_1p_api
+
 from ..core.constants import (
     ALL_ENVIRONMENTS_IDENTIFIER,
     AVAILABLE_CONTENT,
@@ -32,11 +47,7 @@ def id_validator(resource, fields_to_compare, id_field, current_state):
     if isinstance(fields_to_compare, str):
         fields_to_compare = [fields_to_compare]
     current = next(
-        (
-            x
-            for x in current_state
-            if all(x[y] == resource[y] for y in fields_to_compare)
-        ),
+        (x for x in current_state if all(x[y] == resource[y] for y in fields_to_compare)),
         None,
     )
     if current:
@@ -56,39 +67,58 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        if features["Dynamic Parameters"]:
-            siemplify.LOGGER.info(
-                "========== Environment Dynamic Parameters ==========",
-            )
-            current_parameters = gitsync.api.get_env_dynamic_parameters()
-            for dynParam in gitsync.content.get_dynamic_parameters():
-                siemplify.LOGGER.info(
-                    f"Adding dynamic parameter {dynParam.get('name')}",
-                )
-                gitsync.api.add_dynamic_env_param(
-                    id_validator(dynParam, "name", "id", current_parameters),
-                )
+        if features["Dynamic Parameters"]: # 20 jan
+            siemplify.LOGGER.info("======== Environment Dynamic Parameters ========")
+
+            # current_parameters = gitsync.api.get_env_dynamic_parameters(chronicle_soar=siemplify)
+
+            # current_by_name = {p.get("name"): p for p in current_parameters}
+
+            for dyn_param in gitsync.content.get_dynamic_parameters():
+                name = dyn_param.get("name")
+                siemplify.LOGGER.info(f"Adding dynamic parameter {name}")
+
+                # existing = current_by_name.get(name, {})
+
+                # payload = {
+                #     "id": existing.get("id", dyn_param.get("id", 0)),
+                #     "name": name,
+                #     "type": dyn_param.get("type", existing.get("type")),
+                #     "defaultValue": dyn_param.get("defaultValue", existing.get("defaultValue", "")),
+                #     "optionalValues": dyn_param.get(
+                #         "optionalValues", existing.get("optionalValues", [])
+                #     ),
+                # }
+
+                gitsync.api.add_dynamic_env_param(dyn_param)
 
         if features["Environments"]:
             siemplify.LOGGER.info("========== Environments ==========")
-            all_environments_names = gitsync.api.get_environment_names()
-            for environment in gitsync.content.get_environments():
-                if environment.get("name") in all_environments_names:
-                    existing_env_id = next(
-                        x["id"]
-                        for x in gitsync.api.get_environments()
-                        if x.get("name") == environment.get("name")
-                    )
-                    environment["id"] = existing_env_id
-                    siemplify.LOGGER.info(
-                        f"Updating environment {environment.get('name')}",
-                    )
-                else:
-                    siemplify.LOGGER.info(
-                        f"Adding environment {environment.get('name')}",
-                    )
 
-                gitsync.api.import_environment(environment)
+            all_envs = gitsync.api.get_environments(siemplify)
+
+            for environment in gitsync.content.get_environments():
+                env_name = environment.get("name")
+
+                existing_env = next(
+                    (x for x in all_envs if x.name == env_name),
+                    None,
+                )
+
+                if existing_env:
+                    environment["id"] = existing_env.identifier
+                    environment["name"] = existing_env.name  # 🔒 preserve immutable name
+                    siemplify.LOGGER.info(f"Updating environment {env_name}")
+                else:
+                    siemplify.LOGGER.info(f"Adding environment {env_name}")
+
+                payload = (
+                    Environment.from_json(environment).to_1p()
+                    if platform_supports_1p_api()
+                    else Environment.from_json(environment).to_legacy()
+                )
+
+                gitsync.api.import_environment(siemplify, payload)
 
         if features["Integrations"]:
             siemplify.LOGGER.info("========== Integrations ==========")
@@ -98,44 +128,58 @@ def main():
 
         if features["Integration Instances"]:
             siemplify.LOGGER.info("========== Integration instances ==========")
-            current_instances = [
-                *gitsync.api.get_integrations_instances(ALL_ENVIRONMENTS_IDENTIFIER),
-            ]
-            for env in gitsync.api.get_environment_names():
-                current_instances.extend(gitsync.api.get_integrations_instances(env))
+
+            current_instances = gitsync.api.get_integrations_instances(
+                chronicle_soar=siemplify, environment=ALL_ENVIRONMENTS_IDENTIFIER
+            )
+
+            for env in gitsync.api.get_environment_names(chronicle_soar=siemplify):
+                current_instances.extend(
+                    gitsync.api.get_integrations_instances(
+                        chronicle_soar=siemplify, environment=env
+                    )
+                )
+
             for instance in gitsync.content.get_integration_instances():
                 if instance["integrationIdentifier"] not in IGNORED_INTEGRATIONS:
+
                     current = next(
                         (
                             x
                             for x in current_instances
-                            if x["environmentIdentifier"] == instance["environment"]
-                            and x["integrationIdentifier"]
-                            == instance["integrationIdentifier"]
-                            and x["instanceName"]
-                            == instance["settings"]["instanceName"]
+                            if x.environment_identifier == instance["environment"]
+                            and x.integration_identifier == instance["integrationIdentifier"]
+                            and x.instance_name == instance["settings"]["instanceName"]
                         ),
                         None,
                     )
+
                     if current:
                         siemplify.LOGGER.info(
                             f"Updating {instance['settings']['instanceName']}",
                         )
-                        instance_to_update = current
+                        instance_to_update = current.to_json()
                     else:
                         siemplify.LOGGER.info(
                             f"Installing {instance['settings']['instanceName']}",
                         )
                         instance_to_update = gitsync.api.create_integrations_instance(
+                            siemplify,
                             instance["integrationIdentifier"],
                             instance["environment"],
                         )
-                    for i in instance["settings"]["settings"]:
-                        i["integrationInstance"] = instance_to_update["identifier"]
+
+                    instance_identifier = instance_to_update.get("identifier")
+
+                    for setting in instance["settings"]["settings"]:
+                        setting["integrationInstance"] = instance_identifier
+
+                    instance["settings"]["instanceIdentifier"] = instance_identifier
 
                     gitsync.api.save_integration_instance_settings(
-                        instance_to_update["identifier"],
-                        instance["settings"],
+                        instance_identifier=instance_identifier,
+                        env=instance["environment"],
+                        settings=instance["settings"],
                     )
 
         if features["Playbooks"]:
@@ -156,35 +200,63 @@ def main():
 
         if features["Simulated Cases"]:
             siemplify.LOGGER.info("Installing Simulated Cases")
-            for case in gitsync.content.get_simulated_cases():
-                gitsync.api.import_simulated_case(case)
+
+            for raw_payload in gitsync.content.get_simulated_cases():
+                normalized_payload = (
+                    SimulatedCases
+                    .from_legacy_or_1p(raw_payload)
+                    .to_1p()
+                )
+
+                gitsync.api.import_simulated_case(
+                    siemplify,
+                    normalized_payload,
+                )
 
         if features["Case Tags"]:
             siemplify.LOGGER.info("Installing tags")
-            current_tags = gitsync.api.get_case_tags()
+            current_tags = gitsync.api.get_case_tags(chronicle_soar=siemplify)
             for tag in gitsync.content.get_tags():
-                gitsync.api.add_case_tag(id_validator(tag, "name", "id", current_tags))
+                current_tag = id_validator(tag, "name", "id", current_tags)
+                current_tag = (
+                    CaseTag.from_json(current_tag).to_json_1p()
+                    if platform_supports_1p_api()
+                    else CaseTag.from_json(current_tag).to_json()
+                )
+
+                gitsync.api.add_case_tag(siemplify, current_tag)
 
         if features["Case Stages"]:
             siemplify.LOGGER.info("Installing stages")
-            current_stages = gitsync.api.get_case_stages()
+            current_stages = gitsync.api.get_case_stages(chronicle_soar=siemplify)
             for stage in gitsync.content.get_stages():
-                gitsync.api.add_case_stage(
-                    id_validator(stage, "name", "id", current_stages),
+                current_stage = id_validator(stage, "name", "id", current_stages)
+                current_stage = (
+                    CaseStage.from_legacy_or_1p(current_stage).to_1p()
+                    if platform_supports_1p_api()
+                    else CaseStage.from_legacy_or_1p(current_stage).to_legacy()
                 )
+
+                gitsync.api.add_case_stage(siemplify, current_stage)
 
         if features["Case Close Reasons"]:
             siemplify.LOGGER.info("Installing case close reasons")
-            current_causes = gitsync.api.get_close_reasons()
+            current_causes = gitsync.api.get_close_reasons(chronicle_soar=siemplify)
             for cause in gitsync.content.get_case_close_causes():
-                gitsync.api.add_close_reason(
-                    id_validator(
+                current_cause= id_validator(
                         cause,
-                        ("rootCause", "forCloseReason"),
+                        "rootCause",
                         "id",
                         current_causes,
-                    ),
+                    )
+                current_cause = (
+                    CaseCloseReasons.from_legacy_or_1p(current_cause).to_1p()
+                    if platform_supports_1p_api()
+                    else CaseCloseReasons.from_legacy_or_1p(current_cause).to_legacy()
                 )
+
+                gitsync.api.add_close_reason(siemplify, current_cause)
+
 
         if features["Case Title Settings"]:
             case_title_settings = gitsync.content.get_case_titles()
@@ -194,7 +266,7 @@ def main():
 
         if features["Visual Families"]:
             siemplify.LOGGER.info("Installing visual families")
-            current_vfs = gitsync.api.get_custom_families()
+            current_vfs = gitsync.api.get_custom_families(chronicle_soar=siemplify)
             for family in gitsync.content.get_visual_families():
                 gitsync.api.add_custom_family(
                     {
@@ -211,28 +283,46 @@ def main():
 
         if features["Networks"]:
             siemplify.LOGGER.info("Installing networks")
-            current_networks = gitsync.api.get_networks()
+            current_networks = gitsync.api.get_networks(chronicle_soar=siemplify)
             for network in gitsync.content.get_networks():
-                gitsync.api.update_network(
-                    id_validator(network, "name", "id", current_networks),
+                current_network = id_validator(network, "name", "id", current_networks)
+                current_network = (
+                    Network.from_legacy_or_1p(current_network).to_1p()
+                    if platform_supports_1p_api()
+                    else Network.from_legacy_or_1p(current_network).to_legacy()
                 )
+
+                gitsync.api.update_network(siemplify, current_network)
 
         if features["Domains"]:
             siemplify.LOGGER.info("Installing domains")
-            current_domains = gitsync.api.get_domains()
+            current_domains = gitsync.api.get_domains(chronicle_soar=siemplify)
             for domain in gitsync.content.get_domains():
-                gitsync.api.update_domain(
-                    id_validator(domain, "domain", "id", current_domains),
+                current_domain = id_validator(domain, "domain", "id", current_domains)
+                current_domain = (
+                    Domain.from_legacy_or_1p(current_domain).to_1p()
+                    if platform_supports_1p_api()
+                    else Domain.from_legacy_or_1p(current_domain).to_legacy()
                 )
+
+                gitsync.api.update_domain(siemplify, current_domain)
 
         if features["Custom Lists"]:
             siemplify.LOGGER.info("Installing custom lists")
+            current_lsts = gitsync.api.get_custom_lists(chronicle_soar=siemplify)
             for lst in gitsync.content.get_custom_lists():
-                gitsync.api.update_custom_list(lst)
+                current_lst = id_validator(lst, "category", "id", current_lsts)
+                current_lst = (
+                    CustomList.from_legacy_or_1p(current_lst).to_1p()
+                    if platform_supports_1p_api()
+                    else CustomList.from_legacy_or_1p(current_lst).to_legacy()
+                )
+
+                gitsync.api.update_custom_list(siemplify, current_lst)
 
         if features["Email Templates"]:
             siemplify.LOGGER.info("Installing email templates")
-            current_templates = gitsync.api.get_email_templates()
+            current_templates = gitsync.api.get_email_templates(chronicle_soar=siemplify)
             for template in gitsync.content.get_email_templates():
                 gitsync.api.add_email_template(
                     id_validator(template, "name", "id", current_templates),
@@ -240,13 +330,23 @@ def main():
 
         if features["Blacklists"]:
             siemplify.LOGGER.info("Installing denylists")
-            for bl in gitsync.content.get_denylists():
-                gitsync.api.update_denylist(bl)
+            for definition in gitsync.content.get_denylists():
+                definition = (
+                    BlockRecord.from_legacy_or_1p(definition).to_1p()
+                    if platform_supports_1p_api()
+                    else BlockRecord.from_legacy_or_1p(definition).to_legacy()
+                )
+                gitsync.api.update_denylist(siemplify, definition)
 
         if features["SLA Records"]:
             siemplify.LOGGER.info("Installing SLA definition")
             for definition in gitsync.content.get_sla_definitions():
-                gitsync.api.update_sla_record(definition)
+                definition = (
+                    SlaDefinition.from_legacy_or_1p(definition).to_1p()
+                    if platform_supports_1p_api()
+                    else SlaDefinition.from_legacy_or_1p(definition).to_legacy()
+                )
+                gitsync.api.update_sla_record(siemplify, definition)
 
         if features["Logo"]:
             if not gitsync.content.get_logo():
