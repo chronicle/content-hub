@@ -1,0 +1,257 @@
+Async Action Example:
+  ai_description: "### General Description\nThis action is an asynchronous utility\
+    \ designed to pause playbook execution until one or more specified Google SecOps\
+    \ cases are assigned a specific tag. It is primarily used for cross-case synchronization\
+    \ or waiting for manual analyst intervention (tagging) before proceeding with\
+    \ automated logic. The action polls the status of the cases and only completes\
+    \ once the condition is met or a timeout occurs.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Case IDs | String | No | A comma-separated list of Case IDs to monitor. If left\
+    \ empty, the action defaults to monitoring the current case where the action is\
+    \ running. |\n| Case Tag To Wait For | String | Yes | The specific tag string\
+    \ that the action will poll for on the target cases. Defaults to 'Async'. |\n\n\
+    ### Flow Description\n1. **Initialization**: The action retrieves the target Case\
+    \ IDs and the required tag from the input parameters. \n2. **Validation**: If\
+    \ no Case IDs are provided, it identifies the current case ID as the target. It\
+    \ also checks if the action is approaching its total asynchronous timeout.\n3.\
+    \ **Data Retrieval**: The action calls the internal SOAR API to fetch the current\
+    \ overview details (including tags) for all target cases.\n4. **Tag Verification**:\
+    \ It iterates through the target cases and checks if the specified tag exists\
+    \ in the case's tag list.\n5. **State Management**:\n    * If **all** target cases\
+    \ have the required tag, the action sets its execution state to `COMPLETED` and\
+    \ returns a success message.\n    * If any cases are still missing the tag, the\
+    \ action saves its current progress (tracking which cases have the tag and which\
+    \ are still pending) into the action's result value and sets its state to `IN_PROGRESS`.\n\
+    6. **Iteration**: As an asynchronous action, it will be re-invoked by the system\
+    \ to check the status again in subsequent cycles until completion or timeout.\n\
+    \n### Additional Notes\n* This action does not process or filter entities; it\
+    \ operates strictly at the Case level.\n* It utilizes the `TIPCommon` library\
+    \ for API interaction and timeout management."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entity Action Example:
+  ai_description: >-
+    ### General Description
+
+    This action serves as a template for enriching entities within Google SecOps.
+    It identifies entities in the current alert scope based on a user-defined type
+    (IP, Hash, User, or All) and performs a simulated enrichment process. The action
+    adds a timestamp and an enrichment flag to the entities, creates a data table
+    for each processed entity, and updates the entity's attributes within the SOAR
+    platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Entity Type** | DDL | Yes | Specifies which entity types from the alert scope
+    should be processed. Options include 'All Entities', 'IP', 'Hash', and 'User'.
+    This selection determines the filtering logic applied to the `target_entities`
+    list. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the 'Entity Type' parameter
+    and validates it against supported values.
+
+    2. **Entity Filtering**: It identifies eligible entities from the alert's scope
+    that match the selected entity type (e.g., mapping 'IP' to 'ADDRESS' entities).
+
+    3. **Enrichment Processing**: For each eligible entity, the action:
+        * Generates a current Unix timestamp.
+        * Constructs an enrichment dictionary containing the timestamp and a 'true'
+    status for the 'enriched' field.
+        * Prefixes the data keys with 'SampleIntegration_'.
+        * Creates a CSV-formatted data table containing the enrichment information.
+    4. **Internal Update**: The action updates the entity's attributes in Google SecOps
+    and attaches the generated data table.
+
+    5. **Finalization**: A success message is generated listing all entities that
+    were successfully enriched. If no entities were found, the action returns a failure
+    status with a corresponding message.
+
+
+    ### Additional Notes
+
+    * This is a synchronous action and does not perform external API calls; it demonstrates
+    the standard workflow for an enrichment action using the `TIPCommon` framework.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with enrichment data (timestamp and status) and attaches
+      data tables to the entities within the SOAR case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - CHILDHASH
+    - PARENTHASH
+    - USERUNIQNAME
+    - HOSTNAME
+    - DOMAIN
+    - DestinationURL
+    - FILENAME
+    - PROCESS
+    - GENERICENTITY
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\n\nThe **Ping** action is a diagnostic\
+    \ tool used to verify the connectivity between Google SecOps and the target API\
+    \ Service. Its primary purpose is to ensure that the integration configuration\
+    \ parameters\u2014such as the API Root, credentials, and SSL settings\u2014are\
+    \ correct and that the external service is reachable over the network.\n\n###\
+    \ Parameters Description\n\nThis action does not require any action-specific parameters.\
+    \ It relies entirely on the global Integration Configuration settings:\n\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| API Root\
+    \ | String | Yes | The base URL of the API Service (e.g., https://api.vatcomply.com).\
+    \ |\n| Password Field | Password | No | The credential used for authentication\
+    \ with the service. |\n| Verify SSL | Boolean | Yes | Determines whether the action\
+    \ should validate the SSL certificate of the API server. |\n\n### Flow Description\n\
+    \n1.  **Configuration Retrieval**: The action fetches the global integration settings,\
+    \ including the API Root and authentication details.\n2.  **Session Setup**: An\
+    \ authenticated HTTP session is created based on the provided configuration.\n\
+    3.  **Connectivity Check**: The action executes a test request (calling the `test_connectivity`\
+    \ method) to the service's health or rates endpoint.\n4.  **Outcome Reporting**:\
+    \ If the request is successful, the action returns a success message. If the connection\
+    \ fails or the service returns an error, a failure message is produced."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Simple Action Example:
+  ai_description: "### General Description\nThis action fetches currency exchange\
+    \ rates from the VatComply API (`api.vatcomply.com`) for a specified set of currencies\
+    \ and a defined time frame. It is designed to provide financial context within\
+    \ a case by retrieving historical or current exchange rate data. The action does\
+    \ not interact with Google SecOps entities but instead processes user-provided\
+    \ parameters to generate informational outputs such as data tables, links, and\
+    \ case attachments.\n\n### Parameters Description\n| Parameter Name | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Currencies String | string\
+    \ | No | A comma-separated list of currency codes (e.g., 'USD, EUR') to process.\
+    \ |\n| Currencies DDL | ddl | No | A dropdown selection for a single currency\
+    \ code. The action combines values from this and 'Currencies String'. |\n| Time\
+    \ Frame | ddl | No | Defines the date range for results: 'Today', 'Last 7 Days',\
+    \ or 'Custom'. Defaults to 'Today'. |\n| Start Time | string | No | The start\
+    \ date in ISO 8601 format. **Mandatory** if 'Time Frame' is set to 'Custom'. |\n\
+    | End Time | string | No | The end date in ISO 8601 format. If omitted in 'Custom'\
+    \ mode, the current time is used. |\n| Return JSON Result | boolean | Yes | If\
+    \ enabled, the action returns the raw exchange rate data in the JSON result block.\
+    \ |\n\n### Additional Notes\n- **Validation Logic:** At least one currency must\
+    \ be provided via either 'Currencies String' or 'Currencies DDL'.\n- **Time Constraints:**\
+    \ The maximum allowed delta between 'Start Time' and 'End Time' is 7 days. If\
+    \ a larger range is provided, the action automatically adjusts the end date to\
+    \ be 7 days after the start date.\n- **Internal Mutation:** This action modifies\
+    \ the internal case state by adding data tables, external links, and a JSON file\
+    \ attachment to the case wall.\n\n### Flow Description\n1. **Parameter Extraction:**\
+    \ The action retrieves user inputs for currencies, time frames, and output preferences.\n\
+    2. **Validation:** It validates that at least one currency is selected and ensures\
+    \ the time frame logic is sound (e.g., checking for 'Start Time' if 'Custom' is\
+    \ selected).\n3. **Data Retrieval:** The action sends a GET request to the VatComply\
+    \ API to fetch exchange rates for the specified currencies and dates.\n4. **Internal\
+    \ Updates:** \n    - Creates **Data Tables** for each currency and date.\n   \
+    \ - Generates **Links** to the raw API results for the case wall.\n    - Saves\
+    \ the full result set as a **JSON Attachment** and uploads it to the current case.\n\
+    5. **Completion:** Returns a success message summarizing the processed currencies\
+    \ and time range."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables, external links, and a JSON file attachment to the
+      Google SecOps case wall.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

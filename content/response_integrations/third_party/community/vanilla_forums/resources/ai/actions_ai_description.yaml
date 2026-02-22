@@ -1,0 +1,650 @@
+Add User:
+  ai_description: >-
+    ### General Description
+
+    Adds a new user to Vanilla Forums with comprehensive details including name, email,
+    role, and password. This action handles username collisions by optionally appending
+    special characters to create unique identifiers.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | First Name | string | Yes | The first name of the new user. |
+
+    | Last Name | string | Yes | The last name of the new user. |
+
+    | Email | string | Yes | The email address for the new user account. |
+
+    | Role ID | string | Yes | The numeric ID of the role to be assigned to the user
+    (e.g., '8'). |
+
+    | Password | password | Yes | The password for the new account. Must be at least
+    6 characters long and contain both letters and digits. |
+
+    | Override Name Duplicity | boolean | No | If set to 'True', the action will attempt
+    to create a unique username using 'Additional Identifiers' if the primary name
+    is already taken. |
+
+    | Additional Identifiers | string | No | A comma-separated list of characters
+    (e.g., '_,~,-') used to separate first and last names if the default space-separated
+    name is taken. |
+
+    | Email Confirmed | boolean | No | Whether the user's email address is already
+    verified. Defaults to 'true'. |
+
+    | Photo URL | string | No | The URL for the user's profile picture. |
+
+
+    ### Additional Notes
+
+    - The action performs a complexity check on the password before attempting to
+    communicate with the API.
+
+    - If 'Override Name Duplicity' is enabled and all provided 'Additional Identifiers'
+    result in existing usernames, the action will fail.
+
+
+    ### Flow Description
+
+    1. **Validation**: Validates that the provided password meets the complexity requirements
+    (minimum 6 characters, contains letters, and contains digits).
+
+    2. **Name Check**: Searches Vanilla Forums for the proposed username (First Name
+    + Space + Last Name).
+
+    3. **Collision Resolution**: If the name exists and 'Override Name Duplicity'
+    is enabled, it iterates through the 'Additional Identifiers' to find a unique
+    combination (e.g., First_Last).
+
+    4. **User Creation**: Sends a POST request to the Vanilla Forums API to create
+    the user account with the resolved name and provided metadata.
+
+    5. **Result Handling**: Returns the user details and registration status to the
+    Google SecOps platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new user account in the Vanilla Forums platform via a POST request
+      to the /v2/users endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Generate Password:
+  ai_description: >-
+    ### General Description
+
+    Generates a random password that complies with Vanilla Forums' password requirements.
+    The generated password includes at least one uppercase letter, one lowercase letter,
+    and the remainder as digits. This is a utility action that does not interact with
+    the Vanilla Forums API directly but uses the integration's logic to ensure password
+    compatibility.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Length | string | No | The desired length of the password. Must be an integer
+    of at least 6. If not provided, it defaults to 6. |
+
+
+    ### Additional Notes
+
+    - The action will fail if the provided `Length` is less than 6.
+
+    - This action is a local generator and does not perform any network requests to
+    external systems.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `Length` parameter and converts
+    it to an integer.
+
+    2. **Validation**: It checks if the length is at least 6 characters. If not, the
+    action fails with an error message.
+
+    3. **Password Generation**: It calls the `genereate_pass` method in the `VanillaManager`,
+    which constructs a string starting with one random uppercase letter, followed
+    by one random lowercase letter, and fills the remaining length with random digits.
+
+    4. **Completion**: The generated password is returned as the action's result value
+    and the execution state is set to completed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get User Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive information for a specific user from Vanilla Forums using
+    their unique User ID. This action is useful for identifying user profiles, roles,
+    and account status within the forum platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | User ID | The unique identifier of the user whose details you want to fetch.
+    | string | Yes |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify context and retrieves
+    the Vanilla Forums configuration (API Token and URL).
+
+    2. **Parameter Extraction**: The `User ID` is extracted from the action parameters.
+
+    3. **API Request**: The `VanillaManager` executes a GET request to the Vanilla
+    Forums `/v2/users/{user_id}` endpoint.
+
+    4. **Result Processing**: If successful, the user details are returned as a JSON
+    object and attached to the action results.
+
+    5. **Completion**: The action concludes with a success message or an error message
+    if the user could not be found or the request failed.
+
+
+    ### Additional Notes
+
+    - This action does not process entities automatically; it requires the specific
+    User ID to be provided as an input.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get a Leaderboard Analytics:
+  ai_description: >-
+    ### General Description
+
+    The **Get a Leaderboard Analytics** action retrieves performance and engagement
+    metrics for specific leaderboards within the Vanilla Forums platform. It allows
+    users to fetch data such as top posters or discussion starters for a specified
+    date range and limit the number of results returned per board.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Leaderboards** | String | Yes | A comma-separated list of leaderboard identifiers
+    to query (e.g., `top-posters, top-discussion-starters`). |
+
+    | **From** | String | Yes | The start date of the analytics timeframe in `YYYY-MM-DD`
+    format. |
+
+    | **To** | String | Yes | The end date of the analytics timeframe in `YYYY-MM-DD`
+    format. |
+
+    | **Amount Limit** | String | Yes | The maximum number of rows/records to return
+    for each requested leaderboard. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Vanilla Forums manager using
+    the configured API Token and Base URL.
+
+    2. **Parameter Extraction**: It retrieves the list of leaderboards, the date range
+    (From/To), and the result limit from the action parameters.
+
+    3. **Data Retrieval**: The action iterates through the provided list of leaderboards
+    and performs a GET request to the Vanilla Forums analytics API for each one.
+
+    4. **Aggregation**: The retrieved analytics data for each board is collected into
+    a structured JSON object.
+
+    5. **Completion**: The action returns the aggregated JSON results and provides
+    a status message indicating whether the analytics were successfully fetched for
+    all requested boards.
+
+
+    ### Additional Notes
+
+    - The date parameters must strictly follow the `YYYY-MM-DD` syntax to ensure successful
+    API requests.
+
+    - This action does not process or enrich SecOps entities; it operates entirely
+    based on the provided string parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a connectivity\
+    \ test designed to verify the communication between Google SecOps and the **VanillaForums**\
+    \ instance. Its primary purpose is to validate that the integration's configuration\
+    \ parameters, specifically the API Token and Base URL, are correct and that the\
+    \ external service is reachable.\n\n### Parameters Description\nThere are no action-specific\
+    \ parameters for this action. It utilizes the global integration configuration:\n\
+    * **API Token**: The authentication token used to authorize requests to VanillaForums.\n\
+    * **URL**: The base URL of the VanillaForums API instance.\n\n### Additional Notes\n\
+    This action is a standard utility used for troubleshooting or initial setup verification.\
+    \ It does not process any entities or modify any data within Google SecOps or\
+    \ VanillaForums.\n\n### Flow Description\n1. **Parameter Extraction**: The action\
+    \ retrieves the `API Token` and `URL` from the integration's configuration settings.\n\
+    2. **Manager Initialization**: It initializes the `VanillaManager` with the provided\
+    \ credentials.\n3. **Connectivity Check**: The action executes the `test_connectivity`\
+    \ method, which performs a `GET` request to the `/v2/categories` endpoint of the\
+    \ VanillaForums API with minimal depth and limit parameters to minimize data transfer.\n\
+    4. **Execution Outcome**: \n    * If the request is successful (HTTP 200), the\
+    \ action returns a success message and sets the result to `True`.\n    * If the\
+    \ request fails (e.g., due to invalid credentials or network issues), an exception\
+    \ is caught, and a failure message containing the error details is returned."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search User By Email and Name:
+  ai_description: >-
+    ### General Description
+
+    The **Search User By Email and Name** action is used to verify the existence of
+    a user within the Vanilla Forums platform by performing lookups based on a provided
+    email address and a username. It retrieves the user's profile details if a match
+    is found, helping analysts confirm user identities or gather context during investigations.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **User Email** | String | Yes | The email address of the user to search for.
+    The action performs a paginated search across the user database to find an exact
+    match. |
+
+    | **User Name** | String | Yes | The full name or username of the user to search
+    for. The action queries the specific 'by-names' endpoint to find the user. |
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action extracts the `User Email` and `User Name` from
+    the input parameters, ensuring the email is lowercased and both strings are trimmed
+    of whitespace.
+
+    2. **Email-Based Search:** The action calls the Vanilla Forums API (`/v2/users`
+    endpoint). It iterates through paginated results (100 users per page) to find
+    a user whose email matches the input.
+
+    3. **Name-Based Search:** The action queries the `/v2/users/by-names` endpoint
+    using the provided username to check for its existence in the system.
+
+    4. **Data Compilation:** It constructs a result JSON object containing boolean
+    flags (`Email`, `UserName`) indicating if matches were found and includes the
+    full `UserDetails` if the email search was successful.
+
+    5. **Completion:** The action concludes by providing an output message summarizing
+    the findings and sets the result value to `True` if at least one of the identifiers
+    (email or name) was found.
+
+
+    ### Additional Notes
+
+    - This action does not automatically process SecOps entities; it relies strictly
+    on the provided string parameters.
+
+    - The search for the email is exhaustive across all pages of the user list until
+    a match is found or all users are checked.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Badge:
+  ai_description: >-
+    ### General Description
+
+    The **Update Badge** action allows users to award a specific badge to a user within
+    the Vanilla Forums platform using their respective identifiers. This action is
+    primarily used for administrative tasks or community management within the forum
+    ecosystem.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **User ID** | String | Yes | The unique identifier of the user in Vanilla Forums
+    who will be awarded the badge. |
+
+    | **Badge ID** | String | Yes | The unique identifier of the badge to be awarded
+    to the specified user. |
+
+
+    ### Additional Notes
+
+    This action does not interact with Google SecOps entities; it operates strictly
+    based on the provided User ID and Badge ID parameters.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Vanilla Forums manager using
+    the API Token and Base URL provided in the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the `User ID` and `Badge ID` from the
+    action parameters.
+
+    3. **API Execution**: The action calls the `give_user_badge` method in the manager,
+    which sends a `POST` request to the Vanilla Forums API endpoint `/v2/badges/{badge_id}/users`
+    with the user's ID in the payload.
+
+    4. **Finalization**: The action captures the API response, adds it as a JSON result
+    to the action, and returns a success or failure message based on the outcome of
+    the request.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Awards a badge to a user in the Vanilla Forums platform, which modifies the
+      user's profile and badge collection in the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Rank:
+  ai_description: >-
+    Updates the rank of a specific user within the Vanilla Forums platform. This action
+    allows administrators to programmatically change a user's status or permissions
+    level by assigning a new Rank ID to a specific User ID.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Rank ID | String | Yes | The unique identifier of the rank to be assigned to
+    the user. |
+
+    | User ID | String | Yes | The unique identifier of the user whose rank will be
+    modified. |
+
+
+    ### Flow
+
+    1. **Parameter Extraction:** The action retrieves the `Rank ID` and `User ID`
+    from the input parameters.
+
+    2. **API Interaction:** It initializes the Vanilla Forums manager and executes
+    a `PUT` request to the `/v2/users/{user_id}/rank` endpoint using the provided
+    Rank ID.
+
+    3. **Result Processing:** The action captures the API response, updates the execution
+    status to completed upon success, and attaches the resulting JSON data to the
+    action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the rank of a user in Vanilla Forums by sending a PUT request to the
+      user's rank endpoint.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update User Role:
+  ai_description: >-
+    ### General Description
+
+    The **Update User Role** action allows administrators to change the assigned role
+    of a specific user within Vanilla Forums. This is useful for promoting users,
+    restricting access, or managing permissions as part of an incident response or
+    administrative workflow.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **UserID** | String | Yes | The unique identifier of the user whose role needs
+    to be updated. |
+
+    | **RoleID** | String | Yes | The unique identifier of the role to be assigned
+    to the user. |
+
+
+    ### Additional Notes
+
+    - This action performs a `PATCH` request to the Vanilla Forums API.
+
+    - The `RoleID` is passed as a list containing a single ID, effectively replacing
+    the user's current roles with the specified one.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `UserID` and `RoleID` from
+    the input parameters.
+
+    2. **API Interaction**: It uses the `VanillaManager` to send a PATCH request to
+    the `/v2/users/{userID}` endpoint with the new `roleID` payload.
+
+    3. **Validation**: The action checks the API response to ensure the role was successfully
+    updated and that the provided `RoleID` was valid.
+
+    4. **Result Reporting**: The action outputs the updated user details in JSON format
+    and provides a success or failure message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the user's role in Vanilla Forums by modifying the user's profile data
+      via a PATCH request to the /v2/users/{userID} endpoint.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

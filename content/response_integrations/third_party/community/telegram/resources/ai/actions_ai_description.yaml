@@ -1,0 +1,896 @@
+Get Bot Details:
+  ai_description: "### General Description\nThe **Get Bot Details** action retrieves\
+    \ metadata and configuration information about the Telegram bot associated with\
+    \ the provided API token. This action is typically used to verify that the bot\
+    \ is correctly configured and to retrieve its unique identifier, name, and username\
+    \ from the Telegram API.\n\n### Parameters Description\nThere are no action-specific\
+    \ parameters for this action. It utilizes the **API Token** defined in the integration's\
+    \ global configuration to authenticate with the Telegram service.\n\n### Flow\
+    \ Description\n1. **Parameter Initialization**: The action extracts the 'API Token'\
+    \ from the integration's configuration settings.\n2. **API Request**: It initializes\
+    \ the `TelegramManager` and calls the `get_bot_details` method, which performs\
+    \ a GET request to the Telegram `getMe` endpoint.\n3. **Response Handling**: \n\
+    \    * If the request is successful, the bot's details (ID, name, username, etc.)\
+    \ are captured.\n    * If the request fails (e.g., invalid token or network error),\
+    \ an error message is generated.\n4. **Result Finalization**: The retrieved bot\
+    \ details are added to the action's JSON results, and the action completes with\
+    \ a success or failure status.\n\n### Additional Notes\nThis action does not interact\
+    \ with or process any entities (such as IPs or Users) within the Google SecOps\
+    \ environment. It is a utility action for system verification."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Chat Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Chat Details** action retrieves comprehensive metadata for a specific
+    Telegram chat using its unique identifier or username. This action is primarily
+    used to gather context about a chat, such as its title, type (private, group,
+    supergroup, or channel), and available invite links, which can be crucial during
+    investigations involving Telegram-based communication.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Chat ID** | String | Yes | The unique identifier or username of the target
+    Telegram chat (e.g., a numeric ID like `123456` or a username like `@my_channel`).
+    |
+
+
+    ### Flow Description
+
+    1.  **Configuration Retrieval:** The action extracts the Telegram Bot API Token
+    from the integration's global configuration.
+
+    2.  **Parameter Extraction:** It retrieves the `Chat ID` provided by the user
+    in the action parameters.
+
+    3.  **API Interaction:** The action initializes the `TelegramManager` and calls
+    the `getChat` endpoint of the Telegram Bot API.
+
+    4.  **Data Processing:** Upon a successful response, it extracts the chat's invite
+    link (if one exists).
+
+    5.  **Output Generation:** The action adds the invite link to the result UI and
+    attaches the full JSON response containing all chat details to the action's execution
+    results for further use in the playbook.
+
+
+    ### Additional Notes
+
+    *   This action does not iterate over SecOps entities; it operates strictly based
+    on the provided `Chat ID` parameter.
+
+    *   The bot must have the necessary permissions to access the chat details (e.g.,
+    being a member of the group or channel).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Messages:
+  ai_description: >-
+    ### General Description
+
+    The **Get Messages** action retrieves updates and messages from a Telegram chat
+    where the configured bot is a member. It leverages the Telegram Bot API's `getUpdates`
+    method to fetch a list of recent interactions, including messages, channel posts,
+    or poll results. This action is primarily used for monitoring bot interactions
+    or ingesting data from Telegram into the SOAR platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Last Message ID | String | No | The identifier of the last message received.
+    This acts as an 'offset', ensuring the action only retrieves messages newer than
+    this ID. Default is '123456'. |
+
+    | Message Types | Content | No | A JSON-formatted list of update types to retrieve
+    (e.g., `["message", "edited_channel_post"]`). If left as an empty list `[]`, all
+    supported update types are retrieved. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action fetches the Telegram API Token from
+    the integration's global configuration.
+
+    2. **Parameter Extraction:** It retrieves the user-provided offset (Last Message
+    ID) and the list of allowed update types (Message Types) from the action parameters.
+
+    3. **API Interaction:** The `TelegramManager` executes a GET request to the `/getUpdates`
+    endpoint of the Telegram Bot API using the provided offset and filters.
+
+    4. **Data Processing:** The action receives the JSON response containing the message
+    updates from the Telegram servers.
+
+    5. **Output:** The raw JSON data is attached to the action results (`JsonResult`),
+    and the action completes successfully if the API call returns an 'ok' status.
+
+
+    ### Additional Notes
+
+    * **Bot Membership:** The messages of a chat will only be returned if the bot
+    is an active member of that specific chat or channel.
+
+    * **Parameter Mapping:** Note that while the UI displays 'Last Message ID', the
+    underlying code references this parameter as 'Offset Param'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a connectivity\
+    \ test designed to verify the communication between Google SecOps and the Telegram\
+    \ API. It ensures that the provided Bot API Token is valid and that the Telegram\
+    \ service is reachable. This is typically used as a health check for the integration.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| None | N/A | N/A | This action does not have\
+    \ any input parameters. It relies solely on the integration's configuration. |\n\
+    \n### Additional Notes\n* This action uses the **API Token** defined in the Telegram\
+    \ integration configuration to authenticate with the Telegram API.\n* It specifically\
+    \ calls the `getMe` endpoint, which is a basic method for testing a bot's auth\
+    \ token.\n\n### Flow Description\n1. **Configuration Retrieval**: The action extracts\
+    \ the `API Token` from the Telegram integration settings.\n2. **Manager Initialization**:\
+    \ It initializes the `TelegramManager` with the retrieved token.\n3. **Connectivity\
+    \ Test**: The action calls the `test_connectivity` method, which sends a GET request\
+    \ to the Telegram `getMe` endpoint.\n4. **Response Validation**: \n    * If the\
+    \ API returns a successful response (HTTP 200 and `ok: true`), the action completes\
+    \ successfully.\n    * If an exception occurs or the API returns an error, the\
+    \ action fails and reports a connection error."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Send Document:
+  ai_description: >-
+    ### General Description
+
+    Sends a document to a specific Telegram chat or channel using a provided URL.
+    This action is useful for automated reporting or sharing evidence files directly
+    from a SOAR workflow to a Telegram-based communication channel.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Document URL | String | Yes | The direct URL of the document (e.g., PDF, DOCX)
+    that the Telegram bot will fetch and send to the chat. |
+
+    | Chat ID | String | Yes | The unique identifier for the target Telegram chat,
+    group, or channel. |
+
+
+    ### Additional Notes
+
+    * This action requires a valid Telegram Bot API Token to be configured in the
+    integration settings.
+
+    * The Telegram bot must have the necessary permissions to post in the specified
+    Chat ID.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the Telegram Bot API Token from
+    the integration configuration and the Chat ID and Document URL from the action
+    parameters.
+
+    2. **API Interaction:** It initializes the `TelegramManager` and calls the `send_doc`
+    method, which sends a request to the Telegram API's `sendDocument` endpoint.
+
+    3. **Result Processing:** The action captures the JSON response from Telegram,
+    which contains details about the sent message.
+
+    4. **Completion:** The action reports success if the document was sent or failure
+    if an error occurred (e.g., invalid Chat ID or unreachable URL).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a document to a Telegram chat, which creates a new message entry in the
+      external Telegram system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Send Location:
+  ai_description: >-
+    ### General Description
+
+    The **Send Location** action allows a Telegram bot to send a specific geographic
+    location (defined by latitude and longitude) to a designated chat. This is useful
+    for sharing physical coordinates or points of interest during an incident response
+    or notification workflow.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Chat ID** | String | Yes | The unique identifier for the target chat or the
+    username of the target channel/user where the location will be sent. |
+
+    | **Latitude** | String | Yes | The latitude coordinate of the location (e.g.,
+    30.0123213). |
+
+    | **Longitude** | String | Yes | The longitude coordinate of the location (e.g.,
+    30.456468). |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the Telegram API Token from
+    the integration configuration and the Chat ID, Latitude, and Longitude from the
+    action's input parameters.
+
+    2. **API Interaction**: It initializes the `TelegramManager` and calls the `send_location`
+    method.
+
+    3. **External Request**: The manager sends a request to the Telegram Bot API's
+    `sendLocation` endpoint with the provided coordinates and chat identifier.
+
+    4. **Result Handling**: If the request is successful, the action returns a success
+    message and the JSON response from Telegram. If the request fails (e.g., invalid
+    Chat ID or API Token), it captures the error and reports a failure state.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a new location message to a Telegram chat, which creates a new message
+      entry in the external Telegram system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Send Message:
+  ai_description: >-
+    ### General Description
+
+    The **Send Message** action allows a configured Telegram bot to send a text message
+    to a specific chat or channel. This is primarily used for notifications, alerts,
+    or automated communication within the Telegram platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Chat ID** | String | Yes | The unique identifier for the target chat, group,
+    or channel where the message will be sent. |
+
+    | **Message** | String | Yes | The actual text content of the message to be delivered
+    by the bot. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the bot's API Token from the integration
+    configuration and the target Chat ID and Message content from the action parameters.
+
+    2. **API Interaction**: It initializes the `TelegramManager` and calls the `telegram_bot_sendmessage`
+    method.
+
+    3. **External Request**: The manager sends a request to the Telegram Bot API's
+    `sendMessage` endpoint with the provided parameters.
+
+    4. **Result Processing**: The action captures the JSON response from Telegram,
+    adds it to the action results, and completes the execution with a success or failure
+    status based on the API's response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action sends a new message to a Telegram chat, which creates new data/content
+      within the external Telegram platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Send Photo:
+  ai_description: >-
+    ### General Description
+
+    The **Send Photo** action enables a Telegram bot to send an image to a specific
+    chat or channel using a direct image URL. This action is primarily used for automated
+    notifications, sharing visual reports, or providing evidence during incident response
+    workflows.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Photo URL** | String | Yes | The HTTP URL of the photo to be sent. The URL
+    must point to a valid image file and should ideally end with a supported extension
+    such as .png, .jpeg, or .jpg. |
+
+    | **Chat ID** | String | Yes | The unique identifier for the target Telegram chat,
+    group, or channel where the bot will send the photo. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action starts by extracting the Telegram **API
+    Token** from the integration's global configuration.
+
+    2. **Input Processing**: It retrieves the **Chat ID** and **Photo URL** provided
+    by the user in the action parameters.
+
+    3. **API Execution**: The action initializes the `TelegramManager` and calls the
+    `send_photo` method, which sends a request to the Telegram Bot API's `sendPhoto`
+    endpoint.
+
+    4. **Completion**: The response from the Telegram API is stored as a JSON result,
+    and the action concludes by reporting whether the photo was successfully sent.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a photo to a Telegram chat, which creates a new message/content in the
+      external Telegram platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Send Poll:
+  ai_description: >-
+    ### General Description
+
+    The **Send Poll** action allows a Google SecOps bot to send an interactive poll
+    with pre-defined answer options to a specific Telegram chat or channel. This is
+    useful for gathering feedback or triggering manual decision-making processes within
+    a chat interface during incident response.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Chat ID** | String | Yes | The unique identifier for the target chat or channel.
+    Note: Non-anonymous polls cannot be sent to channel chats. |
+
+    | **Question** | String | Yes | The specific question text you want to present
+    in the poll. |
+
+    | **Options** | Content | Yes | A JSON array of strings representing the possible
+    answer choices (e.g., `["Option 1", "Option 2"]`). |
+
+    | **Is Anonymous** | Boolean | No | If set to `true`, the poll results will be
+    anonymous. Default is `false`. Note: Non-anonymous polls cannot be sent to channel
+    chats. |
+
+
+    ### Additional Notes
+
+    - The action requires a valid Telegram Bot API Token configured in the integration
+    settings.
+
+    - Ensure the bot has the necessary permissions to post in the specified Chat ID.
+
+    - There is a limitation where non-anonymous polls are restricted from being sent
+    to Telegram Channels.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the Telegram API Token from the integration
+    configuration and extracts the user-provided parameters (Chat ID, Question, Options,
+    and Anonymity status).
+
+    2. **API Interaction**: The action utilizes the `TelegramManager` to call the
+    Telegram `sendPoll` API endpoint with the provided parameters.
+
+    3. **Result Processing**: If the request is successful, the action captures the
+    metadata of the sent poll (such as the poll ID and message details) and attaches
+    it as a JSON result.
+
+    4. **Completion**: The action concludes by providing a success message to the
+    case wall or an error message if the API call fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action creates a new poll object in an external Telegram chat or channel,
+      which changes the state of the external messaging platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set Default Chat Permissions:
+  ai_description: >-
+    ### General Description
+
+    This action sets the default chat permissions for all new members in a specific
+    Telegram group or supergroup. It allows administrators to define what actions
+    new users can perform by default, such as sending messages, polls, or inviting
+    others. For this action to function, the Telegram bot must be an administrator
+    in the target group with the `can_restrict_members` permission.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Chat ID | string | Yes | The unique identifier for the chat where permissions
+    will be applied. |
+
+    | Can Send Messages | boolean | No | If true, users can send text messages, contacts,
+    and locations. Default is true. |
+
+    | Can Edit Info | boolean | No | If true, users can edit chat settings (title,
+    photo, etc.). Note: This cannot be applied in supergroups. Default is true. |
+
+    | Can Invite Users | boolean | No | If true, users can invite new members to the
+    chat. Default is true. |
+
+    | Can Pin Messages | boolean | No | If true, users can pin messages. Note: This
+    cannot be applied in supergroups. Default is true. |
+
+    | Can Send Polls | boolean | No | If true, users are allowed to send polls. Default
+    is true. |
+
+
+    ### Additional Notes
+
+    - The bot must have administrative privileges in the group.
+
+    - Certain permissions like 'Can Edit Info' and 'Can Pin Messages' are restricted
+    and cannot be applied to regular members in supergroups via this method.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Telegram Manager using the provided
+    API Token from the integration configuration.
+
+    2. **Parameter Extraction**: It retrieves the target Chat ID and the specific
+    permission flags (Send Messages, Edit Info, Invite Users, Pin Messages, Send Polls)
+    from the action input.
+
+    3. **API Execution**: The action calls the Telegram API's `setChatPermissions`
+    endpoint with the specified parameters.
+
+    4. **Result Handling**: If the API call is successful, it returns a success message
+    and the raw JSON response from Telegram. If it fails, it captures the error and
+    reports a failure state.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the default chat permissions for new members in a Telegram group or
+      supergroup by calling the Telegram Bot API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set User Permissions:
+  ai_description: >-
+    ### General Description
+
+    Adds or revokes user permissions for a specific user within a Telegram supergroup
+    or channel. This action allows for granular control over administrative and member
+    capabilities, such as pinning messages, deleting content, or inviting users. It
+    interacts with the Telegram Bot API to promote or demote chat members based on
+    the provided parameters. Note that the bot must be an administrator in the chat
+    with the necessary rights to modify permissions.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Chat ID | String | Yes | The unique identifier or username for the target chat.
+    |
+
+    | User ID | String | Yes | The unique identifier of the user whose permissions
+    are being modified. |
+
+    | Is Anonymous | Boolean | No | If true, the user's presence in the chat is hidden.
+    |
+
+    | Can Edit The Info | Boolean | No | Permission to change chat title, photo, and
+    other settings. |
+
+    | Can Post Messages | Boolean | No | Permission to post messages (relevant for
+    channel chats only). |
+
+    | Can Edit Messages | Boolean | No | Permission to edit messages of other users.
+    |
+
+    | Can Delete Messages | Boolean | No | Permission to delete messages of other
+    users. |
+
+    | Can Invite Users | Boolean | No | Permission to invite new users to the chat.
+    |
+
+    | Can Restrict Members | Boolean | No | Permission to restrict, ban, or unban
+    chat members. |
+
+    | Can Promote Members | Boolean | No | Permission to add new administrators or
+    revoke them. |
+
+    | Can Pin Messages | Boolean | No | Permission to pin messages (relevant for supergroups
+    only). |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the Telegram API Token from
+    the integration configuration and extracts the Chat ID, User ID, and all permission-related
+    boolean flags from the action parameters.
+
+    2. **Manager Initialization**: Initializes the `TelegramManager` using the provided
+    API token.
+
+    3. **API Execution**: Calls the `set_user_permissions` method in the manager,
+    which sends a request to the Telegram `promoteChatMember` endpoint with the specified
+    permission data.
+
+    4. **Result Handling**: If the API call is successful, it returns a success message
+    and the JSON response from Telegram. If it fails, it captures the error and reports
+    a failure state.
+
+
+    ### Additional Notes
+
+    - The bot must be an administrator in the chat for this to work and must have
+    the appropriate admin permissions (specifically the ability to promote members
+    if granting admin rights).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies user permissions, administrative rights, and visibility settings for
+      a specific user within a Telegram chat or channel.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait for poll results:
+  ai_description: >-
+    ### General Description
+
+    The **Wait for poll results** action is an asynchronous utility designed to monitor
+    and retrieve the results of a specific Telegram poll. It allows security orchestrators
+    to pause a playbook until a certain level of engagement (votes) is reached on
+    a Telegram poll or until a specified timeout occurs. This is particularly useful
+    for human-in-the-loop workflows where a decision is made via a Telegram poll.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description | How it affects the flow |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Scan back Limit | String | Yes | The maximum number of poll updates to retrieve
+    and scan from the Telegram bot's history. | Determines the depth of the search
+    for the poll in the bot's update history. |
+
+    | Waiting Timeframe | String | Yes | The duration in minutes the action will wait
+    for the threshold to be met before timing out. | Sets the maximum execution window
+    for the asynchronous polling. |
+
+    | Answer Votes Threshold | String | Yes | The specific number of votes required
+    for any single poll option to trigger completion. | Defines the success criteria
+    that stops the waiting process. |
+
+    | Poll ID | String | Yes | The unique identifier of the Telegram poll to be monitored.
+    | Targets the specific poll to extract data from. |
+
+
+    ### Additional Notes
+
+    - This action is **asynchronous**. It will yield execution and resume periodically
+    until the stop conditions are met.
+
+    - **State Management:** The action stores the `start_time`, `timeframe`, and `last_update`
+    ID in the action's internal state (`additional_data`) to ensure continuity across
+    polling cycles.
+
+    - If the timeframe is reached without the vote threshold being met, the action
+    will complete with the results gathered up to that point.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action extracts the Telegram API Token from the integration
+    configuration and the poll-specific parameters from the action input.
+
+    2. **State Recovery:** It checks if this is the first run. If not, it recovers
+    the start time and the last processed update ID from the previous execution's
+    state.
+
+    3. **Data Retrieval:** It calls the Telegram `getUpdates` API to fetch recent
+    poll-related activity, using the `Scan back Limit` and the last update offset
+    to optimize the search.
+
+    4. **Filtering:** The retrieved updates are filtered to isolate entries matching
+    the provided `Poll ID`.
+
+    5. **Threshold Evaluation:** It iterates through the poll options to see if any
+    option's `voter_count` meets or exceeds the `Answer Votes Threshold`.
+
+    6. **Timeout Check:** It calculates the elapsed time since the action started
+    and compares it against the `Waiting Timeframe`.
+
+    7. **Execution Control:** If the threshold is met or the timeout is reached, the
+    action completes and returns the poll results via JSON. Otherwise, it sets its
+    status to `IN_PROGRESS` and saves its current state for the next iteration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

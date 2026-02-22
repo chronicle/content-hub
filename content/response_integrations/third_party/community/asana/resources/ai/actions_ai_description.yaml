@@ -1,0 +1,606 @@
+Add User To Workspace:
+  ai_description: >-
+    ### General Description
+
+    Adds a user to a specific Asana workspace using their email address. This action
+    allows for automated user management within Asana by programmatically granting
+    workspace access.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Workspace Name | String | Yes | The name of the workspace to which you want
+    to add the user. Note: This is case-sensitive. |
+
+    | User's Email | String | Yes | The email address of the user you want to add
+    to the workspace. |
+
+
+    ### Flow Description
+
+    1. **Retrieve Workspace ID**: The action fetches the list of available workspaces
+    from Asana and identifies the GID (Global ID) of the workspace that matches the
+    provided 'Workspace Name'.
+
+    2. **Add User to Workspace**: It performs a POST request to the Asana API endpoint
+    `/workspaces/{workspace_id}/addUser`, passing the user's email in the request
+    body.
+
+    3. **Finalize**: The action captures the API response, adds the user details to
+    the JSON results, and returns a success message if the user was successfully added.
+
+
+    ### Additional Notes
+
+    This action does not process SecOps entities; it relies entirely on the input
+    parameters provided in the action configuration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a user to a specific Asana workspace, which modifies the membership state
+      of that workspace in the external Asana platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Task:
+  ai_description: >-
+    ### General Description
+
+    This action creates a new task within a specific project in Asana. It allows users
+    to define the task's subject, description, assignee, and due date, facilitating
+    project management and tracking directly from Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Task Subject** | string | Yes | The title or subject of the new task to be
+    created. |
+
+    | **Project Name** | string | Yes | The name of the Asana project where the task
+    will be assigned. This field is case-sensitive. |
+
+    | **Description** | string | Yes | Detailed notes or description for the task.
+    |
+
+    | **Assignee** | string | No | The email address of the user to whom the task
+    will be assigned. This field is case-sensitive. |
+
+    | **Due Date** | string | No | The deadline for the task, formatted as YYYY-MM-DD.
+    |
+
+
+    ### Additional Notes
+
+    - The action first resolves the `Project Name` to a unique Project GID.
+
+    - If an `Assignee` is provided, the action resolves the email to a User GID before
+    task creation.
+
+    - Upon successful creation, a direct link to the Asana task is added to the action
+    results.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** Retrieves the Asana API token and base URL from
+    the integration settings.
+
+    2. **Parameter Retrieval:** Extracts the task details (subject, project name,
+    description, assignee, and due date) from the action inputs.
+
+    3. **Project Resolution:** Calls the Asana API to find the internal GID associated
+    with the provided `Project Name`.
+
+    4. **User Resolution (Optional):** If an assignee email is provided, calls the
+    Asana API to find the internal GID for that user.
+
+    5. **Task Creation:** Sends a POST request to Asana to create the task with the
+    resolved IDs and provided metadata.
+
+    6. **Result Processing:** If successful, adds the task's permalink to the SOAR
+    results and returns the full JSON response from Asana.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new task record in the Asana project management platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Task:
+  ai_description: "### General Description\nThis action retrieves detailed information\
+    \ about a specific task from Asana using its unique Task ID. It is primarily used\
+    \ to gather context about project management tasks, such as their names, due dates,\
+    \ and direct links, making it useful for cross-referencing security incidents\
+    \ with project tracking data.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Task ID | String\
+    \ | Yes | The unique identifier of the Asana task. This ID can be found in the\
+    \ task's URL (e.g., `https://app.asana.com/0/{project_id}/{task_id}`). |\n\n###\
+    \ Flow Description\n1. **Configuration Extraction**: The action retrieves the\
+    \ Asana API Token and Base URL from the integration settings.\n2. **Parameter\
+    \ Retrieval**: The specific `Task ID` is extracted from the action input.\n3.\
+    \ **API Interaction**: The action uses the `AsanaManager` to perform a GET request\
+    \ to the Asana API endpoint for the specified task.\n4. **Data Processing**: \n\
+    \    * If the task is found, the action extracts the task name, due date, and\
+    \ the permanent URL (permalink).\n    * It adds a clickable link to the action\
+    \ results in the Google SecOps UI.\n5. **Result Output**: The full JSON response\
+    \ from Asana is attached to the action results, and the action completes with\
+    \ a success or failure message based on whether the task was found."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List My Tasks:
+  ai_description: >-
+    ### General Description
+
+    Lists all tasks associated with a specific user within a designated Asana workspace.
+    This action allows security analysts to retrieve and review task data from Asana,
+    providing visibility into user activities or assigned remediation steps. It supports
+    filtering tasks by their completion status.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | User's Email | String | Yes | The email address of the Asana user whose tasks
+    you want to retrieve. |
+
+    | Workspace Name | String | Yes | The exact name of the Asana workspace (case-sensitive)
+    where the tasks are located. |
+
+    | Completed Status | Boolean | No | Determines which tasks to retrieve. If checked
+    (`true`), only completed tasks are returned. If unchecked (`false`), only incomplete
+    tasks are returned. Default is `false`. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the API token and base URL from the integration
+    configuration and the user-provided parameters (Email, Workspace Name, and Completed
+    Status).
+
+    2. **User Identification**: Calls the Asana API to resolve the provided email
+    address into a unique User GID (Global Identifier).
+
+    3. **Workspace Identification**: Retrieves all workspaces for the authenticated
+    user and matches the provided 'Workspace Name' to find the corresponding Workspace
+    GID.
+
+    4. **Task List Discovery**: Fetches the specific 'User Task List' ID that links
+    the identified user to the identified workspace.
+
+    5. **Task Retrieval**: Retrieves the list of tasks associated with that User Task
+    List.
+
+    6. **Detail Fetching & Filtering**: For each task in the list, the action performs
+    a follow-up API call to get full task details. It then filters these tasks based
+    on whether their `completed` status matches the 'Completed Status' parameter.
+
+    7. **Result Compilation**: Populates the action's JSON results with the task details
+    and adds clickable links (permalinks) to the SOAR interface for each matching
+    task.
+
+
+    ### Additional Notes
+
+    - The 'Workspace Name' parameter is case-sensitive. If the name does not match
+    exactly, the action will fail to find the workspace.
+
+    - This action is read-only and does not create or modify tasks in Asana.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Project Tasks:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of tasks from a specific project in Asana. It allows
+    users to filter tasks based on their completion status and provides detailed information
+    for each task, including direct links to the tasks in the Asana web interface.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Project Name | string | True | The name of the Asana project from which you
+    want to fetch tasks. The action will first resolve this name to a project ID.
+    |
+
+    | Completed Status | boolean | False | Determines which tasks to retrieve. If
+    set to `true`, the action fetches only completed tasks. If set to `false` (default),
+    it fetches only incomplete tasks. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on SecOps entities (like IPs or Hostnames); it
+    is a utility action that interacts with Asana project data based on the provided
+    project name.
+
+    - The action requires a valid Personal Access Token (PAT) and Base URL configured
+    in the Asana integration settings.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes the Asana manager using the provided API token
+    and base URL.
+
+    2. **Project Resolution**: Calls the Asana API to list all projects and finds
+    the `project_id` corresponding to the provided `Project Name`.
+
+    3. **Task Retrieval**: Fetches the list of tasks associated with the identified
+    project.
+
+    4. **Detail Enrichment & Filtering**: For each task found, the action retrieves
+    full task details and compares the task's `completed` status with the user-provided
+    `Completed Status` parameter.
+
+    5. **Output Generation**: Tasks that match the filter are added to the JSON result.
+    Additionally, the action generates clickable links for each task, including the
+    task name and due date, which are added to the action's result links.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    Google SecOps and the Asana platform. Its primary purpose is to ensure that the
+    configured credentials (Personal Access Token) and the API endpoint (Base URL)
+    are correct and that the network path is open.
+
+
+    ### Parameters Description
+
+    This action does not have any specific input parameters. It utilizes the global
+    integration configuration:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Token | String | Yes | The Personal Access Token (PAT) used for authentication
+    with Asana. |
+
+    | Base URL | String | Yes | The base URL for the Asana API (e.g., `https://app.asana.com/api/1.0`).
+    |
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the integration or
+    for troubleshooting connection issues.
+
+    - It does not interact with any entities or modify any data within Asana or Google
+    SecOps.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** The action retrieves the `Token` and `Base URL`
+    from the Asana integration settings.
+
+    2. **Manager Initialization:** An instance of the `AsanaManager` is created using
+    the retrieved configuration.
+
+    3. **Connectivity Test:** The action calls the `test_connectivity` method, which
+    performs a `GET` request to the `/users/me` endpoint of the Asana API.
+
+    4. **Result Handling:** If the API returns a successful response, the action ends
+    with a "Connected successfully" message and a `True` result. If the request fails
+    or returns an error, it reports "The Connection failed" with a `False` result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove User From Workspace:
+  ai_description: >-
+    ### General Description
+
+    Removes a specific user from an Asana workspace using their email address. This
+    action is useful for offboarding users or managing workspace access programmatically
+    through Google SecOps. It requires the exact name of the workspace and the user's
+    email address.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Type | Mandatory | Additional Notes |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Workspace Name | The name of the Asana workspace from which the user will be
+    removed. | String | Yes | This field is case-sensitive. |
+
+    | User's Email | The email address of the user to be removed from the workspace.
+    | String | Yes | Must be a valid email associated with an Asana account. |
+
+
+    ### Additional Notes
+
+    - This action performs a mutation in the external Asana system by changing workspace
+    membership.
+
+    - The action does not process or enrich Google SecOps entities; it operates solely
+    on the provided input parameters.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action retrieves the Asana API Token and Base
+    URL from the integration settings.
+
+    2. **Workspace Identification:** It calls the Asana API to list workspaces and
+    finds the unique ID (`gid`) corresponding to the provided `Workspace Name`.
+
+    3. **User Removal:** It sends a POST request to the Asana `/workspaces/{workspace_id}/removeUser`
+    endpoint, passing the `User's Email` in the request body.
+
+    4. **Result Handling:** The action evaluates the API response. If the user is
+    successfully removed, it returns a success message and a `True` result; otherwise,
+    it reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes a user's membership from a specific Asana workspace via a POST request
+      to the Asana API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Task:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing task in Asana by modifying its assignee, due date, or description.
+    This action is useful for programmatically managing task lifecycles and ensuring
+    task metadata reflects the current state of an investigation or workflow.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Task ID | String | Yes | The unique identifier of the task to be updated. This
+    can be found in the Asana task URL. |
+
+    | Due Date | String | No | The new deadline for the task, formatted as YYYY-MM-DD.
+    |
+
+    | Description | String | No | The updated text for the task's description or notes
+    field. |
+
+    | Assignee | String | No | The email address of the user to whom the task should
+    be re-assigned. Note: This is case-sensitive. |
+
+
+    ### Additional Notes
+
+    - The action first resolves the provided `Assignee` email to a GID (Global Identifier)
+    using the Asana API before performing the update.
+
+    - If a parameter is left blank, the corresponding field in Asana will be updated
+    with the value provided (which may result in clearing the field if the API allows).
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: Retrieves the Asana API Token and Base URL from
+    the integration settings.
+
+    2. **Parameter Retrieval**: Extracts the Task ID, Assignee email, Due Date, and
+    Description from the action inputs.
+
+    3. **User Resolution**: Calls the Asana API to retrieve the unique User GID associated
+    with the provided Assignee email.
+
+    4. **Task Update**: Executes a PUT request to the Asana `/tasks/{task_id}` endpoint
+    with the new metadata.
+
+    5. **Result Processing**: Captures the API response, adds it to the action's JSON
+    results, and reports the success status to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates task attributes such as the assignee, due date, and description in the
+      external Asana platform via a PUT request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
