@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG
@@ -488,11 +488,11 @@ class LegacySoarApi(BaseSoarApi):
         page_size = 1000
 
         start_time_s = self.params.start_time / 1000.0
-        start_dt_object = datetime.fromtimestamp(start_time_s, tz=UTC)
+        start_dt_object = datetime.fromtimestamp(start_time_s, tz=timezone.utc)
         start_time_iso = start_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         end_time_s = self.params.end_time / 1000.0
-        end_dt_object = datetime.fromtimestamp(end_time_s, tz=UTC)
+        end_dt_object = datetime.fromtimestamp(end_time_s, tz=timezone.utc)
         end_time_iso = end_dt_object.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         while True:
             endpoint = "/search/CaseSearchEverything?format=camel"
@@ -516,3 +516,41 @@ class LegacySoarApi(BaseSoarApi):
             current_page += 1
 
         return all_cases
+
+    def get_case_close_comment(self, case_id):
+        """Get case closure comment"""
+        endpoint = "/dynamic-cases/GetCaseWallActivities?format=camel"
+        payload = {
+            "pageSize": 20,
+            "searchTerm": "",
+            "requestedPage": 0,
+            "caseId": case_id,
+            "alert": "ALL",
+            "users": [],
+            "activities": [1],
+            "order": "desc",
+        }
+        response = self._make_request(
+            method=HttpMethod.POST, endpoint=endpoint, json_payload=payload
+        )
+        response.raise_for_status()
+        case_activities = response.json()
+        close_activity = next(
+            filter(
+                lambda x: x.get("activityKind", 0) == 9,
+                case_activities.get("objectsList", []),
+            ),
+            {},
+        )
+        if not close_activity:
+            return ""
+        close_comment = next(
+            filter(
+                lambda x: x.startswith("Comment:"),
+                close_activity.get("description", "").split("\n"),
+            ),
+            "",
+        )
+        if not close_comment:
+            return ""
+        return close_comment.removeprefix("Comment:").strip()

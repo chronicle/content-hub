@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import json
+
 from TIPCommon.rest.custom_types import HttpMethod
 
 from ...consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
@@ -747,3 +749,29 @@ class OnePlatformSoarApi(BaseSoarApi):
             "&$orderBy=updateTime asc"
         )
         return self._paginate_results(initial_endpoint=initial_endpoint, root_response_key="cases")
+
+    def get_case_close_comment(self, case_id):
+        """Get case closure comment"""
+        endpoint = f"/cases/{case_id}/caseWallRecords"
+        params = {
+            "$filter": "(activityType eq 'CASE_STATUS_CHANGE') and (activityKind eq 'CASE_CLOSED')",
+            "$orderBy": "createTime desc",
+            "$pageSize": 1,
+        }
+        response = self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
+        response.raise_for_status()
+        case_activities = response.json()
+        if case_activities.get("totalSize", 0) < 1:
+            return ""
+
+        activity_data_json_str = case_activities.get("case_wall_records", [{}])[0].get(
+            "activityDataJson", "{}"
+        )
+        close_activity = json.loads(activity_data_json_str)
+        full_comment = close_activity.get("comment", "")
+        if not full_comment:
+            return ""
+
+        case_comment = full_comment.split("\n")[0].strip()
+
+        return case_comment
