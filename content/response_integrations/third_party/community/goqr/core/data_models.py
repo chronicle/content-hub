@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, List
 
 
 @dataclass
@@ -10,7 +10,7 @@ class QrSymbol:
 
     seq: int
     data: str
-    error: Optional[str] = None
+    error: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> QrSymbol:
@@ -40,9 +40,9 @@ class DecodedQrCode:
             "type": self.type,
             "symbols": [symbol.__dict__ for symbol in self.symbols],
         }
-    
+
     @property
-    def first_symbol_data(self) -> Optional[str]:
+    def first_symbol_data(self) -> str | None:
         """Helper to get the data from the first symbol, which is the most common case."""
         if self.symbols:
             return self.symbols[0].data
