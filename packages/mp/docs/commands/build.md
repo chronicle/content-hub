@@ -1,84 +1,119 @@
-# mp Build Command
+# `mp build`
 
----
-
-## Description
-
-Build the Content-Hub integrations or playbooks. This command processes integration/playbook repositories or individual integrations/playbooks, converting them into a deployable format. It also supports deconstructing built integrations/playbooks back into their development source structure.
+Build content from the Content Hub and transform it into a format suitable for the Google SecOps SOAR platform.
 
 ## Usage
 
 ```bash
-mp build [OPTIONS]
+mp build [SUBCOMMAND] [OPTIONS]
 ```
 
-## Options
+## Subcommands
 
-| Option                 | Shorthand | Description                                                                                                                                                      | Type               | Default |
-|:-----------------------|:----------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------|:--------|
-| `--repository`         | `-r`      | Build all integrations/playbooks in specified repositories. Available types: `google`, `third_party`, `custom` (integration repos), `playbook` (playbooks repo). | `[RepositoryType]` | `[]`    |
-| `--integration`        | `-i`      | Build a specified integration                                                                                                                                    | `[str]`            | `[]`    |
-| `--playbook`           | `-p`      | Build a specified playbook                                                                                                                                       | `[str]`            | `[]`    |
-| `--deconstruct`        | `-d`      | Deconstruct built integrations or playbooks instead of building them.                                                                                            | `bool`             | `False` |
-| `--src`                |           | Customize source folder to build or deconstruct from.                                                                                                            | `Path`             | `None`  |
-| `--dst`                |           | Customize destination folder to build or deconstruct to.                                                                                                         | `Path`             | `None`  |
-| `--custom-integration` |           | Build integration from the default custom repository.                                                                                                            | `bool`             | `False` |
-| `--quiet`              |           | Log less on runtime.                                                                                                                                             | `bool`             | `False` |
-| `--verbose`            |           | Log more on runtime.                                                                                                                                             | `bool`             | `False` |
+### `integration`
 
-## Notes
+Build specific response integrations.
 
----
+**Usage:**
 
-- The `--src` and `--dst` options cannot be used with the `--custom-integration` option.
-    - Use
-      `--custom-integration` to build or deconstruct from a managed custom repository for SecOps, supported by
-      `mp` tools and Content-Hub GitHub Actions.
-    - Use `--src` and
-      `--dst` for building or deconstructing from any other source and destination directories.
+```bash
+mp build integration [INTEGRATIONS]... [OPTIONS]
+```
+
+**Arguments:**
+
+*   `INTEGRATIONS`: A list of integration names to build.
+
+**Options:**
+
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--src` | | Customize source folder to build or deconstruct from. | `Path` | `None` |
+| `--dst` | | Customize destination folder to build or deconstruct to. | `Path` | `None` |
+| `--deconstruct` | `-d` | Deconstruct built integrations instead of building them. | `bool` | `False` |
+| `--custom-integration` | | Build a specific integration from the custom repository. | `bool` | `False` |
+| `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
+
+### `playbook`
+
+Build specific playbooks.
+
+**Usage:**
+
+```bash
+mp build playbook [PLAYBOOKS]... [OPTIONS]
+```
+
+**Arguments:**
+
+*   `PLAYBOOKS`: A list of playbook names to build.
+
+**Options:**
+
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--src` | | Customize source folder to build or deconstruct from. | `Path` | `None` |
+| `--dst` | | Customize destination folder to build or deconstruct to. | `Path` | `None` |
+| `--deconstruct` | `-d` | Deconstruct built playbooks instead of building them. | `bool` | `False` |
+| `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
+
+### `repository`
+
+Build an entire content repository.
+
+**Usage:**
+
+```bash
+mp build repository [REPOSITORIES]... [OPTIONS]
+```
+
+**Arguments:**
+
+*   `REPOSITORIES`: One or more repository types to build. Options:
+    *   `google`: Commercial integrations.
+    *   `third_party`: Community and partner integrations.
+    *   `custom`: Custom integrations.
+    *   `playbooks`: Playbooks.
+
+**Options:**
+
+| Option | Shorthand | Description | Type | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `--quiet` | `-q` | Log less on runtime. | `bool` | `False` |
+| `--verbose` | `-v` | Log more on runtime. | `bool` | `False` |
 
 ## Examples
 
----
-
-### Build a specific integration
-
+### Build specific integrations
 ```bash
-mp build --integration my_integration
-```
-
-### Build a specific playbook
-
-```bash
-mp build --playbook my_playbook
-```
-
-### Build all integrations in google repository
-
-```bash
-mp build --repository google
-```
-
-### Build all playbooks
-
-```bash
-mp build --repository playbook
+mp build integration my_integration another_integration
 ```
 
 ### Deconstruct an integration
-
 ```bash
-mp build --integration my_integration --deconstruct
+mp build integration my_integration --deconstruct
 ```
 
-### Deconstruct a playbook
-
+### Build a specific playbook
 ```bash
-mp build --playbook my_playbook --deconstruct
+mp build playbook my_playbook
 ```
 
-### Build an integration with custom source and destination
+### Build the entire commercial repository
+```bash
+mp build repository google
+```
+
+---
+
+## Deprecated Usage
+
+The following flag-based usage is deprecated and will be removed in future versions. Please use the subcommands above.
 
 ```bash
-mp build --integration my_integration --src /path/to/source --dst /path/to/destination
+mp build --integration <name>
+mp build --playbook <name>
+mp build --repository <type>
 ```

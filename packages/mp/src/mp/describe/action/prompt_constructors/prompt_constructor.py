@@ -21,18 +21,26 @@ import anyio
 
 
 class PromptConstructor(abc.ABC):
-    __slots__: tuple[str, ...] = ("action_name", "integration", "integration_name", "out_path")
+    __slots__: tuple[str, ...] = (
+        "action_file_name",
+        "action_name",
+        "integration",
+        "integration_name",
+        "out_path",
+    )
 
     def __init__(
         self,
         integration: anyio.Path,
         integration_name: str,
         action_name: str,
+        action_file_name: str,
         out_path: anyio.Path,
     ) -> None:
         self.integration: anyio.Path = integration
         self.integration_name: str = integration_name
         self.action_name: str = action_name
+        self.action_file_name: str = action_file_name
         self.out_path: anyio.Path = out_path
 
     @property

@@ -23,8 +23,6 @@ from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
 import pydantic
 import yaml
 
-import mp.core.utils
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -125,11 +123,13 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_Buildable = cls._from_built(built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load built\n{built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
@@ -147,11 +147,13 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_Buildable = cls._from_non_built(non_built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load non-built\n{non_built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
@@ -220,11 +222,13 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_BuildableComponent = cls._from_built(file_name, built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load built\n{built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
@@ -243,11 +247,13 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_BuildableComponent = cls._from_non_built(file_name, non_built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load non-built\n{non_built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
@@ -300,13 +306,15 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _BT = json.loads(built_content)
             built: T_SingularComponentMetadata = cls.from_built(metadata_path.stem, metadata_json)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return built
 
@@ -324,13 +332,15 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
             ValueError: when the non-built YAML failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         non_built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _NBT = yaml.safe_load(non_built_content)
             non_built: Self = cls.from_non_built(metadata_path.stem, metadata_json)
         except (ValueError, yaml.YAMLError) as e:
             msg: str = f"Failed to load yaml from {metadata_path}\n{non_built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return non_built
 
@@ -383,13 +393,15 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _BT = json.loads(built_content)
             built: T_ComponentMetadata = cls.from_built(metadata_path.stem, metadata_json)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return built
 
@@ -407,13 +419,15 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built YAML failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         non_built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _NBT = yaml.safe_load(non_built_content)
             non_built: Self = cls.from_non_built(metadata_path.stem, metadata_json)
         except (ValueError, yaml.YAMLError) as e:
             msg: str = f"Failed to load yaml from {metadata_path}\n{non_built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return non_built
 
@@ -467,13 +481,15 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         built: str = meta_path.read_text(encoding="utf-8")
         try:
             content: list[_BT] = json.loads(built)
             results: list[T_SequentialMetadata] = [cls.from_built(c) for c in content]
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {meta_path}\n{built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return results
 
@@ -505,11 +521,13 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             content: list[_NBT] = yaml.safe_load(raw_text)
             results: list[T_SequentialMetadata] = [cls.from_non_built(c) for c in content]
         except (ValueError, yaml.YAMLError) as e:
             msg: str = "Failed to load yaml."
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return results

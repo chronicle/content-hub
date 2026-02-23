@@ -23,6 +23,7 @@ scripts, definitions, and other related files into designated directories.
 from __future__ import annotations
 
 import dataclasses
+import io
 import shutil
 import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
@@ -35,6 +36,7 @@ import mp.core.file_utils
 import mp.core.unix
 import mp.core.utils
 from mp.build_project.restructure.integrations.deconstruct_dependencies import (
+    Dependencies,
     DependencyDeconstructor,
 )
 from mp.core import code_manipulation
@@ -54,9 +56,6 @@ if TYPE_CHECKING:
 
     import libcst as cst
 
-    from mp.build_project.restructure.integrations.deconstruct_dependencies import (
-        Dependencies,
-    )
     from mp.core.data_models.integrations.action.dynamic_results_metadata import (
         DynamicResultsMetadata,
     )
@@ -102,27 +101,46 @@ class DeconstructIntegration:
         'requirements.txt' file.
 
         """
+        result = DependencyDeconstructor(self.path).get_dependencies()
+
         mp.core.unix.init_python_project_if_not_exists(self.out_path)
-        self.update_pyproject()
+        self.update_pyproject(placeholders=result.placeholders)
+
         rich.print(f"Adding dependencies to {mp.core.constants.PROJECT_FILE}")
-        dependencies: Dependencies = DependencyDeconstructor(self.path).get_dependencies()
         try:
             mp.core.unix.add_dependencies_to_toml(
                 project_path=self.out_path,
-                deps_to_add=dependencies.dependencies,
-                dev_deps_to_add=dependencies.dev_dependencies,
+                deps_to_add=result.dependencies.dependencies,
+                dev_deps_to_add=result.dependencies.dev_dependencies,
             )
+
         except mp.core.unix.FatalCommandError as e:
             rich.print(f"Failed to install dependencies: {e}")
 
-    def update_pyproject(self) -> None:
+    def update_pyproject(self, placeholders: Dependencies | None = None) -> None:
         """Update an integration's pyproject.toml file from its definition file."""
         pyproject_toml: Path = self.out_path / mp.core.constants.PROJECT_FILE
         toml_content: MutableMapping[str, Any] = tomllib.loads(
             pyproject_toml.read_text(encoding="utf-8"),
         )
         _update_pyproject_from_integration_meta(toml_content, self.integration.metadata)
-        pyproject_toml.write_text(toml.dumps(toml_content), encoding="utf-8")
+
+        buffer = io.StringIO()
+        buffer.write(toml.dumps(toml_content))
+
+        if placeholders and (placeholders.dependencies or placeholders.dev_dependencies):
+            for dep in placeholders.dependencies:
+                buffer.write(
+                    f"\n# TODO: Failed to automatically add the following dependency. "
+                    f"Please add it manually: {dep}\n",
+                )
+            for dep in placeholders.dev_dependencies:
+                buffer.write(
+                    f"\n# TODO: Failed to automatically add the following dev-dependency. "
+                    f"Please add it manually: {dep}\n",
+                )
+
+        pyproject_toml.write_text(buffer.getvalue(), encoding="utf-8")
         self._copy_lock_file()
 
     def _copy_lock_file(self) -> None:

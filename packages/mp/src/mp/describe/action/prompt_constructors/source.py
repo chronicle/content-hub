@@ -47,9 +47,9 @@ class SourcePromptConstructor(PromptConstructor):
         core_names, core_content = await self._get_core_modules_names_and_content()
         template: Template = await self.task_prompt
         return template.safe_substitute({
-            "json_file_name": f"{self.action_name}.yaml",
+            "json_file_name": f"{self.action_file_name}.yaml",
             "json_file_content": await self._get_non_built_action_def_content(),
-            "python_file_name": f"{self.action_name}.py",
+            "python_file_name": f"{self.action_file_name}.py",
             "python_file_content": await self._get_non_built_action_content(),
             "manager_file_names": core_names or DEFAULT_FILE_CONTENT,
             "manager_files_content": core_content or DEFAULT_FILE_CONTENT,
@@ -70,7 +70,9 @@ class SourcePromptConstructor(PromptConstructor):
 
     async def _get_non_built_action_def_content(self) -> str:
         action_yaml: anyio.Path = (
-            self.integration / constants.ACTIONS_DIR / f"{self.action_name}{constants.YAML_SUFFIX}"
+            self.integration
+            / constants.ACTIONS_DIR
+            / f"{self.action_file_name}{constants.YAML_SUFFIX}"
         )
         if await action_yaml.exists():
             content: str = await action_yaml.read_text(encoding="utf-8")
@@ -85,7 +87,7 @@ class SourcePromptConstructor(PromptConstructor):
 
     async def _get_non_built_action_content(self) -> str:
         action_script: anyio.Path = (
-            self.integration / constants.ACTIONS_DIR / f"{self.action_name}.py"
+            self.integration / constants.ACTIONS_DIR / f"{self.action_file_name}.py"
         )
         if await action_script.exists():
             return await action_script.read_text(encoding="utf-8")

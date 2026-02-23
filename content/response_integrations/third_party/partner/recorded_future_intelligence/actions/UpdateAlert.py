@@ -79,6 +79,7 @@ def main():
         is_mandatory=False,
         print_value=True,
     )
+    alert_status = None if alert_status == "None" else alert_status
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
@@ -108,9 +109,7 @@ def main():
         output_message += f"Successfully updated alert {alert_id} in Recorded Future."
 
     except Exception as err:
-        output_message = (
-            f"Error executing action {UPDATE_ALERT_SCRIPT_NAME}. Reason: {err}"
-        )
+        output_message = f"Error executing action {UPDATE_ALERT_SCRIPT_NAME}. Reason: {err}"
         if isinstance(err, RecordedFutureUnauthorizedError):
             output_message = "Unauthorized - please check your API token and try again."
         result_value = False
