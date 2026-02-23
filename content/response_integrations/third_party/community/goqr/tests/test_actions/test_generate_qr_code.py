@@ -19,9 +19,13 @@ DEFAULT_PARAMETERS: SingleJson = {
     "Content": "https://hianimes.se/",
 }
 
+FAILED_PARAMETERS: SingleJson = {
+    "Content": "invalid",
+}
+
 
 @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
-def test_sample_action_example_success(
+def test_generate_qr_code_success(
     script_session: GOQRSession,
     action_output: MockActionOutput,
     goqr: GOQR,
@@ -40,3 +44,24 @@ def test_sample_action_example_success(
 
     assert action_output.results.output_message == success_output_msg
     assert action_output.results.execution_state == ExecutionState.COMPLETED
+
+
+@set_metadata(integration_config_file_path=CONFIG_PATH, parameters=FAILED_PARAMETERS)
+def test_generate_qr_code_failure(
+    script_session: GOQRSession,
+    action_output: MockActionOutput,
+    goqr: GOQR,
+) -> None:
+    # Arrange
+    goqr.add_generated_qr(GENERATE_QR_CODE_RESULT)
+
+    # Act
+    generate_qr_code.main()
+
+    # Assert
+    assert len(script_session.request_history) == 1
+    request = script_session.request_history[0].request
+    assert request.url.path.endswith("/create-qr-code/")
+
+    assert "None Unable to generate QR code" in action_output.results.output_message
+    assert action_output.results.execution_state == ExecutionState.FAILED

@@ -20,8 +20,11 @@ class GOQRSession(MockSession[MockRequest, MockResponse, GOQR]):
         ]
 
     @router.post(r"/v1/read-qr-code/")
-    def scan_qr_code(self, _: MockRequest) -> MockResponse:
+    def scan_qr_code(self, request: MockRequest) -> MockResponse:
         try:
+            if "invalid" in request.url.netloc:
+                return MockResponse(content="Invalid QR Code", status_code=422)
+
             scan_qr_result: list[SingleJson] = self._product.get_scanned_qr()[0]
 
             return MockResponse(content=scan_qr_result)
@@ -30,9 +33,16 @@ class GOQRSession(MockSession[MockRequest, MockResponse, GOQR]):
             return MockResponse(content=str(e), status_code=422)
 
     @router.get(r"/v1/create-qr-code/")
-    def generate_qr_code(self, _) -> MockResponse:
+    def generate_qr_code(self, request: MockRequest) -> MockResponse:
         try:
+            data = request.kwargs.get("params", {}).get("data", "")
+            if "invalid" in data:
+                return MockResponse(content="Unable to generate QR code", status_code=422)
+
             generated_qr_result: bytes = self._product.get_generated_qr()
+            if "invalid" in request.url.netloc:
+                return MockResponse(content="Invalid QR Code", status_code=422)
+
             return MockResponse(content=str(generated_qr_result), status_code=200)
 
         except ValueError as e:
