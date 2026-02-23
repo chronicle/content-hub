@@ -69,4 +69,5 @@ class GOQRApiClient(Apiable):
         files = {"file": file}
         response: Response = self.session.post(url, files=files)
         validate_response(response, "Failed to read QR code.")
+
         return [DecodedQrCode.from_dict(item) for item in response.json()]

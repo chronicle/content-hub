@@ -53,9 +53,7 @@ class ScanQrCode(GOQRBaseAction):
             raise GOQRError(f"The API could not decode the QR code. Error: {first_symbol.error}")
 
         if first_symbol.data:
-            self.output_message = (
-                "Successfully decoded QR code from provided image content."
-            )
+            self.output_message = "Successfully decoded QR code from provided image content."
             self.json_results = {
                 "decoded_qr_codes": [result.to_json() for result in decoded_results]
             }

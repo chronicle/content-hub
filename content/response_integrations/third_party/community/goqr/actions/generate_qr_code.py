@@ -102,9 +102,7 @@ class GenerateQrCode(GOQRBaseAction):
         self.json_results = json_result
         self.soar_action.add_attachment(str(attachment_path))
         self.result_value = True
-        self.output_message = (
-            "Successfully generated QR code and attached it to the case wall."
-        )
+        self.output_message = "Successfully generated QR code and attached it to the case wall."
         self.soar_action.remove_temp_folder()
 
 
