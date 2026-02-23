@@ -6,7 +6,7 @@ from ..core.base_action import GOQRBaseAction
 from ..core.constants import PING_SCRIPT_NAME
 
 if TYPE_CHECKING:
-    from typing import NoReturn, Never
+    from typing import Never, NoReturn
 
 
 SUCCESS_MESSAGE: str = "Successfully connected to the QR Server API."

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
-
 from TIPCommon.types import SingleJson
 
 

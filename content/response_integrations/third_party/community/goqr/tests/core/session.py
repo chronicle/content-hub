@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Iterable
 
 from integration_testing import router
-from integration_testing.common import get_request_payload
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, Response, RouteFunction
