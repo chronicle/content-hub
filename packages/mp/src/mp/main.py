@@ -63,7 +63,6 @@ def main() -> None:
 
 @app.callback(invoke_without_command=True)
 def version_check(
-    ctx: typer.Context,
     *,
     _version: Annotated[
         bool,
@@ -78,7 +77,6 @@ def version_check(
 ) -> None:
     """Set up mp tool and initialize background tasks."""
     checker: UpdateChecker = UpdateChecker()
-    ctx.obj = checker
     checker.start_background_check(get_mp_version())
     atexit.register(checker.print_warning_if_needed)
 

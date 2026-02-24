@@ -40,7 +40,7 @@ class UpdateChecker:
         self._new_version: str | None = None
         self._check_thread: threading.Thread | None = None
 
-    def start_background_check(self, current_version: str) -> None:
+    def start_background_check(self, current_version: str | None) -> None:
         """Start a background thread to check for updates."""
         if current_version == "unknown":
             return
@@ -60,7 +60,7 @@ class UpdateChecker:
         if self._new_version:
             _print_version_warning(self._new_version)
 
-    def _check_update_worker(self, current_version: str) -> None:
+    def _check_update_worker(self, current_version: str | None) -> None:
         with suppress(
             requests.RequestException,
             requests.HTTPError,
@@ -73,12 +73,16 @@ class UpdateChecker:
             data: dict[str, Any] = tomllib.loads(response.text)
             remote_version: str | None = data.get("project", {}).get("version")
 
-            if remote_version and parse_version(remote_version) > parse_version(current_version):
+            if (
+                remote_version is not None
+                and current_version is not None
+                and parse_version(remote_version) > parse_version(current_version)
+            ):
                 self._new_version = remote_version
 
 
 def _print_version_warning(remote_version: str) -> None:
-    current_version: str = get_mp_version()
+    current_version: str | None = get_mp_version()
     message: str = (
         f"\n[bold yellow]WARNING:[/bold yellow] A newer version of mp "
         f"({current_version} -> {remote_version}) is available.\n"
@@ -95,12 +99,12 @@ def print_mp_version(*, value: bool) -> None:
 
     """
     if value:
-        version: str = get_mp_version()
+        version: str | None = get_mp_version()
         rich.print(f"mp {version}")
         raise typer.Exit
 
 
-def get_mp_version() -> str:
+def get_mp_version() -> str | None:
     """Get the current version of mp.
 
     Returns:

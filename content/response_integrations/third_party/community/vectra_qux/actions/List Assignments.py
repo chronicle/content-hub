@@ -165,10 +165,7 @@ def main():
             siemplify.result.add_data_table(
                 title="Assignment Details",
                 data_table=construct_csv(
-                    [
-                        assignment.list_assignment_csv()
-                        for assignment in assignments_obj
-                    ],
+                    [assignment.list_assignment_csv() for assignment in assignments_obj],
                 ),
             )
 
