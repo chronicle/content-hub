@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import subprocess as sp  # noqa: S404
 import sys
 from typing import IO, TYPE_CHECKING
@@ -112,7 +113,33 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
             )
             rich.print(message)
             return
+
+        _handle_pip_no_matching_distribution_error(e)
         raise FatalCommandError from e
+
+
+def _handle_pip_no_matching_distribution_error(e: sp.CalledProcessError) -> None:
+    """Handle pip/uv errors for missing binary wheels.
+
+    This is a targeted error handler for when pip/uv fails to find a binary wheel
+    and a source distribution is the only option.
+
+    Raises:
+        FatalCommandError: If a "No matching distribution found" error is detected.
+
+    """
+    if "No matching distribution found for" in e.stderr:
+        match = re.search(r"No matching distribution found for (.*?)$", e.stderr, re.MULTILINE)
+        package_info = match.group(1) if match else "unknown package"
+        package_name = package_info.split("==")[0]
+        error_message = (
+            f"Failed to download a binary wheel for '{package_info}'. "
+            f"This is likely because the package is only available as a source "
+            f"distribution.\n"
+            f"To fix this, find the source distribution URL on PyPI "
+            f'and run:\n  uv add "{package_name} @ <URL>"'
+        )
+        raise FatalCommandError(error_message) from e
 
 
 def download_wheels_from_requirements(
