@@ -814,19 +814,22 @@ class WorkflowInstaller:
     ) -> None:
         """Reconfigure an integration instance of a workflow step.
 
-        If old_steps is supplied, It will first try to match the same step in the old playbook and
-        assign the step to the same integration instance.
-        Otherwise, If the playbook is assigned to only one environment (and not all environments),
-        it will assign the first integration instance it finds.
-        If the playbook is assigned to All Environments or more than one environment, The step will
-        be set to dynamic mode and assigned to the first shared instance, or None if it doesn't
-        exist.
+        If old_steps is supplied, It will first try to match the same step in the old
+        playbook and assign the step to the same integration instance.
+        Otherwise, If the playbook is assigned to only one environment
+        (and not all environments), it will assign the first integration instance
+        it finds.
+        If the playbook is assigned to All Environments or more than one environment,
+        The step will be set to dynamic mode and assigned to the first shared instance,
+        or None if it doesn't exist.
 
         Args:
             step: The step to reconfigure
-            environments: Playbook assigned environments, for searching integration instances
-            existing_step: Optional - if the step is already defined, take the integration instance
-            from it instead
+            environments: Playbook assigned environments, for searching integration
+                instances
+            existing_step: Optional - if the step is already defined, take the
+                integration instance from it instead
+
 
         """
         if existing_step:
