@@ -91,8 +91,8 @@ class TestMinorVersionBump:
 
         assert INTEGRATIONS_CACHE_FOLDER_PATH.exists()
         assert sandbox["VERSION_CACHE"].exists()
-        assert _load_cached_version(sandbox["VERSION_CACHE"]) == 2.2  # noqa: RUF069
-        assert _load_built_version(sandbox["DEF_FILE"]) == 2.2  # noqa: RUF069
+        assert _load_cached_version(sandbox["VERSION_CACHE"]) == 2.2
+        assert _load_built_version(sandbox["DEF_FILE"]) == 2.2
 
     def test_dependencies_not_changed_success(self, sandbox: dict[str, Path]) -> None:
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
@@ -114,8 +114,8 @@ class TestMinorVersionBump:
         _add_dependencies(sandbox["NON_BUILT"])
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
-        assert _load_cached_version(sandbox["VERSION_CACHE"]) == old_version_cached - 0.1  # noqa: RUF069
-        assert _load_built_version(sandbox["DEF_FILE"]) == old_version_def_file - 0.1  # noqa: RUF069
+        assert _load_cached_version(sandbox["VERSION_CACHE"]) == old_version_cached - 0.1
+        assert _load_built_version(sandbox["DEF_FILE"]) == old_version_def_file - 0.1
 
         _remove_dependencies(sandbox["NON_BUILT"])
 
@@ -132,8 +132,8 @@ class TestMinorVersionBump:
             toml.dump(pyproject_data, f)
 
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
-        assert _load_cached_version(sandbox["VERSION_CACHE"]) == old_version_cached + 1.0  # noqa: RUF069
-        assert _load_built_version(sandbox["DEF_FILE"]) == old_version_def_file + 1.0  # noqa: RUF069
+        assert _load_cached_version(sandbox["VERSION_CACHE"]) == old_version_cached + 1.0
+        assert _load_built_version(sandbox["DEF_FILE"]) == old_version_def_file + 1.0
 
         pyproject_data = toml.load(pyproject_path)
         pyproject_data["project"]["version"] = "2.0"
@@ -149,8 +149,8 @@ class TestMinorVersionBump:
 
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
-        assert _load_cached_version(sandbox["VERSION_CACHE"]) == 2.2  # noqa: RUF069
-        assert _load_built_version(sandbox["DEF_FILE"]) == 2.2  # noqa: RUF069
+        assert _load_cached_version(sandbox["VERSION_CACHE"]) == 2.2
+        assert _load_built_version(sandbox["DEF_FILE"]) == 2.2
 
     def test_pyproject_toml_missing_raises_error_fail(self, sandbox: dict[str, Path]) -> None:
         (sandbox["NON_BUILT"] / "pyproject.toml").unlink()

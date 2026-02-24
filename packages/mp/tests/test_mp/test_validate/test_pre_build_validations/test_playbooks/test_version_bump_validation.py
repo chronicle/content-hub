@@ -75,8 +75,8 @@ class TestVersionBumpValidationFlow:
             mock_git.return_value = OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path)
 
-            assert existing_files["rn"]["old"].version == 1.0  # noqa: RUF069
-            assert existing_files["rn"]["new"][0].version == 2.0  # noqa: RUF069
+            assert existing_files["rn"]["old"].version == 1.0
+            assert existing_files["rn"]["new"][0].version == 2.0
 
             _version_bump_validation_run_checks(existing_files, new_files)
 
@@ -89,8 +89,8 @@ class TestVersionBumpValidationFlow:
             mock_git.return_value = OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path)
 
-            assert existing_files["rn"]["old"].version == 1.0  # noqa: RUF069
-            assert existing_files["rn"]["new"][0].version == 3.0  # noqa: RUF069
+            assert existing_files["rn"]["old"].version == 1.0
+            assert existing_files["rn"]["new"][0].version == 3.0
 
             with pytest.raises(NonFatalValidationError) as error_msg:
                 _version_bump_validation_run_checks(existing_files, new_files)
@@ -112,8 +112,8 @@ class TestVersionBumpValidationFlow:
             mock_git.return_value = OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path)
 
-            assert existing_files["rn"]["old"].version == 1.0  # noqa: RUF069
-            assert existing_files["rn"]["new"][0].version == 1.5  # noqa: RUF069
+            assert existing_files["rn"]["old"].version == 1.0
+            assert existing_files["rn"]["new"][0].version == 1.5
 
             with pytest.raises(NonFatalValidationError, match=r"must be incremented to 2.0"):
                 _version_bump_validation_run_checks(existing_files, new_files)
@@ -130,7 +130,7 @@ class TestVersionBumpValidationFlow:
 
             assert not existing_files["rn"].get("old")
             assert len(new_files["rn"]) == 1
-            assert new_files["rn"][0].version == 1.0  # noqa: RUF069
+            assert new_files["rn"][0].version == 1.0
 
             _version_bump_validation_run_checks(existing_files, new_files)
 
@@ -144,7 +144,7 @@ class TestVersionBumpValidationFlow:
             )
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path)
 
-            assert new_files["rn"][0].version == 2.0  # noqa: RUF069
+            assert new_files["rn"][0].version == 2.0 
 
             with pytest.raises(NonFatalValidationError, match=r"must be initialize to 1\.0"):
                 _version_bump_validation_run_checks(existing_files, new_files)
@@ -165,7 +165,7 @@ class TestVersionBumpValidationFlow:
             new_notes = existing_files["rn"]["new"]
             assert new_notes is not None
             assert len(new_notes) == 2
-            assert all(note.version == 2.0 for note in new_notes)  # noqa: RUF069
+            assert all(note.version == 2.0 for note in new_notes)
 
             _version_bump_validation_run_checks(existing_files, new_files)
 
