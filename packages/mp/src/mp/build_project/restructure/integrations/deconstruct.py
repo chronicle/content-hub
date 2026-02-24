@@ -23,10 +23,10 @@ scripts, definitions, and other related files into designated directories.
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import io
 import shutil
 import tomllib
-from datetime import date
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 import rich
@@ -230,7 +230,7 @@ class DeconstructIntegration:
                         integration_version=float(self.integration.metadata.version),
                         item_name=self.integration.metadata.identifier,
                         item_type="Integration",
-                        publish_time=date.today().isoformat(),  # noqa: DTZ011
+                        publish_time=str(datetime.datetime.now(datetime.UTC).date()),  # noqa: DTZ011
                         ticket_number="No ticket",
                     )
                 ],
