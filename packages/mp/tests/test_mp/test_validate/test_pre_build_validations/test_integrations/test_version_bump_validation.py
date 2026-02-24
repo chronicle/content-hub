@@ -194,8 +194,8 @@ class TestVersionBumpValidationFlow:
             )
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
-            assert new_files["toml"].project.version == 2.0  # noqa: RUF069
-            assert new_files["rn"][0].version == 2.0  # noqa: RUF069
+            assert new_files["toml"].project.version == 2.0
+            assert new_files["rn"][0].version == 2.0
 
             with pytest.raises(NonFatalValidationError, match=r"must be initialize to 1\.0"):
                 _version_bump_validation_run_checks(existing_files, new_files)
@@ -242,7 +242,7 @@ class TestVersionBumpValidationFlow:
             new_notes = existing_files["rn"]["new"]
             assert new_notes is not None
             assert len(new_notes) == 2
-            assert all(note.version == 2.0 for note in new_notes)  # noqa: RUF069
+            assert all(note.version == 2.0 for note in new_notes)
 
             _version_bump_validation_run_checks(existing_files, new_files)
 

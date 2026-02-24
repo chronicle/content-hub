@@ -144,7 +144,7 @@ class TestVersionBumpValidationFlow:
             )
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path)
 
-            assert new_files["rn"][0].version == 2.0 
+            assert new_files["rn"][0].version == 2.0
 
             with pytest.raises(NonFatalValidationError, match=r"must be initialize to 1\.0"):
                 _version_bump_validation_run_checks(existing_files, new_files)
