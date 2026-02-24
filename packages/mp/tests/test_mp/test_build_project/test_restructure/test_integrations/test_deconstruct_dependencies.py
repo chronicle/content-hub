@@ -1,6 +1,7 @@
 # Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
+#
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -47,7 +48,7 @@ def test_get_dependencies_with_local_and_remote(tmp_path: Path) -> None:
     _create_dummy_python_file(tmp_path, "import requests\nimport TIPCommon")
     _create_dummy_python_file(tmp_path, "from EnvironmentCommon import function", "utils.py")
     dependencies_dir = _create_dependencies_dir(tmp_path)
-    (dependencies_dir / "requests-2.25.1-py3-none-any.whl").touch()
+    (dependencies_dir / "requests-2.32.4-py3-none-any.whl").touch()
     (dependencies_dir / "TIPCommon-2.0.2-py3-none-any.whl").touch()
     (dependencies_dir / "EnvironmentCommon-1.0.0-py3-none-any.whl").touch()
 
@@ -75,7 +76,7 @@ def test_get_dependencies_with_local_and_remote(tmp_path: Path) -> None:
 
         result: DependencyResolutionResult = DependencyDeconstructor(tmp_path).get_dependencies()
 
-        assert "requests==2.25.1" in result.dependencies.dependencies
+        assert "requests==2.32.4" in result.dependencies.dependencies
         assert "path/to/TIPCommon.whl" in result.dependencies.dependencies
         assert "path/to/EnvironmentCommon.whl" in result.dependencies.dependencies
         assert "path/to/integration-testing.whl" in result.dependencies.dev_dependencies
@@ -178,12 +179,12 @@ def test_get_dependencies_with_mismatched_import_and_package_name(tmp_path: Path
 
 
 def test_get_dependencies_with_sdk_modules_config_mapping(tmp_path: Path) -> None:
-    """Test that a missing dependency is correctly mapped using SDK_MODULES_CONFIG."""
+    """Test that a missing dependency is correctly mapped using SDK_DEPENDENCIES_INSTALL_NAMES."""
     _create_dummy_python_file(tmp_path, "import dateutil")
     _create_dependencies_dir(tmp_path)  # Empty dependencies dir
 
     with unittest.mock.patch.dict(
-        "mp.core.constants.SDK_MODULES_CONFIG", {"dateutil": "python-dateutil"}
+        "mp.core.constants.SDK_DEPENDENCIES_INSTALL_NAMES", {"dateutil": "python-dateutil"}
     ):
         result = DependencyDeconstructor(tmp_path).get_dependencies()
 
@@ -209,6 +210,29 @@ def test_get_dependencies_creates_placeholder_for_missing_local_file(tmp_path: P
         assert not result.dependencies.dependencies
         assert not result.dependencies.dev_dependencies
         assert "EnvironmentCommon==2.0.2" in result.placeholders.dependencies
+
+
+def test_get_dependencies_bumps_sdk_dependency_to_min_version(tmp_path: Path) -> None:
+    """Test that a dependency version is bumped to the minimum required version."""
+    _create_dummy_python_file(tmp_path, "import requests")
+    dependencies_dir = _create_dependencies_dir(tmp_path)
+    (dependencies_dir / "requests-2.25.1-py3-none-any.whl").touch()
+
+    min_versions = {"requests": "2.26.1"}
+
+    with (
+        unittest.mock.patch.dict("mp.core.constants.SDK_DEPENDENCIES_MIN_VERSIONS", min_versions),
+        unittest.mock.patch(
+            "mp.build_project.restructure.integrations.deconstruct_dependencies._get_provided_imports",
+            return_value={"requests"},
+        ),
+    ):
+        result = DependencyDeconstructor(tmp_path).get_dependencies()
+
+        assert "requests==2.26.1" in result.dependencies.dependencies
+        assert "requests==2.25.1" not in result.dependencies.dependencies
+        assert not result.placeholders.dependencies
+        assert not result.dependencies.dev_dependencies
 
 
 @pytest.mark.parametrize(
