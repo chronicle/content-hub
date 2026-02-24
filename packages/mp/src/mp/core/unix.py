@@ -296,7 +296,7 @@ def init_python_project_if_not_exists(project_path: Path) -> None:
     keep: set[Path] = {
         project_path / constants.PROJECT_FILE,
         project_path / constants.LOCK_FILE,
-        }
+    }
 
     init_python_project(project_path)
 

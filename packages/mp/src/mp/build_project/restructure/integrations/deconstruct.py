@@ -230,7 +230,7 @@ class DeconstructIntegration:
                         integration_version=float(self.integration.metadata.version),
                         item_name=self.integration.metadata.identifier,
                         item_type="Integration",
-                        publish_time=str(datetime.datetime.now(datetime.UTC).date()),  # noqa: DTZ011
+                        publish_time=str(datetime.datetime.now(datetime.UTC).date()),
                         ticket_number="No ticket",
                     )
                 ],
