@@ -42,7 +42,7 @@ from mp.build_project.restructure.integrations.deconstruct_dependencies import (
 )
 from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
-from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
+from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
