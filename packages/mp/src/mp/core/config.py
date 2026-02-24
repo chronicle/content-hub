@@ -273,7 +273,7 @@ def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
 
         if val_type is Path:
             val = config.get(section, key, fallback=None)
-            return val_type(val) if val else None
+            return typing.cast("_T | None", val_type(val) if val else None)
 
     except (configparser.NoOptionError, configparser.NoSectionError, KeyError):
         return None
