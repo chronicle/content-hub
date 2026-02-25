@@ -214,14 +214,11 @@ def main(is_first_run):
         else:
             pending_files = (
                 file_name
-                for file_name, submission in submit_action.action_context[
-                    "submissions"
-                ].items()
+                for file_name, submission in submit_action.action_context["submissions"].items()
                 if submission.get("pending_submissions", [])
             )
             output_message = (
-                f"Waiting for results for the following files: "
-                f"{','.join(pending_files)}"
+                f"Waiting for results for the following files: {','.join(pending_files)}"
             )
             action_result = ActionResult(
                 result_value=json.dumps(action_context),

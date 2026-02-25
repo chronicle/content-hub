@@ -112,14 +112,25 @@ def main():
                 members_not_removed.append(member)
 
         if members == members_not_removed:
-            output_message = f"No members were removed from the {group_assigned.get('name')} group. Please provide valid members of type {group_type} that exists."
+            output_message = (
+                f"No members were removed from the {group_assigned.get('name')} group. "
+                f"Please provide valid members of type {group_type} that exists."
+            )
             result_value = RESULT_VALUE_FALSE
             status = EXECUTION_STATE_FAILED
         else:
             if members_not_removed:
-                output_message = f"Successfully removed '{len(members_removed)}' members to the {group_assigned.get('name')} group. However, the following members were not removed: {', '.join(members_not_removed)}. Please provide valid members of type {group_type} that exists."
+                output_message = (
+                    f"Successfully removed '{len(members_removed)}' members to the "
+                    f"{group_assigned.get('name')} group. However, the following members "
+                    f"were not removed: {', '.join(members_not_removed)}. Please provide "
+                    f"valid members of type {group_type} that exists."
+                )
             else:
-                output_message = f"Successfully removed {len(members)} members to the {group_assigned.get('name')} group."
+                output_message = (
+                    f"Successfully removed {len(members)} members to the "
+                    f"{group_assigned.get('name')} group."
+                )
 
             group_html_view = render_group_object_as_html(group_assigned, group_type)
             siemplify.result.add_html(

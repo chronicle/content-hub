@@ -24,7 +24,7 @@ import typer
 import yaml
 
 from mp.core.config import get_marketplace_path
-from mp.dev_env.commands.integrations.minor_version_bump import minor_version_bump
+from mp.dev_env.sub_commands.integration.minor_version_bump import minor_version_bump
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

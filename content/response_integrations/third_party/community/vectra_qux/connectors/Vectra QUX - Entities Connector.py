@@ -281,10 +281,14 @@ def main(is_test_run):
 
         siemplify.LOGGER.info(f"Found {len(filtered_alerts)} entities.")
 
-        # Sorting the records based on the timestamp field
+        # Sorting the records based on the full _doc_modified_ts value (including microseconds)
         filtered_alerts = sorted(
             filtered_alerts,
-            key=lambda x: datetime.strptime(x.last_timestamp, "%Y-%m-%dT%H:%M:%SZ"),
+            key=lambda x: (
+                datetime.strptime(x.last_timestamp.rstrip("Z"), "%Y-%m-%dT%H:%M:%S.%f")
+                if "." in x.last_timestamp
+                else datetime.strptime(x.last_timestamp.rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
+            ),
         )
 
         for alert in filtered_alerts:
@@ -311,12 +315,10 @@ def main(is_test_run):
                     )
                     continue
 
-                environment_common = (
-                    GetEnvironmentCommonFactory.create_environment_manager(
-                        siemplify,
-                        environment_field_name,
-                        environment_regex_pattern,
-                    )
+                environment_common = GetEnvironmentCommonFactory.create_environment_manager(
+                    siemplify,
+                    environment_field_name,
+                    environment_regex_pattern,
                 )
 
                 alert_info = alert.get_alert_info(

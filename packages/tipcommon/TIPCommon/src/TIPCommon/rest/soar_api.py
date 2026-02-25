@@ -191,10 +191,7 @@ def get_connector_cards(
         )
 
     if isinstance(response_json, dict) and "connectorInstances" in response_json:
-        return [
-            to_card(card, integration_name)
-            for card in response_json["connectorInstances"]
-        ]
+        return [to_card(card, integration_name) for card in response_json["connectorInstances"]]
 
     return [
         to_card(card, connector_card.get("integration") or integration_name)
@@ -264,10 +261,7 @@ def list_custom_field_values(
     except InternalJSONDecoderError:
         return []
 
-    return [
-        CustomFieldValue.from_json(item)
-        for item in response.json()["customFieldValues"]
-    ]
+    return [CustomFieldValue.from_json(item) for item in response.json()["customFieldValues"]]
 
 
 def set_custom_field_values(
@@ -288,10 +282,7 @@ def set_custom_field_values(
         CustomFieldValue: CustomFieldValue object
 
     """
-    url = (
-        f"{get_sdk_api_uri(chronicle_soar)}/{parent}/customFieldValues/"
-        f"{custom_field_id}"
-    )
+    url = f"{get_sdk_api_uri(chronicle_soar)}/{parent}/customFieldValues/{custom_field_id}"
     payload = {
         "values": values,
     }
@@ -624,12 +615,8 @@ def get_installed_integrations_of_environment(
 
     response = api_client.get_installed_integrations_of_environment()
     validate_response(response)
-    instances = safe_json_for_204(
-        response, default_for_204={"integrationInstances": []}
-    )
-    instances = instances.get("instances", []) or instances.get(
-        "integrationInstances", []
-    )
+    instances = safe_json_for_204(response, default_for_204={"integrationInstances": []})
+    instances = instances.get("instances", []) or instances.get("integrationInstances", [])
     return [InstalledIntegrationInstance.from_json(instance) for instance in instances]
 
 
@@ -1526,9 +1513,7 @@ def get_attachments_metadata(
 
     return [
         AttachmentMetadata.from_json(item)
-        for item in attachment_data.get(
-            "caseComments", attachment_data.get("wall_data", [])
-        )
+        for item in attachment_data.get("caseComments", attachment_data.get("wall_data", []))
     ]
 
 

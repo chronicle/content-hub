@@ -83,7 +83,7 @@ class NonBuiltStep(TypedDict):
 
 
 class StepType(RepresentableEnum):
-    """Represents the type of a step."""
+    """Represents the type of step."""
 
     ACTION = 0
     MULTI_CHOICE_QUESTION = 1
