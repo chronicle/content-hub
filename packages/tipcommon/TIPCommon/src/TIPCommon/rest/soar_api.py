@@ -2409,7 +2409,7 @@ def get_block_lists_details(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
 def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """Get sla records."""
     api_client = get_soar_client(chronicle_soar)
-    response = api_client.get_sla_records()
+    response = api_client.get_sla_records().json()
 
     try:
         if response is None:
@@ -2684,16 +2684,21 @@ def add_custom_family(
 
 
 def get_mapping_rules(
-    chronicle_soar: ChronicleSOAR, source: str, product: str, event_name: str
+    chronicle_soar: ChronicleSOAR,
+    source: str = None,
+    mr_id: int = None,
+    product: str = None,
+    event_name: str = None,
 ) -> SingleJson:
     """Get mapping rules."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.source = source
     api_client.params.product = product
     api_client.params.event_name = event_name
+    api_client.params.mr_id = mr_id
+    
     response = api_client.get_mapping_rules()
-    validate_response(response, validate_json=True)
-    return response.json()
+    return safe_json_for_204(response, default_for_204={})
 
 
 def add_mapping_rules(
@@ -2795,12 +2800,15 @@ def add_email_template(
     return True
 
 
-def get_denylists(chronicle_soar: ChronicleSOAR) -> SingleJson:
+def get_denylists(
+    chronicle_soar: ChronicleSOAR,
+    is_expand: bool = False,
+) -> SingleJson:
     """Get denylists."""
     api_client = get_soar_client(chronicle_soar)
+    api_client.params.is_expand = is_expand
     response = api_client.get_denylists()
-    validate_response(response, validate_json=True)
-    return response.json()
+    return safe_json_for_204(response, default_for_204={})
 
 
 def get_simulated_cases(
@@ -2811,5 +2819,11 @@ def get_simulated_cases(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.is_expand = is_expand
     response = api_client.get_simulated_cases()
-    validate_response(response, validate_json=True)
-    return response.json()
+    return safe_json_for_204(response, default_for_204={})
+
+
+def get_installed_integrations(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+    """Get installed integration."""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_installed_integrations()
+    return response
