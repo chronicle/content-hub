@@ -59,20 +59,21 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Configuration:**
 
-* Go to `Settings > Tools > Ruff`
-* Enable Use Ruff formatter
-* Set the path to Ruff executable (in your virtual environment)
-* Enable Run on save
+* Go to `Settings > Python > Tools > Ruff`
+* Enable all options
+* Set the execution mode to the interpreter of a specific integration's interpreter you already created
+* Enable Run on save by clicking on `All actions on save...`
 
-### Mypy
+### Ty
 
 **Purpose:** Type checking integration
 
 **Configuration:**
 
-* Go to `Settings > Tools > Mypy`
-* Set the path to the Mypy executable (in your virtual environment)
-* Enable Check effects to show type errors in real-time
+* Go to `Settings > Python > Tools > ty`
+* Enable all options
+* Set the execution mode to the interpreter of a specific integration's interpreter you already created
+
 
 ### Pydantic
 
