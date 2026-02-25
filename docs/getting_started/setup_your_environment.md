@@ -59,7 +59,7 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Configuration:**
 
-* Go to `Settings > Python > Interpreter > Tools > Ruff`
+* Go to `Settings > Python > Tools > Ruff`
 * Enable all options
 * Set the execution mode to the interpreter of a specific integration's interpreter you already created
 * Enable Run on save by clicking on `All actions on save...`
@@ -70,7 +70,7 @@ project to be the interpreter found in the virtual environment of the integratio
 
 **Configuration:**
 
-* Go to `Settings > Python > Interpreter > Tools > ty`
+* Go to `Settings > Python > Tools > ty`
 * Enable all options
 * Set the execution mode to the interpreter of a specific integration's interpreter you already created
 
