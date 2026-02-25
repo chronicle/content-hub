@@ -57,6 +57,25 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         return response.json()
 
+    async def get_integration_available_for_upgrade_in_staging(self) -> SingleJson:
+        """Get the integration available for upgrade in staging environment.
+
+        Returns:
+            SingleJson: The integration available for upgrade in staging environment.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
+        """
+        params: SingleJson = {
+            "orderBy": "productionIdentifier asc",
+            "pageSize": DEFAULT_PAGE_SIZE,
+        }
+        response: httpx.Response = await self.get("integrations",params=params)
+        if response.status_code == STATUS_CODE_NO_CONTENT:
+            return {"integrations": []}
+
+        return response.json()
+
     async def upgrade_integration(
         self,
         integration_id: str,
