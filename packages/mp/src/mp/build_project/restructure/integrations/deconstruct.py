@@ -23,6 +23,7 @@ scripts, definitions, and other related files into designated directories.
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import io
 import shutil
 import tomllib
@@ -41,6 +42,7 @@ from mp.build_project.restructure.integrations.deconstruct_dependencies import (
 )
 from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
+from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
@@ -215,10 +217,25 @@ class DeconstructIntegration:
 
     def _create_release_notes(self) -> None:
         rn: Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
-        mp.core.file_utils.write_yaml_to_file(
-            content=[r.to_non_built() for r in self.integration.release_notes],
-            path=rn,
-        )
+        if self.integration.release_notes:
+            mp.core.file_utils.write_yaml_to_file(
+                content=[r.to_non_built() for r in self.integration.release_notes],
+                path=rn,
+            )
+        else:
+            mp.core.file_utils.write_yaml_to_file(
+                content=[
+                    NonBuiltReleaseNote(
+                        description="",
+                        integration_version=float(self.integration.metadata.version),
+                        item_name=self.integration.metadata.identifier,
+                        item_type="Integration",
+                        publish_time=str(datetime.datetime.now(datetime.UTC).date()),
+                        ticket_number="No ticket",
+                    )
+                ],
+                path=rn,
+            )
 
     def _create_custom_families(self) -> None:
         cf: Path = self.out_path / mp.core.constants.CUSTOM_FAMILIES_FILE
