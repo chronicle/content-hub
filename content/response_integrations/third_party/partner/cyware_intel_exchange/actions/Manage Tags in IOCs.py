@@ -8,8 +8,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 from ..core.api_manager import APIManager
 from ..core.constants import (
-    ADD_TAGS_TO_IOC_SCRIPT_NAME,
     COMMON_ACTION_ERROR_MESSAGE,
+    MANAGE_TAGS_IN_IOCS_SCRIPT_NAME,
     NO_ENTITIES_ERROR,
     NO_VALID_IOC_ERROR,
     RESULT_VALUE_FALSE,
@@ -20,15 +20,15 @@ from ..core.utils import get_entities, get_integration_params, string_to_list
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
-    siemplify.script_name = ADD_TAGS_TO_IOC_SCRIPT_NAME
+    siemplify.script_name = MANAGE_TAGS_IN_IOCS_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     output_message = ""
     status = EXECUTION_STATE_COMPLETED
     result_value = RESULT_VALUE_FALSE
-    json_results = []
+    json_results: dict = {}
 
     try:
         base_url, access_id, secret_key, verify_ssl = get_integration_params(siemplify)
@@ -112,7 +112,7 @@ def main():
             response = cyware_manager.add_tags_to_ioc(object_ids=object_ids, tag_ids=tag_ids)
 
             if response:
-                json_results = json.dumps(response, indent=4)
+                json_results = response
                 output_message = (
                     f"Successfully added {len(tag_ids)} tag(s) to {len(object_ids)} IOC(s)."
                 )
@@ -154,7 +154,7 @@ def main():
             response = cyware_manager.remove_tags_from_ioc(object_ids=object_ids, tag_ids=tag_ids)
 
             if response:
-                json_results = json.dumps(response, indent=4)
+                json_results = response
                 output_message = (
                     f"Successfully removed {len(tag_ids)} tag(s) from {len(object_ids)} IOC(s)."
                 )
@@ -179,7 +179,7 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except Exception as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(ADD_TAGS_TO_IOC_SCRIPT_NAME, e)
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(MANAGE_TAGS_IN_IOCS_SCRIPT_NAME, e)
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

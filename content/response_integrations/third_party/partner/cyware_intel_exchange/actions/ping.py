@@ -15,7 +15,7 @@ from ..core.utils import get_integration_params
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = PING_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")

@@ -19,7 +19,7 @@ from ..core.utils import get_entities, get_integration_params
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = ADD_ALLOWED_IOCS_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
@@ -27,7 +27,7 @@ def main():
     output_message = ""
     status = EXECUTION_STATE_COMPLETED
     result_value = RESULT_VALUE_FALSE
-    json_results = []
+    json_results: dict = {}
 
     try:
         base_url, access_id, secret_key, verify_ssl = get_integration_params(siemplify)
@@ -55,7 +55,7 @@ def main():
         )
 
         if response:
-            json_results = json.dumps(response, indent=4)
+            json_results = response
             details = response.get("details", {})
             new_created = details.get("new_created", [])
             already_exists = details.get("already_exists", [])

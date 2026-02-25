@@ -20,7 +20,7 @@ from ..core.utils import get_integration_params, validate_integer_param
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = GET_ALLOWED_IOCS_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
@@ -28,7 +28,7 @@ def main():
     output_message = ""
     status = EXECUTION_STATE_COMPLETED
     result_value = RESULT_VALUE_FALSE
-    results_json = []
+    results_json: dict = {}
 
     try:
         base_url, access_id, secret_key, verify_ssl = get_integration_params(siemplify)
@@ -52,7 +52,7 @@ def main():
         total = response.get("total", 0)
 
         if results:
-            results_json = json.dumps(response, indent=4)
+            results_json = response
             allowed_iocs = [datamodels.AllowedIOC(ioc) for ioc in results]
             csv_output = [ioc.to_csv() for ioc in allowed_iocs]
 

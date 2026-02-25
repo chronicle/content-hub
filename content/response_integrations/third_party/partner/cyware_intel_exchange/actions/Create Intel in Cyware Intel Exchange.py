@@ -30,7 +30,7 @@ from ..core.utils import (
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = CREATE_INTEL_IN_CTIX_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
@@ -38,7 +38,7 @@ def main():
     output_message = ""
     status = EXECUTION_STATE_COMPLETED
     result_value = RESULT_VALUE_FALSE
-    json_results = []
+    json_results: list = []
 
     try:
         base_url, access_id, secret_key, verify_ssl = get_integration_params(siemplify)
@@ -191,7 +191,7 @@ def main():
                 siemplify.LOGGER.exception(inner_error)
 
         if indicator_results:
-            json_results = json.dumps(indicator_results, indent=4)
+            json_results = indicator_results
 
         success_count = len(indicator_results)
         failure_count = len(failed_indicators)

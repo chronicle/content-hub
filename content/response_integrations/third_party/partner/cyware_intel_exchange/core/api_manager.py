@@ -17,22 +17,24 @@ from .constants import (
     BULK_ACTION_UNWHITELIST_ENDPOINT,
     BULK_LOOKUP_ENDPOINT,
     CREATE_INTEL_ENDPOINT,
+    CREATE_TASK_ENDPOINT,
     DEFAULT_BULK_LOOKUP_FIELDS,
     DEFAULT_REQUEST_TIMEOUT,
     PING_ENDPOINT,
     QUICK_INTEL_STATUS_ENDPOINT,
+    RETRIEVE_USERS_ENDPOINT,
     RETRY_COUNT,
     SIGNATURE_EXPIRY_SECONDS,
     TAGS_ENDPOINT,
     TAGS_PAGE_SIZE,
     USER_AGENT_NAME,
-    WAIT_TIME_FOR_RETRY
+    WAIT_TIME_FOR_RETRY,
 )
 from .cyware_exceptions import (
     CywareException,
     InternalServerError,
     RateLimitException,
-    UnauthorizedException
+    UnauthorizedException,
 )
 from .utils import sanitize_url
 
@@ -175,7 +177,7 @@ class APIManager:
                     raise CywareException(f"Request failed: {error_msg}")
                 raise
 
-        return response
+        raise CywareException("Request failed after all retry attempts without returning a response.")
 
     def _get_response_error_details(self, response: requests.Response) -> str:
         """Extract user-friendly error details from a failed HTTP response."""
@@ -541,4 +543,60 @@ class APIManager:
         """
         body = {"object_type": object_type, "object_ids": object_ids}
         response = self._make_rest_call("POST", BULK_ACTION_FALSE_POSITIVE_ENDPOINT, json_body=body)
+        return response.json()
+
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve user information by email address.
+
+        Args:
+            email (str): Email address of the user
+
+        Returns:
+            dict: User information including user_id, or None if not found
+        """
+        params = {"q": email}
+        response = self._make_rest_call("GET", RETRIEVE_USERS_ENDPOINT, params=params)
+        result = response.json()
+        users = result.get("results", [])
+        if users:
+            return users[0]
+        return None
+
+    def create_task(
+        self,
+        text: str,
+        priority: str,
+        object_id: str,
+        deadline: int,
+        assignee: Optional[str] = None,
+        status: str = "not_started",
+        object_type: str = "indicator",
+    ) -> Dict[str, Any]:
+        """
+        Create a task for an indicator.
+
+        Args:
+            text (str): Task description
+            priority (str): Task priority (low, medium, high, critical)
+            object_id (str): Object ID of the indicator
+            deadline (int): Deadline in epoch time
+            assignee (str, optional): User ID of the assignee. If None, task created without assignee.
+            status (str): Task status (default: "not_started")
+            object_type (str): Type of object (default: "indicator")
+
+        Returns:
+            dict: Response containing task details
+        """
+        body = {
+            "text": text,
+            "priority": priority,
+            "status": status,
+            "type": object_type,
+            "object_id": object_id,
+            "deadline": deadline,
+        }
+        if assignee:
+            body["assignee"] = assignee
+        response = self._make_rest_call("POST", CREATE_TASK_ENDPOINT, json_body=body)
         return response.json()

@@ -19,6 +19,8 @@ class CywareIntelExchange:
     remove_tags_response: Optional[SingleJson] = None
     mark_false_positive_response: Optional[SingleJson] = None
     quick_intel_status_response: Optional[SingleJson] = None
+    create_task_response: Optional[SingleJson] = None
+    get_user_by_email_response: Optional[SingleJson] = None
 
     def get_bulk_lookup(self) -> SingleJson:
         if self.bulk_lookup_response:
@@ -82,3 +84,29 @@ class CywareIntelExchange:
         if self.mark_false_positive_response:
             return self.mark_false_positive_response
         return {"status": "success", "message": "IOCs marked as false positive"}
+
+    def get_create_task(self) -> SingleJson:
+        if self.create_task_response:
+            return self.create_task_response
+        return {
+            "id": "task_123",
+            "text": "Test task",
+            "priority": "medium",
+            "status": "not_started",
+            "object_id": "ioc_123",
+            "created_at": "2024-01-01T00:00:00Z",
+        }
+
+    def get_user_by_email(self) -> SingleJson:
+        if self.get_user_by_email_response:
+            return self.get_user_by_email_response
+        return {
+            "count": 1,
+            "results": [
+                {
+                    "id": "user_123",
+                    "email": "test@example.com",
+                    "username": "testuser",
+                }
+            ],
+        }

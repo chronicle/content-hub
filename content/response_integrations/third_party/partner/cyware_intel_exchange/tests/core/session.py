@@ -26,6 +26,8 @@ class CywareSession(MockSession[MockRequest, MockResponse, CywareIntelExchange])
             self.add_tags_endpoint,
             self.remove_tags_endpoint,
             self.mark_false_positive_endpoint,
+            self.create_task_endpoint,
+            self.get_user_by_email_endpoint,
         ]
 
     @router.get(r"/ping/?")
@@ -116,5 +118,19 @@ class CywareSession(MockSession[MockRequest, MockResponse, CywareIntelExchange])
     def mark_false_positive_endpoint(self, request: MockRequest) -> MockResponse:
         try:
             return MockResponse(content=self._product.get_mark_false_positive(), status_code=200)
+        except Exception as e:
+            return MockResponse(content={"error": str(e)}, status_code=400)
+
+    @router.post(r"/ingestion/tasks/?")
+    def create_task_endpoint(self, request: MockRequest) -> MockResponse:
+        try:
+            return MockResponse(content=self._product.get_create_task(), status_code=200)
+        except Exception as e:
+            return MockResponse(content={"error": str(e)}, status_code=400)
+
+    @router.get(r"/rest-auth/users/?")
+    def get_user_by_email_endpoint(self, request: MockRequest) -> MockResponse:
+        try:
+            return MockResponse(content=self._product.get_user_by_email(), status_code=200)
         except Exception as e:
             return MockResponse(content={"error": str(e)}, status_code=400)

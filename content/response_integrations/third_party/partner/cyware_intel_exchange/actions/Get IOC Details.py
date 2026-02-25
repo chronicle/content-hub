@@ -25,7 +25,7 @@ from ..core.utils import get_entities, get_entities_object, get_integration_para
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = GET_IOC_DETAILS_BY_ENRICHING_ENTITIES_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
@@ -33,7 +33,7 @@ def main():
     output_message = ""
     status = EXECUTION_STATE_COMPLETED
     result_value = RESULT_VALUE_FALSE
-    json_results = []
+    json_results: dict = {}
 
     try:
         base_url, access_id, secret_key, verify_ssl = get_integration_params(siemplify)
@@ -77,7 +77,7 @@ def main():
         results = response.get("results", [])
 
         if results:
-            json_results = json.dumps(response, indent=4)
+            json_results = response
             ioc_details = [datamodels.IOCDetails(ioc) for ioc in results]
             csv_output = [ioc_detail.to_csv() for ioc_detail in ioc_details]
 

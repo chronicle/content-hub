@@ -87,54 +87,36 @@ def string_to_list(
 
     Args:
         items_str (str): Comma-separated string
-        strip_quotes (bool): If True, remove wrapping double quotes from each item.
+        strip_quotes (bool): If True, use CSV parsing to handle quoted values properly.
         param_name (str): Parameter name for error messaging.
 
     Returns:
         list: List of strings
 
     Raises:
-        InvalidFormatException: If quoted formatting is invalid when strip_quotes is True
+        InvalidFormatException: If CSV parsing fails when strip_quotes is True
     """
     if not items_str:
         return []
+    
     if strip_quotes:
-        items: List[str] = []
-        current_item = []
-        in_quotes = False
-
-        for char in items_str:
-            if char == '"':
-                in_quotes = not in_quotes
-            elif char == "," and not in_quotes:
-                item = "".join(current_item).strip()
-                if item:
-                    items.append(item)
-                current_item = []
-                continue
-            current_item.append(char)
-
-        if in_quotes:
+        import csv
+        import io
+        
+        try:
+            # Use csv.reader to properly parse comma-separated values with quotes
+            reader = csv.reader(io.StringIO(items_str.strip()), skipinitialspace=True)
+            items = next(reader, [])
+            # Strip whitespace from each item
+            return [item.strip() for item in items if item.strip()]
+        except csv.Error as e:
             raise InvalidFormatException(
-                f"{param_name} contains unmatched double quotes. Review the provided value."
+                f"{param_name} format is invalid. CSV parsing error: {str(e)}"
             )
-
-        final_item = "".join(current_item).strip()
-        if final_item:
-            items.append(final_item)
-
-        cleaned_items = []
-        for item in items:
-            if item.startswith('"') and item.endswith('"') and len(item) >= 2:
-                cleaned_items.append(item[1:-1])
-            elif '"' in item:
-                raise InvalidFormatException(
-                    f"{param_name} format is invalid. Remove stray quotes or quote the entire "
-                    f"value."
-                )
-            else:
-                cleaned_items.append(item)
-        return cleaned_items
+        except Exception as e:
+            raise InvalidFormatException(
+                f"{param_name} format is invalid. Error: {str(e)}"
+            )
 
     return [item.strip() for item in items_str.split(",") if item.strip()]
 
