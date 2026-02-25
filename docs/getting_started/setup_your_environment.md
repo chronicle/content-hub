@@ -74,6 +74,7 @@ project to be the interpreter found in the virtual environment of the integratio
 * Enable all options
 * Set the execution mode to the interpreter of a specific integration's interpreter you already created
 
+
 ### Pydantic
 
 **Purpose:** Enhanced support for Pydantic models
