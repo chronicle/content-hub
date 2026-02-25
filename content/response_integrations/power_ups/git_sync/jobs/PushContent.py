@@ -219,18 +219,30 @@ def main():
                     rules = []
                     for record in records:
                         record["exampleEventFields"] = []  # remove event assets
-                        rule = gitsync.api.get_mapping_rules(
-                            record["source"],
-                            record["product"],
-                            record["eventName"],
+                        rule = gitsync.api.get_mapping_rules(# ng
+                            source=record["source"],
+                            mr_id=record["id"], 
+                            product=record["product"],
+                            event_name=record["eventName"],
                         )
-                        for r in rule["familyFields"] + rule["systemFields"]:
-                            # remove bad rules with no source
-                            if (
-                                r["mappingRule"]["source"]
-                                and r["mappingRule"]["source"].lower()
-                                == integration.lower()
-                            ):
+                        def get_fields(rule):
+                            """Extract iterable fields from either response format."""
+                            if "familyFields" in rule or "systemFields" in rule:
+                                return rule.get("familyFields", []) + rule.get("systemFields", [])
+                            elif "mapping_rules" in rule:
+                                return rule.get("mapping_rules", [])
+                            return []
+
+                        def get_mapping_rule(r, rule):
+                            """Get the mappingRule dict from either format."""
+                            if "mappingRule" in r:
+                                return r["mappingRule"]
+                            return r
+
+                        for r in get_fields(rule):
+                            mapping_rule = get_mapping_rule(r, rule)
+                            source = mapping_rule.get("source")
+                            if source and source.lower() == integration_name.lower():
                                 rules.append(rule)
                                 break
 
