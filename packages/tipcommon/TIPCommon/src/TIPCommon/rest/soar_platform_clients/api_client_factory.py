@@ -433,6 +433,9 @@ class SoarApiClient(Protocol):
     def get_simulated_cases(self) -> requests.Response:
         """Get simulated cases."""
 
+    def get_installed_integrations(self) -> requests.Response:
+        """Get installed integration"""
+
 
 
 

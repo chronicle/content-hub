@@ -1312,13 +1312,8 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_mapping_rules(self) -> requests.Response:
         """Get mapping rules."""
-        endpoint = "/ontology/GetMappingRulesForSettings"
-        payload = {
-            "source": self.params.source,
-            "product": self.params.product,
-            "eventName": self.params.event_name,
-        }
-        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+        endpoint = f"/ontologyRecords/{self.params.mr_id}/mappingRules"
+        return self._make_request(HttpMethod.GET, endpoint)
 
     def add_mapping_rules(self) -> requests.Response:
         """Add mapping rules."""
@@ -1394,7 +1389,9 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_simulated_cases(self) -> requests.Response:
         """Get simulated cases."""
-        endpoint = "/attackssimulator/GetCustomCases"
+        endpoint = "/legacyCases:getCustomCases"
         return self._make_request(HttpMethod.GET, endpoint)
 
-
+    def get_installed_integrations(self) -> requests.Response:
+        endpoint: str = "/integrations"
+        return self._make_request(HttpMethod.GET, endpoint).json()["integrations"]

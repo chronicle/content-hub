@@ -1036,3 +1036,8 @@ class LegacySoarApi(BaseSoarApi):
         """Get sla records"""
         endpoint = "/settings/GetSlaDefinitionsRecords"
         return self._make_request(HttpMethod.GET, endpoint)
+
+    def get_installed_integrations(self) -> requests.Response:
+        """Get installed jobs."""
+        endpoint: str = "/ide/GetIdeItemCards"
+        return self._make_request(HttpMethod.GET, endpoint).json()
