@@ -22,6 +22,7 @@ from packaging import version
 from requests.exceptions import HTTPError
 from TIPCommon.rest.soar_api import (
     add_case_stage,
+    get_installed_integrations,
     add_case_tag,
     add_close_reason,
     add_custom_family,
@@ -41,6 +42,7 @@ from TIPCommon.rest.soar_api import (
     get_denylists,
     get_domains,
     get_email_templates,
+    export_package,
     get_env_dynamic_parameters,
     get_environment_names,
     get_environments,
@@ -222,9 +224,7 @@ class SiemplifyApiClient:
         )
 
     def export_package(self, integration):
-        res = self.session.get(f"ide/ExportPackage/{integration}")
-        self.validate_response(res)
-        return res.content
+        return export_package(self.siemplify_soar, integration)
 
     def import_package(self, integration_name, b64_blob):
         return import_package(self.siemplify_soar, integration_name, b64_blob)
@@ -346,8 +346,14 @@ class SiemplifyApiClient:
         """
         return get_ontology_records(chronicle_soar=chronicle_soar)
 
-    def get_mapping_rules(self, source, product, event_name):
-        return get_mapping_rules(self.siemplify_soar, source, product, event_name)
+    def get_mapping_rules(self, source, mr_id, product, event_name):
+        return get_mapping_rules(
+            self.siemplify_soar,
+            source,
+            mr_id,
+            product,
+            event_name
+        )
 
     def add_mapping_rules(self, mapping_rule):
         return add_mapping_rules(self.siemplify_soar, mapping_rule)
@@ -662,3 +668,6 @@ class SiemplifyApiClient:
             return None
 
         return res.get("identifier")
+
+    def get_installed_integrations(self, siemplify):
+        return get_installed_integrations(siemplify)
