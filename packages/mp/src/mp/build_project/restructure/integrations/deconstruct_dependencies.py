@@ -150,8 +150,8 @@ class DependencyDeconstructor:
         missing_packages: set[str] = required_modules.difference(found_packages)
         for missing_package in missing_packages:
             package_to_add = missing_package
-            if package_to_add in mp.core.constants.SDK_MODULES_CONFIG:
-                package_to_add = mp.core.constants.SDK_MODULES_CONFIG[package_to_add]
+            if package_to_add in mp.core.constants.SDK_DEPENDENCIES_INSTALL_NAMES:
+                package_to_add = mp.core.constants.SDK_DEPENDENCIES_INSTALL_NAMES[package_to_add]
             deps_to_add.append(package_to_add)
 
         if env_common_to_remove:
@@ -175,6 +175,11 @@ class DependencyDeconstructor:
         version: str = match.group("version").replace("_", "-")
 
         provided_imports = _get_provided_imports(package_path).union({package_install_name})
+        if package_install_name in mp.core.constants.SDK_DEPENDENCIES_MIN_VERSIONS:
+            min_version = mp.core.constants.SDK_DEPENDENCIES_MIN_VERSIONS[package_install_name]
+            if Version(version) < Version(min_version):
+                version = min_version
+
         matched_imports = required_modules.intersection(provided_imports)
 
         if not matched_imports:
