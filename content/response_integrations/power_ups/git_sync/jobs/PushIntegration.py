@@ -47,7 +47,8 @@ def main():
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
         integrations = [
-            x for x in gitsync.api.get_ide_cards() if x["identifier"] in push_allowlist
+            x for x in gitsync.api.get_installed_integrations()
+            if x["identifier"] in push_allowlist
         ]
 
         for integration in integrations:
@@ -58,7 +59,8 @@ def main():
             )
             if readme_addon:
                 siemplify.LOGGER.info(
-                    "Readme addon found - adding to GitSync metadata file (GitSync.json)",
+                    "Readme addon found - adding to GitSync metadata file "
+                    "(GitSync.json)",
                 )
                 gitsync.content.metadata.set_readme_addon(
                     "Integration",

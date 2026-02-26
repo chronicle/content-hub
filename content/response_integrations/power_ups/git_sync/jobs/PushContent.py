@@ -66,7 +66,7 @@ def main():
             siemplify.LOGGER.info("========== Integrations ==========")
             for integration in [
                 x
-                for x in gitsync.api.get_ide_cards()
+                for x in gitsync.api.get_installed_integrations()
                 if x.get("identifier") not in IGNORED_INTEGRATIONS
             ]:
                 siemplify.LOGGER.info(f"Pushing {integration['identifier']}")
