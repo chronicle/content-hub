@@ -167,8 +167,8 @@ def save_or_update_job(
         (SingleJson): The response JSON from the platform.
 
     Raises:
-        requests.HTTPError:
-        json.JSONDecodeError:
+        requests.HTTPError: If the platform returns a
+            non-success HTTP status code.
 
     """
     api_client = get_soar_client(chronicle_soar)
