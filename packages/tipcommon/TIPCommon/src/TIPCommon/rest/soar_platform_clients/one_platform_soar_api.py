@@ -543,9 +543,37 @@ class OnePlatformSoarApi(BaseSoarApi):
     def save_or_update_job(self) -> requests.Response:
         """Save or update job data using 1P API.
 
+        The ``job_data`` dict must contain at least:
+
+        - **name** (``str``): The full GCP resource path of
+          the job instance, e.g.::
+
+              projects/{project}/locations/{location}/
+              instances/{instance}/integrations/{integrationId}/
+              jobs/{jobId}/jobInstances/{instanceId}
+
+        - **parameters** (``list[dict]``): A list of parameter
+          dicts, each containing at minimum ``name`` (or
+          ``displayName``) and ``value`` keys.
+
+        Example ``job_data``::
+
+            {
+                "name": "projects/my-proj/locations/us/"
+                        "instances/abc/integrations/MyInt/"
+                        "jobs/j1/jobInstances/ji1",
+                "parameters": [
+                    {
+                        "displayName": "API Key",
+                        "value": "new-value"
+                    }
+                ]
+            }
+
         Raises:
-            ValueError: If ``job_data`` is missing required fields
-                (``name``, ``parameters``) or if the resource path cannot be parsed.
+            ValueError: If ``job_data`` is missing required
+                fields (``name``, ``parameters``) or if the
+                resource path cannot be parsed.
         """
         job_data = self.params.job_data
 
@@ -554,7 +582,9 @@ class OnePlatformSoarApi(BaseSoarApi):
             raise ValueError(
                 "Job data must include a 'name' field with the resource path. "
                 "Example (1P resource path): "
-                "integrations/{integrationId}/jobs/{jobId}/jobInstances/{instanceId}. "
+                "projects/{project}/locations/{location}/instances/{instance}/"
+                "integrations/{integrationId}/jobs/{jobId}/"
+                "jobInstances/{instanceId}. "
                 "Cannot determine the PATCH endpoint without the resource path."
             )
 
@@ -562,31 +592,24 @@ class OnePlatformSoarApi(BaseSoarApi):
         if parameters is None:
             raise ValueError(
                 "Job data is missing 'parameters' field, Nothing to update."
-        )
-
-        if "instances/" not in resource_path:
-            raise ValueError(
-                f"Cannot parse resource path: {resource_path}. "
-                "Expected to contain 'instances/'. "
             )
-
-        parts = resource_path.split("instances/")
-        remainder = parts[-1]
-
-        slash_position = remainder.find("/")
-        if slash_position == -1:
+        # The resource path is a full GCP resource name, e.g.:
+        # projects/X/locations/Y/instances/Z/integrations/.../jobInstances/{id}
+        # The API base URL already includes up to instances/Z, so we need
+        # just the relative path starting from /integrations/...
+        segment_pos = resource_path.find("integrations/")
+        if segment_pos == -1:
             raise ValueError(
-                f"Cannot parse resource path: {resource_path}. No segment found after "
-                f"instance ID in '{resource_path}'"
+                f"Cannot parse resource path: '{resource_path}'. "
+                "Expected path to contain 'integrations/'."
             )
-
-        endpoint = remainder[slash_position:]
+        endpoint = f"/{resource_path[segment_pos:]}"
 
         return self._make_request(
             HttpMethod.PATCH,
             endpoint,
-            params={"updateMask":"parameters"},
-            json_payload={"parameters": parameters}
+            params={"updateMask": "parameters"},
+            json_payload={"parameters": parameters},
         )
 
     def get_case_wall_records(self) -> requests.Response:
