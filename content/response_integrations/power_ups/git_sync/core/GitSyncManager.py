@@ -879,9 +879,9 @@ class WorkflowInstaller:
             display_name=fallback_instance_display_name,
             consider_404_to_none=True,
         )
-        # If the playbook is for one specific environment, choose the first integration instance
-        # from that environment. Otherwise, set the step to dynamic mode and set the first shared
-        # integration instance as fallback
+        # If the playbook is for one specific environment, choose the first integration
+        # instance from that environment. Otherwise, set the step to dynamic mode and
+        # set the first shared integration instance as fallback
         if len(environments) == 1 and environments[0] != ALL_ENVIRONMENTS_IDENTIFIER:
             integration_instances = self._find_integration_instances_for_step(
                 step.get("integration"),
