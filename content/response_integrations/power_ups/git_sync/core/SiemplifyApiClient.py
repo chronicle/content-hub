@@ -670,5 +670,5 @@ class SiemplifyApiClient:
 
         return res.get("identifier")
 
-    def get_installed_integrations(self, siemplify):
-        return get_installed_integrations(siemplify)
+    def get_installed_integrations(self):
+        return get_installed_integrations(self.siemplify_soar)
