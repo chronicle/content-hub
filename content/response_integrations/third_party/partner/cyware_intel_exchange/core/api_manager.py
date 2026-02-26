@@ -79,7 +79,7 @@ class APIManager:
             hmac.new(
                 self.secret_key.encode("utf-8"),
                 to_sign.encode("utf-8"),
-                hashlib.sha1,
+                hashlib.sha1,   # nosec B303
             ).digest()
         ).decode("utf-8")
         return {
