@@ -134,7 +134,10 @@ def main():
             ]:
                 for instance in [
                     x
-                    for x in gitsync.api.get_integrations_instances(chronicle_soar=siemplify, environment=environment)
+                    for x in gitsync.api.get_integrations_instances(
+                        chronicle_soar=siemplify, 
+                        environment=environment
+                    )
                     if x.integration_identifier not in IGNORED_INTEGRATIONS
                 ]:
                     siemplify.LOGGER.info(f"Pushing {instance.instance_name}")
@@ -143,7 +146,7 @@ def main():
                         instance_id=instance.identifier,
                         integration_identifier=instance.integration_identifier,
                     )
-                    for sett in settings:  # Remove Agent Identifiers from settings - should be created separately
+                    for sett in settings:
                         if sett.property_name == "AgentIdentifier":
                             sett.value = None
                     if commit_passwords:
@@ -155,12 +158,14 @@ def main():
                                         prop.value = secrets[prop.property_name]
                                     except KeyError:
                                         siemplify.LOGGER.warn(
-                                            f"{instance.instance_name} was updated with new "
+                                            f"{instance.instance_name} "
+                                            "was updated with new "
                                             "parameters but they weren't configured.",
                                         )
                         except Exception:
                             siemplify.LOGGER.warn(
-                                f"{instance.identifier} is not configured. Skipping passwords",
+                                f"{instance.identifier} is not configured. "
+                                "Skipping passwords"
                             )
                     settings_dict_list = [
                             {
@@ -173,7 +178,9 @@ def main():
                                 "id": s._id,
                                 "propertyDisplayName": s.display_name,
                                 "propertyDescription": s.property_description,
-                                "integrationIdentifier": instance.integration_identifier,
+                                "integrationIdentifier": (
+                                    instance.integration_identifier
+                                ),
                                 "integrationInstance": instance.identifier,
                             }
                             for s in settings
@@ -194,7 +201,7 @@ def main():
         # Ontology - Visual Families
         if features["Visual Families"]:
             siemplify.LOGGER.info("========== Visual Families ==========")
-            for visualFamily in gitsync.api.get_custom_families(chronicle_soar=siemplify):
+            for visualFamily in gitsync.api.get_custom_families(siemplify):
                 siemplify.LOGGER.info(f"Pushing {visualFamily['family']}")
                 gitsync.content.push_visual_family(
                     VisualFamily(
@@ -242,7 +249,7 @@ def main():
                         for r in get_fields(rule):
                             mapping_rule = get_mapping_rule(r, rule)
                             source = mapping_rule.get("source")
-                            if source and source.lower() == integration_name.lower():
+                            if source and source.lower() == integration.lower():
                                 rules.append(rule)
                                 break
 
