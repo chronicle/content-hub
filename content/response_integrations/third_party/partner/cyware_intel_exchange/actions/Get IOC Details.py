@@ -12,12 +12,12 @@ from ..core.constants import (
     MAX_TABLE_RECORDS,
     NO_ENTITIES_ERROR,
     RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE
+    RESULT_VALUE_TRUE,
 )
 from ..core.cyware_exceptions import (
     CywareException,
     InvalidFormatException,
-    InvalidIntegerException
+    InvalidIntegerException,
 )
 from ..core.utils import get_entities, get_entities_object, get_integration_params
 

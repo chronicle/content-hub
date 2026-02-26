@@ -9,7 +9,7 @@ from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
     PING_SCRIPT_NAME,
     RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE
+    RESULT_VALUE_TRUE,
 )
 from ..core.utils import get_integration_params
 

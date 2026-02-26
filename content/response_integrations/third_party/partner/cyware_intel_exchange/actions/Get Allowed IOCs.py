@@ -11,7 +11,7 @@ from ..core.constants import (
     GET_ALLOWED_IOCS_SCRIPT_NAME,
     MAX_TABLE_RECORDS,
     RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE
+    RESULT_VALUE_TRUE,
 )
 from ..core.cyware_exceptions import CywareException, InvalidIntegerException
 from ..core.utils import get_integration_params, validate_integer_param

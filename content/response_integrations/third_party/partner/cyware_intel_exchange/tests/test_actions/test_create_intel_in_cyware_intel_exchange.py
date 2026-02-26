@@ -7,7 +7,7 @@ from cyware_intel_exchange.actions import create_intel_in_cyware_intel_exchange
 from cyware_intel_exchange.tests.common import (
     CONFIG_PATH,
     MOCK_CREATE_INTEL,
-    MOCK_QUICK_INTEL_STATUS
+    MOCK_QUICK_INTEL_STATUS,
 )
 from cyware_intel_exchange.tests.core.product import CywareIntelExchange
 from cyware_intel_exchange.tests.core.session import CywareSession

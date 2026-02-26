@@ -13,7 +13,7 @@ from ..core.constants import (
     NO_ENTITIES_ERROR,
     NO_VALID_IOC_ERROR,
     RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE
+    RESULT_VALUE_TRUE,
 )
 from ..core.cyware_exceptions import CywareException
 from ..core.utils import get_entities, get_integration_params, validate_integer_param
@@ -36,7 +36,7 @@ def main() -> None:
         text = siemplify.extract_action_param("Text", print_value=False, is_mandatory=True)
         priority = siemplify.extract_action_param("Priority", print_value=True, is_mandatory=True)
         task_status = siemplify.extract_action_param("Status", print_value=True, is_mandatory=True)
-        
+
         deadline_days_str = siemplify.extract_action_param(
             "Deadline", print_value=True, is_mandatory=True
         )

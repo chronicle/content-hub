@@ -13,7 +13,7 @@ from ..core.constants import (
     NO_ENTITIES_ERROR,
     NO_VALID_IOC_ERROR,
     RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE
+    RESULT_VALUE_TRUE,
 )
 from ..core.cyware_exceptions import CywareException
 from ..core.utils import get_entities, get_integration_params, string_to_list

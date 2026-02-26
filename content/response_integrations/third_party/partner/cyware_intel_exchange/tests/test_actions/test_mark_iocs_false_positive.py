@@ -7,7 +7,7 @@ from cyware_intel_exchange.actions import mark_iocs_false_positive
 from cyware_intel_exchange.tests.common import (
     CONFIG_PATH,
     MOCK_BULK_LOOKUP,
-    MOCK_MARK_FALSE_POSITIVE
+    MOCK_MARK_FALSE_POSITIVE,
 )
 from cyware_intel_exchange.tests.core.product import CywareIntelExchange
 from cyware_intel_exchange.tests.core.session import CywareSession
