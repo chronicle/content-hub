@@ -98,11 +98,11 @@ def string_to_list(
     """
     if not items_str:
         return []
-    
+
     if strip_quotes:
         import csv
         import io
-        
+
         try:
             # Use csv.reader to properly parse comma-separated values with quotes
             reader = csv.reader(io.StringIO(items_str.strip()), skipinitialspace=True)
@@ -114,9 +114,7 @@ def string_to_list(
                 f"{param_name} format is invalid. CSV parsing error: {str(e)}"
             )
         except Exception as e:
-            raise InvalidFormatException(
-                f"{param_name} format is invalid. Error: {str(e)}"
-            )
+            raise InvalidFormatException(f"{param_name} format is invalid. Error: {str(e)}")
 
     return [item.strip() for item in items_str.split(",") if item.strip()]
 

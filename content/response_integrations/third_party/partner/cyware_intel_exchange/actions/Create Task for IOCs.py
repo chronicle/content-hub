@@ -101,11 +101,11 @@ def main() -> None:
                 status = EXECUTION_STATE_FAILED
                 return
 
-            siemplify.LOGGER.info(
-                f"Found user: {user_info.get('email')} (ID: {assignee_user_id})"
-            )
+            siemplify.LOGGER.info(f"Found user: {user_info.get('email')} (ID: {assignee_user_id})")
         else:
-            siemplify.LOGGER.info("No assignee email provided. Task will be created without an assignee.")
+            siemplify.LOGGER.info(
+                "No assignee email provided. Task will be created without an assignee."
+            )
 
         # Fetch indicator IDs from provided names via bulk IOC lookup
         siemplify.LOGGER.info("Fetching indicator IDs from provided names via bulk IOC lookup.")
@@ -145,7 +145,7 @@ def main() -> None:
                 }
                 if assignee_user_id:
                     task_params["assignee"] = assignee_user_id
-                
+
                 task_response = cyware_manager.create_task(**task_params)
 
                 task_responses.append({
@@ -184,9 +184,7 @@ def main() -> None:
             json_results = task_responses
 
         if successful_tasks:
-            output_message = (
-                f"Successfully created tasks for {len(successful_tasks)} IOC(s). "
-            )
+            output_message = f"Successfully created tasks for {len(successful_tasks)} IOC(s). "
             if assignee_email and assignee_email.strip():
                 output_message += f"Assignee: {assignee_email}. "
             output_message += f"Deadline: {deadline_days} day(s) from now."

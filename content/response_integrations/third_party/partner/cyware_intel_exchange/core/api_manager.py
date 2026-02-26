@@ -177,7 +177,9 @@ class APIManager:
                     raise CywareException(f"Request failed: {error_msg}")
                 raise
 
-        raise CywareException("Request failed after all retry attempts without returning a response.")
+        raise CywareException(
+            "Request failed after all retry attempts without returning a response."
+        )
 
     def _get_response_error_details(self, response: requests.Response) -> str:
         """Extract user-friendly error details from a failed HTTP response."""
@@ -581,7 +583,8 @@ class APIManager:
             priority (str): Task priority (low, medium, high, critical)
             object_id (str): Object ID of the indicator
             deadline (int): Deadline in epoch time
-            assignee (str, optional): User ID of the assignee. If None, task created without assignee.
+            assignee (str, optional): User ID of the assignee. If None, task created without
+                assignee.
             status (str): Task status (default: "not_started")
             object_type (str): Type of object (default: "indicator")
 
