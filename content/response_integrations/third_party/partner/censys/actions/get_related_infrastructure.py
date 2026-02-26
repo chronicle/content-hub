@@ -56,12 +56,15 @@ def build_table_row(index: int, hit: dict) -> dict:
         }
 
 
-def validate_field_and_value(field: str, value: str) -> None:
+def validate_field_and_value(field: str, value: str) -> tuple[str, str]:
     """Validate field and value parameters.
 
     Args:
         field: The field name to search (e.g., 'services.port')
         value: The value to search for (e.g., '443')
+
+    Returns:
+        Tuple of (stripped_field, stripped_value)
 
     Raises:
         ValueError: If field or value is empty

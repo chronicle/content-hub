@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -34,8 +34,8 @@ from ..core.utils import (
 
 
 def _extract_resources_from_response(
-    response: Dict[str, Any],
-) -> List[Dict[str, Any]]:
+    response: dict[str, Any],
+) -> list[dict[str, Any]]:
     """
     Extract resource list from API response.
 
@@ -56,14 +56,14 @@ def _extract_resources_from_response(
 
 
 def _find_entity_resource(
-    resources: List[Dict[str, Any]], hostname: str, port: int
-) -> Optional[Dict[str, Any]]:
+    resources: list[dict[str, Any]], entity_identifier: str, port: int | None
+) -> dict[str, Any] | None:
     """
     Find matching resource for entity and port.
 
     Args:
         resources: List of resource dictionaries
-        hostname: Hostname or IP to match
+        entity_identifier: Hostname or IP to match
         port: Port number to match
 
     Returns:
@@ -72,7 +72,7 @@ def _find_entity_resource(
     for resource in resources:
         resource_data = resource.get("resource", {})
         if (
-            resource_data.get("hostname") == hostname
+            resource_data.get("hostname") == entity_identifier
             and resource_data.get("port") == port
         ):
             return resource
@@ -81,10 +81,10 @@ def _find_entity_resource(
 
 
 def _build_output_message(
-    successful: List[str],
-    not_found: List[str],
-    failed: List[str],
-    invalid: List[str],
+    successful: list[str],
+    not_found: list[str],
+    failed: list[str],
+    invalid: list[str],
 ) -> str:
     """
     Build detailed output message for action results.
@@ -294,8 +294,10 @@ def main():
                     failed_entities.append(web_property_id)
 
     except ValueError as e:
-        output_message = f"Invalid parameter value: {str(e)}\nPlease verify your input parameters"\
-                        " and try again."
+        output_message = (
+            f"Invalid parameter value: {str(e)}\n"
+            f"Please verify your input parameters and try again."
+        )
         siemplify.LOGGER.error(output_message)
         status = EXECUTION_STATE_FAILED
         result_value = RESULT_VALUE_FALSE

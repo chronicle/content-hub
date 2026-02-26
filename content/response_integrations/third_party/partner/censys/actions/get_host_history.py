@@ -123,8 +123,9 @@ def main():
         pagination_info = result.get("pagination_info", {})
 
         if not events:
-            output_message = f"No historical data found for host {host_id} within the specified"\
-                            " time range."
+            output_message = (
+                f"No historical data found for host {host_id} within the specified time range."
+            )
             siemplify.LOGGER.info(output_message)
         else:
             # Build table data using datamodels (limit to MAX_TABLE_RECORDS for display)
@@ -153,8 +154,9 @@ def main():
                     f"(partial data - {pages_fetched} page(s) fetched).\n"
                 )
             else:
-                output_message = f"Successfully retrieved {total_events} event(s) for host"\
-                                f" {host_id}.\n"
+                output_message = (
+                    f"Successfully retrieved {total_events} event(s) for host {host_id}.\n"
+                )
 
             # Add table limit info if we have more events than table can show
             if total_events > MAX_TABLE_RECORDS:
