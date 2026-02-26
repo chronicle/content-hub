@@ -224,7 +224,9 @@ class SiemplifyApiClient:
         )
 
     def export_package(self, integration):
-        return export_package(self.siemplify_soar, integration)
+        res = self.session.get(f"ide/ExportPackage/{integration}")
+        self.validate_response(res)
+        return res.content
 
     def import_package(self, integration_name, b64_blob):
         return import_package(self.siemplify_soar, integration_name, b64_blob)
