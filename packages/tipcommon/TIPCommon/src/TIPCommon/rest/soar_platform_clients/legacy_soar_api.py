@@ -796,7 +796,7 @@ class LegacySoarApi(BaseSoarApi):
         endpoint = (
             f"/ide/ExportPackage/{self.params.integration_identifier}"
         )
-        return self._make_request(HttpMethod.GET, endpoint)
+        return self._make_request(HttpMethod.GET, endpoint).content
 
     def get_integration_instance_settings(self) -> requests.Response:
         """Get integration instance settings"""

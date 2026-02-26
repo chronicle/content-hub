@@ -1797,7 +1797,7 @@ def export_package(
     api_client.params.integration_identifier = integration_identifier
 
     response = api_client.export_package()
-    return response.json()
+    return response
 
 
 def get_integration_instance_settings(
