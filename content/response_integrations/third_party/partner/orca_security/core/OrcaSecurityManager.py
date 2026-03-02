@@ -434,8 +434,7 @@ class OrcaSecurityManager:
         query: VulnerabilityQueryBuilder,
         max_result_limit: int = DEFAULT_RESULTS_LIMIT,
     ) -> list[Any]:
-        """
-        Retrieve paginated results for a vulnerability query.
+        """Retrieve paginated results for a vulnerability query.
 
         First query will have get_results_and_count=True to get total_items,
         then paginate through all results using start_at_index and limit.
