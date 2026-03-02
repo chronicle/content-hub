@@ -71,7 +71,7 @@ class OrcaSecurityParser:
             raw_json,
             cve_id=raw_json.get("CveId"),
             summary=raw_json.get("Description"),
-            fix_available=True if str(raw_json.get("PatchAvailable")).lower() == "yes" else False,
+            fix_available=str(raw_json.get("PatchAvailable")).lower() == "yes",
             asset_name=inventory.get("Name"),
             published=raw_json.get("FirstSeen"),
             source_link=raw_json.get("SourceLink"),
