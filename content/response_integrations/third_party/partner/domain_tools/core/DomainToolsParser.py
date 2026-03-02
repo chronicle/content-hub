@@ -1,24 +1,26 @@
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Any
+
 from .datamodels import (
-    Contact,
-    IrisInvestigateModel,
-    Identity,
-    Registration,
-    Hosting,
+    RDAPDNSSEC,
     Analytics,
-    RiskProfile,
+    Contact,
+    Hosting,
+    Identity,
+    IrisInvestigateModel,
     ParsedDomainRDAPModel,
     RDAPContact,
     RDAPRegistrar,
-    RDAPDNSSEC,
+    Registration,
+    RiskProfile,
+    WhoisDetails,
+    WhoisHistoryEntry,
     WhoisHistoryModel,
     WhoisRegistration,
-    WhoisDetails,
-    WhoisHistoryEntry
 )
 from .UtilsManager import get_domain_risk_score_details
-from datetime import datetime
 
 
 class DomainToolsParser:

@@ -7,27 +7,25 @@ and return CSV output, including JSON results.
 
 from __future__ import annotations
 
-from typing import Any
 from datetime import datetime
+from typing import Any
 
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyDataModel import EntityTypes, DomainEntityInfo
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import DomainEntityInfo, EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_configuration_param, extract_action_param
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import (
-    construct_csv,
-    flat_dict_to_csv,
-    dict_to_flat,
     add_prefix_to_dict_keys,
+    construct_csv,
+    dict_to_flat,
+    flat_dict_to_csv,
 )
 
-
-from ..core.DomainToolsManager import DomainToolsManager
 from ..core.constants import INTEGRATION_NAME, WHOIS_HISTORY_SCRIPT_NAME
-from ..core.UtilsManager import extract_domain_from_string
 from ..core.datamodels import WhoisHistoryModel
-
+from ..core.DomainToolsManager import DomainToolsManager
+from ..core.UtilsManager import extract_domain_from_string
 
 SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 

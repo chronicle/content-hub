@@ -8,10 +8,9 @@ from typing import Any
 from domaintools import API
 from domaintools.exceptions import NotFoundException
 
-from .exceptions import DomainToolsManagerError
-from .DomainToolsParser import DomainToolsParser
 from .datamodels import IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
-
+from .DomainToolsParser import DomainToolsParser
+from .exceptions import DomainToolsManagerError
 
 APP_PARTNER_NAME: str = "Google SecOps SOAR"
 APP_VERSION: str = "10.0"
