@@ -758,20 +758,4 @@ class OnePlatformSoarApi(BaseSoarApi):
             "$orderBy": "createTime desc",
             "$pageSize": 1,
         }
-        response = self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
-        response.raise_for_status()
-        case_activities = response.json()
-        if case_activities.get("totalSize", 0) < 1:
-            return ""
-
-        activity_data_json_str = case_activities.get("case_wall_records", [{}])[0].get(
-            "activityDataJson", "{}"
-        )
-        close_activity = json.loads(activity_data_json_str)
-        full_comment = close_activity.get("comment", "")
-        if not full_comment:
-            return ""
-
-        case_comment = full_comment.split("\n")[0].strip()
-
-        return case_comment
+        return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)

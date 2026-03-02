@@ -517,7 +517,7 @@ class LegacySoarApi(BaseSoarApi):
 
         return all_cases
 
-    def get_case_close_comment(self, case_id):
+    def get_case_close_comment(self, case_id: str | int):
         """Get case closure comment"""
         endpoint = "/dynamic-cases/GetCaseWallActivities?format=camel"
         payload = {
@@ -530,27 +530,6 @@ class LegacySoarApi(BaseSoarApi):
             "activities": [1],
             "order": "desc",
         }
-        response = self._make_request(
+        return self._make_request(
             method=HttpMethod.POST, endpoint=endpoint, json_payload=payload
         )
-        response.raise_for_status()
-        case_activities = response.json()
-        close_activity = next(
-            filter(
-                lambda x: x.get("activityKind", 0) == 9,
-                case_activities.get("objectsList", []),
-            ),
-            {},
-        )
-        if not close_activity:
-            return ""
-        close_comment = next(
-            filter(
-                lambda x: x.startswith("Comment:"),
-                close_activity.get("description", "").split("\n"),
-            ),
-            "",
-        )
-        if not close_comment:
-            return ""
-        return close_comment.removeprefix("Comment:").strip()

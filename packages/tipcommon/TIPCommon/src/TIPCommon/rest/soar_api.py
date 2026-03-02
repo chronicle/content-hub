@@ -24,6 +24,7 @@ from ..consts import DEFAULT_ENVIRONMENT
 from ..data_models import (
     AlertEvent,
     AttachmentMetadata,
+    CaseCloseComment,
     CaseDetails,
     CaseWallAttachment,
     ConnectorCard,
@@ -1694,4 +1695,5 @@ def get_case_close_comment(
     """Get case closure comment"""
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_case_close_comment(case_id)
-    return response
+    validate_response(response, validate_json=True)
+    return CaseCloseComment.from_json(response.json()).comment

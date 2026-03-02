@@ -38,7 +38,7 @@ from ...consts import (
     JOB_SYNC_LIMIT,
     UNIX_FORMAT,
     CASE_ALERTS_LIMIT,
-    TAGS,
+    TAGS_KEY,
 )
 from ..interfaces import ApiClient
 from ...data_models import CaseDetails
@@ -370,7 +370,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         product_tag_prefix: str,
         case_tag_prefix: str,
         product_properties_key: str = None,
-        product_tags_key: str = TAGS,
+        product_tags_key: str = TAGS_KEY,
     ) -> JobTagsResult:
         """Fetches tags from both the case and the product item."""
         return job_case.get_tags_to_sync(
@@ -442,9 +442,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
     def sync_assignee_to_case(
         self,
-        user_display_name: str,
+        alert_id: str,
         case_id: str,
-        alert_id: str
+        user_display_name: str,
     ) -> None:
         """Sync assignee to the case."""
         self.soar_job.assign_case(user_display_name, case_id, alert_id)
@@ -452,9 +452,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
     def sync_severity_to_case(
         self,
-        case_id: str,
         alert_identifier: str,
         alert_name: str,
+        case_id: str,
         new_priority: str
     ) -> None:
         """Sync severity to the case."""
