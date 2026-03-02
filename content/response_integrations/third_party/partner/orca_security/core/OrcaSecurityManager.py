@@ -341,6 +341,9 @@ class OrcaSecurityManager:
             list[Any]: A list containing:
                 The filtered vulnerability results (limited if `limit` is set).
                 Full insight data if `create_insight` is True, otherwise None.
+
+        Raises:
+            Exception: If the API request fails or if response validation fails.
         """
         max_result_limit = limit or VULNERABILITIES_MAX_LIMIT
         fetch_limit = DEFAULT_RESULTS_LIMIT
@@ -378,6 +381,9 @@ class OrcaSecurityManager:
 
         Returns:
             Asset: The Asset object.
+
+        Raises:
+            Exception: If the API request fails or if response validation fails.
         """
         url: str = self._get_full_url("asset_details")
         payload: AssetQueryBuilder = AssetQueryBuilder().with_asset_id(asset_id).build()
@@ -405,6 +411,9 @@ class OrcaSecurityManager:
 
         Returns:
             list[Any]: List of parsed vulnerability objects.
+
+        Raises:
+            Exception: If the API request fails or if response validation fails.
         """
 
         payload = (

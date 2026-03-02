@@ -247,7 +247,13 @@ class VulnerabilityQueryBuilder:
         self.max_tier: int = 2
 
     def with_results_and_count(self, value: bool = False) -> VulnerabilityQueryBuilder:
-        """Set the flag to get both results and count in the response."""
+        """
+        Set the flag to get both results and count in the response.
+        Args:
+            value (bool): Whether to get results and count. Default is False.
+        Returns:
+            VulnerabilityQueryBuilder: The instance of the builder.
+        """
         self.get_results_and_count = value
         return self
 
