@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import urllib.parse
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from dataclasses import dataclass, field, asdict
 from typing import Any
 
 
@@ -109,9 +109,8 @@ class IrisInvestigateModel(DTBaseModel):
     first_seen: str = ""
     server_type: str = ""
 
-
     def to_table_data(self) -> dict[str, Any]:
-        """ Returns a simplified summary dict for UI tables (csv). """
+        """Returns a simplified summary dict for UI tables (csv)."""
         return {
             "Name": self.name,
             "Last Enriched": datetime.now().strftime("%Y-%m-%d"),
@@ -121,16 +120,24 @@ class IrisInvestigateModel(DTBaseModel):
             "Threat Profile Threats": ", ".join(self.analytics.threat_profile_risk_score.threats),
             "Threat Profile Evidence": ", ".join(self.analytics.threat_profile_risk_score.evidence),
             # tracking codes
-            "Google Adsense Tracking Code": self._format_list_value("ad", self.analytics.google_adsense),
-            "Google Analytic Tracking Code": self._format_list_value("ga", self.analytics.google_analytics),
+            "Google Adsense Tracking Code": self._format_list_value(
+                "ad", self.analytics.google_adsense
+            ),
+            "Google Analytic Tracking Code": self._format_list_value(
+                "ga", self.analytics.google_analytics
+            ),
             "Website Response Code": self.analytics.website_response_code,
             "Tags": ", ".join(self.analytics.tags) if self.analytics.tags else "N/A",
             # Identity
             "Registrant Name": self.identity.registrant_name,
             "Registrant Org": self.identity.registrant_org,
             "Registrar": self.identity.registrar,
-            "SOA Email": self._format_list_value("ema", [{"value": e} for e in self.identity.soa_email]),
-            "SSL Certificate Email": self._format_list_value("ssl.em", [{"value": e} for e in self.identity.ssl_email]),
+            "SOA Email": self._format_list_value(
+                "ema", [{"value": e} for e in self.identity.soa_email]
+            ),
+            "SSL Certificate Email": self._format_list_value(
+                "ssl.em", [{"value": e} for e in self.identity.ssl_email]
+            ),
             # Registration
             "Create Date": self.registration.create_date,
             "Expiration Date": self.registration.expiration_date,
@@ -140,10 +147,12 @@ class IrisInvestigateModel(DTBaseModel):
             "IP Country Code": self.hosting.ip_country_code,
             "Website Title": self.website_title,
             "Server Type": self.server_type,
-            "Popularity": self.analytics.popularity_rank
+            "Popularity": self.analytics.popularity_rank,
         }
 
-    def _format_guided_pivot_link(self, link_type: str | None, item: dict, domain: str | None = None) -> str | int:
+    def _format_guided_pivot_link(
+        self, link_type: str | None, item: dict, domain: str | None = None
+    ) -> str | int:
         query = item.get("value", "")
         count = item.get("count", 0)
 
@@ -165,7 +174,9 @@ class IrisInvestigateModel(DTBaseModel):
 
         return count
 
-    def _format_list_value(self, link_type: str, items: list[dict], domain: str | None = None) -> str:
+    def _format_list_value(
+        self, link_type: str, items: list[dict], domain: str | None = None
+    ) -> str:
         """
         Returns a comma-separated string of pivot links
         e.g. admin@domaintools.com [5](iris url)
@@ -252,7 +263,9 @@ class ParsedDomainRDAPModel(DTBaseModel):
         for c in self.contacts:
             roles_str = "/".join(c.roles) if c.roles else "no-role"
             # Confirm formatting as: "Name (admin/tech) <email@domain.com>"
-            contact_info = f"{c.name} ({roles_str}) <{c.email}>" if c.email else f"{c.name} ({roles_str})"
+            contact_info = (
+                f"{c.name} ({roles_str}) <{c.email}>" if c.email else f"{c.name} ({roles_str})"
+            )
             contact_list.append(contact_info)
 
         all_contacts = " | ".join(contact_list) if contact_list else "N/A"
@@ -268,7 +281,7 @@ class ParsedDomainRDAPModel(DTBaseModel):
             "DNSSEC": "Signed" if self.dnssec.signed else "Unsigned",
             "Emails": ", ".join(self.emails) if self.emails else "N/A",
             "EmailDomains": ", ".join(self.email_domains) if self.email_domains else "N/A",
-            "Conformance": ", ".join(self.conformance) if self.conformance else "N/A"
+            "Conformance": ", ".join(self.conformance) if self.conformance else "N/A",
         }
 
 
@@ -317,6 +330,6 @@ class WhoisHistoryModel(DTBaseModel):
                 "Created": reg.created,
                 "Expires": reg.expires,
                 "Registrant": entry.whois.registrant,
-                "Privacy": "Private" if entry.is_private else "Public"
+                "Privacy": "Private" if entry.is_private else "Public",
             })
         return table_rows

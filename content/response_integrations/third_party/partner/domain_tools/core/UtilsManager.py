@@ -7,7 +7,7 @@ from domaintools import utils
 
 
 def chunks(lst, n):
-    """ Yield successive n-sized chunks from a list """
+    """Yield successive n-sized chunks from a list"""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
@@ -80,16 +80,32 @@ def get_domain_risk_score_details(domain_risk: dict[str, Any]) -> dict[str, Any]
         threat_profile_data = utils.get_threat_component(risk_components, "threat_profile")
         if threat_profile_data:
             risk_scores["threat_profile_risk_score"] = threat_profile_data.get("risk_score") or ""
-            risk_scores["threat_profile_threats"] = ", ".join(threat_profile_data.get("threats", []))
-            risk_scores["threat_profile_evidence"] = ", ".join(threat_profile_data.get("evidence", []))
-        threat_profile_malware_data = utils.get_threat_component(risk_components, "threat_profile_malware")
+            risk_scores["threat_profile_threats"] = ", ".join(
+                threat_profile_data.get("threats", [])
+            )
+            risk_scores["threat_profile_evidence"] = ", ".join(
+                threat_profile_data.get("evidence", [])
+            )
+        threat_profile_malware_data = utils.get_threat_component(
+            risk_components, "threat_profile_malware"
+        )
         if threat_profile_malware_data:
-            risk_scores["threat_profile_malware_risk_score"] = threat_profile_malware_data.get("risk_score") or ""
-        threat_profile_phshing_data = utils.get_threat_component(risk_components, "threat_profile_phishing")
+            risk_scores["threat_profile_malware_risk_score"] = (
+                threat_profile_malware_data.get("risk_score") or ""
+            )
+        threat_profile_phshing_data = utils.get_threat_component(
+            risk_components, "threat_profile_phishing"
+        )
         if threat_profile_phshing_data:
-            risk_scores["threat_profile_phishing_risk_score"] = threat_profile_phshing_data.get("risk_score") or ""
-        threat_profile_spam_data = utils.get_threat_component(risk_components, "threat_profile_spam")
+            risk_scores["threat_profile_phishing_risk_score"] = (
+                threat_profile_phshing_data.get("risk_score") or ""
+            )
+        threat_profile_spam_data = utils.get_threat_component(
+            risk_components, "threat_profile_spam"
+        )
         if threat_profile_spam_data:
-            risk_scores["threat_profile_spam_risk_score"] = threat_profile_spam_data.get("risk_score", 0)
+            risk_scores["threat_profile_spam_risk_score"] = threat_profile_spam_data.get(
+                "risk_score", 0
+            )
 
     return risk_scores

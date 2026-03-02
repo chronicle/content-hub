@@ -18,20 +18,17 @@ from TIPCommon.transformation import (
     construct_csv,
     flat_dict_to_csv,
     dict_to_flat,
-    add_prefix_to_dict_keys
+    add_prefix_to_dict_keys,
 )
 
 
 from ..core.DomainToolsManager import DomainToolsManager
-from ..core.exceptions import DomainToolsManagerError
 from ..core.constants import INTEGRATION_NAME, PARSED_DOMAIN_RDAP_SCRIPT_NAME
 from ..core.UtilsManager import extract_domain_from_string
 from ..core.datamodels import ParsedDomainRDAPModel
 
 
-SUPPORTED_ENTITY_TYPES: list[str] = [
-    EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN
-]
+SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 
 
 @output_handler
@@ -56,10 +53,7 @@ def main() -> None:
         print_value=True,
     )
     verify_ssl: str = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Verify SSL",
-        is_mandatory=True
+        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
     )
 
     enriched_entities: list[Any] = []
@@ -75,7 +69,7 @@ def main() -> None:
             username=username,
             api_key=api_key,
             verify_ssl=verify_ssl,
-            siemplify_logger=siemplify.LOGGER
+            siemplify_logger=siemplify.LOGGER,
         )
 
         domain_param = extract_action_param(siemplify, param_name="Domain", print_value=True)
@@ -94,7 +88,7 @@ def main() -> None:
                 is_enriched=False,
                 is_vulnerable=False,
                 is_pivot=False,
-                additional_properties = {}
+                additional_properties={},
             )
             target_entities = [domain_entity]
         else:
@@ -109,17 +103,23 @@ def main() -> None:
                 domain: str = extract_domain_from_string(entity.identifier)
                 siemplify.LOGGER.info(f"Processing entity: {entity.identifier}")
 
-                parsed_domain_rdap: ParsedDomainRDAPModel = dt_manager.get_parsed_domain_rdap(domain=domain)
+                parsed_domain_rdap: ParsedDomainRDAPModel = dt_manager.get_parsed_domain_rdap(
+                    domain=domain
+                )
                 domain_rdap_dict = parsed_domain_rdap.to_dict()
                 flattened_domainrdap_data: dict[str, Any] = dict_to_flat(domain_rdap_dict)
                 json_entity_res = {"Entity": entity.identifier, "EntityResult": domain_rdap_dict}
 
                 if not parsed_domain_rdap.has_found:
                     siemplify.LOGGER.info(f"No parsed domain rdap data found for {domain}")
-                    json_entity_res["EntityResult"] = {"status": "No Parsed Domain RDAP record found on this domain"}
+                    json_entity_res["EntityResult"] = {
+                        "status": "No Parsed Domain RDAP record found on this domain"
+                    }
                 else:
                     # create a table result
-                    siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flattened_domainrdap_data))
+                    siemplify.result.add_entity_table(
+                        entity.identifier, flat_dict_to_csv(flattened_domainrdap_data)
+                    )
                     csv_table_results.append(parsed_domain_rdap.to_table_data())
 
                 enriched_entities.append(entity)
@@ -131,7 +131,9 @@ def main() -> None:
                 siemplify.LOGGER.info(f"Successfully enriched {entity.identifier}")
             except Exception as e:
                 failed_entities.append(entity)
-                siemplify.LOGGER.error(f"Unable to enrich entity: {entity.identifier}. Reason: {str(e)}")
+                siemplify.LOGGER.error(
+                    f"Unable to enrich entity: {entity.identifier}. Reason: {str(e)}"
+                )
                 siemplify.LOGGER.exception(e)
                 continue
 
@@ -151,7 +153,9 @@ def main() -> None:
                 )
             # create a summary table for all entities enriched
             if csv_table_results:
-                siemplify.result.add_data_table("DomainTools Parsed Domain RDAP", construct_csv(csv_table_results))
+                siemplify.result.add_data_table(
+                    "DomainTools Parsed Domain RDAP", construct_csv(csv_table_results)
+                )
         else:
             output_message = "No entities were enriched."
             result_value = False
@@ -168,7 +172,6 @@ def main() -> None:
     siemplify.LOGGER.info(f"Result: {result_value}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
     siemplify.end(output_message, result_value, status)
-
 
 
 if __name__ == "__main__":

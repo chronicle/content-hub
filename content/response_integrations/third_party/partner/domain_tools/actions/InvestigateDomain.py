@@ -1,4 +1,3 @@
-
 """
 Action script for DomainTools - Investigate Domain.
 
@@ -15,25 +14,21 @@ from soar_sdk.SiemplifyDataModel import EntityTypes, DomainEntityInfo
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
-from TIPCommon.transformation import construct_csv, flat_dict_to_csv, dict_to_flat, add_prefix_to_dict_keys
+from TIPCommon.transformation import (
+    construct_csv,
+    flat_dict_to_csv,
+    dict_to_flat,
+    add_prefix_to_dict_keys,
+)
 
 
 from ..core.DomainToolsManager import DomainToolsManager
-from ..core.exceptions import DomainToolsManagerError
 from ..core.constants import INTEGRATION_NAME, INVESTIGATE_SCRIPT_NAME
-from ..core.UtilsManager import (
-    convert_list_to_comma_string,
-    chunks,
-    extract_domain_from_string
-)
+from ..core.UtilsManager import convert_list_to_comma_string, chunks, extract_domain_from_string
 from ..core.datamodels import IrisInvestigateModel
 
 
-SUPPORTED_ENTITY_TYPES: list[str] = [
-    EntityTypes.URL,
-    EntityTypes.HOSTNAME,
-    EntityTypes.DOMAIN
-]
+SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 
 
 @output_handler
@@ -58,10 +53,7 @@ def main() -> None:
         print_value=True,
     )
     verify_ssl: str = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Verify SSL",
-        is_mandatory=True
+        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
     )
 
     status: int = EXECUTION_STATE_COMPLETED
@@ -101,14 +93,12 @@ def main() -> None:
                 is_enriched=False,
                 is_vulnerable=False,
                 is_pivot=False,
-                additional_properties = {}
+                additional_properties={},
             )
-            extracted_domains = {
-                extract_domain_from_string(domain_param): domain_entity}
+            extracted_domains = {extract_domain_from_string(domain_param): domain_entity}
         else:
             extracted_domains: dict[str, Any] = {
-                extract_domain_from_string(entity.identifier): entity
-                for entity in target_entities
+                extract_domain_from_string(entity.identifier): entity for entity in target_entities
             }
         siemplify.LOGGER.info(f"domain_param: {domain_param}")
         if not extracted_domains:
@@ -122,7 +112,9 @@ def main() -> None:
         # we do this to save up api calls
         domain_chunks = chunks(domains_to_enrich, 100)
         for chunk in domain_chunks:
-            domain_iris_models: list[IrisInvestigateModel] = dt_manager.investigate_domains(domains=domains_to_enrich)
+            domain_iris_models: list[IrisInvestigateModel] = dt_manager.investigate_domains(
+                domains=domains_to_enrich
+            )
 
             if not domain_iris_models:
                 output_message = "No entities were extracted to be enrich."
@@ -141,7 +133,9 @@ def main() -> None:
                     prefixed_iris_data = add_prefix_to_dict_keys(flattened_iris_data, "DT")
                     entity.additional_properties.update(prefixed_iris_data)
 
-                    siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flattened_iris_data))
+                    siemplify.result.add_entity_table(
+                        entity.identifier, flat_dict_to_csv(flattened_iris_data)
+                    )
 
                     csv_table_results.append(domain_model.to_table_data())
 
@@ -150,7 +144,8 @@ def main() -> None:
                 except Exception as e:
                     failed_entities.append(entity)
                     siemplify.LOGGER.error(
-                        f"Unable to enrich entity: {entity.identifier}. Reason: {str(e)}")
+                        f"Unable to enrich entity: {entity.identifier}. Reason: {str(e)}"
+                    )
                     siemplify.LOGGER.exception(e)
                     continue
 
@@ -170,7 +165,9 @@ def main() -> None:
 
             # create a summary table for all entities enriched
             if csv_table_results:
-                siemplify.result.add_data_table("DomainTools Iris Investigated Domains", construct_csv(csv_table_results))
+                siemplify.result.add_data_table(
+                    "DomainTools Iris Investigated Domains", construct_csv(csv_table_results)
+                )
         else:
             output_message = "No entities were enriched."
             result_value = False

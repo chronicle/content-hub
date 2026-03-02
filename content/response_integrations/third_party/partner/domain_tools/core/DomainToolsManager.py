@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import re
-from typing import Any, Callable
+from typing import Any
 
 from domaintools import API
-from domaintools.exceptions import (
-    NotAuthorizedException,
-    NotFoundException,
-    ServiceException,
-)
+from domaintools.exceptions import NotFoundException
 
 from .exceptions import DomainToolsManagerError
 from .DomainToolsParser import DomainToolsParser
@@ -70,7 +65,7 @@ class DomainToolsManager:
             verify_ssl=_verify_ssl,
             rate_limit=_rate_limit,
             app_partner=APP_PARTNER_NAME,
-            app_version=APP_VERSION
+            app_version=APP_VERSION,
         )
         self.logger = siemplify_logger
         self.available_api_calls = []
@@ -115,7 +110,9 @@ class DomainToolsManager:
         """
 
         if product_name not in self.available_api_calls:
-            raise DomainToolsManagerError(f"You don't have {product_name} - {self.available_api_calls} in your license.")
+            raise DomainToolsManagerError(
+                f"You don't have {product_name} - {self.available_api_calls} in your license."
+            )
 
     def investigate_domains(self, domains: list[str]) -> list[IrisInvestigateModel]:
         try:
@@ -137,7 +134,9 @@ class DomainToolsManager:
         except NotFoundException:
             return ParsedDomainRDAPModel(domain=domain, has_found=False)
         except Exception as e:
-            raise DomainToolsManagerError(f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}")
+            raise DomainToolsManagerError(
+                f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}"
+            )
 
     def get_whois_history(self, domain: str):
         try:
@@ -147,5 +146,6 @@ class DomainToolsManager:
         except NotFoundException:
             return WhoisHistoryModel(record_count=0)
         except Exception as e:
-            raise DomainToolsManagerError(f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}")
-
+            raise DomainToolsManagerError(
+                f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}"
+            )
