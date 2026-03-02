@@ -212,6 +212,7 @@ class RDAPContact:
     postal: str = ""
     region: str = ""
     country: str = ""
+    handle: str = ""
     roles: list[str] = field(default_factory=list)
 
 

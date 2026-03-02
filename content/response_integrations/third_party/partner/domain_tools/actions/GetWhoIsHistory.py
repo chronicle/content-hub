@@ -1,5 +1,5 @@
 """
-Action script for DomainTools - Get Domain Rdap.
+Action script for DomainTools - Get WhoisHistory.
 
 Enrich external domain entity with DomainTools threat Intelligence data
 and return CSV output, including JSON results.
@@ -8,13 +8,19 @@ and return CSV output, including JSON results.
 from __future__ import annotations
 
 from typing import Any
+from datetime import datetime
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyDataModel import EntityTypes, DomainEntityInfo
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_configuration_param
-from TIPCommon.transformation import construct_csv, flat_dict_to_csv, dict_to_flat, add_prefix_to_dict_keys
+from TIPCommon.extraction import extract_configuration_param, extract_action_param
+from TIPCommon.transformation import (
+    construct_csv,
+    flat_dict_to_csv,
+    dict_to_flat,
+    add_prefix_to_dict_keys
+)
 
 
 from ..core.DomainToolsManager import DomainToolsManager
@@ -73,11 +79,31 @@ def main() -> None:
             siemplify_logger=siemplify.LOGGER
         )
 
-        target_entities: list[Any] = [
-            entity
-            for entity in siemplify.target_entities
-            if entity.entity_type in SUPPORTED_ENTITY_TYPES
-        ]
+        domain_param = extract_action_param(siemplify, param_name="Domain", print_value=True)
+        if domain_param:
+            now_ts = int(datetime.now().timestamp())
+            domain_entity = DomainEntityInfo(
+                domain_param,
+                creation_time=now_ts,
+                modification_time=now_ts,
+                case_identifier="",
+                alert_identifier="",
+                entity_type=EntityTypes.DOMAIN,
+                is_internal=False,
+                is_suspicious=False,
+                is_artifact=False,
+                is_enriched=False,
+                is_vulnerable=False,
+                is_pivot=False,
+                additional_properties = {}
+            )
+            target_entities = [domain_entity]
+        else:
+            target_entities: list[Any] = [
+                entity
+                for entity in siemplify.target_entities
+                if entity.entity_type in SUPPORTED_ENTITY_TYPES
+            ]
 
         for entity in target_entities:
             try:
