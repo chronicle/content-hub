@@ -18,6 +18,7 @@ import asyncio
 import contextlib
 import json
 import logging
+from curses import meta
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
 import anyio
@@ -113,9 +114,11 @@ def _map_bulk_results_to_actions(
         list[ActionDescriptionResult]: Mapped results.
 
     """
-    final_results = [ActionDescriptionResult(a, None) for a in actions]
+    final_results: list[ActionDescriptionResult] = [
+        ActionDescriptionResult(action_name=a, metadata=None) for a in actions
+    ]
     for i, result in zip(valid_indices, results, strict=False):
-        action_name = actions[i]
+        action_name: str = actions[i]
 
         if isinstance(result, ActionAiMetadata) and action_name.casefold() == "Ping".casefold():
             result.categories.enrichment = False
