@@ -391,7 +391,7 @@ class OrcaSecurityManager:
         response: requests.Response = self.session.post(url, json=payload)
         validate_response(response)
 
-        return self.parser.build_asset_object(response.json())
+        return self.parser.build_results(raw_json=response.json(), method="build_asset_object")[0]
 
     def get_vulnerability_details(
         self,
