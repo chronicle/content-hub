@@ -29,6 +29,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED    
         result_value = False
+        enrich_results = []
 
     siemplify.LOGGER.info("----------------- RRS - Enrich IP: End -----------------")
     siemplify.LOGGER.info(f"Enrich IP output: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}")

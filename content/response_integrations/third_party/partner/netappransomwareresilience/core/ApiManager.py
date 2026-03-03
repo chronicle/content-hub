@@ -1,6 +1,6 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from .constants import ENDPOINT_ENRICH_IP, ENDPOINT_ENRICH_STORAGE, ENDPOINT_JOB_STATUS, ENDPOINT_TAKE_SNAPSHOT, ENDPOINT_VOLUME_OFFLINE, RRS_SERVICE_URL, SSL_VERIFY
+from .constants import ENDPOINT_ENRICH_IP, ENDPOINT_ENRICH_STORAGE, ENDPOINT_JOB_STATUS, ENDPOINT_TAKE_SNAPSHOT, ENDPOINT_VOLUME_OFFLINE, RRS_SERVICE_URL
 from .auth_manager import RRSOAuthAdapter, RRSOAuthManager
 from .utils import generate_encryption_key, extract_domain_from_uri, build_rrs_url
 from TIPCommon.oauth import CredStorage
@@ -23,13 +23,12 @@ class ApiManager:
         self.session = requests.Session()
         
         # Get credentials from Integration config
-        self.CLIENT_ID = self.siemplify.extract_configuration_param('Integration', "client id")
-        self.CLIENT_SECRET = self.siemplify.extract_configuration_param('Integration', "client secret")
-        self.ACCOUNT_ID = self.siemplify.extract_configuration_param('Integration', "account id")
+        self.CLIENT_ID = self.siemplify.extract_configuration_param('Integration', "Client ID")
+        self.CLIENT_SECRET = self.siemplify.extract_configuration_param('Integration', "Client Secret")
+        self.ACCOUNT_ID = self.siemplify.extract_configuration_param('Integration', "Account ID")
+        self.SSL_VERIFY = self.siemplify.extract_configuration_param('Integration', "Verify SSL") == "True"
 
         self.ENDPOINT_URL = RRS_SERVICE_URL
-        self.SSL_VERIFY = SSL_VERIFY
-        
         self.DOMAIN = extract_domain_from_uri(self.ENDPOINT_URL)
 
         self.siemplify.LOGGER.info(f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}")
@@ -155,8 +154,8 @@ class ApiManager:
             requests.HTTPError: If the API call returns a non-2xx status code.
         """
         # Extract parameters from action
-        agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
-        system_id = self.siemplify.extract_action_param("system_id", print_value=True)
+        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
+        system_id = self.siemplify.extract_action_param("System ID", print_value=True)
         
         self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: Enriching storage for given agent_id and system_id")
 
@@ -202,9 +201,9 @@ class ApiManager:
             requests.HTTPError: If the API call returns a non-2xx status code.
         """
         # Extract parameters from action
-        source = self.siemplify.extract_action_param("source", print_value=True)
-        agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
-        job_id = self.siemplify.extract_action_param("job_id", print_value=True)
+        source = self.siemplify.extract_action_param("Source", print_value=True)
+        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
+        job_id = self.siemplify.extract_action_param("Job ID", print_value=True)
         
         self.siemplify.LOGGER.info(f"ApiManager.check_job_status: Checking job status for job_id: {job_id}")
 
@@ -253,9 +252,9 @@ class ApiManager:
 
         """
         # Extract parameters from action
-        volume_id = self.siemplify.extract_action_param("volume_id", print_value=True)
-        agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
-        system_id = self.siemplify.extract_action_param("system_id", print_value=True)
+        volume_id = self.siemplify.extract_action_param("Volume ID", print_value=True)
+        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
+        system_id = self.siemplify.extract_action_param("System ID", print_value=True)
         
         self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}")
 
@@ -304,9 +303,9 @@ class ApiManager:
 
         """
         # Extract parameters from action
-        volume_id = self.siemplify.extract_action_param("volume_id", print_value=True)
-        agent_id = self.siemplify.extract_action_param("agent_id", print_value=True)
-        system_id = self.siemplify.extract_action_param("system_id", print_value=True)
+        volume_id = self.siemplify.extract_action_param("Volume ID", print_value=True)
+        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
+        system_id = self.siemplify.extract_action_param("System ID", print_value=True)
         
         self.siemplify.LOGGER.info(f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}")
 

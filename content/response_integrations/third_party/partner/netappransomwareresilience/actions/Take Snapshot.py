@@ -28,6 +28,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED    
         result_value = False
+        snapshot_result = {}
 
     siemplify.LOGGER.info("----------------- RRS - Take Snapshot: End -----------------")
     siemplify.LOGGER.info(f"Take Snapshot: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}")

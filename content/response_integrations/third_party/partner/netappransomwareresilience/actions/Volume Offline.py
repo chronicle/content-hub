@@ -28,6 +28,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED    
         result_value = False
+        volume_offline_result = {}
 
     siemplify.LOGGER.info("----------------- RRS - Volume Offline: End -----------------")
     siemplify.LOGGER.info(f"Volume Offline: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}")

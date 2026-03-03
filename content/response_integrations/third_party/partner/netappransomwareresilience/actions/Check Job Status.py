@@ -28,6 +28,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED    
         result_value = False
+        job_status_result = {}
 
     siemplify.LOGGER.info("----------------- RRS - Check Job Status: End -----------------")
     siemplify.LOGGER.info(f"Check Job Status output: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}")

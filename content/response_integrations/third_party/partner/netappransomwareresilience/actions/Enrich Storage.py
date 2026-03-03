@@ -23,11 +23,12 @@ def main():
         result_value = True  # Set a simple result value, used for playbook if\else and placeholders.
 
     except Exception as e:
-        output_message = f"Failed to enrich storage. Error: {e}"
         siemplify.LOGGER.error(f"Enrich Storage: Failed to enrich storage. Error: {e}")
+        output_message = f"Failed to enrich storage. Error: {e}"
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED    
         result_value = False
+        enrich_results = []
 
     siemplify.LOGGER.info("----------------- RRS - Enrich Storage: End -----------------")
     siemplify.LOGGER.info(f"Enrich Storage output: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}")
