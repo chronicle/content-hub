@@ -18,7 +18,6 @@ import asyncio
 import contextlib
 import json
 import logging
-from curses import meta
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
 import anyio
