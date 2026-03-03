@@ -18,7 +18,7 @@ import asyncio
 import contextlib
 import json
 import logging
-from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
+from typing import Any, NamedTuple, TYPE_CHECKING, TypeAlias
 
 import anyio
 import yaml
@@ -27,10 +27,10 @@ from rich.progress import TaskID, track
 from mp.core import constants
 from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
 from mp.core.utils import folded_string_representer
-
 from .prompt_constructors.built import BuiltPromptConstructor
 from .prompt_constructors.source import SourcePromptConstructor
 from .utils import llm, paths
+
 
 if TYPE_CHECKING:
     import pathlib
@@ -42,7 +42,6 @@ if TYPE_CHECKING:
         BuiltActionMetadata,
         NonBuiltActionMetadata,
     )
-
 
 logger: logging.Logger = logging.getLogger(__name__)
 _PromptConstructor: TypeAlias = BuiltPromptConstructor | SourcePromptConstructor
@@ -116,9 +115,15 @@ def _map_bulk_results_to_actions(
     """
     final_results = [ActionDescriptionResult(a, None) for a in actions]
     for i, result in zip(valid_indices, results, strict=False):
+        action_name = actions[i]
+
+        if action_name.casefold() == "Ping".casefold():
+            result.categories.enrichment = False
+
         final_results[i] = ActionDescriptionResult(
-            actions[i], result if isinstance(result, ActionAiMetadata) else None
+            action_name, result if isinstance(result, ActionAiMetadata) else None
         )
+
     return final_results
 
 
@@ -237,7 +242,7 @@ class DescribeAction:
     ) -> list[ActionDescriptionResult]:
         action_list = list(actions)
         bulks = [
-            action_list[i : i + llm.DESCRIBE_BULK_SIZE]
+            action_list[i: i + llm.DESCRIBE_BULK_SIZE]
             for i in range(0, len(action_list), llm.DESCRIBE_BULK_SIZE)
         ]
 
@@ -266,15 +271,17 @@ class DescribeAction:
                 asyncio.create_task(self._process_bulk_actions(bulk, status, sem, rich_params))
                 for bulk in bulks
             ]
-            results.extend([
-                res
-                for bulk_res in track(
+            results.extend(
+                [
+                    res
+                    for bulk_res in track(
                     asyncio.as_completed(tasks),
                     description=description,
                     total=len(bulks),
                 )
-                for res in await bulk_res
-            ])
+                    for res in await bulk_res
+                ]
+            )
 
         return results
 
