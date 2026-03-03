@@ -117,7 +117,7 @@ def _map_bulk_results_to_actions(
     for i, result in zip(valid_indices, results, strict=False):
         action_name = actions[i]
 
-        if action_name.casefold() == "Ping".casefold():
+        if isinstance(result, ActionAiMetadata) and action_name.casefold() == "Ping".casefold():
             result.categories.enrichment = False
 
         final_results[i] = ActionDescriptionResult(
