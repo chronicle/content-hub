@@ -71,7 +71,7 @@ def main():
         siemplify,
         param_name="Lowest Severity For Vulnerabilities",
         print_value=True,
-        default_value="Hazardous",
+        default_value="Medium",
     )
     max_vulnerabilities_to_return = extract_action_param(
         siemplify,
