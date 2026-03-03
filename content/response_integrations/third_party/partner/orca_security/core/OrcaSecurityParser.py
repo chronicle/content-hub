@@ -81,4 +81,15 @@ class OrcaSecurityParser:
 
     @staticmethod
     def build_asset_object(raw_json):
-        return Asset(raw_json, **raw_json)
+        asset_data = raw_json.get("data") or {}
+        return Asset(
+            raw_json,
+            asset_name=raw_json.get("name"),
+            asset_type=raw_json.get("type"),
+            asset_category=asset_data.get("Category", {}).get("value"),
+            asset_subcategory=asset_data.get("SubCategory", {}).get("value"),
+            asset_state=asset_data.get("State", {}).get("value"),
+            state_severity=asset_data.get("RiskLevel", {}).get("value", "N/A"),
+            state_created_at=asset_data.get("FirstSeen", {}).get("value", "N/A"),
+            state_last_seen=raw_json.get("last_seen", "N/A"),
+        )

@@ -227,6 +227,9 @@ class Asset(BaseModel):
         asset_subcategory=None,
         asset_state=None,
         state=None,
+        state_severity=None,
+        state_created_at=None,
+        state_last_seen=None,
         **kwargs,
     ):
         super().__init__(raw_data)
@@ -237,9 +240,9 @@ class Asset(BaseModel):
         self.asset_subcategory = asset_subcategory
         self.asset_state = asset_state
         self.state = state or {}
-        self.state_severity = self.state.get("severity", "N/A")
-        self.state_created_at = self.state.get("created_at", "N/A")
-        self.state_last_seen = self.state.get("last_seen", "N/A")
+        self.state_severity = state_severity
+        self.state_created_at = state_created_at
+        self.state_last_seen = state_last_seen
 
     def to_csv(self):
         return {
