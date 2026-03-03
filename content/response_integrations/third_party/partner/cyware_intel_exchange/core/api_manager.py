@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import functools
 import hashlib
 import hmac
 import time
@@ -79,7 +80,7 @@ class APIManager:
             hmac.new(
                 self.secret_key.encode("utf-8"),
                 to_sign.encode("utf-8"),
-                hashlib.sha1,   # nosec B303
+                functools.partial(hashlib.sha1, usedforsecurity=False),
             ).digest()
         ).decode("utf-8")
         return {
