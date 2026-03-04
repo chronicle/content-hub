@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import os
 from base64 import b64decode
 
@@ -20,11 +21,8 @@ class GoogleDriveManager:
     """GoogleDoc Manager"""
 
     def __init__(self, cred_json_content):
-        f = open("credentials.json", "w+")
-        f.write(cred_json_content)
-        f.close()
-        credentials = service_account.Credentials.from_service_account_file(
-            "credentials.json",
+        credentials = service_account.Credentials.from_service_account_info(
+            json.loads(cred_json_content),
             scopes=SCOPES,
         )
         self._service = build("drive", "v3", credentials=credentials)

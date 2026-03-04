@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -10,11 +12,8 @@ class GoogleDocsManager:
     """GoogleDocs Manager."""
 
     def __init__(self, cred_json_content):
-        f = open("credentials.json", "w+")
-        f.write(cred_json_content)
-        f.close()
-        credentials = service_account.Credentials.from_service_account_file(
-            "credentials.json",
+        credentials = service_account.Credentials.from_service_account_info(
+            json.loads(cred_json_content),
             scopes=SCOPES,
         )
         self._doc_service = build("docs", "v1", credentials=credentials)
