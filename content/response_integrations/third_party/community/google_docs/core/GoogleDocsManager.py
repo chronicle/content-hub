@@ -11,9 +11,14 @@ SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 class GoogleDocsManager:
     """GoogleDocs Manager."""
 
-    def __init__(self, cred_json_content):
+    def __init__(self, cred_json_content: str) -> None:
+        try:
+            info = json.loads(cred_json_content)
+        except json.JSONDecodeError as e:
+            raise ValueError("Invalid credentials JSON provided.") from e
+
         credentials = service_account.Credentials.from_service_account_info(
-            json.loads(cred_json_content),
+            info,
             scopes=SCOPES,
         )
         self._doc_service = build("docs", "v1", credentials=credentials)
