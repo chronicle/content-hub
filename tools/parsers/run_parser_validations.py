@@ -1,8 +1,10 @@
-"""Proof of concept script to run parser validations using secops-wrapper (External Version)."""
+"""Script to run parser validations using secops-wrapper (External Version)."""
 
 from datetime import datetime
 import json
+from pathlib import Path
 import os
+from typing import Any, Dict, List, Optional, Union
 
 import jsondiff
 
@@ -20,13 +22,95 @@ flags.DEFINE_boolean("generate_report", False, "Whether to generate the markdown
 flags.DEFINE_list("log_type_folders", [], "Comma-separated list of specific log type folders to validate. If empty, all folders are validated.")
 
 _CONTENT_RELATIVE_PATH_TEMPLATE = (
-    "./{parser_source}"
+    "./../../content/parsers/third_party/{parser_source}"
 )
 _REPORT_RELATIVE_PATH = (
     "validation_report.md"
 )
 # DO NOT MODIFY THIS VALUE - as your log type may not be registered yet!
 _DEFAULT_LOG_TYPE = "DUMMY_LOGTYPE"
+
+
+def clean_val(v: Any) -> Any:
+  """Removes unwanted characters and formatting from a value."""
+  if v is None:
+    return ""
+  if isinstance(v, str):
+    return v.strip().rstrip(",").strip('"').strip()
+  return v
+
+
+def normalize_timestamp(ts: Optional[str]) -> Optional[str]:
+  """Normalizes a timestamp string to a consistent format."""
+  if not ts or not isinstance(ts, str):
+    return ts
+  try:
+    if "." in ts:
+      dt = datetime.strptime(ts.rstrip("Z"), "%Y-%m-%dT%H:%M:%S.%f")
+    else:
+      dt = datetime.strptime(ts.rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+  except ValueError:
+    return ts
+
+
+def filter_timestamps(obj: Any) -> Any:
+  """Recursively removes timestamp fields from a dictionary or list."""
+  if isinstance(obj, dict):
+    return {
+        k: filter_timestamps(v)
+        for k, v in obj.items()
+        if k not in ["timestamp", "event_timestamp"]
+    }
+  elif isinstance(obj, list):
+    return [filter_timestamps(i) for i in obj]
+  return obj
+
+
+def get_diff_str(d: Union[Dict, List], path: str = "$") -> List[str]:
+  """Generates a list of strings representing the differences between two objects."""
+  lines = []
+  if isinstance(d, list) and len(d) == 2:
+    lines.append(f"path: {path},")
+    lines.append(f"expected: {json.dumps(d[0])},")
+    lines.append(f"got: {json.dumps(d[1])}")
+  elif isinstance(d, dict):
+    for k, v in d.items():
+      if k is jsondiff.delete:
+        if isinstance(v, dict):
+          for rk, rv in v.items():
+            lines.append(
+                f"path: {path}.{rk},\nexpected:"
+                f" {json.dumps(rv)},\ngot: <DELETED>"
+            )
+        elif isinstance(v, list):
+          for pos, val in v:
+            lines.append(
+                f"path: {path}[{pos}],\nexpected:"
+                f" {json.dumps(val)},\ngot: <DELETED>"
+            )
+      elif k is jsondiff.insert:
+        if isinstance(v, dict):
+          for ak, av in v.items():
+            lines.append(
+                f"path: {path}.{ak},\nexpected: <MISSING>,\ngot:"
+                f" {json.dumps(av)}"
+            )
+        elif isinstance(v, list):
+          for pos, val in v:
+            lines.append(
+                f"path: {path}[{pos}],\nexpected: <MISSING>,\ngot:"
+                f" {json.dumps(val)}"
+            )
+      else:
+        new_segment = f"[{k}]" if str(k).isdigit() else f".{k}"
+        lines.extend(get_diff_str(v, path + new_segment))
+  return lines
+
+
+def get_pretty_relpath(path: "Path") -> str:
+  """Returns the relative path of a file in a user-friendly format."""
+  return str(path.relative_to(Path.cwd()))
 
 
 def main(argv):
@@ -36,8 +120,8 @@ def main(argv):
   print("Usage example:")
   print("  python3 run_parser_validations_external.py \\")
   print("    --parser_source=community \\")
-  print("    --customer_id=ebdc4bb9-878b-11e7-8455-10604b7cb5c1 \\")
-  print("    --project_id=malachite-catfood-byop \\")
+  print("    --customer_id={CUSTOMER_ID} \\")
+  print("    --project_id={PROJECT_ID}} \\")
   print("    --region=us \\")
   print("    --generate_report=True \\")
   print("    --log_type_folders=DUMMY_LOGTYPE,DUMMY_LOGTYPE2")
@@ -49,12 +133,11 @@ def main(argv):
     print(f"Error: The following mandatory arguments are missing: {', '.join(missing_flags)}")
     return
 
-  base_path = _CONTENT_RELATIVE_PATH_TEMPLATE.format(
+  base_path = Path(_CONTENT_RELATIVE_PATH_TEMPLATE.format(
       parser_source=FLAGS.parser_source
-  )
-  report_path = _REPORT_RELATIVE_PATH
+  ))
+  report_path = Path(_REPORT_RELATIVE_PATH)
 
-  print("Initializing SecOpsClient...")
   secops_client = SecOpsClient()
   chronicle_client = secops_client.chronicle(
       customer_id=FLAGS.customer_id,
@@ -62,70 +145,68 @@ def main(argv):
       region=FLAGS.region,
   )
 
-  if not os.path.exists(base_path):
+  if not base_path.exists():
     print(f"Error: Base path {base_path} does not exist. Ensure you are running the script from the root directory that contains the 'content' folder.")
     return
 
   all_results = []  # List of (log_type, [usecase_results], [errors])
 
-  log_types = sorted(os.listdir(base_path))
+  log_types = sorted([d.name for d in base_path.iterdir() if d.is_dir()])
   if FLAGS.log_type_folders:
     log_types = [lt for lt in log_types if lt in FLAGS.log_type_folders]
 
+  if not log_types:
+    print("No log type content found. Nothing to validate.")
+    return
+
   for log_type in log_types:
-    log_type_path = os.path.join(base_path, log_type)
-    if not os.path.isdir(log_type_path):
+    log_type_path = base_path / log_type
+    if not log_type_path.is_dir():
       continue
 
     log_type_results = []
     log_type_errors = []
 
-    cbn_path = os.path.join(log_type_path, "cbn")
-    if not os.path.isdir(cbn_path):
+    cbn_path = log_type_path / "cbn"
+    if not cbn_path.is_dir():
       log_type_errors.append("missing cbn folder")
       all_results.append((log_type, [], log_type_errors))
       continue
 
     # Find the config file.
-    config_file = next((f for f in os.listdir(cbn_path) if f.endswith(".conf")), None)
-    if not config_file:
+    try:
+      config_file = next(cbn_path.glob("*.conf"))
+    except StopIteration:
       log_type_errors.append("missing .conf file")
       all_results.append((log_type, [], log_type_errors))
       continue
 
-    config_path = os.path.join(cbn_path, config_file)
-    with open(config_path, "r") as f:
-      config = f.read()
-    print(f"  Configuration file: {config_path}")
+    config = config_file.read_text()
+    print(f"  Configuration file: {get_pretty_relpath(config_file)}")
 
-    raw_logs_path = os.path.join(cbn_path, "testdata", "raw_logs")
-    expected_events_path = os.path.join(cbn_path, "testdata", "expected_events")
+    raw_logs_path = cbn_path / "testdata" / "raw_logs"
+    expected_events_path = cbn_path / "testdata" / "expected_events"
 
-    if not os.path.exists(raw_logs_path):
+    if not raw_logs_path.exists():
       log_type_errors.append("no raw_logs folder found")
       all_results.append((log_type, [], log_type_errors))
       continue
 
     print(f"\nProcessing Log Type: {log_type}")
 
-    for log_filename in sorted(os.listdir(raw_logs_path)):
-      if not log_filename.endswith("_log.json"):
-        continue
-
-      usecase = log_filename[: -len("_log.json")]
+    for log_file in sorted(raw_logs_path.glob("*_log.json")):
+      usecase = log_file.name.rsplit("_log.json", 1)[0]
       expected_filename = f"{usecase}_events.json"
-      expected_path = os.path.join(expected_events_path, expected_filename)
+      expected_path = expected_events_path / expected_filename
 
-      if not os.path.exists(expected_path):
+      if not expected_path.exists():
         print(f"  Warning: No expected events file found for use case '{usecase}' at {expected_path}")
         continue
 
-      logs_file_path = os.path.join(raw_logs_path, log_filename)
-      with open(logs_file_path, "r") as f:
-        logs_data = json.load(f)
+      logs_data = json.loads(log_file.read_text())
       logs = logs_data.get("raw_logs", [])
 
-      print(f"    Raw logs file: {logs_file_path}")
+      print(f"    Raw logs file: {get_pretty_relpath(log_file)}")
 
       print(f"  Validating Use Case: {usecase}...")
       try:
@@ -139,31 +220,12 @@ def main(argv):
       except Exception as e:
         print(f"  Error: Failed to run parser for use case {usecase}: {e}")
         log_type_results.append({
-            "test_file": log_filename,
+            "test_file": log_file.name,
             "status": "FAILED",
             "details": f"API Error: {e}",
             "failures": []
         })
         continue
-
-      def clean_val(v):
-        if v is None:
-          return ""
-        if isinstance(v, str):
-          return v.strip().rstrip(",").strip('"').strip()
-        return v
-
-      def normalize_timestamp(ts):
-        if not ts or not isinstance(ts, str):
-          return ts
-        try:
-          if "." in ts:
-            dt = datetime.strptime(ts.rstrip("Z"), "%Y-%m-%dT%H:%M:%S.%f")
-          else:
-            dt = datetime.strptime(ts.rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
-          return dt.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
-        except ValueError:
-          return ts
 
       transformed_events = []
       for result in validation_results.get("runParserResults", []):
@@ -196,19 +258,7 @@ def main(argv):
 
       output_data = {"events": transformed_events}
 
-      with open(expected_path, "r") as f:
-        test_events_data = json.load(f)
-
-      def filter_timestamps(obj):
-        if isinstance(obj, dict):
-          return {
-              k: filter_timestamps(v)
-              for k, v in obj.items()
-              if k not in ["timestamp", "event_timestamp"]
-          }
-        elif isinstance(obj, list):
-          return [filter_timestamps(i) for i in obj]
-        return obj
+      test_events_data = json.loads(expected_path.read_text())
 
       expected_events = test_events_data.get("events", [])
       actual_events = transformed_events
@@ -225,54 +275,11 @@ def main(argv):
         )
 
         if event_diff:
-
-          def get_diff_str(d, path="$"):
-            lines = []
-            if isinstance(d, list) and len(d) == 2:
-              lines.append(f"path: {path},")
-              lines.append(f"expected: {json.dumps(d[0])},")
-              lines.append(f"got: {json.dumps(d[1])}")
-            elif isinstance(d, dict):
-              for k, v in d.items():
-                if k is jsondiff.delete:
-                  if isinstance(v, dict):
-                    for rk, rv in v.items():
-                      lines.append(
-                          f"path: {path}.{rk},\nexpected:"
-                          f" {json.dumps(rv)},\ngot: <DELETED>"
-                      )
-                  elif isinstance(v, list):
-                    for pos, val in v:
-                      lines.append(
-                          f"path: {path}[{pos}],\nexpected:"
-                          f" {json.dumps(val)},\ngot: <DELETED>"
-                      )
-                elif k is jsondiff.insert:
-                  if isinstance(v, dict):
-                    for ak, av in v.items():
-                      lines.append(
-                          f"path: {path}.{ak},\nexpected: <MISSING>,\ngot:"
-                          f" {json.dumps(av)}"
-                      )
-                  elif isinstance(v, list):
-                    for pos, val in v:
-                      lines.append(
-                          f"path: {path}[{pos}],\nexpected: <MISSING>,\ngot:"
-                          f" {json.dumps(val)}"
-                      )
-                else:
-                  new_segment = f"[{k}]" if str(k).isdigit() else f".{k}"
-                  lines.extend(get_diff_str(v, path + new_segment))
-            return lines
-
           diff_lines = get_diff_str(event_diff)
           event_failures.append({"index": i, "diff": "\n".join(diff_lines)})
 
-      def get_pretty_relpath(path):
-        return os.path.relpath(path, os.getcwd())
-
       usecase_res = {
-          "test_file": log_filename,
+          "test_file": log_file.name,
           "status": "PASSED" if not event_failures else "FAILED",
           "details": (
               f"{len(event_failures)} of"
@@ -281,8 +288,8 @@ def main(argv):
               else f"All {len(actual_events)} events matched expected output."
           ),
           "event_failures": event_failures,
-          "config_path": get_pretty_relpath(config_path),
-          "log_path": get_pretty_relpath(logs_file_path),
+          "config_path": get_pretty_relpath(config_file),
+          "log_path": get_pretty_relpath(log_file),
       }
       print(f"    Status: {usecase_res['status']}. {usecase_res['details']}")
 

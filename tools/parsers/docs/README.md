@@ -1,6 +1,6 @@
 # SecOps Parser Validation Script
 
-This script allows you to run validations on your parser configurations and test data against a Google SecOps (Chronicle) instance.
+This script allows you to run validations on your parser configurations and test against the test data present for each parser.
 
 ## Prerequisites
 
@@ -52,24 +52,28 @@ export GOOGLE_APPLICATION_CREDENTIALS="<PATH_TO_KEY_JSON>"
 
 ## Directory Structure
 
-The script expects to be run from a directory containing the `content/parsers/third_party` folder:
+The script expects to be run from the `tools/parsers/` directory:
 
 ```
-.
-├── run_parser_validations_external.py
-└── content
-    └── parsers
-        └── third_party
-            └── <parser_source>
-                └── <log_type_identifier>
-                    └── cbn
-                        ├── <config>.conf
-                        ├── metadata.json
-                        └── testdata
-                            ├── raw_logs
-                            │   └── <usecase>_log.json
-                            └── expected_events
-                                └── <usecase>_events.json
+content-hub/
+├── content/
+│   └── parsers/
+│       └── third_party/
+│           └── <parser_source>/
+│               └── <log_type_identifier>/
+│                   └── cbn/
+│                       ├── <config>.conf
+│                       ├── metadata.json
+│                       └── testdata/
+│                           ├── raw_logs/
+│                           │   └── <usecase>_log.json
+│                           └── expected_events/
+│                               └── <usecase>_events.json
+└── tools/
+    └── parsers/
+        ├── run_parser_validations.py
+        └── docs/
+            └── README.md
 ```
 
 ## Usage
