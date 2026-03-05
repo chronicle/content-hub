@@ -156,7 +156,8 @@ def main():
             siemplify.result.add_data_table(ASSETS_TABLE_NAME, construct_csv(csv_result))
 
             output_message += (
-                f"Successfully enriched the following assets using information from {INTEGRATION_NAME}:"
+                f"Successfully enriched the following assets using information from"
+                f" {INTEGRATION_NAME}:"
                 f" {', '.join(successful_assets)}\n"
             )
 

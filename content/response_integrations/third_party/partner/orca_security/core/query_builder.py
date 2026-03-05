@@ -341,7 +341,7 @@ class VulnerabilityQueryBuilder:
         """Build the vulnerability query in the new API format.
 
         Returns:
-            dict[str, Any]: The complete payload with new structure matching new_builder.py requirements.
+            dict[str, Any]: The complete payload.
         """
         query = {
             "models": self.models,  # ["VulnerabilityV2"]

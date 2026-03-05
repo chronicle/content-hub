@@ -486,7 +486,8 @@ class OrcaSecurityManager:
 
             if start_index >= max_result_limit:
                 self.siemplify_logger.info(
-                    "Fetched batch of results, continuing pagination until max_result_limit is reached."
+                    "Fetched batch of results, continuing pagination until"
+                    " max_result_limit is reached."
                 )
                 break
 
