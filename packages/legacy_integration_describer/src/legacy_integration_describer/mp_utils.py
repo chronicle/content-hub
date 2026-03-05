@@ -5,10 +5,9 @@ import logging
 from pathlib import Path
 
 import yaml
-from legacy_integration_describer.models import AppConfig, IntegrationResult
-
 from mp.describe.action.describe_all import describe_all_actions
 
+from legacy_integration_describer.models import IntegrationResult
 
 logger = logging.getLogger(__name__)
 

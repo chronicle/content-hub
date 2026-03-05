@@ -108,6 +108,11 @@ def process_csv(csv_path: Path, config: AppConfig) -> None:
         if not integration_dir.is_dir():
             continue
 
+        # Execute describing dynamically updating definition files securely
+        success = run_mp_describe(integration_dir, errors)
+        if not success:
+            logger.warning("Generation skipped for %s returning empty results", request.identifier)
+
         results = parse_ai_metadata(integration_dir, errors)
         output_rows.extend(results)
 

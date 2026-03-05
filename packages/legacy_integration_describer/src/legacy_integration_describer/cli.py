@@ -5,9 +5,9 @@ from pathlib import Path
 
 import typer
 from rich.logging import RichHandler
-
 from legacy_integration_describer.core import process_csv
 from legacy_integration_describer.models import AppConfig
+
 
 app = typer.Typer(help="Process partner integrations and generate AI descriptions.")
 logger = logging.getLogger("legacy_integration_describer")
@@ -45,19 +45,17 @@ def execute(  # noqa: PLR0913, PLR0917
     destination: str | None = typer.Option(
         None, "-d", "--destination", help="Path to outputs folder"
     ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose debug logging"),  # noqa: FBT001, FBT003
-    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress output logs except errors"),  # noqa: FBT001, FBT003
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose debug logging"),
+    # noqa: FBT001, FBT003
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress output logs except errors"),
+    # noqa: FBT001, FBT003
 ) -> None:
-    """Execute main entry point coordinating multi-repository version searches dynamically."""  # noqa: DOC501
+    """Execute main entry point coordinating multi-repository version searches dynamically."""
     setup_logger(verbose, quiet)
 
     current_dir = Path(__file__).parent.parent
-    root_dir = current_dir.parent.parent
-
-    inputs_dir = Path(source).expanduser() if source else root_dir / "DesignPartnersIntegrations"
-    outputs_dir = (
-        Path(destination).expanduser() if destination else root_dir / "DesignPartnersIntegrations"
-    )
+    inputs_dir = Path(source).expanduser() if source else current_dir / "inputs"
+    outputs_dir = Path(destination).expanduser() if destination else current_dir / "outputs"
 
     inputs_dir.mkdir(exist_ok=True, parents=True)
     outputs_dir.mkdir(exist_ok=True, parents=True)
@@ -88,10 +86,12 @@ def execute(  # noqa: PLR0913, PLR0917
         )
 
     if content_hub:
-        repos_config.extend([
-            (Path(content_hub).expanduser(), "content/response_integrations/power_ups"),
-            (Path(content_hub).expanduser(), "content/response_integrations/third_party"),
-        ])
+        repos_config.extend(
+            [
+                (Path(content_hub).expanduser(), "content/response_integrations/power_ups"),
+                (Path(content_hub).expanduser(), "content/response_integrations/third_party"),
+            ]
+        )
     else:
         logger.warning(
             "Repository 'content-hub' not specified. "
