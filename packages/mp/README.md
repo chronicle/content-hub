@@ -4,14 +4,16 @@
 [![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 ![Maintenance](https://img.shields.io/maintenance/yes/2026)
 
-**`mp`**, short for **`marketplace`**, is the official command-line interface (CLI) for developing, maintaining, and deploying Google SecOps marketplace integrations. It streamlines the entire lifecycle from coding to deployment.
+**`mp`**, short for **`marketplace`
+**, is the official command-line interface (CLI) for developing, maintaining, and deploying Google SecOps marketplace integrations. It streamlines the entire lifecycle from coding to deployment.
 
 ## Workflow
 
 The `mp` tool sits at the center of your integration development workflow:
 
 > [!NOTE]
-> **Windows Users**: Please use `wmp` instead of `mp` for all commands to avoid conflicts with system aliases.
+> **Windows Users**: Please use `wmp` instead of
+`mp` for all commands to avoid conflicts with system aliases.
 
 ## Key Features
 
@@ -21,15 +23,16 @@ The `mp` tool sits at the center of your integration development workflow:
 
 ## Command Reference
 
-| Command | Description | Documentation |
-| :--- | :--- | :--- |
-| `build` | Build integrations or playbooks into deployable format. | [Docs](docs/commands/build.md) |
-| `check` | Lint and sanity-check your code. | [Docs](docs/commands/check.md) |
-| `config` | Configure `mp` settings. | [Docs](docs/commands/config.md) |
-| `format` | Auto-format Python files. | [Docs](docs/commands/format.md) |
-| `test` | Run pre-build integration tests. | [Docs](docs/commands/test.md) |
-| `validate` | Validate integration structure and metadata. | [Docs](docs/commands/validate.md) |
-| `dev-env` | Interact with dev environment (login, push). | [Docs](docs/commands/dev_env.md) |
+| Command    | Description                                             | Documentation                     |
+|:-----------|:--------------------------------------------------------|:----------------------------------|
+| `build`    | Build integrations or playbooks into deployable format. | [Docs](docs/commands/build.md)    |
+| `check`    | Lint and sanity-check your code.                        | [Docs](docs/commands/check.md)    |
+| `config`   | Configure `mp` settings.                                | [Docs](docs/commands/config.md)   |
+| `describe` | Generate AI descriptions for integration actions.       | [Docs](docs/commands/describe.md) |
+| `format`   | Auto-format Python files.                               | [Docs](docs/commands/format.md)   |
+| `test`     | Run pre-build integration tests.                        | [Docs](docs/commands/test.md)     |
+| `validate` | Validate integration structure and metadata.            | [Docs](docs/commands/validate.md) |
+| `dev-env`  | Interact with dev environment (login, push).            | [Docs](docs/commands/dev_env.md)  |
 
 ## Documentation
 

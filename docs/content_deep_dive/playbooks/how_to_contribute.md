@@ -53,36 +53,31 @@ If you prefer to contribute manually, follow these steps:
 - ### 2.2. Unzip the playbook
     - The exported file is a zip archive. Unzip it to extract the playbook JSON file.
 
-- ### 2.3. Place the playbook JSON in the repository
-    - Move the extracted playbook JSON file to the appropriate directory:
-        - Community contributions: `content/playbooks/third_party/community/`
-        - Partner contributions: `content/playbooks/third_party/partner/`
-
-- ### 2.4. Deconstruct the playbook
+- ### 2.3. Deconstruct the playbook
     - At the root of the repository, run the following command:
       ```bash
-      mp build -p <playbook_name> --deconstruct
+      mp build -p <playbook_name> --deconstruct --src <path to exported playbook>
       ```
       Replace `<playbook_name>` with your playbook's name.
 
-- ### 2.5. Fill the `display_info.yaml` file
+- ### 2.4. Fill the `display_info.yaml` file
     - In your new playbook directory, open `display_info.yaml` and provide the required metadata (
       e.g., display name, author, description).
 
-- ### 2.6. Fill the `release_notes.yaml` file
+- ### 2.5. Fill the `release_notes.yaml` file
 
 ### Note: If your playbook uses blocks that already exist in the "content-hub" repository, you don't need to include them in your pull request. Instead, you should reference the existing blocks. For detailed instructions, see the section on [How to Sync a Playbook with Existing Blocks in the Repo](#how-to-sync-a-playbook-with-existing-blocks-in-the-repo).
 
-- ### 2.7. Move the deconstructed playbook files
-    - The previous command creates an `out` folder. Move the deconstructed playbook directory from
-      `out/content/playbooks/third_party/...` to the correct location in the main
-      `content/playbooks/third_party/` directory, replacing the original JSON file.
+- ### 2.6. Place the non-built playbook in the repository
+    - Move the deconstructed playbook to the appropriate directory:
+        - Community contributions: `content/playbooks/third_party/community/`
+        - Partner contributions: `content/playbooks/third_party/partner/`
 
-- ### 2.8. Create a Pull Request
+- ### 2.7. Create a Pull Request
     - Commit your changes and push them to your fork.
     - Open a pull request against the main `content-hub` repository.
 
-- ### 2.9. Await review and approval
+- ### 2.8. Await review and approval
     - The Content Hub team will review your submission and may request changes before merging.
 
 ## How to Sync a Playbook with Existing Blocks in the Repo
