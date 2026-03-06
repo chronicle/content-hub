@@ -796,7 +796,9 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def export_package(self) -> requests.Response:
         """Export package"""
-        endpoint = f"/integrations/{self.params.integration_identifier}:export"
+        endpoint = (
+            f"/integrations/{self.params.integration_identifier}:export?alt=media"
+        )
         return self._make_request(HttpMethod.GET, endpoint).content
 
     def get_integration_instance_settings(self) -> requests.Response:
