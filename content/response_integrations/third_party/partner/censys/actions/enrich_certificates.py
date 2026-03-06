@@ -92,25 +92,19 @@ def _build_output_message(
     message_parts = []
 
     if successful:
-        message_parts.append(
-            f"Successfully enriched {len(successful)} certificate(s) from Censys."
-        )
+        message_parts.append(f"Successfully enriched {len(successful)} certificate(s) from Censys.")
 
     if not_found:
         entities_str = ", ".join(not_found[:5])
         if len(not_found) > 5:
             entities_str += f" and {len(not_found) - 5} more"
-        message_parts.append(
-            f"{len(not_found)} certificate(s) not found in Censys: {entities_str}"
-        )
+        message_parts.append(f"{len(not_found)} certificate(s) not found in Censys: {entities_str}")
 
     if failed:
         entities_str = ", ".join(failed[:5])
         if len(failed) > 5:
             entities_str += f" and {len(failed) - 5} more"
-        message_parts.append(
-            f"{len(failed)} certificate(s) failed to process: {entities_str}"
-        )
+        message_parts.append(f"{len(failed)} certificate(s) failed to process: {entities_str}")
 
     if invalid:
         entities_str = ", ".join(invalid[:5])
@@ -122,9 +116,7 @@ def _build_output_message(
         )
 
     if not message_parts:
-        return (
-            "No certificates were enriched. No matching data found in Censys."
-        )
+        return "No certificates were enriched. No matching data found in Censys."
 
     return "\n".join(message_parts)
 
@@ -146,9 +138,7 @@ def main():
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = ENRICH_CERTIFICATES_SCRIPT_NAME
-    siemplify.LOGGER.info(
-        "================= Main - Param Init ================="
-    )
+    siemplify.LOGGER.info("================= Main - Param Init =================")
 
     # Configuration Parameters
     api_key, organization_id, verify_ssl = get_integration_params(siemplify)
@@ -185,20 +175,14 @@ def main():
             output_message = NO_FILEHASH_ENTITIES_ERROR
             siemplify.LOGGER.info(output_message)
             siemplify.result.add_result_json([])
-            siemplify.end(
-                output_message, RESULT_VALUE_TRUE, EXECUTION_STATE_COMPLETED
-            )
+            siemplify.end(output_message, RESULT_VALUE_TRUE, EXECUTION_STATE_COMPLETED)
             return
 
-        siemplify.LOGGER.info(
-            f"Found {len(cert_entities)} certificate entities to process"
-        )
+        siemplify.LOGGER.info(f"Found {len(cert_entities)} certificate entities to process")
 
         # Extract and validate certificate IDs
         certificate_ids = [entity.identifier for entity in cert_entities]
-        valid_cert_ids, invalid_cert_ids = filter_valid_certificate_ids(
-            certificate_ids
-        )
+        valid_cert_ids, invalid_cert_ids = filter_valid_certificate_ids(certificate_ids)
 
         # Track invalid certificate IDs
         if invalid_cert_ids:
@@ -220,22 +204,16 @@ def main():
             )
             siemplify.LOGGER.error(output_message)
             siemplify.result.add_result_json([])
-            siemplify.end(
-                output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED
-            )
+            siemplify.end(output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED)
             return
 
-        siemplify.LOGGER.info(
-            f"Processing {len(valid_cert_ids)} valid certificate(s)"
-        )
+        siemplify.LOGGER.info(f"Processing {len(valid_cert_ids)} valid certificate(s)")
 
         # Call API with batch of valid certificate IDs only
         response = censys_manager.enrich_certificates(valid_cert_ids)
         resources = _extract_resources_from_response(response)
 
-        siemplify.LOGGER.info(
-            f"Received {len(resources)} resource(s) from Censys API"
-        )
+        siemplify.LOGGER.info(f"Received {len(resources)} resource(s) from Censys API")
 
         # Create set for O(1) lookup performance
         invalid_set = set(invalid_entities)
@@ -252,14 +230,10 @@ def main():
 
             try:
                 # Find matching resource for this certificate
-                entity_result = _find_entity_resource(
-                    resources, entity_identifier
-                )
+                entity_result = _find_entity_resource(resources, entity_identifier)
 
                 if not entity_result:
-                    siemplify.LOGGER.info(
-                        f"No data found for {entity_identifier}"
-                    )
+                    siemplify.LOGGER.info(f"No data found for {entity_identifier}")
                     not_found_entities.append(entity_identifier)
                     continue
 
@@ -268,33 +242,25 @@ def main():
                 enrichment_data = cert_model.get_enrichment_data()
 
                 if not enrichment_data:
-                    siemplify.LOGGER.info(
-                        f"No enrichment data available for {entity_identifier}"
-                    )
+                    siemplify.LOGGER.info(f"No enrichment data available for {entity_identifier}")
                     not_found_entities.append(entity_identifier)
                     continue
 
                 # Remove old certificate enrichment data
                 remove_certificate_enrichment(entity)
-                siemplify.LOGGER.info(
-                    f"Removed old certificate enrichment for {entity_identifier}"
-                )
+                siemplify.LOGGER.info(f"Removed old certificate enrichment for {entity_identifier}")
 
                 entity.additional_properties.update(enrichment_data)
                 entity.is_enriched = True
 
                 # Store results
                 successful_entities.append(entity_identifier)
-                json_results.append(
-                    {
-                        "Entity": entity_identifier,
-                        "EntityResult": cert_model.to_json(),
-                    }
-                )
+                json_results.append({
+                    "Entity": entity_identifier,
+                    "EntityResult": cert_model.to_json(),
+                })
 
-                siemplify.LOGGER.info(
-                    f"Successfully enriched: {entity_identifier}"
-                )
+                siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
 
             except Exception as e:
                 error_message = f"Failed to process {entity_identifier}: {e}"
@@ -304,8 +270,7 @@ def main():
 
     except ValueError as e:
         output_message = (
-            f"Invalid parameter value: {str(e)}\n"
-            f"Please verify your input parameters and try again."
+            f"Invalid parameter value: {str(e)}\nPlease verify your input parameters and try again."
         )
         siemplify.LOGGER.error(output_message)
         status = EXECUTION_STATE_FAILED
@@ -314,11 +279,7 @@ def main():
     except ValidationException as e:
         error_detail = str(e)
         cert_list = ", ".join(certificate_ids[:10])
-        more_text = (
-            f" and {len(certificate_ids) - 10} more"
-            if len(certificate_ids) > 10
-            else ""
-        )
+        more_text = f" and {len(certificate_ids) - 10} more" if len(certificate_ids) > 10 else ""
 
         output_message = (
             f"Validation error occurred while processing "
@@ -333,9 +294,7 @@ def main():
         result_value = RESULT_VALUE_FALSE
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            ENRICH_CERTIFICATES_SCRIPT_NAME, e
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_CERTIFICATES_SCRIPT_NAME, e)
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -349,9 +308,7 @@ def main():
             failed_entities,
             invalid_entities,
         )
-        result_value = (
-            RESULT_VALUE_TRUE if successful_entities else RESULT_VALUE_FALSE
-        )
+        result_value = RESULT_VALUE_TRUE if successful_entities else RESULT_VALUE_FALSE
 
         # Update entities in Siemplify
         if successful_entities:

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import (
-    EXECUTION_STATE_COMPLETED,
-    EXECUTION_STATE_FAILED,
-)
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 
@@ -19,11 +16,7 @@ from ..core.constants import (
     RESULT_VALUE_TRUE,
 )
 from ..core.datamodels import HostHistoryEventModel
-from ..core.utils import (
-    get_integration_params,
-    validate_ip_address,
-    validate_rfc3339_timestamp,
-)
+from ..core.utils import get_integration_params, validate_ip_address, validate_rfc3339_timestamp
 
 
 @output_handler
@@ -51,9 +44,7 @@ def main():
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = GET_HOST_HISTORY_SCRIPT_NAME
-    siemplify.LOGGER.info(
-        "----------------- Main - Param Init -----------------"
-    )
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
     api_key, organization_id, verify_ssl = get_integration_params(siemplify)
@@ -94,9 +85,7 @@ def main():
 
         partial_data_warning = ""
         try:
-            response = censys_manager.get_host_history(
-                host_id, start_time, end_time
-            )
+            response = censys_manager.get_host_history(host_id, start_time, end_time)
         except PartialDataException as e:
             siemplify.LOGGER.info(f"Partial data collected: {str(e)}")
 
@@ -133,17 +122,13 @@ def main():
             events_for_table = events[:MAX_TABLE_RECORDS]
 
             for idx, event in enumerate(events_for_table, start=1):
-                model = HostHistoryEventModel(
-                    event, idx, host_id, organization_id
-                )
+                model = HostHistoryEventModel(event, idx, host_id, organization_id)
                 table_results.append(model.to_csv())
 
             # Add table to results
             if table_results:
                 siemplify.result.add_data_table(
-                    "Host History Events",
-                    construct_csv(table_results),
-                    "Censys",
+                    "Host History Events", construct_csv(table_results), "Censys"
                 )
 
             # Build output message
@@ -151,11 +136,11 @@ def main():
                 pages_fetched = pagination_info.get("pages_fetched", 0)
                 output_message = (
                     f"Successfully retrieved {total_events} event(s) for host {host_id} "
-                    f"(partial data - {pages_fetched} page(s) fetched).\n"
+                    f"(partial data - {pages_fetched} page(s) fetched)."
                 )
             else:
                 output_message = (
-                    f"Successfully retrieved {total_events} event(s) for host {host_id}.\n"
+                    f"Successfully retrieved {total_events} event(s) for host {host_id}."
                 )
 
             # Add table limit info if we have more events than table can show
@@ -168,7 +153,7 @@ def main():
             # Add info about MAX_RECORD_THRESHOLD record limit and Censys Platform link
             if total_events >= MAX_RECORD_THRESHOLD and not is_partial:
                 output_message += (
-                    f"\n\nThere are more than {MAX_RECORD_THRESHOLD} host history "
+                    f"\nThere are more than {MAX_RECORD_THRESHOLD} host history "
                     "records available for this host.\n"
                     f"The first {MAX_RECORD_THRESHOLD} records are displayed.\n"
                     f"Further exploration should be conducted on the Censys platform: "
@@ -188,9 +173,7 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            GET_HOST_HISTORY_SCRIPT_NAME, str(e)
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(GET_HOST_HISTORY_SCRIPT_NAME, str(e))
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

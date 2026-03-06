@@ -28,25 +28,23 @@ class TestEnrichCertificates:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful certificate enrichment."""
-        censys_manager.set_enrich_certificates_response(
-            {
-                "result": [
-                    {
-                        "resource": {
-                            "fingerprint_sha256": "a" * 64,
-                            "parsed": {
-                                "subject_dn": "CN=example.com",
-                                "issuer_dn": "CN=Let's Encrypt Authority X3",
-                                "validity": {
-                                    "start": "2024-01-01T00:00:00Z",
-                                    "end": "2024-12-31T23:59:59Z",
-                                },
+        censys_manager.set_enrich_certificates_response({
+            "result": [
+                {
+                    "resource": {
+                        "fingerprint_sha256": "a" * 64,
+                        "parsed": {
+                            "subject_dn": "CN=example.com",
+                            "issuer_dn": "CN=Let's Encrypt Authority X3",
+                            "validity": {
+                                "start": "2024-01-01T00:00:00Z",
+                                "end": "2024-12-31T23:59:59Z",
                             },
-                        }
+                        },
                     }
-                ]
-            }
-        )
+                }
+            ]
+        })
 
         enrich_certificates.main()
 
@@ -68,10 +66,7 @@ class TestEnrichCertificates:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
-        assert (
-            "No FILEHASH type entities found"
-            in action_output.results.output_message
-        )
+        assert "No FILEHASH type entities found" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -121,7 +116,4 @@ class TestEnrichCertificates:
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Error while executing action"
-            in action_output.results.output_message
-        )
+        assert "Error while executing action" in action_output.results.output_message

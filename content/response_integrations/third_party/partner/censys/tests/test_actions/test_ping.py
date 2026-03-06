@@ -25,10 +25,7 @@ class TestPing:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
-        assert (
-            "Successfully connected to the Censys"
-            in action_output.results.output_message
-        )
+        assert "Successfully connected to the Censys" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     def test_ping_unauthorized(
@@ -45,10 +42,7 @@ class TestPing:
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Failed to connect to the Censys"
-            in action_output.results.output_message
-        )
+        assert "Failed to connect to the Censys" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     def test_ping_rate_limit(
@@ -57,18 +51,13 @@ class TestPing:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test ping with rate limit error."""
-        censys_manager.simulate_connectivity_failure(
-            should_fail=True, exception_type="rate_limit"
-        )
+        censys_manager.simulate_connectivity_failure(should_fail=True, exception_type="rate_limit")
 
         ping.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Failed to connect to the Censys"
-            in action_output.results.output_message
-        )
+        assert "Failed to connect to the Censys" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     def test_ping_http_error(
@@ -77,18 +66,13 @@ class TestPing:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test ping with HTTP error (500)."""
-        censys_manager.simulate_connectivity_failure(
-            should_fail=True, exception_type="http_error"
-        )
+        censys_manager.simulate_connectivity_failure(should_fail=True, exception_type="http_error")
 
         ping.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Failed to connect to the Censys"
-            in action_output.results.output_message
-        )
+        assert "Failed to connect to the Censys" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     def test_ping_generic_exception(
@@ -98,15 +82,10 @@ class TestPing:
     ) -> None:
         """Test ping with generic exception."""
         censys_manager.exception_message = "Connection timeout"
-        censys_manager.simulate_connectivity_failure(
-            should_fail=True, exception_type="generic"
-        )
+        censys_manager.simulate_connectivity_failure(should_fail=True, exception_type="generic")
 
         ping.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Failed to connect to the Censys"
-            in action_output.results.output_message
-        )
+        assert "Failed to connect to the Censys" in action_output.results.output_message

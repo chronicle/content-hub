@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import (
-    EXECUTION_STATE_COMPLETED,
-    EXECUTION_STATE_FAILED,
-)
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 
@@ -107,20 +104,14 @@ def main():
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = GET_RELATED_INFRASTRUCTURE_SCRIPT_NAME
-    siemplify.LOGGER.info(
-        "----------------- Main - Param Init -----------------"
-    )
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
     api_key, organization_id, verify_ssl = get_integration_params(siemplify)
 
     # Action Parameters
-    field = siemplify.extract_action_param(
-        param_name="Field", input_type=str, is_mandatory=True
-    )
-    value = siemplify.extract_action_param(
-        param_name="Value", input_type=str, is_mandatory=True
-    )
+    field = siemplify.extract_action_param(param_name="Field", input_type=str, is_mandatory=True)
+    value = siemplify.extract_action_param(param_name="Value", input_type=str, is_mandatory=True)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
@@ -238,9 +229,7 @@ def main():
             if cert_count > 0:
                 type_breakdown.append(f"Certificates: {cert_count}")
 
-            type_summary = (
-                ", ".join(type_breakdown) if type_breakdown else "No results"
-            )
+            type_summary = ", ".join(type_breakdown) if type_breakdown else "No results"
 
             if truncated:
                 if truncation_reason == "api_error":

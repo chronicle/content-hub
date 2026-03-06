@@ -22,22 +22,20 @@ class TestGetRescanStatus:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful rescan status retrieval."""
-        censys_manager.set_rescan_status_response(
-            {
-                "result": {
-                    "tracked_scan_id": "scan_12345",
-                    "completed": True,
-                    "tasks": [
-                        {
-                            "task_id": "task_001",
-                            "status": "completed",
-                            "result": "success",
-                        }
-                    ],
-                    "completed_at": "2024-01-15T10:35:00Z",
-                }
+        censys_manager.set_rescan_status_response({
+            "result": {
+                "tracked_scan_id": "scan_12345",
+                "completed": True,
+                "tasks": [
+                    {
+                        "task_id": "task_001",
+                        "status": "completed",
+                        "result": "success",
+                    }
+                ],
+                "completed_at": "2024-01-15T10:35:00Z",
             }
-        )
+        })
 
         get_rescan_status.main()
 
@@ -55,14 +53,12 @@ class TestGetRescanStatus:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test rescan status retrieval for pending scan."""
-        censys_manager.set_rescan_status_response(
-            {
-                "result": {
-                    "tracked_scan_id": "scan_12345",
-                    "tasks": [],
-                }
+        censys_manager.set_rescan_status_response({
+            "result": {
+                "tracked_scan_id": "scan_12345",
+                "tasks": [],
             }
-        )
+        })
 
         get_rescan_status.main()
 
@@ -80,18 +76,13 @@ class TestGetRescanStatus:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test rescan status retrieval with API failure."""
-        censys_manager.simulate_rescan_status_failure(
-            should_fail=True, exception_type="generic"
-        )
+        censys_manager.simulate_rescan_status_failure(should_fail=True, exception_type="generic")
 
         get_rescan_status.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Error while executing action"
-            in action_output.results.output_message
-        )
+        assert "Error while executing action" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -107,7 +98,4 @@ class TestGetRescanStatus:
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Scan ID must be a non-empty string"
-            in action_output.results.output_message
-        )
+        assert "Scan ID must be a non-empty string" in action_output.results.output_message

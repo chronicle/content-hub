@@ -16,16 +16,10 @@ COMMON_ACTION_ERROR_MESSAGE = "Error while executing action {}. Reason: {}"
 INVALID_AND_COUNT_CONDITIONS_FORMAT = (
     "Invalid format in And Count Conditions: '{}'. Expected format: field:value"
 )
-INVALID_FIELD_VALUE_PAIR = (
-    "Invalid field-value pair: '{}'. Both field and value must be non-empty"
-)
+INVALID_FIELD_VALUE_PAIR = "Invalid field-value pair: '{}'. Both field and value must be non-empty"
 EMPTY_AND_COUNT_CONDITIONS = "And Count Conditions parameter cannot be empty"
-NO_VALID_CONDITIONS_FOUND = (
-    "No valid conditions found in And Count Conditions parameter"
-)
-THREAT_HUNTING_ACCESS_REQUIRED = (
-    "This action requires active access to the Threat Hunting Module"
-)
+NO_VALID_CONDITIONS_FOUND = "No valid conditions found in And Count Conditions parameter"
+THREAT_HUNTING_ACCESS_REQUIRED = "This action requires active access to the Threat Hunting Module"
 DEFAULT_PAGE_SIZE = 1000
 RETRY_COUNT = 3
 WAIT_TIME_FOR_RETRY = 5
@@ -40,7 +34,7 @@ MAX_TABLE_RECORDS = 1000
 MAX_JSON_CHARS = 300
 MAX_INT_VALUE = 65535
 INTERNAL_SERVER_ERROR_STATUS_CODES = [500, 502, 503, 504]
-MAX_VALUE_COUNT_THRESHOLD = 1000
+MAX_RECORD_THRESHOLD = 1000
 MAX_PAGINATION_CALLS = 10
 SEARCH_PAGE_SIZE = 100
 MAX_PAYLOAD_SIZE_BYTES = 24 * 1024 * 1024  # 24 MB
@@ -69,13 +63,9 @@ PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
 INITIATE_RESCAN_SCRIPT_NAME = f"{INTEGRATION_NAME} - Initiate Rescan"
 GET_RESCAN_STATUS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Rescan Status"
 GET_HOST_HISTORY_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Host History"
-GET_RELATED_INFRASTRUCTURE_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Get Related Infrastructure"
-)
+GET_RELATED_INFRASTRUCTURE_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Related Infrastructure"
 ENRICH_IPS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich IPs"
-ENRICH_WEB_PROPERTIES_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Enrich Web Properties"
-)
+ENRICH_WEB_PROPERTIES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Web Properties"
 ENRICH_CERTIFICATES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Certificates"
 
 # Action Identifiers
@@ -84,12 +74,8 @@ INITIATE_RESCAN_ACTION_IDENTIFIER = "initiate_rescan"
 GET_RESCAN_STATUS_ACTION_IDENTIFIER = "get_rescan_status"
 GET_HOST_HISTORY_ACTION_IDENTIFIER = "get_host_history"
 GET_RELATED_INFRASTRUCTURE_ACTION_IDENTIFIER = "get_related_infrastructure"
-GET_RELATED_INFRASTRUCTURE_VALUE_COUNTS_IDENTIFIER = (
-    "get_related_infrastructure_value_counts"
-)
-GET_RELATED_INFRASTRUCTURE_SEARCH_QUERY_IDENTIFIER = (
-    "get_related_infrastructure_search_query"
-)
+GET_RELATED_INFRASTRUCTURE_VALUE_COUNTS_IDENTIFIER = "get_related_infrastructure_value_counts"
+GET_RELATED_INFRASTRUCTURE_SEARCH_QUERY_IDENTIFIER = "get_related_infrastructure_search_query"
 ENRICH_IPS_ACTION_IDENTIFIER = "enrich_ips"
 ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER = "enrich_web_properties"
 ENRICH_CERTIFICATES_ACTION_IDENTIFIER = "enrich_certificates"
@@ -97,9 +83,7 @@ ENRICH_CERTIFICATES_ACTION_IDENTIFIER = "enrich_certificates"
 # Error Messages
 NO_ADDRESS_ENTITIES_ERROR = "No ADDRESS type entities found in scope."
 NO_WEB_ENTITIES_ERROR = "No ADDRESS or HOSTNAME type entities found in scope."
-NO_FILEHASH_ENTITIES_ERROR = (
-    "No FILEHASH type entities found in the current scope."
-)
+NO_FILEHASH_ENTITIES_ERROR = "No FILEHASH type entities found in the current scope."
 INVALID_IP_FORMAT_ERROR = "Invalid IP address format: {}"
 INVALID_PORT_FORMAT_ERROR = "Invalid port value: {}"
 DEFAULT_PORTS = "80,443"
@@ -109,30 +93,21 @@ API_VERSION_V3 = "/v3"
 
 # API Endpoints
 ENDPOINTS = {
-    PING_ACTION_IDENTIFIER: (
-        API_VERSION_V3 + "/accounts/organizations/{organization_id}"
-    ),
+    PING_ACTION_IDENTIFIER: (API_VERSION_V3 + "/accounts/organizations/{organization_id}"),
     INITIATE_RESCAN_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/scans/rescan",
-    GET_RESCAN_STATUS_ACTION_IDENTIFIER: API_VERSION_V3
-    + "/global/scans/{scan_id}",
-    GET_HOST_HISTORY_ACTION_IDENTIFIER: API_VERSION_V3
-    + "/global/asset/host/{host_id}/timeline",
+    GET_RESCAN_STATUS_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/scans/{scan_id}",
+    GET_HOST_HISTORY_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/asset/host/{host_id}/timeline",
     GET_RELATED_INFRASTRUCTURE_VALUE_COUNTS_IDENTIFIER: API_VERSION_V3
     + "/threat-hunting/value-counts",
-    GET_RELATED_INFRASTRUCTURE_SEARCH_QUERY_IDENTIFIER: API_VERSION_V3
-    + "/global/search/query",
+    GET_RELATED_INFRASTRUCTURE_SEARCH_QUERY_IDENTIFIER: API_VERSION_V3 + "/global/search/query",
     ENRICH_IPS_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/asset/host",
-    ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER: (
-        API_VERSION_V3 + "/global/asset/webproperty"
-    ),
-    ENRICH_CERTIFICATES_ACTION_IDENTIFIER: (
-        API_VERSION_V3 + "/global/asset/certificate"
-    ),
+    ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER: (API_VERSION_V3 + "/global/asset/webproperty"),
+    ENRICH_CERTIFICATES_ACTION_IDENTIFIER: (API_VERSION_V3 + "/global/asset/certificate"),
 }
 
 # IOC Types for Initiate Rescan
-IOC_TYPE_SERVICE_ID = "Host"
-IOC_TYPE_WEB_ORIGIN = "Web Properties"
+IOC_TYPE_SERVICE_ID = "Service"
+IOC_TYPE_WEB_ORIGIN = "Web Origin"
 
 # Transport Protocols
 TRANSPORT_PROTOCOL_UNKNOWN = "Unknown"
@@ -140,3 +115,8 @@ TRANSPORT_PROTOCOL_TCP = "TCP"
 TRANSPORT_PROTOCOL_UDP = "UDP"
 TRANSPORT_PROTOCOL_ICMP = "ICMP"
 TRANSPORT_PROTOCOL_QUIC = "QUIC"
+
+# Enrichment Prefixes
+ENRICHMENT_PREFIX = "Censys_"
+ENRICHMENT_PREFIX_CERT = f"{ENRICHMENT_PREFIX}cert_"
+ENRICHMENT_PREFIX_WEB = ENRICHMENT_PREFIX

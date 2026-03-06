@@ -8,6 +8,8 @@ from .constants import (
     CENSYS_HOSTS_URL_TEMPLATE,
     CENSYS_PLATFORM_BASE_URL,
     DEFAULT_VALUE_NA,
+    ENRICHMENT_PREFIX,
+    ENRICHMENT_PREFIX_CERT,
     RESOURCE_TYPE_ENDPOINT_SCANNED,
     RESOURCE_TYPE_FORWARD_DNS_RESOLVED,
     RESOURCE_TYPE_JARM_SCANNED,
@@ -86,10 +88,7 @@ class PingDatamodel(BaseModel):
         Returns:
             Dictionary with success status
         """
-        return {
-            "success": self.success,
-            "status": "Connected" if self.success else "Failed",
-        }
+        return {"success": self.success, "status": "Connected" if self.success else "Failed"}
 
 
 class HostHistoryEventModel(BaseModel):
@@ -99,11 +98,7 @@ class HostHistoryEventModel(BaseModel):
     """
 
     def __init__(
-        self,
-        raw_data: Dict[str, Any],
-        index: int,
-        host_id: str = None,
-        organization_id: str = None,
+        self, raw_data: Dict[str, Any], index: int, host_id: str = None, organization_id: str = None
     ) -> None:
         super().__init__(raw_data)
         self.index = index
@@ -123,14 +118,10 @@ class HostHistoryEventModel(BaseModel):
         """Parse resource details based on resource type."""
         if RESOURCE_TYPE_SERVICE_SCANNED in self.resource:
             self.resource_type = RESOURCE_TYPE_SERVICE_SCANNED
-            scan_data = self.resource[RESOURCE_TYPE_SERVICE_SCANNED].get(
-                "scan", {}
-            )
+            scan_data = self.resource[RESOURCE_TYPE_SERVICE_SCANNED].get("scan", {})
             port = scan_data.get("port", DEFAULT_VALUE_NA)
             protocol = scan_data.get("protocol", DEFAULT_VALUE_NA)
-            transport_protocol = scan_data.get(
-                "transport_protocol", DEFAULT_VALUE_NA
-            )
+            transport_protocol = scan_data.get("transport_protocol", DEFAULT_VALUE_NA)
             self.resource_key_values = f"{port}/{protocol}/{transport_protocol}"
 
         elif RESOURCE_TYPE_REVERSE_DNS_RESOLVED in self.resource:
@@ -141,9 +132,7 @@ class HostHistoryEventModel(BaseModel):
 
         elif RESOURCE_TYPE_ENDPOINT_SCANNED in self.resource:
             self.resource_type = RESOURCE_TYPE_ENDPOINT_SCANNED
-            scan_data = self.resource[RESOURCE_TYPE_ENDPOINT_SCANNED].get(
-                "scan", {}
-            )
+            scan_data = self.resource[RESOURCE_TYPE_ENDPOINT_SCANNED].get("scan", {})
             port = scan_data.get("port", DEFAULT_VALUE_NA)
             endpoint_type = scan_data.get("endpoint_type", DEFAULT_VALUE_NA)
             self.resource_key_values = f"{port}/{endpoint_type}"
@@ -156,9 +145,7 @@ class HostHistoryEventModel(BaseModel):
 
         elif RESOURCE_TYPE_JARM_SCANNED in self.resource:
             self.resource_type = RESOURCE_TYPE_JARM_SCANNED
-            scan_data = self.resource[RESOURCE_TYPE_JARM_SCANNED].get(
-                "scan", {}
-            )
+            scan_data = self.resource[RESOURCE_TYPE_JARM_SCANNED].get("scan", {})
             port = scan_data.get("port", DEFAULT_VALUE_NA)
             fingerprint = scan_data.get("fingerprint", DEFAULT_VALUE_NA)
             if len(str(fingerprint)) > 20:
@@ -167,9 +154,7 @@ class HostHistoryEventModel(BaseModel):
 
         elif RESOURCE_TYPE_LOCATION_UPDATED in self.resource:
             self.resource_type = RESOURCE_TYPE_LOCATION_UPDATED
-            location = self.resource[RESOURCE_TYPE_LOCATION_UPDATED].get(
-                "location", {}
-            )
+            location = self.resource[RESOURCE_TYPE_LOCATION_UPDATED].get("location", {})
             city = location.get("city", DEFAULT_VALUE_NA)
             country = location.get("country", DEFAULT_VALUE_NA)
             self.resource_key_values = f"{city}/{country}"
@@ -190,11 +175,7 @@ class HostHistoryEventModel(BaseModel):
 
     def _generate_historical_link(self) -> None:
         """Generate historical view link for the event."""
-        if (
-            self.host_id
-            and self.organization_id
-            and self.event_time != DEFAULT_VALUE_NA
-        ):
+        if self.host_id and self.organization_id and self.event_time != DEFAULT_VALUE_NA:
             try:
                 # URL encode the timestamp
                 encoded_time = quote(self.event_time, safe="")
@@ -262,75 +243,61 @@ class HostDatamodel(BaseModel):
         whois = self.host_data.get("whois", {})
 
         enrichment = {
-            "Censys_service_count": self.host_data.get("service_count"),
-            "Censys_ports": self._get_top_values(
-                [str(s.get("port")) for s in services if s.get("port")]
-            ),
-            "Censys_protocols": self._get_top_values(
-                [s.get("protocol") for s in services if s.get("protocol")]
-            ),
-            "Censys_transport_protocols": self._get_top_values(
-                [
-                    s.get("transport_protocol")
-                    for s in services
-                    if s.get("transport_protocol")
-                ]
-            ),
-            "Censys_host_labels": self._get_top_values(
-                [
-                    label.get("value")
-                    for label in self.host_data.get("labels", [])
-                    if label.get("value")
-                ]
-            ),
-            "Censys_service_labels": self._get_top_values(
-                [
-                    label.get("value")
-                    for s in services
-                    for label in s.get("labels", [])
-                    if label.get("value")
-                ]
-            ),
-            "Censys_threat_names": self._get_top_values(
-                [
-                    threat.get("name")
-                    for s in services
-                    for threat in s.get("threats", [])
-                    if threat.get("name")
-                ]
-            ),
-            "Censys_vulnerabilities": self._get_top_values(
-                [vuln for s in services for vuln in s.get("vulns", [])]
-            ),
-            "Censys_last_scan_time": self._get_latest_scan_time(services),
-            "Censys_dns_names": self._get_top_values(dns_data.get("names", [])),
-            "Censys_forward_dns": self._get_top_values(
+            f"{ENRICHMENT_PREFIX}service_count": self.host_data.get("service_count"),
+            f"{ENRICHMENT_PREFIX}ports": self._get_top_values([
+                str(s.get("port")) for s in services if s.get("port")
+            ]),
+            f"{ENRICHMENT_PREFIX}protocols": self._get_top_values([
+                s.get("protocol") for s in services if s.get("protocol")
+            ]),
+            f"{ENRICHMENT_PREFIX}transport_protocols": self._get_top_values([
+                s.get("transport_protocol") for s in services if s.get("transport_protocol")
+            ]),
+            f"{ENRICHMENT_PREFIX}host_labels": self._get_top_values([
+                label.get("value")
+                for label in self.host_data.get("labels", [])
+                if label.get("value")
+            ]),
+            f"{ENRICHMENT_PREFIX}service_labels": self._get_top_values([
+                label.get("value")
+                for s in services
+                for label in s.get("labels", [])
+                if label.get("value")
+            ]),
+            f"{ENRICHMENT_PREFIX}threat_names": self._get_top_values([
+                threat.get("name")
+                for s in services
+                for threat in s.get("threats", [])
+                if threat.get("name")
+            ]),
+            f"{ENRICHMENT_PREFIX}vulnerabilities": self._get_top_values([
+                vuln for s in services for vuln in s.get("vulns", [])
+            ]),
+            f"{ENRICHMENT_PREFIX}last_scan_time": self._get_latest_scan_time(services),
+            f"{ENRICHMENT_PREFIX}dns_names": self._get_top_values(dns_data.get("names", [])),
+            f"{ENRICHMENT_PREFIX}forward_dns": self._get_top_values(
                 dns_data.get("forward_dns", {}).get("names", [])
             ),
-            "Censys_reverse_dns": self._get_top_values(
+            f"{ENRICHMENT_PREFIX}reverse_dns": self._get_top_values(
                 dns_data.get("reverse_dns", {}).get("names", [])
             ),
-            "Censys_network_name": whois.get("network", {}).get("name"),
-            "Censys_network_cidrs": self._get_top_values(
-                whois.get("network", {}).get("cidrs", [])
-            ),
-            "Censys_asn_name": asn.get("name"),
-            "Censys_asn_id": asn.get("asn"),
-            "Censys_location_city": location.get("city"),
-            "Censys_location_province": location.get("province"),
-            "Censys_location_postal": location.get("postal_code"),
-            "Censys_location_country": location.get("country"),
-            "Censys_country_code": location.get("country_code"),
-            "Censys_continent": location.get("continent"),
-            "Censys_geo_lat": location.get("coordinates", {}).get("latitude"),
-            "Censys_geo_long": location.get("coordinates", {}).get("longitude"),
+            f"{ENRICHMENT_PREFIX}network_name": whois.get("network", {}).get("name"),
+            f"{ENRICHMENT_PREFIX}network_cidrs": self._get_top_values(whois.get("network", {}).get("cidrs", [])),
+            f"{ENRICHMENT_PREFIX}asn_name": asn.get("name"),
+            f"{ENRICHMENT_PREFIX}asn_id": asn.get("asn"),
+            f"{ENRICHMENT_PREFIX}location_city": location.get("city"),
+            f"{ENRICHMENT_PREFIX}location_province": location.get("province"),
+            f"{ENRICHMENT_PREFIX}location_postal": location.get("postal_code"),
+            f"{ENRICHMENT_PREFIX}location_country": location.get("country"),
+            f"{ENRICHMENT_PREFIX}country_code": location.get("country_code"),
+            f"{ENRICHMENT_PREFIX}continent": location.get("continent"),
+            f"{ENRICHMENT_PREFIX}geo_lat": location.get("coordinates", {}).get("latitude"),
+            f"{ENRICHMENT_PREFIX}geo_long": location.get("coordinates", {}).get("longitude"),
         }
 
         return {k: v for k, v in enrichment.items() if v is not None}
 
-    def _get_top_values(
-        self, values: List[Any], max_count: int = 5
-    ) -> Optional[str]:
+    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
         """
         Get top N unique values as comma-separated string.
 
@@ -376,9 +343,7 @@ class HostDatamodel(BaseModel):
         Returns:
             Latest scan time as ISO string or None
         """
-        scan_times = [
-            s.get("scan_time") for s in services if s.get("scan_time")
-        ]
+        scan_times = [s.get("scan_time") for s in services if s.get("scan_time")]
         return max(scan_times) if scan_times else None
 
     # def to_csv(self) -> List[Dict[str, Any]]:
@@ -438,7 +403,7 @@ class WebPropertyDatamodel(BaseModel):
         if not self.is_found():
             return {}
 
-        port_prefix = f"Censys_{self.port}_"
+        port_prefix = f"{ENRICHMENT_PREFIX}{self.port}_"
 
         endpoints = self.web_data.get("endpoints", [])
         software_list = self.web_data.get("software", [])
@@ -450,42 +415,34 @@ class WebPropertyDatamodel(BaseModel):
         enrichment = {
             f"{port_prefix}web_hostname": self.web_data.get("hostname"),
             f"{port_prefix}web_port": self.web_data.get("port"),
-            f"{port_prefix}endpoint_type": self._get_top_values(
-                [
-                    ep.get("endpoint_type")
-                    for ep in endpoints
-                    if ep.get("endpoint_type")
-                ]
-            ),
-            f"{port_prefix}endpoint_path": self._get_top_values(
-                [ep.get("path") for ep in endpoints if ep.get("path")]
-            ),
-            f"{port_prefix}web_labels": self._get_top_values(
-                [label.get("value") for label in labels if label.get("value")]
-            ),
-            f"{port_prefix}web_threats": self._get_top_values(
-                [threat.get("name") for threat in threats if threat.get("name")]
-            ),
-            f"{port_prefix}web_vulns": self._get_top_values(
-                [
-                    vuln.get("id") or vuln.get("name")
-                    for vuln in vulns
-                    if vuln.get("id") or vuln.get("name")
-                ]
-            ),
+            f"{port_prefix}endpoint_type": self._get_top_values([
+                ep.get("endpoint_type") for ep in endpoints if ep.get("endpoint_type")
+            ]),
+            f"{port_prefix}endpoint_path": self._get_top_values([
+                ep.get("path") for ep in endpoints if ep.get("path")
+            ]),
+            f"{port_prefix}web_labels": self._get_top_values([
+                label.get("value") for label in labels if label.get("value")
+            ]),
+            f"{port_prefix}web_threats": self._get_top_values([
+                threat.get("name") for threat in threats if threat.get("name")
+            ]),
+            f"{port_prefix}web_vulns": self._get_top_values([
+                vuln.get("id") or vuln.get("name")
+                for vuln in vulns
+                if vuln.get("id") or vuln.get("name")
+            ]),
             f"{port_prefix}web_scan_time": self.web_data.get("scan_time"),
-            f"{port_prefix}software_vendor": self._get_top_values(
-                [sw.get("vendor") for sw in software_list if sw.get("vendor")]
-            ),
-            f"{port_prefix}software_product": self._get_top_values(
-                [sw.get("product") for sw in software_list if sw.get("product")]
-            ),
-            f"{port_prefix}software_version": self._get_top_values(
-                [sw.get("version") for sw in software_list if sw.get("version")]
-            ),
-            f"{port_prefix}last_enriched": (
-                datetime.utcnow().isoformat() + "Z"
-            ),
+            f"{port_prefix}software_vendor": self._get_top_values([
+                sw.get("vendor") for sw in software_list if sw.get("vendor")
+            ]),
+            f"{port_prefix}software_product": self._get_top_values([
+                sw.get("product") for sw in software_list if sw.get("product")
+            ]),
+            f"{port_prefix}software_version": self._get_top_values([
+                sw.get("version") for sw in software_list if sw.get("version")
+            ]),
+            f"{port_prefix}last_enriched": (datetime.utcnow().isoformat() + "Z"),
         }
 
         if cert:
@@ -503,17 +460,13 @@ class WebPropertyDatamodel(BaseModel):
                 ),
                 f"{port_prefix}web_cert_start": cert_validity.get("not_before"),
                 f"{port_prefix}web_cert_end": cert_validity.get("not_after"),
-                f"{port_prefix}web_cert_self_signed": cert_signature.get(
-                    "self_signed"
-                ),
+                f"{port_prefix}web_cert_self_signed": cert_signature.get("self_signed"),
             }
             enrichment.update(cert_enrichment)
 
         return {k: v for k, v in enrichment.items() if v is not None}
 
-    def _get_top_values(
-        self, values: List[Any], max_count: int = 5
-    ) -> Optional[str]:
+    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
         """
         Get top N unique values as comma-separated string.
 
@@ -563,28 +516,6 @@ class WebPropertyDatamodel(BaseModel):
                 return str(val)
         return None
 
-    # def to_csv(self) -> List[Dict[str, Any]]:
-    #     """
-    #     Convert web property data to CSV format.
-
-    #     Returns:
-    #         List with single dict containing key web property fields
-    #     """
-    #     if not self.is_found():
-    #         return []
-
-    #     software_list = self.web_data.get("software", [])
-    #     first_software = software_list[0] if software_list else {}
-
-    #     return [{
-    #         "Hostname": self.web_data.get("hostname"),
-    #         "Port": self.web_data.get("port"),
-    #         "Scan Time": self.web_data.get("scan_time"),
-    #         "Software Vendor": first_software.get("vendor"),
-    #         "Software Product": first_software.get("product"),
-    #         "Software Version": first_software.get("version"),
-    #     }]
-
 
 class CertificateDatamodel(BaseModel):
     """
@@ -627,16 +558,14 @@ class CertificateDatamodel(BaseModel):
         signature = parsed.get("signature", {})
 
         enrichment = {
-            "Censys_cert_sha256": self.cert_data.get("fingerprint_sha256"),
-            "Censys_cert_subject_dn": parsed.get("subject_dn"),
-            "Censys_cert_issuer_dn": parsed.get("issuer_dn"),
-            "Censys_cert_common_name": self._get_first_value(
-                subject.get("common_name", [])
-            ),
-            "Censys_cert_not_before": validity.get("not_before"),
-            "Censys_cert_not_after": validity.get("not_after"),
-            "Censys_cert_is_self_signed": signature.get("self_signed"),
-            "Censys_last_enriched": (datetime.utcnow().isoformat() + "Z"),
+            f"{ENRICHMENT_PREFIX_CERT}sha256": self.cert_data.get("fingerprint_sha256"),
+            f"{ENRICHMENT_PREFIX_CERT}subject_dn": parsed.get("subject_dn"),
+            f"{ENRICHMENT_PREFIX_CERT}issuer_dn": parsed.get("issuer_dn"),
+            f"{ENRICHMENT_PREFIX_CERT}common_name": self._get_first_value(subject.get("common_name", [])),
+            f"{ENRICHMENT_PREFIX_CERT}not_before": validity.get("not_before"),
+            f"{ENRICHMENT_PREFIX_CERT}not_after": validity.get("not_after"),
+            f"{ENRICHMENT_PREFIX_CERT}is_self_signed": signature.get("self_signed"),
+            f"{ENRICHMENT_PREFIX}last_enriched": (datetime.utcnow().isoformat() + "Z"),
         }
 
         return enrichment
@@ -666,28 +595,3 @@ class CertificateDatamodel(BaseModel):
             return {}
 
         return self.cert_data
-
-    # def to_table(self) -> List[Dict[str, Any]]:
-    #     """
-    #     Convert certificate data to table format.
-
-    #     Returns:
-    #         List with single dict containing key certificate fields
-    #     """
-    #     if not self.is_found():
-    #         return []
-
-    #     parsed = self.cert_data.get("parsed", {})
-    #     subject = parsed.get("subject", {})
-    #     validity = parsed.get("validity_period", {})
-
-    #     return [{
-    #         "SHA-256": self.cert_data.get("fingerprint_sha256"),
-    #         "Subject DN": parsed.get("subject_dn"),
-    #         "Issuer DN": parsed.get("issuer_dn"),
-    #         "Common Name": self._get_first_value(
-    #             subject.get("common_name", [])
-    #         ),
-    #         "Not Before": validity.get("not_before"),
-    #         "Not After": validity.get("not_after"),
-    #     }]

@@ -15,7 +15,7 @@ class TestInitiateRescan:
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         parameters={
-            "IOC Type": "Host",
+            "IOC Type": "Service",
             "IOC Value": "8.8.8.8",
             "Port": "443",
             "Protocol": "HTTPS",
@@ -28,15 +28,13 @@ class TestInitiateRescan:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful rescan initiation for host."""
-        censys_manager.set_initiate_rescan_response(
-            {
-                "result": {
-                    "tracked_scan_id": "scan_12345",
-                    "tasks": [],
-                    "create_time": "2024-01-15T10:30:00Z",
-                }
+        censys_manager.set_initiate_rescan_response({
+            "result": {
+                "tracked_scan_id": "scan_12345",
+                "tasks": [],
+                "create_time": "2024-01-15T10:30:00Z",
             }
-        )
+        })
 
         initiate_rescan.main()
 
@@ -47,7 +45,7 @@ class TestInitiateRescan:
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         parameters={
-            "IOC Type": "Web Properties",
+            "IOC Type": "Web Origin",
             "IOC Value": "example.com",
             "Port": "443",
         },
@@ -58,15 +56,13 @@ class TestInitiateRescan:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful rescan initiation for web properties."""
-        censys_manager.set_initiate_rescan_response(
-            {
-                "result": {
-                    "tracked_scan_id": "scan_67890",
-                    "tasks": [],
-                    "create_time": "2024-01-15T10:30:00Z",
-                }
+        censys_manager.set_initiate_rescan_response({
+            "result": {
+                "tracked_scan_id": "scan_67890",
+                "tasks": [],
+                "create_time": "2024-01-15T10:30:00Z",
             }
-        )
+        })
 
         initiate_rescan.main()
 
@@ -77,7 +73,7 @@ class TestInitiateRescan:
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         parameters={
-            "IOC Type": "Host",
+            "IOC Type": "Service",
             "IOC Value": "8.8.8.8",
             "Port": "443",
             "Protocol": "HTTPS",
@@ -90,23 +86,18 @@ class TestInitiateRescan:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test rescan initiation with API failure."""
-        censys_manager.simulate_initiate_rescan_failure(
-            should_fail=True, exception_type="generic"
-        )
+        censys_manager.simulate_initiate_rescan_failure(should_fail=True, exception_type="generic")
 
         initiate_rescan.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Error while executing action"
-            in action_output.results.output_message
-        )
+        assert "Error while executing action" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         parameters={
-            "IOC Type": "Host",
+            "IOC Type": "Service",
             "IOC Value": "8.8.8.8",
             "Port": "443",
             "Protocol": "HTTPS",
@@ -127,15 +118,12 @@ class TestInitiateRescan:
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "Error while executing action"
-            in action_output.results.output_message
-        )
+        assert "Error while executing action" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         parameters={
-            "IOC Type": "Host",
+            "IOC Type": "Service",
             "IOC Value": "8.8.8.8",
             "Port": "443",
             "Protocol": "HTTPS",

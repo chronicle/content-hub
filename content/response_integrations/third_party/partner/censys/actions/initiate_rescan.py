@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import (
-    EXECUTION_STATE_COMPLETED,
-    EXECUTION_STATE_FAILED,
-)
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -18,11 +15,7 @@ from ..core.constants import (
     RESULT_VALUE_TRUE,
     TRANSPORT_PROTOCOL_UNKNOWN,
 )
-from ..core.utils import (
-    get_integration_params,
-    validate_integer_param,
-    validate_ip_address,
-)
+from ..core.utils import get_integration_params, validate_integer_param, validate_ip_address
 
 
 def validate_rescan_params(
@@ -40,14 +33,14 @@ def validate_rescan_params(
         transport_protocol: Transport protocol
 
     Raises:
-        ValueError: If required parameters are missing for Host
+        ValueError: If required parameters are missing for Service
     """
     if ioc_type == IOC_TYPE_SERVICE_ID:
         # Validate IP address for Host
         validate_ip_address(ioc_value, "IOC Value")
 
         if not protocol or not protocol.strip():
-            raise ValueError("Protocol is required when IOC Type is Host.")
+            raise ValueError("Protocol is required when IOC Type is Service.")
 
 
 @output_handler
@@ -69,9 +62,7 @@ def main():
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = INITIATE_RESCAN_SCRIPT_NAME
-    siemplify.LOGGER.info(
-        "----------------- Main - Param Init -----------------"
-    )
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
     api_key, organization_id, verify_ssl = get_integration_params(siemplify)
@@ -84,10 +75,7 @@ def main():
         param_name="IOC Value", input_type=str, is_mandatory=True
     )
     port_param = siemplify.extract_action_param(
-        param_name="Port",
-        input_type=str,
-        is_mandatory=True,
-        default_value="443",
+        param_name="Port", input_type=str, is_mandatory=True, default_value="443"
     )
     protocol = siemplify.extract_action_param(
         param_name="Protocol", input_type=str, is_mandatory=False
@@ -117,9 +105,7 @@ def main():
         )
 
         # Validate required parameters for Host (includes IP validation)
-        validate_rescan_params(
-            ioc_type, ioc_value, protocol, transport_protocol
-        )
+        validate_rescan_params(ioc_type, ioc_value, protocol, transport_protocol)
 
         # Initialize API Manager
         censys_manager = APIManager(
@@ -129,9 +115,7 @@ def main():
             siemplify=siemplify,
         )
 
-        siemplify.LOGGER.info(
-            f"Initiating rescan for {ioc_type}: {ioc_value}:{port}"
-        )
+        siemplify.LOGGER.info(f"Initiating rescan for {ioc_type}: {ioc_value}:{port}")
 
         # Call Censys API
         response = censys_manager.initiate_rescan(
@@ -153,9 +137,7 @@ def main():
 
         # Build output message
         if tracked_scan_id:
-            output_message = (
-                f"Successfully initiated rescan. Scan ID: {tracked_scan_id}"
-            )
+            output_message = f"Successfully initiated rescan. Scan ID: {tracked_scan_id}"
             if create_time:
                 output_message += f", Created: {create_time}"
             if tasks:
@@ -175,9 +157,7 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            INITIATE_RESCAN_SCRIPT_NAME, str(e)
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(INITIATE_RESCAN_SCRIPT_NAME, str(e))
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

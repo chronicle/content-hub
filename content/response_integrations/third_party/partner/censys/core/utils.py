@@ -7,12 +7,8 @@ from typing import Any, List, Optional, Tuple, Union
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
-from .censys_exceptions import (
-    CensysException,
-    InternalServerError,
-    InvalidIntegerException,
-)
-from .constants import INTEGRATION_NAME, PING_ACTION_IDENTIFIER
+from .censys_exceptions import CensysException, InternalServerError, InvalidIntegerException
+from .constants import ENRICHMENT_PREFIX, INTEGRATION_NAME, PING_ACTION_IDENTIFIER
 
 
 def get_integration_params(siemplify: Any) -> Tuple[str, str, bool]:
@@ -93,13 +89,7 @@ def validate_integer_param(
             None
             if not default_value
             else validate_integer_param(
-                default_value,
-                param_name,
-                None,
-                zero_allowed,
-                allow_negative,
-                max_value,
-                min_value,
+                default_value, param_name, None, zero_allowed, allow_negative, max_value, min_value
             )
         )
 
@@ -109,21 +99,13 @@ def validate_integer_param(
         raise InvalidIntegerException(f"{param_name} must be an integer.")
 
     if int_value < 0 and not allow_negative:
-        raise InvalidIntegerException(
-            f"{param_name} must be a non-negative integer."
-        )
+        raise InvalidIntegerException(f"{param_name} must be a non-negative integer.")
     if int_value == 0 and not zero_allowed:
-        raise InvalidIntegerException(
-            f"{param_name} must be greater than zero."
-        )
+        raise InvalidIntegerException(f"{param_name} must be greater than zero.")
     if max_value is not None and int_value > max_value:
-        raise InvalidIntegerException(
-            f"{param_name} must be less than or equal to {max_value}."
-        )
+        raise InvalidIntegerException(f"{param_name} must be less than or equal to {max_value}.")
     if min_value is not None and int_value < min_value:
-        raise InvalidIntegerException(
-            f"{param_name} must be greater than or equal to {min_value}."
-        )
+        raise InvalidIntegerException(f"{param_name} must be greater than or equal to {min_value}.")
 
     return int_value
 
@@ -185,9 +167,7 @@ def filter_valid_ips(ip_list: List[str]) -> Tuple[List[str], List[str]]:
     return valid_ips, invalid_ips
 
 
-def validate_rfc3339_timestamp(
-    timestamp_str: str, param_name: str = "At Time"
-) -> str:
+def validate_rfc3339_timestamp(timestamp_str: str, param_name: str = "At Time") -> str:
     """
     Validates if a string is a valid RFC3339 datetime format.
 
@@ -238,9 +218,7 @@ def validate_rfc3339_timestamp(
         else:
             raise ValueError("Invalid timestamp_str format")
     except ValueError as e:
-        raise ValueError(
-            f"Invalid date/time values in timestamp_str '{timestamp_str}': {str(e)}"
-        )
+        raise ValueError(f"Invalid date/time values in timestamp_str '{timestamp_str}': {str(e)}")
 
     return timestamp_str
 
@@ -265,16 +243,12 @@ def validate_and_parse_ports(ports_string: str) -> List[int]:
         - "8080" -> [8080]
     """
     if not ports_string or not isinstance(ports_string, str):
-        raise ValueError(
-            "Port parameter must be a non-empty string. Example: 80,443"
-        )
+        raise ValueError("Port parameter must be a non-empty string. Example: 80,443")
 
     ports_string = ports_string.strip()
 
     if not ports_string:
-        raise ValueError(
-            "Port parameter must be a non-empty string. Example: 80,443"
-        )
+        raise ValueError("Port parameter must be a non-empty string. Example: 80,443")
 
     port_list = []
     port_strings = [p.strip() for p in ports_string.split(",")]
@@ -373,9 +347,7 @@ def validate_certificate_id(cert_id: str) -> bool:
     return True
 
 
-def filter_valid_certificate_ids(
-    cert_ids: List[str],
-) -> Tuple[List[str], List[str]]:
+def filter_valid_certificate_ids(cert_ids: List[str]) -> Tuple[List[str], List[str]]:
     """
     Filter and validate certificate IDs.
 
@@ -397,9 +369,7 @@ def filter_valid_certificate_ids(
     return valid_certs, invalid_certs
 
 
-def validate_web_property_entities(
-    entities: List, siemplify: Any
-) -> Tuple[List, List[str]]:
+def validate_web_property_entities(entities: List, siemplify: Any) -> Tuple[List, List[str]]:
     """
     Validate entities for web properties (IPs and domains).
 
@@ -424,9 +394,7 @@ def validate_web_property_entities(
                 ipaddress.ip_address(identifier)
                 is_valid = True
             except ValueError:
-                siemplify.LOGGER.info(
-                    f"Invalid IP address format: {identifier}"
-                )
+                siemplify.LOGGER.info(f"Invalid IP address format: {identifier}")
                 invalid_identifiers.append(identifier)
 
         elif entity_type == EntityTypes.DOMAIN:
@@ -436,9 +404,7 @@ def validate_web_property_entities(
                 siemplify.LOGGER.info(f"Invalid domain format: {identifier}")
                 invalid_identifiers.append(identifier)
         else:
-            siemplify.LOGGER.info(
-                f"Unsupported entity type {entity_type}: {identifier}"
-            )
+            siemplify.LOGGER.info(f"Unsupported entity type {entity_type}: {identifier}")
             invalid_identifiers.append(identifier)
 
         if is_valid:
@@ -458,9 +424,7 @@ def get_ip_entities(siemplify: Any) -> List:
         list: List of IP address entities
     """
     return [
-        entity
-        for entity in siemplify.target_entities
-        if entity.entity_type == EntityTypes.ADDRESS
+        entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.ADDRESS
     ]
 
 
@@ -492,9 +456,7 @@ def get_filehash_entities(siemplify: Any) -> List:
         list: List of FILEHASH entities
     """
     return [
-        entity
-        for entity in siemplify.target_entities
-        if entity.entity_type == EntityTypes.FILEHASH
+        entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.FILEHASH
     ]
 
 
@@ -513,7 +475,7 @@ def remove_ip_enrichment(entity) -> None:
     # IP keys: Censys_service_count, Censys_ports, etc.
     # Web keys: Censys_80_*, Censys_443_*, etc. (preserved)
     for key in entity.additional_properties.keys():
-        if key.startswith("Censys_"):
+        if key.startswith(ENRICHMENT_PREFIX):
             # Check if it's NOT a web property key (port-prefixed)
             parts = key.split("_", 2)
             if len(parts) >= 2 and parts[1].isdigit():
@@ -537,7 +499,7 @@ def remove_web_property_enrichment(entity, port: int) -> None:
 
     # Clear only web property keys for this specific port
     # Example: Censys_80_web_hostname, Censys_443_endpoint_type
-    port_prefix = f"Censys_{port}_"
+    port_prefix = f"{ENRICHMENT_PREFIX}{port}_"
     for key in entity.additional_properties.keys():
         if key.startswith(port_prefix):
             entity.additional_properties[key] = "-"
@@ -556,7 +518,7 @@ def remove_certificate_enrichment(entity) -> None:
 
     # Clear all Censys enrichment keys for certificates
     for key in entity.additional_properties.keys():
-        if key.startswith("Censys_"):
+        if key.startswith(ENRICHMENT_PREFIX):
             entity.additional_properties[key] = "-"
 
 
@@ -681,9 +643,7 @@ class HandleExceptions(object):
                                 err_loc = err.get("location", "")
                                 if err_msg:
                                     if err_loc:
-                                        error_messages.append(
-                                            f"{err_loc}: {err_msg}"
-                                        )
+                                        error_messages.append(f"{err_loc}: {err_msg}")
                                     else:
                                         error_messages.append(err_msg)
 
@@ -711,9 +671,7 @@ class HandleExceptions(object):
             tuple: A tuple containing the exception class and the formatted error message.
         """
         error_msg = "{error_msg}: {error} - {text}".format(
-            error_msg=self.error_msg,
-            error=self.error,
-            text=self.response.content,
+            error_msg=self.error_msg, error=self.error, text=self.response.content
         )
 
         return CensysException, error_msg

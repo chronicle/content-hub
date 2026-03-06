@@ -63,9 +63,7 @@ class PartialDataException(CensysException):
     This allows returning successfully fetched pages along with error information.
     """
 
-    def __init__(
-        self, message: str, collected_data: dict, error_details: dict
-    ) -> None:
+    def __init__(self, message: str, collected_data: dict, error_details: dict) -> None:
         """
         Initialize PartialDataException with collected data and error context.
 

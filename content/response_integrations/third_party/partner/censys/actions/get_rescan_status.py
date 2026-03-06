@@ -43,9 +43,7 @@ def main():
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = GET_RESCAN_STATUS_SCRIPT_NAME
-    siemplify.LOGGER.info(
-        "----------------- Main - Param Init -----------------"
-    )
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
     api_key, organization_id, verify_ssl = get_integration_params(siemplify)
@@ -88,17 +86,13 @@ def main():
         if "completed" not in result:
             # Scan is still in progress
             status = EXECUTION_STATE_INPROGRESS
-            output_message = (
-                f"Scan is still in progress. Scan ID: {tracked_scan_id}"
-            )
+            output_message = f"Scan is still in progress. Scan ID: {tracked_scan_id}"
             siemplify.LOGGER.info(output_message)
         else:
             if result.get("completed"):
                 # Scan is complete
                 status = EXECUTION_STATE_COMPLETED
-                output_message = (
-                    f"Scan completed successfully. Scan ID: {tracked_scan_id}"
-                )
+                output_message = f"Scan completed successfully. Scan ID: {tracked_scan_id}"
                 siemplify.LOGGER.info(output_message)
 
             else:
@@ -115,9 +109,7 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            GET_RESCAN_STATUS_SCRIPT_NAME, str(e)
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(GET_RESCAN_STATUS_SCRIPT_NAME, str(e))
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

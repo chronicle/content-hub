@@ -17,6 +17,7 @@ from ..core.censys_exceptions import (
 )
 from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
+    ENRICHMENT_PREFIX,
     ENRICH_IPS_SCRIPT_NAME,
     NO_ADDRESS_ENTITIES_ERROR,
     RESULT_VALUE_FALSE,
@@ -92,33 +93,25 @@ def _build_output_message(
     message_parts = []
 
     if successful:
-        message_parts.append(
-            f"Successfully enriched {len(successful)} IP(s) from Censys."
-        )
+        message_parts.append(f"Successfully enriched {len(successful)} IP(s) from Censys.")
 
     if invalid:
         entities_str = ", ".join(invalid[:5])
         if len(invalid) > 5:
             entities_str += f" and {len(invalid) - 5} more"
-        message_parts.append(
-            f"{len(invalid)} IP(s) skipped due to invalid format: {entities_str}"
-        )
+        message_parts.append(f"{len(invalid)} IP(s) skipped due to invalid format: {entities_str}")
 
     if not_found:
         entities_str = ", ".join(not_found[:5])
         if len(not_found) > 5:
             entities_str += f" and {len(not_found) - 5} more"
-        message_parts.append(
-            f"{len(not_found)} IP(s) not found in Censys: {entities_str}"
-        )
+        message_parts.append(f"{len(not_found)} IP(s) not found in Censys: {entities_str}")
 
     if failed:
         entities_str = ", ".join(failed[:5])
         if len(failed) > 5:
             entities_str += f" and {len(failed) - 5} more"
-        message_parts.append(
-            f"{len(failed)} IP(s) failed to process: {entities_str}"
-        )
+        message_parts.append(f"{len(failed)} IP(s) failed to process: {entities_str}")
 
     if not message_parts:
         return "No IPs were enriched. No matching data found in Censys."
@@ -143,9 +136,7 @@ def main():
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = ENRICH_IPS_SCRIPT_NAME
-    siemplify.LOGGER.info(
-        "================= Main - Param Init ================="
-    )
+    siemplify.LOGGER.info("================= Main - Param Init =================")
 
     # Configuration Parameters
     api_key, organization_id, verify_ssl = get_integration_params(siemplify)
@@ -190,14 +181,10 @@ def main():
             output_message = NO_ADDRESS_ENTITIES_ERROR
             siemplify.LOGGER.info(output_message)
             siemplify.result.add_result_json([])
-            siemplify.end(
-                output_message, RESULT_VALUE_TRUE, EXECUTION_STATE_COMPLETED
-            )
+            siemplify.end(output_message, RESULT_VALUE_TRUE, EXECUTION_STATE_COMPLETED)
             return
 
-        siemplify.LOGGER.info(
-            f"Found {len(ip_entities)} IP entities to process"
-        )
+        siemplify.LOGGER.info(f"Found {len(ip_entities)} IP entities to process")
 
         # Extract and validate IP addresses
         ip_addresses = [entity.identifier for entity in ip_entities]
@@ -207,11 +194,7 @@ def main():
         if invalid_ips:
             invalid_entities.extend(invalid_ips)
 
-            more_text = (
-                f" and {len(invalid_ips) - 5} more"
-                if len(invalid_ips) > 5
-                else ""
-            )
+            more_text = f" and {len(invalid_ips) - 5} more" if len(invalid_ips) > 5 else ""
             siemplify.LOGGER.info(
                 f"Found {len(invalid_ips)} invalid IP(s): {', '.join(invalid_ips[:5])}{more_text}"
             )
@@ -223,9 +206,7 @@ def main():
             )
             siemplify.LOGGER.error(output_message)
             siemplify.result.add_result_json([])
-            siemplify.end(
-                output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED
-            )
+            siemplify.end(output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED)
             return
 
         siemplify.LOGGER.info(f"Processing {len(valid_ips)} valid IP(s)")
@@ -239,9 +220,7 @@ def main():
         response = censys_manager.enrich_hosts(valid_ips, at_time)
         resources = _extract_resources_from_response(response)
 
-        siemplify.LOGGER.info(
-            f"Received {len(resources)} resource(s) from Censys API"
-        )
+        siemplify.LOGGER.info(f"Received {len(resources)} resource(s) from Censys API")
 
         # Create set for O(1) lookup performance
         invalid_set = set(invalid_entities)
@@ -258,14 +237,10 @@ def main():
 
             try:
                 # Find matching resource for this IP
-                entity_result = _find_entity_resource(
-                    resources, entity_identifier
-                )
+                entity_result = _find_entity_resource(resources, entity_identifier)
 
                 if not entity_result:
-                    siemplify.LOGGER.info(
-                        f"No data found for {entity_identifier}"
-                    )
+                    siemplify.LOGGER.info(f"No data found for {entity_identifier}")
                     not_found_entities.append(entity_identifier)
                     continue
 
@@ -274,38 +249,28 @@ def main():
                 enrichment_data = host_model.get_enrichment_data()
 
                 if not enrichment_data:
-                    siemplify.LOGGER.info(
-                        f"No enrichment data available for {entity_identifier}"
-                    )
+                    siemplify.LOGGER.info(f"No enrichment data available for {entity_identifier}")
                     not_found_entities.append(entity_identifier)
                     continue
 
                 # Remove old Censys IP enrichment data
                 remove_ip_enrichment(entity)
-                siemplify.LOGGER.info(
-                    f"Removed old IP enrichment data for {entity_identifier}"
-                )
+                siemplify.LOGGER.info(f"Removed old IP enrichment data for {entity_identifier}")
 
                 # Add timestamp and enrich entity
-                enrichment_data["Censys_last_enriched"] = (
-                    datetime.utcnow().isoformat() + "Z"
-                )
+                enrichment_data[f"{ENRICHMENT_PREFIX}last_enriched"] = datetime.utcnow().isoformat() + "Z"
 
                 entity.additional_properties.update(enrichment_data)
                 entity.is_enriched = True
 
                 # Store results
                 successful_entities.append(entity_identifier)
-                json_results.append(
-                    {
-                        "Entity": entity_identifier,
-                        "EntityResult": host_model.to_json(),
-                    }
-                )
+                json_results.append({
+                    "Entity": entity_identifier,
+                    "EntityResult": host_model.to_json(),
+                })
 
-                siemplify.LOGGER.info(
-                    f"Successfully enriched: {entity_identifier}"
-                )
+                siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
 
             except Exception as e:
                 error_message = f"Failed to process {entity_identifier}: {e}"
@@ -315,8 +280,7 @@ def main():
 
     except ValueError as e:
         output_message = (
-            f"Invalid parameter value: {str(e)}\n"
-            f"Please verify your input parameters and try again."
+            f"Invalid parameter value: {str(e)}\nPlease verify your input parameters and try again."
         )
         siemplify.LOGGER.error(output_message)
         status = EXECUTION_STATE_FAILED
@@ -325,11 +289,7 @@ def main():
     except ValidationException as e:
         error_detail = str(e)
         ip_list = ", ".join(ip_addresses[:10])
-        more_text = (
-            f" and {len(ip_addresses) - 10} more"
-            if len(ip_addresses) > 10
-            else ""
-        )
+        more_text = f" and {len(ip_addresses) - 10} more" if len(ip_addresses) > 10 else ""
 
         output_message = (
             f"Validation error occurred while processing "
@@ -344,9 +304,7 @@ def main():
         result_value = RESULT_VALUE_FALSE
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            ENRICH_IPS_SCRIPT_NAME, e
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_IPS_SCRIPT_NAME, e)
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -360,9 +318,7 @@ def main():
             failed_entities,
             invalid_entities,
         )
-        result_value = (
-            RESULT_VALUE_TRUE if successful_entities else RESULT_VALUE_FALSE
-        )
+        result_value = RESULT_VALUE_TRUE if successful_entities else RESULT_VALUE_FALSE
 
         # Update entities in Siemplify
         if successful_entities:
