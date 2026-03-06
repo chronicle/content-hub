@@ -16,6 +16,9 @@
 
 from __future__ import annotations
 
+import re
+import requests
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from TIPCommon.data_models import Container
@@ -51,6 +54,11 @@ class BaseSoarApi:
     ) -> requests.Response:
         url = f"{get_sdk_api_uri(self.chronicle_soar)}{endpoint}"
         self.chronicle_soar.LOGGER.info(f"Calling API endpoint: {method.value} {url}")
+        url = re.sub(
+            r'(https?://[^/]+)/(v1alpha/.*?)/download/(integrations/.*)',
+            r'\1/download/\2/\3',
+            url
+        )
         request_kwargs = {
             "params": params,
             "json": json_payload,
