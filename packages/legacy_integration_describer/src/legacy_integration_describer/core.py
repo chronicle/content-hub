@@ -9,7 +9,6 @@ from legacy_integration_describer.git_utils import checkout_integration_version
 from legacy_integration_describer.models import AppConfig, IntegrationRequest, IntegrationResult
 from legacy_integration_describer.mp_utils import parse_ai_metadata, run_mp_describe
 
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -58,7 +57,7 @@ def write_csv_output(
 
 
 def write_error_manifest(results_dir: Path, partner_name: str, errors: list[str]) -> None:
-    """Gracefully record missing parameters tracking historical version discrepancies visually."""
+    """Gracefully record missing params by tracking historical version discrepancies visually."""
     out_err = results_dir / f"{partner_name}_errors.txt"
     with out_err.open("w", encoding="utf-8") as f:
         if errors:
@@ -76,7 +75,7 @@ def process_csv(csv_path: Path, config: AppConfig) -> None:
     # Place all assets within the isolated output partner dir natively
     partner_dir = config.outputs_dir / partner_name
 
-    integrations_dir = partner_dir / "integrations"
+    integrations_dir = partner_dir / "Integrations"
     results_dir = partner_dir / "results"
     integrations_dir.mkdir(exist_ok=True, parents=True)
     results_dir.mkdir(exist_ok=True, parents=True)
@@ -99,8 +98,7 @@ def process_csv(csv_path: Path, config: AppConfig) -> None:
         if dest_dir.exists():
             subprocess.run(["rm", "-rf", str(dest_dir)], check=False)  # noqa: S603, S607
 
-        success = checkout_integration_version(request, dest_dir, config, errors)
-        if not success:
+        if not checkout_integration_version(request, dest_dir, config, errors):
             logger.warning("Skipping %s due to checkout failure.", request.identifier)
             continue
 
@@ -109,9 +107,10 @@ def process_csv(csv_path: Path, config: AppConfig) -> None:
             continue
 
         # Execute describing dynamically updating definition files securely
-        success = run_mp_describe(integration_dir, errors)
-        if not success:
-            logger.warning("Generation skipped for %s returning empty results", request.identifier)
+        if not run_mp_describe(integration_dir, errors):
+            logger.warning(
+                "Generation skipped for %s returning empty results", integration_dir.name
+            )
 
         results = parse_ai_metadata(integration_dir, errors)
         output_rows.extend(results)

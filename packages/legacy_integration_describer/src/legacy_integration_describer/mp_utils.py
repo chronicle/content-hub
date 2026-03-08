@@ -4,8 +4,9 @@ import asyncio
 import logging
 from pathlib import Path
 
+import mp.core.config
 import yaml
-from mp.describe.action.describe_all import describe_all_actions
+from mp.describe.action.describe import DescribeAction
 
 from legacy_integration_describer.models import IntegrationResult
 
@@ -24,14 +25,24 @@ def run_mp_describe(integration_dir: Path, errors: list[str]) -> bool:
     """Execute the mp framework regenerating the AI payloads internally via Gemini APIs.
 
     Returns:
-        bool: True if process executed naturally.
+        bool: True if the process is executed naturally.
 
     """
     logger.info("Running `mp describe` for %s...", integration_dir.name)
     purge_existing_definitions(integration_dir)
 
     try:
-        asyncio.run(describe_all_actions(src=integration_dir, override=True))
+        sem = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
+        src_path = integration_dir.parent.parent
+
+        asyncio.run(
+            DescribeAction(
+                integration=integration_dir.name,
+                actions=set(),
+                src=src_path,
+                override=True,
+            ).describe_actions(sem=sem)
+        )
     except Exception as e:
         logger.exception("Failed to run mp describe natively for %s", integration_dir.name)
         errors.append(f"{integration_dir.name}: `mp describe` failed: {e}")

@@ -3,18 +3,21 @@
 A CLI tool for parsing integration definitions from multiple local repositories, extracting historical Git versions natively, and generating cohesive AI metadata overviews into CSVs via `mp describe action`.
 
 ## Prerequisites
+
 - `uv` package manager installed
-- Python 3.11+ 
+- Python 3.11+
 - Local Google SecOps target repositories appropriately cloned or available
 
 ## Setup
+
 1. Clone this repository locally or initialize the local virtual environment via `uv`:
    ```sh
    uv sync
    ```
-2. The project relies on dynamic `mp` framework dependencies securely loaded via Github alongside robust native Pytest/Ruff static analyzers!
+2. The project relies on dynamic `mp` framework dependencies securely loaded via GitHub alongside robust native Pytest/Ruff static analyzers!
 
 ## Usage
+
 Simply run the application dynamically natively managed via `uv`:
 
 ```sh
