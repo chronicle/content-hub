@@ -23,7 +23,7 @@ Simply run the application dynamically natively managed via `uv`:
 ```sh
 uv run legacy-integration-describer \
     --tip-marketplace ~/repos/tip-marketplace \
-    --content-hub ~/PycharmProjects/content-hub \
+    --content-hub ~/repos/content-hub \
     --tip-marketplace-uncertified ~/repos/tip-marketplace-uncertified \
     --source ./inputs \
     --destination ./outputs
