@@ -43,7 +43,7 @@ def execute(  # noqa: PLR0913
     """
     setup_logger(verbose=verbose, quiet=quiet)
 
-    current_dir = Path(__file__).parent.parent
+    current_dir = Path(__file__).parent.parent.parent
     inputs_dir = Path(source).expanduser() if source else current_dir / "inputs"
     outputs_dir = Path(destination).expanduser() if destination else current_dir / "outputs"
 
