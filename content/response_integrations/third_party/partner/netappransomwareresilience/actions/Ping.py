@@ -3,22 +3,30 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from ..core.ApiManager import ApiManager
+from ..core.rrs_exceptions import RrsException
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-
     siemplify.LOGGER.info("----------------- RRS - Test connection: Init -----------------")
-    rrsManager = ApiManager(siemplify)
-    siemplify.LOGGER.info("----------------- RRS - Test connection: Started -----------------")
 
     try:
+        rrsManager = ApiManager(siemplify)
+        siemplify.LOGGER.info("----------------- RRS - Test connection: Started -----------------")
+        
         is_token_valid = rrsManager.is_token_valid()
         siemplify.LOGGER.info(f"Ping: {is_token_valid=}")
 
         status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
         output_message = "Successfully connected to Ransomware Resilience server!"  # human readable message, showed in UI as the action result
         result_value = True  # Set a simple result value, used for playbook if\else and placeholders.
+
+    except RrsException as e:
+        output_message = str(e)
+        siemplify.LOGGER.error(f"Ping: RRS error - {e}")
+        siemplify.LOGGER.exception(e)
+        status = EXECUTION_STATE_FAILED
+        result_value = False
 
     except Exception as e:
         output_message = f"Failed to connect to the Ransomware Resilience server! {e}"
