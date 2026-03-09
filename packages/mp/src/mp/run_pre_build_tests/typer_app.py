@@ -247,6 +247,9 @@ def _run_tests_for_single_integration(
 
 
 def _print_report_summary(pytest_json_report_path: Path, integration_name: str) -> None:
+    if not pytest_json_report_path.exists():
+        return
+
     report_data: dict = json.loads(pytest_json_report_path.read_text(encoding="utf-8"))
     summary: dict[str, int] = report_data["summary"]
     passed_test: int = summary["passed"]
