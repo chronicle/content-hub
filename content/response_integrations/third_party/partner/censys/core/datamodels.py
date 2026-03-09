@@ -346,24 +346,6 @@ class HostDatamodel(BaseModel):
         scan_times = [s.get("scan_time") for s in services if s.get("scan_time")]
         return max(scan_times) if scan_times else None
 
-    # def to_csv(self) -> List[Dict[str, Any]]:
-    #     """
-    #     Convert host data to CSV format.
-
-    #     Returns:
-    #         List with single dict containing key host fields
-    #     """
-    #     if not self.is_found():
-    #         return []
-
-    #     return [{
-    #         "IP": self.host_data.get("ip"),
-    #         "Service Count": self.host_data.get("service_count"),
-    #         "ASN": self.host_data.get("autonomous_system", {}).get("asn"),
-    #         "ASN Name": self.host_data.get("autonomous_system", {}).get("name"),
-    #         "Country": self.host_data.get("location", {}).get("country"),
-    #         "City": self.host_data.get("location", {}).get("city"),
-    #     }]
 
 
 class WebPropertyDatamodel(BaseModel):
