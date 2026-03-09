@@ -251,10 +251,10 @@ def _print_report_summary(pytest_json_report_path: Path, integration_name: str) 
         return
 
     report_data: dict = json.loads(pytest_json_report_path.read_text(encoding="utf-8"))
-    summary: dict[str, int] = report_data["summary"]
-    passed_test: int = summary["passed"]
-    ran_tests: int = summary["total"]
-    collected_test: int = summary["collected"]
+    summary: dict[str, int] = report_data.get("summary", {})
+    passed_test: int = summary.get("passed", 0)
+    ran_tests: int = summary.get("total", 0)
+    collected_test: int = summary.get("collected", 0)
 
     rich.print(
         f"[yellow]Ran {ran_tests} / {collected_test} Tests, while {passed_test} passed "
