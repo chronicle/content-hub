@@ -4,9 +4,11 @@ OAuth adapter and manager for NetApp RRS integration.
 This module implements TIPCommon OAuth components for secure token management
 with automatic refresh and encrypted storage.
 """
+
 from __future__ import annotations
 
 from typing import Any
+
 import requests
 from TIPCommon.oauth import (
     AuthenticationError,
@@ -101,7 +103,7 @@ class RRSOAuthAdapter(OAuthAdapter):
             "client_id": self.client_id,
             "client_secret": self.client_secret,
             "audience": OAUTH_CONFIG["AUDIENCE"],
-            "grant_type": OAUTH_CONFIG["GRANT_TYPE"]
+            "grant_type": OAUTH_CONFIG["GRANT_TYPE"],
         }
 
         response = requests.post(
@@ -109,13 +111,13 @@ class RRSOAuthAdapter(OAuthAdapter):
             data=payload,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             verify=self.verify_ssl,
-            timeout=30
+            timeout=30,
         )
 
         response.raise_for_status()
         response_data = response.json()
         access_token = response_data.get("access_token")
-        
+
         if not access_token:
             raise Exception("Failed to retrieve access token from response")
 
@@ -137,9 +139,7 @@ class RRSOAuthAdapter(OAuthAdapter):
             AuthenticationError: If the response status code is 401 (Unauthorized)
         """
         if response.status_code == 401:
-            raise AuthenticationError(
-                f"Bad credentials detected (HTTP 401): {response.text}"
-            )
+            raise AuthenticationError(f"Bad credentials detected (HTTP 401): {response.text}")
 
     def prepare_authorized_client(
         self,

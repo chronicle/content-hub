@@ -1,4 +1,5 @@
 """Custom exceptions for NetApp Ransomware Resilience integration."""
+
 from __future__ import annotations
 
 

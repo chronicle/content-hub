@@ -1,10 +1,13 @@
 """Utility functions for the NetApp Ransomware Resilience integration."""
+
 from __future__ import annotations
 
 import hashlib
 from typing import Any, Dict
 from urllib.parse import urlparse
+
 from TIPCommon.smp_time import unix_now
+
 from .constants import DEFAULT_EXPIRY_SECONDS, EXPIRES_IN_KEY
 
 
@@ -64,13 +67,10 @@ def extract_domain_from_uri(service_url: str) -> str:
     domain = parsed_uri.netloc
 
     if not domain:
-        raise ValueError(
-            f"Could not extract NetApp Account domain from service_url: {service_url}"
-        )
+        raise ValueError(f"Could not extract NetApp Account domain from service_url: {service_url}")
 
     return domain
 
 
 def build_rrs_url(url: str, account_id: str, endpoint: str) -> str:
     return f"{url}/{account_id}/{endpoint}"
-

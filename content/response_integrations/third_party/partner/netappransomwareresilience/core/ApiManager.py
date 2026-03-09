@@ -1,14 +1,23 @@
 from __future__ import annotations
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from .constants import ENDPOINT_ENRICH_IP, ENDPOINT_ENRICH_STORAGE, ENDPOINT_JOB_STATUS, ENDPOINT_TAKE_SNAPSHOT, ENDPOINT_VOLUME_OFFLINE, RRS_SERVICE_URL
-from .auth_manager import RRSOAuthAdapter, RRSOAuthManager
-from .utils import generate_encryption_key, extract_domain_from_uri, build_rrs_url
-from TIPCommon.oauth import CredStorage
+
 import requests
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from TIPCommon.oauth import CredStorage
+
+from .auth_manager import RRSOAuthAdapter, RRSOAuthManager
+from .constants import (
+    ENDPOINT_ENRICH_IP,
+    ENDPOINT_ENRICH_STORAGE,
+    ENDPOINT_JOB_STATUS,
+    ENDPOINT_TAKE_SNAPSHOT,
+    ENDPOINT_VOLUME_OFFLINE,
+    RRS_SERVICE_URL,
+)
+from .utils import build_rrs_url, extract_domain_from_uri, generate_encryption_key
 
 
 class ApiManager:
-   def __init__(self, siemplify: SiemplifyAction):
+    def __init__(self, siemplify: SiemplifyAction):
         """Initialize the APIManager with OAuth token management.
 
         OAuth Token Flow:
@@ -21,57 +30,64 @@ class ApiManager:
         """
         self.siemplify = siemplify
         self.session = requests.Session()
-        
+
         # Get credentials from Integration config
-        self.CLIENT_ID = self.siemplify.extract_configuration_param('Integration', "Client ID")
-        self.CLIENT_SECRET = self.siemplify.extract_configuration_param('Integration', "Client Secret")
-        self.ACCOUNT_ID = self.siemplify.extract_configuration_param('Integration', "Account ID")
-        self.SSL_VERIFY = self.siemplify.extract_configuration_param('Integration', "Verify SSL") == "True"
+        self.CLIENT_ID = self.siemplify.extract_configuration_param("Integration", "Client ID")
+        self.CLIENT_SECRET = self.siemplify.extract_configuration_param(
+            "Integration", "Client Secret"
+        )
+        self.ACCOUNT_ID = self.siemplify.extract_configuration_param("Integration", "Account ID")
+        self.SSL_VERIFY = (
+            self.siemplify.extract_configuration_param("Integration", "Verify SSL") == "True"
+        )
 
         self.ENDPOINT_URL = RRS_SERVICE_URL
         self.DOMAIN = extract_domain_from_uri(self.ENDPOINT_URL)
 
-        self.siemplify.LOGGER.info(f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}")
-    
+        self.siemplify.LOGGER.info(
+            f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}"
+        )
+
         self.token = ""
-        
+
         # Setup OAuth components
         self.oauth_adapter = RRSOAuthAdapter(
             client_id=self.CLIENT_ID,
             client_secret=self.CLIENT_SECRET,
             verify_ssl=self.SSL_VERIFY,
         )
-        
+
         self.cred_storage = CredStorage(
             encryption_password=generate_encryption_key(self.CLIENT_ID, self.DOMAIN),
             chronicle_soar=self.siemplify,
         )
-        
+
         self.oauth_manager = RRSOAuthManager(
             oauth_adapter=self.oauth_adapter,
             cred_storage=self.cred_storage,
         )
-        
+
         # Check if token is expired and get/generate token
         self.is_token_expired = self.oauth_manager._token_is_expired()
         if self.is_token_expired:
             self.siemplify.LOGGER.info("ApiManager: Access token is expired or not found")
-        
+
         self.token = self.oauth_manager._token.access_token if self.oauth_manager._token else ""
-        
+
         if not self.token or self.is_token_expired:
-            self.siemplify.LOGGER.info(f"ApiManager: generate new token...")
+            self.siemplify.LOGGER.info("ApiManager: generate new token...")
             self.generate_token()
         else:
-            self.siemplify.LOGGER.info(f"ApiManager: Valid access token found in CredStorage.")
-        
+            self.siemplify.LOGGER.info("ApiManager: Valid access token found in CredStorage.")
+
         # Setting HTTP session headers
-        self.siemplify.LOGGER.info(f"ApiManager: Setting HTTP session headers")
-        self.session.headers.update({"Content-Type": "application/json", "Authorization": f"Bearer {self.token}"})
+        self.siemplify.LOGGER.info("ApiManager: Setting HTTP session headers")
+        self.session.headers.update({
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.token}",
+        })
 
-
-
-   def generate_token(self) -> str:
+    def generate_token(self) -> str:
         """Generate and save a new access token.
 
         This method refreshes the access token using the credentials,
@@ -84,23 +100,24 @@ class ApiManager:
             Exception: If token generation fails (propagated from RRSOAuthAdapter.refresh_token).
         """
         self.siemplify.LOGGER.info("Generating new token")
-        
+
         token = self.oauth_adapter.refresh_token()
         self.oauth_manager._token = token  # Update manager's token reference
         self.oauth_manager.save_token()
         self.token = token.access_token
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
-        
-        self.siemplify.LOGGER.info("ApiManager.generate_token - Token generated and saved successfully")
-        
+
+        self.siemplify.LOGGER.info(
+            "ApiManager.generate_token - Token generated and saved successfully"
+        )
+
         return self.token
 
-   def is_token_valid(self):
+    def is_token_valid(self):
         """Returns boolean indicating token expiry status"""
         return not self.oauth_manager._token_is_expired()
 
-
-   def enrich_ip(self, ip_address: str) -> list[dict]:
+    def enrich_ip(self, ip_address: str) -> list[dict]:
         """Enrich an IP address with threat intelligence data.
 
         Args:
@@ -117,9 +134,7 @@ class ApiManager:
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_ENRICH_IP)
 
-        request_payload = {
-            "ip_address": ip_address
-        }
+        request_payload = {"ip_address": ip_address}
 
         self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: POST URL={url}")
 
@@ -131,13 +146,13 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: API call successful. Status: {response.status_code}")
+        self.siemplify.LOGGER.info(
+            f"ApiManager.enrich_ip: API call successful. Status: {response.status_code}"
+        )
 
         return response_data
 
-
-
-   def enrich_storage(self) -> list[dict]:
+    def enrich_storage(self) -> list[dict]:
         """
         Enrich storage information.
 
@@ -156,17 +171,16 @@ class ApiManager:
         # Extract parameters from action
         agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
         system_id = self.siemplify.extract_action_param("System ID", print_value=True)
-        
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: Enriching storage for given agent_id and system_id")
+
+        self.siemplify.LOGGER.info(
+            "ApiManager.enrich_storage: Enriching storage for given agent_id and system_id"
+        )
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_ENRICH_STORAGE)
 
         # Build query parameters
-        params = {
-            "agent_id": agent_id,
-            "system_id": system_id
-        }
+        params = {"agent_id": agent_id, "system_id": system_id}
 
         self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: GET URL={url}")
 
@@ -178,12 +192,13 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: API call successful. Status: {response.status_code}")
+        self.siemplify.LOGGER.info(
+            f"ApiManager.enrich_storage: API call successful. Status: {response.status_code}"
+        )
 
         return response_data
 
-
-   def check_job_status(self) -> dict:
+    def check_job_status(self) -> dict:
         """
         Check the status of a job.
 
@@ -204,18 +219,16 @@ class ApiManager:
         source = self.siemplify.extract_action_param("Source", print_value=True)
         agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
         job_id = self.siemplify.extract_action_param("Job ID", print_value=True)
-        
-        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: Checking job status for job_id: {job_id}")
+
+        self.siemplify.LOGGER.info(
+            f"ApiManager.check_job_status: Checking job status for job_id: {job_id}"
+        )
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_JOB_STATUS)
 
         # Build query parameters
-        params = {
-            "source": source,
-            "agent_id": agent_id,
-            "job_id": job_id
-        }
+        params = {"source": source, "agent_id": agent_id, "job_id": job_id}
 
         self.siemplify.LOGGER.info(f"ApiManager.check_job_status: GET URL={url}")
 
@@ -227,12 +240,13 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: API call successful. Status: {response.status_code}")
+        self.siemplify.LOGGER.info(
+            f"ApiManager.check_job_status: API call successful. Status: {response.status_code}"
+        )
 
         return response_data
 
-
-   def take_snapshot(self) -> dict:
+    def take_snapshot(self) -> dict:
         """
         Take a snapshot of a volume.
 
@@ -255,18 +269,16 @@ class ApiManager:
         volume_id = self.siemplify.extract_action_param("Volume ID", print_value=True)
         agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
         system_id = self.siemplify.extract_action_param("System ID", print_value=True)
-        
-        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}")
+
+        self.siemplify.LOGGER.info(
+            f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}"
+        )
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_TAKE_SNAPSHOT)
 
         # Build request payload
-        request_payload = {
-            "volume_id": volume_id,
-            "agent_id": agent_id,
-            "system_id": system_id
-        }
+        request_payload = {"volume_id": volume_id, "agent_id": agent_id, "system_id": system_id}
 
         self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: POST URL={url}")
 
@@ -278,12 +290,13 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: API call successful. Status: {response.status_code}")
+        self.siemplify.LOGGER.info(
+            f"ApiManager.take_snapshot: API call successful. Status: {response.status_code}"
+        )
 
         return response_data
 
-
-   def volume_offline(self) -> dict:
+    def volume_offline(self) -> dict:
         """
         Take a volume offline.
 
@@ -306,18 +319,16 @@ class ApiManager:
         volume_id = self.siemplify.extract_action_param("Volume ID", print_value=True)
         agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
         system_id = self.siemplify.extract_action_param("System ID", print_value=True)
-        
-        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}")
+
+        self.siemplify.LOGGER.info(
+            f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}"
+        )
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_VOLUME_OFFLINE)
 
         # Build request payload
-        request_payload = {
-            "volume_id": volume_id,
-            "agent_id": agent_id,
-            "system_id": system_id
-        }
+        request_payload = {"volume_id": volume_id, "agent_id": agent_id, "system_id": system_id}
 
         self.siemplify.LOGGER.info(f"ApiManager.volume_offline: POST URL={url}")
 
@@ -329,6 +340,8 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: API call successful. Status: {response.status_code}")
+        self.siemplify.LOGGER.info(
+            f"ApiManager.volume_offline: API call successful. Status: {response.status_code}"
+        )
 
         return response_data
