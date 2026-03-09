@@ -34,6 +34,7 @@ from .data_models import (
 from ..utils import nativemethod, is_native
 from ...consts import (
     COMMENTS_MODIFICATION_TIME_FILTER,
+    DECREMENT_CASE_UPDATED_TIME_BY_MS,
     INCREMENT_CASE_UPDATED_TIME_BY_MS,
     JOB_SYNC_LIMIT,
     UNIX_FORMAT,
@@ -78,7 +79,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         self.last_run_time: int = 0
         self.current_run_latest_timestamp_ms: int = 0
         self.job_cases_to_sync: list[JobCase] = []
-        self.failed_cases: list[JobCase] = []
+        self.skipped_cases: list[JobCase] = []
         self._secops_user_list: list[dict] = []
         self.job_completed_successfully: bool = False
         self._cached_unix_now: int = 0
@@ -187,6 +188,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                             f" Skipping case {case_id} with {alert_count} "
                             "alerts for next run."
                         )
+                        self.skipped_cases.append((case_id, modification_time))
                         break
                 case_details.alerts = list(reversed(case_details.alerts))
                 total_alerts_accumulated += alert_count
@@ -204,7 +206,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     f"Could not retrieve details for new case {case_id}. "
                     f"Skipping. Error: {e}"
                 )
-                self.failed_cases.append((case_id, modification_time))
         self.sorted_modified_ids = final_prepared_ids
         return final_prepared_cases
 
@@ -516,7 +517,14 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """Perform final steps before the job script ends"""
         self._write_ids(self.processed_items)
         if self.job_completed_successfully and len(self.sorted_modified_ids) > 0:
-            self.current_run_latest_timestamp_ms = self.sorted_modified_ids[-1][1]
+            if self.skipped_cases:
+                self.current_run_latest_timestamp_ms = min(
+                    [mod_time for _, mod_time in self.skipped_cases]
+                )
+            else:
+                self.current_run_latest_timestamp_ms = self.sorted_modified_ids[-1][1]
+
+            self.current_run_latest_timestamp_ms -= DECREMENT_CASE_UPDATED_TIME_BY_MS
         latest_time = self.current_run_latest_timestamp_ms
         self._save_timestamp_by_unique_id(new_timestamp=latest_time)
         self.logger.info(
