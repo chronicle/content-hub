@@ -24,7 +24,6 @@ from .constants import (
     ENRICH_IPS_ACTION_IDENTIFIER,
     ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER,
     GET_HOST_HISTORY_ACTION_IDENTIFIER,
-    GET_RELATED_INFRASTRUCTURE_SEARCH_QUERY_IDENTIFIER,
     GET_RESCAN_STATUS_ACTION_IDENTIFIER,
     INITIATE_RESCAN_ACTION_IDENTIFIER,
     INTEGRATION_VERSION,
@@ -37,7 +36,6 @@ from .constants import (
     PING_ACTION_IDENTIFIER,
     RATE_LIMIT_EXCEEDED_STATUS_CODE,
     RETRY_COUNT,
-    SEARCH_PAGE_SIZE,
     UNAUTHORIZED_STATUS_CODE,
     VALIDATION_ERROR_STATUS_CODES,
     WAIT_TIME_FOR_RETRY,
@@ -500,9 +498,9 @@ class APIManager:
                 # Check if payload size limit reached
                 if current_payload_size >= MAX_PAYLOAD_SIZE_BYTES:
                     truncation_reason = "payload_limit"
-                    self.siemplify.LOGGER.warning(
-                        f"Payload size limit reached ({current_payload_size / (1024 * 1024):.2f} MB). "
-                        f"Stopping pagination."
+                    self.siemplify.LOGGER.info(
+                        f"Payload size limit reached ({current_payload_size / (1024 * 1024):.2f}"
+                        " MB). Stopping pagination."
                     )
                     break
 
@@ -624,7 +622,7 @@ class APIManager:
     #         # Check if current payload size has reached the threshold
     #         if current_payload_size >= MAX_PAYLOAD_SIZE_BYTES:
     #             self.siemplify.LOGGER.info(
-    #                 f"Payload size limit reached ({current_payload_size / (1024 * 1024):.2f} MB). "
+    #                 f"Payload size limit reached ({current_payload_size / (1024 * 1024):.2f} MB)."
     #                 f"Stopping pagination."
     #             )
     #             break

@@ -17,8 +17,8 @@ from ..core.censys_exceptions import (
 )
 from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
-    ENRICHMENT_PREFIX,
     ENRICH_IPS_SCRIPT_NAME,
+    ENRICHMENT_PREFIX,
     NO_ADDRESS_ENTITIES_ERROR,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
@@ -258,7 +258,9 @@ def main():
                 siemplify.LOGGER.info(f"Removed old IP enrichment data for {entity_identifier}")
 
                 # Add timestamp and enrich entity
-                enrichment_data[f"{ENRICHMENT_PREFIX}last_enriched"] = datetime.utcnow().isoformat() + "Z"
+                enrichment_data[f"{ENRICHMENT_PREFIX}last_enriched"] = (
+                    datetime.utcnow().isoformat() + "Z"
+                )
 
                 entity.additional_properties.update(enrichment_data)
                 entity.is_enriched = True

@@ -282,7 +282,9 @@ class HostDatamodel(BaseModel):
                 dns_data.get("reverse_dns", {}).get("names", [])
             ),
             f"{ENRICHMENT_PREFIX}network_name": whois.get("network", {}).get("name"),
-            f"{ENRICHMENT_PREFIX}network_cidrs": self._get_top_values(whois.get("network", {}).get("cidrs", [])),
+            f"{ENRICHMENT_PREFIX}network_cidrs": self._get_top_values(
+                whois.get("network", {}).get("cidrs", [])
+            ),
             f"{ENRICHMENT_PREFIX}asn_name": asn.get("name"),
             f"{ENRICHMENT_PREFIX}asn_id": asn.get("asn"),
             f"{ENRICHMENT_PREFIX}location_city": location.get("city"),
@@ -345,7 +347,6 @@ class HostDatamodel(BaseModel):
         """
         scan_times = [s.get("scan_time") for s in services if s.get("scan_time")]
         return max(scan_times) if scan_times else None
-
 
 
 class WebPropertyDatamodel(BaseModel):
@@ -543,7 +544,9 @@ class CertificateDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX_CERT}sha256": self.cert_data.get("fingerprint_sha256"),
             f"{ENRICHMENT_PREFIX_CERT}subject_dn": parsed.get("subject_dn"),
             f"{ENRICHMENT_PREFIX_CERT}issuer_dn": parsed.get("issuer_dn"),
-            f"{ENRICHMENT_PREFIX_CERT}common_name": self._get_first_value(subject.get("common_name", [])),
+            f"{ENRICHMENT_PREFIX_CERT}common_name": self._get_first_value(
+                subject.get("common_name", [])
+            ),
             f"{ENRICHMENT_PREFIX_CERT}not_before": validity.get("not_before"),
             f"{ENRICHMENT_PREFIX_CERT}not_after": validity.get("not_after"),
             f"{ENRICHMENT_PREFIX_CERT}is_self_signed": signature.get("self_signed"),
