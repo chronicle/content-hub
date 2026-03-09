@@ -21,10 +21,10 @@ ENDPOINTS = {
     "snooze_alert": "/api/alerts/{alert_id}/snooze",
     "update_alert_status": "/api/alerts/{alert_id}/status/{status}",
     "add_alert_comment": "/api/alerts/{alert_id}/comment",
-    "get_frameworks": "/api/compliance/frameworks/overview",
+    "get_frameworks": "/api/serving-layer/compliance/frameworks/overview",
     "start_scan": "/api/scan/asset/{asset_id}",
     "get_scan_status": "/api/scan/status/{scan_id}",
-    "vulnerability_details": "/api/query/cves",
+    "vulnerability_details": SERVING_QUERY,
     "asset_details": SERVING_QUERY,
 }
 
@@ -43,17 +43,20 @@ BLACKLIST_FILTER = 2
 KEY_PREFIX = "Orca_Security"
 FALLBACK_ALERT_NAME = "Orca Security Alert"
 POSSIBLE_SEVERITIES = [
-    "compromised",
-    "imminent compromise",
-    "hazardous",
-    "informational",
+    "critical",
+    "high",
+    "medium",
+    "low",
+    "unknown",
 ]
 SEVERITY_MAPPING = {
-    "compromised": 100,
-    "imminent compromise": 80,
-    "hazardous": 60,
-    "informational": -1,
+    "critical": 100,
+    "high": 80,
+    "medium": 60,
+    "low": -1,
+    "unknown": -1,
 }
+
 HIGHEST_POSSIBLE_SCORE = 10.0
 
 
@@ -85,8 +88,9 @@ OUTPUT_TYPE_JSON = "JSON"
 VULNERABILITIES_TABLE_NAME = "Vulnerability Details"
 ASSETS_TABLE_NAME = "Asset Details"
 SEVERITY_COLOR_MAPPER = {
-    "compromised": "style='color: #ff0000;'",
-    "imminent compromise": "style='color: #ff9900;'",
-    "hazardous": "style='color: #ffff00;'",
-    "informational": "",
+    "critical": "style='color: #ff0000;'",
+    "high": "style='color: #ff9900;'",
+    "medium": "style='color: #ffff00;'",
+    "low": "",
+    "unknown": "",
 }
