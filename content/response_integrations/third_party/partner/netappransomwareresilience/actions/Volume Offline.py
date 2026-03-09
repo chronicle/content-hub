@@ -12,7 +12,12 @@ from ..core.rrs_exceptions import RrsException
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Take a storage volume offline via the Ransomware Resilience Service.
+
+    Calls the RRS API to take the target volume offline and reports the result
+    back to the SOAR platform.
+    """
     siemplify = SiemplifyAction()
     siemplify.LOGGER.info("----------------- RRS - Volume Offline: Init -----------------")
 

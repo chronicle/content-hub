@@ -12,7 +12,12 @@ from ..core.rrs_exceptions import RrsException
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Trigger a snapshot creation via the Ransomware Resilience Service.
+
+    Calls the RRS API to initiate a new snapshot and reports the result back
+    to the SOAR platform.
+    """
     siemplify = SiemplifyAction()
     siemplify.LOGGER.info("----------------- RRS - Take Snapshot: Init -----------------")
 

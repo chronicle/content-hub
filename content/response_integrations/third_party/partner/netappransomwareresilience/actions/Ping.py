@@ -9,7 +9,12 @@ from ..core.rrs_exceptions import RrsException
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Test connectivity to the Ransomware Resilience Service.
+
+    Validates the authentication token against the RRS API to verify that the
+    integration is properly configured and the server is reachable.
+    """
     siemplify = SiemplifyAction()
     siemplify.LOGGER.info("----------------- RRS - Test connection: Init -----------------")
 

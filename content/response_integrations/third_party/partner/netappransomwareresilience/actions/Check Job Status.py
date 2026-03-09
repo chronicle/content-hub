@@ -9,7 +9,12 @@ from ..core.rrs_exceptions import RrsException
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Check the status of a previously triggered RRS job.
+
+    Queries the Ransomware Resilience Service API for the current status of a
+    job and reports the result back to the SOAR platform.
+    """
     siemplify = SiemplifyAction()
     siemplify.LOGGER.info("----------------- RRS - Check Job Status: Init -----------------")
 

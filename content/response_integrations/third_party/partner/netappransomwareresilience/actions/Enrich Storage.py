@@ -12,7 +12,12 @@ from ..core.rrs_exceptions import RrsException
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Enrich storage information using the Ransomware Resilience Service.
+
+    Queries the RRS API for storage enrichment data and attaches the results
+    to the SOAR action output.
+    """
     siemplify = SiemplifyAction()
     siemplify.LOGGER.info("----------------- RRS - Enrich Storage: Init -----------------")
 

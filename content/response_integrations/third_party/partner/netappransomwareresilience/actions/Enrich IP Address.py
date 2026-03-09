@@ -12,7 +12,12 @@ from ..core.rrs_exceptions import RrsException
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Enrich an IP address with Ransomware Resilience Service data.
+
+    Extracts the target IP address from the action parameters, queries the RRS
+    API for enrichment data, and attaches the results to the SOAR action output.
+    """
     siemplify = SiemplifyAction()
     siemplify.LOGGER.info("----------------- RRS - Enrich IP: Init -----------------")
 
