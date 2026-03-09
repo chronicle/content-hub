@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from integration_testing.platform.script_output import MockActionOutput
+from integration_testing.set_meta import set_metadata
+
+from cyware_intel_exchange.actions import add_note_to_iocs
+from cyware_intel_exchange.tests.common import CONFIG_PATH, MOCK_ADD_NOTE, MOCK_BULK_LOOKUP
+from cyware_intel_exchange.tests.core.product import CywareIntelExchange
+from cyware_intel_exchange.tests.core.session import CywareSession
+
+DEFAULT_PARAMETERS = {
+    "Note Type": "threatdata",
+    "Note": "Test note from integration tests",
+    "Is the Note in Json format": "false",
+}
+
+DEFAULT_ENTITIES = [
+    {"identifier": "malicious.com", "entity_type": "HOSTNAME", "additional_properties": {}},
+    {"identifier": "evil.com", "entity_type": "HOSTNAME", "additional_properties": {}},
+]
+
+
+class TestAddNoteToIOCs:
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters=DEFAULT_PARAMETERS,
+        entities=DEFAULT_ENTITIES,
+    )
+    def test_add_note_to_iocs_success(
+        self,
+        script_session: CywareSession,
+        action_output: MockActionOutput,
+        cyware: CywareIntelExchange,
+    ) -> None:
+        cyware.bulk_lookup_response = MOCK_BULK_LOOKUP
+        cyware.add_note_response = MOCK_ADD_NOTE
+        success_output_msg_prefix = "Successfully added notes"
+
+        add_note_to_iocs.main()
+
+        assert len(script_session.request_history) >= 1
+        assert success_output_msg_prefix in action_output.results.output_message
+        assert action_output.results.result_value is True
+        assert action_output.results.execution_state.value == 0
