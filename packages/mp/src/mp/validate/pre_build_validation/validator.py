@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import rich
+
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ContentType, ValidationResults, ValidationTypes, Validator
 from mp.validate.pre_build_validation.integrations import get_integration_pre_build_validations
@@ -36,17 +38,30 @@ class PreBuildValidations:
     def run_pre_build_validation(self) -> None:
         """Run all the pre-build validations."""
         validations: list[Validator] = _get_content_validations(self.content_type)
-
+        rich.print(
+            f"[blue]Running pre-build Validations for {self.validation_path.name} "
+            "Integration[/blue]"
+        )
+        count: int = 0
         for validator in validations:
             try:
                 validator.run(self.validation_path)
-
+                count += 1
             except NonFatalValidationError as e:
                 self._handle_non_fatal_error(validator.name, str(e))
 
             except FatalValidationError as e:
                 self._handle_fatal_error(validator.name, str(e))
+                rich.print(
+                    f"[yellow]Validations for {self.validation_path.name} integration stopped in "
+                    "the middle because Fatal validation failed[/yellow]"
+                )
                 return
+
+        rich.print(
+            f"[yellow]Ran {count}/{len(validations)} pre-build validations for "
+            f"{self.validation_path.name} integration[/yellow]."
+        )
 
     def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:
         self.results.validation_report.add_fatal_validation(validation_name, error_msg)

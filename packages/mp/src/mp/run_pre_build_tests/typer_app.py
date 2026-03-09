@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import multiprocessing
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Annotated
 
+import rich
 import typer
 
 import mp.core.config
@@ -230,14 +232,31 @@ def _run_tests_for_single_integration(
     script_path: Path,
     integration_path: Path,
 ) -> IntegrationTestResults | None:
+
+    rich.print(f"[blue]Running Tests for {integration_path.name} integration[/blue]")
     status_code: int = mp.core.unix.run_script_on_paths(script_path, integration_path)
 
     json_report_path = integration_path / ".report.json"
+    _print_report_summary(json_report_path, integration_path.name)
+
     if status_code in SUCCESS_STATUS_CODES:
         json_report_path.unlink(missing_ok=True)
         return None
 
     return process_pytest_json_report(integration_path.name, json_report_path)
+
+
+def _print_report_summary(pytest_json_report_path: Path, integration_name: str) -> None:
+    report_data: dict = json.loads(pytest_json_report_path.read_text(encoding="utf-8"))
+    summary: dict[str, int] = report_data["summary"]
+    passed_test: int = summary["passed"]
+    ran_tests: int = summary["total"]
+    collected_test: int = summary["collected"]
+
+    rich.print(
+        f"[yellow]Ran {ran_tests} / {collected_test} Tests, while {passed_test} passed "
+        f"for {integration_name} integration.[/yellow]"
+    )
 
 
 def _get_mp_paths_from_names(
