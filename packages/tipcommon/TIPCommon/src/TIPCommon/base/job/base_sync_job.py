@@ -26,6 +26,7 @@ from SiemplifyUtils import convert_unixtime_to_datetime, unix_now
 from .base_job import Job
 from .data_models import (
     JobCase,
+    JobCommentsResult,
     JobTagsResult,
     JobAssigneeResult,
     ProductTagsData,
@@ -40,7 +41,7 @@ from ...consts import (
     TAGS_KEY,
     UNIX_FORMAT,
 )
-from ...data_models import CaseDetails
+from ...exceptions import BaseSyncJobException
 from ..interfaces import ApiClient
 from ...rest.soar_api import (
     add_tags_to_case_in_bulk,
@@ -74,18 +75,19 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         self.last_run_time: int = 0
         self.current_run_latest_timestamp_ms: int = 0
         self.job_cases_to_sync: list[JobCase] = []
-        self.skipped_cases: list[JobCase] = []
+        self.skipped_cases: list[tuple[str, int]] = []
         self._secops_user_list: list[dict] = []
+        self.sorted_modified_ids: list[tuple[str, int]] = []
         self.job_completed_successfully: bool = False
         self._cached_unix_now: int = 0
 
     # Abstract methods for standard synchronization actions
     @abstractmethod
-    def _extract_product_ids_from_case(self, case_details: CaseDetails) -> SyncItem:
+    def _extract_product_ids_from_case(self, case_details: JobCase) -> SyncItem:
         """Fetches the IDs of the product from the case details object.
 
         Args:
-            case_details (CaseDetails): The details of the case to extract the product IDs from.
+            case_details (JobCase): The details of the case to extract the product IDs from.
 
         Returns:
             SyncItem: A list of product IDs extracted from the case details.
@@ -204,7 +206,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         case_comment_prefix: str,
         product_comment_key: str = "message",
         product_incident_key: str = "name",
-    ) -> None:
+    ) -> JobCommentsResult:
         """Fetches comments from both the case and the product item.
 
         Args:
@@ -215,6 +217,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             comment data.
             product_incident_key (str): The key used to extract the incident identifier
             from the product comment data.
+
+        Returns:
+            JobCommentsResult: An object containing the comments to add and remove for syncing.
         """
         comments_to_sync = job_case.get_comments_to_sync(
             product_comment_prefix=product_comment_prefix,
@@ -403,7 +408,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         )
 
         if not self.tags_identifiers:
-            filtered_case_ids: list[str] = []
+            filtered_case_ids: list[tuple[str, int]] = []
             for case in cases:
                 if case.get("id"):
                     filtered_case_ids.append((str(case["id"]), case["updateTime"]))
@@ -422,7 +427,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             list[tuple[str, int]]: A list of tuples containing the IDs and modification times
             of cases that contain all of the required tags.
         """
-        filtered_case_ids: list[str] = []
+        filtered_case_ids: list[tuple[str, int]] = []
         for case in cases:
             case_tags_display_names = {
                 tag_dict.get("displayName")
@@ -457,7 +462,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         job_case: JobCase,
         product_tag_prefix: str,
         case_tag_prefix: str,
-        product_properties_key: str = None,
+        product_properties_key: str | None = None,
         product_tags_key: str = TAGS_KEY,
     ) -> JobTagsResult:
         """Fetches tags from both the case and the product item.
@@ -466,7 +471,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             job_case (JobCase): The JobCase object containing the details of the case to sync.
             product_tag_prefix (str): The prefix used to identify tags from the product.
             case_tag_prefix (str): The prefix used to identify tags from the case.
-            product_properties_key (str): The key used to extract the properties list
+            product_properties_key (str | None): The key used to extract the properties list
             from the product data.
             product_tags_key (str): The key used to extract the tags list from the product data.
 
@@ -615,7 +620,11 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         return comment or "Case or Alert was closed"
 
     def _perform_job(self) -> None:
-        """Perform the main flow of the job"""
+        """Perform the main flow of the job.
+
+        Raises:
+            BaseSyncJobException: If any unexpected error occurs during the sync cycle.
+        """
         try:
             self._cached_unix_now = unix_now()
             self.last_run_time: int = self.get_last_run_time()
@@ -642,7 +651,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         except Exception as e:
             self.logger.exception(f"An unexpected error occurred during the sync cycle: {e}")
-            raise
+            raise BaseSyncJobException(
+                f"An unexpected error occurred during the sync cycle: {e}"
+            ) from e
 
         finally:
             self._finalize_job()

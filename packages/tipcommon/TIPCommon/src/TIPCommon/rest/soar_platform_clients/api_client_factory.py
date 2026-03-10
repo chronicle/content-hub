@@ -209,8 +209,15 @@ class SoarApiClient(Protocol):
     def get_cases_by_timestamp_filter(self) -> requests.Response:
         """Get cases by timestamp filter"""
 
-    def get_case_close_comment(self, case_id) -> requests.Response:
-        """Get case closure comment"""
+    def get_case_close_comment(self, case_id: str | int) -> requests.Response:
+        """Get case closure comment
+
+        Args:
+            case_id (str | int): The ID of the case for which to retrieve the closure comment.
+
+        Returns:
+            requests.Response: The response object containing the closure comment details.
+        """
 
 
 def get_soar_client(chronicle_soar: ChronicleSOAR) -> SoarApiClient:

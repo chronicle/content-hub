@@ -748,8 +748,15 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
         return self._paginate_results(initial_endpoint=initial_endpoint, root_response_key="cases")
 
-    def get_case_close_comment(self, case_id):
-        """Get case closure comment"""
+    def get_case_close_comment(self, case_id: str | int) -> requests.Response:
+        """Get case closure comment
+
+        Args:
+            case_id (str | int): The ID of the case for which to retrieve the closure comment.
+
+        Returns:
+            requests.Response: The response object containing the closure comment details.
+        """
         endpoint = f"/cases/{case_id}/caseWallRecords"
         params = {
             "$filter": "(activityType eq 'CASE_STATUS_CHANGE') and (activityKind eq 'CASE_CLOSED')",
