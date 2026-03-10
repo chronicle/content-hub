@@ -37,8 +37,8 @@ class ApiManager:
             "Integration", "Client Secret"
         )
         self.ACCOUNT_ID = self.siemplify.extract_configuration_param("Integration", "Account ID")
-        self.SSL_VERIFY = (
-            self.siemplify.extract_configuration_param("Integration", "Verify SSL") == "True"
+        self.SSL_VERIFY = self.siemplify.extract_configuration_param(
+            "Integration", "Verify SSL", input_type=bool, default_value=True
         )
 
         self.ENDPOINT_URL = RRS_SERVICE_URL

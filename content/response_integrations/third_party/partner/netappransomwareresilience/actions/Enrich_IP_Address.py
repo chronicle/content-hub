@@ -22,6 +22,7 @@ def main() -> None:
     siemplify.LOGGER.info("----------------- RRS - Enrich IP: Init -----------------")
 
     enrich_results = None
+    ip_address = None
     try:
         rrsManager = ApiManager(siemplify)
         ip_address = siemplify.extract_action_param("IP Address", print_value=True)
