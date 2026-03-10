@@ -23,7 +23,7 @@ class ApiManager:
         OAuth Token Flow:
         1. Fetch access_token from encrypted storage
         2. If found and valid, use it for API calls
-        3. If not found or expired, generate new access_token and save
+        3. If not found or expired, generate new access_token and save.
 
         Args:
             siemplify: Chronicle SOAR SDK instance for logging and context storage
