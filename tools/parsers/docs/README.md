@@ -6,10 +6,10 @@ This script allows you to run validations on your parser configurations and test
 
 - Python 3.10+
 - [gcloud CLI](https://cloud.google.com/sdk/docs/install)
-- Dependencies: `absl-py`, `jsondiff`, `secops`
+- Dependencies: See `requirements.txt`
 - Installation:
   ```bash
-  python3 -m pip install absl-py jsondiff secops
+  python3 -m pip install -r requirements.txt
   ```
 
 ## Installing the gcloud CLI
@@ -102,3 +102,8 @@ python3 run_parser_validations.py \
 The script will iterate through all log types in the specified `parser_source` directory, run the parser against the raw logs, and compare the output with the expected events.
 
 A **FINAL FAILURE SUMMARY** will be printed at the end, showing any technical errors or test case failures with detailed differences.
+
+## PII Redaction
+
+It is important to ensure that no Personally Identifiable Information (PII) is included in the raw logs or expected events that are committed to the repository. Please redact any sensitive information before committing your changes.
+

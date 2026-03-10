@@ -2,14 +2,16 @@
 
 from datetime import datetime
 import json
+import logging
 from pathlib import Path
-import os
 from typing import Any, Dict, List, Optional, Union
 
 import jsondiff
 
 from absl import app
 from absl import flags
+from google.api_core import exceptions as api_core_exceptions
+from google.auth import exceptions as auth_exceptions
 from secops.client import SecOpsClient
 
 FLAGS = flags.FLAGS
@@ -113,24 +115,31 @@ def get_pretty_relpath(path: "Path") -> str:
   return str(path.relative_to(Path.cwd()))
 
 
-def main(argv):
+def main(argv: List[str]) -> None:
+  """Runs parser validations on log types.
+
+  Args:
+    argv: A list of command-line arguments.
+  """
   del argv  # Unused.
 
-  print("-" * 80)
-  print("Usage example:")
-  print("  python3 run_parser_validations_external.py \\")
-  print("    --parser_source=community \\")
-  print("    --customer_id={CUSTOMER_ID} \\")
-  print("    --project_id={PROJECT_ID}} \\")
-  print("    --region=us \\")
-  print("    --generate_report=True \\")
-  print("    --log_type_folders=DUMMY_LOGTYPE,DUMMY_LOGTYPE2")
-  print("-" * 80)
+  logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+  logging.info("-" * 80)
+  logging.info("Usage example:")
+  logging.info("  python3 run_parser_validations_external.py \\")
+  logging.info("    --parser_source=community \\")
+  logging.info("    --customer_id={CUSTOMER_ID} \\")
+  logging.info("    --project_id={PROJECT_ID}} \\")
+  logging.info("    --region=us \\")
+  logging.info("    --generate_report=True \\")
+  logging.info("    --log_type_folders=DUMMY_LOGTYPE,DUMMY_LOGTYPE2")
+  logging.info("-" * 80)
 
   mandatory_flags = ["customer_id", "project_id", "region"]
   missing_flags = [f for f in mandatory_flags if not getattr(FLAGS, f)]
   if missing_flags:
-    print(f"Error: The following mandatory arguments are missing: {', '.join(missing_flags)}")
+    logging.error(f"The following mandatory arguments are missing: {', '.join(missing_flags)}")
     return
 
   base_path = Path(_CONTENT_RELATIVE_PATH_TEMPLATE.format(
@@ -146,7 +155,7 @@ def main(argv):
   )
 
   if not base_path.exists():
-    print(f"Error: Base path {base_path} does not exist. Ensure you are running the script from the root directory that contains the 'content' folder.")
+    logging.error(f"Base path {base_path} does not exist. Ensure you are running the script from the root directory that contains the 'content' folder.")
     return
 
   all_results = []  # List of (log_type, [usecase_results], [errors])
@@ -156,7 +165,7 @@ def main(argv):
     log_types = [lt for lt in log_types if lt in FLAGS.log_type_folders]
 
   if not log_types:
-    print("No log type content found. Nothing to validate.")
+    logging.info("No log type content found. Nothing to validate.")
     return
 
   for log_type in log_types:
@@ -182,7 +191,7 @@ def main(argv):
       continue
 
     config = config_file.read_text()
-    print(f"  Configuration file: {get_pretty_relpath(config_file)}")
+    logging.info(f"  Configuration file: {get_pretty_relpath(config_file)}")
 
     raw_logs_path = cbn_path / "testdata" / "raw_logs"
     expected_events_path = cbn_path / "testdata" / "expected_events"
@@ -192,7 +201,7 @@ def main(argv):
       all_results.append((log_type, [], log_type_errors))
       continue
 
-    print(f"\nProcessing Log Type: {log_type}")
+    logging.info(f"\nProcessing Log Type: {log_type}")
 
     for log_file in sorted(raw_logs_path.glob("*_log.json")):
       usecase = log_file.name.rsplit("_log.json", 1)[0]
@@ -200,15 +209,15 @@ def main(argv):
       expected_path = expected_events_path / expected_filename
 
       if not expected_path.exists():
-        print(f"  Warning: No expected events file found for use case '{usecase}' at {expected_path}")
+        logging.warning(f"  Warning: No expected events file found for use case '{usecase}' at {expected_path}")
         continue
 
       logs_data = json.loads(log_file.read_text())
       logs = logs_data.get("raw_logs", [])
 
-      print(f"    Raw logs file: {get_pretty_relpath(log_file)}")
+      logging.info(f"    Raw logs file: {get_pretty_relpath(log_file)}")
 
-      print(f"  Validating Use Case: {usecase}...")
+      logging.info(f"  Validating Use Case: {usecase}...")
       try:
         validation_results = chronicle_client.run_parser(
             log_type=_DEFAULT_LOG_TYPE,
@@ -216,9 +225,12 @@ def main(argv):
             parser_extension_code="",
             logs=logs,
         )
-        print(f"    Parser execution successful.")
-      except Exception as e:
-        print(f"  Error: Failed to run parser for use case {usecase}: {e}")
+        logging.info("    Parser execution successful.")
+      except (
+          auth_exceptions.DefaultCredentialsError,
+          api_core_exceptions.GoogleAPICallError,
+      ) as e:
+        logging.error(f"  Error: Failed to run parser for use case {usecase}: {e}")
         log_type_results.append({
             "test_file": log_file.name,
             "status": "FAILED",
@@ -291,10 +303,10 @@ def main(argv):
           "config_path": get_pretty_relpath(config_file),
           "log_path": get_pretty_relpath(log_file),
       }
-      print(f"    Status: {usecase_res['status']}. {usecase_res['details']}")
+      logging.info(f"    Status: {usecase_res['status']}. {usecase_res['details']}")
 
       log_type_results.append(usecase_res)
-      print("-" * 80)
+      logging.info("-" * 80)
     all_results.append((log_type, log_type_results, log_type_errors))
 
   # Generate Markdown Report
@@ -346,41 +358,41 @@ def main(argv):
   report.append("\n[View more details on Google SecOps Bot](https://chronicle.security/)\n")
 
   if FLAGS.generate_report:
-    print(f"\nWriting Markdown report to {report_path}...")
+    logging.info(f"\nWriting Markdown report to {report_path}...")
     with open(report_path, "w") as f:
       f.write("\n".join(report))
   else:
-    print("\nReport generation skipped (--generate_report=False).")
+    logging.info("\nReport generation skipped (--generate_report=False).")
 
   # Final Failure Summary
-  print("\n" + "=" * 80)
-  print("FINAL FAILURE SUMMARY")
-  print("=" * 80)
+  logging.info("\n" + "=" * 80)
+  logging.info("FINAL FAILURE SUMMARY")
+  logging.info("=" * 80)
   any_failures = False
   for log_type, results, errors in all_results:
     if errors:
       any_failures = True
-      print(f"\nParser: {log_type}")
+      logging.error(f"\nParser: {log_type}")
       for err in errors:
-        print(f"  - ERROR: {err}")
+        logging.error(f"  - ERROR: {err}")
 
     for res in results:
       if res["status"] == "FAILED":
         any_failures = True
-        print(f"\nParser: {log_type}")
-        print(f"  - Test File: {res['test_file']}")
-        print(f"    Status: {res['status']}")
-        print(f"    Details: {res['details']}")
+        logging.error(f"\nParser: {log_type}")
+        logging.error(f"  - Test File: {res['test_file']}")
+        logging.error(f"    Status: {res['status']}")
+        logging.error(f"    Details: {res['details']}")
         if "event_failures" in res and res["event_failures"]:
-          print("    Differences:")
+          logging.error("    Differences:")
           for fail in res["event_failures"]:
-            print(f"    Log Entry {fail['index']}:")
+            logging.error(f"    Log Entry {fail['index']}:")
             for line in fail["diff"].split("\n"):
-              print(f"      {line}")
+              logging.error(f"      {line}")
 
   if not any_failures:
-    print("\nGreat, No failures found. Good to Go!!")
-  print("=" * 80)
+    logging.info("\nGreat, No failures found. Good to Go!!")
+  logging.info("=" * 80)
 
 
 if __name__ == "__main__":
