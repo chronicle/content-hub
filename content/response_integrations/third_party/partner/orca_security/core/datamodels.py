@@ -70,9 +70,13 @@ class Alert(BaseModel):
         alert_info.name = self.title or self.type_string or FALLBACK_ALERT_NAME
         alert_info.description = self.details
         alert_info.device_vendor = DEVICE_VENDOR
-        alert_info.device_product = self.flat_raw_data.get(device_product_field) or DEVICE_PRODUCT
+        alert_info.device_product = (
+            self.flat_raw_data.get(device_product_field) or DEVICE_PRODUCT
+        )
         alert_info.priority = self.get_siemplify_severity()
-        alert_info.rule_generator = self.title or self.type_string or FALLBACK_ALERT_NAME
+        alert_info.rule_generator = (
+            self.title or self.type_string or FALLBACK_ALERT_NAME
+        )
         alert_info.source_grouping_identifier = self.title
         alert_info.start_time = self.created_at_ms
         alert_info.end_time = self.created_at_ms
@@ -130,7 +134,7 @@ class Framework(BaseModel):
         return (
             f"<h2><strong>"
             f"{self.display_name}. "
-            f"Score: <span style='color: {self.get_score_color()}'>{self.avg_score_percent}%</span> "
+            f"Score: <span style='color: {self.get_score_color()}'>{self.avg_score_percent}%</span>"
             f"Passed: {self.test_results_pass} "
             f"Failed: {self.test_results_fail}"
             f"</strong></h2>"
@@ -139,11 +143,23 @@ class Framework(BaseModel):
     def get_score_color(self):
         if 0 <= self.avg_score_percent < SCORE_MAPPING.get("info"):
             return SCORE_COLORS.get("info")
-        elif SCORE_MAPPING.get("info") <= self.avg_score_percent < SCORE_MAPPING.get("low"):
+        elif (
+            SCORE_MAPPING.get("info")
+            <= self.avg_score_percent
+            < SCORE_MAPPING.get("low")
+        ):
             return SCORE_COLORS.get("low")
-        elif SCORE_MAPPING.get("low") <= self.avg_score_percent < SCORE_MAPPING.get("medium"):
+        elif (
+            SCORE_MAPPING.get("low")
+            <= self.avg_score_percent
+            < SCORE_MAPPING.get("medium")
+        ):
             return SCORE_COLORS.get("medium")
-        elif SCORE_MAPPING.get("medium") <= self.avg_score_percent < SCORE_MAPPING.get("high"):
+        elif (
+            SCORE_MAPPING.get("medium")
+            <= self.avg_score_percent
+            < SCORE_MAPPING.get("high")
+        ):
             return SCORE_COLORS.get("high")
 
         return ""
@@ -189,7 +205,9 @@ class CVE(BaseModel):
             "Description": self.summary,
             "Fix Available": self.fix_available,
             "Affected Assets Count": count,
-            "Labels": (", ".join(self.labels) if isinstance(self.labels, list) else self.labels),
+            "Labels": (
+                ", ".join(self.labels) if isinstance(self.labels, list) else self.labels
+            ),
             "Publish Date": self.published,
         }
 
@@ -198,7 +216,9 @@ class CVE(BaseModel):
         description = html.escape(self.summary) if self.summary else "N/A"
         fix_available = self.fix_available if self.fix_available is not None else "N/A"
         labels = (
-            html.escape(", ".join(self.labels) if isinstance(self.labels, list) else self.labels)
+            html.escape(
+                ", ".join(self.labels) if isinstance(self.labels, list) else self.labels
+            )
             if self.labels
             else "N/A"
         )
@@ -207,11 +227,22 @@ class CVE(BaseModel):
         severity_color = SEVERITY_COLOR_MAPPER[severity.lower()]
         source_link = html.escape(self.source_link)
         insight_html = (
-            f"<h2><strong> Severity:<span {severity_color}> {severity}</span><br /></strong></h2>"
+            f"<h2><strong> Severity:<span {severity_color}> {severity}</span>"
+            f"<br /></strong></h2>"
         )
-        insight_html += f"<p><strong>Description: </strong> {description} <br /><strong>Fix Available: </strong> {fix_available} <br />"
-        insight_html += f"<strong>Affected Assets: </strong> {asset_names}<br /><strong>Labels: </strong> {labels} <br /><strong>Publish Date: </strong> {published} <br /></p>"
-        insight_html += f"<p>For more details visit the following link: <a href='{source_link}' target='_blank'>{source_link}&nbsp;</a></p>"
+        insight_html += (
+            f"<p><strong>Description: </strong> {description} <br />"
+            f"<strong>Fix Available: </strong> {fix_available} <br />"
+        )
+        insight_html += (
+            f"<strong>Affected Assets: </strong> {asset_names}<br />"
+            f"<strong>Labels: </strong> {labels} <br />"
+            f"<strong>Publish Date: </strong> {published} <br /></p>"
+        )
+        insight_html += (
+            f"<p>For more details visit the following link: "
+            f"<a href='{source_link}' target='_blank'>{source_link}&nbsp;</a></p>"
+        )
         insight_html += "<p>&nbsp;</p>"
         return insight_html
 
@@ -227,6 +258,9 @@ class Asset(BaseModel):
         asset_subcategory=None,
         asset_state=None,
         state=None,
+        state_severity=None,
+        state_created_at=None,
+        state_last_seen=None,
         **kwargs,
     ):
         super().__init__(raw_data)
@@ -237,9 +271,9 @@ class Asset(BaseModel):
         self.asset_subcategory = asset_subcategory
         self.asset_state = asset_state
         self.state = state or {}
-        self.state_severity = self.state.get("severity", "N/A")
-        self.state_created_at = self.state.get("created_at", "N/A")
-        self.state_last_seen = self.state.get("last_seen", "N/A")
+        self.state_severity = state_severity
+        self.state_created_at = state_created_at
+        self.state_last_seen = state_last_seen
 
     def to_csv(self):
         return {
@@ -258,8 +292,8 @@ class Asset(BaseModel):
         insight_html = ""
         insight_html += "<h2><strong>"
         insight_html += (
-            f"Severity:<span {SEVERITY_COLOR_MAPPER[self.state_severity.lower()] if self.state_severity.lower() in SEVERITY_COLOR_MAPPER.keys() else ''}> "
-            f"{self.state_severity.capitalize() if self.state_severity.lower() in SEVERITY_COLOR_MAPPER.keys() else self.state_severity}</span> "
+            f"Severity:<span {SEVERITY_COLOR_MAPPER[self.state_severity.lower()] if self.state_severity.lower() in SEVERITY_COLOR_MAPPER.keys() else ''}> "  # noqa: E501
+            f"{self.state_severity.capitalize() if self.state_severity.lower() in SEVERITY_COLOR_MAPPER.keys() else self.state_severity}</span> "  # noqa: E501
         )
         insight_html += "<br /></strong></h2>"
         insight_html += f"<p><strong>Name: </strong> {self.asset_name} <br>"
