@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 
+import time
+import threading
 from io import BytesIO
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
@@ -25,49 +26,71 @@ from ..core.GitSyncManager import GitSyncManager
 SCRIPT_NAME = "Push Integration"
 
 
+def fetch_with_timer(func, *args):
+    result, error, done = [None], [None], [False]
+
+    def target():
+        try:
+            result[0] = func(*args)
+        except Exception as e:
+            error[0] = e
+        finally:
+            done[0] = True
+
+    threading.Thread(target=target, daemon=True).start()
+
+    for elapsed in iter(lambda: time.sleep(1) or True, False):
+        if done[0]:
+            break
+        print(f"\r⏳ {elapsed}s...", end="", flush=True)
+
+    print(f"\r✅ Done!     ")
+    if error[0]:
+        raise error[0]
+    return result[0]
+
+
 @output_handler
 def main():
     siemplify = SiemplifyJob()
     siemplify.script_name = SCRIPT_NAME
 
-    push_allowlist = list(
-        [
-            _f
-            for _f in [
-                x.strip()
-                for x in siemplify.extract_job_param("Push Whitelist", " ").split(",")
-            ]
-            if _f
-        ],
-    )
+    push_allowlist = [
+        x.strip()
+        for x in siemplify.extract_job_param("Push Whitelist", " ").split(",")
+        if x.strip()
+    ]
     commit_msg = siemplify.extract_job_param("Commit")
     readme_addon = siemplify.extract_job_param("Readme Addon", input_type=str)
 
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        integrations = [
-            x for x in gitsync.api.get_installed_integrations()
-            if x["identifier"] in push_allowlist
-        ]
+        for integration in gitsync.api.get_installed_integrations():
+            if integration["identifier"] not in push_allowlist:
+                continue
 
-        for integration in integrations:
-            siemplify.LOGGER.info(f"Pushing Integration: {integration['identifier']}")
-            integration_obj = Integration(
-                integration,
-                BytesIO(gitsync.api.export_package(integration["identifier"])),
-            )
-            if readme_addon:
-                siemplify.LOGGER.info(
-                    "Readme addon found - adding to GitSync metadata file "
-                    "(GitSync.json)",
+            identifier = integration["identifier"]
+            siemplify.LOGGER.info(f"Pushing Integration: {identifier}")
+
+            try:
+                integration_obj = Integration(
+                    integration,
+                    BytesIO(fetch_with_timer(gitsync.api.export_package, identifier)),
                 )
-                gitsync.content.metadata.set_readme_addon(
-                    "Integration",
-                    integration_obj.identifier,
-                    readme_addon,
-                )
-            gitsync.content.push_integration(integration_obj)
+
+                if readme_addon:
+                    siemplify.LOGGER.info(
+                        "Readme addon found - adding to GitSync metadata file (GitSync.json)"
+                    )
+                    gitsync.content.metadata.set_readme_addon(
+                        "Integration", identifier, readme_addon
+                    )
+
+                gitsync.content.push_integration(integration_obj)
+
+            except Exception as e:
+                siemplify.LOGGER.error(f"Couldn't upload {identifier}. ERROR: {e}")
 
         gitsync.commit_and_push(commit_msg)
 
