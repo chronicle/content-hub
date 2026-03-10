@@ -15,6 +15,8 @@
 from __future__ import annotations
 
 from io import BytesIO
+import time
+import threading
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
@@ -45,6 +47,30 @@ from ..core.GitSyncManager import GitSyncManager
 SCRIPT_NAME = "Push Content"
 
 
+def fetch_with_timer(func, *args):
+    result, error, done = [None], [None], [False]
+
+    def target():
+        try:
+            result[0] = func(*args)
+        except Exception as e:
+            error[0] = e
+        finally:
+            done[0] = True
+
+    threading.Thread(target=target, daemon=True).start()
+
+    for elapsed in iter(lambda: time.sleep(1) or True, False):
+        if done[0]:
+            break
+        print(f"\r⏳ {elapsed}s...", end="", flush=True)
+
+    print(f"\r✅ Done!     ")
+    if error[0]:
+        raise error[0]
+    return result[0]
+
+
 @output_handler
 def main():
     siemplify = SiemplifyJob()
@@ -64,22 +90,24 @@ def main():
         # Integrations
         if features["Integrations"]:
             siemplify.LOGGER.info("========== Integrations ==========")
-            for integration in [
-                x
-                for x in gitsync.api.get_installed_integrations()
-                if x.get("identifier") not in IGNORED_INTEGRATIONS
-            ]:
-                siemplify.LOGGER.info(f"Pushing {integration['identifier']}")
-                integration_obj = Integration(
-                    integration,
-                    BytesIO(gitsync.api.export_package(integration["identifier"])),
-                )
+            for integration in gitsync.api.get_installed_integrations():
+                if integration.get("identifier") in IGNORED_INTEGRATIONS:
+                    continue
+
+                identifier = integration["identifier"]
+                siemplify.LOGGER.info(f"Pushing {identifier}")
+
                 try:
+                    integration_obj = Integration(
+                        integration,
+                        BytesIO(fetch_with_timer(
+                            gitsync.api.export_package,
+                            identifier
+                        )),
+                    )
                     gitsync.content.push_integration(integration_obj)
                 except Exception as e:
-                    siemplify.LOGGER.error(
-                        f"Couldn't upload {integration_obj.identifier}. ERROR: {e}",
-                    )
+                    siemplify.LOGGER.error(f"Couldn't upload {identifier}. ERROR: {e}")
 
         # Playbooks
         if features["Playbooks"]:
