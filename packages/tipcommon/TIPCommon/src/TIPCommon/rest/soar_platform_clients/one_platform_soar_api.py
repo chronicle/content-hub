@@ -747,3 +747,13 @@ class OnePlatformSoarApi(BaseSoarApi):
             "&$orderBy=updateTime asc"
         )
         return self._paginate_results(initial_endpoint=initial_endpoint, root_response_key="cases")
+
+    def get_case_close_comment(self, case_id):
+        """Get case closure comment"""
+        endpoint = f"/cases/{case_id}/caseWallRecords"
+        params = {
+            "$filter": "(activityType eq 'CASE_STATUS_CHANGE') and (activityKind eq 'CASE_CLOSED')",
+            "$orderBy": "createTime desc",
+            "$pageSize": 1,
+        }
+        return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)

@@ -23,7 +23,7 @@ import sys
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import requests
 from SiemplifyAddressProvider import BASE_1P_SDK_CONTROLLER_VERSION
@@ -547,3 +547,26 @@ def temporarily_remove_header(header_name: str):
         return wrapper
 
     return decorator
+
+
+def merge_and_sort(
+    list_1: Iterable[tuple[int, int]],
+    list_2: Iterable[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    """
+    Merges two iterables of (id, timestamp) tuples, with datab taking precedence
+    in case of duplicate ids, and sorts the result by timestamp.
+    Args:
+        list_1 (Iterable[tuple[int, int]]): First iterable of (id, timestamp) tuples.
+        list_2 (Iterable[tuple[int, int]]): Second iterable of (id, timestamp
+            tuples), which takes precedence over list_1 for duplicate ids.
+    Returns:
+        list[tuple[int, int]]: Merged and sorted list of (id, timestamp) tuples.
+    """
+    merged = {}
+    for _id, ts in list_1:
+        merged[_id] = ts
+    for _id, ts in list_2:
+        merged[_id] = ts
+
+    return sorted(merged.items(), key=lambda x: x[1])

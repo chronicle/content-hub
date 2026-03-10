@@ -209,6 +209,9 @@ class SoarApiClient(Protocol):
     def get_cases_by_timestamp_filter(self) -> requests.Response:
         """Get cases by timestamp filter"""
 
+    def get_case_close_comment(self, case_id) -> requests.Response:
+        """Get case closure comment"""
+
 
 def get_soar_client(chronicle_soar: ChronicleSOAR) -> SoarApiClient:
     """Get the appropriate SOAR API client based on platform support.

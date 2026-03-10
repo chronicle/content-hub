@@ -109,7 +109,7 @@ class NewLineLogger(Logger):
         self.logger.info(f"{msg}\n", *args, **kwargs)
 
     def warn(self, warning_msg: str, *args, **kwargs) -> None:
-        self.logger.warning(f"{warning_msg}\n", *args, **kwargs)
+        self.logger.warn(f"{warning_msg}\n", *args, **kwargs)
 
     def error(self, error_msg: str, *args, **kwargs) -> None:
         self.logger.error(f"{error_msg}\n", *args, **kwargs)

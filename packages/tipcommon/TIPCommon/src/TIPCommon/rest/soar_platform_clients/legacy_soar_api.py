@@ -516,3 +516,20 @@ class LegacySoarApi(BaseSoarApi):
             current_page += 1
 
         return all_cases
+
+    def get_case_close_comment(self, case_id: str | int):
+        """Get case closure comment"""
+        endpoint = "/dynamic-cases/GetCaseWallActivities?format=camel"
+        payload = {
+            "pageSize": 20,
+            "searchTerm": "",
+            "requestedPage": 0,
+            "caseId": case_id,
+            "alert": "ALL",
+            "users": [],
+            "activities": [1],
+            "order": "desc",
+        }
+        return self._make_request(
+            method=HttpMethod.POST, endpoint=endpoint, json_payload=payload
+        )
