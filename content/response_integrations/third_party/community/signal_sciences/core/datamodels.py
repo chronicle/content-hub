@@ -1,0 +1,57 @@
+class AllowListItem:
+    def __init__(self, raw_data: dict[str, any]):
+        self.raw_data = raw_data
+        self.id = raw_data.get("id")
+        self.source = raw_data.get("source")
+        self.note = raw_data.get("note")
+        self.created_by = raw_data.get("createdBy")
+        self.created = raw_data.get("created")
+        self.expires = raw_data.get("expires")
+
+    def to_json(self) -> dict[str, any]:
+        return {
+            "id": self.id,
+            "source": self.source,
+            "note": self.note,
+            "createdBy": self.created_by,
+            "created": self.created,
+            "expires": self.expires
+        }
+
+
+class BlockListItem:
+    def __init__(self, raw_data: dict[str, any]):
+        self.raw_data = raw_data
+        self.id = raw_data.get("id")
+        self.source = raw_data.get("source")
+        self.note = raw_data.get("note")
+        self.created_by = raw_data.get("createdBy")
+        self.created = raw_data.get("created")
+        self.expires = raw_data.get("expires")
+
+    def to_json(self) -> dict[str, any]:
+        return {
+            "id": self.id,
+            "source": self.source,
+            "note": self.note,
+            "createdBy": self.created_by,
+            "created": self.created,
+            "expires": self.expires
+        }
+
+
+class Site:
+    def __init__(self, raw_data: dict[str, any]):
+        self.raw_data = raw_data
+        self.name = raw_data.get("name")
+        self.display_name = raw_data.get("displayName")
+        self.created = raw_data.get("created")
+        self.agent_level = raw_data.get("agentLevel")
+
+    def to_json(self) -> dict[str, any]:
+        return {
+            "name": self.name,
+            "displayName": self.display_name,
+            "created": self.created,
+            "agentLevel": self.agent_level
+        }
