@@ -82,9 +82,10 @@ content-hub/
 │                               └── <usecase>_events.json
 └── tools/
     └── parsers/
-        ├── run_parser_validations.py
-        └── docs/
-            └── README.md
+        ├── validations/
+            ├── run_parser_validations.py
+            └── docs/
+                └── README.md
 ```
 
 ## Usage

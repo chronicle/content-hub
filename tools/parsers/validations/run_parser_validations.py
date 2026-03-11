@@ -25,7 +25,7 @@ flags.DEFINE_boolean("generate_report", False, "Whether to generate the markdown
 flags.DEFINE_list("log_type_folders", [], "Comma-separated list of specific log type folders to validate. If empty, all folders are validated.")
 
 _CONTENT_RELATIVE_PATH_TEMPLATE = (
-    "./../../content/parsers/third_party/{parser_source}"
+    "./../../../content/parsers/third_party/{parser_source}"
 )
 _REPORT_RELATIVE_PATH = (
     "validation_report.md"
