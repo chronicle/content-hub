@@ -18,7 +18,7 @@ from abc import abstractmethod
 import itertools
 import json
 import math
-from typing import TYPE_CHECKING
+from typing import Generic, TYPE_CHECKING
 from requests.exceptions import HTTPError, JSONDecodeError
 
 from SiemplifyUtils import convert_unixtime_to_datetime, unix_now
@@ -56,7 +56,7 @@ from ...types import SingleJson, SyncItem, SyncData
 from ..utils import nativemethod, is_native, merge_ids_by_timestamp
 
 if TYPE_CHECKING:
-    from typing import Generic, Iterator, Any
+    from typing import Iterator, Any
 
 
 class BaseSyncJob(Job, Generic[ApiClient]):

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
 
 import hashlib
 from dataclasses import dataclass, field
@@ -24,7 +24,7 @@ from ...data_models import AlertCard, CaseDataStatus, CaseDetails
 from ...types import SingleJson
 
 if TYPE_CHECKING:
-    from typing import Any, NamedTuple
+    from typing import Any
 
 
 class JobCommentsResult(NamedTuple):
