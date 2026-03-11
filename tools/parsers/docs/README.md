@@ -6,11 +6,22 @@ This script allows you to run validations on your parser configurations and test
 
 - Python 3.10+
 - [gcloud CLI](https://cloud.google.com/sdk/docs/install)
-- Dependencies: See `requirements.txt`
-- Installation:
-  ```bash
-  python3 -m pip install -r requirements.txt
-  ```
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Recommended for dependency management)
+
+## Installation
+
+### Using uv (Recommended)
+`uv` handles virtual environments automatically and ensures reproducible builds.
+```bash
+# In the tools/parsers/ directory
+uv sync
+```
+
+### Using pip (Legacy)
+If you prefer using `pip`, you can install dependencies manually:
+```bash
+python3 -m pip install absl-py jsondiff secops requests google-api-core google-auth
+```
 
 ## Installing the gcloud CLI
 
@@ -78,14 +89,16 @@ content-hub/
 
 ## Usage
 
+### Using uv (Recommended)
+You can run the script without manually activating a virtual environment:
+
 ```bash
-python3 run_parser_validations.py \
-  --parser_source=community \
+uv run run_parser_validations.py \
   --customer_id=<YOUR_CUSTOMER_ID> \
   --project_id=<YOUR_PROJECT_ID> \
   --region=<YOUR_REGION> \
-  --generate_report=True \
   --log_type_folders=DUMMY_LOGTYPE,DUMMY_LOGTYPE2
+  --generate_report=True
 ```
 
 ### Flags
