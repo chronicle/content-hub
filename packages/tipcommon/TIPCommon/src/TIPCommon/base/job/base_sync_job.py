@@ -18,13 +18,13 @@ from abc import abstractmethod
 import itertools
 import json
 import math
-from typing import Generic, Iterator, Any
+from typing import TYPE_CHECKING
 from requests.exceptions import HTTPError, JSONDecodeError
 
 from SiemplifyUtils import convert_unixtime_to_datetime, unix_now
 
 from .base_job import Job
-from .data_models import (
+from .job_case import (
     JobCase,
     JobCommentsResult,
     JobTagsResult,
@@ -53,8 +53,10 @@ from ...rest.soar_api import (
 )
 from ...soar_ops import get_user_by_id, get_users_profile_cards_with_pagination
 from ...types import SingleJson, SyncItem, SyncData
-from ..utils import nativemethod, is_native
-from ...utils import merge_and_sort
+from ..utils import nativemethod, is_native, merge_ids_by_timestamp
+
+if TYPE_CHECKING:
+    from typing import Generic, Iterator, Any
 
 
 class BaseSyncJob(Job, Generic[ApiClient]):
@@ -136,7 +138,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
     @abstractmethod
     def remove_synced_data_from_db(self, job_case: JobCase, product_details: Any) -> None:
-        """Removes synced data from db
+        """Removes synced data from db.
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
@@ -320,7 +322,10 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         final_prepared_cases: list[JobCase] = []
         cases_by_modified_timestamp = self._get_case_ids_by_timestamp()
         modified_synced_case_ids = self._get_case_ids_by_timestamp(list(self.processed_items))
-        sorted_modified_ids = merge_and_sort(cases_by_modified_timestamp, modified_synced_case_ids)
+        sorted_modified_ids = merge_ids_by_timestamp(
+            cases_by_modified_timestamp,
+            modified_synced_case_ids,
+        )
 
         if not is_native(self.modified_synced_case_ids_by_product):
             synced_incident_ids: Iterator[str] = itertools.chain.from_iterable(
@@ -330,7 +335,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                 synced_incident_ids,
                 sorted_modified_ids,
             )
-            sorted_modified_ids = merge_and_sort(
+            sorted_modified_ids = merge_ids_by_timestamp(
                 sorted_modified_ids,
                 modified_synced_case_ids_by_product,
             )
@@ -659,14 +664,14 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             self._finalize_job()
 
     def _finalize_job(self) -> None:
-        """Perform final steps before the job script ends"""
+        """Perform final steps before the job script ends."""
         self._write_ids(self.processed_items)
 
         if self.job_completed_successfully and len(self.sorted_modified_ids) > 0:
             if self.skipped_cases:
-                self.current_run_latest_timestamp_ms = min(
-                    [mod_time for _, mod_time in self.skipped_cases]
-                )
+                self.current_run_latest_timestamp_ms = min([
+                    mod_time for _, mod_time in self.skipped_cases
+                ])
             else:
                 self.current_run_latest_timestamp_ms = self.sorted_modified_ids[-1][1]
 
