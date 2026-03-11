@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from TIPCommon.smp_time import unix_now
 
 from .constants import DEFAULT_EXPIRY_SECONDS, EXPIRES_IN_KEY
+from .rrs_exceptions import RrsException
 
 
 def compute_expiry(response: Dict[str, Any]) -> int:
@@ -28,8 +29,10 @@ def compute_expiry(response: Dict[str, Any]) -> int:
             expires_in_sec = int(expires_in)
             return now_ms + (expires_in_sec * 1000)
 
-        except (TypeError, ValueError):
-            pass
+        except (TypeError, ValueError) as e:
+            raise RrsException(
+                f"Malformed '{EXPIRES_IN_KEY}' value in OAuth response: {expires_in!r}"
+            ) from e
     return now_ms + (DEFAULT_EXPIRY_SECONDS * 1000)
 
 
@@ -69,7 +72,7 @@ def extract_domain_from_uri(service_url: str) -> str:
         ValueError: If the URI is invalid or domain cannot be extracted
     """
     if not service_url or not service_url.strip():
-        raise ValueError("access_token_uri not present in the Service Account JSON.")
+        raise ValueError("Service URL cannot be empty.")
 
     parsed_uri = urlparse(service_url.strip())
     domain = parsed_uri.netloc

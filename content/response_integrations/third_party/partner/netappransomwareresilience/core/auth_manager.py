@@ -20,6 +20,7 @@ from TIPCommon.oauth import (
 from TIPCommon.smp_time import unix_now
 
 from .constants import OAUTH_CONFIG
+from .rrs_exceptions import RrsException
 from .utils import compute_expiry
 
 
@@ -97,7 +98,7 @@ class RRSOAuthAdapter(OAuthAdapter):
             OauthToken: New token with access_token and expiration_time
 
         Raises:
-            Exception: If token generation fails
+            RrsException: If token generation fails
         """
         payload = {
             "client_id": self.client_id,
@@ -119,7 +120,7 @@ class RRSOAuthAdapter(OAuthAdapter):
         access_token = response_data.get("access_token")
 
         if not access_token:
-            raise Exception("Failed to retrieve access token from response")
+            raise RrsException("Failed to retrieve access token from response")
 
         # Calculate expiration time
         expiration_time = compute_expiry(response_data)

@@ -18,7 +18,7 @@ def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.LOGGER.info("----------------- RRS - Check Job Status: Init -----------------")
 
-    job_status_result = None
+    job_status_result = {}
     try:
         rrsManager = ApiManager(siemplify)
         # Extract parameters from action
