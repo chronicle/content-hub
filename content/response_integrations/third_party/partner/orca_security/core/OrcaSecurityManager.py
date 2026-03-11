@@ -8,11 +8,15 @@ import requests
 from .constants import (
     DEFAULT_RESULTS_LIMIT,
     ENDPOINTS,
-    POSSIBLE_SEVERITIES,
+    VULNERABILITIES_MAX_LIMIT,
     WHITELIST_FILTER,
 )
 from .OrcaSecurityParser import OrcaSecurityParser
-from .query_builder import AlertQueryBuilder, AssetQueryBuilder
+from .query_builder import (
+    AlertQueryBuilder,
+    AssetQueryBuilder,
+    VulnerabilityQueryBuilder,
+)
 from .UtilsManager import validate_response
 
 if TYPE_CHECKING:
@@ -92,7 +96,9 @@ class OrcaSecurityManager:
 
     def test_connectivity(self) -> None:
         """Test connectivity to the OrcaSecurity API."""
-        payload = {"limit": 1}
+        # Use the new VulnerabilityQueryBuilder for connectivity test
+        test_query = VulnerabilityQueryBuilder(limit=1)
+        payload = test_query.build()
         url = self._get_full_url("vulnerability_details")
         response = self.session.post(url, json=payload)
         validate_response(response)
@@ -228,11 +234,32 @@ class OrcaSecurityManager:
                 List of framework names that were not found.
         """
         url = self._get_full_url("get_frameworks")
-        response = self.session.post(url)
-        validate_response(response)
-        return self.filter_frameworks(
-            self.parser.build_framework_objects(response.json()), framework_names, limit
-        )
+
+        payload = {
+            "framework_filters": {
+                "partial_framework_name": None,
+            }
+        }
+
+        frameworks = []
+        not_found_frameworks = []
+
+        if limit and limit > len(framework_names):
+            framework_names = framework_names[:limit]
+
+        for framework_name in framework_names:
+            payload["framework_filters"]["partial_framework_name"] = framework_name
+
+            response = self.session.post(url, json=payload)
+            validate_response(response)
+            found_items = self.parser.build_framework_objects(response.json())
+
+            if len(found_items) == 0:
+                not_found_frameworks.append(framework_name)
+            else:
+                frameworks.extend(found_items)
+
+        return frameworks, not_found_frameworks
 
     @staticmethod
     def filter_frameworks(
@@ -314,23 +341,29 @@ class OrcaSecurityManager:
             list[Any]: A list containing:
                 The filtered vulnerability results (limited if `limit` is set).
                 Full insight data if `create_insight` is True, otherwise None.
-        """
-        payload = {
-            "dsl_filter": {
-                "filter": [{"field": "cve_id", "includes": [cve_id]}],
-                "sort": [{"field": "severity", "order": "desc"}],
-            }
-        }
 
-        results = self._paginate_results(
-            method="POST",
-            url=self._get_full_url("vulnerability_details"),
-            body=payload,
-            limit=limit,
-        )
-        enrichment_data = self.parser.build_results(
-            raw_json=results[:limit], pure_data=True, method="build_cve_object"
-        )
+        Raises:
+            Exception: If the API request fails or if response validation fails.
+        """
+        max_result_limit = limit or VULNERABILITIES_MAX_LIMIT
+        fetch_limit = DEFAULT_RESULTS_LIMIT
+        if fetch_limit > max_result_limit:
+            fetch_limit = max_result_limit
+
+        query = VulnerabilityQueryBuilder(fetch_limit).with_cve_id(cve_id)
+
+        try:
+            results = self._paginate_cve_results(query, max_result_limit=max_result_limit)
+            # Ensure limit is an integer for slicing
+            enrichment_data = self.parser.build_results(
+                raw_json=results[:max_result_limit],
+                pure_data=True,
+                method="build_cve_object",
+            )
+        except Exception as e:
+            self.siemplify_logger.error(f"Error in _paginate_cve_results or build_results: {e}")
+            self.siemplify_logger.exception(e)
+            raise
         return_list = [enrichment_data, None]
         if create_insight:
             # for insight generation whole data is required
@@ -348,6 +381,9 @@ class OrcaSecurityManager:
 
         Returns:
             Asset: The Asset object.
+
+        Raises:
+            Exception: If the API request fails or if response validation fails.
         """
         url: str = self._get_full_url("asset_details")
         payload: AssetQueryBuilder = AssetQueryBuilder().with_asset_id(asset_id).build()
@@ -355,7 +391,7 @@ class OrcaSecurityManager:
         response: requests.Response = self.session.post(url, json=payload)
         validate_response(response)
 
-        return self.parser.build_asset_object(response.json())
+        return self.parser.build_results(raw_json=response.json(), method="build_asset_object")[0]
 
     def get_vulnerability_details(
         self,
@@ -375,71 +411,84 @@ class OrcaSecurityManager:
 
         Returns:
             list[Any]: List of parsed vulnerability objects.
-        """
-        payload = {
-            "dsl_filter": {
-                "filter": [{"field": "asset_unique_id", "includes": [asset_id]}],
-                "sort": [{"field": "score", "order": "desc"}],
-            },
-            "limit": limit,
-            "start_at_index": 0,
-            "grouping": True,
-        }
 
-        if severity:
-            payload.get("dsl_filter").get("filter").append({
-                "field": "severity",
-                "includes": POSSIBLE_SEVERITIES[: POSSIBLE_SEVERITIES.index(severity.lower()) + 1],
-            })
+        Raises:
+            Exception: If the API request fails or if response validation fails.
+        """
+
+        payload = (
+            VulnerabilityQueryBuilder(limit)
+            .with_asset_unique_id(asset_id)
+            .with_severity(severity)
+            .with_order_by("-CvssScore")
+            .build()
+        )
 
         response = self.session.post(self._get_full_url("vulnerability_details"), json=payload)
         validate_response(response)
 
         return self.parser.build_results(raw_json=response.json(), method="build_cve_object")
 
-    def _paginate_results(
+    def _paginate_cve_results(
         self,
-        method: str,
-        url: str,
-        params: dict[str, Any] | None = None,
-        body: dict[str, Any] | None = None,
-        limit: int | None = None,
-        err_msg: str = "Unable to get results",
+        query: VulnerabilityQueryBuilder,
+        max_result_limit: int = DEFAULT_RESULTS_LIMIT,
     ) -> list[Any]:
-        """Paginate through API results and return a consolidated list.
+        """Retrieve paginated results for a vulnerability query.
 
-        Sends repeated requests if a next page token is returned, accumulating
-        all results into a single list.
+        First query will have get_results_and_count=True to get total_items,
+        then paginate through all results using start_at_index and limit.
 
         Args:
-            method (str): HTTP method to use for the request (GET, POST, etc.).
-            url (str): The URL to send the request to.
-            params (dict, optional): Query parameters for the request. Defaults to None.
-            body (dict, optional): JSON payload for the request. Defaults to None.
-            limit (int, optional): Maximum number of results to fetch.
-            err_msg (str, optional): Error message to display if request fails.
+            query (VulnerabilityQueryBuilder): The query builder with CVE filters
+            max_result_limit: Maximum number of results to return across all pages.
 
         Returns:
-            list[Any]: List of results returned by the API across all pages.
+            list[Any]: All paginated results combined
+
+        Raises:
+            Exception: If any API request fails or if response validation fails.
         """
-        if body is None:
-            body = {}
+        start_index = 0
+        query.with_results_and_count(True).start_at_index(start_index)
+        url = self._get_full_url("vulnerability_details")
 
-        body.update({"limit": limit or DEFAULT_RESULTS_LIMIT})
+        results = []
+        total_items = 0
 
-        response = self.session.request(method, url, params=params, json=body)
+        while True:
+            payload = query.build()
+            self.siemplify_logger.info(
+                f"Making first pagination {start_index=} with query {payload['query']}"
+            )
+            response = self.session.post(url, json=payload)
+            validate_response(response)
 
-        validate_response(response, err_msg)
-        json_response = response.json()
-        results = json_response.get("data", [])
-        next_page_token = json_response.get("next_page_token", "")
-
-        while next_page_token:
-            body.update({"next_page_token": next_page_token})
-
-            response = self.session.request(method, url, params=params, json=body)
-            validate_response(response, err_msg)
             json_response = response.json()
-            next_page_token = json_response.get("next_page_token", "")
-            results.extend(json_response.get("data", []))
-        return results
+            batch_data = json_response.get("data", [])
+
+            if not batch_data:
+                break
+
+            results.extend(batch_data)
+            start_index += len(batch_data)
+
+            # Get total items count from first response
+            if "total_items" in json_response:
+                total_items = json_response["total_items"]
+
+                self.siemplify_logger.info(f"Total items to fetch: {total_items}")
+                query.with_results_and_count(False)
+
+            if total_items <= start_index:
+                self.siemplify_logger.info("No more items to fetch, breaking pagination loop.")
+                break
+
+            if start_index >= max_result_limit:
+                self.siemplify_logger.info(
+                    "Fetched batch of results, continuing pagination until"
+                    " max_result_limit is reached."
+                )
+                break
+
+        return results[:max_result_limit]

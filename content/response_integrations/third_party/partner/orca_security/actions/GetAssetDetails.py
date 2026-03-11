@@ -71,7 +71,7 @@ def main():
         siemplify,
         param_name="Lowest Severity For Vulnerabilities",
         print_value=True,
-        default_value="Hazardous",
+        default_value="Medium",
     )
     max_vulnerabilities_to_return = extract_action_param(
         siemplify,
@@ -156,7 +156,8 @@ def main():
             siemplify.result.add_data_table(ASSETS_TABLE_NAME, construct_csv(csv_result))
 
             output_message += (
-                f"Successfully enriched the following assets using information from {INTEGRATION_NAME}:"
+                f"Successfully enriched the following assets using information from"
+                f" {INTEGRATION_NAME}:"
                 f" {', '.join(successful_assets)}\n"
             )
 

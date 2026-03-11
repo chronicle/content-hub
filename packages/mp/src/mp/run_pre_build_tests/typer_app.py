@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import multiprocessing
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Annotated
 
+import rich
 import typer
 
 import mp.core.config
@@ -211,7 +213,7 @@ def _get_tests_script_paths() -> Path:
 
 
 def _run_script_on_paths(script_path: Path, paths: Iterable[Path]) -> list[IntegrationTestResults]:
-    paths = [p for p in paths if p.is_dir()]
+    paths = [p for p in paths if p.is_dir() and (p / "tests").exists()]
     all_integration_results: list[IntegrationTestResults] = []
 
     processes: int = mp.core.config.get_processes_number()
@@ -230,14 +232,35 @@ def _run_tests_for_single_integration(
     script_path: Path,
     integration_path: Path,
 ) -> IntegrationTestResults | None:
+
+    rich.print(f"[bold blue]Running tests:[/bold blue] [cyan]{integration_path.name}[/cyan]...")
     status_code: int = mp.core.unix.run_script_on_paths(script_path, integration_path)
 
     json_report_path = integration_path / ".report.json"
+    _print_report_summary(json_report_path, integration_path.name)
+
     if status_code in SUCCESS_STATUS_CODES:
         json_report_path.unlink(missing_ok=True)
         return None
 
     return process_pytest_json_report(integration_path.name, json_report_path)
+
+
+def _print_report_summary(pytest_json_report_path: Path, integration_name: str) -> None:
+    if not pytest_json_report_path.exists():
+        return
+
+    report_data: dict = json.loads(pytest_json_report_path.read_text(encoding="utf-8"))
+    summary: dict[str, int] = report_data.get("summary", {})
+    passed_test: int = summary.get("passed", 0)
+    ran_tests: int = summary.get("total", 0)
+    collected_test: int = summary.get("collected", 0)
+
+    rich.print(
+        f"[yellow]Integration: {integration_name} | "
+        f"Passed: [bold]{passed_test}[/bold] | "
+        f"Executed: {ran_tests} / {collected_test} collected[/yellow]"
+    )
 
 
 def _get_mp_paths_from_names(
