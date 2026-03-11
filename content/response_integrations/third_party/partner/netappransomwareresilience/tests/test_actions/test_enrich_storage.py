@@ -3,7 +3,7 @@ from __future__ import annotations
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
-from netappransomwareresilience.actions import Enrich_Storage
+from netappransomwareresilience.actions import enrich_storage
 from netappransomwareresilience.tests.common import CONFIG_PATH, MOCK_ENRICH_STORAGE_RESPONSE
 from netappransomwareresilience.tests.core.product import RansomwareResilience
 from netappransomwareresilience.tests.core.session import RRSSession
@@ -26,7 +26,7 @@ class TestEnrichStorage:
         rrs.enrich_storage_response = MOCK_ENRICH_STORAGE_RESPONSE
         success_output_msg = "Successfully enriched storage information"
 
-        Enrich_Storage.main()
+        enrich_storage.main()
 
         assert len(script_session.request_history) >= 1
         storage_requests = [
@@ -51,7 +51,7 @@ class TestEnrichStorage:
         rrs.enrich_storage_status_code = 500
         rrs.enrich_storage_response = {"error": "Internal Server Error"}
 
-        Enrich_Storage.main()
+        enrich_storage.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2
@@ -67,7 +67,7 @@ class TestEnrichStorage:
         rrs.enrich_storage_status_code = 401
         rrs.enrich_storage_response = {"error": "Unauthorized"}
 
-        Enrich_Storage.main()
+        enrich_storage.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2

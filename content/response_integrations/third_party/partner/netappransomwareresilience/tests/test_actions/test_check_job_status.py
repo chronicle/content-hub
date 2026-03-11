@@ -3,7 +3,7 @@ from __future__ import annotations
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
-from netappransomwareresilience.actions import Check_Job_Status
+from netappransomwareresilience.actions import check_job_status
 from netappransomwareresilience.tests.common import CONFIG_PATH, MOCK_CHECK_JOB_STATUS_RESPONSE
 from netappransomwareresilience.tests.core.product import RansomwareResilience
 from netappransomwareresilience.tests.core.session import RRSSession
@@ -27,7 +27,7 @@ class TestCheckJobStatus:
         rrs.check_job_status_response = MOCK_CHECK_JOB_STATUS_RESPONSE
         success_output_msg = "Successfully retrieved job status"
 
-        Check_Job_Status.main()
+        check_job_status.main()
 
         assert len(script_session.request_history) >= 1
         job_requests = [
@@ -50,7 +50,7 @@ class TestCheckJobStatus:
         rrs.check_job_status_status_code = 500
         rrs.check_job_status_response = {"error": "Internal Server Error"}
 
-        Check_Job_Status.main()
+        check_job_status.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2
@@ -66,7 +66,7 @@ class TestCheckJobStatus:
         rrs.check_job_status_status_code = 401
         rrs.check_job_status_response = {"error": "Unauthorized"}
 
-        Check_Job_Status.main()
+        check_job_status.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2

@@ -3,7 +3,7 @@ from __future__ import annotations
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
-from netappransomwareresilience.actions import Volume_Offline
+from netappransomwareresilience.actions import volume_offline
 from netappransomwareresilience.tests.common import CONFIG_PATH, MOCK_VOLUME_OFFLINE_RESPONSE
 from netappransomwareresilience.tests.core.product import RansomwareResilience
 from netappransomwareresilience.tests.core.session import RRSSession
@@ -27,7 +27,7 @@ class TestVolumeOffline:
         rrs.volume_offline_response = MOCK_VOLUME_OFFLINE_RESPONSE
         success_output_msg = "Successfully took volume offline"
 
-        Volume_Offline.main()
+        volume_offline.main()
 
         assert len(script_session.request_history) >= 1
         offline_requests = [
@@ -52,7 +52,7 @@ class TestVolumeOffline:
         rrs.volume_offline_status_code = 500
         rrs.volume_offline_response = {"error": "Internal Server Error"}
 
-        Volume_Offline.main()
+        volume_offline.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2
@@ -68,7 +68,7 @@ class TestVolumeOffline:
         rrs.volume_offline_status_code = 401
         rrs.volume_offline_response = {"error": "Unauthorized"}
 
-        Volume_Offline.main()
+        volume_offline.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2

@@ -3,7 +3,7 @@ from __future__ import annotations
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
-from netappransomwareresilience.actions import Enrich_IP_Address
+from netappransomwareresilience.actions import enrich_ip_address
 from netappransomwareresilience.tests.common import CONFIG_PATH, MOCK_ENRICH_IP_RESPONSE
 from netappransomwareresilience.tests.core.product import RansomwareResilience
 from netappransomwareresilience.tests.core.session import RRSSession
@@ -25,7 +25,7 @@ class TestEnrichIPAddress:
         rrs.enrich_ip_response = MOCK_ENRICH_IP_RESPONSE
         success_output_msg = "Successfully enriched IP - 10.0.1.251"
 
-        Enrich_IP_Address.main()
+        enrich_ip_address.main()
 
         assert len(script_session.request_history) >= 1
         enrich_requests = [
@@ -50,7 +50,7 @@ class TestEnrichIPAddress:
         rrs.enrich_ip_status_code = 500
         rrs.enrich_ip_response = {"error": "Internal Server Error"}
 
-        Enrich_IP_Address.main()
+        enrich_ip_address.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2
@@ -66,7 +66,7 @@ class TestEnrichIPAddress:
         rrs.enrich_ip_status_code = 401
         rrs.enrich_ip_response = {"error": "Unauthorized"}
 
-        Enrich_IP_Address.main()
+        enrich_ip_address.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2

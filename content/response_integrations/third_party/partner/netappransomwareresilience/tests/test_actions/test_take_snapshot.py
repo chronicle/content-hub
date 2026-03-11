@@ -3,7 +3,7 @@ from __future__ import annotations
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
-from netappransomwareresilience.actions import Take_Snapshot
+from netappransomwareresilience.actions import take_snapshot
 from netappransomwareresilience.tests.common import CONFIG_PATH, MOCK_TAKE_SNAPSHOT_RESPONSE
 from netappransomwareresilience.tests.core.product import RansomwareResilience
 from netappransomwareresilience.tests.core.session import RRSSession
@@ -27,7 +27,7 @@ class TestTakeSnapshot:
         rrs.take_snapshot_response = MOCK_TAKE_SNAPSHOT_RESPONSE
         success_output_msg = "Successfully triggered snapshot creation"
 
-        Take_Snapshot.main()
+        take_snapshot.main()
 
         assert len(script_session.request_history) >= 1
         snapshot_requests = [
@@ -52,7 +52,7 @@ class TestTakeSnapshot:
         rrs.take_snapshot_status_code = 500
         rrs.take_snapshot_response = {"error": "Internal Server Error"}
 
-        Take_Snapshot.main()
+        take_snapshot.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2
@@ -68,7 +68,7 @@ class TestTakeSnapshot:
         rrs.take_snapshot_status_code = 401
         rrs.take_snapshot_response = {"error": "Unauthorized"}
 
-        Take_Snapshot.main()
+        take_snapshot.main()
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2
