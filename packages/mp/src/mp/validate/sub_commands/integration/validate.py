@@ -109,7 +109,7 @@ def validate_integration(
         typer.Exit: If validation fails, the program will exit with code 1.
 
     """
-    integrations = ensure_valid_list(integrations)
+    integrations: list[str] = ensure_valid_list(integrations)
 
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()

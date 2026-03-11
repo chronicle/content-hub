@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import os
 from base64 import b64decode
 
@@ -19,18 +20,20 @@ SCOPES = [
 class GoogleDriveManager:
     """GoogleDoc Manager"""
 
-    def __init__(self, cred_json_content):
-        f = open("credentials.json", "w+")
-        f.write(cred_json_content)
-        f.close()
-        credentials = service_account.Credentials.from_service_account_file(
-            "credentials.json",
+    def __init__(self, cred_json_content: str) -> None:
+        try:
+            info = json.loads(cred_json_content)
+        except json.JSONDecodeError as e:
+            raise ValueError("Invalid credentials JSON provided.") from e
+
+        credentials = service_account.Credentials.from_service_account_info(
+            info,
             scopes=SCOPES,
         )
         self._service = build("drive", "v3", credentials=credentials)
 
     def test_connectivity(self):
-        response = (
+        _ = (
             self._service.files()
             .list(
                 q="mimeType='image/jpeg'",

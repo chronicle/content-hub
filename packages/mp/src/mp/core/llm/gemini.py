@@ -325,7 +325,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         response = await self.client.models.generate_content(
             model=self.config.model_name,
-            contents=[Content(role="user", parts=parts)],
+            contents=[Content(role="user", parts=parts)],  # type: ignore[invalid-argument-type]
             config=config,
         )
 
@@ -366,7 +366,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             inlined_requests.append(
                 InlinedRequest(
                     model=self.config.model_name,
-                    contents=[Content(role="user", parts=parts)],
+                    contents=[Content(role="user", parts=parts)],  # type: ignore[invalid-argument-type]
                     config=config,
                 )
             )
