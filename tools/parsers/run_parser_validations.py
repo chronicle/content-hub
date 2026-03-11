@@ -3,6 +3,7 @@
 from datetime import datetime
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -110,9 +111,9 @@ def get_diff_str(d: Union[Dict, List], path: str = "$") -> List[str]:
   return lines
 
 
-def get_pretty_relpath(path: "Path") -> str:
+def get_pretty_relpath(path: Path) -> str:
   """Returns the relative path of a file in a user-friendly format."""
-  return str(path.relative_to(Path.cwd()))
+  return os.path.relpath(path)
 
 
 def main(argv: List[str]) -> None:
