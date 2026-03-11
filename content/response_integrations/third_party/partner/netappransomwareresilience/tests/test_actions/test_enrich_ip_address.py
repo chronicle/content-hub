@@ -38,3 +38,35 @@ class TestEnrichIPAddress:
         assert action_output.results.output_message == success_output_msg
         assert action_output.results.result_value is True
         assert action_output.results.execution_state.value == 0
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_enrich_ip_api_error_500(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Enrich IP handles a 500 server error gracefully."""
+        rrs.enrich_ip_status_code = 500
+        rrs.enrich_ip_response = {"error": "Internal Server Error"}
+
+        Enrich_IP_Address.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_enrich_ip_api_error_401(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Enrich IP handles a 401 unauthorized error gracefully."""
+        rrs.enrich_ip_status_code = 401
+        rrs.enrich_ip_response = {"error": "Unauthorized"}
+
+        Enrich_IP_Address.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2

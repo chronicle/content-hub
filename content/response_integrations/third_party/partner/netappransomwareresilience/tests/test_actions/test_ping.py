@@ -26,3 +26,19 @@ class TestPing:
         assert action_output.results.output_message == success_output_msg
         assert action_output.results.result_value is True
         assert action_output.results.execution_state.value == 0
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH)
+    def test_ping_auth_failure(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Ping handles authentication failure gracefully."""
+        rrs.token_status_code = 401
+        rrs.token_response = {"error": "invalid_client"}
+
+        Ping.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2

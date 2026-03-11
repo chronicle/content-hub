@@ -40,3 +40,35 @@ class TestVolumeOffline:
         assert action_output.results.output_message == success_output_msg
         assert action_output.results.result_value is True
         assert action_output.results.execution_state.value == 0
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_volume_offline_api_error_500(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Volume Offline handles a 500 server error gracefully."""
+        rrs.volume_offline_status_code = 500
+        rrs.volume_offline_response = {"error": "Internal Server Error"}
+
+        Volume_Offline.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_volume_offline_api_error_401(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Volume Offline handles a 401 unauthorized error gracefully."""
+        rrs.volume_offline_status_code = 401
+        rrs.volume_offline_response = {"error": "Unauthorized"}
+
+        Volume_Offline.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2

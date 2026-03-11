@@ -40,3 +40,35 @@ class TestTakeSnapshot:
         assert action_output.results.output_message == success_output_msg
         assert action_output.results.result_value is True
         assert action_output.results.execution_state.value == 0
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_take_snapshot_api_error_500(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Take Snapshot handles a 500 server error gracefully."""
+        rrs.take_snapshot_status_code = 500
+        rrs.take_snapshot_response = {"error": "Internal Server Error"}
+
+        Take_Snapshot.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_take_snapshot_api_error_401(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Take Snapshot handles a 401 unauthorized error gracefully."""
+        rrs.take_snapshot_status_code = 401
+        rrs.take_snapshot_response = {"error": "Unauthorized"}
+
+        Take_Snapshot.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2

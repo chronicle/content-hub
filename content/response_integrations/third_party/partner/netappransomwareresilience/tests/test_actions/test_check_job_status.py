@@ -38,3 +38,35 @@ class TestCheckJobStatus:
         assert action_output.results.output_message == success_output_msg
         assert action_output.results.result_value is True
         assert action_output.results.execution_state.value == 0
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_check_job_status_api_error_500(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Check Job Status handles a 500 server error gracefully."""
+        rrs.check_job_status_status_code = 500
+        rrs.check_job_status_response = {"error": "Internal Server Error"}
+
+        Check_Job_Status.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_check_job_status_api_error_401(
+        self,
+        script_session: RRSSession,
+        action_output: MockActionOutput,
+        rrs: RansomwareResilience,
+    ) -> None:
+        """Test that Check Job Status handles a 401 unauthorized error gracefully."""
+        rrs.check_job_status_status_code = 401
+        rrs.check_job_status_response = {"error": "Unauthorized"}
+
+        Check_Job_Status.main()
+
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2

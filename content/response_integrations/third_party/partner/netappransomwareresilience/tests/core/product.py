@@ -12,6 +12,11 @@ class RansomwareResilience:
 
     Each field holds a mock response that can be overridden per test.
     If a field is None, the corresponding getter returns a safe default.
+
+    Error simulation:
+        Set ``<endpoint>_status_code`` to a non-2xx value to make the mock
+        endpoint return that HTTP status.  The corresponding
+        ``<endpoint>_response`` will be used as the error body.
     """
 
     token_response: Optional[SingleJson] = None
@@ -20,6 +25,14 @@ class RansomwareResilience:
     check_job_status_response: Optional[SingleJson] = None
     take_snapshot_response: Optional[SingleJson] = None
     volume_offline_response: Optional[SingleJson] = None
+
+    # Error simulation — set to a non-2xx code to trigger error responses
+    token_status_code: Optional[int] = None
+    enrich_ip_status_code: Optional[int] = None
+    enrich_storage_status_code: Optional[int] = None
+    check_job_status_status_code: Optional[int] = None
+    take_snapshot_status_code: Optional[int] = None
+    volume_offline_status_code: Optional[int] = None
 
     def get_token(self) -> SingleJson:
         """Return mock OAuth token response."""

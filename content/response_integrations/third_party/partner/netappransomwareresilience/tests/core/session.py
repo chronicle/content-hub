@@ -30,53 +30,53 @@ class RRSSession(MockSession[MockRequest, MockResponse, RansomwareResilience]):
     @router.post(r"/oauth/token")
     def oauth_token_endpoint(self, request: MockRequest) -> MockResponse:
         """Handle OAuth token requests."""
-        try:
-            token_data = self._product.get_token()
-            return MockResponse(content=token_data, status_code=200)
-        except Exception as e:
-            return MockResponse(content={"error": str(e)}, status_code=401)
+        status_code = self._product.token_status_code
+        if status_code and status_code >= 400:
+            body = self._product.token_response or {"error": "authentication_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_token(), status_code=200)
 
     @router.post(r".*/enrich/ip-address")
     def enrich_ip_endpoint(self, request: MockRequest) -> MockResponse:
         """Handle enrich IP address requests."""
-        try:
-            result = self._product.get_enrich_ip()
-            return MockResponse(content=result, status_code=200)
-        except Exception as e:
-            return MockResponse(content={"error": str(e)}, status_code=400)
+        status_code = self._product.enrich_ip_status_code
+        if status_code and status_code >= 400:
+            body = self._product.enrich_ip_response or {"error": "request_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_enrich_ip(), status_code=200)
 
     @router.get(r".*/enrich/storage")
     def enrich_storage_endpoint(self, request: MockRequest) -> MockResponse:
         """Handle enrich storage requests."""
-        try:
-            result = self._product.get_enrich_storage()
-            return MockResponse(content=result, status_code=200)
-        except Exception as e:
-            return MockResponse(content={"error": str(e)}, status_code=400)
+        status_code = self._product.enrich_storage_status_code
+        if status_code and status_code >= 400:
+            body = self._product.enrich_storage_response or {"error": "request_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_enrich_storage(), status_code=200)
 
     @router.get(r".*/job/status")
     def check_job_status_endpoint(self, request: MockRequest) -> MockResponse:
         """Handle check job status requests."""
-        try:
-            result = self._product.get_check_job_status()
-            return MockResponse(content=result, status_code=200)
-        except Exception as e:
-            return MockResponse(content={"error": str(e)}, status_code=400)
+        status_code = self._product.check_job_status_status_code
+        if status_code and status_code >= 400:
+            body = self._product.check_job_status_response or {"error": "request_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_check_job_status(), status_code=200)
 
     @router.post(r".*/storage/take-snapshot")
     def take_snapshot_endpoint(self, request: MockRequest) -> MockResponse:
         """Handle take snapshot requests."""
-        try:
-            result = self._product.get_take_snapshot()
-            return MockResponse(content=result, status_code=200)
-        except Exception as e:
-            return MockResponse(content={"error": str(e)}, status_code=400)
+        status_code = self._product.take_snapshot_status_code
+        if status_code and status_code >= 400:
+            body = self._product.take_snapshot_response or {"error": "request_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_take_snapshot(), status_code=200)
 
     @router.post(r".*/storage/take-volume-offline")
     def volume_offline_endpoint(self, request: MockRequest) -> MockResponse:
         """Handle volume offline requests."""
-        try:
-            result = self._product.get_volume_offline()
-            return MockResponse(content=result, status_code=200)
-        except Exception as e:
-            return MockResponse(content={"error": str(e)}, status_code=400)
+        status_code = self._product.volume_offline_status_code
+        if status_code and status_code >= 400:
+            body = self._product.volume_offline_response or {"error": "request_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_volume_offline(), status_code=200)
