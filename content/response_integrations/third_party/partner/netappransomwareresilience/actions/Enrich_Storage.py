@@ -24,11 +24,13 @@ def main() -> None:
     enrich_results = None
     try:
         rrsManager = ApiManager(siemplify)
+        # Extract parameters from action
+        agent_id = siemplify.extract_action_param("Agent ID", print_value=True)
+        system_id = siemplify.extract_action_param("System ID", print_value=True)
         siemplify.LOGGER.info("----------------- RRS - Enrich Storage: Started -----------------")
 
         # call enrich storage api
-        enrich_results = rrsManager.enrich_storage()
-
+        enrich_results = rrsManager.enrich_storage(agent_id, system_id)
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED
         # human readable message, showed in UI as the action result

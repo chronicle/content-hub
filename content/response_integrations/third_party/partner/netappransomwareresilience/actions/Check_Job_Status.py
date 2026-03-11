@@ -21,10 +21,14 @@ def main() -> None:
     job_status_result = None
     try:
         rrsManager = ApiManager(siemplify)
+        # Extract parameters from action
+        source = siemplify.extract_action_param("Source", print_value=True)
+        agent_id = siemplify.extract_action_param("Agent ID", print_value=True)
+        job_id = siemplify.extract_action_param("Job ID", print_value=True)
         siemplify.LOGGER.info("----------------- RRS - Check Job Status: Started -----------------")
 
         # call check job status api
-        job_status_result = rrsManager.check_job_status()
+        job_status_result = rrsManager.check_job_status(source, agent_id, job_id)
 
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED

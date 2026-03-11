@@ -24,10 +24,14 @@ def main() -> None:
     snapshot_result = None
     try:
         rrsManager = ApiManager(siemplify)
+        # Extract parameters from action
+        volume_id = siemplify.extract_action_param("Volume ID", print_value=True)
+        agent_id = siemplify.extract_action_param("Agent ID", print_value=True)
+        system_id = siemplify.extract_action_param("System ID", print_value=True)
         siemplify.LOGGER.info("----------------- RRS - Take Snapshot: Started -----------------")
 
         # call take snapshot api
-        snapshot_result = rrsManager.take_snapshot()
+        snapshot_result = rrsManager.take_snapshot(volume_id, agent_id, system_id)
 
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED

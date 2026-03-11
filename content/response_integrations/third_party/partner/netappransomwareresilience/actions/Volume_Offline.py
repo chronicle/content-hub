@@ -24,11 +24,14 @@ def main() -> None:
     volume_offline_result = None
     try:
         rrsManager = ApiManager(siemplify)
+        # Extract parameters from action
+        volume_id = siemplify.extract_action_param("Volume ID", print_value=True)
+        agent_id = siemplify.extract_action_param("Agent ID", print_value=True)
+        system_id = siemplify.extract_action_param("System ID", print_value=True)
         siemplify.LOGGER.info("----------------- RRS - Volume Offline: Started -----------------")
 
         # call volume offline api
-        volume_offline_result = rrsManager.volume_offline()
-
+        volume_offline_result = rrsManager.volume_offline(volume_id, agent_id, system_id)
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED
         # human readable message, showed in UI as the action result

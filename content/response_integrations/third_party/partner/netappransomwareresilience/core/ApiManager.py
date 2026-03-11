@@ -58,7 +58,9 @@ class ApiManager:
         )
 
         self.cred_storage = CredStorage(
-            encryption_password=generate_encryption_key(self.CLIENT_ID, self.DOMAIN),
+            encryption_password=generate_encryption_key(
+                self.CLIENT_ID, self.DOMAIN, self.CLIENT_SECRET
+            ),
             chronicle_soar=self.siemplify,
         )
 
@@ -152,7 +154,7 @@ class ApiManager:
 
         return response_data
 
-    def enrich_storage(self) -> list[dict]:
+    def enrich_storage(self, agent_id: str, system_id: str) -> list[dict]:
         """
         Enrich storage information.
 
@@ -168,9 +170,6 @@ class ApiManager:
         Raises:
             requests.HTTPError: If the API call returns a non-2xx status code.
         """
-        # Extract parameters from action
-        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
-        system_id = self.siemplify.extract_action_param("System ID", print_value=True)
 
         self.siemplify.LOGGER.info(
             "ApiManager.enrich_storage: Enriching storage for given agent_id and system_id"
@@ -198,7 +197,7 @@ class ApiManager:
 
         return response_data
 
-    def check_job_status(self) -> dict:
+    def check_job_status(self, source: str, agent_id: str, job_id: str) -> dict:
         """
         Check the status of a job.
 
@@ -215,10 +214,6 @@ class ApiManager:
         Raises:
             requests.HTTPError: If the API call returns a non-2xx status code.
         """
-        # Extract parameters from action
-        source = self.siemplify.extract_action_param("Source", print_value=True)
-        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
-        job_id = self.siemplify.extract_action_param("Job ID", print_value=True)
 
         self.siemplify.LOGGER.info(
             f"ApiManager.check_job_status: Checking job status for job_id: {job_id}"
@@ -246,7 +241,7 @@ class ApiManager:
 
         return response_data
 
-    def take_snapshot(self) -> dict:
+    def take_snapshot(self, volume_id: str, agent_id: str, system_id: str) -> dict:
         """
         Take a snapshot of a volume.
 
@@ -261,15 +256,9 @@ class ApiManager:
             dict: Response data from the snapshot API.
 
         Raises:
-            ValueError: If any of volume_id, agent_id, or system_id are missing.
             requests.HTTPError: If the API call returns a non-2xx status code.
 
         """
-        # Extract parameters from action
-        volume_id = self.siemplify.extract_action_param("Volume ID", print_value=True)
-        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
-        system_id = self.siemplify.extract_action_param("System ID", print_value=True)
-
         self.siemplify.LOGGER.info(
             f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}"
         )
@@ -296,7 +285,7 @@ class ApiManager:
 
         return response_data
 
-    def volume_offline(self) -> dict:
+    def volume_offline(self, volume_id: str, agent_id: str, system_id: str) -> dict:
         """
         Take a volume offline.
 
@@ -311,15 +300,9 @@ class ApiManager:
             dict: Response data from the volume offline API.
 
         Raises:
-            ValueError: If any of volume_id, agent_id, or system_id are missing.
             requests.HTTPError: If the API call returns a non-2xx status code.
 
         """
-        # Extract parameters from action
-        volume_id = self.siemplify.extract_action_param("Volume ID", print_value=True)
-        agent_id = self.siemplify.extract_action_param("Agent ID", print_value=True)
-        system_id = self.siemplify.extract_action_param("System ID", print_value=True)
-
         self.siemplify.LOGGER.info(
             f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}"
         )

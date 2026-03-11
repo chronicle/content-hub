@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 from typing import Any, Dict
 from urllib.parse import urlparse
 
@@ -32,19 +33,26 @@ def compute_expiry(response: Dict[str, Any]) -> int:
     return now_ms + (DEFAULT_EXPIRY_SECONDS * 1000)
 
 
-def generate_encryption_key(client_id: str, account_domain: str) -> str:
-    """Generate an encryption key from existing settings.
+def generate_encryption_key(client_id: str, account_domain: str, client_secret: str) -> str:
+    """Generate an encryption key using HMAC-SHA256 with the client secret.
+
+    Uses the client_secret as the HMAC key and client_id:account_domain as the
+    message, ensuring the encryption key cannot be reconstructed without the secret.
 
     Args:
         client_id: OAuth client ID.
         account_domain: NetApp account domain.
+        client_secret: OAuth client secret used as HMAC key.
 
     Returns:
-        str: SHA-256 hash hex string used for token encryption.
+        str: HMAC-SHA256 hex digest used for token encryption.
     """
-    unique_string = f"{client_id}:{account_domain}"
-    # Create a SHA-256 hash to ensure consistent length and format
-    return hashlib.sha256(unique_string.encode()).hexdigest()
+    message = f"{client_id}:{account_domain}"
+    return hmac.new(
+        key=client_secret.encode(),
+        msg=message.encode(),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
 
 
 def extract_domain_from_uri(service_url: str) -> str:
