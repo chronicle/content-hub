@@ -7,7 +7,7 @@ from soar_sdk.ScriptResult import (
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.ApiManager import ApiManager
+from ..core.api_manager import ApiManager
 from ..core.rrs_exceptions import RrsException
 
 
