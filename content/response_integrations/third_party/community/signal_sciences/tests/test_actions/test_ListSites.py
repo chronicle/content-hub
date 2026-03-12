@@ -42,7 +42,7 @@ class TestListSites:
 
         assert success_output_msg in action_output.results.output_message
         assert action_output.results.result_value is True
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.json_output.json_result == SITES_DATA
 
     @set_metadata(
         parameters={"Max Sites To Return": 0},
@@ -65,7 +65,9 @@ class TestListSites:
         # Assert
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         # The script should have gathered all 15 sites
-        assert "site14" in action_output.results.output_message
+        assert len(action_output.results.json_output.json_result) == 15
+        for i in range(15):
+            assert action_output.results.json_output.json_result[i]["name"] == f"site{i}"
 
     @set_metadata(
         parameters={"Max Sites To Return": None},
@@ -83,7 +85,8 @@ class TestListSites:
 
         # Act
         ListSites.main()
+        expected_json = [{"name": "site1"}] # Since we only added one site in this test case
 
         # Assert
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert "site1" in action_output.results.output_message
+        assert action_output.results.json_output.json_result == expected_json

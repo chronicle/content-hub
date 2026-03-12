@@ -42,7 +42,9 @@ class SignalSciences:
             "id": f"allow-{ip_address}",
             "source": ip_address,
             "note": note,
-            "expires": ""
+            "expires": "",
+            "createdBy": "test-user",
+            "created": "2024-12-16T15:13:40Z",
         }
         self.allowlists[corp_name][site_name].append(item)
         return item
@@ -67,7 +69,9 @@ class SignalSciences:
             "id": f"block-{ip_address}",
             "source": ip_address,
             "note": note,
-            "expires": ""
+            "expires": "",
+            "createdBy": "test-user",
+            "created": "2024-12-16T15:13:40Z",
         }
         self.blocklists[corp_name][site_name].append(item)
         return item

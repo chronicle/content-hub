@@ -39,8 +39,7 @@ class SignalSciencesSession(MockSession[MockRequest, MockResponse, SignalScience
 
     def _paginate(self, all_items: list, params: SingleJson) -> list:
         page = int(params.get("page", 1))
-        # Default limit in manager seems to be 100, but let's be safe
-        limit = int(params.get("limit", 100))
+        limit = int(params.get("limit", 10))
         
         start = (page - 1) * limit
         end = start + limit
