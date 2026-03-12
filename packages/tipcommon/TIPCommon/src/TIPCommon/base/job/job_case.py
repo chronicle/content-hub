@@ -21,9 +21,9 @@ from dataclasses import dataclass, field
 
 from ...consts import JOB_MAX_TAG_LEN, JOB_MIN_TAG_LEN
 from ...data_models import AlertCard, CaseDataStatus, CaseDetails
-from ...types import SingleJson
 
 if TYPE_CHECKING:
+    from ...types import SingleJson
     from typing import Any
 
 
@@ -72,13 +72,13 @@ class JobStatusResult(NamedTuple):
     """Data structure to hold status updates that need to be synced between product and case."""
 
     alerts_to_close_in_soar: list[tuple[AlertCard, SyncMetadata]]
-    incidents_to_close_in_product: list[dict[str, Any]]
+    incidents_to_close_in_product: list[SingleJson]
 
 
 class JobAssigneeResult(NamedTuple):
     """Data structure to hold assignee updates that need to be synced between product and case."""
 
-    target_user: dict[str, Any] | None
+    target_user: SingleJson | None
     alert: AlertCard | None
 
 
@@ -405,7 +405,10 @@ class JobCase:
         return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
 
     def get_product_tags_to_sync_to_products(
-        self, product_properties_key: str | None = None, tags_key="tags", tags_name="name"
+        self,
+        product_properties_key: str | None = None,
+        tags_key="tags",
+        tags_name="name",
     ) -> tuple[list[SingleJson], list[str]]:
         """Get product incidents that need tag updates and a list of all product tags.
 
