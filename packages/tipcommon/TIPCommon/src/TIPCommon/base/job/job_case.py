@@ -24,7 +24,6 @@ from ...data_models import AlertCard, CaseDataStatus, CaseDetails
 
 if TYPE_CHECKING:
     from ...types import SingleJson
-    from typing import Any
 
 
 class JobCommentsResult(NamedTuple):
@@ -444,7 +443,10 @@ class JobCase:
         return incident_to_update_tags, all_tags
 
     def __get_all_product_tags(
-        self, product_properties_key: str | None = None, tags_key="tags", tags_name="name"
+        self,
+        product_properties_key: str | None = None,
+        tags_key="tags",
+        tags_name="name",
     ) -> list[str]:
         """Get all product tags from the case alerts.
 
@@ -488,7 +490,10 @@ class JobCase:
         ]
 
     def product_tags(
-        self, product_properties_key: str | None = None, tags_key="tags", tags_name="name"
+        self,
+        product_properties_key: str | None = None,
+        tags_key="tags",
+        tags_name="name",
     ) -> list[str]:
         """Get all product tags from the case alerts.
 
@@ -726,12 +731,12 @@ class JobCase:
 
         return min_len <= len(stripped_tag) <= max_len
 
-    def get_assignee_to_sync(self, secops_users: list[dict]) -> JobAssigneeResult:
+    def get_assignee_to_sync(self, secops_users: list[SingleJson]) -> JobAssigneeResult:
         """Finds the first open alert and matches the source assignee.
 
         Args:
-            secops_users (list[dict]): A list of user dictionaries from SecOps, each containing
-            at least 'email' and 'userFullName' keys.
+            secops_users (list[SingleJson]): A list of user dictionaries from SecOps, each
+            containing at least 'email' and 'userFullName' keys.
 
         Returns:
             JobAssigneeResult: A named tuple containing the target user dictionary to sync to
@@ -761,7 +766,7 @@ class JobCase:
 
         return JobAssigneeResult(target_user, first_open_alert)
 
-    def get_severity_to_sync(self, severity_map: dict) -> JobSeverityResult:
+    def get_severity_to_sync(self, severity_map: dict[str, str]) -> JobSeverityResult:
         """Fetches severity updates for alerts based on metadata and severity map.
 
         Args:
@@ -825,7 +830,10 @@ class JobCase:
         return self.case_detail.status == CaseDataStatus.CLOSED
 
     def _should_close_alert_in_secops(
-        self, alert: AlertCard, meta: SyncMetadata, closed_status: str
+        self,
+        alert: AlertCard,
+        meta: SyncMetadata,
+        closed_status: str,
     ) -> bool:
         """Determines if an alert should be closed in SecOps based on its metadata
         and the product's closed status.
@@ -841,7 +849,11 @@ class JobCase:
         return meta.status == closed_status and alert.status.lower() != "close"
 
     def _should_close_alert_in_product(
-        self, alert: AlertCard, meta: SyncMetadata, is_case_closed: bool, closed_status: str
+        self,
+        alert: AlertCard,
+        meta: SyncMetadata,
+        is_case_closed: bool,
+        closed_status: str,
     ) -> bool:
         """Determines if an alert's corresponding incident should be closed in the product
         based on the alert's metadata, the case's closed status, and the product's closed status.
@@ -864,7 +876,10 @@ class JobCase:
         )
 
     def _build_product_closure_payload(
-        self, alert: AlertCard, meta: SyncMetadata, is_case_closed: bool
+        self,
+        alert: AlertCard,
+        meta: SyncMetadata,
+        is_case_closed: bool,
     ) -> SingleJson:
         """Builds the payload to update a product incident's status to closed based
         on the alert's metadata and the case's closed status.
