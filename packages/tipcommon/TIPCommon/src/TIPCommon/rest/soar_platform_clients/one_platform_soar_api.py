@@ -842,7 +842,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_domains(self) -> requests.Response:
         """Create integrations instance"""
-        endpoint = "/system/settings/domains"
+        endpoint = "/soarDomains"
         response = self._make_request(HttpMethod.GET, endpoint)
         raw = response.text.strip()
         if not raw:
@@ -855,13 +855,13 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def update_domain(self) -> requests.Response:
         """Update domain"""
-        endpoint = "/system/settings/domains"
+        endpoint = "/soarDomains"
         payload = self.params.domain_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_environment_names(self) -> requests.Response:
         """Get environment names"""
-        endpoint = "/system/settings/environments"
+        endpoint = "/environments"
         response = self._make_request(HttpMethod.GET, endpoint)
         return [
             evn_name.get("displayName")
@@ -897,7 +897,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def add_case_tag(self) -> requests.Response:
         """Add case tag"""
-        endpoint = "/system/settings/caseTagDefinitions"
+        endpoint = "/caseTagDefinitions"
         payload = self.params.case_tag
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
@@ -1386,7 +1386,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_denylists(self) -> requests.Response:
         """Get denylists."""
-        endpoint = "/system/settings/soarBlockEntities"
+        endpoint = "/entitiesBlocklists"
         params = {"expand": "*"} if self.params.is_expand else None
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
@@ -1396,5 +1396,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_installed_integrations(self) -> requests.Response:
+        """Get installed integrations."""
         endpoint: str = "/integrations"
         return self._make_request(HttpMethod.GET, endpoint).json()["integrations"]
