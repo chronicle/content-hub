@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from .datamodels import *
+from .datamodels import (
+    CVE,
+    Alert,
+    AlertComment,
+    Asset,
+    Framework,
+    ScanStatus,
+)
 
 
 class OrcaSecurityParser:
@@ -9,7 +16,9 @@ class OrcaSecurityParser:
     ):
         return [
             getattr(self, method)(item_json, **kwargs)
-            for item_json in (raw_json if pure_data else raw_json.get(data_key, []))[:limit]
+            for item_json in (raw_json if pure_data else raw_json.get(data_key, []))[
+                :limit
+            ]
         ]
 
     def build_alert_objects(self, raw_data):
@@ -63,8 +72,33 @@ class OrcaSecurityParser:
 
     @staticmethod
     def build_cve_object(raw_json):
-        return CVE(raw_json, **raw_json)
+
+        inventory = raw_json.get("Inventory") or {}
+        installed_package = raw_json.get("InstalledPackage") or {}
+
+        return CVE(
+            raw_json,
+            cve_id=raw_json.get("CveId"),
+            summary=raw_json.get("Description"),
+            fix_available=str(raw_json.get("PatchAvailable")).lower() == "yes",
+            asset_name=inventory.get("Name"),
+            published=raw_json.get("FirstSeen"),
+            source_link=raw_json.get("SourceLink"),
+            affected_packages=installed_package.get("Name"),
+            severity=str(raw_json.get("CvssSeverity")).lower(),
+        )
 
     @staticmethod
     def build_asset_object(raw_json):
-        return Asset(raw_json, **raw_json)
+        asset_data = raw_json.get("data") or {}
+        return Asset(
+            raw_json,
+            asset_name=raw_json.get("name"),
+            asset_type=raw_json.get("type"),
+            asset_category=asset_data.get("Category", {}).get("value"),
+            asset_subcategory=asset_data.get("SubCategory", {}).get("value"),
+            asset_state=asset_data.get("State", {}).get("value"),
+            state_severity=asset_data.get("RiskLevel", {}).get("value", "N/A"),
+            state_created_at=asset_data.get("FirstSeen", {}).get("value", "N/A"),
+            state_last_seen=raw_json.get("last_seen", "N/A"),
+        )
