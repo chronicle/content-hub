@@ -24,6 +24,7 @@ class AddIpToBlockListAction(SignalSciencesAction):
             self.soar_action, "IP Address", default_value=""
         )
         self.note = extract_action_param(self.soar_action, "Note", is_mandatory=True)
+        self.logger.info(f"Extracted Note: {self.note}")
 
     def _perform_action(self, _=None) -> None:
         target_ips = []
@@ -96,7 +97,7 @@ class AddIpToBlockListAction(SignalSciencesAction):
                 self.failed_ips.append(ip_address)
 
     def _finalize_action_on_success(self) -> None:
-        if self.execution_state == ExecutionState.FAILED:
+        if self.execution_state == ExecutionState.FAILED or (not self.successful_ips and not self.failed_ips):
             return
 
         if self.successful_ips:

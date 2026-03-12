@@ -1,208 +1,160 @@
-from unittest.mock import MagicMock, patch
-import requests
+from __future__ import annotations
+
+import pytest
+from integration_testing.common import create_entity
+from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
-from actions.AddIpToBlockList import main
-from core.SignalSciencesManager import SignalSciencesManager
-from TIPCommon.base.action.data_models import ExecutionState
-from common import CONFIG_PATH, IP_RESPONSES_DATA
+from TIPCommon.base.action import ExecutionState
+from TIPCommon.base.action.data_models import EntityTypesEnum
+
+from signal_sciences.actions import AddIpToBlockList
+from signal_sciences.tests.common import CONFIG_PATH
+from signal_sciences.tests.core.product import SignalSciences
+from signal_sciences.tests.core.session import SignalSciencesSession
 
 
-@set_metadata(
-    parameters={
-        "Site Name": "test-site",
-        "IP Address": "1.2.3.4",
-        "Note": "Test Note",
-    },
-    integration_config_file_path=CONFIG_PATH,
-)
-@patch.object(SignalSciencesManager, "get_blocklists")
-@patch.object(SignalSciencesManager, "add_ip_to_blocklist")
-def test_add_ip_to_block_list_success(
-    mock_add_ip, mock_get_block, script_session, action_output
-):
-    mock_get_block.return_value = []
-    mock_add_ip.return_value = IP_RESPONSES_DATA["block_list_response"][0]["EntityResult"]
-
-    main()
-
-    mock_add_ip.assert_called_once_with(
-        site_name="test-site",
-        ip_address="1.2.3.4",
-        note="Test Note"
+class TestAddIpToBlockList:
+    @set_metadata(
+        parameters={
+            "Site Name": "test-site",
+            "IP Address": "1.2.3.5",
+            "Note": "Test Note",
+        },
+        integration_config_file_path=CONFIG_PATH,
     )
+    def test_add_ip_to_block_list_success(
+        self,
+        script_session: SignalSciencesSession,
+        action_output: MockActionOutput,
+        signal_sciences: SignalSciences,
+    ) -> None:
+        # Arrange
+        signal_sciences.add_corp("test-corp", {"name": "test-corp"})
 
-    assert (
-        "Successfully added the following IPs to the Block List for "
-        "site test-site in Signal Sciences:\n1.2.3.4"
-    ) in action_output.results.output_message
-    assert action_output.results.is_success is True
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
-    assert action_output.results.json_output == [
-        {
-            "Entity": "1.2.3.4",
-            "EntityResult": {
-                "id": "558cde293dfaa4a829000010",
-                "source": "1.1.1.2",
-                "note": "Example Note",
-                "createdBy": "user@example.com",
-                "created": "2014-12-11T22:51:56-08:00",
-                "expires": ""
-            }
-        }
-    ]
+        # Act
+        AddIpToBlockList.main()
 
+        # Assert
+        assert any(
+            r.request.method.value == "PUT" and r.request.kwargs.get("json", {}).get("source") == "1.2.3.5" 
+            for r in script_session.request_history
+        )
+        assert "Successfully added" in action_output.results.output_message
+        assert "1.2.3.5" in action_output.results.output_message
+        assert action_output.results.result_value is True
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.json_output.json_result[0]["Entity"] == "1.2.3.5"
 
-@set_metadata(
-    parameters={
-        "Site Name": "test-site",
-        "IP Address": "1.2.3.4",
-        "Note": "Test Note",
-    },
-    integration_config_file_path=CONFIG_PATH,
-)
-@patch.object(SignalSciencesManager, "get_blocklists")
-@patch.object(SignalSciencesManager, "add_ip_to_blocklist")
-def test_add_ip_to_block_list_failure(
-    mock_add_ip, mock_get_block, script_session, action_output
-):
-    mock_get_block.return_value = []
-    mock_add_ip.side_effect = Exception("API Error")
-
-    main()
-
-    mock_add_ip.assert_called_once_with(
-        site_name="test-site",
-        ip_address="1.2.3.4",
-        note="Test Note"
+    @set_metadata(
+        parameters={
+            "Site Name": "test-site",
+            "IP Address": "1.2.3.5",
+            "Note": "Test Note",
+        },
+        integration_config_file_path=CONFIG_PATH,
     )
-    assert (
-        'Error executing action: "Add IP to Block List". Reason: Failed to add '
-        'the following IPs to the Block List for site test-site in Signal Sciences:\n1.2.3.4'
-    ) in action_output.results.output_message
-    assert action_output.results.is_success is False
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    def test_add_ip_to_block_list_already_exists(
+        self,
+        script_session: SignalSciencesSession,
+        action_output: MockActionOutput,
+        signal_sciences: SignalSciences,
+    ) -> None:
+        # Arrange
+        corp_name = "test-corp"
+        site_name = "test-site"
+        signal_sciences.add_corp(corp_name, {"name": corp_name})
+        signal_sciences.add_ip_to_blocklist(corp_name, site_name, "1.2.3.5", "Existing Note")
 
+        # Act
+        AddIpToBlockList.main()
 
-@set_metadata(
-    parameters={
-        "Site Name": "test-site",
-        "IP Address": "1.2.3.4",
-        "Note": "Test Note",
-    },
-    integration_config_file_path=CONFIG_PATH,
-)
-@patch.object(SignalSciencesManager, "get_blocklists")
-@patch.object(SignalSciencesManager, "add_ip_to_blocklist")
-def test_add_ip_to_block_list_already_exists(
-    mock_add_ip, mock_get_block, script_session, action_output
-):
-    mock_get_block.return_value = [{
-        "id": "existing-123",
-        "source": "1.2.3.4",
-        "note": "Existing Note",
-        "createdBy": "other@example.com",
-        "created": "2023-12-31T00:00:00Z"
-    }]
+        # Assert
+        assert not any(r.request.method == "PUT" for r in script_session.request_history)
+        assert "Successfully added" in action_output.results.output_message
+        assert "1.2.3.5" in action_output.results.output_message
+        assert action_output.results.result_value is True
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.json_output.json_result[0]["EntityResult"]["note"] == "Existing Note"
 
-    main()
+    @set_metadata(
+        parameters={
+            "Site Name": "non-existent-site",
+            "IP Address": "1.2.3.5",
+            "Note": "Test Note",
+        },
+        integration_config_file_path=CONFIG_PATH,
+    )
+    def test_add_ip_to_block_list_site_not_found(
+        self,
+        script_session: SignalSciencesSession,
+        action_output: MockActionOutput,
+        signal_sciences: SignalSciences,
+    ) -> None:
+        # Arrange
+        signal_sciences.add_corp("test-corp", {"name": "test-corp"})
 
-    # Verify no addition call was made
-    mock_add_ip.assert_not_called()
+        # Act
+        AddIpToBlockList.main()
 
-    assert (
-        "Successfully added the following IPs to the Block List for "
-        "site test-site in Signal Sciences:\n1.2.3.4"
-    ) in action_output.results.output_message
-    assert action_output.results.is_success is True
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
-    assert action_output.results.json_output == [
-        {
-            "Entity": "1.2.3.4",
-            "EntityResult": {
-                "id": "existing-123",
-                "source": "1.2.3.4",
-                "note": "Existing Note",
-                "createdBy": "other@example.com",
-                "created": "2023-12-31T00:00:00Z",
-                "expires": None
-            }
-        }
-    ]
+        # Assert
+        assert "Reason: Site non-existent-site not found." in action_output.results.output_message
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state == ExecutionState.FAILED
 
-@set_metadata(
-    parameters={
-        "Site Name": "test-site",
-        "IP Address": "",
-    },
-    integration_config_file_path=CONFIG_PATH,
-)
-@patch.object(SignalSciencesManager, "get_blocklists")
-def test_add_ip_to_block_list_no_ips(
-    mock_get_block, script_session, action_output
-):
-    main()
+    @set_metadata(
+        parameters={
+            "Site Name": "test-site",
+            "IP Address": "1.2.3.5, 5.6.7.9",
+            "Note": "Test Note",
+        },
+        integration_config_file_path=CONFIG_PATH,
+    )
+    def test_add_ip_to_block_list_partial_success(
+        self,
+        script_session: SignalSciencesSession,
+        action_output: MockActionOutput,
+        signal_sciences: SignalSciences,
+    ) -> None:
+        # Arrange
+        signal_sciences.add_corp("test-corp", {"name": "test-corp"})
 
-    assert (
-        "No IP addresses were provided as parameters or found as entities."
-    ) in action_output.results.output_message
-    assert action_output.results.is_success is False
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+        # Act
+        AddIpToBlockList.main()
 
-@set_metadata(
-    parameters={
-        "Site Name": "non-existent-site",
-        "IP Address": "1.2.3.4",
-    },
-    integration_config_file_path=CONFIG_PATH,
-)
-@patch.object(SignalSciencesManager, "get_blocklists")
-def test_add_ip_to_block_list_site_not_found(
-    mock_get_block, script_session, action_output
-):
-    # Mocking the error response for Site not found
-    error_response = MagicMock(spec=requests.Response)
-    error_response.json.return_value = {"message": "Site not found"}
-    http_error = requests.exceptions.HTTPError("400 Client Error", response=error_response)
-    mock_get_block.side_effect = http_error
+        # Assert
+        assert "Successfully added" in action_output.results.output_message
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
 
-    main()
+    @set_metadata(
+        parameters={
+            "Site Name": "test-site",
+            "IP Address": "1.2.3.5",
+            "Note": "Test Note",
+        },
+        entities=[create_entity("5.6.7.9", EntityTypesEnum.ADDRESS)],
+        integration_config_file_path=CONFIG_PATH,
+    )
+    def test_add_ip_to_block_list_with_entities(
+        self,
+        script_session: SignalSciencesSession,
+        action_output: MockActionOutput,
+        signal_sciences: SignalSciences,
+    ) -> None:
+        # Arrange
+        signal_sciences.add_corp("test-corp", {"name": "test-corp"})
 
-    assert 'Error executing action: "Add IP to Block List". Reason: Site non-existent-site not found.' in action_output.results.output_message
-    assert action_output.results.is_success is False
-    assert action_output.results.execution_state == ExecutionState.FAILED
+        # Act
+        AddIpToBlockList.main()
 
-
-@set_metadata(
-    parameters={
-        "Site Name": "test-site",
-        "IP Address": "1.2.3.4, 5.6.7.8",
-        "Note": "Test Note",
-    },
-    integration_config_file_path=CONFIG_PATH,
-)
-@patch.object(SignalSciencesManager, "get_blocklists")
-@patch.object(SignalSciencesManager, "add_ip_to_blocklist")
-def test_add_ip_to_block_list_partial_success(
-    mock_add_ip, mock_get_block, script_session, action_output
-):
-    mock_get_block.return_value = []
-    
-    def add_ip_side_effect(site_name, ip_address, note):
-        if ip_address == "1.2.3.4":
-            return {
-                "id": "12345",
-                "source": "1.2.3.4",
-                "note": "Test Note",
-                "createdBy": "admin@example.com",
-                "created": "2024-01-01T00:00:00Z"
-            }
-        raise Exception("API Error for 5.6.7.8")
-        
-    mock_add_ip.side_effect = add_ip_side_effect
-
-    main()
-
-    assert "Successfully added the following IPs" in action_output.results.output_message
-    assert "Failed to add the following IPs" in action_output.results.output_message
-    assert action_output.results.is_success is False
-    assert action_output.results.execution_state == ExecutionState.COMPLETED
+        # Assert
+        put_requests = [
+            r for r in script_session.request_history 
+            if r.request.method.value == "PUT"
+        ]
+        assert len(put_requests) == 2
+        sources = [r.request.kwargs.get("json", {}).get("source") for r in put_requests]
+        assert "1.2.3.5" in sources
+        assert "5.6.7.9" in sources
+        assert "1.2.3.5" in action_output.results.output_message
+        assert "5.6.7.9" in action_output.results.output_message
+        assert action_output.results.result_value is True

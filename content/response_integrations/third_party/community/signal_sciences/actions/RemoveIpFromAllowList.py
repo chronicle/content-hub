@@ -89,7 +89,7 @@ class RemoveIpFromAllowListAction(SignalSciencesAction):
                 self.failed_ips.append(ip_address)
 
     def _finalize_action_on_success(self) -> None:
-        if self.execution_state == ExecutionState.FAILED:
+        if self.execution_state == ExecutionState.FAILED or (not self.successful_ips and not self.failed_ips):
             return
 
         if self.successful_ips:
@@ -109,11 +109,7 @@ class RemoveIpFromAllowListAction(SignalSciencesAction):
                 self.output_message = error_msg
 
             self.result_value = False
-            if not self.successful_ips:
-                self.execution_state = ExecutionState.FAILED
-                self.output_message = (
-                    f'Error executing action: "{SCRIPT_NAME}". Reason: {self.output_message}'
-                )
+            self.result_value = False
         else:
             self.result_value = True
 
