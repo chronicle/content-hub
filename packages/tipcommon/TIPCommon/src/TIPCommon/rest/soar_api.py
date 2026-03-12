@@ -1742,8 +1742,8 @@ def get_env_dynamic_parameters(chronicle_soar: ChronicleSOAR) -> list[SingleJson
     try:
         validate_response(response, validate_json=True)
         response_data = response.json()
-        if isinstance(response_data, dict) and "dynamic_parameters" in response_data:
-            return response_data["dynamic_parameters"]
+        if isinstance(response_data, dict) and "dynamicParameters" in response_data:
+            return response_data["dynamicParameters"]
     except InternalJSONDecoderError:
         return []
 
@@ -1791,7 +1791,7 @@ def install_integration(
 def export_package(
     chronicle_soar: ChronicleSOAR,
     integration_identifier: str,
-) -> SingleJson:
+) -> bytes:
     """Export package"""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.integration_identifier = integration_identifier
