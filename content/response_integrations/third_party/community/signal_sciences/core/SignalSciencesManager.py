@@ -57,8 +57,8 @@ class SignalSciencesManager:
         response = self.session.get(url)
         response.raise_for_status()
 
-    def add_ip_to_allowlist(self, site_name: str, ip_address: str, note: str = "") -> dict:
-        url = self._get_full_url(ALLOW_LIST_ENDPOINT, corp_name=self.corp_name, site_name=site_name)
+    def _add_ip_to_list(self, endpoint: str, site_name: str, ip_address: str, note: str = "") -> dict:
+        url = self._get_full_url(endpoint, corp_name=self.corp_name, site_name=site_name)
         payload = {
             "source": ip_address,
             "note": note if note else "Added via SOAR"
@@ -66,48 +66,41 @@ class SignalSciencesManager:
         response = self.session.put(url, json=payload)
         response.raise_for_status()
         return response.json()
+
+    def _get_list(self, endpoint: str, site_name: str) -> list[dict]:
+        url = self._get_full_url(endpoint, corp_name=self.corp_name, site_name=site_name)
+        response = self.session.get(url)
+        response.raise_for_status()
+        return response.json().get("data", [])
+
+    def _remove_ip_from_list(self, endpoint: str, site_name: str, item_id: str) -> None:
+        url = self._get_full_url(
+            endpoint,
+            corp_name=self.corp_name,
+            site_name=site_name,
+            item_id=item_id
+        )
+        response = self.session.delete(url)
+        response.raise_for_status()
+
+    def add_ip_to_allowlist(self, site_name: str, ip_address: str, note: str = "") -> dict:
+        return self._add_ip_to_list(ALLOW_LIST_ENDPOINT, site_name, ip_address, note)
 
     def get_allowlists(self, site_name: str) -> list[dict]:
-        url = self._get_full_url(ALLOW_LIST_ENDPOINT, corp_name=self.corp_name, site_name=site_name)
-        response = self.session.get(url)
-        response.raise_for_status()
-        return response.json().get("data", [])
+        return self._get_list(ALLOW_LIST_ENDPOINT, site_name)
 
     def remove_ip_from_allowlist(self, site_name: str, item_id: str) -> None:
-        url = self._get_full_url(
-            ALLOW_LIST_ITEM_ENDPOINT,
-            corp_name=self.corp_name,
-            site_name=site_name,
-            item_id=item_id
-        )
-        response = self.session.delete(url)
-        response.raise_for_status()
+        self._remove_ip_from_list(ALLOW_LIST_ITEM_ENDPOINT, site_name, item_id)
 
     def add_ip_to_blocklist(self, site_name: str, ip_address: str, note: str = "") -> dict:
-        url = self._get_full_url(BLOCK_LIST_ENDPOINT, corp_name=self.corp_name, site_name=site_name)
-        payload = {
-            "source": ip_address,
-            "note": note if note else "Added via SOAR"
-        }
-        response = self.session.put(url, json=payload)
-        response.raise_for_status()
-        return response.json()
+        return self._add_ip_to_list(BLOCK_LIST_ENDPOINT, site_name, ip_address, note)
 
     def get_blocklists(self, site_name: str) -> list[dict]:
-        url = self._get_full_url(BLOCK_LIST_ENDPOINT, corp_name=self.corp_name, site_name=site_name)
-        response = self.session.get(url)
-        response.raise_for_status()
-        return response.json().get("data", [])
+        return self._get_list(BLOCK_LIST_ENDPOINT, site_name)
 
     def remove_ip_from_blocklist(self, site_name: str, item_id: str) -> None:
-        url = self._get_full_url(
-            BLOCK_LIST_ITEM_ENDPOINT,
-            corp_name=self.corp_name,
-            site_name=site_name,
-            item_id=item_id
-        )
-        response = self.session.delete(url)
-        response.raise_for_status()
+        self._remove_ip_from_list(BLOCK_LIST_ITEM_ENDPOINT, site_name, item_id)
+
 
     def get_sites(self, max_records: int = 50) -> list[dict]:
         """

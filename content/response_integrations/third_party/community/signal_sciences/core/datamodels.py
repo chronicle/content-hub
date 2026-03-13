@@ -1,4 +1,4 @@
-class AllowListItem:
+class SignalSciencesListItem:
     def __init__(self, raw_data: dict[str, any]):
         self.raw_data = raw_data
         self.id = raw_data.get("id")
@@ -19,25 +19,13 @@ class AllowListItem:
         }
 
 
-class BlockListItem:
-    def __init__(self, raw_data: dict[str, any]):
-        self.raw_data = raw_data
-        self.id = raw_data.get("id")
-        self.source = raw_data.get("source")
-        self.note = raw_data.get("note")
-        self.created_by = raw_data.get("createdBy")
-        self.created = raw_data.get("created")
-        self.expires = raw_data.get("expires")
+class AllowListItem(SignalSciencesListItem):
+    pass
 
-    def to_json(self) -> dict[str, any]:
-        return {
-            "id": self.id,
-            "source": self.source,
-            "note": self.note,
-            "createdBy": self.created_by,
-            "created": self.created,
-            "expires": self.expires
-        }
+
+class BlockListItem(SignalSciencesListItem):
+    pass
+
 
 
 class Site:
