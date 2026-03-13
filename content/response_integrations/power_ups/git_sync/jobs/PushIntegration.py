@@ -26,30 +26,6 @@ from ..core.GitSyncManager import GitSyncManager
 SCRIPT_NAME = "Push Integration"
 
 
-def fetch_with_timer(func, *args):
-    result, error, done = [None], [None], [False]
-
-    def target():
-        try:
-            result[0] = func(*args)
-        except Exception as e:
-            error[0] = e
-        finally:
-            done[0] = True
-
-    threading.Thread(target=target, daemon=True).start()
-
-    for elapsed in iter(lambda: time.sleep(1) or True, False):
-        if done[0]:
-            break
-        print(f"\r⏳ {elapsed}s...", end="", flush=True)
-
-    print(f"\r✅ Done!     ")
-    if error[0]:
-        raise error[0]
-    return result[0]
-
-
 @output_handler
 def main():
     siemplify = SiemplifyJob()
@@ -76,7 +52,7 @@ def main():
             try:
                 integration_obj = Integration(
                     integration,
-                    BytesIO(fetch_with_timer(gitsync.api.export_package, identifier)),
+                    BytesIO(gitsync.api.export_package, identifier),
                 )
 
                 if readme_addon:
