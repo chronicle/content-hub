@@ -77,19 +77,6 @@ def main():
             for dyn_param in gitsync.content.get_dynamic_parameters():
                 name = dyn_param.get("name")
                 siemplify.LOGGER.info(f"Adding dynamic parameter {name}")
-
-                # existing = current_by_name.get(name, {})
-
-                # payload = {
-                #     "id": existing.get("id", dyn_param.get("id", 0)),
-                #     "name": name,
-                #     "type": dyn_param.get("type", existing.get("type")),
-                #     "defaultValue": dyn_param.get("defaultValue", existing.get("defaultValue", "")),
-                #     "optionalValues": dyn_param.get(
-                #         "optionalValues", existing.get("optionalValues", [])
-                #     ),
-                # }
-
                 gitsync.api.add_dynamic_env_param(dyn_param)
 
         if features["Environments"]:
