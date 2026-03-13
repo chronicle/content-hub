@@ -1,6 +1,14 @@
-class SignalSciencesListItem:
+class BaseModel:
     def __init__(self, raw_data: dict[str, any]):
         self.raw_data = raw_data
+
+    def to_json(self) -> dict[str, any]:
+        return self.raw_data
+
+
+class SignalSciencesListItem(BaseModel):
+    def __init__(self, raw_data: dict[str, any]):
+        super().__init__(raw_data)
         self.id = raw_data.get("id")
         self.source = raw_data.get("source")
         self.note = raw_data.get("note")
@@ -27,10 +35,9 @@ class BlockListItem(SignalSciencesListItem):
     pass
 
 
-
-class Site:
+class Site(BaseModel):
     def __init__(self, raw_data: dict[str, any]):
-        self.raw_data = raw_data
+        super().__init__(raw_data)
         self.name = raw_data.get("name")
         self.display_name = raw_data.get("displayName")
         self.created = raw_data.get("created")
