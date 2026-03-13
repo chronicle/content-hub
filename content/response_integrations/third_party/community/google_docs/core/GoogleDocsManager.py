@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -9,12 +11,14 @@ SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 class GoogleDocsManager:
     """GoogleDocs Manager."""
 
-    def __init__(self, cred_json_content):
-        f = open("credentials.json", "w+")
-        f.write(cred_json_content)
-        f.close()
-        credentials = service_account.Credentials.from_service_account_file(
-            "credentials.json",
+    def __init__(self, cred_json_content: str) -> None:
+        try:
+            info = json.loads(cred_json_content)
+        except json.JSONDecodeError as e:
+            raise ValueError("Invalid credentials JSON provided.") from e
+
+        credentials = service_account.Credentials.from_service_account_info(
+            info,
             scopes=SCOPES,
         )
         self._doc_service = build("docs", "v1", credentials=credentials)

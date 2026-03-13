@@ -23,7 +23,7 @@ from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG
 from TIPCommon.exceptions import NotSupportedPlatformVersion
 from TIPCommon.rest.custom_types import HttpMethod
 
-from ...consts import DATAPLANE_1P_HEADER
+from ...consts import CASE_STATUS_CHANGE_ACTIVITY, DATAPLANE_1P_HEADER
 from ...utils import temporarily_remove_header
 from .base_soar_api import BaseSoarApi
 
@@ -516,3 +516,27 @@ class LegacySoarApi(BaseSoarApi):
             current_page += 1
 
         return all_cases
+
+    def get_case_close_comment(self, case_id: str | int) -> requests.Response:
+        """Get case closure comment
+
+        Args:
+            case_id (str | int): The ID of the case for which to retrieve the closure comment.
+
+        Returns:
+            requests.Response: The response object containing the closure comment details.
+        """
+        endpoint = "/dynamic-cases/GetCaseWallActivities?format=camel"
+        payload = {
+            "pageSize": 20,
+            "searchTerm": "",
+            "requestedPage": 0,
+            "caseId": case_id,
+            "alert": "ALL",
+            "users": [],
+            "activities": [CASE_STATUS_CHANGE_ACTIVITY],
+            "order": "desc",
+        }
+        return self._make_request(
+            method=HttpMethod.POST, endpoint=endpoint, json_payload=payload
+        )
