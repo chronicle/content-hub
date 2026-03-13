@@ -46,15 +46,7 @@ class ListSitesAction(SignalSciencesAction):
 
             self.json_results = [site.raw_data for site in sites]
 
-            table_data = [
-                {
-                    "Name (API Name)": site.name,
-                    "Display Name": site.display_name,
-                    "Created": site.created,
-                    "Agent Level": site.agent_level
-                }
-                for site in sites
-            ]
+            table_data = [site.to_table() for site in sites]
             self.data_tables.append(
                 TIPDataTable(title="Signal Sciences Sites", data_table=construct_csv(table_data))
             )

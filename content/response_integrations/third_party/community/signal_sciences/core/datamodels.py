@@ -28,11 +28,11 @@ class SignalSciencesListItem(BaseModel):
 
 
 class AllowListItem(SignalSciencesListItem):
-    pass
+    """Represents an item in the Signal Sciences Allow List."""
 
 
 class BlockListItem(SignalSciencesListItem):
-    pass
+    """Represents an item in the Signal Sciences Block List."""
 
 
 class Site(BaseModel):
@@ -49,4 +49,12 @@ class Site(BaseModel):
             "displayName": self.display_name,
             "created": self.created,
             "agentLevel": self.agent_level
+        }
+
+    def to_table(self) -> dict[str, any]:
+        return {
+            "Name (API Name)": self.name,
+            "Display Name": self.display_name,
+            "Created": self.created,
+            "Agent Level": self.agent_level
         }
