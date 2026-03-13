@@ -24,6 +24,7 @@ from ..consts import DEFAULT_ENVIRONMENT
 from ..data_models import (
     AlertEvent,
     AttachmentMetadata,
+    CaseCloseComment,
     CaseDetails,
     CaseWallAttachment,
     ConnectorCard,
@@ -1343,7 +1344,7 @@ def get_email_template(
     response_data = response.json()
     if isinstance(response_data, list):
         return [EmailTemplate.from_json(res) for res in response_data]
-    email_templates_list = response_data.get("email_templates", [])
+    email_templates_list = response_data.get("emailTemplates", [])
     return [EmailTemplate.from_json(res) for res in email_templates_list]
 
 
@@ -2827,3 +2828,12 @@ def get_installed_integrations(chronicle_soar: ChronicleSOAR) -> list[SingleJson
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_installed_integrations()
     return response
+def get_case_close_comment(
+    chronicle_soar: ChronicleSOAR,
+    case_id: str | int,
+) -> str:
+    """Get case closure comment"""
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_case_close_comment(case_id)
+    validate_response(response, validate_json=True)
+    return CaseCloseComment.from_json(response.json()).comment

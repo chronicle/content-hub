@@ -427,6 +427,16 @@ class SoarApiClient(Protocol):
     def get_installed_integrations(self) -> requests.Response:
         """Get installed integration"""
 
+    def get_case_close_comment(self, case_id: str | int) -> requests.Response:
+        """Get case closure comment
+
+        Args:
+            case_id (str | int): The ID of the case for which to retrieve the closure comment.
+
+        Returns:
+            requests.Response: The response object containing the closure comment details.
+        """
+
 
 def get_soar_client(chronicle_soar: ChronicleSOAR) -> SoarApiClient:
     """Get the appropriate SOAR API client based on platform support.

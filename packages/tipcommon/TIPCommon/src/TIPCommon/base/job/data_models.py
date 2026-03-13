@@ -14,10 +14,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ...data_models import JobParamType
 from ...types import SingleJson
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 class JobParameter:

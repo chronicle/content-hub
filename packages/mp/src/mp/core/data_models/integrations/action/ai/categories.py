@@ -42,11 +42,25 @@ it meets the following criteria:
     2. Create Case Insights.
     3. Update Entity fields/attributes (enriching the entity's profile).
 
+Few other constraints:
+
+* Actions named Ping must not be categorized as enrichment actions.
+
+* Actions that download files must not be categorized as enrichment actions.
+
 Here's a pseudocode example of how to determine whether an action is an enrichment
 action:
 
 ```
 def is_enrichment_action(action):
+    # Rule 0.1: Ping actions are not enrichment actions
+    if action.name == "Ping":
+        return False
+
+    # Rule 0.2 Actions that download files are not enrichment actions
+    if is_download_action(action):
+        return False
+
     # Rule 1: Must fetch data to be considered enrichment
     if not action.fetches_data:
         return False
