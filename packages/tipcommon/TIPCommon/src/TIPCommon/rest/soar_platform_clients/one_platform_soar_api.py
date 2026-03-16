@@ -820,7 +820,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_domains(self) -> requests.Response:
         """Create integrations instance"""
-        endpoint = "/soarDomains"
+        endpoint = "/system/settings/domains"
         response = self._make_request(HttpMethod.GET, endpoint)
         raw = response.text.strip()
         if not raw:
@@ -833,13 +833,13 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def update_domain(self) -> requests.Response:
         """Update domain"""
-        endpoint = "/soarDomains"
+        endpoint = "/system/settings/domains"
         payload = self.params.domain_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_environment_names(self) -> requests.Response:
         """Get environment names"""
-        endpoint = "/environments"
+        endpoint = "/system/settings/environments"
         response = self._make_request(HttpMethod.GET, endpoint)
         return [
             evn_name.get("displayName")
@@ -875,7 +875,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def add_case_tag(self) -> requests.Response:
         """Add case tag"""
-        endpoint = "/caseTagDefinitions"
+        endpoint = "/system/settings/caseTagDefinitions"
         payload = self.params.case_tag
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
@@ -1286,7 +1286,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def add_custom_family(self) -> requests.Response:
         """Add custom family."""
-        endpoint = "/ontology/AddOrUpdateVisualFamily"
+        endpoint = "/ontologyRecords/*/visualFamilies"
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=self.params.visual_family
         )
@@ -1298,14 +1298,14 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def add_mapping_rules(self) -> requests.Response:
         """Add mapping rules."""
-        endpoint = "/ontology/AddOrUpdateMappingRules"
+        endpoint = "/ontologyRecords/*/mappingRules:save"
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=self.params.mapping_rule
         )
 
     def set_mappings_visual_family(self) -> requests.Response:
         """Set mappings visual family."""
-        endpoint = "/ontology/AddOrUpdateProductToVisualizationFamilyRecord"
+        endpoint = "/ontologyRecords/*/mappingRules:family"
         payload = {
             "source": self.params.source,
             "product": self.params.product or "",
@@ -1316,13 +1316,13 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def export_playbooks(self) -> requests.Response:
         """Export playbooks."""
-        endpoint = "/playbooks/ExportDefinitions"
+        endpoint = "/legacyPlaybooks:legacyExportDefinitions"
         payload = {"identifiers": self.params.definitions}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def import_playbooks(self) -> requests.Response:
         """Import playbooks."""
-        endpoint = "/playbooks/ImportDefinitions"
+        endpoint = "/legacyPlaybooks:legacyImportDefinitions"
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=self.params.playbooks
         )
@@ -1346,6 +1346,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def update_connector(self) -> requests.Response:
         """Update connector."""
         endpoint = "/connectors/AddOrUpdateConnector"
+        #integrations/{integration}/connectors
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=self.params.connector_data
         )
@@ -1353,6 +1354,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def add_job(self) -> requests.Response:
         """Add job."""
         endpoint = "/jobs/SaveOrUpdateJobData"
+        #integrations/{integration}/jobs/{job}/jonInstances/{jobInstance}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
 
     def add_email_template(self) -> requests.Response:
@@ -1364,7 +1366,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_denylists(self) -> requests.Response:
         """Get denylists."""
-        endpoint = "/entitiesBlocklists"
+        endpoint = "/system/settings/soarBlockEntities"
         params = {"expand": "*"} if self.params.is_expand else None
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
