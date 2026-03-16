@@ -13,17 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from ..core.IPInfoManager import IPInfoManager
 from soar_sdk.SiemplifyUtils import (
+    add_prefix_to_dict,
+    convert_dict_to_json_result_dict,
     dict_to_flat,
     flat_dict_to_csv,
-    add_prefix_to_dict,
     get_domain,
-    convert_dict_to_json_result_dict,
+    output_handler,
 )
+
+from ..core.IPInfoManager import IPInfoManager
 
 ACTION_NAME = "IPInfo Get_Domain_Information"
 PROVIDER = "IPInfo"
@@ -44,9 +46,7 @@ def main():
     result_value = False
 
     host_entities = [
-        entity
-        for entity in siemplify.target_entities
-        if entity.entity_type == EntityTypes.HOSTNAME
+        entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.HOSTNAME
     ]
 
     for entity in host_entities:
@@ -61,15 +61,11 @@ def main():
                     add_prefix_to_dict(flat_info, INTEGRATION_PREFIX)
                 )
                 entity.is_enriched = True
-                siemplify.result.add_entity_table(
-                    entity.identifier, flat_dict_to_csv(flat_info)
-                )
+                siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flat_info))
                 success_entities.append(entity)
                 result_value = True
         except Exception as err:
-            error_message = (
-                f"Failed fetching information for {entity.identifier}, ERROR: {err}"
-            )
+            error_message = f"Failed fetching information for {entity.identifier}, ERROR: {err}"
             siemplify.LOGGER.error(error_message)
             siemplify.LOGGER.exception(err)
             errors.append(error_message)
@@ -77,14 +73,13 @@ def main():
     siemplify.update_entities(success_entities)
 
     if success_entities:
-        output_message = f"Fetched domain information for: {', '.join([entity.identifier for entity in success_entities])}"
+        output_message = (f"Fetched domain information for: "
+                          f"{', '.join([entity.identifier for entity in success_entities])}")
     else:
         output_message = "No information fetched for target entities."
 
     if errors:
-        output_message = "{0}\n\nErrors:\n{1}".format(
-            output_message, "\n ".join(errors)
-        )
+        output_message = "{0}\n\nErrors:\n{1}".format(output_message, "\n ".join(errors))
 
     siemplify.result.add_result_json(convert_dict_to_json_result_dict(results_json))
     siemplify.end(output_message, result_value)

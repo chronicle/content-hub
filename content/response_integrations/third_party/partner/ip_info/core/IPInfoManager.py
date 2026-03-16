@@ -23,10 +23,11 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
-import urllib.parse
+
 import copy
 import urllib.parse
+
+import requests
 
 # =====================================
 #               CONSTS                #
@@ -59,9 +60,7 @@ class IPInfoManager:
         self.session = requests.session()
         self.session.verify = verify_ssl
         self.session.headers = copy.deepcopy(HEADERS)
-        self.session.headers["Authorization"] = self.session.headers[
-            "Authorization"
-        ].format(token)
+        self.session.headers["Authorization"] = self.session.headers["Authorization"].format(token)
 
     @staticmethod
     def validate_response(response):
@@ -73,9 +72,7 @@ class IPInfoManager:
         try:
             response.raise_for_status()
             if ERROR_WORD in response.content.lower():
-                raise IPInfoManagerError(
-                    f"Failed processing request., ERROR: {response.content}"
-                )
+                raise IPInfoManagerError(f"Failed processing request., ERROR: {response.content}")
             response.json()
 
         except Exception as err:
@@ -110,7 +107,8 @@ class IPInfoManager:
         :param domain_name: {string} Target domain name.
         :return: {dict} Domain information.
         """
-        request_url = rf"{urllib.parse.urljoin(self.api_root, GET_DOMAINS_INFORMATION_URL)}/{urllib.parse.quote_plus(domain_name)}"
+        request_url = (rf"{urllib.parse.urljoin(self.api_root, GET_DOMAINS_INFORMATION_URL)}/"
+                       rf"{urllib.parse.quote_plus(domain_name)}")
         response = self.session.get(request_url)
         self.validate_response(response)
         return response.json()
