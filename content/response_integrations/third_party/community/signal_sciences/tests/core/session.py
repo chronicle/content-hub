@@ -40,11 +40,11 @@ class SignalSciencesSession(MockSession[MockRequest, MockResponse, SignalScience
     def _paginate(self, all_items: list, params: SingleJson) -> list:
         page = int(params.get("page", 1))
         limit = int(params.get("limit", 10))
-        
+
         start = (page - 1) * limit
         end = start + limit
         if start >= len(all_items):
-             return []
+            return []
         return all_items[start:end]
 
     @router.get(r"/api/v0/corps/[^/]+$")
@@ -69,7 +69,7 @@ class SignalSciencesSession(MockSession[MockRequest, MockResponse, SignalScience
         corp_name = self._extract_corp_name(request.url.path)
         site_name = self._extract_site_name(request.url.path)
         if site_name == "non-existent-site":
-             return MockResponse(content={"message": "Site not found"}, status_code=404)
+            return MockResponse(content={"message": "Site not found"}, status_code=404)
         params: SingleJson = get_request_payload(request)
         items = self._product.get_allowlist(corp_name, site_name)
         paged_items = self._paginate(items, params)
@@ -101,7 +101,7 @@ class SignalSciencesSession(MockSession[MockRequest, MockResponse, SignalScience
         corp_name = self._extract_corp_name(request.url.path)
         site_name = self._extract_site_name(request.url.path)
         if site_name == "non-existent-site":
-             return MockResponse(content={"message": "Site not found"}, status_code=404)
+            return MockResponse(content={"message": "Site not found"}, status_code=404)
         params: SingleJson = get_request_payload(request)
         items = self._product.get_blocklist(corp_name, site_name)
         paged_items = self._paginate(items, params)

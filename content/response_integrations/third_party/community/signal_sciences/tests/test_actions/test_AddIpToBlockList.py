@@ -36,24 +36,22 @@ class TestAddIpToBlockList:
 
         # Assert
         assert any(
-            r.request.method.value == "PUT" and r.request.kwargs.get("json", {}).get("source") == "1.2.3.5" 
+            r.request.method.value == "PUT"
+            and r.request.kwargs.get("json", {}).get("source") == "1.2.3.5"
             for r in script_session.request_history
         )
         assert "Successfully added" in action_output.results.output_message
         assert "1.2.3.5" in action_output.results.output_message
         assert action_output.results.result_value is True
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.json_output.json_result == [{
-            "Entity": "1.2.3.5",
-            "EntityResult": {
-                "id": "block-1.2.3.5",
-                "source": "1.2.3.5",
-                "expires": "",
-                "note": "Test Note",
-                "createdBy": "test-user",
-                "created": "2024-12-16T15:13:40Z",
-            }
-        }]
+        assert action_output.results.json_output.json_result == {
+            "added_entities": ["1.2.3.5"],
+            "failed_entities": [],
+            "site_name": "test-site",
+            "created_by": "test-user",
+            "note": "Test Note",
+            "created": "2024-12-16T15:13:40Z",
+        }
 
     @set_metadata(
         parameters={
@@ -84,17 +82,14 @@ class TestAddIpToBlockList:
         assert "1.2.3.5" in action_output.results.output_message
         assert action_output.results.result_value is True
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.json_output.json_result == [{
-            "Entity": "1.2.3.5",
-            "EntityResult": {
-                "id": "block-1.2.3.5",
-                "source": "1.2.3.5",
-                "expires": "",
-                "note": "Existing Note",
-                "createdBy": "test-user",
-                "created": "2024-12-16T15:13:40Z",
-            }
-        }]
+        assert action_output.results.json_output.json_result == {
+            "added_entities": ["1.2.3.5"],
+            "failed_entities": [],
+            "site_name": "test-site",
+            "created_by": "test-user",
+            "note": "Existing Note",
+            "created": "2024-12-16T15:13:40Z",
+        }
 
     @set_metadata(
         parameters={
@@ -169,8 +164,7 @@ class TestAddIpToBlockList:
 
         # Assert
         put_requests = [
-            r for r in script_session.request_history 
-            if r.request.method.value == "PUT"
+            r for r in script_session.request_history if r.request.method.value == "PUT"
         ]
         assert len(put_requests) == 2
         sources = [r.request.kwargs.get("json", {}).get("source") for r in put_requests]
@@ -181,11 +175,8 @@ class TestAddIpToBlockList:
         assert action_output.results.result_value is True
         # Verify both IPs are in the results
         results = action_output.results.json_output.json_result
-        assert len(results) == 2
-        entities = {item["Entity"] for item in results}
-        assert entities == {"1.2.3.5", "5.6.7.9"}
-        
-        # Verify the structure of one item fully
-        item_1_2_3_5 = next(item for item in results if item["Entity"] == "1.2.3.5")
-        assert item_1_2_3_5["EntityResult"]["note"] == "Test Note"
-        assert item_1_2_3_5["EntityResult"]["createdBy"] == "test-user"
+        assert set(results["added_entities"]) == {"1.2.3.5", "5.6.7.9"}
+
+        # Verify general fields
+        assert results["note"] == "Test Note"
+        assert results["created_by"] == "test-user"

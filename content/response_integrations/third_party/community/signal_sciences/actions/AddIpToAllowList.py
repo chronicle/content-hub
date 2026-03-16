@@ -29,10 +29,13 @@ class AddIpToAllowListAction(SignalSciencesAction):
     def _perform_action(self, _=None) -> None:
         target_ips = []
         if self.ip_addresses_param:
-            target_ips.extend([ip.strip() for ip in self.ip_addresses_param.split(",") if ip.strip()])
+            target_ips.extend([
+                ip.strip() for ip in self.ip_addresses_param.split(",") if ip.strip()
+            ])
 
         suitable_entities = [
-            entity.identifier for entity in self.soar_action.target_entities
+            entity.identifier
+            for entity in self.soar_action.target_entities
             if entity.entity_type == EntityTypes.ADDRESS
         ]
         target_ips.extend(suitable_entities)
@@ -50,7 +53,7 @@ class AddIpToAllowListAction(SignalSciencesAction):
         except Exception as e:
             # Handle "Site not found" specifically if possible
             error_message = str(e)
-            if hasattr(e, 'response') and e.response is not None:
+            if hasattr(e, "response") and e.response is not None:
                 try:
                     res_json = e.response.json()
                     if res_json.get("message") == "Site not found":
@@ -60,13 +63,16 @@ class AddIpToAllowListAction(SignalSciencesAction):
                 except:
                     pass
 
-            self.output_message = f'Error executing action: "{SCRIPT_NAME}". Reason: {error_message}'
+            self.output_message = (
+                f'Error executing action: "{SCRIPT_NAME}". Reason: {error_message}'
+            )
             self.logger.error(self.output_message)
             self.result_value = False
             self.execution_state = ExecutionState.FAILED
             return
 
         existing_ips = {item["source"]: item for item in allowlists}
+        first_item = None
 
         for ip_address in target_ips:
             self.logger.info(f"Processing IP: {ip_address}")
@@ -76,27 +82,41 @@ class AddIpToAllowListAction(SignalSciencesAction):
                 continue
 
             if ip_address in existing_ips:
-                self.logger.info(f"IP {ip_address} already exists in the allow list. Using existing data.")
+                self.logger.info(
+                    f"IP {ip_address} already exists in the allow list. Using existing data."
+                )
                 item = AllowListItem(existing_ips[ip_address])
-                self.json_results.append({"Entity": ip_address, "EntityResult": item.to_json()})
+                if not first_item:
+                    first_item = item
                 self.successful_ips.append(ip_address)
                 continue
 
             try:
                 raw_data = self.api_client.add_ip_to_allowlist(
-                    site_name=self.site_name,
-                    ip_address=ip_address,
-                    note=self.note
+                    site_name=self.site_name, ip_address=ip_address, note=self.note
                 )
                 item = AllowListItem(raw_data)
-                self.json_results.append({"Entity": ip_address, "EntityResult": item.to_json()})
+                if not first_item:
+                    first_item = item
                 self.successful_ips.append(ip_address)
             except Exception as e:
                 self.logger.error(f"Failed to add IP {ip_address}: {e}")
                 self.failed_ips.append(ip_address)
 
+        # Construct Generic JsonResult
+        self.json_results = {
+            "added_entities": self.successful_ips,
+            "failed_entities": self.failed_ips,
+            "site_name": self.site_name,
+            "created_by": getattr(first_item, "created_by", "") if first_item else "",
+            "note": getattr(first_item, "note", self.note) if first_item else self.note,
+            "created": getattr(first_item, "created", "") if first_item else "",
+        }
+
     def _finalize_action_on_success(self) -> None:
-        if self.execution_state == ExecutionState.FAILED or (not self.successful_ips and not self.failed_ips):
+        if self.execution_state == ExecutionState.FAILED or (
+            not self.successful_ips and not self.failed_ips
+        ):
             return
 
         if self.successful_ips:

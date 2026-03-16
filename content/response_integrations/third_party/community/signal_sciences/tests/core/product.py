@@ -32,7 +32,9 @@ class SignalSciences:
     def get_allowlist(self, corp_name: str, site_name: str) -> list[SingleJson]:
         return self.allowlists.get(corp_name, {}).get(site_name, [])
 
-    def add_ip_to_allowlist(self, corp_name: str, site_name: str, ip_address: str, note: str) -> SingleJson:
+    def add_ip_to_allowlist(
+        self, corp_name: str, site_name: str, ip_address: str, note: str
+    ) -> SingleJson:
         if corp_name not in self.allowlists:
             self.allowlists[corp_name] = {}
         if site_name not in self.allowlists[corp_name]:
@@ -52,14 +54,15 @@ class SignalSciences:
     def remove_ip_from_allowlist(self, corp_name: str, site_name: str, item_id: str) -> None:
         if corp_name in self.allowlists and site_name in self.allowlists[corp_name]:
             self.allowlists[corp_name][site_name] = [
-                item for item in self.allowlists[corp_name][site_name]
-                if item["id"] != item_id
+                item for item in self.allowlists[corp_name][site_name] if item["id"] != item_id
             ]
 
     def get_blocklist(self, corp_name: str, site_name: str) -> list[SingleJson]:
         return self.blocklists.get(corp_name, {}).get(site_name, [])
 
-    def add_ip_to_blocklist(self, corp_name: str, site_name: str, ip_address: str, note: str) -> SingleJson:
+    def add_ip_to_blocklist(
+        self, corp_name: str, site_name: str, ip_address: str, note: str
+    ) -> SingleJson:
         if corp_name not in self.blocklists:
             self.blocklists[corp_name] = {}
         if site_name not in self.blocklists[corp_name]:
@@ -79,6 +82,5 @@ class SignalSciences:
     def remove_ip_from_blocklist(self, corp_name: str, site_name: str, item_id: str) -> None:
         if corp_name in self.blocklists and site_name in self.blocklists[corp_name]:
             self.blocklists[corp_name][site_name] = [
-                item for item in self.blocklists[corp_name][site_name]
-                if item["id"] != item_id
+                item for item in self.blocklists[corp_name][site_name] if item["id"] != item_id
             ]

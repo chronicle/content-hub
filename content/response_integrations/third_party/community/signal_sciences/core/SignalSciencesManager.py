@@ -16,14 +16,9 @@ from .constants import (
 
 class SignalSciencesManager:
     def __init__(
-        self,
-        api_root: str,
-        email: str,
-        api_token: str,
-        corp_name: str,
-        verify_ssl: bool = True
+        self, api_root: str, email: str, api_token: str, corp_name: str, verify_ssl: bool = True
     ):
-        self.api_root = api_root if api_root.endswith('/') else f"{api_root}/"
+        self.api_root = api_root if api_root.endswith("/") else f"{api_root}/"
         self.verify_ssl = verify_ssl
         self.email = email
         self.api_token = api_token
@@ -57,12 +52,11 @@ class SignalSciencesManager:
         response = self.session.get(url)
         response.raise_for_status()
 
-    def _add_ip_to_list(self, endpoint: str, site_name: str, ip_address: str, note: str = "") -> dict:
+    def _add_ip_to_list(
+        self, endpoint: str, site_name: str, ip_address: str, note: str = ""
+    ) -> dict:
         url = self._get_full_url(endpoint, corp_name=self.corp_name, site_name=site_name)
-        payload = {
-            "source": ip_address,
-            "note": note if note else "Added via SOAR"
-        }
+        payload = {"source": ip_address, "note": note if note else "Added via SOAR"}
         response = self.session.put(url, json=payload)
         response.raise_for_status()
         return response.json()
@@ -75,10 +69,7 @@ class SignalSciencesManager:
 
     def _remove_ip_from_list(self, endpoint: str, site_name: str, item_id: str) -> None:
         url = self._get_full_url(
-            endpoint,
-            corp_name=self.corp_name,
-            site_name=site_name,
-            item_id=item_id
+            endpoint, corp_name=self.corp_name, site_name=site_name, item_id=item_id
         )
         response = self.session.delete(url)
         response.raise_for_status()
@@ -101,7 +92,6 @@ class SignalSciencesManager:
     def remove_ip_from_blocklist(self, site_name: str, item_id: str) -> None:
         self._remove_ip_from_list(BLOCK_LIST_ITEM_ENDPOINT, site_name, item_id)
 
-
     def get_sites(self, max_records: int = 50) -> list[dict]:
         """
         Lists all sites in the corporation with automatic pagination.
@@ -110,10 +100,7 @@ class SignalSciencesManager:
         return self._paginate_results(url, max_records=max_records)
 
     def _paginate_results(
-        self,
-        url: str,
-        params: dict | None = None,
-        max_records: int = 50
+        self, url: str, params: dict | None = None, max_records: int = 50
     ) -> list[dict]:
         """
         Generic pagination logic for Signal Sciences API (using page/limit).

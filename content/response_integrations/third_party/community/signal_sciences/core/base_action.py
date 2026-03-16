@@ -32,36 +32,36 @@ class SignalSciencesAction(Action, ABC):
     def _init_api_clients(self) -> SignalSciencesManager:
         """Prepare API client"""
         api_root = extract_configuration_param(
-            self.soar_action, 
-            provider_name=INTEGRATION_IDENTIFIER, 
+            self.soar_action,
+            provider_name=INTEGRATION_IDENTIFIER,
             param_name="API Root",
-            default_value=DEFAULT_API_ROOT
+            default_value=DEFAULT_API_ROOT,
         )
 
         email = extract_configuration_param(
-            self.soar_action, 
-            provider_name=INTEGRATION_IDENTIFIER, 
+            self.soar_action,
+            provider_name=INTEGRATION_IDENTIFIER,
             param_name="Email",
-            is_mandatory=True
+            is_mandatory=True,
         )
         api_token = extract_configuration_param(
-            self.soar_action, 
-            provider_name=INTEGRATION_IDENTIFIER, 
+            self.soar_action,
+            provider_name=INTEGRATION_IDENTIFIER,
             param_name="API Token",
-            is_mandatory=True
+            is_mandatory=True,
         )
         corp_name = extract_configuration_param(
-            self.soar_action, 
-            provider_name=INTEGRATION_IDENTIFIER, 
+            self.soar_action,
+            provider_name=INTEGRATION_IDENTIFIER,
             param_name="Corporation Name",
-            is_mandatory=True
+            is_mandatory=True,
         )
         verify_ssl = extract_configuration_param(
-            self.soar_action, 
-            provider_name=INTEGRATION_IDENTIFIER, 
-            param_name="Verify SSL", 
-            default_value=True, 
-            input_type=bool
+            self.soar_action,
+            provider_name=INTEGRATION_IDENTIFIER,
+            param_name="Verify SSL",
+            default_value=True,
+            input_type=bool,
         )
 
         return SignalSciencesManager(
@@ -69,5 +69,5 @@ class SignalSciencesAction(Action, ABC):
             email=email,
             api_token=api_token,
             corp_name=corp_name,
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         )

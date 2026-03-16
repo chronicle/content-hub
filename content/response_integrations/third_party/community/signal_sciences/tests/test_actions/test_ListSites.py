@@ -25,10 +25,9 @@ class TestListSites:
         corp_name = "test-corp"
         for site in SITES_DATA:
             signal_sciences.add_site(corp_name, site)
-        
+
         success_output_msg = (
-            "Successfully fetched information about the following sites in Signal "
-            "Sciences:\nsite1"
+            "Successfully fetched information about the following sites in Signal Sciences:\nsite1"
         )
 
         # Act
@@ -57,7 +56,7 @@ class TestListSites:
         # Arrange
         corp_name = "test-corp"
         for i in range(15):
-             signal_sciences.add_site(corp_name, {"name": f"site{i}", "displayName": f"Site {i}"})
+            signal_sciences.add_site(corp_name, {"name": f"site{i}", "displayName": f"Site {i}"})
 
         # Act
         ListSites.main()
@@ -85,7 +84,7 @@ class TestListSites:
 
         # Act
         ListSites.main()
-        expected_json = [{"name": "site1"}] # Since we only added one site in this test case
+        expected_json = [{"name": "site1"}]  # Since we only added one site in this test case
 
         # Assert
         assert action_output.results.execution_state == ExecutionState.COMPLETED

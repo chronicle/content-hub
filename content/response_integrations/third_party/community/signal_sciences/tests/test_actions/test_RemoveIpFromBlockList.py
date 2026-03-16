@@ -146,8 +146,7 @@ class TestRemoveIpFromBlockList:
 
         # Assert
         delete_requests = [
-            r for r in script_session.request_history 
-            if r.request.method.value == "DELETE"
+            r for r in script_session.request_history if r.request.method.value == "DELETE"
         ]
         assert len(delete_requests) == 2
         assert "1.2.3.5" in action_output.results.output_message

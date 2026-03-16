@@ -23,7 +23,7 @@ class SignalSciencesListItem(BaseModel):
             "note": self.note,
             "createdBy": self.created_by,
             "created": self.created,
-            "expires": self.expires
+            "expires": self.expires,
         }
 
 
@@ -48,7 +48,7 @@ class Site(BaseModel):
             "name": self.name,
             "displayName": self.display_name,
             "created": self.created,
-            "agentLevel": self.agent_level
+            "agentLevel": self.agent_level,
         }
 
     def to_table(self) -> dict[str, any]:
@@ -56,5 +56,5 @@ class Site(BaseModel):
             "Name (API Name)": self.name,
             "Display Name": self.display_name,
             "Created": self.created,
-            "Agent Level": self.agent_level
+            "Agent Level": self.agent_level,
         }

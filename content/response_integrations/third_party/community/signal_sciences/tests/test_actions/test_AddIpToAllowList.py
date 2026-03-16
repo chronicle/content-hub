@@ -36,24 +36,22 @@ class TestAddIpToAllowList:
 
         # Assert
         assert any(
-            r.request.method.value == "PUT" and r.request.kwargs.get("json", {}).get("source") == "1.2.3.4" 
+            r.request.method.value == "PUT"
+            and r.request.kwargs.get("json", {}).get("source") == "1.2.3.4"
             for r in script_session.request_history
         )
         assert "Successfully added" in action_output.results.output_message
         assert "1.2.3.4" in action_output.results.output_message
         assert action_output.results.result_value is True
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.json_output.json_result == [{
-            "Entity": "1.2.3.4",
-            "EntityResult": {
-                "id": "allow-1.2.3.4",
-                "source": "1.2.3.4",
-                "expires": "",
-                "note": "Test Note",
-                "createdBy": "test-user",
-                "created": "2024-12-16T15:13:40Z",
-            }
-        }]
+        assert action_output.results.json_output.json_result == {
+            "added_entities": ["1.2.3.4"],
+            "failed_entities": [],
+            "site_name": "test-site",
+            "created_by": "test-user",
+            "note": "Test Note",
+            "created": "2024-12-16T15:13:40Z",
+        }
 
     @set_metadata(
         parameters={
@@ -84,17 +82,14 @@ class TestAddIpToAllowList:
         assert "Successfully added" in action_output.results.output_message
         assert "1.2.3.4" in action_output.results.output_message
         assert action_output.results.result_value is True
-        assert action_output.results.json_output.json_result == [{
-            "Entity": "1.2.3.4",
-            "EntityResult": {
-                "id": "allow-1.2.3.4",
-                "source": "1.2.3.4",
-                "expires": "",
-                "note": "Existing Note",
-                "createdBy": "test-user",
-                "created": "2024-12-16T15:13:40Z",
-            }
-        }]
+        assert action_output.results.json_output.json_result == {
+            "added_entities": ["1.2.3.4"],
+            "failed_entities": [],
+            "site_name": "test-site",
+            "created_by": "test-user",
+            "note": "Existing Note",
+            "created": "2024-12-16T15:13:40Z",
+        }
 
     @set_metadata(
         parameters={
@@ -136,7 +131,7 @@ class TestAddIpToAllowList:
         signal_sciences: SignalSciences,
     ) -> None:
         # Arrange
-        # We want one to fail. I'll mock a failure for 5.6.7.8 in session.py if I can, 
+        # We want one to fail. I'll mock a failure for 5.6.7.8 in session.py if I can,
         # but session.py is generic. I'll modify SignalSciences mock to reject certain IPs.
         signal_sciences.add_corp("test-corp", {"name": "test-corp"})
 
@@ -171,8 +166,7 @@ class TestAddIpToAllowList:
 
         # Assert
         put_requests = [
-            r for r in script_session.request_history 
-            if r.request.method.value == "PUT"
+            r for r in script_session.request_history if r.request.method.value == "PUT"
         ]
         assert len(put_requests) == 2
         sources = [r.request.kwargs.get("json", {}).get("source") for r in put_requests]
@@ -182,12 +176,10 @@ class TestAddIpToAllowList:
         assert "5.6.7.8" in action_output.results.output_message
         assert action_output.results.result_value is True
         # Verify both IPs are in the results
+        # Verify both IPs are in the results
         results = action_output.results.json_output.json_result
-        assert len(results) == 2
-        entities = {item["Entity"] for item in results}
-        assert entities == {"1.2.3.4", "5.6.7.8"}
-        
-        # Verify the structure of one item fully
-        item_1_2_3_4 = next(item for item in results if item["Entity"] == "1.2.3.4")
-        assert item_1_2_3_4["EntityResult"]["note"] == "Test Note"
-        assert item_1_2_3_4["EntityResult"]["createdBy"] == "test-user"
+        assert set(results["added_entities"]) == {"1.2.3.4", "5.6.7.8"}
+
+        # Verify general fields
+        assert results["note"] == "Test Note"
+        assert results["created_by"] == "test-user"

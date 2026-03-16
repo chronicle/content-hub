@@ -25,11 +25,11 @@ def script_session(
 ) -> SignalSciencesSession:
     """Provides a SignalSciencesSession instance and patches requests."""
     session = SignalSciencesSession(signal_sciences)
-    
+
     if not use_live_api():
         # Patch requests.Session
         monkeypatch.setattr("requests.Session", lambda: session)
-        
+
     return session
 
 

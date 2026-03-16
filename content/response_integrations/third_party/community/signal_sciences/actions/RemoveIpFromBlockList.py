@@ -25,10 +25,13 @@ class RemoveIpFromBlockListAction(SignalSciencesAction):
     def _perform_action(self, _=None) -> None:
         target_ips = []
         if self.ip_addresses_param:
-            target_ips.extend([ip.strip() for ip in self.ip_addresses_param.split(",") if ip.strip()])
+            target_ips.extend([
+                ip.strip() for ip in self.ip_addresses_param.split(",") if ip.strip()
+            ])
 
         suitable_entities = [
-            entity.identifier for entity in self.soar_action.target_entities
+            entity.identifier
+            for entity in self.soar_action.target_entities
             if entity.entity_type == EntityTypes.ADDRESS
         ]
         target_ips.extend(suitable_entities)
@@ -55,7 +58,9 @@ class RemoveIpFromBlockListAction(SignalSciencesAction):
                 except:
                     pass
 
-            self.output_message = f'Error executing action: "{SCRIPT_NAME}". Reason: {error_message}'
+            self.output_message = (
+                f'Error executing action: "{SCRIPT_NAME}". Reason: {error_message}'
+            )
             self.logger.error(self.output_message)
             self.result_value = False
             self.execution_state = ExecutionState.FAILED
@@ -64,9 +69,7 @@ class RemoveIpFromBlockListAction(SignalSciencesAction):
         for ip_address in target_ips:
             self.logger.info(f"Processing IP: {ip_address}")
             if not self.is_valid_ip(ip_address):
-                self.logger.warn(
-                    f"IP {ip_address} is not a valid IPv4 or IPv6 address. Skipping."
-                )
+                self.logger.warn(f"IP {ip_address} is not a valid IPv4 or IPv6 address. Skipping.")
                 self.failed_ips.append(ip_address)
                 continue
 
@@ -89,7 +92,9 @@ class RemoveIpFromBlockListAction(SignalSciencesAction):
                 self.failed_ips.append(ip_address)
 
     def _finalize_action_on_success(self) -> None:
-        if self.execution_state == ExecutionState.FAILED or (not self.successful_ips and not self.failed_ips):
+        if self.execution_state == ExecutionState.FAILED or (
+            not self.successful_ips and not self.failed_ips
+        ):
             return
 
         if self.successful_ips:

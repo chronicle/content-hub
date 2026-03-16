@@ -16,10 +16,7 @@ class ListSitesAction(SignalSciencesAction):
 
     def _extract_action_parameters(self) -> None:
         self.max_sites_to_return_raw = extract_action_param(
-            self.soar_action,
-            "Max Sites To Return",
-            is_mandatory=False,
-            print_value=True
+            self.soar_action, "Max Sites To Return", is_mandatory=False, print_value=True
         )
 
     def _validate_params(self) -> None:
@@ -29,7 +26,7 @@ class ListSitesAction(SignalSciencesAction):
             except (ValueError, TypeError):
                 raise Exception(
                     f'Invalid parameter "Max Sites To Return". The value must be an '
-                    f'integer. Wrong value provided: {self.max_sites_to_return_raw}'
+                    f"integer. Wrong value provided: {self.max_sites_to_return_raw}"
                 )
         else:
             self.max_sites_to_return = 0
