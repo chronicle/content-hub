@@ -57,8 +57,8 @@ class APIManager:
         self,
         method: str,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-        json_body: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
+        json_body: dict[str, Any] | None = None,
         retry_count: int = RETRY_COUNT,
     ) -> requests.Response:
         """
@@ -236,7 +236,7 @@ class APIManager:
                     break
                 raise e
 
-            if not page_results or len(page_results) == 0:
+            if not page_results:
                 self.siemplify.LOGGER.info(
                     f"No more results found on page {page}. Stopping pagination."
                 )
@@ -298,8 +298,8 @@ class APIManager:
                     response["ioc"] = entity_identifier
                 enriched_results.append(response)
                 self.siemplify.LOGGER.info(f"Successfully enriched IOC: {entity_identifier}")
-            except UnauthorizedException as e:
-                raise UnauthorizedException(str(e))
+            except UnauthorizedException:
+                raise
             except Exception as e:
                 self.siemplify.LOGGER.warn(f"Failed to enrich IOC {entity_identifier}: {str(e)}")
                 failed_iocs.append(entity_identifier)

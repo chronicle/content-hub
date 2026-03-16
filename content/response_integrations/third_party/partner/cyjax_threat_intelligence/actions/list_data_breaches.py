@@ -63,7 +63,6 @@ def main():
         parse_date(since)
         parse_date(until)
         if since and until and (since > until):
-            siemplify.result.add_result_json(json.dumps(json_results, indent=4))
             raise ValueError("Since date cannot be greater than Until date")
 
         siemplify.LOGGER.info("Initializing Cyjax API client")
@@ -115,7 +114,7 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except Exception as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(LIST_DATA_BREACHES_SCRIPT_NAME, e)
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(LIST_DATA_BREACHES_SCRIPT_NAME, str(e))
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

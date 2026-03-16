@@ -7,7 +7,7 @@ from .constants import INTEGRATION_NAME
 from .cyjax_exceptions import InvalidIntegerException
 
 
-def get_integration_params(siemplify: Any) -> Tuple[str, bool]:
+def get_integration_params(siemplify: Any) -> tuple[str, bool]:
     """
     Retrieve the integration parameters from Siemplify configuration.
 
@@ -43,10 +43,10 @@ def parse_date(date_str: str):
         date_str = date_str.strip()
     else:
         return None
-    format = "%Y-%m-%dT%H:%M:%SZ"  # e.g. 2011-11-11T23:59:59Z
+    date_format = "%Y-%m-%dT%H:%M:%SZ"  # e.g. 2011-11-11T23:59:59Z
 
     try:
-        datetime.strptime(date_str, format)
+        datetime.strptime(date_str, date_format)
     except ValueError:
         raise ValueError("The Date needs to be in YYYY-MM-DDTHH:MM:SSZ format.")
 

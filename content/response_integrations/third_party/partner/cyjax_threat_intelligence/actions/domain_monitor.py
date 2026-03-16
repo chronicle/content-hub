@@ -25,10 +25,10 @@ def main():
     This action retrieves information for the Domain Monitor feature. The feature tracks
     your brands against newly registered global domains and the certificate transparency logs (CTL).
 
-    Action Parameters:
-        Query (str, optional): A query string to search for a domain or part of it
-        Since (str, optional): The start date time in ISO8601 format
-        Until (str, optional): The end date time in ISO8601 format
+    Args:
+        Query: A query string to search for a domain or part of it.
+        Since: The start date time in ISO8601 format.
+        Until: The end date time in ISO8601 format.
 
     Returns:
         None. Results are returned via siemplify.end() with:
@@ -37,8 +37,9 @@ def main():
             - status (str): Execution state (COMPLETED or FAILED)
 
     Raises:
-        CyjaxException: If API calls to Cyjax fail
-        Exception: For any other unexpected errors during execution
+        CyjaxException: If API calls to Cyjax fail.
+        ValueError: If the 'Since' date is after the 'Until' date.
+        Exception: For any other unexpected errors during execution.
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = DOMAIN_MONITOR_SCRIPT_NAME
@@ -63,7 +64,6 @@ def main():
         parse_date(since)
         parse_date(until)
         if since and until and (since > until):
-            siemplify.result.add_result_json(json.dumps(json_results, indent=4))
             raise ValueError("Since date cannot be greater than Until date")
 
         siemplify.LOGGER.info("Initializing Cyjax API client")

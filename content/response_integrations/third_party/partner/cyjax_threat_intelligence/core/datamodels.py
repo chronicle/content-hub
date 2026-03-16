@@ -147,9 +147,10 @@ class DataBreachListResult(BaseModel):
 
     def to_csv(self) -> Dict[str, Any]:
         """Return data formatted for CSV/table output."""
-        if self.data_classes and len(self.data_classes) > 10:
-            self.data_classes = self.data_classes[:10] + ["... (more)"]
-        data_classes_str = "| ".join(self.data_classes) if self.data_classes else "N/A"
+        data_classes_for_csv = self.data_classes
+        if data_classes_for_csv and len(data_classes_for_csv) > 10:
+            data_classes_for_csv = data_classes_for_csv[:10] + ["... (more)"]
+        data_classes_str = "| ".join(data_classes_for_csv) if data_classes_for_csv else "N/A"
 
         return {
             "ID": self.id,

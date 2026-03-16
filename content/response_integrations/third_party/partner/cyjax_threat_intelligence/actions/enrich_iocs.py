@@ -35,10 +35,6 @@ def get_entity_resp(entity, entity_results):
     return entity_resp
 
 
-def prepare_entity_json_response(entity):
-    return {"Entity": entity.identifier, "EntityResult": entity}
-
-
 @output_handler
 def main():
     """Execute Enrich IOCs action for Cyjax.
@@ -126,8 +122,6 @@ def main():
             output_message += f" Failed to enrich {len(failed_iocs)} IOCs."
         if not_found_iocs:
             output_message += f" {len(not_found_iocs)} IOCs were not found in Cyjax."
-
-            result_value = RESULT_VALUE_FALSE
 
     except (CyjaxException, ValueError) as e:
         output_message = str(e)
