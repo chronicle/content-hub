@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any
 
 from TIPCommon.types import SingleJson
 

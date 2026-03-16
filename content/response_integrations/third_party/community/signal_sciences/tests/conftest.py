@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import pytest
-import requests
 from integration_testing.common import use_live_api
-from soar_sdk.SiemplifyBase import SiemplifyBase
-from TIPCommon.base.utils import CreateSession
 
 from signal_sciences.tests.core.product import SignalSciences
 from signal_sciences.tests.core.session import SignalSciencesSession

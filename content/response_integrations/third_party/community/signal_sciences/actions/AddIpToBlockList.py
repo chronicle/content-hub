@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from SiemplifyDataModel import EntityTypes
-from TIPCommon.extraction import extract_action_param
-
 from TIPCommon.base.action.data_models import ExecutionState
+from TIPCommon.extraction import extract_action_param
 
 from ..core.base_action import SignalSciencesAction
 from ..core.datamodels import BlockListItem
@@ -59,7 +58,7 @@ class AddIpToBlockListAction(SignalSciencesAction):
                         error_message = f"Site {self.site_name} not found."
                     else:
                         error_message = res_json.get("message", error_message)
-                except:
+                except ValueError:
                     pass
 
             self.output_message = (

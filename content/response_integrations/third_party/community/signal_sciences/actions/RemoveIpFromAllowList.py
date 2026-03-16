@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from SiemplifyDataModel import EntityTypes
-from TIPCommon.extraction import extract_action_param
-
 from TIPCommon.base.action.data_models import ExecutionState
+from TIPCommon.extraction import extract_action_param
 
 from ..core.base_action import SignalSciencesAction
 
@@ -55,7 +54,7 @@ class RemoveIpFromAllowListAction(SignalSciencesAction):
                         error_message = f"Site {self.site_name} not found."
                     else:
                         error_message = res_json.get("message", error_message)
-                except:
+                except ValueError:
                     pass
 
             self.output_message = (
@@ -77,7 +76,8 @@ class RemoveIpFromAllowListAction(SignalSciencesAction):
                 matching_items = [item for item in allowlists if item["source"] == ip_address]
                 if not matching_items:
                     self.logger.info(
-                        f"IP {ip_address} not found in the allow list. Treating as successfully removed."
+                        f"IP {ip_address} not found in the allow list. "
+                        "Treating as successfully removed."
                     )
                     self.successful_ips.append(ip_address)
                     continue
@@ -113,7 +113,6 @@ class RemoveIpFromAllowListAction(SignalSciencesAction):
             else:
                 self.output_message = error_msg
 
-            self.result_value = False
             self.result_value = False
         else:
             self.result_value = True

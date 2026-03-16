@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from TIPCommon.base.action.data_models import DataTable as TIPDataTable, ExecutionState
+from TIPCommon.base.action.data_models import DataTable as TIPDataTable
+from TIPCommon.base.action.data_models import ExecutionState
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import construct_csv
 

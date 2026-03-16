@@ -8,9 +8,8 @@ from integration_testing.common import get_request_payload
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, Response, RouteFunction
-from TIPCommon.types import SingleJson
-
 from signal_sciences.tests.core.product import SignalSciences
+from TIPCommon.types import SingleJson
 
 
 class SignalSciencesSession(MockSession[MockRequest, MockResponse, SignalSciences]):

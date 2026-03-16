@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from TIPCommon.base.action.data_models import ExecutionState
+
 from ..core.base_action import SignalSciencesAction
 
 SCRIPT_NAME = "Ping"

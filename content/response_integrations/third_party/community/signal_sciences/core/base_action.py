@@ -1,6 +1,6 @@
 from __future__ import annotations
-import ipaddress
 
+import ipaddress
 from abc import ABC
 
 from TIPCommon.base.action import Action
