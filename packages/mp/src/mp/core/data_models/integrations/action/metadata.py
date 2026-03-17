@@ -286,9 +286,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             Creator=self.creator,
             Description=self.description,
             DocumentationLink=(
-                str(self.documentation_link) or None
-                if self.documentation_link is not None
-                else None
+                str(self.documentation_link) if self.documentation_link else None
             ),
             DynamicResultsMetadata=[m.to_built() for m in self.dynamic_results_metadata],
             IntegrationIdentifier=self.integration_identifier,
@@ -320,9 +318,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             name=self.name,
             description=self.description,
             documentation_link=(
-                str(self.documentation_link) or None
-                if self.documentation_link is not None
-                else None
+                str(self.documentation_link) if self.documentation_link else None
             ),
             integration_identifier=self.integration_identifier,
             parameters=[p.to_non_built() for p in self.parameters],
