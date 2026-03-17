@@ -77,7 +77,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         self.last_run_time: int = 0
         self.current_run_latest_timestamp_ms: int = 0
         self.job_cases_to_sync: list[JobCase] = []
-        self.skipped_cases: list[tuple[str, int]] = []
         self._secops_user_list: list[dict] = []
         self.sorted_modified_ids: list[tuple[str, int]] = []
         self.job_completed_successfully: bool = False
@@ -339,6 +338,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                 sorted_modified_ids,
                 modified_synced_case_ids_by_product,
             )
+        sorted_modified_ids.sort(key=lambda x: x[1])
 
         potential_cases = sorted_modified_ids[: self.sync_limit]
         total_alerts_accumulated = 0
@@ -368,7 +368,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                             f"({total_alerts_accumulated}/{self.product_alerts_limit}). "
                             f"Skipping case {case_id} with {alert_count} alerts for next run."
                         )
-                        self.skipped_cases.append((case_id, modification_time))
                         break
 
                 case_details.alerts = list(reversed(case_details.alerts))
@@ -668,15 +667,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         self._write_ids(self.processed_items)
 
         if self.job_completed_successfully and len(self.sorted_modified_ids) > 0:
-            if self.skipped_cases:
-                self.current_run_latest_timestamp_ms = min([
-                    mod_time for _, mod_time in self.skipped_cases
-                ])
-            else:
-                self.current_run_latest_timestamp_ms = self.sorted_modified_ids[-1][1]
-
-            self.current_run_latest_timestamp_ms -= DECREMENT_CASE_UPDATED_TIME_BY_MS
-
+            self.current_run_latest_timestamp_ms = self.sorted_modified_ids[-1][1]
         latest_time = self.current_run_latest_timestamp_ms
         self._save_timestamp_by_unique_id(new_timestamp=latest_time)
         self.logger.info(
