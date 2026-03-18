@@ -13,7 +13,6 @@
 > workflow. We expect to expand support to other critical content types in the near future.
 
 
-
 👋 Hello and welcome!
 
 This repository is the central hub for a wide array of community-contributed content intended to
