@@ -31,8 +31,9 @@ class SignalSciencesApiClient(Apiable):
 
     def _get_url(self, path: str) -> str:
         """Construct the full URL for a given path."""
+        base = f"{self.api_root.rstrip('/')}/api/v0/corps/{self.corp_name}"
         path = path.lstrip('/')
-        return f"{self.api_root.rstrip('/')}/api/v0/corps/{self.corp_name}/{path}"
+        return f"{base}/{path}" if path else base
 
     def test_connectivity(self) -> None:
         """Test API connectivity by fetching the corp details."""

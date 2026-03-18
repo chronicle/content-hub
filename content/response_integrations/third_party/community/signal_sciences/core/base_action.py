@@ -4,8 +4,8 @@ from abc import ABC
 
 from TIPCommon.base.action import Action
 
-from .api.api_client import ApiParameters, SignalSciencesApiClient
-from .auth import AuthenticatedSession, SessionAuthenticationParameters, build_auth_params
+from ..core.api.api_client import ApiParameters, SignalSciencesApiClient
+from ..core.auth import AuthenticatedSession, SessionAuthenticationParameters, build_auth_params
 
 
 class SignalSciencesAction(Action, ABC):

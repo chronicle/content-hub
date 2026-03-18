@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from TIPCommon.base.action import EntityTypesEnum
 from TIPCommon.extraction import extract_action_param
 
+from ..core.auth import build_auth_params
 from ..core.base_action import SignalSciencesAction
 
 
@@ -50,9 +53,8 @@ class AddIpToAllowListAction(SignalSciencesAction):
         
         for ip in ips:
             try:
-                # Payload structure assumption: {"ip": ip, "note": note}
                 payload = {
-                    "ip": ip,
+                    "source": ip,
                     "note": note
                 }
                 self.api_client.add_whitelist_item(site_name, payload)
@@ -61,8 +63,28 @@ class AddIpToAllowListAction(SignalSciencesAction):
                 self.logger.error(f"Failed to add IP {ip} to allowlist for site {site_name}: {e}")
                 failed_ips.append(ip)
 
+        try:
+            auth_params = build_auth_params(self.soar_action)
+            email = auth_params.email
+        except Exception:
+            email = ""
+
+        result_json = {
+            "added_entities": success_ips,
+            "failed_entities": failed_ips,
+            "site_name": site_name,
+            "created_by": email,
+            "note": note,
+            "created": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        }
+        self.soar_action.result.add_result_json(result_json)
+
         if success_ips:
-            self.output_message = f"Successfully added IPs to allow list for site {site_name}: {', '.join(success_ips)}"
+            ips_str = ", ".join(success_ips)
+            self.output_message = (
+                f"Successfully added IPs to allow list for "
+                f"site {site_name}: {ips_str}"
+            )
             if failed_ips:
                 self.output_message += f". Failed for: {', '.join(failed_ips)}"
             self.result_value = True
