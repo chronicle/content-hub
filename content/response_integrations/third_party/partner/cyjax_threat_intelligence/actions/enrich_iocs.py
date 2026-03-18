@@ -89,6 +89,7 @@ def main():
         not_found_iocs = processed_data["not_found_iocs"]
 
         csv_output = []
+        successful_entities = []
 
         for entity in entity_objects:
             entity_identifier = entity.identifier
@@ -109,8 +110,11 @@ def main():
             entity.is_enriched = True
             json_results.append(entity_resp)
 
-            siemplify.update_entities([entity])
+            successful_entities.append(entity)
             csv_output.append(entity_csv_output)
+
+        if successful_entities:
+            siemplify.update_entities(successful_entities)
 
         if json_results:
             output_message = f"Successfully enriched {len(json_results)} IOCs."

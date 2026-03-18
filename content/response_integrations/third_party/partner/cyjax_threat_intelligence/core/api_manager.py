@@ -21,6 +21,7 @@ from .constants import (
 from .cyjax_exceptions import (
     CyjaxException,
     InternalServerError,
+    ItemNotFoundException,
     RateLimitException,
     UnauthorizedException,
 )
@@ -112,11 +113,8 @@ class APIManager:
                         "Rate limit hit. Max retries exceeded."
                         " Please check your network connection and try again later."
                     )
-                elif (
-                    response.status_code == 404
-                    and self.siemplify.action_definition_name == "Enrich IOCs"
-                ):
-                    return response
+                elif response.status_code == 404:
+                    raise ItemNotFoundException("Resource not found.")
                 elif response.status_code >= 500:
                     if attempt < retry_count - 1:
                         delay = FIRST_RETRY_DELAY if attempt == 0 else SECOND_RETRY_DELAY
@@ -297,9 +295,14 @@ class APIManager:
                         continue
                     response["ioc"] = entity_identifier
                 enriched_results.append(response)
-                self.siemplify.LOGGER.info(f"Successfully enriched IOC: {entity_identifier}")
-            except UnauthorizedException:
-                raise
+                self.siemplify.LOGGER.info(
+                    f"Successfully enriched IOC: {entity_identifier}"
+                )
+            except ItemNotFoundException:
+                not_found_iocs.append(entity_identifier)
+                continue
+            except UnauthorizedException as e:
+                raise UnauthorizedException(str(e))
             except Exception as e:
                 self.siemplify.LOGGER.warn(f"Failed to enrich IOC {entity_identifier}: {str(e)}")
                 failed_iocs.append(entity_identifier)
