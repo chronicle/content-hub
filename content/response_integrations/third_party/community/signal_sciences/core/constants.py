@@ -18,6 +18,13 @@ DEFAULT_VERIFY_SSL: bool = True
 # API Constants
 ENDPOINTS: Mapping[str, str] = {
     "ping": "/ping",
+    "list-sites": "sites",
+    "get-allowlist": "sites/{site_name}/whitelist",
+    "get-blocklist": "sites/{site_name}/blacklist",
+    "add-allowlist-item": "sites/{site_name}/whitelist",
+    "add-blocklist-item": "sites/{site_name}/blacklist",
+    "delete-allowlist-item": "sites/{site_name}/whitelist/{item_id}",
+    "delete-blocklist-item": "sites/{site_name}/blacklist/{item_id}",
 }
 
 # Timeouts

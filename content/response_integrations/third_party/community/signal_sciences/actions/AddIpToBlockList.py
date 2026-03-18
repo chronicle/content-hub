@@ -56,7 +56,7 @@ class AddIpToBlockListAction(SignalSciencesAction):
                     "source": ip,
                     "note": note
                 }
-                self.api_client.add_blacklist_item(site_name, payload)
+                self.api_client.add_blocklist_item(site_name, payload)
                 success_ips.append(ip)
             except Exception as e:
                 self.logger.error(f"Failed to add IP {ip} to blocklist for site {site_name}: {e}")

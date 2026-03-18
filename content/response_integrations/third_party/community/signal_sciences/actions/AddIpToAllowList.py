@@ -57,7 +57,7 @@ class AddIpToAllowListAction(SignalSciencesAction):
                     "source": ip,
                     "note": note
                 }
-                self.api_client.add_whitelist_item(site_name, payload)
+                self.api_client.add_allowlist_item(site_name, payload)
                 success_ips.append(ip)
             except Exception as e:
                 self.logger.error(f"Failed to add IP {ip} to allowlist for site {site_name}: {e}")

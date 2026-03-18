@@ -38,7 +38,7 @@ class RemoveIpFromAllowListAction(SignalSciencesAction):
             return
 
         try:
-            current_list = self.api_client.get_whitelist(site_name)
+            current_list = self.api_client.get_allowlist(site_name)
         except Exception as e:
             self.output_message = f"Failed to fetch allowlist for site {site_name}: {e}"
             self.result_value = False
@@ -62,7 +62,7 @@ class RemoveIpFromAllowListAction(SignalSciencesAction):
 
             try:
                 item_id = ip_to_id[ip]
-                self.api_client.delete_whitelist_item(site_name, item_id)
+                self.api_client.delete_allowlist_item(site_name, item_id)
                 success_ips.append(ip)
             except Exception as e:
                 self.logger.error(f"Failed to remove IP {ip} from allowlist for site {site_name}: {e}")
