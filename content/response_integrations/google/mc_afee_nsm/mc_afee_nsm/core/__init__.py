@@ -12,11 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Unblock IP
-description: Unblock a particular IP address
-documentation_link: https://cloud.google.com/chronicle/docs/soar/marketplace-integrations/mcafeensm#unblock_ip
-integration_identifier: McAfeeNSM
-parameters: []
-dynamic_results_metadata: []
-creator: admin
-simulation_data_json: '{"Entities": ["ADDRESS"]}'
