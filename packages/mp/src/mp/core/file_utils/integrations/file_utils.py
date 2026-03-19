@@ -434,11 +434,11 @@ def png_path_to_bytes(file_path: Path) -> str | None:
 def read_and_validate_json_file(json_path: Path) -> JsonString:
     """Read the text content of a file and validates that it's valid JSON.
 
-    Raises:
-        ValueError: If the file doesn't exist or is an invalid JSON.
-
     Returns:
         The decoded text content of the JSON file if exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid JSON.
 
     """
     try:
@@ -463,11 +463,11 @@ def write_str_to_json_file(json_path: Path, json_content: JsonString) -> None:
 def load_yaml_file(path: Path) -> dict[str, Any]:
     """Read a file and loads its content as YAML.
 
-    Raises:
-        ValueError: If the file doesn't exist or is an invalid YAML.
-
     Returns:
         The decoded YAML content of the YAML file if it exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid YAML.
 
     """
     try:
