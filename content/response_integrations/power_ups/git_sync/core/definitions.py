@@ -95,6 +95,7 @@ class Metadata:
                 "Playbook": {},
                 "Connector": {},
                 "Job": {},
+                "Block": {},
             },
         )
         self.settings = kwargs.get("settings", {"update_root_readme": True})
@@ -226,9 +227,14 @@ class Integration(Content):
         self.zipfile = ZipFile(zip_buffer)
         self.identifier = self.integration_card.get("identifier")
         self.isCustom = self.integration_card.get("isCustomIntegration")
-        self.definition = json.loads(
-            self.zipfile.read(f"Integration-{self.identifier}.def"),
-        )
+        try:
+            self.definition = json.loads(
+                self.zipfile.read(f"Integration-{self.identifier}.def"),
+            )
+        except KeyError:
+            self.definition = json.loads(
+                self.zipfile.read(f"Integration-{self.identifier}.json"),
+            )
         self.version = self.definition.get("Version")
         if not self.isCustom:
             self.definition["IsCustom"] = False
@@ -240,26 +246,29 @@ class Integration(Content):
         self.dependencies = []
         self.has_resources = False
         for file in [x for x in self.zipfile.namelist() if not x.endswith("/")]:
-            if file.startswith("ActionsDefinitions"):
-                self.actions.append(json.loads(self.zipfile.read(file)))
-            elif file.startswith("Jobs") and not file.startswith("JobsScrips"):
-                self.jobs.append(json.loads(self.zipfile.read(file)))
-            elif file.startswith("Connectors") and not file.startswith(
-                "ConnectorsScripts",
-            ):
-                self.connectors.append(json.loads(self.zipfile.read(file)))
-            elif (
-                not self.isCustom
-                and file.startswith("Managers")
-                and file.endswith(".managerdef")
-            ):
-                self.managers.append(json.loads(self.zipfile.read(file)))
-            elif self.isCustom and file.startswith("Managers"):
-                self.managers.append(file)
-            elif file.startswith("Dependencies"):
-                self.dependencies.append(file)
-            elif file.startswith("Resources/" + self.identifier + ".svg"):
-                self.has_resources = True
+            try:
+                if file.startswith("ActionsDefinitions"):
+                    self.actions.append(json.loads(self.zipfile.read(file)))
+                elif file.startswith("Jobs") and not file.startswith("JobsScrips"):
+                    self.jobs.append(json.loads(self.zipfile.read(file)))
+                elif file.startswith("Connectors") and not file.startswith(
+                    "ConnectorsScripts",
+                ):
+                    self.connectors.append(json.loads(self.zipfile.read(file)))
+                elif (
+                    not self.isCustom
+                    and file.startswith("Managers")
+                    and file.endswith(".managerdef")
+                ):
+                    self.managers.append(json.loads(self.zipfile.read(file)))
+                elif self.isCustom and file.startswith("Managers"):
+                    self.managers.append(file)
+                elif file.startswith("Dependencies"):
+                    self.dependencies.append(file)
+                elif file.startswith("Resources/" + self.identifier + ".svg"):
+                    self.has_resources = True
+            except json.JSONDecodeError:
+                pass
 
     def get_all_items(self):
         return self.actions + self.jobs + self.connectors + self.managers

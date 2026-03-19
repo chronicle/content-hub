@@ -382,7 +382,7 @@ class SiemplifyApiClient:
             if self.system_version >= VERSION_6138
             else get_playbooks_workflow_menu_cards
         )
-        return get_playbooks_func(chronicle_soar=chronicle_soar, api_payload=[0, 100])
+        return get_playbooks_func(chronicle_soar=chronicle_soar, api_payload=[0, 10000])
 
     def get_playbook(
         self,
