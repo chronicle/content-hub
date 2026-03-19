@@ -108,6 +108,7 @@ class BuiltIntegrationMetadata(TypedDict):
     IsCustom: bool
     IsPowerUp: bool
     IsCertified: bool
+    IsFirstParty: NotRequired[bool]
 
 
 class NonBuiltIntegrationMetadata(TypedDict):
@@ -126,6 +127,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
     is_custom: NotRequired[bool]
     is_available_for_community: NotRequired[bool]
     is_powerup: NotRequired[bool]
+    is_first_party: NotRequired[bool]
 
 
 class IntegrationMetadata(
@@ -171,6 +173,7 @@ class IntegrationMetadata(
         pydantic.PositiveFloat,
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
+    is_first_party: bool = False
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -257,6 +260,7 @@ class IntegrationMetadata(
             is_custom=built.get("IsCustom", False),
             is_available_for_community=built.get("IsAvailableForCommunity", True),
             is_powerup=built.get("IsPowerUp", False),
+            is_first_party=built.get("IsFirstParty", False),
         )
 
     @classmethod
@@ -286,6 +290,7 @@ class IntegrationMetadata(
                 True,
             ),
             is_powerup=non_built.get("is_powerup", False),
+            is_first_party=non_built.get("is_first_party", False),
         )
 
     def to_built(self) -> BuiltIntegrationMetadata:
@@ -322,6 +327,7 @@ class IntegrationMetadata(
             IsCustom=self.is_custom,
             IsPowerUp=self.is_powerup,
             IsCertified=self.is_certified,
+            IsFirstParty=self.is_first_party,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -355,14 +361,17 @@ class IntegrationMetadata(
         if self.feature_tags is not None:
             non_built["feature_tags"] = self.feature_tags.to_non_built()
 
-        if self.should_install_in_system is True:
+        if self.should_install_in_system:
             non_built["should_install_in_system"] = self.should_install_in_system
 
-        if self.is_available_for_community is False:
+        if self.is_available_for_community:
             non_built["is_available_for_community"] = self.is_available_for_community
 
-        if self.is_powerup is True:
+        if self.is_powerup:
             non_built["is_powerup"] = self.is_powerup
+
+        if self.is_first_party:
+            non_built["is_first_party"] = self.is_first_party
 
         mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
