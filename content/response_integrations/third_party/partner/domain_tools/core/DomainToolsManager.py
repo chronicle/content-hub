@@ -13,7 +13,7 @@ from .DomainToolsParser import DomainToolsParser
 from .exceptions import DomainToolsManagerError
 
 APP_PARTNER_NAME: str = "Google SecOps SOAR"
-APP_VERSION: str = "10.0"
+APP_VERSION: str = "12.0"
 
 
 def _to_bool_case_insensitive(value) -> bool:
