@@ -1,0 +1,1748 @@
+Blocklist - Add Hashes:
+  ai_description: "### General Description\nThe **Blocklist - Add Hashes** action\
+    \ allows users to programmatically add file hashes to the Bitdefender GravityZone\
+    \ blocklist. This is a containment action used to prevent specific malicious files\
+    \ from executing across the environment managed by Bitdefender. It supports both\
+    \ MD5 and SHA256 hash formats.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Hash List**\
+    \ | String | Yes | A comma-separated list of SHA256 or MD5 hashes to be blocked.\
+    \ |\n| **Source Info** | String | Yes | A description or reason for blocking these\
+    \ hashes (e.g., 'Determined to be malicious'). |\n\n### Flow Description\n1. **Configuration\
+    \ Extraction**: The action retrieves the Bitdefender API Key, Access URL, and\
+    \ SSL verification settings from the integration configuration.\n2. **Input Parsing**:\
+    \ It extracts the `Hash List` and `Source Info` provided as action parameters.\n\
+    3. **Hash Categorization**: The logic splits the comma-separated string and uses\
+    \ regular expressions to categorize each hash as either MD5 or SHA256.\n4. **API\
+    \ Interaction**: \n    - If SHA256 hashes are identified, it sends a request to\
+    \ the Bitdefender `addToBlocklist` endpoint with the appropriate type identifier.\n\
+    \    - If MD5 hashes are identified, it sends a separate request to the same endpoint\
+    \ with the MD5 type identifier.\n5. **Validation**: If any hashes in the list\
+    \ do not conform to MD5 or SHA256 formats, the action raises an error and stops\
+    \ execution.\n6. **Result Reporting**: Upon successful API calls, the action returns\
+    \ a JSON result containing the lists of hashes that were successfully submitted."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds file hashes to the Bitdefender GravityZone blocklist, which modifies the
+      security policy and prevention state of the external Bitdefender environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Blocklist - List Items:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a comprehensive list of all file hashes (MD5 and SHA256)
+    currently stored in the Bitdefender GravityZone blocklist. It is primarily used
+    for auditing blocked items or verifying the current state of the environment's
+    hash-based prevention rules.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Use JSON Filter | String | No | Intended for filtering results, though not currently
+    utilized by the underlying API call logic in this specific action. |
+
+    | Filter | String | No | Intended for filtering results, though not currently
+    utilized by the underlying API call logic in this specific action. |
+
+    | Parent ID | String | No | Intended to scope the request to a specific parent
+    container, though not currently utilized by the underlying API call logic in this
+    specific action. |
+
+    | Endpoints | String | No | Intended to scope the request to specific endpoints,
+    though not currently utilized by the underlying API call logic in this specific
+    action. |
+
+
+    ### Additional Notes
+
+    While the action extracts several parameters (Filter, Parent ID, etc.) from the
+    UI, the current implementation of the `blocklist_hashes_list` method in the Bitdefender
+    manager retrieves the entire blocklist without applying these specific filters
+    to the API request.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a connection to the Bitdefender GravityZone
+    Control Center using the provided API Key and Access URL.
+
+    2. **Data Retrieval**: Executes the `getBlocklistItems` JSON-RPC method against
+    the Incidents API endpoint.
+
+    3. **Pagination**: Automatically handles paginated responses from the API to ensure
+    all blocked items are collected into a single list.
+
+    4. **Output**: Consolidates the retrieved items and returns them as a JSON object
+    in the action's results for further processing in the playbook.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Blocklist - Remove Item:
+  ai_description: >-
+    ### General Description
+
+    Removes a specific hash entry from the Bitdefender GravityZone blocklist. This
+    action is used to manage the blocklist by deleting entries identified by their
+    unique internal ID, effectively unblocking the associated file hash in the Bitdefender
+    environment.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Hash ID | The unique internal identifier of the item in the Bitdefender blocklist
+    to be deleted (e.g., a UUID). | String | Yes |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a connection to the Bitdefender GravityZone
+    Control Center using the provided API Key and Access URL.
+
+    2. **Request Execution**: Sends a JSON-RPC request to the Bitdefender API using
+    the `removeFromBlocklist` method, passing the `Hash ID` as the target identifier.
+
+    3. **Result Handling**: Evaluates the API response. If the operation is successful,
+    the action completes with a success status; otherwise, it reports a failure.
+
+
+    ### Additional Notes
+
+    Note that the `Hash ID` refers to the internal ID assigned by Bitdefender to the
+    blocklist entry, not the MD5 or SHA256 hash value itself. To find this ID, one
+    might typically use a 'List Blocklist' action first.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes a hash entry from the Bitdefender GravityZone blocklist, which changes
+      the security policy state in the external Bitdefender system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Scan Task:
+  ai_description: >-
+    ### General Description
+
+    Creates a scan task in Bitdefender GravityZone for specified target endpoints
+    or containers. This action allows security teams to initiate various types of
+    scans (Quick, Full, Memory, or Custom) on demand to identify potential threats
+    on managed systems. Note: While the internal metadata description mentions isolation,
+    the actual implementation and API calls are strictly for creating scan tasks.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Target IDs | String | Yes | A comma-separated list of IDs for the targets (endpoints
+    or containers) to be scanned. |
+
+    | Scan Type | DDL | Yes | The type of scan to perform. Available options: Quick
+    (1), Full (2), Memory (3), Custom (4). |
+
+    | Task Name | String | No | A custom name for the scan task. If not provided,
+    the name is automatically generated by Bitdefender. |
+
+    | Custom Scan - Depth | DDL | No | The scanning intensity for 'Custom' scans.
+    Options: Aggressive (1), Normal (2), Permissive (3). Defaults to Normal. |
+
+    | Custom Scan - Paths | String | No | A comma-separated list of target paths to
+    be scanned. This is only used when the Scan Type is set to 'Custom'. Defaults
+    to LocalDrives. |
+
+
+    ### Additional Notes
+
+    * The 'Custom Scan' parameters (Depth and Paths) are only processed by the Bitdefender
+    API when the 'Scan Type' is explicitly set to 'Custom'.
+
+    * This action does not automatically process SOAR entities; it requires the manual
+    input of Target IDs.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Bitdefender GravityZone Control Center
+    using the API Key and Access URL provided in the integration configuration.
+
+    2. **Parameter Mapping**: Converts the user-selected scan type and depth strings
+    into the specific integer values required by the Bitdefender JSON-RPC API.
+
+    3. **Task Creation**: Sends a `createScanTask` POST request to the Bitdefender
+    network endpoint with the target IDs and scan configuration.
+
+    4. **Status Reporting**: Evaluates the API response and terminates the action
+    with a success or failure message based on whether the task was successfully created
+    in Bitdefender.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new scan task (job) in the Bitdefender GravityZone Control Center
+      for the specified target IDs.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Scan Task by MAC Address:
+  ai_description: >-
+    ### General Description
+
+    This action generates a scan task for managed endpoints within Bitdefender GravityZone,
+    identified by their MAC addresses. It allows security analysts to trigger various
+    types of scans (Quick, Full, Memory, or Custom) directly from Google SecOps to
+    remediate or investigate potential threats on specific network interfaces.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | MAC Addresses | String | Yes | A comma-separated list of MAC addresses for the
+    endpoints to be scanned. A maximum of 100 MAC addresses can be processed in a
+    single request. |
+
+    | Scan Type | DDL | Yes | The category of scan to perform. Options include: Quick,
+    Full, Memory, or Custom. |
+
+    | Task Name | String | No | A custom name for the scan task. If omitted, Bitdefender
+    will automatically generate a name. |
+
+    | Custom Scan - Depth | DDL | No | Specifies the scanning intensity (Aggressive,
+    Normal, Permissive). This is only applicable when 'Scan Type' is set to 'Custom'.
+    |
+
+    | Custom Scan - Paths | String | No | A comma-separated list of specific file
+    system paths to scan. This is only applicable when 'Scan Type' is set to 'Custom'.
+    |
+
+
+    ### Additional Notes
+
+    - This action does not utilize Google SecOps entities (e.g., MAC entities in the
+    case). Instead, it relies entirely on the MAC addresses provided in the input
+    parameter.
+
+    - There is a known discrepancy between the parameter name in the configuration
+    (`MAC Addresses`) and the identifier used in the script logic (`Target IDs`),
+    which may require alignment for successful execution.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** The action retrieves integration credentials
+    (API Key, Access URL) and user-provided scan parameters.
+
+    2. **Manager Initialization:** It establishes a connection to the Bitdefender
+    GravityZone Control Center using the provided API Key.
+
+    3. **Task Creation:** The action calls the `createScanTaskByMac` API method, passing
+    the list of MAC addresses and the specified scan configuration (type, depth, paths).
+
+    4. **Status Reporting:** The action evaluates the API response and returns a success
+    or failure status to the Google SecOps platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new scan task in the Bitdefender GravityZone Control Center for the
+      specified endpoints.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Custom Groups List:
+  ai_description: >-
+    ### General Description
+
+    The **Get Custom Groups List** action retrieves a list of child groups nested
+    under a specific parent group within the Bitdefender GravityZone environment.
+    This action is primarily used for organizational discovery, allowing users to
+    identify group hierarchies and retrieve specific Group IDs required for other
+    management tasks.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Parent ID** | String | No | The unique identifier of the parent group for
+    which child groups should be listed. If this parameter is left empty (null), the
+    action defaults to returning the top-level 'Computers and Groups' and 'Deleted'
+    groups. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action connects to the Bitdefender GravityZone Control
+    Center using the API Key, Access URL, and SSL verification settings defined in
+    the integration configuration.
+
+    2. **API Request**: It executes the `getCustomGroupsList` method via the Bitdefender
+    API, passing the optional `Parent ID` to filter the results.
+
+    3. **Data Validation**: The response is validated to ensure a successful connection
+    and valid data retrieval from the external system.
+
+    4. **Output Generation**: The retrieved list of groups and their metadata is processed
+    and returned as a JSON result for use in subsequent playbook logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Endpoints List:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a comprehensive list of endpoints from the Bitdefender GravityZone Control
+    Center. This action allows users to search and filter endpoints based on management
+    status, security roles, network location, and specific identifiers like MAC addresses
+    or SSIDs. It is primarily used for asset discovery and inventory verification
+    within the security environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Endpoints** | DDL | Yes | Determines whether to return 'Managed', 'Unmanaged',
+    or 'All' endpoints. |
+
+    | **Parent ID** | String | No | The ID of the target company or group. If omitted,
+    returns endpoints under Computers and Groups. |
+
+    | **Filter - Managed with BEST** | Boolean | No | If true, filters for endpoints
+    with the Bitdefender Endpoint Security Tools (BEST) agent installed. |
+
+    | **Filter - Managed Exchange Servers** | Boolean | No | If true, filters for
+    protected Exchange servers. |
+
+    | **Filter - Managed Relays** | Boolean | No | If true, filters for endpoints
+    acting as Relays. |
+
+    | **Filter - Security Servers** | Boolean | No | If true, filters for Security
+    Servers. |
+
+    | **Filter - Depth - All Items Recursively** | Boolean | No | If true, searches
+    all endpoints recursively within the network inventory. |
+
+    | **Filter - SSID** | String | No | Filters endpoints by their Active Directory
+    SID. |
+
+    | **Filter - MAC Addresses** | String | No | A comma-separated list of MAC addresses
+    to filter the results. |
+
+    | **Filter - Name** | String | No | Filters items by name. Requires a minimum
+    of three characters. |
+
+
+    ### Additional Notes
+
+    - The **Filter - Name** parameter has a strict requirement: if provided, the string
+    must be at least 3 characters long, otherwise the action will fail with an error.
+
+    - This action does not operate on specific entities within a case; it performs
+    a global or scoped query against the Bitdefender environment.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: Retrieves API credentials (API Key, Access URL)
+    and SSL verification settings.
+
+    2. **Parameter Parsing**: Collects all filtering criteria from the action input,
+    including the mandatory 'Endpoints' selection.
+
+    3. **Manager Initialization**: Establishes a connection to the Bitdefender GravityZone
+    API using the provided credentials.
+
+    4. **Data Retrieval**: Executes a paginated JSON-RPC request (`getEndpointsList`)
+    to the Bitdefender Network API endpoint.
+
+    5. **Result Processing**: Aggregates all items from paginated responses and returns
+    the final list as a JSON object for use in subsequent playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Hourly Usage for EC2 Instances:
+  ai_description: >-
+    ### General Description
+
+    Retrieves hourly usage statistics for Amazon EC2 instance categories (such as
+    micro, medium, etc.) from Bitdefender GravityZone for a specified month. This
+    action is primarily used for monitoring and reporting on cloud infrastructure
+    usage managed within the GravityZone environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Target Month | String | Yes | The month for which the usage data is retrieved.
+    The value must be provided in the format `mm/yyyy` (e.g., 01/2020). If not specified,
+    the integration logic typically defaults to the current month. |
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities (like IP addresses or Hostnames)
+    within a case. Instead, it performs a global query against the Bitdefender GravityZone
+    API to fetch account-level or integration-level usage data.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: Retrieves the API Key, Access URL, and SSL verification
+    settings from the integration configuration.
+
+    2. **Parameter Parsing**: Extracts the `Target Month` provided by the user.
+
+    3. **API Connection**: Initializes the Bitdefender GravityZone Manager and establishes
+    a connection to the Control Center.
+
+    4. **Data Retrieval**: Calls the `getHourlyUsageForAmazonEC2Instances` API method
+    to fetch the usage data for the specified month.
+
+    5. **Result Processing**: Returns the retrieved usage data as a JSON object and
+    completes the action execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Managed Endpoint Details:
+  ai_description: "Retrieves detailed information about a specific managed endpoint\
+    \ from Bitdefender GravityZone. This action provides comprehensive data including\
+    \ endpoint identification, security agent details, and the operational status\
+    \ of various protection modules. \n\n### Parameters\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Endpoint ID | string | Yes\
+    \ | The unique identifier of the endpoint for which details are being requested.\
+    \ |\n\n### Flow Description\n1. **Configuration Extraction:** Retrieves the API\
+    \ Key, Access URL, and SSL verification settings from the integration configuration.\n\
+    2. **Parameter Extraction:** Retrieves the mandatory `Endpoint ID` from the action\
+    \ parameters.\n3. **API Connection:** Establishes a connection to the Bitdefender\
+    \ GravityZone Control Center using the provided credentials.\n4. **Data Retrieval:**\
+    \ Executes the `getManagedEndpointDetails` method via the Bitdefender API to fetch\
+    \ the endpoint's metadata and module status.\n5. **Result Processing:** Returns\
+    \ the retrieved endpoint data as a JSON object for use in subsequent playbook\
+    \ steps."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Network Inventory Items:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of network inventory items from Bitdefender GravityZone. This
+    action allows users to search for and list various network objects such as endpoints,
+    virtual machines, security servers, and custom groups managed within the GravityZone
+    environment. It provides extensive filtering capabilities to narrow down results
+    based on management status, roles (e.g., Relay, Exchange), or specific identifiers
+    like MAC addresses and SSIDs.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Filter - Name | String | No | Filters items by name. Supports partial matching.
+    Requires a minimum of 3 characters. |
+
+    | Filter - MAC Addresses | String | No | A comma-separated list of MAC addresses
+    to filter endpoints. |
+
+    | Filter - SSID | String | No | The Active Directory SID of the endpoint used
+    for filtering. |
+
+    | Filter - Depth - All Items Recursively | Boolean | No | If set to true, the
+    action searches all endpoints recursively within the network hierarchy. |
+
+    | Filter - Security Servers | Boolean | No | Filters the results to include only
+    Security Servers. |
+
+    | Filter - Managed Relays | Boolean | No | Filters the results to include only
+    endpoints with the Relay role. |
+
+    | Filter - Managed Exchange Servers | Boolean | No | Filters the results to include
+    only protected Exchange servers. |
+
+    | Filter - Managed with BEST | Boolean | No | Filters for endpoints that have
+    the Bitdefender Endpoint Security Tools (BEST) agent installed. |
+
+    | Filter - Virtual Machines | Boolean | No | Filters the results to include only
+    virtual machines. |
+
+    | Filter - Computers | Boolean | No | Filters the results to include only physical
+    computers. |
+
+    | Filter - EC2 Instances | Boolean | No | Filters the results to include only
+    Amazon EC2 instances. |
+
+    | Filter - Groups | Boolean | No | Filters the results to include only custom
+    groups of endpoints. |
+
+    | Parent ID | String | No | The ID of the container or group for which the network
+    items will be returned. |
+
+
+    ### Additional Notes
+
+    - The `Filter - Name` parameter must be at least 3 characters long if provided;
+    otherwise, the action will raise an error.
+
+    - Some filters may be ignored by the Bitdefender API if the corresponding license
+    is not active in the GravityZone environment.
+
+
+    ### Flow Description
+
+    1. **Connection**: The action initializes a connection to the Bitdefender GravityZone
+    Control Center using the configured API Key and Access URL.
+
+    2. **Parameter Processing**: It extracts all optional filter parameters and the
+    Parent ID from the action input.
+
+    3. **API Query**: It executes a paginated request to the `getNetworkInventoryItems`
+    endpoint. The manager handles the JSON-RPC communication and iterates through
+    all result pages to compile a complete list.
+
+    4. **Result Handling**: The retrieved inventory data is attached to the action
+    as a JSON result.
+
+    5. **Completion**: The action concludes by reporting a success status and providing
+    the collected inventory items.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Scan Tasks List:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of scan tasks from the Bitdefender GravityZone Control Center.
+    This action allows security analysts to monitor the status and progress of scanning
+    operations across the environment by filtering results based on task status and
+    name.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Task Status | DDL | Yes | Filters tasks by their current state. Options include
+    'All', 'Pending', 'In-progress', and 'Finished'. |
+
+    | Task Name | String | No | Filters tasks by name. If an asterisk (*) is used
+    at the beginning, it searches for the keyword anywhere in the name; otherwise,
+    it returns results where the name starts with the keyword. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a connection to the Bitdefender GravityZone
+    API using the configured API Key and Access URL.
+
+    2. **Parameter Extraction**: Retrieves the filtering criteria (Task Status and
+    Task Name) provided by the user.
+
+    3. **API Request**: Executes the `getScanTasksList` method via the Bitdefender
+    manager. The manager handles the JSON-RPC request and maps the status strings
+    to their corresponding numerical identifiers (e.g., 'Pending' to 1).
+
+    4. **Pagination Handling**: Automatically iterates through paginated results from
+    the API to compile a complete list of matching scan tasks.
+
+    5. **Output**: Returns the compiled list of tasks as a JSON result and sets the
+    action execution state to completed.
+
+
+    ### Additional Notes
+
+    This action is a read-only utility and does not interact with specific entities
+    in the Google SecOps environment. It is used for broad visibility into the scanning
+    infrastructure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Isolate Endpoint:
+  ai_description: >-
+    ### General Description
+
+    This action creates a task in Bitdefender GravityZone to isolate a specified endpoint.
+    It is primarily used as a containment measure during incident response to restrict
+    the network connectivity of a potentially compromised machine, preventing lateral
+    movement or data exfiltration.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Type | Mandatory | Notes |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Endpoint ID | The unique identifier of the endpoint in Bitdefender GravityZone
+    that needs to be isolated. | String | True | This ID is used to target the specific
+    machine for the isolation task. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action connects to the Bitdefender GravityZone Control
+    Center using the provided API Key and Access URL.
+
+    2. **Task Creation**: It sends a request to the Bitdefender API (`createIsolateEndpointTask`)
+    using the specified `Endpoint ID`.
+
+    3. **Execution Status**: The action monitors the API response to determine if
+    the isolation task was successfully created.
+
+    4. **Completion**: It returns a success or failure status to the Google SecOps
+    platform based on the API's response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates an isolation task in Bitdefender GravityZone which changes the network
+      state of the target endpoint to restricted/isolated.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description The Ping action is used to verify the connectivity between
+    Google SecOps and the Bitdefender GravityZone Control Center. It ensures that
+    the provided API Key and Access URL are valid and that the network connection
+    is functional. ### Parameters Description | Parameter Name | Type | Mandatory
+    | Description | | :--- | :--- | :--- | :--- | | API Key | String | Yes | The API
+    key used for authenticating with the Bitdefender GravityZone API. This is an integration-level
+    configuration. | | Access URL | String | Yes | The base URL of the Bitdefender
+    GravityZone instance (e.g., https://cloud.gravityzone.bitdefender.com). This is
+    an integration-level configuration. | | Verify SSL | Boolean | Yes | Determines
+    whether to verify the SSL certificate of the Bitdefender GravityZone server. This
+    is an integration-level configuration. | ### Additional Notes This action does
+    not take any action-specific parameters. It relies entirely on the integration's
+    configuration. ### Flow Description 1. Initialization: The action extracts the
+    API Key, Access URL, and SSL verification setting from the integration configuration.
+    2. API Request: It initializes the Bitdefender GravityZone Manager and calls the
+    getApiKeyDetails method. 3. Validation: The manager sends a POST request to the
+    GravityZone JSON-RPC endpoint. 4. Result: If the API returns valid key details,
+    the action completes successfully with a true result. If an error occurs or no
+    details are returned, it fails with a false result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Policies - Get Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive information about a specific security policy from Bitdefender
+    GravityZone. This action allows security analysts to inspect the detailed settings
+    of a policy, including its rules, modules, and configurations, by providing the
+    unique Policy ID. It is primarily used for auditing policy configurations or verifying
+    the security posture applied to specific groups or endpoints.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Policy ID | String | Yes | The unique identifier of the security policy to be
+    queried. This ID is typically obtained from the 'Policies - List' action or the
+    Bitdefender console. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on entities (IPs, Hosts, etc.) but rather on a
+    specific Policy ID provided as an input parameter.
+
+    - The output is a JSON object containing the full policy specification.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts integration settings (API Key, Access URL, SSL
+    verification) and the target `Policy ID` from the action parameters.
+
+    2. **Connection**: Establishes a connection to the Bitdefender GravityZone Control
+    Center via the `BitdefenderGravityZoneManager`.
+
+    3. **Data Retrieval**: Executes the `getPolicyDetails` API call to fetch the policy's
+    metadata and configuration details.
+
+    4. **Result Processing**: Formats the API response and attaches it to the action's
+    JSON results, marking the execution as completed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Policies - List All:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a comprehensive list of all available security policies
+    configured within the Bitdefender GravityZone Control Center. It is primarily
+    used for administrative auditing, policy management, or as a helper step in playbooks
+    to identify which policies can be applied to endpoints.
+
+
+    ### Parameters Description
+
+    There are no input parameters for this action. It relies solely on the integration's
+    global configuration (API Key and Access URL).
+
+
+    ### Additional Notes
+
+    * This action does not target specific entities; it performs a global fetch of
+    policy data from the Bitdefender environment.
+
+    * The action automatically handles API pagination to ensure all policies are retrieved
+    if the list exceeds a single page.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the Bitdefender
+    GravityZone API using the provided API Key and Access URL.
+
+    2. **Data Retrieval**: It calls the `getPoliciesList` method via the JSON-RPC
+    interface.
+
+    3. **Pagination Handling**: The manager logic checks for multiple pages of results
+    and iteratively fetches all policy items.
+
+    4. **Result Processing**: The complete list of policies is formatted and attached
+    to the action's JSON result for use in subsequent playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Quarantine - Add File:
+  ai_description: >-
+    ### General Description
+
+    This action creates a new task in Bitdefender GravityZone to add a specific file
+    to quarantine on designated endpoints. It is primarily used for containment by
+    isolating potentially malicious files based on their absolute file path on the
+    target system.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Path | String | Yes | The absolute file path on the target disk (e.g.,
+    'C:\\Users\\Public\\malicious.exe'). Max 4096 characters. |
+
+    | Endpoint IDs | String | Yes | A comma-separated list of target endpoint IDs.
+    Supports up to 100 targets per request. |
+
+
+    ### Additional Notes
+
+    - Only endpoints with an active EDR Sensor module are considered valid targets
+    for this action.
+
+    - The file path format must be suitable for the target's operating system.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Bitdefender GravityZone Control Center
+    using the configured API Key and Access URL.
+
+    2. **Parameter Extraction**: Retrieves the target endpoint IDs and the specific
+    file path from the action inputs.
+
+    3. **Task Creation**: Sends a JSON-RPC request to the Bitdefender API using the
+    `createAddFileToQuarantineTask` method.
+
+    4. **Result Handling**: Evaluates the API response to determine if the task was
+    successfully created and updates the action status accordingly.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a task in Bitdefender GravityZone to move a file from its original location
+      to quarantine on the target endpoints.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Quarantine - Get Items List:
+  ai_description: "### General Description\nRetrieves a list of quarantined items\
+    \ from Bitdefender GravityZone. This action allows security analysts to search\
+    \ for and list files or Microsoft Exchange objects that have been moved to quarantine\
+    \ across the network or on specific endpoints. It supports various filtering options\
+    \ to narrow down results based on threat names, timeframes, and specific endpoint\
+    \ identifiers.\n\n### Parameters Description\n| Parameter | Type | Mandatory |\
+    \ Description |\n| :--- | :--- | :--- | :--- |\n| Service | DDL | Yes | Determines\
+    \ the source of the quarantined items. Options are 'Computers' (for Computers\
+    \ and Virtual Machines) or 'Exchange' (for Security for Exchange). |\n| Filter\
+    \ - Threat Name | String | No | Filters the list by the name of the detected threat.\
+    \ Supports partial matching. |\n| Filter - Start Date | String | No | Filters\
+    \ for items quarantined after this specific date. Must be in ISO 8601 format.\
+    \ |\n| Filter - End Date | String | No | Filters for items quarantined before\
+    \ this specific date. Must be in ISO 8601 format. |\n| Filter - File Path | String\
+    \ | No | Filters by the file path where the item originated. Supports partial\
+    \ matching and wildcards (e.g., using '*' as a suffix). Only available for the\
+    \ 'Computers' service. |\n| Filter - IP Address | String | No | Filters by the\
+    \ IP address of the source endpoint. Only available for the 'Computers' service.\
+    \ |\n| Filter - Action Status | DDL | No | Filters items by their current status\
+    \ (None, Pending Save, Saved). Note: 'Pending Save' is only applicable to the\
+    \ Exchange service. |\n| Endpoint ID | String | No | The unique identifier of\
+    \ a specific computer. If provided, only items from that computer are returned;\
+    \ otherwise, the search covers the entire network. |\n\n### Additional Notes\n\
+    - The filter fields **Threat Name**, **File Path**, and **IP Address** support\
+    \ partial matching. \n- For the **File Path** filter, you can use an asterisk\
+    \ (*) to perform suffix matching (e.g., `*myfile.exe`).\n- The Exchange service\
+    \ filters require a valid license for 'Security for Exchange'.\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The action retrieves the integration configuration\
+    \ (API Key, URL) and all user-defined filter parameters.\n2. **Manager Initialization**:\
+    \ Initializes the Bitdefender GravityZone Manager to handle API communication.\n\
+    3. **API Request**: Sends a JSON-RPC request (`getQuarantineItemsList`) to the\
+    \ Bitdefender Control Center, targeting the specified service (Computers or Exchange).\n\
+    4. **Pagination Handling**: The action automatically handles paginated responses\
+    \ from the API to ensure all matching quarantined items are retrieved.\n5. **Result\
+    \ Processing**: The collected list of quarantined items is formatted and returned\
+    \ as a JSON result for use in subsequent playbook steps."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Quarantine - Remove Items:
+  ai_description: >-
+    ### General Description
+
+    This action creates a new task in Bitdefender GravityZone to remove specific items
+    from quarantine. It allows security analysts to permanently delete quarantined
+    files or emails that have been identified as malicious or are no longer needed
+    for investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Service | DDL | Yes | Specifies the target service for the removal task. Options
+    are 'Computers' (for Computers and Virtual Machines) or 'Exchange' (for Security
+    for Exchange). |
+
+    | Quarantine Item IDs | String | Yes | A comma-separated list of unique identifiers
+    for the items to be removed from quarantine. A maximum of 100 items can be processed
+    in a single request. |
+
+
+    ### Additional Notes
+
+    - The action interacts with the Bitdefender GravityZone Control Center via JSON-RPC.
+
+    - The 'Service' parameter determines the specific API endpoint used for the removal
+    request.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action connects to the Bitdefender GravityZone Control
+    Center using the configured API Key and Access URL.
+
+    2. **Parameter Extraction**: It retrieves the target service type and the list
+    of quarantine item IDs from the action parameters.
+
+    3. **Task Creation**: The action sends a `createRemoveQuarantineItemTask` request
+    to the Bitdefender API, targeting the specified service (Computers or Exchange).
+
+    4. **Execution Status**: It evaluates the API response to determine if the task
+    was successfully created and reports the final status back to Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a task in Bitdefender GravityZone to permanently remove specified items
+      from the quarantine, effectively deleting them from the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Quarantine - Restore Exchange Items:
+  ai_description: >-
+    ### General Description
+
+    This action creates a new task in Bitdefender GravityZone to restore specific
+    items from the quarantine for Exchange Servers. It is designed to move items previously
+    identified as threats or suspicious back to their original location within the
+    Exchange environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Quarantine Item IDs** | String | Yes | A comma-separated list of unique identifiers
+    for the items to be restored. Note: The maximum number of items that can be processed
+    in a single request is 100. |
+
+    | **Username** | String | Yes | The username of a Microsoft Exchange user, which
+    must include the domain name (e.g., domain\user). |
+
+    | **Password** | Password | Yes | The password associated with the provided Exchange
+    username. |
+
+    | **Email** | String | No | The email address of the Exchange user. This is required
+    if the email address differs from the username. |
+
+    | **EWS URL** | String | No | The Exchange Web Services (EWS) URL. This should
+    be provided if Exchange Autodiscovery is not functioning in the environment. |
+
+
+    ### Additional Notes
+
+    - This action does not automatically process entities from the Google SecOps case;
+    it relies entirely on the provided action parameters.
+
+    - The action interacts with the Bitdefender GravityZone API via a POST request
+    to initiate a restoration task.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** The action retrieves the API Key, Access URL,
+    and SSL verification settings from the integration configuration.
+
+    2. **Parameter Extraction:** It extracts the specific item IDs and Exchange credentials
+    provided by the user.
+
+    3. **Manager Initialization:** It initializes the Bitdefender GravityZone Manager
+    to establish a connection to the Control Center.
+
+    4. **Task Creation:** It calls the `createRestoreQuarantineExchangeItemTask` method,
+    sending the item IDs and credentials to the Bitdefender API.
+
+    5. **Result Reporting:** The action checks the API response and reports whether
+    the restoration task was successfully created or if the operation failed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action creates a task in Bitdefender GravityZone to restore items from
+      the Exchange quarantine, which changes the state of the quarantined items in
+      the external Exchange environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Quarantine - Restore Items:
+  ai_description: >-
+    ### General Description
+
+    The **Quarantine - Restore Items** action allows users to restore files or items
+    previously quarantined by Bitdefender GravityZone. It creates a restoration task
+    in the GravityZone Control Center for specific items identified by their IDs.
+    This action is useful for recovering false positives or restoring files for forensic
+    analysis.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Quarantine Item IDs** | String | Yes | A comma-separated list of unique identifiers
+    for the items to be restored from quarantine. Maximum of 100 items per request.
+    |
+
+    | **Service** | DDL | Yes | Specifies the service context: 'Computers' for endpoint
+    files or 'Exchange' for email-related items. |
+
+    | **Location to Restore** | String | No | The absolute file path where items should
+    be restored. If left empty, the original location is used. |
+
+    | **Add Exclusion in Policy** | Boolean | No | If set to true, the restored items
+    will be added as exclusions in the current policy to prevent them from being quarantined
+    again in future scans. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Bitdefender GravityZone API using the provided
+    API Key and Access URL.
+
+    2. **Parameter Extraction**: Retrieves the list of item IDs, the target service,
+    and optional restoration settings (location and exclusions) from the action parameters.
+
+    3. **Task Creation**: Sends a POST request to the Bitdefender API to initiate
+    a `createRestoreQuarantineItemTask` for the specified service.
+
+    4. **Completion**: Returns a success status if the task was successfully created
+    in the external system, or a failure status if the API request failed.
+
+
+    ### Additional Notes
+
+    This action does not process Google SecOps entities; it relies entirely on the
+    provided Quarantine Item IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a task in Bitdefender GravityZone to restore specific items from quarantine
+      to their original or a specified location and optionally adds scan exclusions
+      to the security policy.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reports - Get Download Links:
+  ai_description: >-
+    ### General Description
+
+    Retrieves download links for a specific report from Bitdefender GravityZone. This
+    action is used to obtain the necessary URLs to download generated reports, whether
+    they are instant (available for less than 24 hours) or scheduled (stored in the
+    GravityZone database).
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Report ID | The unique identifier of the report for which you want to retrieve
+    download links. | String | Yes |
+
+
+    ### Additional Notes
+
+    - Instant reports are temporary and typically expire within 24 hours of creation.
+
+    - Scheduled reports are persistent and saved within the Bitdefender database.
+
+    - This action requires a valid API Key and Access URL configured in the integration
+    settings.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the API Key, Access URL,
+    and SSL verification settings from the integration configuration.
+
+    2. **Parameter Extraction**: The action extracts the mandatory `Report ID` provided
+    by the user.
+
+    3. **Manager Initialization**: It initializes the `BitdefenderGravityZoneManager`
+    to handle communication with the Control Center.
+
+    4. **API Request**: The action calls the `getDownloadLinks` method via the Bitdefender
+    JSON-RPC API using the provided Report ID.
+
+    5. **Result Processing**: The retrieved download link information is added to
+    the action's JSON results, and the execution is marked as completed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reports - List All:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of scheduled reports from the Bitdefender GravityZone Control
+    Center. This action allows users to query and filter reports based on their name
+    or specific type, providing visibility into the reporting configuration and history
+    within the Bitdefender environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Report Name | String | No | Filters the list to only include reports with a
+    specific name. |
+
+    | Report Type | DDL | No | Filters the list by a specific report category, such
+    as 'Malware Status', 'Firewall Activity', or 'Network Incidents'. |
+
+
+    ### Additional Notes
+
+    - This action does not require any entities to run; it performs a global query
+    against the Bitdefender API.
+
+    - If no parameters are provided, the action will attempt to retrieve all available
+    scheduled reports.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action establishes a connection to the Bitdefender
+    GravityZone API using the configured API Key and Access URL.
+
+    2. **Parameter Extraction**: It retrieves the optional 'Report Name' and 'Report
+    Type' filters from the action configuration.
+
+    3. **Type Mapping**: If a 'Report Type' is specified, the action maps the human-readable
+    string to the internal integer ID required by the Bitdefender API.
+
+    4. **Data Retrieval**: The action executes a paginated request to the Bitdefender
+    `getReportsList` endpoint.
+
+    5. **Output**: The collected list of reports is returned as a JSON result, making
+    the data available for downstream playbook logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Restore Isolated Endpoint:
+  ai_description: >-
+    ### General Description
+
+    Restores a specified endpoint from network isolation within the Bitdefender GravityZone
+    environment. This action is used to reverse a previous isolation command, allowing
+    the endpoint to resume normal network communications.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Endpoint ID | The unique identifier of the endpoint to be restored from isolation.
+    | String | True |
+
+
+    ### Additional Notes
+
+    This action does not process entities from the Google SecOps scope; it relies
+    solely on the provided 'Endpoint ID' parameter to identify the target system in
+    Bitdefender GravityZone.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: Retrieves the API Key, Access URL, and SSL verification
+    settings from the integration configuration.
+
+    2. **Parameter Extraction**: Retrieves the mandatory 'Endpoint ID' from the action
+    parameters.
+
+    3. **Manager Initialization**: Establishes a connection to the Bitdefender GravityZone
+    Control Center using the provided credentials.
+
+    4. **Task Creation**: Executes the `createRestoreEndpointFromIsolationTask` API
+    method to trigger the restoration process for the specified endpoint.
+
+    5. **Result Reporting**: Evaluates the API response and returns a success or failure
+    status to the Google SecOps workbench.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a task in Bitdefender GravityZone to restore an endpoint from isolation,
+      which changes the network connectivity state of the target machine.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set Endpoint Label:
+  ai_description: >-
+    ### General Description
+
+    Sets or resets a label for a specific endpoint in Bitdefender GravityZone. This
+    action allows administrators to organize or tag endpoints within the Bitdefender
+    Control Center by applying a string label (up to 64 characters) to a target endpoint
+    identified by its ID.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Label | string | Yes | A string representing the label to be applied. The maximum
+    allowed length is 64 characters. To reset/remove a previously set label, provide
+    an empty string. |
+
+    | Endpoint ID | string | Yes | The unique identifier of the endpoint for which
+    the label will be set. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: Retrieves the API Key, Access URL, and SSL verification
+    settings from the integration configuration.
+
+    2. **Parameter Extraction**: Retrieves the target `Endpoint ID` and the desired
+    `Label` from the action parameters.
+
+    3. **Manager Initialization**: Connects to the Bitdefender GravityZone Control
+    Center using the provided credentials.
+
+    4. **API Execution**: Calls the `setEndpointLabel` method via the Bitdefender
+    API, passing the endpoint ID and the label string.
+
+    5. **Result Handling**: Evaluates the API response and terminates the action with
+    a success or failure status based on whether the label was successfully applied.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the label attribute of a specific endpoint in the Bitdefender GravityZone
+      Control Center.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
