@@ -42,31 +42,28 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        for integration in gitsync.api.get_installed_integrations():
-            if integration["identifier"] not in push_allowlist:
-                continue
+        integrations = [
+            x for x in gitsync.api.get_installed_integrations()
+            if x["identifier"] in push_allowlist
+        ]
 
-            identifier = integration["identifier"]
-            siemplify.LOGGER.info(f"Pushing Integration: {identifier}")
-
-            try:
-                integration_obj = Integration(
-                    integration,
-                    BytesIO(gitsync.api.export_package, identifier),
+        for integration in integrations:
+            siemplify.LOGGER.info(f"Pushing Integration: {integration['identifier']}")
+            integration_obj = Integration(
+                integration,
+                BytesIO(gitsync.api.export_package(integration["identifier"])),
+            )
+            if readme_addon:
+                siemplify.LOGGER.info(
+                    "Readme addon found - adding to GitSync metadata file "
+                    "(GitSync.json)",
                 )
-
-                if readme_addon:
-                    siemplify.LOGGER.info(
-                        "Readme addon found - adding to GitSync metadata file (GitSync.json)"
-                    )
-                    gitsync.content.metadata.set_readme_addon(
-                        "Integration", identifier, readme_addon
-                    )
-
-                gitsync.content.push_integration(integration_obj)
-
-            except Exception as e:
-                siemplify.LOGGER.error(f"Couldn't upload {identifier}. ERROR: {e}")
+                gitsync.content.metadata.set_readme_addon(
+                    "Integration",
+                    integration_obj.identifier,
+                    readme_addon,
+                )
+            gitsync.content.push_integration(integration_obj)
 
         gitsync.commit_and_push(commit_msg)
 
