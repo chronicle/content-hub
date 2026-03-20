@@ -35,6 +35,7 @@ from ..core.definitions import (
     Mapping,
     VisualFamily,
     Workflow,
+    WorkflowTypes,
 )
 
 from TIPCommon.data_models import Environment
@@ -54,6 +55,7 @@ def main():
 
     commit_msg = siemplify.extract_job_param("Commit")
     commit_passwords = siemplify.extract_job_param("Commit Passwords", input_type=bool)
+    include_blocks = True
 
     # Features
     features = {}
@@ -76,7 +78,7 @@ def main():
                 try:
                     integration_obj = Integration(
                         integration,
-                        BytesIO(gitsync.api.export_package, identifier),
+                        BytesIO(gitsync.api.export_package(identifier)),
                     )
                     gitsync.content.push_integration(integration_obj)
                 except Exception as e:
@@ -85,7 +87,8 @@ def main():
         # Playbooks
         if features["Playbooks"]:
             siemplify.LOGGER.info("========== Playbooks ==========")
-            for playbook in gitsync.api.get_playbooks(chronicle_soar=siemplify):
+            installed_playbooks = gitsync.api.get_playbooks(chronicle_soar=siemplify)
+            for playbook in installed_playbooks:
                 siemplify.LOGGER.info(f"Pushing {playbook['name']}")
                 playbook = gitsync.api.get_playbook(
                     chronicle_soar=siemplify,
@@ -93,7 +96,39 @@ def main():
                 )
                 workflow = Workflow(playbook)
                 workflow.update_instance_name_in_steps(gitsync.api, siemplify)
-                gitsync.content.push_playbook(workflow)
+                if workflow.type == WorkflowTypes.BLOCK:
+                    gitsync.content.push_block(workflow)
+                else:
+                    gitsync.content.push_playbook(workflow)
+
+                if include_blocks:
+                    for block_step in workflow.get_involved_blocks():
+                        installed_block = next(
+                            (
+                                x
+                                for x in installed_playbooks
+                                if x.get("name") == block_step.get("name")
+                            ),
+                            None,
+                        )
+
+                        block_definition = None
+                        if not installed_block:
+                            siemplify.LOGGER.info(
+                                f"Block '{block_step.get('name')}' not found in installed playbooks. Assuming it's a "
+                                f"custom block."
+                            )
+                            block_definition = block_step
+                        else:
+                            block_definition = gitsync.api.get_playbook(
+                                chronicle_soar=siemplify,
+                                identifier=installed_block.get("identifier"),
+                            )
+
+                        if block_definition:
+                            block = Workflow(block_definition)
+                            block.update_instance_name_in_steps(gitsync.api, siemplify)
+                            gitsync.content.push_block(block)
 
         # Jobs
         if features["Jobs"]:
