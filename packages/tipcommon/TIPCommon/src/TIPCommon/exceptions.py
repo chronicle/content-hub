@@ -81,6 +81,10 @@ class RefreshTokenRenewalJobException(GeneralJobException):
     """Failure in a RefreshTokenRenewalJob instance"""
 
 
+class BaseSyncJobException(GeneralJobException):
+    """Failure in a BaseSyncJob instance"""
+
+
 # General Exceptions ####
 class EmptyMandatoryValues(Exception):
     """Exception for empty mandatory values"""

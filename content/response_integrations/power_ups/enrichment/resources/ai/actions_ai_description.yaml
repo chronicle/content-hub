@@ -1,0 +1,1041 @@
+Enrich Entities from List with Field:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich Entities from List with Field** action is designed to bulk-update
+    entities within a Google SecOps case by adding a custom field and value to their
+    metadata. This action is particularly useful for tagging or labeling a specific
+    subset of entities (e.g., marking a list of IP addresses as 'Known Malicious'
+    or 'Executive Owned') based on a provided list of identifiers.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **List of Entities** | String | Yes | A delimited string containing the identifiers
+    of the entities to be enriched (e.g., '192.168.1.1, 192.168.1.2'). |
+
+    | **Entity Type** | String | Yes | The specific type of entities to target (e.g.,
+    ADDRESS, HOSTNAME, USERUNIQNAME). Only entities matching this type will be processed.
+    |
+
+    | **Entity Delimiter** | String | Yes | The character used to separate the identifiers
+    in the 'List of Entities' parameter (e.g., a comma, semicolon, or pipe). |
+
+    | **Enrichment Field** | String | Yes | The name of the property/key to be added
+    to the entity's 'additional_properties'. |
+
+    | **Enrichment Value** | String | Yes | The value to be assigned to the specified
+    'Enrichment Field'. |
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action retrieves the input parameters, including the
+    list of entities, the target entity type, the delimiter, and the enrichment key-value
+    pair.
+
+    2. **Parsing:** The 'List of Entities' string is split into individual identifiers
+    using the provided delimiter, and whitespace is trimmed from each entry.
+
+    3. **Entity Retrieval:** The action fetches all entities associated with the alerts
+    in the current Google SecOps case.
+
+    4. **Matching Logic:** It iterates through the parsed list of identifiers and
+    attempts to find matching entities in the case. A match is confirmed if the entity's
+    identifier (case-insensitive) and entity type both align with the input parameters.
+
+    5. **Data Mutation:** For every matched entity, the action updates its `additional_properties`
+    dictionary by inserting the 'Enrichment Field' as the key and the 'Enrichment
+    Value' as the value.
+
+    6. **Commitment:** The action calls the SDK's `update_entities` method to save
+    the changes back to the Google SecOps platform and returns the count of successfully
+    enriched entities.
+
+
+    ### Additional Notes
+
+    This action performs internal data manipulation only and does not interact with
+    any external APIs or services. It is strictly used for organizing and enriching
+    data already present within the SOAR environment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' attribute of matched entities within the
+      Google SecOps case with a user-specified field and value.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entity From Event Field:
+  ai_description: >-
+    ### General Description
+
+    This action extracts specific data fields from the first security event of an
+    alert and maps them to the entities within that alert. It is designed to enrich
+    entity profiles with contextual information already present in the event logs,
+    such as custom metadata or specific identifiers that were not automatically mapped
+    during ingestion.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Fields to enrich | String | Yes | A comma-separated list of field names (e.g.,
+    'src_port, device_id') to extract from the event's additional properties and add
+    to the entities. |
+
+
+    ### Additional Notes
+
+    - The action performs a case-insensitive search for the specified fields within
+    the event's `additional_properties`.
+
+    - Only the first security event (`security_events[0]`) associated with the alert
+    is used as the data source.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the comma-separated list of field names from
+    the action parameters.
+
+    2. **Data Retrieval**: Accesses the first security event of the current alert
+    and converts its additional properties into a case-insensitive dictionary.
+
+    3. **Entity Processing**: Iterates through all target entities in the current
+    scope.
+
+    4. **Field Mapping**: For each entity, it checks if the requested fields exist
+    in the event data. If found, the field and its value are added to the entity's
+    `additional_properties`.
+
+    5. **Update**: Updates all modified entities in Google SecOps and outputs the
+    enriched data as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' of entities within the Google SecOps case
+      using data extracted from the alert's security events.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entity From JSON:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich Entity From JSON** action is a utility designed to update entity
+    attributes within Google SecOps using data provided in a JSON format. It allows
+    users to map external data (passed as a parameter) to existing entities by matching
+    identifiers. This is particularly useful for manual enrichment or when data is
+    retrieved in a previous step of a playbook and needs to be associated with entities.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Enrichment JSON** | String | Yes | A JSON-formatted list of objects containing
+    the enrichment data. |
+
+    | **Identifier KeyPath** | String | Yes | The path within the JSON objects to
+    the field that matches the entity's identifier (e.g., `EntityResult.id`). Supports
+    multiple paths separated by newlines. |
+
+    | **Separator** | String | Yes | The character used to separate keys in the `Identifier
+    KeyPath` (default is `.`). |
+
+    | **PrefixForEnrichment** | String | No | An optional prefix to prepend to the
+    keys of the added enrichment data. |
+
+    | **Enrichment JSONPath** | String | No | An optional JSONPath expression to extract
+    specific subsets of data from the matching JSON object. |
+
+
+    ### Additional Notes
+
+    - The action flattens nested JSON structures into a flat key-value format before
+    adding them to the entity's `additional_properties`.
+
+    - If multiple key paths are provided in `Identifier KeyPath`, the action will
+    check them sequentially.
+
+    - This action does not perform external API calls; it processes data already present
+    in the playbook context.
+
+
+    ### Flow Description
+
+    1. **Data Parsing**: The action parses the `Enrichment JSON` input into a list
+    of dictionaries.
+
+    2. **Entity Iteration**: It iterates through all target entities in the current
+    context.
+
+    3. **Identifier Matching**: For each entity, it searches the JSON list for a record
+    where the value at `Identifier KeyPath` matches the entity's identifier.
+
+    4. **Data Extraction**:
+        - If `Enrichment JSONPath` is provided, it extracts the specific data matching
+    the path.
+        - Otherwise, it uses the entire matching JSON object.
+    5. **Flattening and Prefixing**: The extracted data is flattened into a single-level
+    dictionary. If a `PrefixForEnrichment` is defined, it is applied to all keys.
+
+    6. **Entity Update**: The entity's `additional_properties` are updated with the
+    processed data.
+
+    7. **Finalization**: The action updates the entities in the system and returns
+    the count of successfully enriched entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' field of entities within the Google SecOps
+      case based on the provided JSON data.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entity With Field:
+  ai_description: >-
+    ### General Description
+
+    This action allows users to manually enrich entities within a Google SecOps case
+    by adding custom key-value pairs to their 'additional_properties' attribute. It
+    is primarily used to inject static data or context into entities that may not
+    be available through automated enrichment sources.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Fields to enrich | string | Yes | A JSON-formatted string representing a list
+    of objects. Each object must contain `entity_field_name` (the key) and `entity_field_value`
+    (the value) to be added to the entities. Example: `[{"entity_field_name": "Department",
+    "entity_field_value": "Finance"}]`. |
+
+
+    ### Additional Notes
+
+    - This action does not interact with any external APIs; it only processes the
+    data provided in the input parameters.
+
+    - The action updates all entities currently in the scope of the action execution.
+
+
+    ### Flow Description
+
+    1. **Parse Input:** The action retrieves the `Fields to enrich` parameter and
+    parses the JSON string into a Python list of dictionaries.
+
+    2. **Iterate Entities:** It iterates through all `target_entities` provided in
+    the current context.
+
+    3. **Apply Enrichment:** For each entity, it loops through the list of key-value
+    pairs and adds them to the entity's `additional_properties` dictionary.
+
+    4. **Update Internal State:** The action calls the SDK's `update_entities` method
+    to persist the changes within Google SecOps.
+
+    5. **Report Results:** It adds a JSON result for each updated entity and concludes
+    the execution with a summary message indicating the number of enriched entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      The action updates the 'additional_properties' attribute of entities within
+      the Google SecOps case based on the provided input parameters.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entity from Explorer Attributes:
+  ai_description: >-
+    ### General Description
+
+    Enriches entities within a case by retrieving historical attribute data from the
+    Google SecOps Entity Explorer. This action allows analysts to automatically populate
+    entity properties with previously discovered information, ensuring consistency
+    and providing immediate context without manual lookups.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Field Name | string | No | A comma-separated list of specific field names to
+    retrieve from the Entity Explorer. If left empty, all available fields (except
+    system fields) will be processed. |
+
+    | Use Field Name as Whitelist | boolean | No | Determines how the 'Field Name'
+    parameter is applied. If 'true' (default), only the specified fields are added
+    to the entity. If 'false', the specified fields are excluded (denylist), and all
+    other available fields are added. |
+
+
+    ### Additional Notes
+
+    - The action automatically filters out internal system fields (e.g., 'IsSuspicious',
+    'Environment', 'Type') to prevent accidental overwriting of core platform data.
+
+    - If a field already exists as a standard attribute on the entity object, it is
+    updated directly; otherwise, it is added to the entity's 'additional_properties'
+    dictionary.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the configuration parameters, specifically
+    the list of fields and the allowlist/denylist toggle.
+
+    2. **Data Retrieval**: For every entity targeted in the current scope, the action
+    calls the internal SecOps API to fetch historical data stored in the Entity Explorer.
+
+    3. **Filtering**: The retrieved fields are filtered based on the 'Field Name'
+    and 'Use Field Name as Whitelist' logic. System-protected fields are explicitly
+    excluded from the update list.
+
+    4. **Entity Update**: The action maps the filtered data to the entity object.
+    It attempts to set attributes directly if they exist or appends them to the 'additional_properties'
+    metadata.
+
+    5. **Commit**: The updated entity objects are sent back to the Google SecOps platform
+    to persist the changes, and a summary of the updated properties is logged.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes and additional properties within the Google SecOps
+      platform using historical data retrieved from the Entity Explorer.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich FileName Entity with Path:
+  ai_description: >-
+    ### General Description
+
+    This action parses file path strings from entity identifiers to extract and enrich
+    entities with specific file-related metadata, including the directory path, the
+    full filename, and the file extension. It is designed to work with both Windows
+    and Unix-style path conventions.
+
+
+    ### Parameters Description
+
+    No parameters are required for this action.
+
+
+    ### Additional Notes
+
+    This action does not interact with external APIs or services. It performs local
+    string manipulation on the entity's identifier to derive its components. If an
+    identifier cannot be parsed as a valid path (e.g., it does not contain a directory
+    component), the entity will not be enriched.
+
+
+    ### Flow Description
+
+    1. **Iterate Entities**: The action retrieves all target entities from the current
+    context.
+
+    2. **Path Analysis**: For each entity, it examines the identifier to detect the
+    path format (Windows vs. Unix).
+
+    3. **Extraction**: It utilizes path-parsing libraries to split the identifier
+    into `file_path`, `file_name`, and `file_extension`.
+
+    4. **Internal Mutation**: If parsing is successful, it updates the entity's `additional_properties`
+    with the extracted values.
+
+    5. **Update and Report**: It updates the entities within Google SecOps and returns
+    a JSON result mapping identifiers to their parsed details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with parsed file path, name, and extension
+      metadata derived from the entity identifier.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Source and Destinations:
+  ai_description: "### General Description\nThis action enriches entities within a\
+    \ Google SecOps alert by identifying their roles as network sources or destinations.\
+    \ It retrieves contextual data from the Chronicle Investigator API to determine\
+    \ which identifiers are associated with source and destination activities and\
+    \ then updates the corresponding entities in the SOAR with specific flags.\n\n\
+    ### Parameters\nThere are no user-configurable parameters for this action. It\
+    \ automatically processes entities based on the context of the current alert.\n\
+    \n### Additional Notes\n- This action specifically targets entities associated\
+    \ with the current alert being processed.\n- It relies on the `get_investigator_data`\
+    \ method to fetch the underlying security event details from Google SecOps.\n\
+    - The enrichment is internal to the SOAR, adding `isSource` or `isDest` attributes\
+    \ to the entity's additional properties.\n\n### Flow Description\n1. **Fetch Alert\
+    \ Context**: The action calls the Chronicle Investigator API to retrieve the full\
+    \ JSON representation of the current alert.\n2. **Identify Roles**: It parses\
+    \ the alert data (specifically looking at `securityEventCards` or field groups)\
+    \ to extract lists of identifiers categorized as 'sources' and 'destinations'.\n\
+    3. **Match Entities**: The action iterates through all entities associated with\
+    \ the current alert.\n4. **Apply Enrichment**: \n    - If an entity's identifier\
+    \ matches a 'source' from the API data, the property `isSource: true` is added\
+    \ to the entity.\n    - If an entity's identifier matches a 'destination' from\
+    \ the API data, the property `isDest: true` is added to the entity.\n5. **Update\
+    \ SOAR**: The modified entities are updated within the Google SecOps platform\
+    \ to reflect these new attributes."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with 'isSource' or 'isDest' flags based
+      on the alert context retrieved from the investigator API.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: true
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Mark Entity as Suspicious:
+  ai_description: >-
+    ### General Description
+
+    Marks all entities within the current scope as suspicious. This is an internal
+    utility action used to flag entities for further investigation or to trigger specific
+    playbooks based on the suspicious status within Google SecOps.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action does not interact with any external services. It only modifies the
+    internal state of entities within Google SecOps. It processes all entities in
+    the scope regardless of their type.
+
+
+    ### Flow Description
+
+    1. **Retrieve Entities**: The action accesses the list of target entities in the
+    current scope.
+
+    2. **Flag Entities**: It iterates through every entity and sets its `is_suspicious`
+    attribute to `True`.
+
+    3. **Update Platform**: The action sends the updated entity objects back to Google
+    SecOps to persist the changes.
+
+    4. **Finalize**: It reports the total number of entities successfully marked as
+    suspicious and completes the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the 'is_suspicious' attribute of entities within the Google SecOps case
+      to True.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    between the Google SecOps (Chronicle) environment and the integration's execution
+    context. It serves as a health check to ensure that the integration is correctly
+    configured and reachable within the SOAR platform.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify action module to establish
+    a session.
+
+    2. **Connectivity Confirmation**: The action immediately terminates with a success
+    status and a message indicating that the connection is active ('Siemplify is connected').
+
+
+    ### Additional Notes
+
+    This action does not perform any data retrieval from external sources, nor does
+    it interact with or modify any entity data or case information. It is strictly
+    used for configuration validation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Whois:
+  ai_description: >-
+    ### General Description
+
+    The **Whois** action queries WHOIS and RDAP servers to retrieve registration and
+    ownership information for various entity types, including IP Addresses, Domains,
+    URLs, and Email addresses. It provides critical context regarding domain age,
+    registrar details, and geographic location for IP addresses to assist in threat
+    analysis.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Create Entities | boolean | No | If set to `true`, the action extracts the root
+    domain from URLs or Email addresses and creates a new, linked DOMAIN entity within
+    the case. Default is `true`. |
+
+    | Domain Age Threshold | string | No | A threshold in days. If a domain's age
+    is less than this value, the entity is marked as suspicious. A value of 0 or empty
+    disables this check. |
+
+
+    ### Flow Description
+
+    1. **Entity Identification**: The action iterates through all target entities
+    in the current context.
+
+    2. **IP Enrichment**: For `ADDRESS` entities, it performs an RDAP lookup and a
+    geographic lookup (via DB-IP) to identify the owner, ASN, and physical location.
+
+    3. **Domain/URL/Email Processing**: For other entities, it extracts the registered
+    domain using the `tldextract` library.
+
+    4. **WHOIS Query**: It performs a WHOIS lookup for the extracted domain to retrieve
+    creation dates, expiration dates, and registrar information.
+
+    5. **Entity Creation**: If the `Create Entities` parameter is enabled and a new
+    domain is identified (e.g., extracted from a URL or Email), a new `DOMAIN` entity
+    is created and linked to the source entity.
+
+    6. **Risk Assessment**: The action calculates the domain age in days. If the age
+    is below the user-defined `Domain Age Threshold`, the entity's `is_suspicious`
+    attribute is set to `true`.
+
+    7. **Data Update**: All retrieved information is flattened and added to the entities'
+    additional properties with a `WHOIS` prefix. The entities are then marked as enriched
+    and updated in the system.
+
+
+    ### Additional Notes
+
+    - This action requires outbound network access to WHOIS/RDAP servers and the DB-IP
+    API.
+
+    - The `Domain Age Threshold` parameter is processed as an integer; ensure numeric
+    values are provided.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates new DOMAIN entities and establishes relationships between
+      them and the original entities. It also updates existing entities by setting
+      'is_suspicious' based on domain age, marking them as 'is_enriched', and adding
+      WHOIS/Geo-location data to their additional properties.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DOMAIN
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
