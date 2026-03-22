@@ -1,0 +1,194 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Get Hash Report:
+  ai_description: >-
+    ### General Description
+
+    Enriches File Hash entities by retrieving sample reports from Symantec Content
+    Analysis. This action supports both MD5 and SHA256 hash types, providing detailed
+    sample information in a tabular format and updating the entity's metadata within
+    Google SecOps.
+
+
+    ### Parameters
+
+    There are no specific action parameters for this action. It relies on the global
+    integration configuration (API Root, API Key, and Verify SSL).
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all `FILEHASH` entities within
+    the current context.
+
+    2. **Hash Validation**: For each entity, it validates the hash type based on string
+    length (32 characters for MD5, 64 characters for SHA256).
+
+    3. **Data Retrieval**: It performs a GET request to the Symantec Content Analysis
+    API to fetch sample data associated with the specific hash.
+
+    4. **Data Attachment**: If a report is found, the action converts the results
+    into a CSV format and attaches it as an entity table.
+
+    5. **Internal Enrichment**: The raw JSON response is mapped to the entity's 'additional_properties'
+    field.
+
+    6. **Entity Update**: Finally, the action updates the entities in the case to
+    persist the enriched data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with the retrieved hash report and adds
+      a data table to the entity in the SOAR.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Symantec Content Analysis server. It ensures that the provided
+    API Root and API Key are valid and that the network path is open.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies entirely on
+    the integration's global configuration (API Root, API Key, and Verify SSL).
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup or troubleshooting of
+    the Symantec Content Analysis integration.
+
+    - According to standard SOAR practices, Ping actions are not categorized as enrichment
+    actions.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the integration's global settings,
+    including the API Root, API Key, and SSL verification preference.
+
+    2. **Manager Initialization**: It initializes the `SymantecContentAnalysisManager`
+    with the retrieved credentials.
+
+    3. **Connectivity Test**: The manager executes a `GET` request to the `rapi/pattern_groups`
+    endpoint of the Symantec Content Analysis API.
+
+    4. **Validation**: The action validates the HTTP response. If the status code
+    indicates success, it confirms the connection.
+
+    5. **Result Reporting**: The action outputs 'Connection Established' on success
+    or 'Connection Failed' if an error occurs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit File:
+  ai_description: "### General Description\nThis action uploads a file from a specified\
+    \ local path to Symantec Content Analysis for security scanning and reputation\
+    \ analysis. It is used to determine if a file is malicious or suspicious by leveraging\
+    \ Symantec's analysis engine. The action retrieves a reputation score and provides\
+    \ immediate feedback within the case.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| File Path\
+    \ | String | Yes | The full local path to the file that should be uploaded and\
+    \ scanned. |\n\n### Flow Description\n1. **Configuration Retrieval**: The action\
+    \ initializes the Symantec Content Analysis manager using the provided API Root\
+    \ and API Key.\n2. **File Submission**: It reads the file from the provided `File\
+    \ Path` and performs a POST request to the Symantec `rapi/cas/scan` endpoint.\n\
+    3. **Score Extraction**: The action waits for the scan results (with a 5-minute\
+    \ timeout) and extracts the `file_reputation_score` from the API response.\n4.\
+    \ **Insight Creation**: \n    * If the score is between 2 and 6, a 'File Found\
+    \ as Suspicious' insight is created.\n    * If the score is between 7 and 10,\
+    \ a 'File Found as Malicious' insight is created.\n5. **Completion**: The action\
+    \ ends by returning the reputation score and a summary message to the Google SecOps\
+    \ workbench."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates case insights in Google SecOps based on the reputation score returned
+      by the Symantec Content Analysis scan.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
