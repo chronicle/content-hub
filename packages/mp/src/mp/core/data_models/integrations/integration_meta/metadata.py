@@ -364,7 +364,7 @@ class IntegrationMetadata(
         if self.should_install_in_system:
             non_built["should_install_in_system"] = self.should_install_in_system
 
-        if self.is_available_for_community:
+        if not self.is_available_for_community:
             non_built["is_available_for_community"] = self.is_available_for_community
 
         if self.is_powerup:
