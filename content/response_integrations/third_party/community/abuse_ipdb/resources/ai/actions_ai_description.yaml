@@ -1,0 +1,126 @@
+Check IP Reputation:
+  ai_description: >-
+    Checks the reputation of IP address entities using the AbuseIPDB API. This action
+    retrieves detailed threat intelligence, including abuse confidence scores, country
+    information, ISP details, and recent report history. It enriches the entities
+    within Google SecOps by adding these details as attributes and can automatically
+    mark entities as suspicious if they exceed a user-defined confidence threshold.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Exclude Internal Addresses | Boolean | No | If set to `true` (default), the
+    action will skip any IP addresses marked as internal to save API quota. |
+
+    | Suspicious Threshold | String | Yes | An abuse confidence score (0-100). If
+    the IP's score is equal to or higher than this value, the entity is marked as
+    suspicious in the platform. Set to 0 to disable this logic. |
+
+    | Create Insight | Boolean | No | If `true` (default), creates a formatted insight
+    on the entity containing key reputation data. |
+
+    | Max Age in Days | String | Yes | Specifies the time range (in days) for which
+    AbuseIPDB should check for reports. Default is 90. |
+
+
+    ### Flow Description
+
+    1. **Filter Entities:** The action identifies all `ADDRESS` entities in the current
+    scope. If `Exclude Internal Addresses` is enabled, it filters out entities where
+    `is_internal` is true.
+
+    2. **API Query:** For each valid IP, the action sends a GET request to the AbuseIPDB
+    `/check` endpoint, passing the IP and the `Max Age in Days` parameter.
+
+    3. **Data Enrichment:** The retrieved data (e.g., ISP, Domain, Country, Confidence
+    Score) is mapped to the entity's additional properties with the prefix `AbuseIPDB_`.
+
+    4. **Suspicious Evaluation:** The action compares the `abuseConfidenceScore` against
+    the `Suspicious Threshold`. If the threshold is met, the entity's `is_suspicious`
+    flag is set to true.
+
+    5. **Insight Generation:** If enabled, a detailed HTML insight is created for
+    the entity, summarizing the reputation findings.
+
+    6. **Update:** The action updates the entities in the Google SecOps case and returns
+    the raw JSON data for further use in the playbook.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with reputation data, sets the suspicious status based
+      on the confidence score, and creates case insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description Tests the connectivity to the AbuseIPDB service to verify
+    that the provided API key and configuration are valid. This action is typically
+    used during the initial setup or troubleshooting of the integration. ### Parameters
+    Description | Parameter | Type | Mandatory | Description | | :--- | :--- | :---
+    | :--- | | Api Key | String | Yes | The API key required to authenticate with
+    the AbuseIPDB API. This is an integration configuration parameter. | | Verify
+    SSL | Boolean | No | If enabled, the action will verify the SSL certificate of
+    the AbuseIPDB API endpoint. This is an integration configuration parameter. Default
+    is False. | ### Flow Description 1. **Initialization**: The action retrieves the
+    API Key and SSL verification preference from the integration settings. 2. **Connectivity
+    Test**: It attempts to query the AbuseIPDB 'check' endpoint using a dummy IP address
+    (1.1.1.1). 3. **Validation**: The response is checked for success. If the API
+    key is invalid, a specific error is caught and reported. 4. **Completion**: The
+    action returns 'true' and a success message if the connection is established,
+    or 'false' with an error message if the connection fails. ### Additional Notes
+    There are no action-specific parameters; it relies entirely on the integration's
+    configuration. This action does not process or affect any entities in the environment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
