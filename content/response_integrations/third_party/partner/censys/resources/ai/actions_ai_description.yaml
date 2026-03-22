@@ -1,0 +1,517 @@
+Enrich Certificates:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves comprehensive information about SSL/TLS certificates using
+    the Censys Platform API. It identifies certificates by their SHA-256 fingerprint
+    and provides detailed intelligence including issuer, subject, validity periods,
+    and Subject Alternative Names (SANs).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action does not have any input parameters. It relies
+    on the global integration configuration (API Key, Organization ID, and Verify
+    SSL). |
+
+
+    ### Additional Notes
+
+    This action specifically targets FILEHASH entities. The identifiers must be valid
+    SHA-256 fingerprints (64 hex characters). If an entity identifier is not a valid
+    fingerprint, it will be skipped.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Censys API manager using the
+    integration's global configuration.
+
+    2. **Entity Selection**: It identifies all `FILEHASH` entities within the current
+    scope.
+
+    3. **Validation**: It validates that the entity identifiers are valid SHA-256
+    fingerprints (exactly 64 hexadecimal characters).
+
+    4. **API Request**: It performs a batch POST request to the Censys `/v3/global/asset/certificate`
+    endpoint.
+
+    5. **Data Processing**: For each matching certificate found, it extracts metadata
+    such as Subject DN, Issuer DN, Common Name, and Validity dates.
+
+    6. **Internal Update**: It clears any existing Censys enrichment data on the entity,
+    updates the entity's additional properties with the new data, and marks the entity
+    as enriched.
+
+    7. **Completion**: The action returns a summary message and the full raw JSON
+    results for the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with certificate metadata (e.g., issuer,
+      subject, validity) and sets the 'is_enriched' attribute to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich IPs:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities using the Censys Platform API. This action retrieves
+    comprehensive intelligence about internet-facing infrastructure, including active
+    services, open ports, protocols, SSL/TLS certificates, known vulnerabilities,
+    and geographic location data. It is designed to help security teams understand
+    the attack surface exposure of specific IP addresses.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | At Time | String | No | An RFC3339 formatted timestamp (e.g., `2024-01-15T00:00:00Z`)
+    used to retrieve historical host data from a specific point in time. If omitted,
+    the most recent data is returned. |
+
+
+    ### Additional Notes
+
+    - This action specifically targets `ADDRESS` entities. Other entity types in the
+    scope will be ignored.
+
+    - The action performs a batch request to Censys for all valid IP addresses found
+    in the scope to optimize API usage.
+
+    - Existing Censys-specific enrichment data on the entity is cleared before new
+    data is applied to ensure accuracy.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Censys API manager using the
+    integration's API Key and Organization ID.
+
+    2. **Entity Filtering**: It identifies all `ADDRESS` entities within the current
+    SOAR scope.
+
+    3. **Validation**: It validates the format of the IP addresses and the optional
+    `At Time` timestamp parameter.
+
+    4. **API Request**: A POST request is sent to the Censys `/v3/global/asset/host`
+    endpoint with the list of valid IP addresses.
+
+    5. **Data Processing**: For each IP found in the Censys database, the action parses
+    the response into a structured data model, extracting fields such as ASN, location,
+    service counts, and threat labels.
+
+    6. **Internal Mutation**: It updates the entity's `additional_properties` with
+    the retrieved intelligence and sets the `is_enriched` flag to `true`.
+
+    7. **Completion**: The action returns a summary message indicating how many IPs
+    were successfully enriched, not found, or failed to process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with Censys enrichment data and sets the
+      'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Web Properties:
+  ai_description: >-
+    Enriches IP Address and Domain entities using the Censys Platform API to retrieve
+    detailed web property intelligence. The action identifies assets by combining
+    hostnames or IP addresses with specific ports to provide context on web-facing
+    services, including HTTP/HTTPS configurations, SSL/TLS certificates, and detected
+    software technologies.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Default | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Port | String | Yes | 80, 443 | A comma-separated list of ports associated with
+    the domain or hostname (e.g., '80, 443, 8080'). |
+
+    | At Time | String | No | N/A | An RFC3339 formatted timestamp (e.g., '2023-10-01T00:00:00Z')
+    used to retrieve historical data for the requested hosts at a specific point in
+    time. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the list of ports and the optional historical
+    timestamp from the action configuration.
+
+    2. **Entity Filtering:** Identifies valid `ADDRESS` (IP) and `DOMAIN` entities
+    within the current SOAR scope.
+
+    3. **Identifier Construction:** For every valid entity, it generates a unique
+    web property identifier for each specified port (e.g., `1.1.1.1:80`, `example.com:443`).
+
+    4. **External API Query:** Performs a bulk lookup via the Censys API to fetch
+    enrichment data for all constructed web property identifiers.
+
+    5. **Internal Data Update:** For each successful match, it clears existing Censys
+    enrichment data for that specific port, updates the entity's additional properties
+    with new metadata (software, certificates, scan times), and marks the entity as
+    enriched.
+
+    6. **Result Reporting:** Updates the entities in the SOAR platform and returns
+    a JSON result containing the full raw data for each enriched property.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with web property details such as service
+      information, software versions, and certificate fingerprints. It also sets the
+      'is_enriched' flag to true and clears previous enrichment values for the specific
+      ports being processed to ensure data freshness.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Host History:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves the event history for a specific host (IP address) from
+    the Censys platform. It allows security analysts to view historical scan data,
+    track infrastructure changes over time, and identify when specific services were
+    added, modified, or removed. The action is particularly useful for forensic investigations
+    and monitoring the evolution of an asset's exposure.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Host ID** | string | Yes | The IP address of the host for which you want to
+    retrieve the history. |
+
+    | **Start Time** | string | Yes | The beginning of the timeline range. Must be
+    a valid RFC3339 string (e.g., `2025-01-01T00:00:00Z`). This should be chronologically
+    earlier than the End Time. |
+
+    | **End Time** | string | Yes | The end of the timeline range. Must be a valid
+    RFC3339 string (e.g., `2025-01-02T00:00:00Z`). This should be chronologically
+    later than the Start Time and earlier than the current time. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction and Validation**: The action extracts the Host ID, Start
+    Time, and End Time. It validates that the Host ID is a valid IP address and that
+    both timestamps conform to the RFC3339 standard.
+
+    2. **API Initialization**: It initializes the Censys API Manager using the provided
+    integration credentials (API Key and Organization ID).
+
+    3. **Data Retrieval**: The action performs a series of paginated `GET` requests
+    to the Censys Host Timeline endpoint. It automatically handles time-based pagination
+    using the `scanned_to` cursor provided by the API.
+
+    4. **Pagination Limits**: To ensure performance, the action retrieves a maximum
+    of 1,000 records or performs up to 10 pagination calls. It also monitors the total
+    payload size to prevent exceeding system limits.
+
+    5. **Data Modeling**: Each retrieved event is processed through the `HostHistoryEventModel`,
+    which parses resource types (e.g., service scans, DNS resolutions, WHOIS updates)
+    and generates direct links to the Censys platform for historical viewing.
+
+    6. **Result Output**: The full event history is attached as a JSON result. Additionally,
+    a data table named "Host History Events" is created to display the first 1,000
+    events directly in the SOAR interface.
+
+
+    ### Additional Notes
+
+    - If the API returns a partial data error during pagination, the action will still
+    return the events collected up to that point along with a warning message.
+
+    - The action implements a chronological-to-reverse-chronological mapping to align
+    user input with the Censys API's internal timeline logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Rescan Status:
+  ai_description: "### General Description\nRetrieves the current status of a scan\
+    \ in Censys using its unique Scan ID. This action is primarily used to monitor\
+    \ the progress of scans initiated via the 'Initiate Rescan' action. It supports\
+    \ asynchronous execution, allowing the playbook to poll until the scan reaches\
+    \ a terminal state (Completed or Failed).\n\n### Parameters Description\n\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Scan ID\
+    \ | String | Yes | The unique identifier of the tracked scan. |\n\n### Additional\
+    \ Notes\nThis action does not run on entities. It is a utility for process monitoring\
+    \ and is designed to be used in an asynchronous loop within a playbook to wait\
+    \ for scan results to become available.\n\n### Flow Description\n1. **Parameter\
+    \ Extraction**: Retrieves the `Scan ID` from the input parameters and validates\
+    \ that it is not empty.\n2. **API Interaction**: Connects to the Censys API and\
+    \ calls the GET endpoint for the specific scan ID.\n3. **Status Evaluation**:\
+    \ Analyzes the API response to check for the presence and value of the `completed`\
+    \ field.\n4. **Execution State Management**: \n    - If the `completed` field\
+    \ is missing, the action returns an `IN_PROGRESS` state.\n    - If `completed`\
+    \ is `True`, the action returns `COMPLETED`.\n    - If `completed` is `False`,\
+    \ the action returns `FAILED`.\n5. **Data Output**: Adds the full API response\
+    \ as a JSON result for use in subsequent playbook steps."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Initiate Rescan:
+  ai_description: >-
+    ### General Description
+
+    This action initiates a live rescan for a specific host service or web origin
+    on the Censys platform. It allows users to trigger an immediate update of Censys's
+    data for a particular IP/Port or Hostname/Port combination. The action returns
+    a `tracked_scan_id`, which can be used to monitor the progress and eventual results
+    of the scan.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **IOC Type** | DDL | Yes | Specifies the type of target to rescan. Options are
+    'Service' (for IP-based services) or 'Web Origin' (for hostname-based services).
+    |
+
+    | **IOC Value** | String | Yes | The target identifier. This should be an IP address
+    if 'IOC Type' is 'Service', or a domain/hostname if 'IOC Type' is 'Web Origin'.
+    |
+
+    | **Port** | String | Yes | The port associated with the service (e.g., 443).
+    Valid range is 1 to 65535. Default is '443'. |
+
+    | **Protocol** | String | No | The name of the service protocol (e.g., 'http',
+    'ssh'). This is **mandatory** if 'IOC Type' is set to 'Service'. |
+
+    | **Transport Protocol** | DDL | No | The transport layer protocol (e.g., TCP,
+    UDP). Default is 'Unknown'. |
+
+
+    ### Additional Notes
+
+    - If 'IOC Type' is 'Service', the 'IOC Value' must be a valid IP address and the
+    'Protocol' parameter must be provided.
+
+    - The scan may take several minutes to complete on the Censys side.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the target details (Type, Value,
+    Port, Protocol) from the user input.
+
+    2. **Validation:** It validates that the port is a valid integer and, if the type
+    is 'Service', ensures the value is a valid IP and a protocol is specified.
+
+    3. **API Request:** The action sends a POST request to the Censys `/v3/global/scans/rescan`
+    endpoint with the target configuration.
+
+    4. **Response Processing:** It parses the API response to extract the `tracked_scan_id`,
+    creation time, and task count.
+
+    5. **Completion:** The action outputs the scan ID and status message, providing
+    the raw JSON response for further automation steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a new live rescan task on the Censys platform for the specified target,
+      which creates a new scan job in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ used to verify the connectivity between the Google SecOps SOAR platform and\
+    \ the Censys API. It ensures that the integration is correctly configured with\
+    \ valid credentials and that the SOAR server can communicate with the Censys platform\
+    \ over the network.\n\n### Parameters Description\nThis action does not have any\
+    \ input parameters. It relies entirely on the integration's global configuration\
+    \ parameters:\n* **API Key**: The credential used for authentication.\n* **Organization\
+    \ Id**: The specific Censys organization identifier.\n* **Verify SSL**: A boolean\
+    \ flag determining whether to validate SSL certificates during the connection.\n\
+    \n### Flow Description\n1. **Parameter Extraction**: The action retrieves the\
+    \ `API Key`, `Organization Id`, and `Verify SSL` settings from the integration\
+    \ configuration.\n2. **Manager Initialization**: It initializes the `APIManager`\
+    \ with the retrieved credentials and settings.\n3. **Connectivity Test**: The\
+    \ action calls the `test_connectivity` method, which executes a `GET` request\
+    \ to the Censys organization endpoint (`/v3/accounts/organizations/{organization_id}`).\n\
+    4. **Status Evaluation**: \n    * If the API call is successful, the action concludes\
+    \ with a success message and a positive connectivity result.\n    * If an exception\
+    \ occurs (e.g., 401 Unauthorized, 404 Not Found, or network timeout), the error\
+    \ is caught, logged, and the action returns a failure message with a negative\
+    \ connectivity result."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

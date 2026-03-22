@@ -23,7 +23,7 @@ import sys
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import requests
 from SiemplifyAddressProvider import BASE_1P_SDK_CONTROLLER_VERSION
@@ -40,6 +40,9 @@ from .consts import (
     SIEM_ID_ATTR_KEY,
     TRUE_VAL_LOWER_STRINGS,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 def get_unique_items_by_difference(item_pool, items_to_remove):

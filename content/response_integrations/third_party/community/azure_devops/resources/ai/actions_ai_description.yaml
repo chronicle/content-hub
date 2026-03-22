@@ -1,0 +1,199 @@
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Azure DevOps instance using the provided configuration
+    parameters. This action is primarily used to verify that the Personal Access Token,
+    Organization, and Base URL are correctly configured and that the Google SecOps
+    environment can reach the Azure DevOps API.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | This action does not have any input parameters. It relies solely on the
+    integration's configuration parameters (Personal Access Token, Organization, and
+    Base URL). | N/A | N/A |
+
+
+    ### Additional Notes
+
+    * This is a standard 'Ping' action used for integration health checks.
+
+    * It uses the `azure-devops` Python library to interact with the API.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action extracts the `Personal Access Token`,
+    `Organization`, and `Base URL` from the integration settings.
+
+    2. **Authentication**: It sets up Basic Authentication using the provided token.
+
+    3. **Connection Initialization**: It establishes a connection to the Azure DevOps
+    service URL (constructed as `Base URL/Organization`).
+
+    4. **Connectivity Test**: It attempts to retrieve the list of projects using the
+    `get_projects()` method to verify the API connection.
+
+    5. **Result Reporting**: Based on the success or failure of the API call, it returns
+    a boolean result and a status message to the SOAR platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Trigger Azure Build:
+  ai_description: >-
+    ### General Description
+
+    Triggers an Azure DevOps build pipeline for a specific build definition ID and
+    monitors its progress until completion. This action is designed to automate CI/CD
+    workflows or infrastructure-as-code tasks directly from Google SecOps by interacting
+    with the Azure DevOps REST API.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Build Definition Id | String | Yes | The unique identifier for the build definition
+    (pipeline) in Azure DevOps that you want to trigger. |
+
+    | Build Variables | Code (JSON) | Yes | A JSON-formatted string containing the
+    variables to be passed to the build pipeline. For example: `{"ENV": "production",
+    "VERSION": "1.0.1"}`. |
+
+
+    ### Additional Notes
+
+    - This action is asynchronous. It will trigger the build and then periodically
+    poll Azure DevOps to check the status of the job until it reaches a terminal state
+    (Succeeded, Failed, or Canceled).
+
+    - The integration must be configured with a valid Organization, Project, and Personal
+    Access Token (PAT) with sufficient permissions to trigger and view builds.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves integration configuration (Base URL,
+    Organization, Project, PAT) and action parameters (Build Definition ID, Build
+    Variables).
+
+    2. **Trigger Build**: It sends a POST request to the Azure DevOps API (`_apis/build/builds`)
+    to initiate the pipeline execution.
+
+    3. **Capture Build ID**: Upon a successful trigger, it extracts the `build_id`
+    from the response and transitions to an 'In Progress' state.
+
+    4. **Status Polling (Async)**: The `query_job` function periodically sends GET
+    requests to the Azure DevOps API to monitor the `status` and `result` of the specific
+    `build_id`.
+
+    5. **Completion**: The action concludes with a 'Completed' status if the build
+    result is `succeeded` or `partiallySucceeded`. It returns a 'Failed' status if
+    the build fails, is canceled, or encounters an error.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a new build pipeline execution in the Azure DevOps environment.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait Until Web Resource Is Up:
+  ai_description: "### General Description\nThis action is a utility designed to monitor\
+    \ the availability of a specific web resource. It performs an HTTP GET request\
+    \ to a provided URL and checks if the resource is accessible (returning a successful\
+    \ status code). Because the action is marked as asynchronous, it is typically\
+    \ used in playbooks to pause execution until a specific service or endpoint becomes\
+    \ reachable.\n\n### Parameters Description\n| Parameter Name | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| URL | String | Yes | The full\
+    \ URL of the web resource to check for availability. |\n\n### Additional Notes\n\
+    - This action does not interact with Google SecOps entities.\n- It is an asynchronous\
+    \ action; if the web resource is down, the action returns an 'In Progress' state,\
+    \ allowing the SOAR platform to retry the check until the resource is up or a\
+    \ timeout is reached.\n\n### Flow Description\n1. **Parameter Extraction**: The\
+    \ action retrieves the mandatory `URL` parameter from the input.\n2. **Connectivity\
+    \ Check**: It performs an HTTP GET request to the specified URL with a 5-second\
+    \ timeout.\n3. **Status Evaluation**: \n    - If the request is successful (status\
+    \ code < 400), the resource is considered 'up'.\n    - If the request fails or\
+    \ an exception occurs, the resource is considered 'down'.\n4. **Execution Control**:\
+    \ \n    - If 'up', the action finishes with a `COMPLETED` state.\n    - If 'down',\
+    \ the action finishes with an `IN_PROGRESS` state, signaling the platform to retry\
+    \ later."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
