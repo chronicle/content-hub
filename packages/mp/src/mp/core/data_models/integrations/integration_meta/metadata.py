@@ -361,16 +361,16 @@ class IntegrationMetadata(
         if self.feature_tags is not None:
             non_built["feature_tags"] = self.feature_tags.to_non_built()
 
-        if self.should_install_in_system:
+        if self.should_install_in_system is True:
             non_built["should_install_in_system"] = self.should_install_in_system
 
-        if not self.is_available_for_community:
+        if self.is_available_for_community is False:
             non_built["is_available_for_community"] = self.is_available_for_community
 
-        if self.is_powerup:
+        if self.is_powerup is True:
             non_built["is_powerup"] = self.is_powerup
 
-        if self.google_secops_product:
+        if self.google_secops_product is True:
             non_built["google_secops_product"] = self.google_secops_product
 
         mp.core.utils.remove_none_entries_from_mapping(non_built)
