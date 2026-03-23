@@ -1,0 +1,327 @@
+Convert File:
+  ai_description: >-
+    Converts files between PNG and PDF formats on a Remote Agent. This action allows
+    for the transformation of image and document formats directly on the filesystem
+    where the Remote Agent is deployed. It is particularly useful for workflows that
+    require file format standardization before further processing, such as OCR or
+    report generation.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Input File Format | DDL | Yes | The original format of the file to be converted.
+    Supported values: PDF, PNG. |
+
+    | Input File Path | String | Yes | The absolute path to the source file on the
+    Remote Agent's filesystem. |
+
+    | Output File Format | DDL | Yes | The desired format for the resulting file.
+    Supported values: PNG, PDF. |
+
+
+    ### Flow Description
+
+    1. **Environment Validation**: Checks if the action is running on a Remote Agent;
+    if not, it raises an error.
+
+    2. **Parameter Validation**: Verifies that the input file exists at the specified
+    path and ensures the input and output formats are not the same.
+
+    3. **File Conversion**:
+        - **PDF to PNG**: Uses the `pdf2image` library (requiring `pdftoppm`) to convert
+    the first page of the PDF into a PNG image.
+        - **PNG to PDF**: Uses the `PIL` (Pillow) library to convert the PNG image
+    into a PDF document.
+    4. **Result Generation**: Saves the converted file to a temporary directory with
+    a timestamped filename and returns the new file path and format in the action's
+    JSON results.
+
+
+    ### Additional Notes
+
+    - This action requires a Remote Agent to function as it interacts with the local
+    filesystem.
+
+    - For PDF to PNG conversion, the `poppler-utils` package (specifically `pdftoppm`)
+    must be installed on the Remote Agent host.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+OCR Image:
+  ai_description: >-
+    Extracts text from image files using Optical Character Recognition (OCR). This
+    action leverages the Tesseract OCR engine to process images provided either as
+    a Base64 encoded string or via a local file path on a Remote Agent.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Base64 Encoded Image | String | No | The base64 encoded string of the image
+    file. If provided, this is processed first. |
+
+    | File Path | String | No | The path to the image file on the Remote Agent's file
+    system. |
+
+
+    ### Additional Notes
+
+    - Either **Base64 Encoded Image** or **File Path** must be configured for the
+    action to run.
+
+    - This action **must** be executed on a Remote Agent.
+
+    - The Remote Agent must have the `tesseract-ocr` package installed (e.g., via
+    `apt-get install -y tesseract-ocr`).
+
+
+    ### Flow Description
+
+    1. **Environment Validation**: Verifies that the action is executing on a Remote
+    Agent.
+
+    2. **Parameter Extraction**: Retrieves the image data (Base64) or the file path
+    from the action configuration.
+
+    3. **Image Preparation**: If a Base64 string is provided, it is decoded and written
+    to a temporary PNG file. Otherwise, the provided file path is used.
+
+    4. **OCR Processing**: Invokes the `pytesseract` library to perform OCR on the
+    image file and extract text content.
+
+    5. **Result Output**: Trims the extracted text and returns it within the `extracted_text`
+    field of the JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity and environment readiness for the Image Utilities integration.
+    This action specifically validates that the execution environment is a Google
+    SecOps Remote Agent and checks for the presence of critical local dependencies:
+    the Tesseract OCR engine and Playwright browser binaries (Chromium). It is used
+    to ensure that the system is correctly configured to perform image processing
+    and web content rasterization tasks.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    This action must be executed on a Remote Agent. If dependencies are missing, the
+    action provides specific shell commands in the error message to help administrators
+    resolve the issues within the container environment.
+
+
+    ### Flow Description
+
+    1. **Environment Validation**: Verifies that the action is running on a Remote
+    Agent by checking the environment context.
+
+    2. **Tesseract Verification**: Attempts to retrieve the Tesseract version using
+    the `pytesseract` library to confirm the OCR engine is installed and accessible.
+
+    3. **Playwright Verification**: Attempts to launch a headless Chromium instance
+    using the Playwright library to confirm browser binaries and system dependencies
+    are correctly installed.
+
+    4. **Result Reporting**: Returns a success message if all checks pass, or raises
+    an informative error with installation instructions if dependencies are missing.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Rasterize Content:
+  ai_description: >-
+    The Rasterize Content action converts vector or complex content, such as URLs,
+    raw HTML, or Email bodies, into fixed bitmap image formats (PNG) or PDF documents.
+    This action is particularly useful for capturing visual evidence of phishing sites,
+    rendered emails, or web-based reports directly into a security case. It utilizes
+    a headless Chromium browser (via Playwright) to ensure accurate rendering of dynamic
+    content.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Default | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Input Type | DDL | Yes | HTML | Specifies the format of the input: 'URL' (fetches
+    a webpage), 'HTML' (renders raw HTML), or 'Email' (renders email content). |
+
+    | URLs or Body | String | Yes | N/A | The actual content to process. Provide a
+    comma-separated list for URLs, or the full text/HTML body for other types. |
+
+    | Output Type | DDL | No | PNG | The desired output format: 'PNG', 'PDF', or 'Both'.
+    |
+
+    | Export Method | DDL | No | Case Attachment | Determines where to save the result:
+    'Case Attachment' (adds to the SOAR case), 'File Path' (returns the local path),
+    or 'Both'. |
+
+    | Width | String | Yes | 1920 | The browser viewport width in pixels. |
+
+    | Height | String | Yes | 1080 | The browser viewport height in pixels (ignored
+    if 'Full Screen' is enabled). |
+
+    | Full Screen | Boolean | Yes | False | If true, the action captures the entire
+    scrollable height of the content rather than just the viewport. |
+
+    | Timeout | String | No | 120 | Maximum time in seconds to wait for the page to
+    render. |
+
+    | Wait For | DDL | No | NETWORK_IDLE | The browser state to reach before capturing:
+    'LOAD', 'DOM_CONTENT_LOADED', 'NETWORK_IDLE', or 'COMMIT'. |
+
+    | Wait for Selector | String | No | N/A | A CSS selector that must become visible
+    on the page before the capture occurs. |
+
+
+    ### Additional Notes
+
+    - **Remote Agent Required:** This action must run on a Remote Agent because it
+    requires specific browser binaries (Playwright/Chromium) not present in the default
+    cloud environment.
+
+    - **Environment Setup:** Ensure Playwright and Chromium dependencies are installed
+    on the Remote Agent as described in the action's error messages if execution fails.
+
+
+    ### Flow Description
+
+    1. **Validation:** The action verifies it is running on a Remote Agent and validates
+    all input parameters.
+
+    2. **Input Preparation:** Depending on the 'Input Type', it either parses a list
+    of URLs or wraps HTML/Email content into a renderable format.
+
+    3. **Browser Initialization:** Launches a headless Chromium instance using Playwright
+    with the specified viewport dimensions.
+
+    4. **Content Rendering:** Navigates to the URL or loads the HTML content, waiting
+    for the specified 'Wait For' state and/or the 'Wait for Selector' to appear.
+
+    5. **Capture:** Generates a PNG screenshot and/or a PDF document based on the
+    'Output Type'. If 'Full Screen' is active, it calculates the full page height
+    before capturing.
+
+    6. **Export:** Attaches the generated files to the Google SecOps case and/or provides
+    the file paths in the action's JSON results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds the generated PNG or PDF files as attachments to the current
+      Google SecOps case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
