@@ -26,7 +26,7 @@ from .one_platform_soar_api import OnePlatformSoarApi
 if TYPE_CHECKING:
     import requests
 
-    from TIPCommon.types import ChronicleSOAR
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from typing import Protocol
 
@@ -155,7 +155,7 @@ class SoarApiClient(Protocol):
     def assign_case_to_user(self) -> requests.Response:
         """Assign case to user"""
 
-    def get_email_template(self) -> requests.Response:
+    def get_email_template(self) -> requests.Response | list[SingleJson]:
         """Get email template"""
 
     def get_siemplify_user_details(self) -> requests.Response:
