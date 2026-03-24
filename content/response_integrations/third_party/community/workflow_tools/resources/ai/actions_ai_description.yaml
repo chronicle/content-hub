@@ -1,0 +1,296 @@
+Approval Request:
+  ai_description: >-
+    The **Approval Request** action is designed to pause a workflow and require manual
+    intervention from a designated reviewer. It facilitates the approval process by
+    reassigning cases within Google SecOps and notifying stakeholders via Slack.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Move Alert If Grouped** | boolean | No | If set to `true` (default), and the
+    current alert is part of a case containing multiple alerts, the action will move
+    this specific alert into its own new case before assigning it to the reviewer.
+    If `false`, the entire case is assigned as-is. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** Retrieves integration-level settings including
+    API credentials, the target Siemplify/SecOps hostname, Slack webhook URL, and
+    the designated Approval Managers.
+
+    2. **Grouping Logic:** Checks the `Move Alert If Grouped` parameter. If enabled
+    and the case contains more than one alert, it triggers an internal API call to
+    move the current alert into a newly created case.
+
+    3. **Case Assignment:** Reassigns the target case (either the original or the
+    newly created one) to the user specified as the 'Approval Manager'.
+
+    4. **External Notification:** Sends a formatted message to a Slack channel via
+    a webhook, providing a direct link to the case awaiting approval.
+
+    5. **Result Reporting:** Returns a JSON object containing the original case ID,
+    any new case ID created, and the identities of the assigned managers.
+
+
+    ### Additional Notes
+
+    - This action requires the 'Workflow Tools' integration to be configured with
+    valid API credentials for the SecOps instance itself to perform the case reassignment
+    and alert movement.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: true
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a notification message to an external Slack channel via a webhook to alert
+      reviewers of the pending approval request.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Reassigns the case owner to the designated Approval Manager and can move an
+      alert from one case to a new case using internal API calls.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Approval Response:
+  ai_description: >-
+    ### General Description
+
+    The **Approval Response** action enables a formal approval workflow within Google
+    SecOps. It allows designated 'Approval Managers' to either approve or deny a pending
+    request. The action ensures security by verifying that the user executing the
+    action matches the authorized personnel or roles defined in the integration settings.
+    It provides a mechanism for human-in-the-loop decision-making within automated
+    playbooks.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Action Approved** | Boolean | Yes | Determines the outcome of the request.
+    Set to `True` to approve or `False` to deny. |
+
+    | **Response Comments** | String | No | Optional notes or justification for the
+    decision. If provided, these are added as a case comment and included in the Slack
+    notification. |
+
+
+    ### Flow Description
+
+    1. **Authorization Check**: The action identifies the user currently executing
+    the task (`original_requesting_user`) and compares them against the configured
+    `Approval Manager` and `Secondary Approval Manager`. If a manager is defined as
+    a role (prefixed with `@`), the action queries the Google SecOps API to verify
+    the user's role membership.
+
+    2. **Decision Processing**: Based on the `Action Approved` input, the action sets
+    the internal result state to approved or denied.
+
+    3. **Internal Documentation**: If `Response Comments` are provided, the action
+    adds them as a comment to the current case and alert using the `add_comment` method.
+
+    4. **External Notification**: A notification message containing the decision,
+    the reviewer's name, and any comments is sent to a configured Slack channel via
+    a webhook.
+
+    5. **Result Reporting**: The action returns a JSON object summarizing the review
+    details (reason, reviewer, comments, approval status) and sets the action's final
+    status.
+
+
+    ### Additional Notes
+
+    - If an unauthorized user attempts to run this action, it will fail with a `ValueError`
+    and send an unauthorized access alert to Slack.
+
+    - The `Approval Manager` configuration can accept specific usernames or role names
+    (prefixed with `@`).
+  capabilities:
+    can_create_case_comments: true
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a notification message to a Slack channel via a webhook to report the
+      approval or denial of a request.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a comment to the case and alert if 'Response Comments' are provided.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Assign Case to Current User:
+  ai_description: "### General Description\nThe **Assign Case to Current User** action\
+    \ is a workflow utility designed to automatically assign a Google SecOps case\
+    \ and its current alert to the analyst who manually triggered the playbook action.\
+    \ This is typically used at the beginning of a playbook to ensure that the person\
+    \ investigating the case is officially recorded as the owner.\n\n### Parameters\
+    \ Description\nThis action does not require any input parameters from the user\
+    \ at runtime. It relies on the execution context to identify the requesting user.\n\
+    \n### Additional Notes\n* **Manual Execution Required:** This action is specifically\
+    \ designed for manual execution. If triggered by the 'System' user (e.g., via\
+    \ an automated trigger without human intervention), the action will fail with\
+    \ an error. \n* **Integration Configuration:** Requires the 'Workflow Tools' integration\
+    \ to be configured with a valid Siemplify API Key, API Root, and Instance Hostname\
+    \ to interact with the platform's internal API.\n\n### Flow Description\n1. **Configuration\
+    \ Extraction:** The action retrieves the API credentials and connection details\
+    \ for the Google SecOps instance from the integration settings.\n2. **Context\
+    \ Identification:** It identifies the unique identifiers for the current case\
+    \ and the active alert.\n3. **User Validation:** It retrieves the username of\
+    \ the person who initiated the action (`original_requesting_user`). It checks\
+    \ if the user is the 'System' user.\n4. **Assignment:** If the user is a valid\
+    \ human analyst, it calls the internal API to assign the case and alert to that\
+    \ specific user.\n5. **Completion:** The action logs the assignment and returns\
+    \ the username as the result value."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: true
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the ownership/assignment of the case and alert within Google SecOps
+      to the user who executed the action.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    and configuration of the Workflow Tools integration. It serves as a health check
+    to ensure that the Google SecOps (Siemplify) environment can communicate with
+    its own internal API and external services like Slack.
+
+
+    ### Parameters Description
+
+    This action does not require any direct input parameters. It utilizes the following
+    integration configuration settings to perform its checks:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Siemplify API Key | String | Yes | The API key used to authenticate requests
+    to the Google SecOps internal API. |
+
+    | Siemplify API Root | String | Yes | The base URL for the Google SecOps API.
+    |
+
+    | Siemplify Instance Hostname | String | Yes | The hostname of the current instance.
+    |
+
+    | Slack Webhook URL | String | No | The URL used to send test messages to Slack.
+    If omitted, the Slack test is skipped. |
+
+    | Approval Manager | String | Yes | A username or role (prefixed with @) to validate
+    against the user profile database. |
+
+    | Secondary Approval Manager | String | No | An optional secondary username or
+    role to validate. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action extracts necessary API keys, endpoints,
+    and manager identities from the integration's global settings.
+
+    2. **Internal API Validation**: It initializes the `WorkflowToolsManager` and
+    performs a lookup for the configured 'Approval Manager' and 'Secondary Approval
+    Manager' using the `/api/external/v1/settings/GetUserProfiles` endpoint. This
+    confirms the API key and root URL are correct.
+
+    3. **External Notification Test**: If a Slack Webhook URL is provided, the action
+    sends a test POST request to Slack to verify outbound connectivity.
+
+    4. **Execution Finalization**: The action completes with a success status if the
+    API queries and Slack notification (if applicable) are processed without exceptions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action sends a test message to a Slack Webhook URL to verify connectivity,
+      which creates a new message entry in the external Slack channel.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
