@@ -1,0 +1,368 @@
+Get-Collection-Info-Async:
+  ai_description: "### General Description\nThis action retrieves threat intelligence\
+    \ data from specific Group-IB TI collections. It is designed for periodic data\
+    \ extraction (e.g., daily updates) by tracking sequence numbers to ensure only\
+    \ new data is ingested. It operates independently of case entities, acting as\
+    \ a data retrieval utility for the Group-IB TI portal.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Collection | DDL | Yes | The specific Group-IB TI collection to download data\
+    \ from (e.g., `apt/threat`, `malware/cnc`, `ioc/common`). |\n| Portion limit |\
+    \ DDL | Yes | Controls the number of data portions (batches) received from the\
+    \ TI Portal API in a single run. |\n| Enable mapping parser | Boolean | No | If\
+    \ set to `true`, the action parses the JSON output using predefined Group-IB mapping\
+    \ keys. If `false`, it returns raw data. |\n| Start date | String | No | The start\
+    \ date (YYYY-MM-DD) for data download if no previous sequence timestamp is found\
+    \ in the system. Defaults to 1 day ago if left empty. |\n\n### Additional Notes\n\
+    - This action is asynchronous and ignores any entities present in the case; it\
+    \ uses the execution trigger to start the collection download.\n- It utilizes\
+    \ sequence tracking (via `fetch_timestamp`) to maintain state between runs, allowing\
+    \ for incremental updates.\n\n### Flow Description\n1. **Initialization**: The\
+    \ action initializes the Group-IB TI connector and retrieves user-defined parameters\
+    \ including the collection name, portion limits, and parsing preferences.\n2.\
+    \ **Sequence Tracking**: It attempts to fetch a stored timestamp (sequence update\
+    \ number) from the environment. If found, it resumes data collection from that\
+    \ specific sequence. \n3. **Fallback Logic**: If no sequence number is stored,\
+    \ it calculates a starting point based on the provided 'Start date' or defaults\
+    \ to 24 hours prior to the current time.\n4. **Data Retrieval**: It establishes\
+    \ a connection to the Group-IB TI API and creates a generator to fetch data portions\
+    \ for the selected collection, respecting the 'Portion limit'.\n5. **Processing\
+    \ & Parsing**: For each retrieved portion, the action either applies a mapping\
+    \ parser to structure the data into a standardized format or extracts the raw\
+    \ items based on the 'Enable mapping parser' configuration.\n6. **Aggregation**:\
+    \ The action aggregates all retrieved portions into a single result set, adds\
+    \ it to the action's JSON output, and completes the execution."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get-Graph-Info:
+  ai_description: >-
+    ### General Description
+
+    The **Get-Graph-Info** action retrieves relational intelligence and infrastructure
+    data (often associated with WHOIS information) from the Group-IB Threat Intelligence
+    (TI) platform. It is specifically designed to provide context for network-based
+    entities by querying Group-IB's graph utility endpoints.
+
+
+    ### Parameters
+
+    This action does not have any user-configurable parameters. It automatically processes
+    supported entities found in the current alert or case context.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Group-IB TI poller using the
+    integration's global configuration (API Login, API Key, and API URL).
+
+    2. **Entity Gathering**: It retrieves the list of target entities from the current
+    Google SecOps context.
+
+    3. **Type Validation**: The action uses an internal validator to identify the
+    type of each entity. It explicitly filters the list to only include entities identified
+    as **IP Addresses** or **Domains**.
+
+    4. **API Interaction**: For each valid entity, it sends a GET request to the Group-IB
+    TI `utils/graph` endpoint (e.g., `utils/graph/ip` or `utils/graph/domain`).
+
+    5. **Rate Limiting**: The script pauses for 1 second between entity requests to
+    respect external API rate limits.
+
+    6. **Data Output**: The raw JSON responses from the API are aggregated and added
+    to the action's result JSON, making the data available for subsequent playbook
+    logic.
+
+
+    ### Additional Notes
+
+    - This action is a data-retrieval task. It does not automatically update entity
+    fields, add insights, or create case comments. The output is provided as a raw
+    JSON result for use in playbooks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get-TI-Search-Info:
+  ai_description: "### General Description\nThe **Get-TI-Search-Info** action allows\
+    \ users to search for specific entities\u2014including Domains, IP Addresses,\
+    \ File Hashes, Bank Cards, and Emails\u2014within the Group-IB Threat Intelligence\
+    \ (TI) database. This action is designed to provide deep contextual enrichment\
+    \ by identifying which threat collections (e.g., APT reports, malware configs,\
+    \ compromised accounts) contain information about the target entities and retrieving\
+    \ the detailed records associated with them.\n\n### Parameters Description\n|\
+    \ Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Enable mapping parser | Boolean | No | If set to `true`, the action will use\
+    \ predefined mapping keys to structure the JSON output into a more readable format.\
+    \ If `false` (default), the action returns the raw data as provided by the Group-IB\
+    \ API. |\n\n### Flow Description\n1. **Initialization**: The action initializes\
+    \ the Group-IB TI connector and poller using the integration's configuration (API\
+    \ Key, Login, and URL).\n2. **Entity Identification**: It iterates through the\
+    \ target entities in the current context and uses an internal validator to determine\
+    \ their type (e.g., IP, Domain, Hash, Email, or Credit Card).\n3. **Global Search**:\
+    \ For each valid entity, the action performs a global search across the Group-IB\
+    \ TI database to identify all relevant data collections (API paths) that contain\
+    \ matches.\n4. **Data Retrieval**: For every identified collection, the action\
+    \ executes a specific query to fetch detailed records, limited to a maximum of\
+    \ 3,000 items per collection.\n5. **Data Processing**: The retrieved records are\
+    \ either parsed using a mapping configuration (if enabled) or kept in their raw\
+    \ format.\n6. **Result Aggregation**: All findings are aggregated into a single\
+    \ JSON object and attached to the action's execution results for use in subsequent\
+    \ playbook steps."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DOMAIN
+    - FILEHASH
+    - DestinationURL
+    - USERUNIQNAME
+    - CREDITCARD
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get-TI-Search-Info-By-Collection:
+  ai_description: >-
+    ### General Description
+
+    The **Get-TI-Search-Info-By-Collection** action searches the Group-IB Threat Intelligence
+    (TI) database for specific indicators across a wide range of collections. It allows
+    users to query for data related to Domains, IP Addresses, URLs, File Hashes, Bank
+    Cards, and Emails. The action is highly configurable, allowing users to target
+    specific collections and optionally apply a mapping parser to structure the raw
+    API response into a more readable format.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Collection** | DDL | Yes | Specifies the Group-IB TI collection to search.
+    Options include `apt/threat`, `malware/cnc`, `compromised/account_group`, and
+    many others. |
+
+    | **Enable mapping parser** | Boolean | No | If set to `true`, the action transforms
+    the raw API data into a structured JSON format based on internal mapping keys.
+    If `false`, it returns the raw items from the API. Default is `false`. |
+
+    | **Search tag** | String | No | An optional tag used to prefix the search query
+    (e.g., `domain:google.com`). If provided, the query is formatted as `tag:identifier`.
+    If omitted, the raw entity identifier is used. |
+
+
+    ### Flow Description
+
+    1.  **Initialization:** The action initializes the Group-IB TI connector and retrieves
+    user-defined parameters including the target collection and search preferences.
+
+    2.  **Entity Processing:** It iterates through all entities in the current scope.
+    For each entity, it validates the identifier to determine if it matches supported
+    formats (IP, Domain, Hash, etc.).
+
+    3.  **Query Construction:** A search query is built for each valid entity. If
+    a `Search tag` is specified, it is prepended to the entity identifier; otherwise,
+    the identifier is used as the standalone query.
+
+    4.  **Data Retrieval:** The action queries the Group-IB TI API for the selected
+    collection. It uses a generator to handle data retrieval, supporting up to 3,000
+    items per query.
+
+    5.  **Parsing and Aggregation:** Based on the `Enable mapping parser` setting,
+    the retrieved data is either parsed into a structured format or kept as raw JSON.
+    All results are aggregated into a single result object.
+
+    6.  **Completion:** The final aggregated JSON is attached to the action result,
+    and the task is marked as completed.
+
+
+    ### Additional Notes
+
+    *   The action includes built-in rate-limiting protection by implementing a 1-second
+    delay between API requests.
+
+    *   While the `Enable mapping parser` parameter is a boolean, the underlying logic
+    expects string comparisons ("true"/"false"), which is handled automatically by
+    the integration's parameter extraction logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is designed to verify\
+    \ the connectivity between Google SecOps and the Group-IB Threat Intelligence\
+    \ (TI) platform. Beyond a simple heartbeat check, it retrieves a list of all data\
+    \ collections available to the user based on their current subscription level,\
+    \ providing visibility into accessible threat feeds.\n\n### Parameters Description\n\
+    | Parameter Name | Description | Type | Mandatory | Notes |\n| :--- | :--- | :---\
+    \ | :--- | :--- |\n| None | This action does not require any input parameters.\
+    \ | N/A | N/A | N/A |\n\n### Additional Notes\n- This action relies on the integration's\
+    \ global configuration (API Login, API Key, and API URL) to authenticate.\n- The\
+    \ output includes a JSON object listing the 'granted_collections' which helps\
+    \ administrators verify which threat feeds are active.\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the Siemplify environment and sets\
+    \ the script name.\n2. **Connector Setup**: It retrieves the global configuration\
+    \ credentials (API Login, API Key, API URL) and initializes the `GIBConnector`\
+    \ and `PlaybookAdapter`.\n3. **API Request**: The action sends a GET request to\
+    \ the `user/granted_collections` endpoint of the Group-IB TI API.\n4. **Result\
+    \ Processing**: \n    - If successful, the list of collections is added to the\
+    \ action's JSON results, and a 'Connection Established' message is returned.\n\
+    \    - If the request fails (e.g., due to authentication or network issues), an\
+    \ error message is logged, and the action status is set to failed.\n5. **Termination**:\
+    \ The action concludes by reporting the connectivity status and the retrieved\
+    \ collection data to the SOAR workbench."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
