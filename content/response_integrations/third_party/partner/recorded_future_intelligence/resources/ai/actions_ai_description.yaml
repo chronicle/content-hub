@@ -1,0 +1,1433 @@
+Add Analyst Note:
+  ai_description: >-
+    ### General Description
+
+    Adds an analyst note to the Recorded Future platform. This action allows users
+    to document findings or context within Recorded Future, automatically associating
+    the note with the entities currently present in the Google SecOps case scope by
+    appending their identifiers to the note text.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Note Title | String | Yes | Specifies the title for the analyst note. |
+
+    | Note Text | String | Yes | Specifies the body text for the note. The action
+    will automatically append a list of all entities collected from the current case
+    to this text. |
+
+    | Topic | DDL | No | Specifies the relevant note topic from a predefined list
+    (e.g., Actor Profile, Malware/Tool Profile, YARA Rule). If not specified, it defaults
+    to 'None'. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the API configuration (URL,
+    Key, SSL verification) and the user-provided note details (Title, Text, Topic).
+
+    2. **Entity Collection:** It iterates through all entities in the current target
+    scope and aggregates their identifiers into a single string.
+
+    3. **Text Preparation:** The aggregated entity list is appended to the user-provided
+    `Note Text` to ensure the note contains context about the specific case.
+
+    4. **External API Call:** The action uses the `RecordedFutureManager` to publish
+    the note to the Recorded Future platform via the `AnalystNoteMgr`.
+
+    5. **Result Handling:** Upon successful creation, the action returns the unique
+    `document_id` of the new note and completes the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new Analyst Note in the Recorded Future platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Detonate File:
+  ai_description: >-
+    ### General Description
+
+    Submits a file to the Recorded Future Sandbox for automated detonation and behavioral
+    analysis. This action is designed to handle files stored either in a Google Cloud
+    Platform (GCP) Bucket or on the local file system. It is an asynchronous action
+    that uploads the file, monitors the analysis progress, and retrieves a comprehensive
+    report once completed.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Path | String | Yes | The full path or identifier of the file to be detonated.
+    |
+
+    | File Source | DDL | Yes | Specifies where the file is located. Options are `GCP
+    Bucket` or `Local File System`. |
+
+    | Profile | String | No | The specific Sandbox profile to use for the analysis.
+    |
+
+    | Password | String | No | The password required to extract the file if it is
+    an encrypted archive. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the file path and source configuration
+    from the input parameters.
+
+    2. **File Retrieval**: Depending on the `File Source`, it either reads the file
+    from the local disk or fetches it from a GCP Bucket using the SecOps SDK.
+
+    3. **Submission**: The file is uploaded to the Recorded Future Sandbox API for
+    detonation.
+
+    4. **Monitoring**: As an asynchronous action, it enters an 'In Progress' state,
+    periodically polling the sandbox to check if the analysis is finished.
+
+    5. **Reporting**: Once the analysis is complete, it retrieves the overview report,
+    including scores, signatures, and IOCs.
+
+    6. **Internal Update**: It generates a detailed Case Insight in Google SecOps
+    containing the detonation results and analysis summary.
+
+
+    ### Additional Notes
+
+    This action requires a valid Recorded Future Sandbox API key and URL configured
+    in the integration settings. It is an asynchronous action and will remain in progress
+    until the sandbox analysis is finished or a timeout occurs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits a file to the Recorded Future Sandbox for detonation and analysis, which
+      creates a new analysis task in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates case insights containing the detonation report and analysis details.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Detonate URL:
+  ai_description: >-
+    ### General Description
+
+    Submits URL entities to the Recorded Future Sandbox (Triage) for automated detonation
+    and behavioral analysis. This action is designed to handle URLs asynchronously,
+    meaning it initiates the detonation process and then polls the sandbox until the
+    analysis is complete. Once finished, it retrieves a comprehensive report including
+    risk scores, signatures, and observed network flows.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Profile | String | No | Specifies the Sandbox profile to use for the detonation
+    (e.g., a specific OS or browser environment). If left empty, the default sandbox
+    profile is used. |
+
+
+    ### Flow Description
+
+    1. **Entity Extraction**: The action identifies all URL entities within the current
+    context.
+
+    2. **Submission**: It submits each identified URL to the Recorded Future Sandbox
+    API. If a specific 'Profile' is provided, it is applied to the submission.
+
+    3. **Polling (Async)**: Because detonation takes time, the action enters an 'In
+    Progress' state, periodically polling the sandbox to check the status of the analysis.
+
+    4. **Report Retrieval**: Once the sandbox reports the analysis as 'reported' (finished),
+    the action fetches the full overview report.
+
+    5. **Result Generation**: The action parses the report to extract risk scores,
+    signatures, and IOCs.
+
+    6. **Internal Updates**: It creates detailed Case Insights containing the detonation
+    results in HTML format and adds the raw data to the action's JSON results and
+    data tables.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits URLs to the Recorded Future Sandbox, which creates new analysis samples
+      and triggers active detonation processes in the external environment.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates case insights containing the detonation analysis reports and adds data
+      tables to the case wall.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich CVE:
+  ai_description: >-
+    ### General Description
+
+    This action queries Recorded Future to retrieve comprehensive threat intelligence
+    for CVE (Common Vulnerabilities and Exposures) entities. It provides detailed
+    risk scores, triggered risk rules, and intelligence cards. The action helps security
+    analysts understand the severity of a vulnerability by comparing Recorded Future's
+    risk score against a customizable threshold, automatically marking high-risk entities
+    as suspicious and providing context through case insights.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Risk Score Threshold | String | Yes | The minimum malicious risk score (0-99)
+    required to mark a CVE as suspicious. Corresponds to Recorded Future's risk levels
+    (e.g., Medium: 25-64, High: 65-79). |
+
+    | Include Links | Boolean | No | If enabled, the action retrieves information
+    about related entities and links from Recorded Future. |
+
+    | Enable Collective Insights | Boolean | No | If enabled, the action contributes
+    detection data back to Recorded Future's Collective Insights platform. |
+
+
+    ### Additional Notes
+
+    - **Collective Insights**: This feature is only active if enabled in both the
+    integration configuration and the action parameters, and only for alerts where
+    the reporting vendor is not 'Recorded Future'.
+
+    - **Risk Levels**: The threshold corresponds to Recorded Future's risk levels:
+    None (0), Low (5-24), Medium (25-64), High (65-79), Critical (80-89), and Very
+    Critical (90-99).
+
+    - **External Mutation**: This action is not categorized as a pure enrichment action
+    because it can submit data to an external system (Collective Insights).
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: Extracts API credentials and action-specific
+    parameters like the risk threshold and link inclusion settings.
+
+    2. **Entity Scoping**: Filters the target entities to process only those of type
+    'CVE'.
+
+    3. **Intelligence Query**: Calls the Recorded Future API to fetch vulnerability
+    intelligence, including risk scores, evidence, and optional links.
+
+    4. **Collective Insights Submission**: If enabled, the action sends detection
+    telemetry to Recorded Future's Collective Insights service, provided the alert
+    did not originate from Recorded Future.
+
+    5. **Result Processing**: Populates data tables with the vulnerability report
+    and triggered risk rules. It also adds a direct link to the Recorded Future intelligence
+    card.
+
+    6. **Risk Evaluation**: Compares the CVE's risk score against the user-defined
+    'Risk Score Threshold'.
+
+    7. **Internal Enrichment**: If the score exceeds the threshold, the entity is
+    marked as suspicious, and a detailed case insight is created.
+
+    8. **Entity Update**: Updates the entity's additional properties with the retrieved
+    intelligence and marks it as enriched.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Submits detection telemetry and incident metadata to Recorded Future's Collective
+      Insights platform when the 'Enable Collective Insights' parameter is enabled.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - CVE
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Hash:
+  ai_description: >-
+    ### General Description
+
+    Enriches File Hash entities using Recorded Future's threat intelligence. This
+    action retrieves risk scores, evidence details, and optional entity links. It
+    evaluates the hash against a user-defined risk threshold to mark entities as suspicious
+    and generates detailed insights and data tables within the case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
+    score (0-89) for a Hash to be marked malicious. |
+
+    | Include Links | Boolean | No | If enabled, the action retrieves information
+    about related entity links. |
+
+    | Enable Collective Insights | Boolean | No | If enabled, contributes detection
+    data back to Recorded Future's Collective Insights service. |
+
+
+    ### Additional Notes
+
+    Collective Insights are only submitted if the alert's reporting vendor is not
+    'Recorded Future'.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves API configuration and action parameters
+    (Threshold, Links, Collective Insights).
+
+    2. **Entity Filtering**: Iterates through target entities and filters for File
+    Hash types.
+
+    3. **Intelligence Retrieval**: Queries Recorded Future for reputation data, including
+    risk scores, evidence, and optional links.
+
+    4. **External Contribution**: If enabled and applicable, submits detection information
+    back to Recorded Future via Collective Insights.
+
+    5. **Internal Enrichment**: Updates entity attributes (is_suspicious, additional_properties)
+    based on the risk score and threshold.
+
+    6. **Reporting**: Generates case insights, data tables for risk rules and links,
+    and adds a direct link to the Recorded Future portal.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Submits detection information to Recorded Future's Collective Insights service
+      if the 'Enable Collective Insights' parameter is set to true and the alert source
+      is not Recorded Future.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity fields (is_suspicious, additional_properties, is_enriched) and
+      creates case insights with detailed threat intelligence.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Host:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich Host** action queries Recorded Future to retrieve comprehensive threat
+    intelligence for **Hostname** and **Domain** entities. It provides security analysts
+    with critical context, including risk scores, triggered risk rules, and intelligence
+    cards, to help evaluate the threat level of specific hosts within a case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Risk Score Threshold** | String | Yes | The minimum risk score (0-99) required
+    to mark a host as suspicious. Scores are categorized as: Very Malicious (90-99),
+    Malicious (65-89), Suspicious (25-64), Unusual (5-24), and No Malicious Content
+    (0). |
+
+    | **Include Links** | Boolean | No | If enabled, the action retrieves additional
+    information about related entity links from Recorded Future. |
+
+    | **Enable Collective Insights** | Boolean | No | If enabled, the action contributes
+    detection data back to Recorded Future's Collective Insights system, provided
+    the alert did not originate from Recorded Future itself. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts API configuration (URL, Key, SSL settings) and
+    action parameters (Threshold, Links, Collective Insights).
+
+    2. **Entity Filtering**: Identifies all `HOSTNAME` and `DOMAIN` entities within
+    the current Google SecOps context.
+
+    3. **Intelligence Retrieval**: For each identified entity, the action calls the
+    Recorded Future API to fetch enrichment data, including risk scores and evidence.
+
+    4. **External Contribution**: If `Enable Collective Insights` is true and the
+    alert source is external, detection data is submitted to Recorded Future.
+
+    5. **Data Augmentation**: Adds detailed data tables to the action results, including
+    a general report, triggered risk rules, and optionally, related links.
+
+    6. **Risk Assessment**: Compares the retrieved risk score against the user-defined
+    `Risk Score Threshold`. If the score exceeds the threshold, the entity is marked
+    as suspicious.
+
+    7. **Internal Updates**: Updates the entity's properties in Google SecOps with
+    the new intelligence and creates a case insight containing the risk analysis and
+    portal links.
+
+
+    ### Additional Notes
+
+    - This action performs an external mutation by contributing to 'Collective Insights'
+    if the parameter is enabled.
+
+    - The action supports both `HOSTNAME` and `DOMAIN` entity types, even though the
+    simulation data may only list one.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      If the 'Enable Collective Insights' parameter is enabled, the action submits
+      detection information back to Recorded Future's Collective Insights platform.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes such as 'is_suspicious', 'is_enriched', and 'additional_properties'.
+      It also creates case insights to display threat intelligence summary.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich IOC:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich IOC** action retrieves comprehensive threat intelligence from Recorded
+    Future for various Indicators of Compromise (IOCs), including IP addresses, domains,
+    hostnames, file hashes, URLs, and CVEs. It provides risk scores, evidence for
+    maliciousness, and links to Recorded Future intelligence cards. This action is
+    designed to automate the initial triage of entities within a case by providing
+    context and automatically flagging suspicious entities based on a configurable
+    risk threshold.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Risk Score Threshold** | Integer | Yes | The minimum Recorded Future risk
+    score (0-100) required to mark an entity as suspicious. Default is 25. |
+
+    | **Include Links** | Boolean | No | If enabled, the action retrieves related
+    entity links (e.g., IPs related to a domain) and populates them into a data table.
+    |
+
+    | **Enable Collective Insights** | Boolean | No | If enabled, the action contributes
+    detection data back to Recorded Future's Collective Insights platform to improve
+    global threat intelligence. This is skipped for alerts originally generated by
+    Recorded Future. |
+
+
+    ### Additional Notes
+
+    - This action updates the `is_suspicious` and `is_enriched` flags on entities
+    within Google SecOps.
+
+    - It populates the entity's `additional_properties` with Recorded Future specific
+    data (prefixed with `RF_`).
+
+    - Collective Insights submission is subject to both the action-level parameter
+    and a global integration configuration.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves API credentials and action parameters (Threshold,
+    Links, Collective Insights).
+
+    2. **Entity Filtering:** Iterates through the case's target entities and filters
+    for supported types (ADDRESS, HOSTNAME, DOMAIN, FILEHASH, CVE, DestinationURL).
+
+    3. **Intelligence Retrieval:** For each supported entity, it queries the Recorded
+    Future API to fetch the risk report and intelligence metadata.
+
+    4. **External Contribution:** If 'Enable Collective Insights' is active, it submits
+    the detection context to Recorded Future.
+
+    5. **Data Visualization:** Adds multiple data tables to the case, including an
+    overview report, triggered risk rules, and related links (if requested).
+
+    6. **Risk Assessment:** Compares the retrieved risk score against the **Risk Score
+    Threshold**. If the score is higher, the entity is marked as suspicious.
+
+    7. **Insight Generation:** Creates a detailed Case Insight containing the risk
+    score, portal links, and evidence details for risky entities.
+
+    8. **Entity Update:** Updates the entities in the Google SecOps case with the
+    new enrichment data and suspicious status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      If 'Enable Collective Insights' is enabled, the action performs a POST request
+      to Recorded Future's Collective Insights API to contribute detection data.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity fields (is_suspicious, is_enriched), adds enrichment data to
+      entity additional_properties, and creates case insights.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - CVE
+    - FILEHASH
+    - HOSTNAME
+    - DestinationURL
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich IOCs Bulk:
+  ai_description: >-
+    ### General Description
+
+    Enriches multiple IOCs (Indicators of Compromise) in bulk using Recorded Future's
+    SOAR API. This action retrieves threat intelligence for a variety of entity types,
+    including IP Addresses, Domains, Hostnames, File Hashes, URLs, and CVEs, in a
+    single request. It is designed for high-efficiency enrichment of all supported
+    entities present in the current context.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Enable Collective Insights | boolean | No | If enabled, the action will contribute
+    detection information back to Recorded Future's Collective Insights platform.
+    This submission only occurs if the alert did not originate from Recorded Future
+    itself. Default is true. |
+
+
+    ### Additional Notes
+
+    - This action uses the Recorded Future SOAR API, which is optimized for bulk lookups.
+
+    - The action retrieves raw intelligence data and attaches it as a JSON result
+    to the action output.
+
+    - Unlike individual enrichment actions, this bulk action does not automatically
+    update entity fields or create case insights; it focuses on data retrieval.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the API configuration (URL, Key, SSL verification)
+    and the 'Enable Collective Insights' action parameter.
+
+    2. **Entity Identification**: Scans the current context for all supported entities
+    (ADDRESS, DOMAIN, HOSTNAME, FILEHASH, DestinationURL, CVE).
+
+    3. **Bulk Request Preparation**: Groups the identified entities by their Recorded
+    Future type (e.g., mapping 'ADDRESS' to 'ip') to construct a bulk query.
+
+    4. **Intelligence Retrieval**: Executes a bulk lookup via the Recorded Future
+    SOAR API to fetch intelligence for all entities simultaneously.
+
+    5. **Collective Insights Submission**: If enabled and applicable (based on the
+    alert vendor), submits detection metadata for the entities to Recorded Future's
+    global intelligence platform.
+
+    6. **Output Generation**: Aggregates the retrieved intelligence into a structured
+    JSON result and completes the action.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      If 'Enable Collective Insights' is true, the action submits detection information
+      (IOC value, type, and incident metadata) to Recorded Future's Collective Insights
+      API to contribute to global threat intelligence.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - CVE
+    - FILEHASH
+    - HOSTNAME
+    - DOMAIN
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich IP:
+  ai_description: >-
+    Enriches IP Address entities using Recorded Future threat intelligence. This action
+    retrieves comprehensive reputation data, including risk scores, triggered risk
+    rules, location details (ASN, country, city), and related entity links. It evaluates
+    the risk score against a configurable threshold to automatically mark entities
+    as suspicious within Google SecOps. Additionally, it can contribute detection
+    data back to Recorded Future via the Collective Insights feature.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Risk Score Threshold | String | Yes | The minimum malicious risk score (0-99)
+    required to mark an IP as suspicious. Band levels: Very Malicious (90-99), Malicious
+    (65-89), Suspicious (25-64), Unusual (5-24). Default is 25. |
+
+    | Include Links | Boolean | No | If enabled, the action retrieves and displays
+    information about related entity links in a dedicated data table. |
+
+    | Enable Collective Insights | Boolean | No | If enabled, the action contributes
+    detection data back to Recorded Future's Collective Insights platform. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves API credentials and configuration settings (URL,
+    API Key, SSL verification).
+
+    2. **Parameter Extraction**: Parses the risk threshold, link inclusion preference,
+    and Collective Insights toggle.
+
+    3. **Entity Filtering**: Identifies all IP Address entities within the current
+    alert or case context.
+
+    4. **Data Retrieval**: Queries Recorded Future for the IP's risk score, evidence
+    details, and geographical information.
+
+    5. **External Contribution**: If 'Enable Collective Insights' is active and the
+    alert is not from Recorded Future itself, it submits the detection to the Recorded
+    Future platform.
+
+    6. **Risk Evaluation**: Compares the retrieved risk score against the 'Risk Score
+    Threshold'. If exceeded, the entity is marked as suspicious.
+
+    7. **Internal Updates**: Updates the entity's additional properties with enrichment
+    data, creates a detailed case insight, and populates data tables with the findings.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      If 'Enable Collective Insights' is enabled, the action submits detection information
+      back to Recorded Future's Collective Insights service, which modifies data in
+      the external Recorded Future platform.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity attributes with enrichment data, modifies the 'is_suspicious'
+      flag of entities based on the risk score, and creates case insights.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich URL:
+  ai_description: >-
+    ### General Description
+
+    Enriches URL entities using Recorded Future Intelligence. This action retrieves
+    comprehensive threat intelligence for URLs, including risk scores, evidence details,
+    and intelligence cards. It helps security analysts determine the reputation of
+    a URL and provides context for investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Risk Score Threshold | string | Yes | Represents the minimum malicious risk
+    score (0-99) for a URL to be marked as suspicious in Google SecOps. Default is
+    25. |
+
+    | Include Links | boolean | No | If enabled, the action retrieves additional information
+    about related links associated with the URL. |
+
+    | Enable Collective Insights | boolean | No | If enabled, the action contributes
+    detection telemetry back to Recorded Future's Collective Insights API. |
+
+
+    ### Additional Notes
+
+    - The action will mark an entity as suspicious and create a case insight if the
+    retrieved risk score exceeds the configured 'Risk Score Threshold'.
+
+    - Collective Insights submissions are automatically disabled if the alert vendor
+    is 'Recorded Future' to avoid redundant reporting.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: Extracts API configuration (URL, Key, SSL) and
+    action parameters (Threshold, Include Links, Collective Insights).
+
+    2. **Entity Filtering**: Identifies URL entities within the current alert scope.
+
+    3. **Intelligence Retrieval**: For each URL, queries the Recorded Future API to
+    fetch enrichment data, risk scores, and evidence.
+
+    4. **Telemetry Submission**: If 'Enable Collective Insights' is active, submits
+    detection context to Recorded Future.
+
+    5. **Internal Enrichment**: Updates the entity's additional properties with Recorded
+    Future data and sets the 'is_enriched' flag.
+
+    6. **Risk Assessment**: Compares the risk score against the threshold. If exceeded,
+    marks the entity as suspicious and generates a detailed case insight.
+
+    7. **Data Visualization**: Adds data tables to the case wall containing the overview
+    report, triggered risk rules, and related links.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Submits detection telemetry (IOC value, type, and incident context) to Recorded
+      Future's Collective Insights API if the 'Enable Collective Insights' parameter
+      is enabled.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes (is_suspicious, additional_properties) and creates
+      case insights with detailed threat intelligence.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Alert Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive details for a specific Recorded Future alert using its
+    unique identifier. This action allows analysts to fetch deep context regarding
+    a threat, including associated documents, related entities, and evidence details,
+    facilitating a more thorough investigation within the Google SecOps case.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | string | Yes | The unique identifier of the Recorded Future alert
+    for which details are being requested. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the Recorded Future manager using
+    the provided API URL and API Key.
+
+    2. **Parameter Extraction**: It retrieves the mandatory `Alert ID` from the action
+    parameters.
+
+    3. **Data Retrieval**: The action queries the Recorded Future API to fetch detailed
+    information about the specified alert, including hits, rules, and analyst notes.
+
+    4. **Result Processing**: The retrieved alert data is converted to JSON and added
+    to the action's execution results for use in subsequent playbook steps.
+
+    5. **Portal Linking**: A direct web link to the alert in the Recorded Future portal
+    is provided for the analyst to access the original report.
+
+
+    ### Additional Notes
+
+    This action does not operate on case entities; it requires a specific Alert ID
+    as input. It is primarily used for manual or automated deep-dive lookups of known
+    Recorded Future alerts.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Playbook Alert Details:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves comprehensive details for a specific Recorded Future Playbook
+    Alert and attaches the results to the current case. It is designed to provide
+    deep context beyond the initial alert summary, such as updated DNS records, specific
+    vulnerability stages, or detailed identity exposure information. The action returns
+    the full raw data of the alert and provides a direct link to the Recorded Future
+    portal for the full web report.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Playbook Alert ID | String | Yes | The unique identifier of the playbook alert
+    for which you want to fetch details. |
+
+    | Category | String | Yes | The specific category of the Playbook Alert. Supported
+    values include: `domain_abuse`, `cyber_vulnerability`, `code_repo_leakage`, `third_party_risk`,
+    `identity_novel_exposures`, and `geopolitics_facility`. |
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it requires a specific Alert ID and Category
+    as input parameters.
+
+    - The action is read-only and does not change the status or assignee of the alert
+    in Recorded Future.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action extracts the API credentials (URL, Key,
+    SSL verification) and the specific Playbook Alert ID and Category from the user
+    input.
+
+    2. **API Interaction:** It utilizes the `RecordedFutureManager` to call the Recorded
+    Future API's fetch method for the specified alert.
+
+    3. **Data Processing:** The retrieved alert data is transformed into a structured
+    `PlaybookAlert` object.
+
+    4. **Result Attachment:** The action adds the full JSON representation of the
+    alert details to the execution results and generates a direct link to the Recorded
+    Future portal report for easy access by analysts.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    the Google SecOps (Chronicle) environment and the Recorded Future API. It ensures
+    that the provided API URL and API Key are valid and that the network allows communication
+    with the service.
+
+
+    ### Parameters
+
+    | Parameter Name | Description | Type | Mandatory | Default Value |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | ApiUrl | The base URL for the Recorded Future API. | String | Yes | N/A |
+
+    | ApiKey | The API Key used for authentication with Recorded Future. | String
+    | Yes | N/A |
+
+    | Verify SSL | If enabled, the action will verify the SSL certificate of the API
+    endpoint. | Boolean | No | False |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify SDK and logger.
+
+    2. **Parameter Extraction**: It retrieves the `ApiUrl`, `ApiKey`, and `Verify
+    SSL` settings from the integration configuration.
+
+    3. **Manager Setup**: A `RecordedFutureManager` instance is created using the
+    extracted credentials.
+
+    4. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    performs a sample enrichment lookup for a hardcoded IP address (8.8.8.8) to confirm
+    the API is responsive and the credentials are valid.
+
+    5. **Result Reporting**: If the test succeeds, it returns a 'Connection Established'
+    message. If it fails, it captures the exception and reports a failure status.
+
+
+    ### Additional Notes
+
+    - This action does not process any entities from the current alert or case; it
+    uses a static internal test to validate the integration configuration.
+
+    - As per standard SOAR conventions, this action is categorized as a connectivity
+    test and not as an enrichment action.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Refresh Playbook Alert:
+  ai_description: >-
+    Updates a Google SecOps case with the latest information from a Recorded Future
+    Playbook Alert. This action is designed to synchronize an existing case with new
+    data fetched directly from the Recorded Future platform, ensuring that the investigation
+    reflects the most current threat intelligence.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Playbook Alert ID | The unique identifier of the playbook alert in Recorded
+    Future to be refreshed. | string | Yes |
+
+    | Category | The specific category of the Playbook Alert. Supported values include:
+    `domain_abuse`, `cyber_vulnerability`, `code_repo_leakage`, `third_party_risk`,
+    `identity_novel_exposures`, and `geopolitics_facility`. | string | Yes |
+
+
+    ### Flow Description
+
+
+    1. **Validation**: The action first verifies that the current case was generated
+    by the Recorded Future Playbook Alert product. If not, it terminates with an error.
+
+    2. **Data Retrieval**: It connects to the Recorded Future API to fetch the latest
+    details for the specified Playbook Alert ID and Category.
+
+    3. **Entity Synchronization**: Based on the alert category, the action identifies
+    relevant indicators (such as IPs, Domains, Hostnames, or CVEs) within the refreshed
+    data and automatically adds them as entities to the Google SecOps case.
+
+    4. **Result Generation**: The action populates the execution results with a JSON
+    object containing the updated alert data (including HTML-formatted summaries for
+    widgets) and provides a direct link to the Recorded Future portal for the specific
+    alert.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds new entities discovered in the refreshed Recorded Future alert
+      data to the current Google SecOps case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Hash Malware Intelligence:
+  ai_description: >-
+    Queries Recorded Future's Malware Intelligence to retrieve sandbox analysis reports
+    for SHA256 file hashes. This action allows security analysts to look up historical
+    detonation results from the Recorded Future Sandbox (Triage) without re-submitting
+    the file. It retrieves detailed technical data including risk scores, network
+    flows, and behavioral signatures.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | My Enterprise | boolean | No | If set to `true`, the search is restricted to
+    samples submitted by your organization's enterprise account. Default is `false`.
+    |
+
+    | Start Date | string | No | The starting point for the search lookback. Supports
+    relative formats like `-30d` or specific dates like `2026-01-23`. Default is `-30d`.
+    |
+
+    | End Date | string | No | The ending point for the search lookback. Supports
+    relative formats or specific dates. If left empty, it defaults to the current
+    date. |
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action extracts the API configuration and user-provided
+    parameters (Enterprise scope and date range).
+
+    2. **Entity Filtering**: It iterates through the target entities in the case,
+    specifically looking for `FILEHASH` entities that are 64 characters long (SHA256).
+
+    3. **External Query**: For each valid hash, it queries the Recorded Future Malware
+    Intelligence API using the specified date filters and enterprise scope.
+
+    4. **Data Processing**: If reports are found, the action parses the sandbox results,
+    including analysis scores, completion timestamps, network flows (destination IPs/ports),
+    and behavioral signatures (TTPs and descriptions).
+
+    5. **Internal Enrichment**: It generates a detailed HTML Case Insight for each
+    hash, providing a summary of the sandbox findings directly within the Google SecOps
+    interface.
+
+    6. **Output**: The raw report data is attached as a JSON result for use in downstream
+    playbook logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates Case Insights in Google SecOps to display detailed malware
+      sandbox report summaries for the analyzed file hashes.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Alert:
+  ai_description: "### General Description\nUpdates the details of an existing alert\
+    \ within the Recorded Future platform. This action allows analysts to programmatically\
+    \ manage the lifecycle of Recorded Future alerts by changing their status, assigning\
+    \ them to specific users, or adding administrative notes.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Alert ID** | string | Yes | The unique identifier of the Recorded Future alert\
+    \ to be updated. |\n| **Assign To** | string | No | The identifier of the user\
+    \ to whom the alert should be assigned. Accepts ID, username, user hash, or email.\
+    \ |\n| **Note** | string | No | A text comment or note to be appended to the alert.\
+    \ |\n| **Status** | ddl | Yes | The new lifecycle status for the alert. Options\
+    \ include: `New`, `Pending`, `Dismissed`, `Resolved`, and `Flag for Tuning`. |\n\
+    \n### Additional Notes\nWhile the `Status` parameter is marked as mandatory in\
+    \ the configuration, the action logic requires that at least one of the following\
+    \ parameters\u2014`Status` (if not set to 'None'), `Assign To`, or `Note`\u2014\
+    must be provided for the update to proceed. If all three are empty or 'None',\
+    \ the action will fail with an error message.\n\n### Flow Description\n1. **Parameter\
+    \ Extraction**: Retrieves the API configuration and the specific alert details\
+    \ (ID, Status, Assignee, Note) from the action input.\n2. **Validation**: Checks\
+    \ if at least one update field (Status, Assignee, or Note) contains a value to\
+    \ ensure a valid update request is sent.\n3. **API Interaction**: Uses the `RecordedFutureManager`\
+    \ to send a request to the Recorded Future API's alert update endpoint.\n4. **Result\
+    \ Processing**: Captures the API response, adds the raw JSON result to the action\
+    \ output, and provides a success message if the update was accepted by the external\
+    \ system."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status, assignee, and notes of an alert directly within the Recorded
+      Future platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Playbook Alert:
+  ai_description: >-
+    Updates the details of a specific playbook alert in Recorded Future. This action
+    allows for modifying the alert's status, priority, assignee, and reopen strategy,
+    as well as adding log entries for auditing purposes.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Playbook Alert ID | String | Yes | The unique identifier of the playbook alert
+    to be updated. |
+
+    | Playbook Alert Category | String | Yes | The category associated with the playbook
+    alert (e.g., domain_abuse, cyber_vulnerability). |
+
+    | Assign To | String | No | The user uhash of the person to whom the alert should
+    be assigned. |
+
+    | Log Entry | String | No | A comment or note to be added to the alert's activity
+    log. |
+
+    | Status | DDL | No | The new status for the alert (New, In Progress, Dismissed,
+    Resolved). |
+
+    | Priority | DDL | No | The new priority level for the alert (High, Moderate,
+    Informational). |
+
+    | Reopen Strategy | DDL | No | The strategy for reopening the alert (Never, Significant
+    Updates). |
+
+
+    ### Additional Notes
+
+    At least one of the following parameters must be provided for the action to execute:
+    `Assign To`, `Log Entry`, `Status`, `Priority`, or `Reopen Strategy`. If none
+    are provided, the action will fail with an error message.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the API configuration (URL,
+    Key, SSL verification) and the specific alert identifiers and update values from
+    the input parameters.
+
+    2. **Validation:** It verifies that at least one update field (Status, Priority,
+    Assignee, Log Entry, or Reopen Strategy) has been provided to ensure a mutation
+    is intended.
+
+    3. **Manager Initialization:** Initializes the Recorded Future Manager to facilitate
+    communication with the external API.
+
+    4. **Alert Update:** The action first fetches the existing playbook alert to ensure
+    its existence and then submits a request to the Recorded Future API to apply the
+    specified changes.
+
+    5. **Result Processing:** The updated alert data is returned as a JSON object,
+    and a success message is logged in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status, priority, assignee, log entry, or reopen strategy of a playbook
+      alert in the Recorded Future platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
