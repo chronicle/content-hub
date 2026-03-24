@@ -5,13 +5,13 @@ This document outlines the standard workflow for contributing new parsers or upd
 ## Prerequisites
 
 *   All contributors must sign a Contributor License Agreement (CLA) before their submission can be considered for review.
-*   The contributor should have a `parsers.admin` role for the customer instance and have the ingested data for the logtype (can be custom/prebuilt) that the contributor needs to add/modify. At least 1000 log entries are expected to be ingested.
+*   The contributor should have a `chronicle.admin` role for the customer instance and have the ingested data for the logtype (can be custom/prebuilt) that the contributor needs to add/modify. At least 1000 log entries are expected to be ingested.
 
 ## 1. Local Development and Testing (Optional)
 
 Before submitting a PR, you can run local tests to ensure faster iteration and catch basic errors.
 
-*   **Authentication**: You must have `chronicle.parsers.run` permission, that is part of `parsers.admin` default role.
+*   **Authentication**: You must have `chronicle.parsers.run` permission, that is part of `chronicle.admin` default role.
 *   **Action**: Modify the `parser.conf` file, and ensure that the `testdata/` subdirectory includes representative raw logs and corresponding expected UDM output files.
 *   **Running Local Tests**: Use the provided command-line utility for sanity checks, refer to the [documentation](/tools/parsers/validations/docs/README.md) for more details.
 *   **Mandatory `testdata/` changes whenever new PR is raised.**
@@ -36,13 +36,13 @@ The system triggers two key check runs that must complete successfully:
 
 Basic Validations/Unit Tests are run automatically during PR raise event:
 
-*   Checks folder structure validity - Ex : [Check Link](https://github.com/chronicle/content-hub/pull/624/checks?check_run_id=67368352418)
-*   Presence of all required files - `metadata.json`, `*.conf` file, events, test logs. - Ex: [Check 1](https://github.com/chronicle/content-hub/pull/626/checks?check_run_id=67369312078), [Check 2](https://github.com/chronicle/content-hub/pull/627/checks?check_run_id=67369642041)
-*   Validations of expected and actual events - [Check Link](https://github.com/chronicle/content-hub/pull/628/checks?check_run_id=67369956115), [Check 2](https://github.com/chronicle/content-hub/pull/629/checks?check_run_id=67370293899)
-*   Support for multiple cases for single parser i.e. `testcase1_events.json`, `testcase1_logs.json`, `testcase2_events.json`, `testcase2_logs.json`. Validations match events and logs case wise according to the naming convention. - Ex - [Check Link](https://github.com/chronicle/content-hub/pull/624/checks?check_run_id=67368352418)
-*   Runs unit tests using the parser logic against the data in `testdata/`. Ex : [Check Link](https://github.com/chronicle/content-hub/pull/624/checks?check_run_id=67368352418)
-*   Verifies that the log types in `metadata.json` are unique and present in SecOps. Ex: [Check Link](https://github.com/chronicle/content-hub/pull/630/checks?check_run_id=67370661694)
-*   Checks that no new logtype is added without support from internal team - Ex: [Check Link](https://github.com/chronicle/content-hub/pull/631/checks?check_run_id=67371233028)
+*   Checks folder structure validity.
+*   Presence of all required files - `metadata.json`, `*.conf` file, events, test logs.
+*   Validations of expected and actual events.
+*   Support for multiple cases for single parser i.e. `testcase1_events.json`, `testcase1_logs.json`, `testcase2_events.json`, `testcase2_logs.json`. Validations match events and logs case wise according to the naming convention.
+*   Runs unit tests using the parser logic against the data in `testdata/`.
+*   Verifies that the log types in `metadata.json` are unique and present in SecOps.
+*   Checks that no new logtype is added without support from internal team.
 
 If these tests fail, you must fix the errors (e.g., structuring, unit tests) and push a new commit.
 
