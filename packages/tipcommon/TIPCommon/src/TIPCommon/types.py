@@ -53,3 +53,6 @@ BiPredicate = Callable[[_T, _E], bool]
 BiConsumer = Callable[[_T, _E], None]
 BiFunction = Callable[[_T, _E], _R]
 BinaryOperator = Callable[[_T, _T], _T]
+
+SyncItem = list[str]
+SyncData = dict[str, SyncItem]

@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from collections.abc import Coroutine, Iterable
-from typing import Any
+from typing import TYPE_CHECKING
 
 import requests
 import SiemplifyVaultUtils
@@ -31,6 +31,9 @@ from ..data_models import Container
 from ..exceptions import ActionSetupError
 from ..types import ChronicleSOAR, Entity, GeneralFunction, SingleJson
 from .interfaces.logger import Logger, ScriptLogger
+
+if TYPE_CHECKING:
+    from typing import Any, Iterable
 
 
 class CreateSession:
@@ -109,7 +112,7 @@ class NewLineLogger(Logger):
         self.logger.info(f"{msg}\n", *args, **kwargs)
 
     def warn(self, warning_msg: str, *args, **kwargs) -> None:
-        self.logger.warning(f"{warning_msg}\n", *args, **kwargs)
+        self.logger.warn(f"{warning_msg}\n", *args, **kwargs)
 
     def error(self, error_msg: str, *args, **kwargs) -> None:
         self.logger.error(f"{error_msg}\n", *args, **kwargs)
@@ -167,3 +170,30 @@ def get_param_value_from_vault(vault_settings: SingleJson, param_value: str) -> 
 
     """
     return SiemplifyVaultUtils.extract_vault_param(param_value, vault_settings)
+
+
+def merge_ids_by_timestamp(
+    list_1: Iterable[tuple[str, int]],
+    list_2: Iterable[tuple[str, int]],
+) -> list[tuple[str, int]]:
+    """Merge and sort lists of (id, timestamp) pairs.
+
+    This helper is used to merge two sets of case IDs with their last modified
+    timestamps and ensure the most recent timestamp wins when duplicates exist.
+
+    Args:
+        list_1: First iterable of (id, timestamp) pairs.
+        list_2: Second iterable of (id, timestamp) pairs, which takes precedence
+            over list_1 for duplicate ids.
+
+    Returns:
+        A merged and timestamp-sorted list of (id, timestamp) pairs.
+    """
+
+    merged: dict[str, int] = {}
+    for _id, ts in list_1:
+        merged[_id] = ts
+    for _id, ts in list_2:
+        merged[_id] = ts
+
+    return sorted(merged.items(), key=lambda x: x[1])
