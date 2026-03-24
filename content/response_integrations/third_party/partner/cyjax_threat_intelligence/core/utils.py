@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 
 from .constants import INTEGRATION_NAME
 from .cyjax_exceptions import InvalidIntegerException
