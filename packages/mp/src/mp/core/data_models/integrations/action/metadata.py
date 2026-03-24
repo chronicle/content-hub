@@ -60,6 +60,7 @@ class ActionAiCategories(RepresentableEnum):
 
 class BuiltActionMetadata(TypedDict):
     Description: str
+    DocumentationLink: NotRequired[str | None]
     DynamicResultsMetadata: list[BuiltDynamicResultsMetadata]
     IntegrationIdentifier: str
     IsAsync: bool
@@ -79,6 +80,7 @@ class BuiltActionMetadata(TypedDict):
 
 class NonBuiltActionMetadata(TypedDict):
     description: str
+    documentation_link: NotRequired[str | None]
     dynamic_results_metadata: list[NonBuiltDynamicResultsMetadata]
     integration_identifier: str
     is_async: NotRequired[bool]
@@ -102,6 +104,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         str,
         pydantic.AfterValidator(mp.core.validators.validate_param_long_description),
     ]
+    documentation_link: pydantic.HttpUrl | pydantic.FileUrl | None
     dynamic_results_metadata: list[DynamicResultsMetadata]
     integration_identifier: Annotated[
         str,
@@ -213,6 +216,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
+            documentation_link=built.get("DocumentationLink"),  # type: ignore[assignment]
             dynamic_results_metadata=[
                 DynamicResultsMetadata.from_built(drm)
                 for drm in built.get("DynamicResultsMetadata", []) or []
@@ -248,6 +252,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             file_name=file_name,
             creator=non_built.get("creator", "admin"),
             description=non_built["description"],
+            documentation_link=non_built.get("documentation_link"),  # type: ignore[assignment]
             dynamic_results_metadata=[
                 DynamicResultsMetadata.from_non_built(drm)
                 for drm in non_built.get("dynamic_results_metadata", [])
@@ -280,6 +285,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         built: BuiltActionMetadata = BuiltActionMetadata(
             Creator=self.creator,
             Description=self.description,
+            DocumentationLink=(
+                str(self.documentation_link) if self.documentation_link else None
+            ),
             DynamicResultsMetadata=[m.to_built() for m in self.dynamic_results_metadata],
             IntegrationIdentifier=self.integration_identifier,
             IsAsync=self.is_async,
@@ -309,6 +317,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         non_built: NonBuiltActionMetadata = NonBuiltActionMetadata(
             name=self.name,
             description=self.description,
+            documentation_link=(
+                str(self.documentation_link) if self.documentation_link else None
+            ),
             integration_identifier=self.integration_identifier,
             parameters=[p.to_non_built() for p in self.parameters],
             dynamic_results_metadata=[m.to_non_built() for m in self.dynamic_results_metadata],

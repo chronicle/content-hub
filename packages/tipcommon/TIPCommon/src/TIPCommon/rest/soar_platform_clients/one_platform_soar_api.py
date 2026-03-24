@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
 
 _PAGE_SIZE = 1000
+_EMAIL_TEMPLATES_PAGE_SIZE = 50
 
 
 class OnePlatformSoarApi(BaseSoarApi):
@@ -499,10 +500,12 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = {"casesIds": [self.params.case_id], "userName": self.params.assign_to}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    def get_email_template(self) -> requests.Response:
+    def get_email_template(self) -> list[SingleJson]:
         """Get email template"""
-        endpoint = "/system/settings/emailTemplates"
-        return self._make_request(HttpMethod.GET, endpoint)
+        endpoint = (
+            f"/system/settings/emailTemplates?pageSize={_EMAIL_TEMPLATES_PAGE_SIZE}"
+        )
+        return self._paginate_results(endpoint, "emailTemplates")
 
     def get_siemplify_user_details(self) -> requests.Response:
         """Get siemplify user details"""
@@ -747,3 +750,20 @@ class OnePlatformSoarApi(BaseSoarApi):
             "&$orderBy=updateTime asc"
         )
         return self._paginate_results(initial_endpoint=initial_endpoint, root_response_key="cases")
+
+    def get_case_close_comment(self, case_id: str | int) -> requests.Response:
+        """Get case closure comment
+
+        Args:
+            case_id (str | int): The ID of the case for which to retrieve the closure comment.
+
+        Returns:
+            requests.Response: The response object containing the closure comment details.
+        """
+        endpoint = f"/cases/{case_id}/caseWallRecords"
+        params = {
+            "$filter": "(activityType eq 'CASE_STATUS_CHANGE') and (activityKind eq 'CASE_CLOSED')",
+            "$orderBy": "createTime desc",
+            "$pageSize": 1,
+        }
+        return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
