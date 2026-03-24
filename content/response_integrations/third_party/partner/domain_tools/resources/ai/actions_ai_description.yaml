@@ -1,0 +1,568 @@
+Get Domain Profile:
+  ai_description: >-
+    ### General Description
+
+    Enriches Domain, Hostname, and URL entities using DomainTools threat intelligence.
+    This action retrieves the "Domain Profile" for a given domain, providing comprehensive
+    details such as registration information, hosting history summaries, and risk
+    indicators. It is designed to provide security analysts with immediate context
+    regarding the reputation and ownership of external domains.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters beyond
+    the integration configuration. |
+
+
+    ### Additional Notes
+
+    *   **License Requirement**: The action requires the "domain-profile" product
+    to be active on the DomainTools account license.
+
+    *   **Domain Extraction**: It automatically extracts the root domain from URLs
+    and email addresses (e.g., extracting "example.com" from "www.example.com" or
+    "user@example.com").
+
+    *   **Data Prefixing**: Enrichment data is added to the entity's additional properties
+    with a "DT" prefix to avoid naming collisions.
+
+
+    ### Flow Description
+
+    1. **Domain Extraction**: The action parses the entity identifier to extract the
+    root domain name.
+
+    2. **API Interaction**: It queries the DomainTools `domain_profile` endpoint using
+    the extracted domain.
+
+    3. **Data Transformation**: The JSON response is flattened and converted into
+    a CSV format for UI presentation.
+
+    4. **Internal Enrichment**:
+        *   Updates the entity's `additional_properties` with the flattened profile
+    data.
+        *   Marks the entity as `is_enriched`.
+        *   Attaches a CSV data table containing the profile details to the entity
+    in the Google SecOps SOAR interface.
+    5. **Finalization**: The action updates all processed entities in the case and
+    returns the raw JSON results for downstream playbook logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with DomainTools profile data, sets the
+      enriched status, and adds a CSV data table to the entity.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - DOMAIN
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Domain Risk:
+  ai_description: >-
+    Enriches Domain, Hostname, and URL entities with risk scores and detailed risk
+    profiles using DomainTools data. The action retrieves threat intelligence from
+    DomainTools' risk and reputation endpoints to evaluate the potential threat level
+    of a domain.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Threshold | String | Yes | A numeric value (e.g., 3) used as a cutoff. If the
+    domain's risk score exceeds this value, the entity is marked as suspicious in
+    Google SecOps. |
+
+
+    ### Flow Description
+
+    1. **Domain Extraction:** Parses the entity identifier (URL, Hostname, or Domain)
+    to extract the base domain name.
+
+    2. **Data Retrieval:** Queries the DomainTools API (Risk and Reputation products)
+    to fetch the domain's risk score and component data.
+
+    3. **Risk Evaluation:** Compares the retrieved risk score against the user-provided
+    `Threshold` parameter.
+
+    4. **Entity Enrichment:** Updates the entity's additional properties with the
+    risk score (`DT_Risk`).
+
+    5. **Suspicious Marking:** If the risk score is higher than the threshold, the
+    entity's `is_suspicious` attribute is set to `True`.
+
+    6. **Result Reporting:** Returns a JSON result containing the detailed risk profile
+    and updates the case with the enrichment data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes by adding the 'DT_Risk' property and modifies the
+      'is_suspicious' status of the entity if the risk score exceeds the defined threshold.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Hosting History:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves the hosting history for a domain using the DomainTools API.
+    It provides security analysts with historical context regarding where a domain
+    has been hosted over time, which is useful for identifying infrastructure changes
+    or malicious patterns. The action enriches Hostname and URL entities with this
+    data and presents it in a structured CSV table within the Google SecOps UI.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all Hostname and URL entities within
+    the current context.
+
+    2. **Domain Extraction**: For each entity, it extracts the base domain name from
+    the identifier (e.g., stripping protocols or email prefixes).
+
+    3. **API Query**: It calls the DomainTools 'hosting-history' endpoint to retrieve
+    historical records for the extracted domain.
+
+    4. **Data Enrichment**: The retrieved data is flattened and added to the entity's
+    'additional_properties' with a 'DT' prefix.
+
+    5. **UI Enhancement**: A CSV-formatted table containing the hosting history is
+    attached to the entity via the 'add_entity_table' method for visibility in the
+    case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates the 'additional_properties' of the processed entities with
+      the retrieved hosting history data and attaches a CSV-formatted table to the
+      entity in the Google SecOps UI.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    Google SecOps and the DomainTools API. Its primary purpose is to ensure that the
+    integration's configuration parameters, such as the Username and API Token, are
+    correct and that the network path to the DomainTools service is open.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action is typically executed during the initial setup of the DomainTools
+    integration or when troubleshooting communication issues. It performs a 'Read-Only'
+    operation by requesting account information from the API.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action retrieves the Username, API Token,
+    and SSL verification settings from the DomainTools integration configuration.
+
+    2. **Manager Initialization**: It instantiates the `DomainToolsManager` using
+    the provided credentials.
+
+    3. **Connectivity Verification**: Upon initialization, the manager automatically
+    executes an API call to the DomainTools `account_information` endpoint to validate
+    the credentials and retrieve the list of licensed products.
+
+    4. **Final Status**: If the API call succeeds, the action returns a success message
+    ('Connection Established'). If the initialization or API call fails, it indicates
+    a connection failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Recent Domains:
+  ai_description: >-
+    ### General Description
+
+    This action searches for newly registered domains that contain a specific keyword
+    using the DomainTools Phisheye service. It is designed to help security teams
+    identify potential phishing or brand-impersonation domains shortly after they
+    are registered. **Note:** This action is deprecated as the Phisheye product has
+    been deprecated by DomainTools.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | String Query | String | Yes | The specific word or string to search for within
+    newly registered domain names. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on entities within a case; it relies solely on
+    the manual input provided in the `String Query` parameter.
+
+    - Because the underlying Phisheye service is deprecated, this action may not return
+    results or may fail depending on the current state of the DomainTools API.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the DomainTools manager using the
+    integration's API credentials (Username and API Token).
+
+    2. **Parameter Extraction**: It retrieves the user-provided `String Query` parameter.
+
+    3. **API Query**: The action calls the DomainTools Phisheye API endpoint with
+    the provided query string.
+
+    4. **Data Transformation**: If results are returned, the action flattens the JSON
+    response and converts it into a CSV-compatible format.
+
+    5. **Reporting**: It creates a data table within the Google SecOps case to display
+    the search results and sets the action's result to success.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table to the Google SecOps case containing the results
+      of the domain search.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reverse Domain:
+  ai_description: >-
+    ### General Description
+
+    Finds IP addresses that point to a specific domain or identifies domains associated
+    with a given IP address using DomainTools. This action is primarily used for reverse
+    DNS enrichment, allowing security analysts to understand the infrastructure associated
+    with a hostname, URL, or domain entity.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies on the global
+    integration configuration (Username, API Token, and Verify SSL).
+
+
+    ### Additional Notes
+
+    *   The action supports `HOSTNAME`, `URL`, and `DOMAIN` entity types.
+
+    *   It automatically extracts the domain from URLs or email-like strings before
+    querying the API.
+
+    *   If the input is identified as a valid IPv4 address, it performs a 'Host Domains'
+    lookup; otherwise, it performs a 'Reverse IP' lookup.
+
+
+    ### Flow Description
+
+    1.  **Entity Filtering:** The action identifies all entities in the current scope
+    that match the supported types (`URL`, `HOSTNAME`, `DOMAIN`).
+
+    2.  **Domain Extraction:** For each entity, it extracts the base domain from the
+    identifier (e.g., stripping 'www' or URL paths).
+
+    3.  **API Query:** It calls the DomainTools `enrich_domain` method, which dynamically
+    chooses between `host_domains` (for IPs) or `reverse_ip` (for domains) based on
+    the input format.
+
+    4.  **Internal Enrichment:** If results are found, the action:
+        *   Flattens the API response and adds it to the entity's `additional_properties`
+    with a `DT` prefix.
+        *   Generates a CSV-formatted table of the results and attaches it to the
+    entity in the case wall.
+    5.  **Platform Update:** Updates the entities within Google SecOps to persist
+    the new metadata.
+
+    6.  **Final Output:** Returns a JSON object containing the full enrichment data
+    for all processed entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with DomainTools reverse DNS data and adds
+      data tables to the entity's context in the case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reverse Email:
+  ai_description: "### General Description\nThe **Reverse Email** action leverages\
+    \ the DomainTools Iris API to identify domain names associated with a specific\
+    \ email address found in WhoIs records. This action is designed to help security\
+    \ analysts uncover infrastructure linked to a known email address during investigations\
+    \ or threat hunting activities.\n\n### Parameters Description\n| Parameter | Description\
+    \ | Type | Mandatory |\n| :--- | :--- | :--- | :--- |\n| N/A | This action does\
+    \ not require any input parameters. | N/A | N/A |\n\n### Additional Notes\n- This\
+    \ action requires a DomainTools license that includes access to the **Iris** product.\n\
+    - Enrichment data added to entities is prefixed with 'DT' to distinguish DomainTools\
+    \ data from other sources.\n\n### Flow Description\n1. **Configuration Retrieval**:\
+    \ The action fetches the DomainTools integration settings, including the Username,\
+    \ API Token, and SSL verification preference.\n2. **Entity Filtering**: It identifies\
+    \ all `USER` entities (representing email addresses) within the current scope\
+    \ of the action.\n3. **External API Query**: For each identified email address,\
+    \ the action queries the DomainTools Iris endpoint to find associated domains.\n\
+    4. **Data Processing**: The raw API response is flattened into a key-value structure\
+    \ and converted into a CSV-compatible format for display.\n5. **Internal Enrichment**:\
+    \ \n    - The entity's `additional_data` is updated with the flattened DomainTools\
+    \ attributes.\n    - A data table containing the results is attached to the entity\
+    \ in the Google SecOps SOAR UI.\n6. **Entity Update**: The action updates the\
+    \ entities within the case to persist the newly acquired enrichment data.\n7.\
+    \ **Completion**: The action concludes by providing a summary message of the enriched\
+    \ entities and a boolean success status."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates the 'additional_data' attribute of User entities with information
+      retrieved from DomainTools and adds a data table to the entity's result view.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reverse IP:
+  ai_description: >-
+    ### General Description
+
+    This action identifies domain names that share a specific IP address using the
+    DomainTools Iris API. It is designed to enrich IP Address entities by uncovering
+    their hosting relationships, which is critical for infrastructure mapping and
+    threat intelligence gathering.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It utilizes the global
+    integration configuration settings:
+
+    * **Username**: DomainTools API username.
+
+    * **ApiToken**: DomainTools API key.
+
+    * **Verify SSL**: Boolean flag to enable/disable SSL certificate verification.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all `ADDRESS` (IP) entities in
+    the current scope that are not marked as internal.
+
+    2. **API Query**: For each valid entity, the action calls the DomainTools Iris
+    API (`get_domains_by_ip`) to retrieve a list of domains associated with that IP.
+
+    3. **Data Processing**: If data is returned, the response is flattened and prefixed
+    with 'DT' to avoid naming collisions.
+
+    4. **Internal Enrichment**: The action updates the entity's 'additional_properties'
+    with the flattened API data.
+
+    5. **UI Visualization**: A data table containing the domain information is attached
+    to the entity in the Google SecOps case view.
+
+    6. **Finalization**: The action updates the entities in the system and returns
+    a summary of the enrichment results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with enrichment data and adds data tables
+      to the entity in the case view.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
