@@ -49,7 +49,7 @@ with your changes to the main repository's main branch.
 
 - [Playbooks](/docs/content_deep_dive/playbooks/how_to_contribute.md)
 
-- [Parsers](tools/parsers/validations/docs/README.md)
+- [Parsers](/docs/content_deep_dive/parsers/parser_structure.md)
 
 ### Code Reviews
 
