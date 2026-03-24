@@ -1324,14 +1324,24 @@ def assign_case_to_user(
 
 def get_email_template(
     chronicle_soar: ChronicleSOAR,
-) -> EmailTemplate:
-    """Get email template
-    Args:
-        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+) -> list[EmailTemplate]:
+    """Get email templates.
 
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+
+    Returns:
+        A list of email templates.
+
+    Raises:
+        requests.HTTPError: If the API request fails.
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_email_template()
+
+    if isinstance(response, list):
+        return [EmailTemplate.from_json(res) for res in response]
+
     try:
         validate_response(response, validate_json=True)
     except InternalJSONDecoderError:
