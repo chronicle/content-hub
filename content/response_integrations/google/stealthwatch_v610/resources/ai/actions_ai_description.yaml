@@ -1,0 +1,187 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ used to verify the connectivity between Google SecOps and the Cisco Stealthwatch\
+    \ (v6.10) instance. It ensures that the provided integration parameters\u2014\
+    such as the API Root, Username, and Password\u2014are correct and that the Stealthwatch\
+    \ server is reachable over the network.\n\n### Parameters\nThere are no user-input\
+    \ parameters for this action. It relies entirely on the integration's global configuration\
+    \ settings.\n\n### Flow Description\n1. **Configuration Retrieval**: The action\
+    \ fetches the 'Api Root', 'Username', and 'Password' from the StealthwatchV6-10\
+    \ integration settings.\n2. **Authentication**: The action initializes the `StealthwatchManager`,\
+    \ which performs a POST request to the `/token/v2/authenticate` endpoint to obtain\
+    \ a JWT cookie.\n3. **Connectivity Test**: The manager executes the `test_connectivity`\
+    \ method, which performs a GET request to the `/sw-reporting/v1/tenants` endpoint\
+    \ to retrieve available domains.\n4. **Result Reporting**: If the authentication\
+    \ and domain retrieval are successful, the action returns a 'Connected Successfully'\
+    \ message and a boolean `True` result."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Events:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves security events for specific IP address entities from Cisco
+    Stealthwatch (v6.10) within a user-defined timeframe. It is designed to provide
+    security analysts with visibility into the network behavior of a host by identifying
+    events where the host acted as either a source or a destination. The results are
+    presented as both raw JSON data and formatted entity tables for easy review within
+    the Google SecOps platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Timeframe | Integer | Yes | Specifies the lookback period in hours from the
+    current time to search for security events. |
+
+
+    ### Flow Description
+
+    1. **Time Calculation**: The action calculates the start and end timestamps for
+    the search based on the current UTC time and the provided `Timeframe` parameter.
+
+    2. **Entity Filtering**: It iterates through the target entities and processes
+    only those of type `ADDRESS` (IP addresses).
+
+    3. **Domain Identification**: For each IP address, the action queries the Stealthwatch
+    API to determine the `domain_id` associated with that host.
+
+    4. **Search Initiation**: If a domain is found, the action initiates two separate
+    asynchronous search queries: one for events where the IP is the source and another
+    where it is the destination.
+
+    5. **Result Retrieval**: The action polls the Stealthwatch API for the completion
+    of these search jobs and retrieves the resulting event data.
+
+    6. **Data Attachment**: The retrieved events are attached to the entity in the
+    SOAR interface as a JSON object and a formatted CSV table containing security
+    event details.
+
+    7. **Final Status**: The action concludes by reporting which entities had security
+    events found or if no events were discovered.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Flows:
+  ai_description: "### General Description\nThe **Search Flows** action retrieves\
+    \ network flow records from Cisco Stealthwatch (Secure Network Analytics) for\
+    \ specific IP address entities. It identifies flows where the target entity acts\
+    \ as either the source or the destination within a user-defined timeframe. This\
+    \ action is primarily used for network forensics and visibility, allowing analysts\
+    \ to see which internal or external hosts an IP has been communicating with.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| **Timeframe** | Integer | Yes | The number of\
+    \ hours to look back from the current time (e.g., 3) to define the search window.\
+    \ |\n| **Limit** | Integer | Yes | The maximum number of flow records to retrieve\
+    \ for each search (source and destination). |\n\n### Flow Description\n1. **Initialization**:\
+    \ The action retrieves the integration configuration (API Root, credentials) and\
+    \ the user-provided parameters: `Timeframe` and `Limit`.\n2. **Time Calculation**:\
+    \ It calculates the `start_time` and `end_time` in ISO format based on the current\
+    \ UTC time and the `Timeframe` parameter.\n3. **Domain Identification**: For each\
+    \ IP address entity, the action queries the Stealthwatch API to find the `domain_id`\
+    \ associated with that specific IP.\n4. **Flow Searching**: For each valid domain\
+    \ found, the action initiates two separate asynchronous search queries:\n    *\
+    \ A search for flows where the entity is the **source IP**.\n    * A search for\
+    \ flows where the entity is the **destination IP**.\n5. **Data Retrieval**: The\
+    \ action polls the Stealthwatch API for the status of the search jobs. Once completed,\
+    \ it retrieves the flow results up to the specified `Limit`.\n6. **Enrichment\
+    \ and Output**: \n    * The raw flow data is attached to the action results as\
+    \ a JSON object.\n    * A flattened CSV table of the flows is created and attached\
+    \ as an **Entity Table** for the specific IP address.\n7. **Completion**: The\
+    \ action concludes by listing the entities for which flows were successfully identified\
+    \ and retrieved."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
