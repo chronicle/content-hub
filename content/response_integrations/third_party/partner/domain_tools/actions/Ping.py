@@ -26,7 +26,7 @@ def main():
     verify_ssl = conf["Verify SSL"]
     dt_manager = DomainToolsManager(username, key, verify_ssl=verify_ssl)
 
-    output_message = "Connection Establishe" if dt_manager else "Connection Failed"
+    output_message = "Connection Established" if dt_manager else "Connection Failed"
     siemplify.end(output_message, "true")
 
 
