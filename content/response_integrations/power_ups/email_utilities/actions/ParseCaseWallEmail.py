@@ -169,7 +169,7 @@ def main():
                     r_email,
                     fang_entities,
                 )
-            except (requests.exceptions.HTTPError, Exception) as e:
+            except Exception as e:
                 current_entities = email_mgr.get_alert_entity_identifiers()
                 created_count = len(set(current_entities) - set(initial_entities))
                 siemplify.LOGGER.error(
