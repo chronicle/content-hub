@@ -18,7 +18,6 @@ import base64
 import datetime
 import json
 import os
-import requests
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
