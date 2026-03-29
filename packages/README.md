@@ -106,10 +106,19 @@ development, testing, and maintenance of your Google SecOps marketplace integrat
 * **Streamlined Developer Workflow:** `mp` offers a suite of helpful commands to simplify common development tasks. It
   also leverages `uv` for fast and efficient dependency management.
 
-### Learn More
+### Install and Use as a Tool (Recommended)
 
-To get started with `mp` and explore all its capabilities, please refer to
-the [Marketplace CLI Tool (mp) documentation](./mp/README.md).
+You can install `mp` once and use it everywhere using `uv`. This is the easiest way to manage the tool:
+
+```bash
+# Install from the main branch
+uv tool install mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
+
+# Use the tool directly:
+mp --help
+```
+
+For more details, please refer to the [Marketplace CLI Tool (mp) documentation](./mp/README.md) and the [Installation Guide](./mp/docs/installation.md).
 
 ---
 
