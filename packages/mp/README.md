@@ -11,7 +11,7 @@
 
 ### 1. Install as a persistent tool (Recommended)
 
-Install `mp` once and use it everywhere. Pin to a specific version for stability:
+Install `mp` once and use it everywhere:
 
 ```bash
 # Install from the main branch

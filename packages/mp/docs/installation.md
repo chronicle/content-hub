@@ -14,7 +14,7 @@ Choose your preferred installation method:
 Install `mp` once and use it everywhere. This method keeps the tool available in your PATH.
 
 ```bash
-# Install from the main branch (may include unreleased changes)
+# Install from the main branch
 uv tool install mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
 ```
 
