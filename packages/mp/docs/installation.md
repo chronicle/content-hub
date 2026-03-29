@@ -5,17 +5,49 @@
 - Python 3.11 or later (Python 3.11.0+ is officially supported)
 - uv package manager
 
-## Installation Steps
+## Installation Options
 
-### 1. Install `uv`
+Choose your preferred installation method:
 
-Install uv in your base Python interpreter:
+### Option 1: Persistent Installation (Recommended)
+
+Install `mp` once and use it everywhere. This method keeps the tool available in your PATH.
 
 ```bash
-pip install uv
+# Install from the main branch
+uv tool install mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
 ```
 
-### 2. Clone the Repository
+Then use the tool directly:
+
+```bash
+# Check version
+mp --version
+
+# View help
+mp --help
+```
+
+To upgrade `mp`:
+
+```bash
+uv tool upgrade mp
+```
+
+### Option 2: One-time Usage
+
+Run `mp` directly without installing:
+
+```bash
+# Run latest from main
+uvx --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp mp --help
+```
+
+### Option 3: Manual Installation (Development)
+
+This method is recommended if you are developing the `mp` tool itself or want to use it within a local checkout.
+
+#### 1. Clone the Repository
 
 ```shell
 git clone <repository-url>
@@ -90,6 +122,7 @@ mp config --help
 ```
 
 ## IDE Configuration
+
 To run or debug the application from within an IDE, please make sure to set the project's Python interpreter to the executable located within the virtual environment created by uv. the relative path from packages/mp is:
 
 - Windows: .venv\Scripts\python.exe
@@ -107,7 +140,6 @@ uv sync
 ```
 
 For development, also sync the dev-dependencies
-
 
 ```shell
 uv sync --dev
