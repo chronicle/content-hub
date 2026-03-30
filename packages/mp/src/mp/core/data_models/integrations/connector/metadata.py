@@ -26,7 +26,9 @@ from .parameter import (
     BuiltConnectorParameter,
     ConnectorParameter,
     NonBuiltConnectorParameter,
+    ParamMode,
 )
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from .rule import BuiltConnectorRule, ConnectorRule, NonBuiltConnectorRule
 
 if TYPE_CHECKING:
@@ -149,6 +151,22 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
 
     @classmethod
     def _from_non_built(cls, file_name: str, non_built: NonBuiltConnectorMetadata) -> Self:
+        parameters: list[ConnectorParameter] = [
+            ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
+        ]
+        if not any(p.name == "Debug Mode" for p in parameters):
+            parameters.append(
+                ConnectorParameter(
+                    name="Debug Mode",
+                    description="Enable debug mode for finer logging.",
+                    is_mandatory=False,
+                    is_advanced=True,
+                    type_=ScriptParamType.BOOLEAN,
+                    default_value=False,
+                    mode=ParamMode.REGULAR,
+                )
+            )
+
         return cls(
             file_name=file_name,
             creator=non_built["creator"],
@@ -159,9 +177,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
-            parameters=[
-                ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
-            ],
+            parameters=parameters,
             rules=[ConnectorRule.from_non_built(rule) for rule in non_built["rules"]],
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
         )

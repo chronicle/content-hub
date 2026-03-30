@@ -37,6 +37,7 @@ from .dynamic_results_metadata import (
 )
 from .parameter import (
     ActionParameter,
+    ActionParamType,
     BuiltActionParameter,
     NonBuiltActionParameter,
 )
@@ -248,6 +249,21 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             An `ActionMetadata` object
 
         """
+        parameters: list[ActionParameter] = [
+            ActionParameter.from_non_built(p) for p in non_built["parameters"]
+        ]
+        if not any(p.name == "Debug Mode" for p in parameters):
+            parameters.append(
+                ActionParameter(
+                    name="Debug Mode",
+                    description="Enable debug mode for finer logging.",
+                    is_mandatory=False,
+                    type_=ActionParamType.BOOLEAN,
+                    default_value=False,
+                    optional_values=None,
+                )
+            )
+
         return cls(
             file_name=file_name,
             creator=non_built.get("creator", "admin"),
@@ -262,7 +278,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
-            parameters=[ActionParameter.from_non_built(p) for p in non_built["parameters"]],
+            parameters=parameters,
             script_result_name=non_built.get("script_result_name", DEFAULT_SCRIPT_RESULT_NAME),
             simulation_data_json=non_built.get(
                 "simulation_data_json",

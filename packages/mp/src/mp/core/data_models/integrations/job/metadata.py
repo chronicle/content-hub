@@ -22,6 +22,7 @@ import mp.core.constants
 from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
 
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from .parameter import BuiltJobParameter, JobParameter, NonBuiltJobParameter
 
 if TYPE_CHECKING:
@@ -146,6 +147,20 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
 
     @classmethod
     def _from_non_built(cls, file_name: str, non_built: NonBuiltJobMetadata) -> Self:
+        parameters: list[JobParameter] = [
+            JobParameter.from_non_built(param) for param in non_built["parameters"]
+        ]
+        if not any(p.name == "Debug Mode" for p in parameters):
+            parameters.append(
+                JobParameter(
+                    name="Debug Mode",
+                    description="Enable debug mode for finer logging.",
+                    is_mandatory=False,
+                    type_=ScriptParamType.BOOLEAN,
+                    default_value=False,
+                )
+            )
+
         return cls(
             file_name=file_name,
             creator=non_built["creator"],
@@ -154,7 +169,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
-            parameters=[JobParameter.from_non_built(param) for param in non_built["parameters"]],
+            parameters=parameters,
             run_interval_in_seconds=non_built.get(
                 "run_interval_in_seconds",
                 DEFAULT_RUNTIME_INTERVAL,
