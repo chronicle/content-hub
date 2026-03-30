@@ -27,6 +27,10 @@ import mp.core.utils
 import mp.core.validators
 from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
+from mp.core.constants import (
+    SCRIPT_DEBUG_MODE_PARAM_NAME,
+    SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
+)
 
 from .ai.entity_types import EntityType
 from .ai.metadata import ActionAiMetadata
@@ -252,11 +256,11 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         parameters: list[ActionParameter] = [
             ActionParameter.from_non_built(p) for p in non_built["parameters"]
         ]
-        if not any(p.name == "Debug Mode" for p in parameters):
+        if not any(p.name == SCRIPT_DEBUG_MODE_PARAM_NAME for p in parameters):
             parameters.append(
                 ActionParameter(
-                    name="Debug Mode",
-                    description="Enable debug mode for finer logging.",
+                    name=SCRIPT_DEBUG_MODE_PARAM_NAME,
+                    description=SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
                     is_mandatory=False,
                     type_=ActionParamType.BOOLEAN,
                     default_value=False,

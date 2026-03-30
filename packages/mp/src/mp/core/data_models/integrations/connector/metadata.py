@@ -21,6 +21,10 @@ import pydantic
 import mp.core.constants
 from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
+from mp.core.constants import (
+    SCRIPT_DEBUG_MODE_PARAM_NAME,
+    SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
+)
 
 from .parameter import (
     BuiltConnectorParameter,
@@ -154,11 +158,11 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         parameters: list[ConnectorParameter] = [
             ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
         ]
-        if not any(p.name == "Debug Mode" for p in parameters):
+        if not any(p.name == SCRIPT_DEBUG_MODE_PARAM_NAME for p in parameters):
             parameters.append(
                 ConnectorParameter(
-                    name="Debug Mode",
-                    description="Enable debug mode for finer logging.",
+                    name=SCRIPT_DEBUG_MODE_PARAM_NAME,
+                    description=SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
                     is_mandatory=False,
                     is_advanced=True,
                     type_=ScriptParamType.BOOLEAN,
