@@ -20,11 +20,12 @@ import pydantic
 
 import mp.core.constants
 from mp.core import exclusions
-from mp.core.data_models.abc import ComponentMetadata
 from mp.core.constants import (
-    SCRIPT_DEBUG_MODE_PARAM_NAME,
     SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
+    SCRIPT_DEBUG_MODE_PARAM_NAME,
 )
+from mp.core.data_models.abc import ComponentMetadata
+from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
 from .parameter import (
     BuiltConnectorParameter,
@@ -32,7 +33,6 @@ from .parameter import (
     NonBuiltConnectorParameter,
     ParamMode,
 )
-from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from .rule import BuiltConnectorRule, ConnectorRule, NonBuiltConnectorRule
 
 if TYPE_CHECKING:

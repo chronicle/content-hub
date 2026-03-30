@@ -26,11 +26,11 @@ import mp.core.file_utils
 import mp.core.utils
 import mp.core.validators
 from mp.core import exclusions
-from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 from mp.core.constants import (
-    SCRIPT_DEBUG_MODE_PARAM_NAME,
     SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
+    SCRIPT_DEBUG_MODE_PARAM_NAME,
 )
+from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 
 from .ai.entity_types import EntityType
 from .ai.metadata import ActionAiMetadata
@@ -305,9 +305,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         built: BuiltActionMetadata = BuiltActionMetadata(
             Creator=self.creator,
             Description=self.description,
-            DocumentationLink=(
-                str(self.documentation_link) if self.documentation_link else None
-            ),
+            DocumentationLink=(str(self.documentation_link) if self.documentation_link else None),
             DynamicResultsMetadata=[m.to_built() for m in self.dynamic_results_metadata],
             IntegrationIdentifier=self.integration_identifier,
             IsAsync=self.is_async,
@@ -337,9 +335,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         non_built: NonBuiltActionMetadata = NonBuiltActionMetadata(
             name=self.name,
             description=self.description,
-            documentation_link=(
-                str(self.documentation_link) if self.documentation_link else None
-            ),
+            documentation_link=(str(self.documentation_link) if self.documentation_link else None),
             integration_identifier=self.integration_identifier,
             parameters=[p.to_non_built() for p in self.parameters],
             dynamic_results_metadata=[m.to_non_built() for m in self.dynamic_results_metadata],
