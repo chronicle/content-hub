@@ -9,8 +9,10 @@
 
 from __future__ import annotations
 
-from psengine.classic_alerts import AlertUpdateError, ClassicAlertMgr
+import json
+
 from psengine.config import Config
+from psengine.entity_lists import EntityListMgr, ListApiError
 from pydantic import ValidationError
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -18,15 +20,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.constants import PROVIDER_NAME
+from ..core.UtilsManager import map_secops_entities_to_rf
 from ..core.version import __version__ as version
-
-
-def clean_input(input_str):
-    """
-    Cleans the classic alert input values from ddl config options.
-    """
-    result = None if input_str == "None" else input_str
-    return result
 
 
 @output_handler
@@ -46,27 +41,27 @@ def main():
         input_type=bool,
     )
 
-    alert_id = extract_action_param(
+    list_id = extract_action_param(
         siemplify,
-        param_name="Alert ID",
+        param_name="List ID",
         is_mandatory=True,
         print_value=True,
     )
-    assign_to = extract_action_param(
+    entity_id = extract_action_param(
         siemplify,
-        param_name="Assign To",
+        param_name="Entity ID",
         is_mandatory=False,
         print_value=True,
     )
-    note = extract_action_param(
+    entity_name = extract_action_param(
         siemplify,
-        param_name="Note",
+        param_name="Entity Name",
         is_mandatory=False,
         print_value=True,
     )
-    alert_status = extract_action_param(
+    entity_type = extract_action_param(
         siemplify,
-        param_name="Status",
+        param_name="Entity Type",
         is_mandatory=False,
         print_value=True,
     )
@@ -77,6 +72,20 @@ def main():
     output_message = ""
     status = EXECUTION_STATE_COMPLETED
 
+    if entity_id:
+        entities = [entity_id]
+        siemplify.LOGGER.info(f"Entity ID parameter supplied, target entity: {entities}")
+    elif bool(entity_name) and bool(entity_type):
+        entities = [(entity_name, entity_type)]
+        siemplify.LOGGER.info(
+            f"Entity Name and Type parameters supplied, target entity: {entities}"
+        )
+    else:
+        entities = map_secops_entities_to_rf(siemplify.target_entities)
+        siemplify.LOGGER.info(
+            f"No Entity parameters supplied, defaulting to Case Target Entities: {entities}"
+        )
+
     try:
         siemplify.LOGGER.info("Initializing psengine configuration")
         Config.init(
@@ -84,41 +93,41 @@ def main():
             rf_token=api_key,
             app_id=f"ps-google-soar/{version}",
         )
-        siemplify.LOGGER.info("Initializing psengine ClassicAlertMgr")
-        alert_mgr = ClassicAlertMgr()
-        siemplify.LOGGER.info("Building alert update object")
-        updates = {
-            "id": alert_id,
-            "assignee": assign_to or None,
-            "note": note or None,
-            "statusInPortal": clean_input(alert_status) or None,
-        }
-        siemplify.LOGGER.info(f"Updating Classic Alert: {alert_id}")
-        update_alert_resp = alert_mgr.update(
-            updates=[{k: v for k, v in updates.items() if v is not None}]
-        )
-        siemplify.LOGGER.info(f"Classic Alert Update response: {update_alert_resp}")
+        siemplify.LOGGER.info("Initializing psengine EntityListMgr")
+        list_mgr = EntityListMgr()
+        siemplify.LOGGER.info(f"Fetching List from Recorded Future: {list_id}")
+        fetch_resp = list_mgr.fetch(list_=list_id)
 
-        siemplify.result.add_result_json({"success": {"id": alert_id}})
-        output_message += f"Successfully updated classic alert {alert_id} in Recorded Future."
+        siemplify.LOGGER.info(f"Adding {len(entities)} entities from SecOps case to list")
+        add_resp = fetch_resp.bulk_add(entities=entities)
 
-    except ValueError as err:
-        output_message = f"Classic Alert Manager ValueError: {err}"
-        siemplify.LOGGER.error(output_message)
-        is_success = False
-        status = EXECUTION_STATE_FAILED
+        siemplify.result.add_result_json(json.dumps(add_resp))
+
+        if added := add_resp.get("added", []):
+            output_message += f"Successfully added {len(added)} entities to list."
+        if error := add_resp.get("error", []):
+            output_message += f"\nError adding {len(error)} entities to list."
+        if unchanged := add_resp.get("unchanged", []):
+            output_message += f"\n{len(unchanged)} entities unchanged."
+
     except ValidationError as err:
-        output_message = f"Error with Classic Alert Manager update parameters: {err}"
+        output_message = f"Error with List Manager parameters: {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
-    except AlertUpdateError as err:
-        output_message = f"Error updating classic alert: {err}"
+    except ValueError as err:
+        output_message = f"Error creating List Manager: {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
+    except ListApiError as err:
+        output_message = f"Error calling Recorded Future List API: {err}"
+        siemplify.LOGGER.error(output_message)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+
     except Exception as err:
-        output_message = f"Error executing Update Playbook Alert action: {err}"
+        output_message = f"Error executing Fetch List action: {err}"
         is_success = False
         status = EXECUTION_STATE_FAILED
 

@@ -37,8 +37,11 @@ from psengine.enrich import (
 )
 from psengine.malware_intel import MalwareIntelMgr, MalwareIntelReportError
 from psengine.playbook_alerts import (
+    PBA_CodeRepoLeakage,
+    PBA_CyberVulnerability,
     PBA_DomainAbuse,
     PBA_IdentityNovelExposure,
+    PBA_MalwareReport,
     PlaybookAlertFetchError,
     PlaybookAlertMgr,
     PlaybookAlertUpdateError,
@@ -505,7 +508,7 @@ class RecordedFutureManager:
                     f"Error trying to add entity {record!s} to case. Skipping",
                 )
 
-    def refresh_code_repo_leakage(self, playbook_alert):
+    def refresh_code_repo_leakage(self, playbook_alert: PBA_CodeRepoLeakage):
         """Adds case entities for Code Repo Leakage alert."""
         suspicious = playbook_alert.panel_status.risk_score > 24
         self.add_lightweight_entity(
@@ -531,7 +534,7 @@ class RecordedFutureManager:
             )
             self.siemplify.LOGGER.info(f"Added entity {entity}")
 
-    def refresh_cyber_vulnerability(self, playbook_alert):
+    def refresh_cyber_vulnerability(self, playbook_alert: PBA_CyberVulnerability):
         """Adds case entities for Cyber Vulnerability alert."""
         suspicious = playbook_alert.panel_status.risk_score > 24
         self.siemplify.add_entity_to_case(
@@ -591,6 +594,32 @@ class RecordedFutureManager:
             )
             self.siemplify.LOGGER.info(f"Added entity {compromised_host}")
 
+    def refresh_malware_report(
+        self,
+        playbook_alert: PBA_MalwareReport,
+    ):
+        """Adds case entities for Malware Report alert."""
+        matched_hashes = playbook_alert.panel_evidence_summary.matched_hashes
+        sorted_hashes = sorted(matched_hashes, key=lambda h: h.risk_score, reverse=True)
+        if len(sorted_hashes) > 500:
+            self.siemplify.LOGGER.info(
+                f"Warning: The number of hashes in this report ({len(matched_hashes)}) exceeds "
+                "the SecOps Case Entity Limit of 500. For full report details run the playbook "
+                "alert details action or open the alert in the Recorded Future portal."
+            )
+            sorted_hashes = sorted_hashes[:500]
+        for matched_hash in sorted_hashes:
+            entity = matched_hash.sha256
+            self.siemplify.add_entity_to_case(
+                entity_identifier=entity,
+                entity_type=EntityTypes.FILEHASH,
+                is_suspicous=False if matched_hash.risk_score < 25 else True,
+                is_internal=False,
+                is_enriched=False,
+                is_vulnerable=True,
+                properties={},
+            )
+
     def refresh_pba_case(self, alert_id, category):
         """Fetches specified Playbook Alert from Recorded Future and adds entities.
         :param alert_id: {str} Playbook Alert ID.
@@ -602,6 +631,7 @@ class RecordedFutureManager:
             "code_repo_leakage": self.refresh_code_repo_leakage,
             "cyber_vulnerability": self.refresh_cyber_vulnerability,
             "identity_novel_exposures": self.refresh_identity_novel_exposures,
+            "malware_report": self.refresh_malware_report,
         }
         self.siemplify.LOGGER.info(
             f"Fetching and refreshing Playbook Alert {alert_id}",

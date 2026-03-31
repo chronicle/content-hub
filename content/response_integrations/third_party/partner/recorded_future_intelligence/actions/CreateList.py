@@ -9,8 +9,8 @@
 
 from __future__ import annotations
 
-from psengine.classic_alerts import AlertUpdateError, ClassicAlertMgr
 from psengine.config import Config
+from psengine.entity_lists import EntityListMgr, ListApiError
 from pydantic import ValidationError
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -19,14 +19,6 @@ from TIPCommon.extraction import extract_action_param, extract_configuration_par
 
 from ..core.constants import PROVIDER_NAME
 from ..core.version import __version__ as version
-
-
-def clean_input(input_str):
-    """
-    Cleans the classic alert input values from ddl config options.
-    """
-    result = None if input_str == "None" else input_str
-    return result
 
 
 @output_handler
@@ -46,27 +38,15 @@ def main():
         input_type=bool,
     )
 
-    alert_id = extract_action_param(
+    list_name = extract_action_param(
         siemplify,
-        param_name="Alert ID",
-        is_mandatory=True,
-        print_value=True,
-    )
-    assign_to = extract_action_param(
-        siemplify,
-        param_name="Assign To",
+        param_name="List Name",
         is_mandatory=False,
         print_value=True,
     )
-    note = extract_action_param(
+    list_type = extract_action_param(
         siemplify,
-        param_name="Note",
-        is_mandatory=False,
-        print_value=True,
-    )
-    alert_status = extract_action_param(
-        siemplify,
-        param_name="Status",
+        param_name="List Type",
         is_mandatory=False,
         print_value=True,
     )
@@ -84,41 +64,35 @@ def main():
             rf_token=api_key,
             app_id=f"ps-google-soar/{version}",
         )
-        siemplify.LOGGER.info("Initializing psengine ClassicAlertMgr")
-        alert_mgr = ClassicAlertMgr()
-        siemplify.LOGGER.info("Building alert update object")
-        updates = {
-            "id": alert_id,
-            "assignee": assign_to or None,
-            "note": note or None,
-            "statusInPortal": clean_input(alert_status) or None,
-        }
-        siemplify.LOGGER.info(f"Updating Classic Alert: {alert_id}")
-        update_alert_resp = alert_mgr.update(
-            updates=[{k: v for k, v in updates.items() if v is not None}]
+        siemplify.LOGGER.info("Initializing psengine EntityListMgr")
+        list_mgr = EntityListMgr()
+        siemplify.LOGGER.info("Creating new list")
+        create_resp = list_mgr.create(
+            list_name=list_name,
+            list_type=list_type,
         )
-        siemplify.LOGGER.info(f"Classic Alert Update response: {update_alert_resp}")
+        data = create_resp.json()
+        siemplify.result.add_result_json(data)
+        output_message += f"Successfully created new list in Recorded Future: {create_resp.id_}."
 
-        siemplify.result.add_result_json({"success": {"id": alert_id}})
-        output_message += f"Successfully updated classic alert {alert_id} in Recorded Future."
-
-    except ValueError as err:
-        output_message = f"Classic Alert Manager ValueError: {err}"
-        siemplify.LOGGER.error(output_message)
-        is_success = False
-        status = EXECUTION_STATE_FAILED
     except ValidationError as err:
-        output_message = f"Error with Classic Alert Manager update parameters: {err}"
+        output_message = f"Error with List Manager parameters: {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
-    except AlertUpdateError as err:
-        output_message = f"Error updating classic alert: {err}"
+    except ValueError as err:
+        output_message = f"Error creating List Manager: {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
+    except ListApiError as err:
+        output_message = f"Error creating list in Recorded Future: {err}"
+        siemplify.LOGGER.error(output_message)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+
     except Exception as err:
-        output_message = f"Error executing Update Playbook Alert action: {err}"
+        output_message = f"Error executing Create List action: {err}"
         is_success = False
         status = EXECUTION_STATE_FAILED
 

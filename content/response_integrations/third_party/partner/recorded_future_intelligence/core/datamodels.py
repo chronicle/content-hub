@@ -463,6 +463,8 @@ class PlaybookAlert(BaseModel):
         elif self.category == "third_party_risk":
             self.add_targets_html(event)
             self.add_assessment_html_tpr(event)
+        elif self.category == "malware_report":
+            self.add_matched_hashes_html(event)
         return event
 
     def add_assessment_html_tpr(self, event):
@@ -570,7 +572,8 @@ class PlaybookAlert(BaseModel):
         """
         secrets_html = []
         for prop in (
-            event.get("panel_evidence_summary", {})
+            event
+            .get("panel_evidence_summary", {})
             .get("exposed_secret", {})
             .get("details", {})
             .get("properties", [])
@@ -741,6 +744,56 @@ class PlaybookAlert(BaseModel):
                     ns_html,
                     value.get("privateRegistration"),
                 )
+
+    def add_matched_hashes_html(self, event):
+        """Adds HTML for Whois records.
+
+        :param event {dict}: raw event object to append html chunks to"
+        """
+
+        malwares_chunk = """
+        <div class="assessment">
+            <p><span class="label">Detected Malwares:</span> {}</p>
+        </div>
+        """
+        header_chunk = """
+        <hr>
+        <h4><span class="label">Hash:</span> {} ({})</h4>
+        """
+        report_chunk = """
+        <div class="assessment">
+            <p><span class="label">Sandbox Report:</span> {}</p>
+            <p><span class="label">Sandbox Score:</span> {}</p>
+            <p><span class="label">Tags:</span>  {}</p>
+        </div>
+        """
+
+        matched_hashes_html = []
+        try:
+            detected_malwares = ", ".join([
+                f"{m['name'].upper()} ({m['count']})"
+                for m in event.get("panel_evidence_summary", {}).get("detected_malwares", [])
+            ])
+            if detected_malwares:
+                matched_hashes_html.append(malwares_chunk.format(detected_malwares))
+        except KeyError:
+            pass
+
+        matched_hashes = event.get("panel_evidence_summary", {}).get("matched_hashes", [])
+        sorted_hashes = sorted(matched_hashes, key=lambda h: h["risk_score"], reverse=True)
+        for matched_hash in sorted_hashes:
+            try:
+                hash_value = matched_hash["sha256"]
+                hash_risk_score = matched_hash["risk_score"]
+                matched_hashes_html.append(header_chunk.format(hash_value, hash_risk_score))
+                for report in matched_hash.get("report_overviews"):
+                    report_id = report["report_id"].split("-", 1)[1]
+                    score = report["sandbox_score"]
+                    tags = ", ".join(report["tags"]).upper()
+                    matched_hashes_html.append(report_chunk.format(report_id, score, tags))
+            except (KeyError, IndexError):
+                continue
+        event["matched_hashes_html"] = "\n".join(matched_hashes_html)
 
 
 @dataclass

@@ -17,6 +17,7 @@ from .constants import (
     CONNECTOR_DATETIME_FORMAT,
     DATETIME_READABLE_FORMAT,
     ENTITY_CHANGE_CASES,
+    ENTITY_PREFIX_TYPE_MAP_LIST_OPS,
     PBA_SEVERITY_MAP_INTEGER,
     SANDBOX_TIMEOUT_THRESHOLD_IN_MIN,
 )
@@ -252,3 +253,17 @@ def is_async_action_global_timeout_approaching(siemplify, start_time):
         siemplify.execution_deadline_unix_time_ms - start_time
         < SANDBOX_TIMEOUT_THRESHOLD_IN_MIN * 60
     )
+
+
+def map_secops_entities_to_rf(entities):
+    """
+    Maps the SecOps entity to the Recorded Future ID format with entity prefix.
+    Ignores entities that are not included in the default mapping. For entities that
+    do not follow the Recorded Future prefix syntax, run the action with 'Entity Name'
+    and 'Entity Type' parameters instead.
+    """
+    return [
+        f"{ENTITY_PREFIX_TYPE_MAP_LIST_OPS.get(entity.entity_type)}:{entity.identifier}"
+        for entity in entities
+        if entity.entity_type in ENTITY_PREFIX_TYPE_MAP_LIST_OPS
+    ]

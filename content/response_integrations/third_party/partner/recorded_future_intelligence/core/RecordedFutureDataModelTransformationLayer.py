@@ -25,16 +25,9 @@ from psengine.enrich import (
     SOAREnrichedEntity,
 )
 from psengine.malware_intel import SandboxReport
-from psengine.playbook_alerts import PBA_Generic, PBA_IdentityNovelExposure
+from psengine.playbook_alerts import PBA_Generic, PBA_IdentityNovelExposure, PBA_MalwareReport
 
-from .constants import (
-    ENTITY_DOMAIN,
-    ENTITY_EMAIL,
-    ENTITY_HASH,
-    ENTITY_IP,
-    ENTITY_URL,
-    ENTITY_VULN,
-)
+from .constants import CLASSIC_ALERT_ENTITY_MAPPING
 from .datamodels import (
     CVE,
     HASH,
@@ -286,18 +279,24 @@ def build_event(
     elif value := _extract_triggered_by(triggered_by_str):
         entity_data = [value[0]]
 
-    for k, v in [
-        (ENTITY_IP, "IpAddress"),
-        (ENTITY_DOMAIN, "InternetDomainName"),
-        (ENTITY_EMAIL, "EmailAddress"),
-        (ENTITY_HASH, "Hash"),
-        (ENTITY_URL, "URL"),
-        (ENTITY_VULN, "CyberVulnerability"),
-    ]:
-        raw_data[k] = ",".join(
-            [entity["name"] for entity in entity_data if entity["type"] == v],
+    for field_name, entity_type in CLASSIC_ALERT_ENTITY_MAPPING.items():
+        raw_data[field_name] = ",".join(
+            [entity["name"] for entity in entity_data if entity["type"] == entity_type],
         )
 
+    return raw_data
+
+
+def build_enriched_entity_event(enriched_entity: EnrichedEntity):
+    """Formats and builds event out of Alert enriched_entities object.
+    : param enriched_entities: {list[EnrichedEntity]} classic alert enriched entities
+    : return {dict}.
+    """
+    raw_data = {}
+    for field_name, entity_type in CLASSIC_ALERT_ENTITY_MAPPING.items():
+        raw_data[field_name] = (
+            enriched_entity.entity.name if enriched_entity.entity.type_ == entity_type else ""
+        )
     return raw_data
 
 
@@ -336,6 +335,13 @@ def build_alert(
                     extract_all_entities,
                 ),
             )
+        # also create events for enriched entities regardless of extract entities param.
+        # required for the case where an alert only has enriched entities. Alert structure
+        # is different so we pull entities into entity_* field.
+        if raw_alert.enriched_entities and not raw_alert.hits:
+            for entity in raw_alert.enriched_entities:
+                alert.events.append(build_enriched_entity_event(enriched_entity=entity))
+
     except (KeyError, IndexError) as err:
         raise RecordedFutureDataModelTransformationLayerError(err)
     return alert
@@ -351,16 +357,20 @@ def build_playbook_alert(pba: PBA_Generic, linked_cases=None, severity=None):
     alert_url = f"https://app.recordedfuture.com/portal/playbook-alerts/{id_}"
 
     # when the compromised user isn't an email
+    label = pba.panel_status.case_rule_label
     entity_name = pba.panel_status.entity_name
     if entity_name is None and isinstance(pba, PBA_IdentityNovelExposure):
         entity_name = pba.panel_evidence_summary.subject
+    elif entity_name is None and isinstance(pba, PBA_MalwareReport):
+        entity_name = pba.panel_evidence_summary.notification_title
+        label = "Malware Report"
 
     return PlaybookAlert(
         raw_data=dump_model(pba),
         id_=id_,
         alert_url=alert_url,
         category=pba.category,
-        label=pba.panel_status.case_rule_label,
+        label=label,
         start=pba.panel_status.created,
         end=pba.panel_status.updated,
         title=f"{pba.panel_status.case_rule_label} - {entity_name}",
