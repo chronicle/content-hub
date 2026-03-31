@@ -205,8 +205,6 @@ PARAM_NAME_MAX_LENGTH: int = 150
 PARAM_NAME_MAX_WORDS: int = 13
 MINIMUM_SCRIPT_VERSION: float = 1.0
 MAX_SCRIPT_RESULT_NAME_LENGTH: int = 100
-SCRIPT_DEBUG_MODE_PARAM_NAME: str = "Debug Mode"
-SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION: str = "Enable debug mode for finer logging."
 
 # ------------------ Playbooks ------------------
 
