@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 
+import time
+import threading
 from io import BytesIO
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
@@ -30,16 +31,11 @@ def main():
     siemplify = SiemplifyJob()
     siemplify.script_name = SCRIPT_NAME
 
-    push_allowlist = list(
-        [
-            _f
-            for _f in [
-                x.strip()
-                for x in siemplify.extract_job_param("Push Whitelist", " ").split(",")
-            ]
-            if _f
-        ],
-    )
+    push_allowlist = [
+        x.strip()
+        for x in siemplify.extract_job_param("Push Whitelist", " ").split(",")
+        if x.strip()
+    ]
     commit_msg = siemplify.extract_job_param("Commit")
     readme_addon = siemplify.extract_job_param("Readme Addon", input_type=str)
 
@@ -47,7 +43,8 @@ def main():
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
         integrations = [
-            x for x in gitsync.api.get_ide_cards() if x["identifier"] in push_allowlist
+            x for x in gitsync.api.get_installed_integrations()
+            if x["identifier"] in push_allowlist
         ]
 
         for integration in integrations:
@@ -58,7 +55,8 @@ def main():
             )
             if readme_addon:
                 siemplify.LOGGER.info(
-                    "Readme addon found - adding to GitSync metadata file (GitSync.json)",
+                    "Readme addon found - adding to GitSync metadata file "
+                    "(GitSync.json)",
                 )
                 gitsync.content.metadata.set_readme_addon(
                     "Integration",
