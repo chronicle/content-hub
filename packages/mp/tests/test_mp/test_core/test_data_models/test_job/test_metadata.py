@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
+from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 from mp.core.data_models.integrations.job.metadata import (
     BuiltJobMetadata,
     JobMetadata,
@@ -43,3 +44,9 @@ class TestValidations:
     @given(valid_built=ST_VALID_BUILT_JOB_METADATA_DICT)
     def test_valid_built(self, valid_built: BuiltJobMetadata) -> None:
         JobMetadata.from_built(FILE_NAME, valid_built)
+
+    @settings(max_examples=30)
+    @given(valid_non_built=ST_VALID_NON_BUILT_JOB_METADATA_DICT)
+    def test_debug_mode_parameter_added(self, valid_non_built: NonBuiltJobMetadata) -> None:
+        metadata = JobMetadata.from_non_built(FILE_NAME, valid_non_built)
+        assert any(p.name == SCRIPT_DEBUG_MODE_PARAM_NAME for p in metadata.parameters)

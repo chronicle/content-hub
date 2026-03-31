@@ -26,6 +26,10 @@ import mp.core.file_utils
 import mp.core.utils
 import mp.core.validators
 from mp.core import exclusions
+from mp.core.constants import (
+    SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
+    SCRIPT_DEBUG_MODE_PARAM_NAME,
+)
 from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 
 from .ai.entity_types import EntityType
@@ -37,6 +41,7 @@ from .dynamic_results_metadata import (
 )
 from .parameter import (
     ActionParameter,
+    ActionParamType,
     BuiltActionParameter,
     NonBuiltActionParameter,
 )
@@ -248,6 +253,21 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             An `ActionMetadata` object
 
         """
+        parameters: list[ActionParameter] = [
+            ActionParameter.from_non_built(p) for p in non_built["parameters"]
+        ]
+        if not any(p.name == SCRIPT_DEBUG_MODE_PARAM_NAME for p in parameters):
+            parameters.append(
+                ActionParameter(
+                    name=SCRIPT_DEBUG_MODE_PARAM_NAME,
+                    description=SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
+                    is_mandatory=False,
+                    type_=ActionParamType.BOOLEAN,
+                    default_value=False,
+                    optional_values=None,
+                )
+            )
+
         return cls(
             file_name=file_name,
             creator=non_built.get("creator", "admin"),
@@ -262,7 +282,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
-            parameters=[ActionParameter.from_non_built(p) for p in non_built["parameters"]],
+            parameters=parameters,
             script_result_name=non_built.get("script_result_name", DEFAULT_SCRIPT_RESULT_NAME),
             simulation_data_json=non_built.get(
                 "simulation_data_json",
@@ -285,9 +305,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         built: BuiltActionMetadata = BuiltActionMetadata(
             Creator=self.creator,
             Description=self.description,
-            DocumentationLink=(
-                str(self.documentation_link) if self.documentation_link else None
-            ),
+            DocumentationLink=(str(self.documentation_link) if self.documentation_link else None),
             DynamicResultsMetadata=[m.to_built() for m in self.dynamic_results_metadata],
             IntegrationIdentifier=self.integration_identifier,
             IsAsync=self.is_async,
@@ -317,9 +335,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         non_built: NonBuiltActionMetadata = NonBuiltActionMetadata(
             name=self.name,
             description=self.description,
-            documentation_link=(
-                str(self.documentation_link) if self.documentation_link else None
-            ),
+            documentation_link=(str(self.documentation_link) if self.documentation_link else None),
             integration_identifier=self.integration_identifier,
             parameters=[p.to_non_built() for p in self.parameters],
             dynamic_results_metadata=[m.to_non_built() for m in self.dynamic_results_metadata],
