@@ -500,6 +500,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = {"casesIds": [self.params.case_id], "userName": self.params.assign_to}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_email_template(self) -> requests.Response:
         """Get email template"""
         endpoint = "/system/settings/emailTemplates"
@@ -885,6 +886,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = self.params.case_stage
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_case_alert(self) -> requests.Response:
         """Get case alert"""
         endpoint = "/system/settings/caseCloseDefinitions"
@@ -1054,6 +1056,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         new_response._content = json.dumps(response_json).encode("utf-8")
         return new_response
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_visual_families(self) -> requests.Response:
         """Get custom visual families."""
         endpoint = "/ontologyRecords/-/visualFamilies"
@@ -1074,6 +1077,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/system/settings/caseTagDefinitions"
         return self._make_request(HttpMethod.GET, endpoint)
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_case_stages(self) -> requests.Response:
         """Get case stages"""
         endpoint = "/system/settings/caseStageDefinitions"
@@ -1088,6 +1092,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/system/settings/soar-block-entities"
         return self._make_request(HttpMethod.GET, endpoint)
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_sla_records(self) -> requests.Response:
         """Get sla records"""
         endpoint = "/system/settings/slaDefinitions"
@@ -1370,6 +1375,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         params = {"expand": "*"} if self.params.is_expand else None
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_simulated_cases(self) -> requests.Response:
         """Get simulated cases."""
         endpoint = "/legacyCases:getCustomCases"
