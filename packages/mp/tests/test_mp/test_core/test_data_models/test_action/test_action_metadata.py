@@ -21,6 +21,7 @@ from mp.core.data_models.integrations.action.metadata import (
     BuiltActionMetadata,
     NonBuiltActionMetadata,
 )
+from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 from test_mp.test_core.test_data_models.utils import FILE_NAME
 
 from .strategies import (
@@ -43,3 +44,9 @@ class TestValidations:
     @given(valid_built=ST_VALID_BUILT_ACTION_METADATA_DICT)
     def test_valid_built(self, valid_built: BuiltActionMetadata) -> None:
         ActionMetadata.from_built(FILE_NAME, valid_built)
+
+    @settings(max_examples=30)
+    @given(valid_non_built=ST_VALID_NON_BUILT_ACTION_METADATA_DICT)
+    def test_debug_mode_parameter_added(self, valid_non_built: NonBuiltActionMetadata) -> None:
+        metadata = ActionMetadata.from_non_built(FILE_NAME, valid_non_built)
+        assert any(p.name == SCRIPT_DEBUG_MODE_PARAM_NAME for p in metadata.parameters)

@@ -21,6 +21,7 @@ from mp.core.data_models.integrations.connector.metadata import (
     ConnectorMetadata,
     NonBuiltConnectorMetadata,
 )
+from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 
 from .strategies import (
     ST_VALID_BUILT_CONNECTOR_METADATA_DICT,
@@ -42,3 +43,9 @@ class TestValidations:
     @given(valid_built=ST_VALID_BUILT_CONNECTOR_METADATA_DICT)
     def test_valid_built(self, valid_built: BuiltConnectorMetadata) -> None:
         ConnectorMetadata.from_built("test_name", valid_built)
+
+    @settings(max_examples=30)
+    @given(valid_non_built=ST_VALID_NON_BUILT_CONNECTOR_METADATA_DICT)
+    def test_debug_mode_parameter_added(self, valid_non_built: NonBuiltConnectorMetadata) -> None:
+        metadata = ConnectorMetadata.from_non_built("test_name", valid_non_built)
+        assert any(p.name == SCRIPT_DEBUG_MODE_PARAM_NAME for p in metadata.parameters)
