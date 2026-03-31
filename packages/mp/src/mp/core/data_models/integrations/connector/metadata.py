@@ -20,18 +20,12 @@ import pydantic
 
 import mp.core.constants
 from mp.core import exclusions
-from mp.core.constants import (
-    SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
-    SCRIPT_DEBUG_MODE_PARAM_NAME,
-)
 from mp.core.data_models.abc import ComponentMetadata
-from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
 from .parameter import (
     BuiltConnectorParameter,
     ConnectorParameter,
     NonBuiltConnectorParameter,
-    ParamMode,
 )
 from .rule import BuiltConnectorRule, ConnectorRule, NonBuiltConnectorRule
 
@@ -155,22 +149,6 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
 
     @classmethod
     def _from_non_built(cls, file_name: str, non_built: NonBuiltConnectorMetadata) -> Self:
-        parameters: list[ConnectorParameter] = [
-            ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
-        ]
-        if not any(p.name == SCRIPT_DEBUG_MODE_PARAM_NAME for p in parameters):
-            parameters.append(
-                ConnectorParameter(
-                    name=SCRIPT_DEBUG_MODE_PARAM_NAME,
-                    description=SCRIPT_DEBUG_MODE_PARAM_DESCRIPTION,
-                    is_mandatory=False,
-                    is_advanced=True,
-                    type_=ScriptParamType.BOOLEAN,
-                    default_value=False,
-                    mode=ParamMode.REGULAR,
-                )
-            )
-
         return cls(
             file_name=file_name,
             creator=non_built["creator"],
@@ -181,7 +159,9 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
-            parameters=parameters,
+            parameters=[
+                ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
+            ],
             rules=[ConnectorRule.from_non_built(rule) for rule in non_built["rules"]],
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
         )
