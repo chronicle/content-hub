@@ -21,7 +21,7 @@ from ..core.constants import PROVIDER_NAME
 from ..core.version import __version__ as version
 
 
-def clean_input(input_str):
+def clean_input(input_str: str | None) -> str | None:
     """
     Cleans the classic alert input values from ddl config options.
     """

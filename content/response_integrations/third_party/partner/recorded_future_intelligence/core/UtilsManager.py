@@ -255,7 +255,7 @@ def is_async_action_global_timeout_approaching(siemplify, start_time):
     )
 
 
-def map_secops_entities_to_rf(entities):
+def map_secops_entities_to_rf(entities: list) -> list[str]:
     """
     Maps the SecOps entity to the Recorded Future ID format with entity prefix.
     Ignores entities that are not included in the default mapping. For entities that

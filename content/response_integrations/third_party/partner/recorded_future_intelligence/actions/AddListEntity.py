@@ -9,8 +9,6 @@
 
 from __future__ import annotations
 
-import json
-
 from psengine.config import Config
 from psengine.entity_lists import EntityListMgr, ListApiError
 from pydantic import ValidationError
@@ -101,7 +99,7 @@ def main():
         siemplify.LOGGER.info(f"Adding {len(entities)} entities from SecOps case to list")
         add_resp = fetch_resp.bulk_add(entities=entities)
 
-        siemplify.result.add_result_json(json.dumps(add_resp))
+        siemplify.result.add_result_json(add_resp)
 
         if added := add_resp.get("added", []):
             output_message += f"Successfully added {len(added)} entities to list."

@@ -745,7 +745,7 @@ class PlaybookAlert(BaseModel):
                     value.get("privateRegistration"),
                 )
 
-    def add_matched_hashes_html(self, event):
+    def add_matched_hashes_html(self, event: dict) -> None:
         """Adds HTML for Whois records.
 
         :param event {dict}: raw event object to append html chunks to"

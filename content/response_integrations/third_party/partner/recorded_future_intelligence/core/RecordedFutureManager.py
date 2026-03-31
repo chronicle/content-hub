@@ -597,7 +597,7 @@ class RecordedFutureManager:
     def refresh_malware_report(
         self,
         playbook_alert: PBA_MalwareReport,
-    ):
+    ) -> None:
         """Adds case entities for Malware Report alert."""
         matched_hashes = playbook_alert.panel_evidence_summary.matched_hashes
         sorted_hashes = sorted(matched_hashes, key=lambda h: h.risk_score, reverse=True)

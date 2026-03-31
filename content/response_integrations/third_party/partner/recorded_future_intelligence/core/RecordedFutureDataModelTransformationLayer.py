@@ -287,7 +287,7 @@ def build_event(
     return raw_data
 
 
-def build_enriched_entity_event(enriched_entity: EnrichedEntity):
+def build_enriched_entity_event(enriched_entity: EnrichedEntity) -> dict[str, str]:
     """Formats and builds event out of Alert enriched_entities object.
     : param enriched_entities: {list[EnrichedEntity]} classic alert enriched entities
     : return {dict}.

@@ -9,8 +9,6 @@
 
 from __future__ import annotations
 
-import json
-
 from psengine.config import Config
 from psengine.entity_lists import EntityListMgr, ListApiError
 from pydantic import ValidationError
@@ -101,7 +99,7 @@ def main():
         siemplify.LOGGER.info(f"Deleting {len(entities)} from list: {list_id}")
         delete_resp = fetch_resp.bulk_remove(entities=entities)
 
-        siemplify.result.add_result_json(json.dumps(delete_resp))
+        siemplify.result.add_result_json(delete_resp)
 
         if removed := delete_resp.get("removed"):
             output_message += f"Successfully deleted {len(removed)} entities to list."

@@ -22,7 +22,7 @@ from ..core.version import __version__ as version
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
 
     api_key = extract_configuration_param(
