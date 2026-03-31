@@ -304,19 +304,8 @@ def test_is_commercial_integration(tmp_path: Path, non_built_integration: Path) 
     shutil.copytree(non_built_integration.parent, community_dir)
     shutil.copytree(non_built_integration.parent, partner_dir)
 
-    assert (
-        mp.core.file_utils.is_certified_integration(commercial_dir / non_built_integration.name)
-        is True
-    )
-    assert (
-        mp.core.file_utils.is_certified_integration(powerups_dir / non_built_integration.name)
-        is True
-    )
-    assert (
-        mp.core.file_utils.is_certified_integration(partner_dir / non_built_integration.name)
-        is False
-    )
-    assert (
-        mp.core.file_utils.is_certified_integration(community_dir / non_built_integration.name)
-        is False
-    )
+    name: str = non_built_integration.name
+    assert mp.core.file_utils.is_certified_integration(commercial_dir / name) is True
+    assert mp.core.file_utils.is_certified_integration(powerups_dir / name) is True
+    assert mp.core.file_utils.is_certified_integration(partner_dir / name) is False
+    assert mp.core.file_utils.is_certified_integration(community_dir / name) is False
