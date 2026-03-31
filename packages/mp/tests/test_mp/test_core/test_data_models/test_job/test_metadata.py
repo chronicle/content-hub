@@ -16,12 +16,12 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
+from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 from mp.core.data_models.integrations.job.metadata import (
     BuiltJobMetadata,
     JobMetadata,
     NonBuiltJobMetadata,
 )
-from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 from test_mp.test_core.test_data_models.utils import FILE_NAME
 
 from .strategies import (

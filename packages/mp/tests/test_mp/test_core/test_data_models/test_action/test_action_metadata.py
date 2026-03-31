@@ -16,12 +16,12 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
+from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 from mp.core.data_models.integrations.action.metadata import (
     ActionMetadata,
     BuiltActionMetadata,
     NonBuiltActionMetadata,
 )
-from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 from test_mp.test_core.test_data_models.utils import FILE_NAME
 
 from .strategies import (

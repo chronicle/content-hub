@@ -16,12 +16,12 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 
+from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 from mp.core.data_models.integrations.connector.metadata import (
     BuiltConnectorMetadata,
     ConnectorMetadata,
     NonBuiltConnectorMetadata,
 )
-from mp.core.constants import SCRIPT_DEBUG_MODE_PARAM_NAME
 
 from .strategies import (
     ST_VALID_BUILT_CONNECTOR_METADATA_DICT,
