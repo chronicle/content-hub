@@ -7,6 +7,7 @@ from urllib.parse import quote
 from .constants import (
     CENSYS_HOSTS_URL_TEMPLATE,
     CENSYS_PLATFORM_BASE_URL,
+    CENSYS_SEARCH_BASE_URL,
     DEFAULT_VALUE_NA,
     ENRICHMENT_PREFIX,
     ENRICHMENT_PREFIX_CERT,
@@ -18,6 +19,9 @@ from .constants import (
     RESOURCE_TYPE_ROUTE_UPDATED,
     RESOURCE_TYPE_SERVICE_SCANNED,
     RESOURCE_TYPE_WHOIS_UPDATED,
+    TARGET_TYPE_HOST,
+    TARGET_TYPE_WEB_PROPERTY,
+    TARGET_TYPE_CERTIFICATE
 )
 
 
@@ -580,3 +584,141 @@ class CertificateDatamodel(BaseModel):
             return {}
 
         return self.cert_data
+
+
+class RelatedInfraResultModel(BaseModel):
+    """
+    Data model for CensEye Related Infrastructure pivot results.
+    Formats pivot data for table output and generates Censys search URLs.
+    """
+
+    def __init__(
+        self,
+        raw_data: Dict[str, Any],
+        index: int,
+        target_type: str,
+    ) -> None:
+        """
+        Initialize RelatedInfraResultModel.
+
+        Args:
+            raw_data: Raw pivot result data from API
+            index: Sequential number for this result
+            target_type: Type of target (Host, Web Property, Certificate)
+        """
+        super().__init__(raw_data)
+        self.index = index
+        self.target_type = target_type
+
+        self.count = raw_data.get("count", 0)
+        self.field_value_pairs = raw_data.get("field_value_pairs", [])
+
+        self.pivot_fields = self._format_fields()
+        self.pivot_values = self._format_values()
+        self.search_url = self._generate_search_url()
+
+    def _format_fields(self) -> str:
+        """
+        Format field names as comma-separated string.
+
+        Returns:
+            Comma-separated field names or N/A
+        """
+        fields = [pair.get("field", "") for pair in self.field_value_pairs]
+        return ", ".join(fields) if fields else DEFAULT_VALUE_NA
+
+    def _format_values(self) -> str:
+        """
+        Format field values as comma-separated string.
+
+        Returns:
+            Comma-separated field values or N/A
+        """
+        values = [str(pair.get("value", "")) for pair in self.field_value_pairs]
+        return ", ".join(values) if values else DEFAULT_VALUE_NA
+
+    def _generate_search_url(self) -> str:
+        """
+        Generate Censys search URL for this pivot.
+
+        Returns:
+            Clickable Censys search URL or N/A
+        """
+        if not self.field_value_pairs:
+            return DEFAULT_VALUE_NA
+        # Special header fields that need nested key-value syntax
+        # These fields appear as field.key and field.value in the API response
+        HEADER_FIELD_PATTERNS = [
+            "web.endpoints.http.headers",
+            "host.services.endpoints.http.headers"
+        ]
+
+        # Check if this is a header field pivot with key/value pairs
+        if len(self.field_value_pairs) == 2:
+            field1 = self.field_value_pairs[0].get("field", "")
+            field2 = self.field_value_pairs[1].get("field", "")
+            
+            # Check if these are .key and .value variants of a header field
+            for header_pattern in HEADER_FIELD_PATTERNS:
+                key_field = f"{header_pattern}.key"
+                value_field = f"{header_pattern}.value"
+                
+                # Check if we have both .key and .value fields
+                if (field1 == key_field and field2 == value_field) or \
+                   (field1 == value_field and field2 == key_field):
+                    
+                    # Extract the key and value
+                    key_val = None
+                    value_val = None
+                    
+                    for pair in self.field_value_pairs:
+                        if pair.get("field", "").endswith(".key"):
+                            key_val = pair.get("value", "")
+                        elif pair.get("field", "").endswith(".value"):
+                            value_val = pair.get("value", "")
+                    
+                    if key_val and value_val:
+                        # Use nested syntax: field: (key = "X" and value = "Y")
+                        query = f"{header_pattern}: (key = '{key_val}' and value = '{value_val}')"
+                        encoded_query = quote(query, safe="")
+                        return f"{CENSYS_SEARCH_BASE_URL}?q={encoded_query}"
+
+        query_parts = []
+        for pair in self.field_value_pairs:
+            field = pair.get("field", "")
+            value = pair.get("value", "")
+            
+            if field and value:
+                query_parts.append(f"{field}:'{value}'")
+
+        if not query_parts:
+            return DEFAULT_VALUE_NA
+
+        query = " AND ".join(query_parts)
+        encoded_query = quote(query, safe="")
+
+        return f"{CENSYS_SEARCH_BASE_URL}?q={encoded_query}"
+
+    def to_csv(self) -> Dict[str, Any]:
+        """
+        Convert to CSV-compatible dictionary for table output.
+
+        Returns:
+            Dict with 5 columns for data table
+        """
+        return {
+            "Sr. No.": self.index,
+            "Pivot Field(s)": self.pivot_fields,
+            "Pivot Value(s)": self.pivot_values,
+            "Asset Count": self.count,
+            "Search on Censys": self.search_url,
+        }
+
+    def to_json(self) -> Dict[str, Any]:
+        """
+        Convert to JSON format for case wall.
+
+        Returns:
+            Dict containing full raw data
+        """
+        return self.raw_data

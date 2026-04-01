@@ -63,7 +63,9 @@ PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
 INITIATE_RESCAN_SCRIPT_NAME = f"{INTEGRATION_NAME} - Initiate Rescan"
 GET_RESCAN_STATUS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Rescan Status"
 GET_HOST_HISTORY_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Host History"
-# GET_RELATED_INFRASTRUCTURE_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Related Infrastructure"
+CREATE_RELATED_INFRA_JOB_SCRIPT_NAME = f"{INTEGRATION_NAME} - Create Related Infrastructure Job"
+GET_RELATED_INFRA_JOB_STATUS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Related Infrastructure Job Status"
+GET_RELATED_INFRA_RESULTS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Related Infrastructure Results"
 ENRICH_IPS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich IPs"
 ENRICH_WEB_PROPERTIES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Web Properties"
 ENRICH_CERTIFICATES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Certificates"
@@ -73,7 +75,9 @@ PING_ACTION_IDENTIFIER = "ping"
 INITIATE_RESCAN_ACTION_IDENTIFIER = "initiate_rescan"
 GET_RESCAN_STATUS_ACTION_IDENTIFIER = "get_rescan_status"
 GET_HOST_HISTORY_ACTION_IDENTIFIER = "get_host_history"
-# GET_RELATED_INFRASTRUCTURE_SEARCH_QUERY_IDENTIFIER = "get_related_infrastructure_search_query"
+CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER = "create_related_infra_job"
+GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER = "get_related_infra_job_status"
+GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER = "get_related_infra_results"
 ENRICH_IPS_ACTION_IDENTIFIER = "enrich_ips"
 ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER = "enrich_web_properties"
 ENRICH_CERTIFICATES_ACTION_IDENTIFIER = "enrich_certificates"
@@ -86,6 +90,13 @@ INVALID_IP_FORMAT_ERROR = "Invalid IP address format: {}"
 INVALID_PORT_FORMAT_ERROR = "Invalid port value: {}"
 DEFAULT_PORTS = "80,443"
 
+# CensEye Related Infrastructure Error Messages
+INVALID_TARGET_TYPE_ERROR = "Invalid target type: {}. Expected: Host, Web Property, or Certificate"
+INVALID_CERTIFICATE_FORMAT_ERROR = "Invalid certificate fingerprint format. Expected 64 hexadecimal characters (SHA-256)"
+INVALID_WEB_PROPERTY_FORMAT_ERROR = "Invalid Web Property format. Expected format: domain:port (e.g., example.com:443)"
+TARGET_VALUE_REQUIRED_ERROR = "Target Value is required and cannot be empty"
+JOB_ID_REQUIRED_ERROR = "Job ID is required and cannot be empty"
+
 # API Services and Versions
 API_VERSION_V3 = "/v3"
 
@@ -95,7 +106,9 @@ ENDPOINTS = {
     INITIATE_RESCAN_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/scans/rescan",
     GET_RESCAN_STATUS_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/scans/{scan_id}",
     GET_HOST_HISTORY_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/asset/host/{host_id}/timeline",
-    # GET_RELATED_INFRASTRUCTURE_SEARCH_QUERY_IDENTIFIER: API_VERSION_V3 + "/global/search/query",
+    CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER: API_VERSION_V3 + "/threat-hunting/censeye/jobs",
+    GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER: API_VERSION_V3 + "/threat-hunting/censeye/jobs/{job_id}",
+    GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER: API_VERSION_V3 + "/threat-hunting/censeye/jobs/{job_id}/results",
     ENRICH_IPS_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/asset/host",
     ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER: (API_VERSION_V3 + "/global/asset/webproperty"),
     ENRICH_CERTIFICATES_ACTION_IDENTIFIER: (API_VERSION_V3 + "/global/asset/certificate"),
@@ -111,6 +124,19 @@ TRANSPORT_PROTOCOL_TCP = "TCP"
 TRANSPORT_PROTOCOL_UDP = "UDP"
 TRANSPORT_PROTOCOL_ICMP = "ICMP"
 TRANSPORT_PROTOCOL_QUIC = "QUIC"
+
+# CensEye Target Types
+TARGET_TYPE_HOST = "Host"
+TARGET_TYPE_WEB_PROPERTY = "Web Property"
+TARGET_TYPE_CERTIFICATE = "Certificate"
+
+# CensEye Job States
+JOB_STATE_STARTED = "started"
+JOB_STATE_COMPLETED = "completed"
+JOB_STATE_FAILED = "failed"
+
+# Censys Search URL
+CENSYS_SEARCH_BASE_URL = f"{CENSYS_PLATFORM_BASE_URL}/search"
 
 # Enrichment Prefixes
 ENRICHMENT_PREFIX = "Censys_"
