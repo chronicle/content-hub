@@ -229,7 +229,7 @@ def list_custom_fields(
         except InternalJSONDecoderError:
             if not custom_fields:
                 return []
-            break
+            raise
 
         res_json = response.json()
         fields_data = res_json.get("customFields", [])
