@@ -232,8 +232,8 @@ def list_custom_fields(
             raise
 
         res_json = response.json()
-        fields_data = res_json.get("customFields", [])
-        custom_fields.extend([CustomField.from_json(item) for item in fields_data])
+        fields_data = res_json.get("customFields") or []
+        custom_fields.extend(CustomField.from_json(item) for item in fields_data)
 
         next_page_token = res_json.get("nextPageToken")
         total_size = res_json.get("totalSize")
