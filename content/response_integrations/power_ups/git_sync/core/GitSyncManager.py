@@ -974,9 +974,9 @@ class WorkflowInstaller:
         """
         cache_key = f"integration_instances_{environment}"
         if cache_key not in self._cache:
-            self._cache[cache_key] = self.api.get_integrations_instances(environment)
+            self._cache[cache_key] = self.api.get_integrations_instances(environment) or []
 
-        instances = self._cache.get(cache_key)
+        instances = self._cache.get(cache_key, [])
 
         filtered_instances = [
             x
@@ -994,7 +994,7 @@ class WorkflowInstaller:
         self,
         integration_name: str,
         instance_id: str,
-        environments: list,
+        environments: list[str],
     ) -> bool:
         """Check if an instance ID exists among the available integration instances.
 
@@ -1007,7 +1007,8 @@ class WorkflowInstaller:
             True if the instance exists in any of the playbook's environments
             or in the shared environment.
         """
-        for env in environments:
+        envs_to_check = set(environments) | {ALL_ENVIRONMENTS_IDENTIFIER}
+        for env in envs_to_check:
             instances = self._find_integration_instances_for_step(
                 integration_name,
                 env,
@@ -1015,12 +1016,7 @@ class WorkflowInstaller:
             if any(x.get("identifier") == instance_id for x in instances):
                 return True
 
-        shared_instances = self._find_integration_instances_for_step(
-            integration_name,
-            ALL_ENVIRONMENTS_IDENTIFIER,
-        )
-
-        return any(x.get("identifier") == instance_id for x in shared_instances)
+        return False
 
     @staticmethod
     def _flatten_playbook_steps(steps: list) -> list[dict]:
