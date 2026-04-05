@@ -219,6 +219,14 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         if not self.resource_names:
             self.resource_names = await self._get_all_resources(status)
 
+        # Prune metadata for resources that no longer exist
+        # Only for non-integration types which use resource names as keys
+        if self.resource_type_name != "integration":
+            metadata_keys = list(metadata.keys())
+            for key in metadata_keys:
+                if key not in self.resource_names:
+                    del metadata[key]
+
         if not self.override:
             resources_to_process: set[str] = {
                 res for res in self.resource_names if res not in metadata
@@ -448,7 +456,13 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         else:
             save_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
 
-        await save_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = save_dir / self.metadata_file_name
+
+        if not metadata:
+            if await metadata_file.exists():
+                await metadata_file.unlink()
+            return
+
+        await save_dir.mkdir(parents=True, exist_ok=True)
         yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
         await metadata_file.write_text(yaml.safe_dump(metadata))

@@ -115,10 +115,16 @@ class DescribeIntegration(DescribeBase[IntegrationAiMetadata]):
         else:
             save_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
 
-        await save_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = save_dir / self.metadata_file_name
-        yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
 
         # For integrations, we don't want to key it by integration name in the file
-        if (integration_metadata := metadata.get(self.integration_name)) is not None:
-            await metadata_file.write_text(yaml.safe_dump(integration_metadata))
+        integration_metadata = metadata.get(self.integration_name)
+
+        if not integration_metadata:
+            if await metadata_file.exists():
+                await metadata_file.unlink()
+            return
+
+        await save_dir.mkdir(parents=True, exist_ok=True)
+        yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
+        await metadata_file.write_text(yaml.safe_dump(integration_metadata))

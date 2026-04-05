@@ -22,6 +22,7 @@ from __future__ import annotations
 import base64
 import dataclasses
 import json
+import pathlib
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -74,6 +75,7 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
             third_party = base_path / constants.THIRD_PARTY_REPO_NAME
 
             return mp.core.file_utils.common.create_dirs_if_not_exists(
+                third_party,
                 base_path / constants.POWERUPS_DIR_NAME,
                 third_party / constants.COMMUNITY_DIR_NAME,
                 third_party / constants.PARTNER_DIR_NAME,
@@ -130,6 +132,55 @@ def create_or_get_out_integrations_dir() -> Path:
         mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
         / constants.OUT_INTEGRATIONS_DIR_NAME
     )
+
+
+def get_marketplace_integration_base_paths() -> list[Path]:
+    """Get all integration base paths across all relevant repository types.
+
+    Returns:
+        list[Path]: All integration base directories.
+
+    """
+    base_paths: list[Path] = []
+    for repo_type_name in [
+        constants.COMMERCIAL_REPO_NAME,
+        constants.THIRD_PARTY_REPO_NAME,
+        constants.CUSTOM_REPO_NAME,
+    ]:
+        base_paths.extend(get_integration_base_folders_paths(repo_type_name))
+
+    return base_paths
+
+
+def get_marketplace_integration_path(name: str) -> Path | None:
+    """Find the path to an integration in the marketplace.
+
+    Args:
+        name: The name or path of the integration.
+
+    Returns:
+        Path | None: The path to the integration if found, None otherwise.
+
+    """
+    p = pathlib.Path(name)
+    if p.exists() and is_integration(p):
+        return p
+
+    for base_path in get_marketplace_integration_base_paths():
+        if (p := base_path / name).exists() and is_integration(p):
+            return p
+
+    return None
+
+
+def get_all_marketplace_integrations_paths() -> list[Path]:
+    """Get all integration paths from the marketplace.
+
+    Returns:
+        list[Path]: All integration paths found in the marketplace.
+
+    """
+    return sorted(get_integrations_from_paths(*get_marketplace_integration_base_paths()))
 
 
 def discover_core_modules(path: Path) -> list[ManagerName]:

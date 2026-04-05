@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import tomllib
 from string import Template
 from typing import TYPE_CHECKING, Any
 
@@ -57,6 +58,8 @@ class IntegrationPromptConstructor(PromptConstructor):
             "integration_name": self.integration_name,
             "integration_description": await self._get_integration_description(),
             "actions_ai_descriptions": await self._get_actions_ai_descriptions(),
+            "connectors_ai_descriptions": await self._get_connectors_ai_descriptions(),
+            "jobs_ai_descriptions": await self._get_jobs_ai_descriptions(),
         })
 
     async def _get_integration_description(self) -> str:
@@ -111,8 +114,8 @@ class IntegrationPromptConstructor(PromptConstructor):
             return None
 
         content: str = await pyproject_file.read_text(encoding="utf-8")
-        with contextlib.suppress(yaml.YAMLError):
-            data: dict[str, Any] = yaml.safe_load(content)
+        with contextlib.suppress(Exception):
+            data: dict[str, Any] = tomllib.loads(content)
             if project_data := data.get("project"):
                 return project_data.get("description")
 
@@ -124,4 +127,18 @@ class IntegrationPromptConstructor(PromptConstructor):
         actions_ai_file: anyio.Path = ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
         if await actions_ai_file.exists():
             return await actions_ai_file.read_text(encoding="utf-8")
+        return "N/A"
+
+    async def _get_connectors_ai_descriptions(self) -> str:
+        ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
+        connectors_ai_file: anyio.Path = ai_dir / constants.CONNECTORS_AI_DESCRIPTION_FILE
+        if await connectors_ai_file.exists():
+            return await connectors_ai_file.read_text(encoding="utf-8")
+        return "N/A"
+
+    async def _get_jobs_ai_descriptions(self) -> str:
+        ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
+        jobs_ai_file: anyio.Path = ai_dir / constants.JOBS_AI_DESCRIPTION_FILE
+        if await jobs_ai_file.exists():
+            return await jobs_ai_file.read_text(encoding="utf-8")
         return "N/A"

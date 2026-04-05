@@ -84,7 +84,15 @@ OUT_WIDGETS_META_DIR: str = "Widgets"
 
 AI_DIR: str = "ai"
 ACTIONS_AI_DESCRIPTION_FILE: str = "actions_ai_description.yaml"
-INTEGRATIONS_AI_DESCRIPTION_FILE: str = "integrations_ai_description.yaml"
+CONNECTORS_AI_DESCRIPTION_FILE: str = "connectors_ai_description.yaml"
+JOBS_AI_DESCRIPTION_FILE: str = "jobs_ai_description.yaml"
+INTEGRATIONS_AI_DESCRIPTION_FILE: str = "integration_ai_description.yaml"
+AI_DESCRIPTION_FILES: tuple[str, ...] = (
+    ACTIONS_AI_DESCRIPTION_FILE,
+    CONNECTORS_AI_DESCRIPTION_FILE,
+    JOBS_AI_DESCRIPTION_FILE,
+    INTEGRATIONS_AI_DESCRIPTION_FILE,
+)
 
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"

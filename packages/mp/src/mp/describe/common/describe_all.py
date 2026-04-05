@@ -30,8 +30,10 @@ from rich.progress import (
 )
 
 import mp.core.config
-from mp.core.custom_types import RepositoryType
-from mp.core.file_utils import get_integration_base_folders_paths, get_integrations_from_paths
+from mp.core.file_utils import (
+    get_all_marketplace_integrations_paths,
+    get_integrations_from_paths,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -183,12 +185,4 @@ def get_all_integrations_paths(src: Path | None = None) -> list[Path]:
     if src:
         return sorted(get_integrations_from_paths(src)) if src.exists() else []
 
-    base_paths: list[Path] = []
-    for repo_type in [
-        RepositoryType.COMMERCIAL,
-        RepositoryType.THIRD_PARTY,
-        RepositoryType.CUSTOM,
-    ]:
-        base_paths.extend(get_integration_base_folders_paths(repo_type.value))
-
-    return sorted(get_integrations_from_paths(*base_paths))
+    return get_all_marketplace_integrations_paths()

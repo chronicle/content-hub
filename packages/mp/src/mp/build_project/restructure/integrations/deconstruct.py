@@ -180,6 +180,13 @@ class DeconstructIntegration:
         ai_dir: Path = resources_dir / mp.core.constants.AI_DIR
         ai_dir.mkdir(exist_ok=True, parents=True)
 
+        for file_name, content in self.integration.ai_metadata.items():
+            if file_name == mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE:
+                continue
+
+            ai_file: Path = ai_dir / file_name
+            mp.core.file_utils.write_yaml_to_file(content, ai_file)
+
         categories_dict: dict[str, bool] = {
             category: (
                 PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]

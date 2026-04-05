@@ -26,7 +26,9 @@ from __future__ import annotations
 import dataclasses
 import json
 import operator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import yaml
 
 import mp.core.constants
 
@@ -62,6 +64,18 @@ class Metadata(Restructurable):
         self._restructure_widget_metadata()
         self._restructure_custom_families()
         self._restructure_mapping_rules()
+        self._restructure_ai_metadata()
+
+    def _restructure_ai_metadata(self) -> None:
+        ai_metadata: Mapping[str, Any] = self.metadata["ai_metadata"]
+        if not ai_metadata:
+            return
+
+        ai_path: Path = self.out_path / "resources" / mp.core.constants.AI_DIR
+        ai_path.mkdir(parents=True, exist_ok=True)
+        for file_name, content in ai_metadata.items():
+            metadata_file: Path = ai_path / file_name
+            metadata_file.write_text(yaml.dump(content, sort_keys=True), encoding="utf-8")
 
     def _restructure_integration_metadata(self) -> None:
         metadata: BuiltIntegrationMetadata = self.metadata["metadata"]

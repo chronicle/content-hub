@@ -86,6 +86,7 @@ def describe(  # noqa: PLR0913
         bool,
         typer.Option(
             "--override",
+            "-o",
             help="Rewrite actions that already have their description.",
         ),
     ] = False,

@@ -34,14 +34,14 @@ app = typer.Typer(help="Commands for describing integrations")
     help="Describe integrations using Gemini.",
     epilog=(
         "Examples:\n\n"
-        "    $ mp describe integration -i aws_ec2\n\n"
+        "    $ mp describe integration aws_ec2\n\n"
         "    $ mp describe integration --all\n\n"
         "    $ mp describe integration --all --src ./custom_folder\n\n"
     ),
     no_args_is_help=True,
 )
 def describe(  # noqa: PLR0913
-    integration: Annotated[str | None, typer.Argument(help="Integration name")] = None,
+    integrations: Annotated[list[str] | None, typer.Argument(help="Integration names")] = None,
     *,
     all_marketplace: Annotated[
         bool,
@@ -79,6 +79,7 @@ def describe(  # noqa: PLR0913
         bool,
         typer.Option(
             "--override",
+            "-o",
             help="Rewrite integrations that already have their description.",
         ),
     ] = False,
@@ -86,7 +87,7 @@ def describe(  # noqa: PLR0913
     """Describe integrations.
 
     Args:
-        integration: The name of the integration.
+        integrations: The names of the integrations.
         all_marketplace: Whether to describe all integrations in the marketplace.
         src: Customize the source folder to describe from.
         dst: Customize destination folder to save the AI descriptions.
@@ -95,19 +96,22 @@ def describe(  # noqa: PLR0913
         override: Whether to rewrite existing descriptions.
 
     Raises:
-        typer.Exit: If neither --integration nor --all is specified.
+        typer.Exit: If neither integrations nor --all is specified.
 
     """
     run_params: mp.core.config.RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    if integration:
+    if integrations:
         sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
-        asyncio.run(
-            DescribeIntegration(integration, src=src, dst=dst, override=override).describe(sem=sem)
-        )
+        for integration in integrations:
+            asyncio.run(
+                DescribeIntegration(integration, src=src, dst=dst, override=override).describe(
+                    sem=sem
+                )
+            )
     elif all_marketplace:
         asyncio.run(describe_all_integrations(src=src, dst=dst, override=override))
     else:
-        rich.print("[red]Please specify either --integration or --all[/red]")
+        rich.print("[red]Please specify either integrations or --all[/red]")
         raise typer.Exit(code=1)
