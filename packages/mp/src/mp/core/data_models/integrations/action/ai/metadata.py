@@ -18,9 +18,10 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from .ai_categories import AiCategories  # noqa: TC001
 from .capabilities import ActionCapabilities  # noqa: TC001
-from .categories import AiCategories  # noqa: TC001
 from .entity_usage import EntityUsage  # noqa: TC001
+from .product_categories import ActionProductCategories  # noqa: TC001
 
 
 class ActionAiMetadata(BaseModel):
@@ -78,3 +79,4 @@ class ActionAiMetadata(BaseModel):
             ),
         ),
     ]
+    product_categories: ActionProductCategories

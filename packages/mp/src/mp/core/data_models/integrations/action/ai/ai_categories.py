@@ -18,6 +18,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from mp.core.data_models.abc import RepresentableEnum
+
 
 class AiCategories(BaseModel):
     enrichment: Annotated[
@@ -88,3 +90,12 @@ def is_enrichment_action(action):
             )
         ),
     ]
+
+
+class ActionAiCategory(RepresentableEnum):
+    ENRICHMENT = "Enrichment"
+
+
+AI_CATEGORY_TO_DEF_AI_CATEGORY: dict[str, ActionAiCategory] = {
+    "enrichment": ActionAiCategory.ENRICHMENT,
+}

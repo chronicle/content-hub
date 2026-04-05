@@ -110,7 +110,7 @@ def st_valid_non_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict
     return st.sampled_from(param_type).map(lambda e: e.to_string())
 
 
-def st_valid_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
+def st_valid_built_param_type(param_type: type[Enum]) -> SearchStrategy[Any | str]:
     return st.sampled_from(param_type).flatmap(lambda e: st.sampled_from([e.value, str(e.value)]))
 
 
