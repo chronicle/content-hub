@@ -14,11 +14,10 @@
 
 from __future__ import annotations
 
+import enum
 from typing import Annotated
 
 from pydantic import BaseModel, Field
-
-from mp.core.data_models.abc import RepresentableEnum
 
 
 class ActionProductCategories(BaseModel):
@@ -27,7 +26,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Enrich IOC (hash, filename, IP, domain, URL, CVE, Threat Actor, Campaign)",
             description=(
-                "Returns reputation, prevalence, and threat intelligence"
+                "Expected Outcome:"
+                " Returns reputation, prevalence, and threat intelligence"
                 " (e.g., malware family, attribution) for the indicator."
             ),
         ),
@@ -37,7 +37,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Enrich Asset (hostname, user or internal resource)",
             description=(
-                "Returns contextual metadata (e.g., OS version, owner, department, MAC address)"
+                "Expected Outcome:"
+                " Returns contextual metadata (e.g., OS version, owner, department, MAC address)"
                 " for a user or resource."
             ),
         ),
@@ -47,7 +48,9 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Update Alert",
             description=(
-                "Changes the status, severity, or assignee of the alert within the SecOps platform."
+                "Expected Outcome:"
+                " Changes the status, severity, or assignee of the alert within the SecOps"
+                " platform."
             ),
         ),
     ] = False
@@ -56,7 +59,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Add Alert Comment",
             description=(
-                "Appends analyst notes or automated log entries to the alert's activity timeline."
+                "Expected Outcome:"
+                " Appends analyst notes or automated log entries to the alert's activity timeline."
             ),
         ),
     ] = False
@@ -65,7 +69,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Create Ticket",
             description=(
-                "Generates a new record in an external ITSM (e.g., Jira, ServiceNow) and returns"
+                "Expected Outcome:"
+                " Generates a new record in an external ITSM (e.g., Jira, ServiceNow) and returns"
                 " the Ticket ID."
             ),
         ),
@@ -75,7 +80,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Update Ticket",
             description=(
-                "Synchronizes status, priority, or field changes from SecOps to the external"
+                "Expected Outcome:"
+                " Synchronizes status, priority, or field changes from SecOps to the external"
                 " ticketing system."
             ),
         ),
@@ -85,8 +91,9 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Add IOC To Blocklist",
             description=(
-                "Updates security controls (Firewall, EDR, Proxy) to prevent any future interaction"
-                " with the IOC."
+                "Expected Outcome:"
+                " Updates security controls (Firewall, EDR, Proxy) to prevent any future"
+                " interaction with the IOC."
             ),
         ),
     ] = False
@@ -95,7 +102,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Remove IOC From Blocklist",
             description=(
-                "Restores connectivity or execution rights for an indicator by removing it from"
+                "Expected Outcome:"
+                " Restores connectivity or execution rights for an indicator by removing it from"
                 " restricted lists."
             ),
         ),
@@ -105,7 +113,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Add IOC To Allowlist",
             description=(
-                'Marks an indicator as "known good" to prevent future security alerts or false'
+                "Expected Outcome:"
+                ' Marks an indicator as "known good" to prevent future security alerts or false'
                 " positives."
             ),
         ),
@@ -115,7 +124,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Remove IOC From Allowlist",
             description=(
-                "Re-enables standard security monitoring and blocking for a previously trusted"
+                "Expected Outcome:"
+                " Re-enables standard security monitoring and blocking for a previously trusted"
                 " indicator."
             ),
         ),
@@ -125,8 +135,9 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Disable Identity (User, Account)",
             description=(
-                "Revokes active sessions and prevents a user or service account from authenticating"
-                " to the network."
+                "Expected Outcome:"
+                " Revokes active sessions and prevents a user or service account from"
+                " authenticating to the network."
             ),
         ),
     ] = False
@@ -135,7 +146,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Enable Identity (User, Account)",
             description=(
-                "Restores authentication capabilities and system access for a previously disabled"
+                "Expected Outcome:"
+                " Restores authentication capabilities and system access for a previously disabled"
                 " account."
             ),
         ),
@@ -145,7 +157,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Contain Host",
             description=(
-                "Isolates an endpoint from the network via EDR, allowing communication only with"
+                "Expected Outcome:"
+                " Isolates an endpoint from the network via EDR, allowing communication only with"
                 " the management console."
             ),
         ),
@@ -155,7 +168,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Uncontain Host",
             description=(
-                "Removes network isolation and restores the endpoint's full communication"
+                "Expected Outcome:"
+                " Removes network isolation and restores the endpoint's full communication"
                 " capabilities."
             ),
         ),
@@ -165,7 +179,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Reset Identity Password (User, Account)",
             description=(
-                "Invalidates the current credentials and triggers a password change or temporary"
+                "Expected Outcome:"
+                " Invalidates the current credentials and triggers a password change or temporary"
                 " password generation."
             ),
         ),
@@ -175,7 +190,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Update Identity (User, Account)",
             description=(
-                "Modifies account metadata, such as group memberships, permissions, or contact"
+                "Expected Outcome:"
+                " Modifies account metadata, such as group memberships, permissions, or contact"
                 " information."
             ),
         ),
@@ -185,8 +201,9 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Search Events",
             description=(
-                "Returns a collection of historical logs or telemetry data matching specific search"
-                " parameters."
+                "Expected Outcome:"
+                " Returns a collection of historical logs or telemetry data matching specific"
+                " search parameters."
             ),
         ),
     ] = False
@@ -195,7 +212,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Execute Command on the Host",
             description=(
-                "Runs a script or system command on a remote endpoint and returns the standard"
+                "Expected Outcome:"
+                " Runs a script or system command on a remote endpoint and returns the standard"
                 " output (STDOUT)."
             ),
         ),
@@ -205,7 +223,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Download File",
             description=(
-                "Retrieves a specific file from a remote host for local forensic analysis"
+                "Expected Outcome:"
+                " Retrieves a specific file from a remote host for local forensic analysis"
                 " or sandboxing."
             ),
         ),
@@ -215,7 +234,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Send Email",
             description=(
-                "Dispatches an outbound email notification or response to specified recipients."
+                "Expected Outcome:"
+                " Dispatches an outbound email notification or response to specified recipients."
             ),
         ),
     ] = False
@@ -224,7 +244,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Search Email",
             description=(
-                "Identifies and lists emails across the mail server based on criteria like sender,"
+                "Expected Outcome:"
+                " Identifies and lists emails across the mail server based on criteria like sender,"
                 " subject, or attachment."
             ),
         ),
@@ -234,7 +255,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Delete Email",
             description=(
-                "Removes a specific email or thread from one or more user mailboxes"
+                "Expected Outcome:"
+                " Removes a specific email or thread from one or more user mailboxes"
                 " (Purge/Withdraw)."
             ),
         ),
@@ -244,7 +266,8 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Update Email",
             description=(
-                "Modifies the state of an email, such as moving it to quarantine, marking as read,"
+                "Expected Outcome:"
+                " Modifies the state of an email, such as moving it to quarantine, marking as read,"
                 " or applying labels."
             ),
         ),
@@ -254,14 +277,15 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Submit File",
             description=(
-                "Uploads a file or sample to a sandbox or analysis engine"
+                "Expected Outcome:"
+                " Uploads a file or sample to a sandbox or analysis engine"
                 " (e.g., VirusTotal, Joe Sandbox) and returns a behavior report or threat score."
             ),
         ),
     ] = False
 
 
-class ActionProductCategory(RepresentableEnum):
+class ActionProductCategory(enum.StrEnum):
     ENRICH_IOC = "Enrich IOC (Indicator of Compromise)"
     ENRICH_ASSET = "Enrich Asset"
     UPDATE_ALERT = "Update Alert"

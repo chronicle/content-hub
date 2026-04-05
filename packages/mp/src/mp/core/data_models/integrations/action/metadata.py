@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Annotated, Any, NamedTuple, NotRequired, Self, TypedDict, cast
 
 import pydantic
-import yaml
 from PIL.GifImagePlugin import TYPE_CHECKING
 
 import mp.core.constants
@@ -58,7 +57,7 @@ class AiFields(NamedTuple):
     description: str | None
     ai_categories: list[ActionAiCategory]
     entity_types: list[EntityType]
-    action_categories: list[ActionProductCategory]
+    product_categories: list[ActionProductCategory]
 
 
 class BuiltActionMetadata(TypedDict):
@@ -79,7 +78,7 @@ class BuiltActionMetadata(TypedDict):
     AIDescription: str | None
     AICategories: NotRequired[list[str] | None]
     EntityTypes: NotRequired[list[str] | None]
-    ActionCategories: NotRequired[list[str] | None]
+    ActionProductCategories: NotRequired[list[str] | None]
 
 
 class NonBuiltActionMetadata(TypedDict):
@@ -100,7 +99,7 @@ class NonBuiltActionMetadata(TypedDict):
     ai_description: NotRequired[str | None]
     ai_categories: NotRequired[list[str]]
     entity_types: NotRequired[list[str]]
-    action_categories: NotRequired[list[str]]
+    action_product_categories: NotRequired[list[str]]
 
 
 class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
@@ -194,10 +193,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             action_metadata_json["dynamic_results_metadata"] = drms_with_json_contents
 
             ai_fields: AiFields = _get_ai_fields(action_metadata_json["name"], path)
-            action_metadata_json["ai_description"] = ai_fields.description
-            action_metadata_json["ai_categories"] = [c.value for c in ai_fields.ai_categories]
-            action_metadata_json["entity_types"] = [t.value for t in ai_fields.entity_types]
-            action_metadata_json["action_categories"] = [t.value for t in ai_fields.entity_types]
+            _update_non_built_with_ai_fields(action_metadata_json, ai_fields)
 
             metadata_object: Self = cls.from_non_built(p.stem, action_metadata_json)
             metadata_objects.append(metadata_object)
@@ -313,6 +309,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,
+            ActionProductCategories=[c.value for c in self.action_categories] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -390,10 +387,11 @@ def _load_json_examples(
 
 def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     empty_results: AiFields = AiFields(
-        description=None, ai_categories=[], entity_types=[], action_categories=[]
+        description=None, ai_categories=[], entity_types=[], product_categories=[]
     )
     if not integration_path.exists():
         return empty_results
+
     actions_desc: Path = (
         integration_path
         / mp.core.constants.RESOURCES_DIR
@@ -403,7 +401,7 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     if not actions_desc.exists():
         return empty_results
 
-    content: dict[str, Any] = yaml.safe_load(actions_desc.read_text(encoding="utf-8"))
+    content: dict[str, Any] = mp.core.file_utils.load_yaml_file(actions_desc)
     action_content: dict[str, Any] | None = content.get(action_name)
     if action_content is None:
         return empty_results
@@ -417,9 +415,18 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
             if is_true
         ],
         entity_types=ai_meta.entity_usage.entity_types,
-        action_categories=[
+        product_categories=[
             PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
             for category, is_true in ai_meta.product_categories.model_dump().items()
             if is_true
         ],
     )
+
+
+def _update_non_built_with_ai_fields(
+    non_built: NonBuiltActionMetadata, ai_fields: AiFields
+) -> None:
+    non_built["ai_description"] = ai_fields.description
+    non_built["ai_categories"] = [c.value for c in ai_fields.ai_categories]
+    non_built["entity_types"] = [t.value for t in ai_fields.entity_types]
+    non_built["action_product_categories"] = [c.value for c in ai_fields.product_categories]

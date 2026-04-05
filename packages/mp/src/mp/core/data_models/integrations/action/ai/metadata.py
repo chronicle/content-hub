@@ -79,4 +79,13 @@ class ActionAiMetadata(BaseModel):
             ),
         ),
     ]
-    product_categories: ActionProductCategories
+    product_categories: Annotated[
+        ActionProductCategories,
+        Field(
+            description=(
+                "Categories that describe the action's capabilities in its security product."
+                " It shows the category and explains the expected outcome of such"
+                " action."
+            )
+        ),
+    ]
