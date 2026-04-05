@@ -23,7 +23,6 @@ import typer
 
 import mp.core.config
 
-from .describe import DescribeIntegration
 from .describe_all import describe_all_integrations
 
 app = typer.Typer(help="Commands for describing integrations")
@@ -102,14 +101,12 @@ def describe(  # noqa: PLR0913
     run_params: mp.core.config.RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    if integrations:
-        sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
-        for integration in integrations:
-            asyncio.run(
-                DescribeIntegration(integration, src=src, dst=dst, override=override).describe(
-                    sem=sem
-                )
+    if integrations and not all_marketplace:
+        asyncio.run(
+            describe_all_integrations(
+                src=src, dst=dst, override=override, integrations=integrations
             )
+        )
     elif all_marketplace:
         asyncio.run(describe_all_integrations(src=src, dst=dst, override=override))
     else:

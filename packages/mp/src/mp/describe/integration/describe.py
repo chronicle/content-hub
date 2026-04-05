@@ -85,13 +85,17 @@ class DescribeIntegration(DescribeBase[IntegrationAiMetadata]):
                 self.integration, integration_name, status.out_path
             )
             prompts.append(await constructor.construct())
+
         return prompts
 
     async def _load_metadata(self) -> dict[str, Any]:
         resource_ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         metadata_file: anyio.Path = resource_ai_dir / self.metadata_file_name
-        metadata: dict[str, Any] = {}
+        if not await metadata_file.exists():
+            # Fallback to resources/
+            metadata_file = self.integration / constants.RESOURCES_DIR / self.metadata_file_name
 
+        metadata: dict[str, Any] = {}
         if await metadata_file.exists():
             content: str = await metadata_file.read_text()
             with contextlib.suppress(yaml.YAMLError):
@@ -118,11 +122,10 @@ class DescribeIntegration(DescribeBase[IntegrationAiMetadata]):
         metadata_file: anyio.Path = save_dir / self.metadata_file_name
 
         # For integrations, we don't want to key it by integration name in the file
-        integration_metadata = metadata.get(self.integration_name)
-
-        if not integration_metadata:
+        if not (integration_metadata := metadata.get(self.integration_name)):
             if await metadata_file.exists():
                 await metadata_file.unlink()
+
             return
 
         await save_dir.mkdir(parents=True, exist_ok=True)

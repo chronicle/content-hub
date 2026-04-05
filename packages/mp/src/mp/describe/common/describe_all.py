@@ -18,7 +18,7 @@ import abc
 import asyncio
 import collections
 import logging
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from rich.progress import (
     BarColumn,
@@ -36,9 +36,26 @@ from mp.core.file_utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
-    from .describe import DescribeBase
+
+class Describer(Protocol):
+    """Protocol for describer classes."""
+
+    async def get_resources_count(self) -> int:
+        """Get the number of resources to describe."""
+        ...
+
+    async def describe(
+        self,
+        sem: asyncio.Semaphore | None = None,
+        on_done: Callable[[], None] | None = None,
+        progress: Progress | None = None,
+    ) -> None:
+        """Describe resources."""
+        ...
+
 
 logger: logging.Logger = logging.getLogger(__name__)
 MAX_ACTIVE_INTEGRATIONS: int = 3
@@ -92,14 +109,14 @@ class MarketplaceOrchestratorBase(abc.ABC):
         )
 
     @abc.abstractmethod
-    def _create_describer(self, integration_name: str) -> DescribeBase:
+    def _create_describer(self, integration_name: str) -> Describer:
         """Create a describer for the given integration."""
         raise NotImplementedError
 
     async def _start_next_integration(self, progress: Progress) -> None:
         """Start describing the next integration in the queue."""
         path: Path = self.pending_paths.popleft()
-        describer: DescribeBase = self._create_describer(path.name)
+        describer: Describer = self._create_describer(path.name)
 
         # Pre-discover resource count to decide if we should start more
         count: int = await describer.get_resources_count()
@@ -166,10 +183,7 @@ class MarketplaceOrchestratorBase(abc.ABC):
                     try:
                         await it.task
                     except Exception:
-                        logger.exception(
-                            "Failed to describe integration %s",
-                            it.integration_name,
-                        )
+                        logger.exception("Failed to describe integration %s", it.integration_name)
 
 
 def get_all_integrations_paths(src: Path | None = None) -> list[Path]:

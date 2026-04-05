@@ -41,7 +41,7 @@ async def describe_all_content(
     Args:
         integration: The name of the integration.
         src: Customize the source folder to describe from.
-        dst: Customize destination folder to save the AI descriptions.
+        dst: Customize the destination folder to save the AI descriptions.
         override: Whether to rewrite existing descriptions.
 
     """

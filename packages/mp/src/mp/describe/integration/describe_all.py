@@ -14,24 +14,41 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from mp.describe.common.describe_all import (
     MarketplaceOrchestratorBase,
     get_all_integrations_paths,
 )
+from mp.describe.common.utils.paths import get_integration_path
 
 from .describe import DescribeIntegration
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 async def describe_all_integrations(
-    src: Path | None = None, dst: Path | None = None, *, override: bool = False
+    src: Path | None = None,
+    dst: Path | None = None,
+    *,
+    override: bool = False,
+    integrations: list[str] | None = None,
 ) -> None:
-    """Describe all integrations in the marketplace."""
-    integrations_paths: list[Path] = get_all_integrations_paths(src=src)
+    """Describe all integrations in the marketplace or specific ones.
+
+    Args:
+        src: Optional custom source path.
+        dst: Optional custom destination path.
+        override: Whether to rewrite existing descriptions.
+        integrations: Optional list of integration names to describe.
+
+    """
+    integrations_paths: list[Path]
+    if integrations:
+        integrations_paths = [
+            Path(str(get_integration_path(name, src=src))) for name in integrations
+        ]
+    else:
+        integrations_paths = get_all_integrations_paths(src=src)
+
     orchestrator = _MarketplaceOrchestrator(src, integrations_paths, dst=dst, override=override)
     await orchestrator.run()
 

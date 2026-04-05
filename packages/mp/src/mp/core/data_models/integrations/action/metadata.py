@@ -392,12 +392,21 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     if not integration_path.exists():
         return empty_results
 
+    # 1. Check in resources/ai/ (new standard)
     actions_desc: Path = (
         integration_path
         / mp.core.constants.RESOURCES_DIR
         / mp.core.constants.AI_DIR
         / mp.core.constants.ACTIONS_AI_DESCRIPTION_FILE
     )
+    if not actions_desc.exists():
+        # 2. Check in resources/ (fallback)
+        actions_desc = (
+            integration_path
+            / mp.core.constants.RESOURCES_DIR
+            / mp.core.constants.ACTIONS_AI_DESCRIPTION_FILE
+        )
+
     if not actions_desc.exists():
         return empty_results
 
@@ -409,17 +418,25 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     ai_meta: ActionAiMetadata = ActionAiMetadata.model_validate(action_content)
     return AiFields(
         description=ai_meta.ai_description,
-        ai_categories=[
-            AI_CATEGORY_TO_DEF_AI_CATEGORY[category]
-            for category, is_true in ai_meta.categories.model_dump().items()
-            if is_true
-        ],
-        entity_types=ai_meta.entity_usage.entity_types,
-        product_categories=[
-            PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
-            for category, is_true in ai_meta.product_categories.model_dump().items()
-            if is_true
-        ],
+        ai_categories=(
+            [
+                AI_CATEGORY_TO_DEF_AI_CATEGORY[category]
+                for category, is_true in ai_meta.categories.model_dump().items()
+                if is_true
+            ]
+            if ai_meta.categories
+            else []
+        ),
+        entity_types=ai_meta.entity_usage.entity_types if ai_meta.entity_usage else [],
+        product_categories=(
+            [
+                PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
+                for category, is_true in ai_meta.product_categories.model_dump().items()
+                if is_true
+            ]
+            if ai_meta.product_categories
+            else []
+        ),
     )
 
 

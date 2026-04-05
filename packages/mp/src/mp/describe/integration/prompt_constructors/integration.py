@@ -81,18 +81,14 @@ class IntegrationPromptConstructor(PromptConstructor):
         return "N/A"
 
     async def _get_description_from_def(self) -> str | None:
-        integration_def: anyio.Path = self.integration / constants.INTEGRATION_DEF_FILE.format(
-            self.integration_name
-        )
-        if not await integration_def.exists():
-            return None
+        # Search for any .def file in the root
+        async for def_file in self.integration.glob("Integration-*.def"):
+            content: str = await def_file.read_text(encoding="utf-8")
+            with contextlib.suppress(yaml.YAMLError):
+                data: NonBuiltIntegrationMetadata = yaml.safe_load(content)
+                if data and "description" in data:
+                    return data["description"]
 
-        content: str = await integration_def.read_text(encoding="utf-8")
-        with contextlib.suppress(yaml.YAMLError):
-            data: NonBuiltIntegrationMetadata = yaml.safe_load(content)
-            return data.get("description")
-
-        logger.warning("Failed to parse integration metadata %s", integration_def)
         return None
 
     async def _get_description_from_definition(self) -> str | None:
@@ -125,6 +121,12 @@ class IntegrationPromptConstructor(PromptConstructor):
     async def _get_actions_ai_descriptions(self) -> str:
         ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         actions_ai_file: anyio.Path = ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
+        if not await actions_ai_file.exists():
+            # Fallback to resources/
+            actions_ai_file = (
+                self.integration / constants.RESOURCES_DIR / constants.ACTIONS_AI_DESCRIPTION_FILE
+            )
+
         if await actions_ai_file.exists():
             return await actions_ai_file.read_text(encoding="utf-8")
         return "N/A"
@@ -132,6 +134,14 @@ class IntegrationPromptConstructor(PromptConstructor):
     async def _get_connectors_ai_descriptions(self) -> str:
         ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         connectors_ai_file: anyio.Path = ai_dir / constants.CONNECTORS_AI_DESCRIPTION_FILE
+        if not await connectors_ai_file.exists():
+            # Fallback to resources/
+            connectors_ai_file = (
+                self.integration
+                / constants.RESOURCES_DIR
+                / constants.CONNECTORS_AI_DESCRIPTION_FILE
+            )
+
         if await connectors_ai_file.exists():
             return await connectors_ai_file.read_text(encoding="utf-8")
         return "N/A"
@@ -139,6 +149,12 @@ class IntegrationPromptConstructor(PromptConstructor):
     async def _get_jobs_ai_descriptions(self) -> str:
         ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         jobs_ai_file: anyio.Path = ai_dir / constants.JOBS_AI_DESCRIPTION_FILE
+        if not await jobs_ai_file.exists():
+            # Fallback to resources/
+            jobs_ai_file = (
+                self.integration / constants.RESOURCES_DIR / constants.JOBS_AI_DESCRIPTION_FILE
+            )
+
         if await jobs_ai_file.exists():
             return await jobs_ai_file.read_text(encoding="utf-8")
         return "N/A"

@@ -222,8 +222,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         # Prune metadata for resources that no longer exist
         # Only for non-integration types which use resource names as keys
         if self.resource_type_name != "integration":
-            metadata_keys = list(metadata.keys())
-            for key in metadata_keys:
+            for key in list(metadata.keys()):
                 if key not in self.resource_names:
                     del metadata[key]
 
@@ -420,20 +419,22 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
 
         # If it's not built in the out directory, check if the integration itself is built
         if not is_built:
-            def_file: anyio.Path = self.integration / constants.INTEGRATION_DEF_FILE.format(
-                self.integration_name
-            )
-            if await def_file.exists():
+            # Look for any .def file in the integration directory
+            async for _f in self.integration.glob("Integration-*.def"):
                 is_built = True
                 out_path = self.integration
+                break
 
         return IntegrationStatus(is_built=is_built, out_path=out_path)
 
     async def _load_metadata(self) -> dict[str, Any]:
         resource_ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         metadata_file: anyio.Path = resource_ai_dir / self.metadata_file_name
-        metadata: dict[str, Any] = {}
+        if not await metadata_file.exists():
+            # Fallback to resources/
+            metadata_file = self.integration / constants.RESOURCES_DIR / self.metadata_file_name
 
+        metadata: dict[str, Any] = {}
         if await metadata_file.exists():
             content: str = await metadata_file.read_text()
             with contextlib.suppress(yaml.YAMLError):

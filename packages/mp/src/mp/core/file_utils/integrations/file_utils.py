@@ -20,6 +20,7 @@ Used for things such as path manipulation and file content operations.
 from __future__ import annotations
 
 import base64
+import contextlib
 import dataclasses
 import json
 import pathlib
@@ -228,8 +229,9 @@ def get_integrations_from_paths(*paths: Path) -> set[Path]:
             continue
 
         for dir_ in path.iterdir():
-            if is_integration(dir_):
-                integrations.add(dir_)
+            with contextlib.suppress(Exception):
+                if is_integration(dir_):
+                    integrations.add(dir_)
 
     return integrations
 
@@ -258,8 +260,7 @@ def is_integration(path: Path) -> bool:
     validator.validate_integration_components_parity()
 
     pyproject_toml: Path = path / constants.PROJECT_FILE
-    def_: Path = path / constants.INTEGRATION_DEF_FILE.format(path.name)
-    return pyproject_toml.exists() or def_.exists()
+    return pyproject_toml.exists() or _has_def_file(path)
 
 
 def replace_file_content(file: Path, replace_fn: Callable[[str], str]) -> None:
@@ -284,9 +285,7 @@ def is_built(integration: Path) -> bool:
 
     """
     pyproject: Path = integration / constants.PROJECT_FILE
-    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
-    definition_file: Path = integration / constants.DEFINITION_FILE
-    return not pyproject.exists() and def_file.exists() and not definition_file.exists()
+    return not pyproject.exists() and _has_def_file(integration)
 
 
 def is_half_built(integration: Path) -> bool:
@@ -297,8 +296,7 @@ def is_half_built(integration: Path) -> bool:
 
     """
     pyproject: Path = integration / constants.PROJECT_FILE
-    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
-    return pyproject.exists() and def_file.exists()
+    return pyproject.exists() and _has_def_file(integration)
 
 
 def is_non_built_integration(integration: Path) -> bool:
@@ -309,9 +307,18 @@ def is_non_built_integration(integration: Path) -> bool:
 
     """
     pyproject: Path = integration / constants.PROJECT_FILE
-    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
     definition_file: Path = integration / constants.DEFINITION_FILE
-    return pyproject.exists() and definition_file.exists() and not def_file.exists()
+    return pyproject.exists() and definition_file.exists() and not _has_def_file(integration)
+
+
+def _has_def_file(path: Path) -> bool:
+    """Check if the path contains an Integration-*.def file.
+
+    Returns:
+        True if it has a def file, False otherwise.
+
+    """
+    return any(path.glob("Integration-*.def"))
 
 
 def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: Path) -> None:

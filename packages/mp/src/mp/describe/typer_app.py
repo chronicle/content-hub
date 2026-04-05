@@ -17,6 +17,7 @@ import asyncio
 import pathlib  # noqa: TC003
 from typing import Annotated
 
+import rich
 import typer
 
 import mp.core.config
@@ -38,13 +39,21 @@ app.add_typer(job_app)
 @app.command(
     name="all-content",
     help=(
-        "Describe all content (actions, connectors, jobs, and the integration) for a given"
-        " integration."
+        "Describe all content (actions, connectors, jobs, and the integration) for integrations."
     ),
+    no_args_is_help=True,
 )
 def all_content(  # noqa: PLR0913
-    integration: Annotated[str, typer.Argument(help="Integration name")],
+    integrations: Annotated[list[str] | None, typer.Argument(help="Integration names")] = None,
     *,
+    all_marketplace: Annotated[
+        bool,
+        typer.Option(
+            "-a",
+            "--all",
+            help="Describe all content for all integrations in the marketplace",
+        ),
+    ] = False,
     src: Annotated[
         pathlib.Path | None,
         typer.Option(help="Customize source folder to describe from."),
@@ -78,8 +87,21 @@ def all_content(  # noqa: PLR0913
         ),
     ] = False,
 ) -> None:
-    """Describe all content in an integration."""
+    """Describe all content in integrations.
+
+    Raises:
+        typer.Exit: If neither integrations nor --all is specified.
+
+    """
     run_params: mp.core.config.RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    asyncio.run(describe_all_content(integration, src=src, dst=dst, override=override))
+    if integrations and not all_marketplace:
+        asyncio.run(
+            describe_all_content(src=src, dst=dst, override=override, integrations=integrations)
+        )
+    elif all_marketplace:
+        asyncio.run(describe_all_content(src=src, dst=dst, override=override))
+    else:
+        rich.print("[red]Please specify either an integration or --all[/red]")
+        raise typer.Exit(code=1)

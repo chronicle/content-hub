@@ -56,6 +56,13 @@ def mock_describe_integration() -> Generator[mock.MagicMock, None, None]:
         yield mock_class
 
 
+@pytest.fixture
+def mock_describe_all_integrations() -> Generator[mock.MagicMock, None, None]:
+    with mock.patch("mp.describe.integration.typer_app.describe_all_integrations") as mock_func:
+        mock_func.return_value = mock.AsyncMock()
+        yield mock_func
+
+
 def test_describe_action_cli(mock_describe_action: mock.MagicMock) -> None:
     # mp describe action [ACTIONS]... -i INTEGRATION
     result = runner.invoke(app, ["action", "ping", "get_logs", "-i", "aws_ec2"])
@@ -86,21 +93,33 @@ def test_describe_job_cli(mock_describe_job: mock.MagicMock) -> None:
     assert args[1] == {"my_job"}
 
 
-def test_describe_integration_cli(mock_describe_integration: mock.MagicMock) -> None:
+def test_describe_integration_cli(mock_describe_all_integrations: mock.MagicMock) -> None:
     # mp describe integration [INTEGRATIONS]...
     result = runner.invoke(app, ["integration", "int1", "int2"])
     assert result.exit_code == 0
-    assert mock_describe_integration.call_count == 2
-    # Check first call
-    args, _ = mock_describe_integration.call_args_list[0]
-    assert args[0] == "int1"
-    # Check second call
-    args, _ = mock_describe_integration.call_args_list[1]
-    assert args[0] == "int2"
+    mock_describe_all_integrations.assert_called_once_with(
+        src=None, dst=None, override=False, integrations=["int1", "int2"]
+    )
+
+
+def test_describe_integration_all_cli(mock_describe_all_integrations: mock.MagicMock) -> None:
+    # mp describe integration --all
+    result = runner.invoke(app, ["integration", "--all"])
+    assert result.exit_code == 0
+    mock_describe_all_integrations.assert_called_once_with(src=None, dst=None, override=False)
 
 
 def test_all_content_cli() -> None:
     with mock.patch("mp.describe.typer_app.describe_all_content") as mock_all:
         result = runner.invoke(app, ["all-content", "my_int"])
         assert result.exit_code == 0
-        mock_all.assert_called_once_with("my_int", src=None, dst=None, override=False)
+        mock_all.assert_called_once_with(
+            src=None, dst=None, override=False, integrations=["my_int"]
+        )
+
+
+def test_all_content_all_cli() -> None:
+    with mock.patch("mp.describe.typer_app.describe_all_content") as mock_all:
+        result = runner.invoke(app, ["all-content", "--all"])
+        assert result.exit_code == 0
+        mock_all.assert_called_once_with(src=None, dst=None, override=False)

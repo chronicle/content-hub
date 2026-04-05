@@ -63,6 +63,29 @@ def mock_integration_full(tmp_path: Path) -> Path:
         yaml.safe_dump({"description": "Mock integration description"}), encoding="utf-8"
     )
 
+    # Create pyproject.toml
+    (integration_path / constants.PROJECT_FILE).write_text(
+        '[project]\nname = "mock_integration"\n', encoding="utf-8"
+    )
+
+    return integration_path
+
+
+@pytest.fixture
+def mock_integration_another(tmp_path: Path) -> Path:
+    integration_path = tmp_path / "another_integration"
+    integration_path.mkdir()
+
+    # Only integration definition
+    (integration_path / constants.DEFINITION_FILE).write_text(
+        yaml.safe_dump({"description": "Another integration"}), encoding="utf-8"
+    )
+
+    # Create pyproject.toml
+    (integration_path / constants.PROJECT_FILE).write_text(
+        '[project]\nname = "another_integration"\n', encoding="utf-8"
+    )
+
     return integration_path
 
 
@@ -107,3 +130,33 @@ async def test_describe_all_content(mock_integration_full: Path) -> None:
     # Verify integration AI description
     content = yaml.safe_load((ai_dir / constants.INTEGRATIONS_AI_DESCRIPTION_FILE).read_text())
     assert content["endpoint_security"] is True
+
+
+@pytest.mark.anyio
+async def test_describe_all_all_content(
+    mock_integration_full: Path, mock_integration_another: Path
+) -> None:
+    # Mock LLM response to avoid API calls
+    integration_response = mock.Mock()
+    integration_response.model_dump.return_value = {"endpoint_security": True}
+
+    with mock.patch(
+        "mp.describe.common.utils.llm.call_gemini_bulk", return_value=[integration_response]
+    ):
+        await describe_all_all_content(
+            src=mock_integration_full.parent,
+        )
+
+    # Verify both were processed
+    assert (
+        mock_integration_full
+        / constants.RESOURCES_DIR
+        / constants.AI_DIR
+        / constants.INTEGRATIONS_AI_DESCRIPTION_FILE
+    ).exists()
+    assert (
+        mock_integration_another
+        / constants.RESOURCES_DIR
+        / constants.AI_DIR
+        / constants.INTEGRATIONS_AI_DESCRIPTION_FILE
+    ).exists()

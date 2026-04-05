@@ -58,7 +58,7 @@ class ActionAiMetadata(BaseModel):
             description=(
                 "Fields that describe how the action operates. Determine these fields based on the"
                 "metadata json and the code itself."
-            )
+            ),
         ),
     ]
     categories: Annotated[
@@ -67,7 +67,7 @@ class ActionAiMetadata(BaseModel):
             description=(
                 "Categories that describe the action's capabilities."
                 " These tags are inferred based on the fields."
-            )
+            ),
         ),
     ]
     entity_usage: Annotated[
@@ -86,6 +86,6 @@ class ActionAiMetadata(BaseModel):
                 "Categories that describe the action's capabilities in its security product."
                 " It shows the category and explains the expected outcome of such"
                 " action."
-            )
+            ),
         ),
     ]

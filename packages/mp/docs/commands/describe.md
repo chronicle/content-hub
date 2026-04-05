@@ -75,18 +75,19 @@ mp describe integration [INTEGRATIONS]... [OPTIONS]
 
 ## `mp describe all-content`
 
-Describe all content (actions, connectors, jobs, and the integration) for a given integration.
+Describe all content (actions, connectors, jobs, and the integration) for integrations.
 
 ### Usage
 
 ```bash
-mp describe all-content [INTEGRATION] [OPTIONS]
+mp describe all-content [INTEGRATIONS]... [OPTIONS]
 ```
 
 ### Options
 
 | Option       | Shorthand | Description                                          | Type   | Default |
 |:-------------|:----------|:-----------------------------------------------------|:-------|:--------|
+| `--all`      | `-a`      | Describe all content for all integrations.           | `bool` | `False` |
 | `--override` | `-o`      | Rewrite content that already have their description. | `bool` | `False` |
 | `--quiet`    | `-q`      | Log less on runtime.                                 | `bool` | `False` |
 | `--verbose`  | `-v`      | Log more on runtime.                                 | `bool` | `False` |
