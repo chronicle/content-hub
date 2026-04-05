@@ -84,6 +84,7 @@ OUT_WIDGETS_META_DIR: str = "Widgets"
 
 AI_DIR: str = "ai"
 ACTIONS_AI_DESCRIPTION_FILE: str = "actions_ai_description.yaml"
+INTEGRATIONS_AI_DESCRIPTION_FILE: str = "integrations_ai_description.yaml"
 
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"
