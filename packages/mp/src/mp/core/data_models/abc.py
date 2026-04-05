@@ -23,7 +23,6 @@ import pydantic
 import yaml
 
 import mp.core.file_utils
-from mp.core.utils.common.utils import trim_values
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -125,6 +124,8 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_Buildable = cls._from_built(built)
         except (KeyError, ValueError) as e:
@@ -147,6 +148,8 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_Buildable = cls._from_non_built(non_built)
         except (KeyError, ValueError) as e:
@@ -220,6 +223,8 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_BuildableComponent = cls._from_built(file_name, built)
         except (KeyError, ValueError) as e:
@@ -243,6 +248,8 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             metadata: T_BuildableComponent = cls._from_non_built(file_name, non_built)
         except (KeyError, ValueError) as e:
