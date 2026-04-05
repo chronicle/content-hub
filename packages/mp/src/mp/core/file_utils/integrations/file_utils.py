@@ -459,7 +459,7 @@ def write_str_to_json_file(json_path: Path, json_content: JsonString) -> None:
         json.dump(json_content, f_json, indent=4)
 
 
-def load_yaml_file(path: Path) -> dict[str, Any]:
+def load_yaml_file(path: Path) -> Any:  # noqa: ANN401
     """Read a file and loads its content as YAML.
 
     Returns:
@@ -470,10 +470,31 @@ def load_yaml_file(path: Path) -> dict[str, Any]:
 
     """
     try:
-        content = path.read_text(encoding="utf-8")
+        content: str = path.read_text(encoding="utf-8")
         return yaml.safe_load(content)
     except yaml.YAMLError as e:
         msg = f"Failed to load or parse YAML from file: {path}"
+        raise ValueError(msg) from e
+    except FileNotFoundError as e:
+        msg = f"File {path} does not exist"
+        raise ValueError(msg) from e
+
+
+def load_json_file(path: Path) -> Any:  # noqa: ANN401
+    """Read a file and loads its content as JSON.
+
+    Returns:
+        The decoded JSON content of the JSON file if it exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid JSON.
+
+    """
+    try:
+        content: str = path.read_text(encoding="utf-8")
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        msg = f"Failed to load or parse JSON from file: {path}"
         raise ValueError(msg) from e
     except FileNotFoundError as e:
         msg = f"File {path} does not exist"
