@@ -15,34 +15,33 @@
 from __future__ import annotations
 
 import abc
-from string import Template
+from typing import TYPE_CHECKING
 
-import anyio
+if TYPE_CHECKING:
+    from string import Template
 
-from mp.describe.common.prompt_constructors.prompt_constructor import (
-    PromptConstructor as BasePromptConstructor,
-)
+    import anyio
 
 
-class PromptConstructor(BasePromptConstructor, abc.ABC):
+class PromptConstructor(abc.ABC):
     __slots__: tuple[str, ...] = (
-        "action_file_name",
-        "action_name",
+        "integration",
+        "integration_name",
+        "out_path",
     )
 
     def __init__(
         self,
         integration: anyio.Path,
         integration_name: str,
-        action_name: str,
-        action_file_name: str,
         out_path: anyio.Path,
     ) -> None:
-        super().__init__(integration, integration_name, out_path)
-        self.action_name: str = action_name
-        self.action_file_name: str = action_file_name
+        self.integration: anyio.Path = integration
+        self.integration_name: str = integration_name
+        self.out_path: anyio.Path = out_path
 
     @staticmethod
+    @abc.abstractmethod
     async def get_task_prompt() -> Template:
         """Get the task prompt.
 
@@ -50,8 +49,7 @@ class PromptConstructor(BasePromptConstructor, abc.ABC):
             Template: The task prompt.
 
         """
-        prompt_file: anyio.Path = anyio.Path(__file__).parent.parent / "prompts" / "task.md"
-        return Template(await prompt_file.read_text(encoding="utf-8"))
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def construct(self) -> str:
@@ -62,3 +60,9 @@ class PromptConstructor(BasePromptConstructor, abc.ABC):
 
         """
         raise NotImplementedError
+
+    @property
+    async def task_prompt(self) -> Template:
+        """Get the task prompt (compatibility property)."""
+        # Compatibility property
+        return await self.get_task_prompt()

@@ -21,26 +21,25 @@ from mp.describe.common.describe_all import (
     get_all_integrations_paths,
 )
 
-from .describe import DescribeAction
+from .describe import DescribeIntegration
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-async def describe_all_actions(
+async def describe_all_integrations(
     src: Path | None = None, dst: Path | None = None, *, override: bool = False
 ) -> None:
-    """Describe all actions in all integrations in the marketplace."""
+    """Describe all integrations in the marketplace."""
     integrations_paths: list[Path] = get_all_integrations_paths(src=src)
     orchestrator = _MarketplaceOrchestrator(src, integrations_paths, dst=dst, override=override)
     await orchestrator.run()
 
 
 class _MarketplaceOrchestrator(MarketplaceOrchestratorBase):
-    def _create_describer(self, integration_name: str) -> DescribeAction:
-        return DescribeAction(
+    def _create_describer(self, integration_name: str) -> DescribeIntegration:
+        return DescribeIntegration(
             integration=integration_name,
-            actions=set(),
             src=self.src,
             dst=self.dst,
             override=self.override,

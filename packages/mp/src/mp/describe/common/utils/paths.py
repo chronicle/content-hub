@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+import pathlib
 
 import anyio
 import typer
@@ -24,10 +24,8 @@ from mp.core.custom_types import RepositoryType
 from mp.core.file_utils import (
     create_or_get_out_integrations_dir,
     get_integration_base_folders_paths,
+    is_integration,
 )
-
-if TYPE_CHECKING:
-    import pathlib
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -57,12 +55,20 @@ def _get_source_integration_path(name: str, src: pathlib.Path) -> anyio.Path:
 
 
 def _get_marketplace_integration_path(name: str) -> anyio.Path:
+    # First, check if name is a direct path to an integration
+    if (p := pathlib.Path(name)).exists() and is_integration(p):
+        return anyio.Path(p)
+
     base_paths: list[pathlib.Path] = []
-    for repo_type in [RepositoryType.COMMERCIAL, RepositoryType.THIRD_PARTY]:
+    for repo_type in [
+        RepositoryType.COMMERCIAL,
+        RepositoryType.THIRD_PARTY,
+        RepositoryType.CUSTOM,
+    ]:
         base_paths.extend(get_integration_base_folders_paths(repo_type.value))
 
     for path in base_paths:
-        if (p := path / name).exists():
+        if (p := path / name).exists() and is_integration(p):
             return anyio.Path(p)
 
     logger.error("Integration '%s' not found in marketplace", name)

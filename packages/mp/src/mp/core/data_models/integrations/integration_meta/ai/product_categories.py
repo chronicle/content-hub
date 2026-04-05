@@ -190,6 +190,7 @@ class IntegrationProductCategory(enum.StrEnum):
 PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY: dict[str, IntegrationProductCategory] = {
     "siem": IntegrationProductCategory.SIEM,
     "edr": IntegrationProductCategory.EDR,
+    "network_security": IntegrationProductCategory.NETWORK_SECURITY,
     "threat_intelligence": IntegrationProductCategory.THREAT_INTELLIGENCE,
     "email_security": IntegrationProductCategory.EMAIL_SECURITY,
     "iam_and_identity_management": IntegrationProductCategory.IAM_AND_IDENTITY_MANAGEMENT,

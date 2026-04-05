@@ -16,7 +16,9 @@ from __future__ import annotations
 import typer
 
 from .action.typer_app import app as action_app
+from .integration.typer_app import app as integration_app
 
 app: typer.Typer = typer.Typer(help="Commands for creating description for content using Gemini")
 
 app.add_typer(action_app)
+app.add_typer(integration_app)

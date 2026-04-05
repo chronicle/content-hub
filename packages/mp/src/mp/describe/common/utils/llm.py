@@ -18,8 +18,8 @@ import contextlib
 from typing import TYPE_CHECKING, TypeVar
 
 import anyio
+from pydantic import BaseModel
 
-from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
 from mp.core.llm.gemini import Gemini, GeminiConfig
 
 if TYPE_CHECKING:
@@ -31,23 +31,26 @@ GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
 GEMINI_TEMPERATURE: float = 0.1
 DESCRIBE_BULK_SIZE: int = 4
 
-T_Schema = TypeVar("T_Schema")
+T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
-async def call_gemini_bulk(prompts: list[str]) -> list[ActionAiMetadata | str]:
+async def call_gemini_bulk(
+    prompts: list[str], response_json_schema: type[T_Schema]
+) -> list[T_Schema | str]:
     """Call Gemini to describe multiple prompts in bulk.
 
     Args:
         prompts: The prompts to send.
+        response_json_schema: The schema for the response.
 
     Returns:
-        list[ActionAiMetadata | str]: The responses from Gemini.
+        list[T_Schema | str]: The responses from Gemini.
 
     """
     async with create_llm_session() as gemini:
         return await gemini.send_bulk_messages(
             prompts,
-            response_json_schema=ActionAiMetadata,
+            response_json_schema=response_json_schema,
         )
 
 
