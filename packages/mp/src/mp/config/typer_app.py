@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 from typing import Annotated
 
@@ -93,13 +94,25 @@ def config(
         n: int = mp.core.config.get_processes_number()
         c: int = mp.core.config.get_gemini_concurrency()
         k: str | None = mp.core.config.get_gemini_api_key()
+        env_k: str | None = os.environ.get("GEMINI_API_KEY")
+
+        display_k: str = "N/A"
         if k:
-            k = f"{k[:4]}{'*' * (len(k) - 4)}"
+            display_k = f"{k[:4]}{'*' * (len(k) - 4)} (from config)"
+            if env_k and k != env_k:
+                display_k += (
+                    f"\n[yellow]Warning: GEMINI_API_KEY environment variable is also set "
+                    f"({env_k[:4]}{'*' * (len(env_k) - 4)}), but the configuration above "
+                    "takes priority.[/yellow]"
+                )
+        elif env_k:
+            display_k = f"{env_k[:4]}{'*' * (len(env_k) - 4)} (from GEMINI_API_KEY env var)"
+
         rich.print(
             f"Marketplace path: {p}\n"
             f"Number of processes: {n}\n"
             f"Gemini concurrency: {c}\n"
-            f"API Key: {k}"
+            f"API Key: {display_k}"
         )
 
 

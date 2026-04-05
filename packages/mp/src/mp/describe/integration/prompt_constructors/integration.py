@@ -14,9 +14,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from string import Template
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import anyio
 import yaml
@@ -59,21 +60,64 @@ class IntegrationPromptConstructor(PromptConstructor):
         })
 
     async def _get_integration_description(self) -> str:
-        # We need to read the integration description from its metadata file.
-        # It's usually in integration_name.yaml or integration_name.json
-        # But we can try to find it.
+        # Try to find the description in various metadata files.
+        # Order: .def file (built), definition.yaml (source), pyproject.toml (source)
+
+        # 1. Check for built integration metadata (.def file)
+        if desc := await self._get_description_from_def():
+            return desc
+
+        # 2. Check for source integration metadata (definition.yaml)
+        if desc := await self._get_description_from_definition():
+            return desc
+
+        # 3. Check for pyproject.toml (standard PEP 621)
+        if desc := await self._get_description_from_pyproject():
+            return desc
+
+        return "N/A"
+
+    async def _get_description_from_def(self) -> str | None:
         integration_def: anyio.Path = self.integration / constants.INTEGRATION_DEF_FILE.format(
             self.integration_name
         )
-        if await integration_def.exists():
-            content: str = await integration_def.read_text(encoding="utf-8")
-            try:
-                data: NonBuiltIntegrationMetadata = yaml.safe_load(content)
-                return data.get("description", "N/A")
-            except yaml.YAMLError:
-                logger.warning("Failed to parse integration metadata %s", integration_def)
+        if not await integration_def.exists():
+            return None
 
-        return "N/A"
+        content: str = await integration_def.read_text(encoding="utf-8")
+        with contextlib.suppress(yaml.YAMLError):
+            data: NonBuiltIntegrationMetadata = yaml.safe_load(content)
+            return data.get("description")
+
+        logger.warning("Failed to parse integration metadata %s", integration_def)
+        return None
+
+    async def _get_description_from_definition(self) -> str | None:
+        definition_file: anyio.Path = self.integration / constants.DEFINITION_FILE
+        if not await definition_file.exists():
+            return None
+
+        content: str = await definition_file.read_text(encoding="utf-8")
+        with contextlib.suppress(yaml.YAMLError):
+            data: NonBuiltIntegrationMetadata = yaml.safe_load(content)
+            return data.get("description")
+
+        logger.warning("Failed to parse definition file %s", definition_file)
+        return None
+
+    async def _get_description_from_pyproject(self) -> str | None:
+        pyproject_file: anyio.Path = self.integration / constants.PROJECT_FILE
+        if not await pyproject_file.exists():
+            return None
+
+        content: str = await pyproject_file.read_text(encoding="utf-8")
+        with contextlib.suppress(yaml.YAMLError):
+            data: dict[str, Any] = yaml.safe_load(content)
+            if project_data := data.get("project"):
+                return project_data.get("description")
+
+        logger.warning("Failed to parse pyproject file %s", pyproject_file)
+        return None
 
     async def _get_actions_ai_descriptions(self) -> str:
         ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
