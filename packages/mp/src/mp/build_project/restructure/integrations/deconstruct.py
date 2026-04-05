@@ -46,6 +46,11 @@ from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNot
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
+from mp.core.data_models.integrations.integration_meta.ai.metadata import IntegrationAiMetadata
+from mp.core.data_models.integrations.integration_meta.ai.product_categories import (
+    PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY,
+    IntegrationProductCategories,
+)
 from mp.core.data_models.integrations.integration_meta.metadata import (
     IntegrationMetadata,
     PythonVersion,
@@ -169,6 +174,26 @@ class DeconstructIntegration:
 
         self._create_png_image(resources_dir)
         self._create_svg_logo(resources_dir)
+        self._create_ai_description_file(resources_dir)
+
+    def _create_ai_description_file(self, resources_dir: Path) -> None:
+        ai_dir: Path = resources_dir / mp.core.constants.AI_DIR
+        ai_dir.mkdir(exist_ok=True, parents=True)
+
+        categories_dict: dict[str, bool] = {
+            category: (
+                PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
+                in self.integration.metadata.product_categories
+            )
+            for category in PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY
+        }
+
+        ai_meta = IntegrationAiMetadata(
+            product_categories=IntegrationProductCategories(**categories_dict)
+        )
+
+        ai_file: Path = ai_dir / mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE
+        mp.core.file_utils.write_yaml_to_file(ai_meta.model_dump(), ai_file)
 
     def _create_png_image(self, resources_dir: Path) -> None:
         if self.integration.metadata.image_base64:

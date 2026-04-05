@@ -72,6 +72,8 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         "--no-dev",
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
@@ -175,6 +177,8 @@ def download_wheels_from_requirements(
         "cp",
         "--platform",
         "none-any",
+        "--index-url",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
@@ -218,6 +222,8 @@ def add_dependencies_to_toml(
         "add",
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     base_command.extend(runtime_config)
@@ -238,10 +244,6 @@ def _add_regular_dependencies_to_toml(
         return
     deps_command: list[str] = base_command.copy()
     deps_command.extend(deps_to_add)
-    deps_command.extend([
-        "--default-index",
-        "https://pypi.org/simple",
-    ])
     try:
         sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
 
@@ -545,6 +547,8 @@ def check_lock_file(project_path: Path) -> None:
         str(project_path),
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
 
     runtime_config: list[str] = _get_runtime_config()
