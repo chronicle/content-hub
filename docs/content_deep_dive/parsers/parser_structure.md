@@ -39,7 +39,7 @@ Each subdirectory under folder `cbn/` will contain the following files:
   "supported_format": "SYSLOG,CSV", // (Optional)
   "category": "Identity and Access Management", // (Optional)
   "description": "Parses audit logs from Azure Product.", // (Optional)
-  "references": "", // (Optional)
+  "references": "" // (Optional)
 }
 ```
 * **log_type**: The specific Google Security Operations LogType identifier (e.g., APACHE, GCP_CLOUDAUDIT).
