@@ -73,6 +73,7 @@ from TIPCommon.rest.soar_api import (
     import_package,
     import_playbooks,
     import_simulated_case,
+    save_case_title_settings, #QA fixes
     save_integration_instance_settings,
     save_playbook,
     set_mappings_visual_family,
@@ -485,10 +486,16 @@ class SiemplifyApiClient:
         return get_case_title_settings(self.siemplify_soar)
 
 
-    def save_case_title_settings(self, settings):
-        res = self.session.post("settings/SaveCaseTitleSettings", json=settings)
-        self.validate_response(res)
-        return True
+    def save_case_title_settings(self, settings):#QA fixes
+        items = settings.get("items") if isinstance(settings, dict) else settings
+        for item in items:
+            save_case_title_settings(
+                self.siemplify_soar,
+                name=item.get("name"),
+                display_name=item.get("displayName"),
+                value=item.get("value") or "Null",
+                type_=item.get("type"),
+            )
 
     def get_case_stages(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         """Gets case stages.

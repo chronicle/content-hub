@@ -214,12 +214,12 @@ INTEGRATION_README_TEMPLATE = """{% if integration.has_resources -%}
 {{ integration.definition.Description }}
 
 Python Version - {{ integration.definition.PythonVersion }}
-{% if integration.definition.IntegrationProperties -%}
+{% if integration.definition.Parameters or integration.definition.IntegrationProperties -%}
 #### Parameters
 |Name|Description|IsMandatory|Type|DefaultValue|
 |----|-----------|-----------|----|------------|
-{% for param in integration.definition.IntegrationProperties -%}
-|{{ param.PropertyDisplayName }}|{{ param.PropertyDescription|replace('\n', '') }}|{{ param.IsMandatory }}|{{ param.PropertyType|base_param_type }}|{% if param.PropertyType != 3 %}{{ param.Value }}{% else %}*****{% endif %}|
+{% for param in integration.definition.Parameters or integration.definition.IntegrationProperties -%}
+|{{ param.PropertyDisplayName or param.PropertyName }}|{{ param.PropertyDescription|replace('\n', '') or param.Description|replace('\n', '') }}|{{ param.IsMandatory or param.Mandatory }}|{{ param.Type or param.PropertyType|base_param_type }}|{% if param.Type or param.PropertyType != 3 %}{{ param.Value }}{% else %}*****{% endif %}|
 {% endfor -%}
 {% endif %}
 {% if integration.dependencies %}
@@ -240,7 +240,7 @@ Timeout - {{ action.TimeoutSeconds }} Seconds\n
 |Name|Description|IsMandatory|Type|DefaultValue|
 |----|-----------|-----------|----|------------|
 {% for param in action.Parameters -%}
-|{{ param.Name }}|{{ param.Description|replace('\n', '') }}|{{ param.IsMandatory }}|{{ param.Type|action_param_type }}|{% if param.Type != 12 %}{{ param.Value }}{% else %}*****{% endif %}|
+|{{ param.Name or param.DisplayName }}|{{ param.Description|replace('\n', '') }}|{{ param.IsMandatory or param.Mandatory }}|{{ param.Type|action_param_type }}|{% if param.Type != 12 %}{{ param.Value }}{% else %}*****{% endif %}|
 {% endfor %}
 {% endif %}
 {% if action.DynamicResultsMetadata %}
@@ -265,7 +265,7 @@ Timeout - {{ action.TimeoutSeconds }} Seconds\n
 |Name|IsMandatory|Type|DefaultValue|
 |----|-----------|----|------------|
 {% for param in job.Parameters -%}
-|{{ param.Name }}|{{ param.IsMandatory }}|{{ param.Type|base_param_type }}|{% if param.Type != 3 %}{{ param.DefaultValue }}{% else %}*****{% endif %}|
+|{{ param.Name or param.DisplayName }}|{{ param.IsMandatory or param.Mandatory }}|{{ param.Type|base_param_type }}|{% if param.Type != 3 %}{{ param.DefaultValue }}{% else %}*****{% endif %}|
 {% endfor -%}
 {% endif -%}
 {% endfor -%}
@@ -280,7 +280,7 @@ Timeout - {{ action.TimeoutSeconds }} Seconds\n
 |Name|Description|IsMandatory|Type|DefaultValue|
 |----|-----------|-----------|----|------------|
 {% for param in connector.Parameters -%}
-|{{ param.Name }}|{{ param.Description|replace('\n', '') }}|{{ param.IsMandatory }}|{{ param.Type|base_param_type }}|{% if param.Type != 3 %}{{ param.DefaultValue }}{% else %}*****{% endif %}|
+|{{ param.Name or param.DisplayName }}|{{ param.Description|replace('\n', '') }}|{{ param.IsMandatory or param.Mandatory }}|{{ param.Type|base_param_type }}|{% if param.Type != 3 %}{{ param.DefaultValue }}{% else %}*****{% endif %}|
 {% endfor -%}
 {% endif %}
 {% if connector.Rules %}
@@ -328,14 +328,14 @@ CONNECTOR_README = """# {{ connector.displayName }}
 
 Integration: {{ connector.integration }}\n
 Integration Version: {{ connector.integrationVersion }}\n
-Device Product Field: {{ connector.deviceProductField }}\n
-Event Name Field: {{ connector.eventNameField }}
+Device Product Field: {{ connector.deviceProductField or connector.productFieldName }}\n
+Event Name Field: {{ connector.eventNameField or connector.eventFieldName }}
 ### Parameters
 |Name|Description|Is Mandatory|Value|
 |----|-----------|------------|-----|
 {% for param in connector.params -%}
-{% if param.isDisplayed == True -%}
-|{{ param.paramName }}|{{ param.description }}|{{ param.isMandatory }}|{% if param.Type != 3 %}{{ param.paramValue }}{% else %}*****{% endif %}|
+{% if param.isDisplayed is not defined or param.isDisplayed == True -%}
+|{{ param.paramName or param.displayName }}|{{ param.description }}|{{ param.isMandatory or param.mandatory }}|{% if param.Type or param.type != 3 %}{{ param.paramValue or param.value }}{% else %}*****{% endif %}|
 {% endif -%}
 {% endfor -%}
 
