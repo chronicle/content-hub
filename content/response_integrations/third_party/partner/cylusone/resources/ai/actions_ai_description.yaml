@@ -3,52 +3,46 @@ EnrichAssetInformation:
     ### General Description
 
     Enriches IP Address entities with detailed asset information retrieved from the
-    CylusOne platform. This action is designed to provide security analysts with deeper
-    context regarding network assets by fetching metadata such as MAC addresses, associated
-    IP lists, and custom asset properties. The retrieved data is mapped directly to
-    the entity's additional properties within Google SecOps, facilitating better informed
-    incident response.
+    CylusOne platform. This action is designed to provide security analysts with contextual
+    metadata about network assets, such as MAC addresses, associated IPs, and custom
+    asset properties, directly within the Google SecOps case.
 
 
     ### Parameters Description
 
-    There are no action-specific parameters for this action. It relies on the global
-    integration configuration (Base URL, API Key, and Verify SSL).
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    - The action specifically targets entities of type **ADDRESS** (IP addresses).
+
+    - Enriched data is added to the entity's `additional_properties` with a `Cylus_`
+    prefix.
+
+    - The action marks the entity as `is_enriched = True` upon successful data retrieval.
 
 
     ### Flow Description
 
     1. **Initialization**: The action initializes the CylusOne API manager using the
-    integration's global configuration parameters.
+    integration's base URL and API key.
 
-    2. **Entity Filtering**: It iterates through all target entities in the current
-    context, specifically filtering for those of type `ADDRESS` (IP Address).
+    2. **Entity Filtering**: It iterates through the target entities in the current
+    context, filtering for those of type `ADDRESS` and validating that they follow
+    a proper IPv4 format.
 
-    3. **Validation**: Each IP address is validated against a standard IPv4 regex
-    pattern to ensure API compatibility.
+    3. **Data Retrieval**: For each valid IP address, the action performs a GET request
+    to the CylusOne `/rest/v1/assets/by-ip` endpoint.
 
-    4. **Data Retrieval**: For each valid IP, the action performs a GET request to
-    the CylusOne `/rest/v1/assets/by-ip` endpoint.
+    4. **Data Processing**: If an asset is found, the action flattens the JSON response,
+    formatting list fields (like MACs) and custom properties into a key-value structure.
 
-    5. **Data Transformation**: If an asset is found, the action flattens the response
-    data. Custom properties are prefixed with `Cylus_prop_`, and list-based fields
-    (like MACs) are converted into comma-separated strings.
+    5. **Internal Update**: The processed metadata is appended to the entity's additional
+    properties, and the entity is updated within the Google SecOps platform.
 
-    6. **Internal Update**: The processed enrichment data is added to the entity's
-    `additional_properties` dictionary, and the entity's `is_enriched` status is set
-    to `True`.
-
-    7. **Finalization**: The action updates the entities in the Google SecOps platform
-    and returns a JSON object containing the enrichment results for all processed
-    identifiers.
-
-
-    ### Additional Notes
-
-    - This action only supports IPv4 addresses.
-
-    - If an asset is not found in CylusOne for a specific IP, the action will report
-    a failure for that specific entity but continue processing others.
+    6. **Finalization**: The action returns a summary message indicating which entities
+    were successfully enriched and which failed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -59,8 +53,8 @@ EnrichAssetInformation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with asset metadata from CylusOne and sets
-      the 'is_enriched' flag to true for successful lookups.
+      Updates entity additional properties with asset information from Cylus and sets
+      the 'is_enriched' flag to true.
   categories:
     enrichment: true
   entity_usage:
@@ -79,49 +73,53 @@ EnrichAssetInformation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests the connectivity between Google SecOps and the CylusOne platform. This action
-    verifies that the provided Base URL and API Key are correct and that the network
-    connection is functional.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies entirely on
-    the integration's global configuration parameters:
-
-    * **Base URL**: The root URL of the CylusOne API.
-
-    * **Cylus API Key**: The API key used for authentication.
-
-    * **Verify SSL**: Boolean flag indicating whether to verify the SSL certificate
-    of the CylusOne server.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: Retrieves the integration's configuration parameters
-    (Base URL, API Key, and SSL verification setting) using utility functions.
-
-    2. **API Initialization**: Initializes the `ApiManager` with the retrieved credentials
-    and session headers.
-
-    3. **Connectivity Test**: Executes the `test_connectivity` method, which performs
-    a GET request to a sample asset endpoint (`/rest/v1/assets/by-ip`) using a placeholder
-    IP address to verify authentication and network reachability.
-
-    4. **Result Reporting**: Returns a success status if the API responds with a valid
-    status code (200 or 404). If the request fails (e.g., 401 Unauthorized, 403 Forbidden,
-    or connection timeout), it captures the error and reports a failure.
-
-
-    ### Additional Notes
-
-    This is a standard health check action. Per system rules, actions named 'Ping'
-    are not categorized as enrichment actions.
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between the Google SecOps platform and the\
+    \ CylusOne instance. It ensures that the provided Base URL is reachable and that\
+    \ the API Key is valid by performing a test API call. This action is typically\
+    \ used during the initial setup or for troubleshooting communication issues.\n\
+    \n### Parameters Description\nThere are no action-specific parameters for this\
+    \ action. It relies entirely on the integration's global configuration parameters\
+    \ (Base URL, API Key, and Verify SSL).\n\n### Flow Description\n1. **Parameter\
+    \ Extraction:** The action retrieves the global integration settings, including\
+    \ the Base URL, API Key, and SSL verification preference.\n2. **API Initialization:**\
+    \ An API Manager instance is created using the retrieved credentials.\n3. **Connectivity\
+    \ Test:** The action executes a `GET` request to a sample asset endpoint (`/rest/v1/assets/by-ip`)\
+    \ using a dummy IP address.\n4. **Response Validation:** \n    * If the API returns\
+    \ a `200 OK` or `404 Not Found` (indicating the service is reachable even if the\
+    \ dummy IP doesn't exist), the connection is considered successful.\n    * If\
+    \ the API returns `401` or `403`, it identifies authentication or permission errors.\n\
+    \    * If a connection timeout or network error occurs, it captures the specific\
+    \ failure reason.\n5. **Final Result:** The action reports a success or failure\
+    \ status along with a descriptive message to the Siemplify interface.\n\n### Additional\
+    \ Notes\nThis action does not process any entities and does not modify any data\
+    \ within CylusOne or Google SecOps."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -149,3 +147,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

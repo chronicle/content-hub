@@ -1,0 +1,129 @@
+Cron Scheduled Connector:
+  ai_description: >-
+    ### General Description
+
+    The **Cron Scheduled Connector** is a utility integration designed to generate
+    synthetic alerts within Google SecOps based on a user-defined schedule. Unlike
+    traditional connectors that fetch data from external security products, this connector
+    creates internal alerts using a Cron expression. It is primarily used to trigger
+    periodic playbooks for tasks such as system health checks, automated reporting,
+    or recurring maintenance workflows.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert fields | String | Yes | A JSON-formatted string (e.g., `{"key": "value"}`)
+    containing custom data to be included in the alert extensions. |
+
+    | Alert name | String | Yes | The display name for the generated alert. |
+
+    | Alert type | String | No | The category or rule generator for the alert. Defaults
+    to "Scheduled Alert" if not provided. |
+
+    | Cron Expression | String | No | A standard Cron expression (e.g., `*/5 * * *
+    *`) that defines the schedule for alert creation. |
+
+    | DeviceProductField | String | Yes | The field name used to identify the device
+    product in the event mapping. |
+
+    | EventClassId | String | Yes | The field name used to identify the event class
+    or sub-type. |
+
+    | Product name | String | No | The product name associated with the generated
+    alert. |
+
+    | PythonProcessTimeout | String | Yes | The maximum execution time (in seconds)
+    allowed for the connector script. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The connector retrieves the configuration parameters, including
+    the alert metadata and the Cron expression.
+
+    2. **Schedule Validation**: The script uses the `cronex` library to compare the
+    current system time against the provided Cron expression.
+
+    3. **Condition Check**: If the current time matches the Cron schedule (or if no
+    schedule is provided), the connector proceeds to alert generation.
+
+    4. **Data Parsing**: The `Alert fields` JSON string is parsed into a dictionary
+    to be used as alert extensions.
+
+    5. **Case Creation**: A `CaseInfo` object is instantiated with a unique UUID.
+    The script populates the case with the configured Alert Name, Product, Type, and
+    a default priority of "Medium" (60).
+
+    6. **Event Generation**: A single synthetic event is created containing the start
+    time and product details, which is then attached to the case.
+
+    7. **Ingestion**: The completed case is returned to Google SecOps, where it triggers
+    playbooks matching the alert's properties.
+Scheduled Connector:
+  ai_description: >-
+    ### General Description
+
+    This connector is designed to programmatically trigger playbooks within Google
+    SecOps by creating synthetic alerts. It allows users to define specific alert
+    metadata, such as product name, alert type, and custom fields, which are then
+    ingested as a new case. This is particularly useful for testing playbook logic,
+    simulating specific threat scenarios, or creating scheduled tasks that require
+    a case-based trigger.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert fields | String | Yes | A JSON-formatted string containing key-value pairs
+    (e.g., `{"key": "value"}`) to be added as extensions to the alert. |
+
+    | Alert name | String | Yes | The name assigned to the created alert and case.
+    |
+
+    | Alert type | String | No | The type of alert, which maps to the `rule_generator`
+    field in the case. Defaults to "Scheduled Alert" if not provided. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product (metadata requirement). |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    or sub-type (metadata requirement). |
+
+    | Product name | String | No | The product name associated with the alert, used
+    for playbook routing. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process running the current script. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The connector retrieves configuration parameters,
+    including the alert name, product name, alert type, and custom fields from the
+    connector settings.
+
+    2. **Data Parsing**: It parses the `Alert fields` JSON string into a dictionary
+    to be used for case extensions.
+
+    3. **Identity Generation**: A unique UUID is generated to serve as the `ticket_id`,
+    `display_id`, and `source_grouping_identifier` for the new case.
+
+    4. **Case Construction**: A `CaseInfo` object is created and populated with the
+    provided metadata. The priority is hardcoded to 60 (Medium), and the vendor is
+    set to "Siemplify".
+
+    5. **Extension Mapping**: All key-value pairs provided in the `Alert fields` parameter
+    are added to the case's extensions.
+
+    6. **Event Creation**: A single event is generated containing the start/end time,
+    name, and product details, and is attached to the case.
+
+    7. **Ingestion**: The constructed case is returned to the Google SecOps platform,
+    where it triggers playbooks based on the defined product and alert criteria.

@@ -1,10 +1,10 @@
 Check IP Reputation:
   ai_description: >-
-    Checks the reputation of IP address entities using the AbuseIPDB API. This action
-    retrieves detailed threat intelligence, including abuse confidence scores, country
-    information, ISP details, and recent report history. It enriches the entities
-    within Google SecOps by adding these details as attributes and can automatically
-    mark entities as suspicious if they exceed a user-defined confidence threshold.
+    Enriches IP Address entities by retrieving reputation data from AbuseIPDB. This
+    action checks if an IP address has been reported for malicious activity, providing
+    details such as the abuse confidence score, ISP, domain, and country. It allows
+    for filtering out internal addresses to conserve API quota and can automatically
+    mark entities as suspicious based on a configurable threshold.
 
 
     ### Parameters
@@ -13,41 +13,50 @@ Check IP Reputation:
 
     | :--- | :--- | :--- | :--- |
 
-    | Exclude Internal Addresses | Boolean | No | If set to `true` (default), the
-    action will skip any IP addresses marked as internal to save API quota. |
+    | Exclude Internal Addresses | boolean | No | If set to true, the action will
+    skip any address entities marked as internal in Google SecOps. Default is true.
+    |
 
-    | Suspicious Threshold | String | Yes | An abuse confidence score (0-100). If
-    the IP's score is equal to or higher than this value, the entity is marked as
-    suspicious in the platform. Set to 0 to disable this logic. |
+    | Suspicious Threshold | string | Yes | An abuse confidence score (0-100) equal
+    to or above this value will mark the entity as suspicious. Set to 0 to disable
+    this logic. |
 
-    | Create Insight | Boolean | No | If `true` (default), creates a formatted insight
-    on the entity containing key reputation data. |
+    | Create Insight | boolean | No | If true, creates a detailed insight on the entity's
+    case wall containing the reputation report summary. Default is true. |
 
-    | Max Age in Days | String | Yes | Specifies the time range (in days) for which
-    AbuseIPDB should check for reports. Default is 90. |
+    | Max Age in Days | string | Yes | Specifies the timeframe (in days) for the reputation
+    report (e.g., check reports from the last 90 days). |
+
+
+    ### Additional Notes
+
+    - The action specifically targets `ADDRESS` entities.
+
+    - Data retrieved from AbuseIPDB is mapped to the entity's additional properties
+    with the prefix `AbuseIPDB_`.
 
 
     ### Flow Description
 
-    1. **Filter Entities:** The action identifies all `ADDRESS` entities in the current
-    scope. If `Exclude Internal Addresses` is enabled, it filters out entities where
-    `is_internal` is true.
+    1. **Filter Entities:** Identifies all `ADDRESS` entities in the current scope.
+    If `Exclude Internal Addresses` is enabled, it filters out entities where `is_internal`
+    is true.
 
-    2. **API Query:** For each valid IP, the action sends a GET request to the AbuseIPDB
-    `/check` endpoint, passing the IP and the `Max Age in Days` parameter.
+    2. **API Request:** For each valid IP, it queries the AbuseIPDB API using the
+    provided API key and the `Max Age in Days` parameter.
 
-    3. **Data Enrichment:** The retrieved data (e.g., ISP, Domain, Country, Confidence
-    Score) is mapped to the entity's additional properties with the prefix `AbuseIPDB_`.
+    3. **Data Mapping:** Parses the API response and populates the entity's additional
+    properties (e.g., `AbuseIPDB_isp`, `AbuseIPDB_abuseConfidenceScore`).
 
-    4. **Suspicious Evaluation:** The action compares the `abuseConfidenceScore` against
-    the `Suspicious Threshold`. If the threshold is met, the entity's `is_suspicious`
-    flag is set to true.
+    4. **Suspicious Evaluation:** Compares the retrieved `abuseConfidenceScore` against
+    the `Suspicious Threshold`. If the score meets or exceeds the threshold, the entity
+    is marked as suspicious.
 
-    5. **Insight Generation:** If enabled, a detailed HTML insight is created for
-    the entity, summarizing the reputation findings.
+    5. **Insight Creation:** If `Create Insight` is enabled, a formatted HTML insight
+    is added to the entity in the SecOps case.
 
-    6. **Update:** The action updates the entities in the Google SecOps case and returns
-    the raw JSON data for further use in the playbook.
+    6. **Update Entities:** Updates the entities in the Google SecOps platform with
+    the new enrichment data and status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -58,8 +67,8 @@ Check IP Reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes with reputation data, sets the suspicious status based
-      on the confidence score, and creates case insights.
+      Updates entity attributes with reputation data, sets the suspicious status of
+      entities, and creates case insights.
   categories:
     enrichment: true
   entity_usage:
@@ -78,25 +87,83 @@ Check IP Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
   ai_description: >-
-    ### General Description Tests the connectivity to the AbuseIPDB service to verify
-    that the provided API key and configuration are valid. This action is typically
-    used during the initial setup or troubleshooting of the integration. ### Parameters
-    Description | Parameter | Type | Mandatory | Description | | :--- | :--- | :---
-    | :--- | | Api Key | String | Yes | The API key required to authenticate with
-    the AbuseIPDB API. This is an integration configuration parameter. | | Verify
-    SSL | Boolean | No | If enabled, the action will verify the SSL certificate of
-    the AbuseIPDB API endpoint. This is an integration configuration parameter. Default
-    is False. | ### Flow Description 1. **Initialization**: The action retrieves the
-    API Key and SSL verification preference from the integration settings. 2. **Connectivity
-    Test**: It attempts to query the AbuseIPDB 'check' endpoint using a dummy IP address
-    (1.1.1.1). 3. **Validation**: The response is checked for success. If the API
-    key is invalid, a specific error is caught and reported. 4. **Completion**: The
-    action returns 'true' and a success message if the connection is established,
-    or 'false' with an error message if the connection fails. ### Additional Notes
-    There are no action-specific parameters; it relies entirely on the integration's
-    configuration. This action does not process or affect any entities in the environment.
+    ### General Description
+
+    The Ping action is a utility designed to verify the connectivity between Google
+    SecOps and the AbuseIPDB API. It ensures that the provided API key is valid and
+    that the network path to the service is open. This is typically used during the
+    initial setup or troubleshooting of the integration.
+
+
+    ### Parameters Description
+
+    This action does not have any action-specific parameters. It relies solely on
+    the integration's global configuration parameters:
+
+
+    | Parameter Name | Expected Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Key | String | Yes | The API key used to authenticate requests to AbuseIPDB.
+    |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the AbuseIPDB API endpoint. Defaults to False. |
+
+
+    ### Additional Notes
+
+    *   The action performs a test lookup for a dummy IP address (1.1.1.1) to validate
+    the API response.
+
+    *   If the API key is invalid, the action will return a failure state with a specific
+    error message regarding forbidden access.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action retrieves the global configuration (API Key
+    and SSL verification settings).
+
+    2.  **Connectivity Test**: The action calls the AbuseIPDB manager to perform a
+    `test_connectivity` operation.
+
+    3.  **API Request**: The manager executes a GET request to the AbuseIPDB 'check'
+    endpoint using a hardcoded dummy IP (1.1.1.1).
+
+    4.  **Validation**: The response is checked for HTTP errors (e.g., 403 Forbidden
+    for invalid keys or 204 for rate limits).
+
+    5.  **Outcome**: If the request is successful, the action returns 'true'. If an
+    exception occurs or the key is invalid, it returns 'false' and logs the error.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -124,3 +191,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

@@ -2,56 +2,57 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches **USER** entities (email addresses) using the Full Contact API. This
-    action retrieves comprehensive data about both the individual (e.g., job title,
-    gender, LinkedIn profile) and the organization associated with their email domain
-    (e.g., company name, industry, employee count, location). It enhances the context
-    of a case by populating entity properties with external identity and firmographic
-    intelligence.
+    Enriches User entities with detailed person and company information using the
+    Full Contact API. This action takes the email address from a User entity, extracts
+    the domain, and queries Full Contact to retrieve professional and organizational
+    metadata. The retrieved data is then mapped to the entity's additional properties
+    within Google SecOps, providing analysts with deeper context about the individuals
+    and organizations involved in an alert.
 
 
     ### Parameters Description
 
-    There are no parameters for this action.
+    There are no action-specific parameters for this action. It relies on the 'API
+    Key' configured in the integration settings.
 
 
     ### Additional Notes
 
-    * The action requires a valid Full Contact API Key to be configured in the integration
-    settings.
+    * This action specifically targets entities of type **USER**.
 
-    * It specifically targets entities of type **USER** (interpreted as email addresses).
+    * It performs two types of enrichment: Person enrichment (using the full email)
+    and Company enrichment (using the email domain).
 
-    * It handles the asynchronous nature of the Full Contact API by polling when a
-    `202 Accepted` status is received during domain enrichment.
+    * The action handles HTTP 202 (Accepted) responses from Full Contact by polling
+    until the data is ready.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: Fetches the API Key from the 'Full Contact' integration
+    1. **Configuration Retrieval:** Fetches the Full Contact API Key from the integration
     configuration.
 
-    2. **Entity Filtering**: Iterates through the target entities and selects those
-    identified as `USER` types.
+    2. **Entity Filtering:** Iterates through the target entities and identifies those
+    of type `USER`.
 
-    3. **Domain Extraction**: Parses the email address of the user entity to extract
-    the domain name.
+    3. **Data Extraction:** For each User entity, extracts the full email address
+    and the domain part of the email.
 
-    4. **Company Enrichment**: Queries the Full Contact `company.enrich` endpoint
-    using the extracted domain. It includes logic to retry if the API returns a 202
-    status.
+    4. **Company Enrichment:** Queries the Full Contact `company.enrich` endpoint
+    using the extracted domain to get details like company name, size, industry, and
+    location.
 
-    5. **Person Enrichment**: Queries the Full Contact `person.enrich` endpoint using
-    the user's email address.
+    5. **Person Enrichment:** Queries the Full Contact `person.enrich` endpoint using
+    the email address to get details like gender, job title, and LinkedIn profile.
 
-    6. **Data Mapping**: Maps the retrieved JSON data (Company Name, Industry, Founded
-    Year, Employees, Website, Location, Gender, Title, LinkedIn) to a local dictionary.
+    6. **Internal Mutation:** Maps the retrieved data points to the entity's `additional_properties`
+    (e.g., `FullContact_CompanyName`, `FullContact_Person_Linkedin`).
 
-    7. **Internal Update**: Updates the `additional_properties` of the entity within
-    Google SecOps with the enriched data.
+    7. **Entity Update:** Updates the entities in Google SecOps with the new enriched
+    attributes.
 
-    8. **Finalization**: Updates the entities in the case and returns a JSON result
-    containing the enrichment details for all processed entities.
+    8. **Result Reporting:** Returns a JSON result containing the raw enrichment data
+    for each successfully enriched entity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -62,8 +63,8 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' field of USER entities with data retrieved
-      from Full Contact.
+      Updates the 'additional_properties' attribute of User entities with enriched
+      data retrieved from Full Contact.
   categories:
     enrichment: true
   entity_usage:
@@ -82,42 +83,69 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
   ai_description: >-
     ### General Description
 
     The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the Full Contact service. Its primary purpose is to ensure that the integration's
-    API Key is correctly configured and that the environment can successfully communicate
-    with the Full Contact API endpoints.
+    and the Full Contact API. Its primary purpose is to ensure that the integration's
+    configuration, specifically the API Key, is correct and that the service is reachable.
 
 
     ### Parameters Description
 
-    There are no user-facing parameters for this action. It relies entirely on the
-    'API Key' provided in the integration's configuration settings.
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action fetches the 'API Key' from the Full
-    Contact integration configuration.
-
-    2. **API Connection Attempt**: It initializes a connection to the Full Contact
-    API and performs a test request to the company enrichment endpoint (`https://api.fullcontact.com/v3/company.enrich`)
-    using the hardcoded domain 'google.com'.
-
-    3. **Validation**: The action checks the response from the API. If a 401 Unauthorized
-    status is returned, it raises an exception to notify the user of invalid credentials.
-
-    4. **Result Reporting**: If the request is successful, the action returns a success
-    message and a boolean result of `True`.
+    There are no parameters for this action.
 
 
     ### Additional Notes
 
-    This action does not interact with or process any entities within a case. It is
-    a diagnostic tool used for integration setup and troubleshooting.
+    This action performs a test enrichment request using a hardcoded domain ('google.com')
+    against the Full Contact Company Enrichment API. It is used as a diagnostic tool
+    rather than a functional enrichment step for case entities.
+
+
+    ### Flow Description
+
+    1. **Retrieve Configuration:** The action fetches the 'API Key' from the Full
+    Contact integration settings.
+
+    2. **Initialize Manager:** It sets up the `FullContactManager` with the provided
+    credentials.
+
+    3. **Execute Test Request:** The action sends a POST request to the `https://api.fullcontact.com/v3/company.enrich`
+    endpoint for the domain 'google.com'.
+
+    4. **Error Handling:** It specifically monitors for a 401 Unauthorized status
+    code. If detected, it raises an exception to notify the user of an authentication
+    failure.
+
+    5. **Finalize:** If the request completes without authentication errors, the action
+    returns a success status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -145,3 +173,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

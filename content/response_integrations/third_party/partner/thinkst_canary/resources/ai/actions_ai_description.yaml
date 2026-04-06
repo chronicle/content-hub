@@ -2,47 +2,50 @@ Acknowledge Console Alert:
   ai_description: >-
     ### General Description
 
-
-    Acknowledges an alert on the Thinkst Canary console. This action allows analysts
-    to programmatically mark Canary incidents as acknowledged directly from the Google
-    SecOps interface, ensuring synchronization between the SOAR and the Canary platform.
+    The **Acknowledge Console Alert** action is designed to change the status of a
+    specific incident to 'acknowledged' within the Thinkst Canary console. This action
+    is typically used as a response step in a playbook to synchronize the state of
+    an alert between Google SecOps and the Canary management environment, ensuring
+    that analysts do not need to manually acknowledge the same alert in multiple consoles.
 
 
     ### Parameters Description
 
-
-    | Parameter | Type | Mandatory | Description |
+    | Parameter Name | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | None | N/A | N/A | This action does not take any input parameters. It automatically
-    identifies the alert to acknowledge using the `AlertId` stored in the alert's
-    metadata. |
+    | None | N/A | N/A | This action does not require any direct input parameters.
+    It relies on the context of the current alert and the integration's global configuration
+    (API Key and Console Hash). |
 
 
     ### Additional Notes
 
+    - **Prerequisites:** This action requires that the alert in Google SecOps was
+    originally ingested via the Thinkst Canary connector, as it relies on the `AlertId`
+    being present in the `additional_properties` of the alert's security events.
 
-    This action requires the `AlertId` to be present in the `additional_properties`
-    of the first security event of the alert. This ID is typically populated automatically
-    by the Thinkst Canary connector when the alert is ingested. If the `AlertId` is
-    missing, the action will fail.
+    - **Configuration:** The action uses the global 'API Key' and 'Console Hash' defined
+    in the Thinkst integration settings.
 
 
     ### Flow Description
 
+    1. **Configuration Retrieval:** The action fetches the API Key, Console Hash,
+    and SSL verification settings from the integration configuration.
 
-    1. **Extract Configuration**: Retrieves the API Key, Console Hash, and SSL verification
-    settings from the integration configuration.
+    2. **Incident Identification:** It accesses the `security_events` of the current
+    alert in Google SecOps and extracts the `AlertId` from the `additional_properties`
+    of the first event.
 
-    2. **Identify Incident**: Accesses the current alert's security events and extracts
-    the `AlertId` from the `additional_properties` field of the first event.
+    3. **API Request:** The action constructs a POST request to the Thinkst Canary
+    API endpoint `/incident/acknowledge`, passing the `AlertId` as the `incident`
+    parameter.
 
-    3. **API Request**: Sends a POST request to the `/api/v1/incident/acknowledge`
-    endpoint on the Canary Console using the extracted `AlertId`.
-
-    4. **Finalize**: Reports the outcome of the acknowledgement request (success or
-    failure) to the case wall.
+    4. **Outcome Validation:** It checks the API response. If the response indicates
+    success, the action completes successfully; otherwise, it fails with an error
+    message explaining the issue (e.g., missing AlertId or API error).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -51,8 +54,8 @@ Acknowledge Console Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of an incident on the Thinkst Canary console to 'acknowledged'
-      via a POST request to the API.
+      Updates the status of an incident to 'acknowledged' on the Thinkst Canary console
+      via a POST request to the /incident/acknowledge endpoint.
     fetches_data: false
     internal_data_mutation_explanation: null
   categories:
@@ -72,63 +75,76 @@ Acknowledge Console Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility used to verify the connectivity and
-    authentication credentials between Google SecOps and the Thinkst Canary Console.
-    It ensures that the provided API Key and Console Hash are valid and that the network
-    path to the Canary API is open.
+    The **Ping** action is a connectivity utility designed to verify the communication
+    between Google SecOps and the Thinkst Canary Console. It validates that the provided
+    API Key and Console Hash are correct and that the network path is open. This action
+    is typically used during initial setup or troubleshooting to ensure the integration
+    is properly configured.
 
 
     ### Parameters Description
 
-    This action does not have any action-specific parameters. It relies entirely on
+    There are no action-specific parameters for this action. It relies entirely on
     the integration's global configuration parameters:
 
+    * **API Key**: The authentication token for the Canary Console.
 
-    | Parameter | Type | Mandatory | Description |
+    * **Console Hash**: The unique identifier/subdomain for your Canary Console.
 
-    | :--- | :--- | :--- | :--- |
-
-    | **API Key** | String | Yes | The authentication token used to access the Thinkst
-    Canary API. |
-
-    | **Console Hash** | String | Yes | The unique subdomain identifier for your Canary
-    Console (e.g., the 'example' in 'example.canary.tools'). |
-
-    | **Verify SSL** | Boolean | No | Determines whether to verify the SSL certificate
-    of the Canary Console. |
-
-
-    ### Additional Notes
-
-    * This action will fail immediately if the **API Key** or **Console Hash** are
-    left as their default placeholder values.
-
-    * Per Google SecOps standards, Ping actions are used for health checks and do
-    not contribute to case enrichment or data mutation.
+    * **Verify SSL**: Determines whether to validate the SSL certificate of the console.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The script retrieves the global configuration for
-    the Thinkst integration, including the API Key, Console Hash, and SSL verification
-    setting.
+    1. **Configuration Extraction**: The action retrieves the API Key, Console Hash,
+    and SSL verification settings from the integration configuration.
 
-    2. **Validation:** It checks if the API Key and Console Hash have been changed
-    from their default values. If not, the action fails with an error message.
+    2. **Validation**: It checks if the API Key and Console Hash are provided and
+    are not the default placeholder values.
 
-    3. **Manager Initialization:** It initializes the `ThinkstActionManager` which
-    sets up the HTTP session and base URL for the Canary API.
+    3. **Manager Initialization**: Initializes the `ThinkstActionManager` with the
+    connection details.
 
-    4. **Connectivity Check:** The script calls the `/api/v1/ping` endpoint using
-    a GET request.
+    4. **API Call**: Executes a GET request to the `/api/v1/ping` endpoint of the
+    Canary Console.
 
-    5. **Result Processing:** If the API returns a JSON response with a 'success'
-    result, the action completes successfully. Otherwise, it reports a connection
-    failure.
+    5. **Result Evaluation**: If the API returns a success result, the action completes
+    successfully; otherwise, it reports a failure.
+
+
+    ### Additional Notes
+
+    This action does not process any entities and does not modify any data within
+    Google SecOps or the Thinkst Canary environment.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -156,3 +172,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

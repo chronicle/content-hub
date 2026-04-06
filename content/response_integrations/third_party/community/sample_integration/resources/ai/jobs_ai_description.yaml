@@ -1,0 +1,52 @@
+Simple Job Example:
+  ai_description: >-
+    ### General Description
+
+    This job performs automated case management and data enrichment within Google
+    SecOps. It identifies open cases based on specific tags to either automate the
+    closure process or enrich the case with real-time financial data. Specifically,
+    it handles cases tagged with "Closed" by closing them formally in the system and
+    handles cases tagged with "Currency" by fetching and posting the latest EUR exchange
+    rates from the vatcomply API. The job includes a state-management mechanism (context)
+    to ensure that enrichment comments are added only once per case per day.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The root URL for the vatcomply API service (default:
+    `https://api.vatcomply.com`). |
+
+    | Password Field | Password | No | A placeholder password field used for demonstration
+    purposes; the current API does not require authentication. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the job validates the SSL certificate
+    of the API service during connection. |
+
+
+    ### Flow Description
+
+    1. **Initialize API Client**: Establishes a connection to the external API service
+    using the provided root URL and SSL settings.
+
+    2. **Load Job Context**: Retrieves the persistent state from Google SecOps to
+    track the current date and a list of cases that have already received currency
+    updates.
+
+    3. **Fetch Target Cases**: Queries the SOAR platform for open cases that possess
+    either the "Closed" or "Currency" tags, limited to a predefined processing threshold.
+
+    4. **Automated Case Closure**: For every case tagged with "Closed", the job executes
+    a closure command with the reason "Maintenance" and a standard system comment.
+
+    5. **Currency Enrichment**: For cases tagged with "Currency" (and not already
+    processed in the current session):
+        * Calls the external API to retrieve the latest exchange rate for EUR.
+        * Posts a formatted comment to the case wall containing the exchange rate
+    and the retrieval date.
+    6. **State Persistence**: Updates the job context with the IDs of newly enriched
+    cases and saves the state back to the platform to prevent duplicate comments in
+    the next execution cycle.

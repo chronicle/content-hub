@@ -1,58 +1,67 @@
 ANYRUN TI Lookup:
   ai_description: >-
-    ### General Description
+    Performs threat intelligence lookups on ANY.RUN for specific entities or raw queries.
+    This action retrieves threat levels and detailed intelligence reports, providing
+    analysts with context on potentially malicious indicators. It supports lookups
+    for IP addresses, domains, URLs, processes, and file hashes. The action attaches
+    a full JSON summary of the intelligence report to the case wall and adds comments
+    with direct lookup links and a summary of the findings.
 
-    Performs threat intelligence lookups using the ANY.RUN TI Lookup service. This
-    action allows users to query for specific entities (IPs, Domains, URLs, Processes,
-    Filehashes) or provide a raw ANY.RUN query string to retrieve detailed threat
-    analysis. The results include threat levels (Malicious, Suspicious, Unknown) and
-    full JSON reports.
 
+    ### Parameters
 
-    ### Parameters Description
+    | Parameter | Description | Type | Mandatory | Default Value |
 
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
+    | :--- | :--- | :--- | :--- | :--- |
 
     | Lookup Depth | Specify the number of days from the current date for which you
-    want to lookup. | String | Yes |
+    want to lookup. | string | Yes | 90 |
 
     | Query | Raw query with necessary filters. Supports condition concatenation with
-    AND, OR, NOT and Parentheses (). | String | No |
+    AND, OR, NOT and Parentheses (). | string | No |  |
 
-    | Identifiers | The target case entity identifiers. | String | Yes |
+    | Identifiers | The target case entity identifiers. | string | Yes | [Entity.Identifier]
+    |
 
-    | Types | The target case entity types. | String | Yes |
+    | Types | The target case entity types. | string | Yes | [Entity.Type] |
 
 
     ### Additional Notes
 
-    The action requires either a raw query or a list of entity identifiers and types.
-    If the 'Query' parameter is provided, the action will prioritize it and perform
-    a lookup based on the query string. If 'Query' is empty, the action will iterate
-    through the provided entities and perform lookups for supported types (Address,
-    IPSet, DestinationURL, Domain, Process, and Filehash).
+    * If the **Query** parameter is provided, the action will perform a raw query
+    lookup and ignore the **Identifiers** and **Types** parameters.
+
+    * Supported entity types include: ADDRESS, IPSET, DestinationURL, DOMAIN, PROCESS,
+    and FILEHASH.
+
+    * The action requires an ANY.RUN TI Lookup API KEY to be configured in the integration
+    settings.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieve action parameters (Lookup Depth, Query,
-    Identifiers, Types) and integration settings (API Key, SSL verification).
+    1. **Initialization:** Extract action parameters (Lookup Depth, Query, Identifiers,
+    Types) and integration configuration (API Key, Verify SSL, Proxy settings).
 
-    2. **Lookup Mode Selection**: Check if a raw query is provided. If so, proceed
-    with query lookup; otherwise, process the list of entities.
+    2. **Query Execution:** If a raw **Query** is provided, the action performs a
+    single lookup using that query.
 
-    3. **API Interaction**: For the query or each supported entity, call the ANY.RUN
-    TI Lookup API to fetch intelligence data.
+    3. **Entity Processing:** If no raw query is provided, the action iterates through
+    the provided **Identifiers** and **Types**.
 
-    4. **Internal Data Updates**: For each successful lookup:
-        - Add a comment to the case with a direct link to the ANY.RUN portal.
-        - Save the complete JSON intelligence report as an attachment to the case
-    wall.
-        - Calculate a verdict based on the threat level score.
-    5. **Summary Reporting**: Aggregate the results for all processed items into a
-    summary table and add it as a final comment to the case.
+    4. **Type Validation:** For each entity, it checks if the type is supported (Address,
+    IPSet, DestinationURL, Domain, Process, FileHash).
+
+    5. **Intelligence Retrieval:** For each valid entity or query, it calls the ANY.RUN
+    API to fetch threat intelligence data based on the specified **Lookup Depth**.
+
+    6. **Internal Updates:** For each successful lookup, it adds a comment to the
+    case with a direct link to the ANY.RUN analysis and attaches the full JSON report
+    to the case wall.
+
+    7. **Final Summary:** Once all lookups are complete, it adds a final summary comment
+    to the case listing the type, value, and verdict (Malicious, Suspicious, Unknown,
+    or No info) for each item processed.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
@@ -63,7 +72,8 @@ ANYRUN TI Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds lookup URLs and summary reports as comments and case wall attachments.
+      Adds comments to the case containing lookup URLs and a summary of results. It
+      also saves the full JSON intelligence report as an attachment to the case wall.
   categories:
     enrichment: false
   entity_usage:
@@ -87,29 +97,83 @@ ANYRUN TI Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
   ai_description: >-
-    ### General Description: Tests the connectivity between Google SecOps and the
-    ANY.RUN TI Lookup service to ensure the integration is correctly configured and
-    can successfully communicate with the ANY.RUN API. ### Parameters Description:
-    1. ANYRUN TI Lookup API KEY (String, Mandatory): The API key required to authenticate
-    requests to the ANY.RUN TI Lookup service. 2. Verify SSL (Boolean, Optional):
-    If enabled, the action will verify the SSL certificate of the ANY.RUN API endpoint.
-    3. Enable proxy (Boolean, Optional): If enabled, the action will attempt to connect
-    through the specified proxy server. 4. Proxy host (String, Optional): The hostname
-    or IP address of the proxy server. Required if 'Enable proxy' is true. 5. Proxy
-    port (String, Optional): The port number of the proxy server. Required if 'Enable
-    proxy' is true. ### Additional Notes: This action does not process any entities
-    or modify any data. If 'Enable proxy' is selected, both 'Proxy host' and 'Proxy
-    port' must be provided. ### Flow Description: 1. Configuration Extraction: The
-    action retrieves the API key, SSL verification preference, and proxy settings
-    from the integration configuration. 2. Proxy Validation (Optional): If proxying
-    is enabled, the action first tests the connection through the specified proxy
-    host and port. 3. Authorization Check: The action uses the LookupConnector to
-    perform an authorization check against the ANY.RUN API using the provided API
-    key. 4. Result Reporting: If the check is successful, a completion message is
-    returned. If any step fails (e.g., invalid API key, network timeout), the action
-    fails and logs the error details.
+    ### General Description
+
+    Tests the connectivity between Google SecOps and the ANY.RUN TI Lookup service.
+    This action validates the provided API key and network configuration (including
+    proxy settings) to ensure that subsequent enrichment actions can communicate with
+    the ANY.RUN API successfully.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | ANYRUN TI Lookup API KEY | String | Yes | The API key used to authenticate with
+    the ANY.RUN TI Lookup service. |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the ANY.RUN server. |
+
+    | Enable proxy | Boolean | No | If enabled, the action will use the configured
+    proxy to connect to the service. |
+
+    | Proxy host | String | No | The hostname or IP address of the proxy server. Required
+    if 'Enable proxy' is true. |
+
+    | Proxy port | String | No | The port of the proxy server. Required if 'Enable
+    proxy' is true. |
+
+
+    ### Additional Notes
+
+    This is a utility action used for troubleshooting and initial setup. It does not
+    process entities or modify any data within the SOAR or the external service. If
+    'Enable proxy' is set to true, both 'Proxy host' and 'Proxy port' must be provided.
+
+
+    ### Flow Description
+
+    1. Extract configuration parameters including the API Key, SSL verification preference,
+    and proxy settings.
+
+    2. If proxying is enabled, validate the proxy connection using the provided host
+    and port.
+
+    3. Initialize the ANY.RUN connector and perform an authorization check against
+    the ANY.RUN TI Lookup API.
+
+    4. Return a success message if the connection is established and authorized, otherwise
+    return a failure message with the error details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -137,3 +201,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

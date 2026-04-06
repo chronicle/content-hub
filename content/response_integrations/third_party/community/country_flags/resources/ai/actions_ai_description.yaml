@@ -2,25 +2,62 @@ Get Country Flag:
   ai_description: >-
     ### General Description
 
-    The **Get Country Flag** action retrieves a base64-encoded image of a country's
-    flag from the `countryflags.io` service. This utility is used to provide visual
-    context for countries associated with entities or provided as direct input. The
-    action maintains a local cache to optimize performance and reduce API calls.\n\n###
-    Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---
-    | :--- | :--- | :--- |\n| Country Code Two Digit | string | No | A 2-letter ISO
-    country code (e.g., 'us', 'fr') to fetch the flag for. |\n| Country Code From
-    Entity Field | string | No | A comma-separated list of field names to look for
-    in an entity's `additional_properties` (e.g., 'country', 'location'). |\n\n###
-    Additional Notes\n- The action uses a local `flags.json` file in the run folder
-    for caching.\n- If no country code is found and no parameter is provided, the
-    action completes without fetching data.\n\n### Flow Description\n1. **Load Cache**:
-    Attempts to read existing flag data from a local JSON file.\n2. **Identify Country
-    Codes**: Checks the `Country Code Two Digit` parameter and iterates through entities
-    to find codes in specified `additional_properties` fields.\n3. **Fetch Missing
-    Flags**: For any code not in the cache, it performs a GET request to the external
-    flag service.\n4. **Process and Encode**: Converts the image content to a base64
-    string.\n5. **Update and Output**: Updates the local cache file and adds the base64
-    strings to the action's JSON result.
+    The **Get Country Flag** action retrieves a country's flag image in Base64 format.
+    It is designed to provide visual context for geographic data by converting 2-digit
+    ISO country codes (e.g., 'US', 'FR') into encoded image strings. The action can
+    process country codes provided manually as a parameter or dynamically extracted
+    from the `additional_properties` of entities within a case. It utilizes an external
+    service (`countryflags.io`) to fetch flags and maintains a local cache file (`flags.json`)
+    to optimize performance and reduce redundant API calls.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Country Code Two Digit** | String | No | A manual 2-digit ISO country code
+    (e.g., 'us', 'gb') to fetch a flag for. |
+
+    | **Country Code From Entity Field** | String | No | A comma-separated list of
+    field names to look for in the `additional_properties` of entities. If found,
+    the value of that field is used as the country code. |
+
+
+    ### Additional Notes
+
+    - If neither parameter is provided, the action will not perform any lookups.
+
+    - The action maintains a local cache file named `flags.json` in the execution
+    folder to store previously fetched flags.
+
+    - The results are returned as a JSON object mapping the identifier (entity or
+    country code) to the Base64 string.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes and attempts to load the `flags.json`
+    cache file from the local execution environment.
+
+    2. **Parameter Retrieval**: It retrieves the manual `Country Code Two Digit` and
+    the list of entity fields to check from `Country Code From Entity Field`.
+
+    3. **Entity Processing**: For each entity in the case, the action checks if any
+    of the specified fields exist in the entity's `additional_properties`. If a country
+    code is found, it proceeds to fetch the flag.
+
+    4. **Flag Retrieval**: For each identified country code (from entities or manual
+    input), the action checks the local cache. If the flag is missing, it performs
+    a GET request to `https://www.countryflags.io/`, encodes the resulting image to
+    Base64, and updates the cache.
+
+    5. **Cache Update**: If new flags were fetched, the action overwrites the local
+    `flags.json` file with the updated data.
+
+    6. **Output**: The action attaches the Base64 flag data to the action's JSON results
+    and completes the execution.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -32,7 +69,7 @@ Get Country Flag:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: true
+    enrichment: false
   entity_usage:
     entity_types:
     - ADDRESS
@@ -83,13 +120,38 @@ Get Country Flag:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to verify connectivity between Google SecOps and
-    the Country Flags service. It performs a test request to ensure that the integration
-    can successfully reach the external API and retrieve data.
+    Tests connectivity to the Country Flags service by attempting to retrieve the
+    flag for a hardcoded country code ('us'). This action is primarily used to verify
+    that the integration is correctly configured and can reach the external API.
 
 
     ### Parameters Description
@@ -99,30 +161,28 @@ Ping:
 
     ### Additional Notes
 
-    This action uses a hardcoded country code ("us") to perform the connectivity test.
-    It also utilizes a local cache file (`flags.json`) within the execution environment
-    to store previously retrieved flag data. Note that while the action fetches data,
-    it is named 'Ping' and therefore is not categorized as an enrichment action per
-    standard guidelines.
+    This is a standard 'Ping' action. It utilizes a local cache file (`flags.json`)
+    to store retrieved flag data in base64 format to optimize subsequent requests.
+    It does not process any entities from the case.
 
 
     ### Flow Description
 
-    1. **Initialize**: The script initializes the Siemplify action and attempts to
-    load existing flag data from a local cache file named `flags.json` in the run
-    folder.
+    1. **Initialize Action**: Sets up the Siemplify action context and identifies
+    the script as 'GetCountryFlag'.
 
-    2. **Cache Check**: It checks if the flag for the hardcoded country code "us"
-    is already present in the loaded cache.
+    2. **Load Cache**: Attempts to read the `flags.json` file from the execution folder
+    to retrieve previously cached flags. If the file is missing or invalid, it initializes
+    an empty cache.
 
-    3. **API Request**: If the flag is not found in the cache, it sends a GET request
-    to the Country Flags API (`https://www.countryflags.io/us/flat/64.png`).
+    3. **Connectivity Test**: Uses a hardcoded country code ('us') to check for a
+    flag.
 
-    4. **Data Processing**: The retrieved image content is encoded into a base64 string
-    and added to the local cache object.
+    4. **External Request**: If the flag for 'us' is not in the cache, it performs
+    a GET request to the Country Flags API (https://www.countryflags.io/us/flat/64.png).
 
-    5. **Completion**: The action concludes with a success status if the flag data
-    is successfully obtained (either from the cache or the external API).
+    5. **Finalize**: Returns a success status if the flag data is retrieved or found
+    in the cache; otherwise, it terminates with a failure state.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -150,3 +210,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

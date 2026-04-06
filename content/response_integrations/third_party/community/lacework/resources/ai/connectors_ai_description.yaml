@@ -1,0 +1,58 @@
+Lacework Connector:
+  ai_description: >-
+    ### General Description
+
+    The Lacework Connector integrates with the Lacework Events API to ingest security
+    events into Google SecOps. It allows security teams to monitor cloud security
+    posture, container activity, and compliance violations by automatically fetching
+    and converting Lacework events into actionable cases. The connector supports severity-based
+    filtering to ensure only relevant security incidents are processed.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | accountName | String | Yes | The Lacework account URL (e.g., [youraccount].lacework.net).
+    |
+
+    | keyId | String | Yes | The Lacework API Access Key ID. |
+
+    | secret | Password | Yes | The Lacework API Secret Key. |
+
+    | severity_threshold | String | Yes | The maximum severity level to ingest (1-Critical,
+    2-High, 3-Medium, 4-Low, 5-Info). Events with a numerical value higher than this
+    threshold are ignored. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product (Default: device_product). |
+
+    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
+    (Default: event_name). |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector
+    execution (Default: 30). |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The connector uses the provided `keyId` and `secret` to
+    request a temporary bearer token from the Lacework Access Token API.
+
+    2. **Event Discovery**: It queries the `GetEventsForDateRange` endpoint to retrieve
+    a list of events generated within the last hour.
+
+    3. **Severity Filtering**: For each event found, the connector compares its severity
+    against the `severity_threshold`. Only events meeting the threshold (e.g., severity
+    1, 2, or 3 if the threshold is 3) are processed further.
+
+    4. **Detail Enrichment**: For every event passing the filter, the connector makes
+    a secondary call to `GetEventDetails` to fetch the full metadata and context of
+    the alert.
+
+    5. **Mapping and Ingestion**: The connector maps Lacework event fields (such as
+    `EVENT_TYPE`, `EVENT_MODEL`, and `START_TIME`) to the Google SecOps AlertInfo
+    model, converts the severity to the platform's priority scale, and ingests the
+    data as a new alert.

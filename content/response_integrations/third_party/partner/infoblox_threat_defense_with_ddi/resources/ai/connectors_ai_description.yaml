@@ -1,0 +1,130 @@
+Infoblox - DNS Security Events Connector:
+  ai_description: >-
+    ### General Description
+
+    The Infoblox - DNS Security Events connector integrates with the Infoblox Threat
+    Defense platform to ingest DNS-related security events into Google SecOps. This
+    connector allows security teams to monitor malicious DNS activity, such as malware
+    communications, phishing attempts, and data exfiltration, by pulling detailed
+    event logs. It supports extensive filtering capabilities based on threat categories,
+    severity levels, and policy actions to ensure only relevant security data is ingested
+    for investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Infoblox API, typically `https://csp.infoblox.com/`.
+    |
+
+    | API Key | Password | Yes | The unique identifier used to authenticate and authorize
+    access to the Infoblox API. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process running the connector script. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
+    (default: `tclass`). |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product (default: `Infoblox Threat Defense with DDI`). |
+
+    | Limit | String | No | Specify the maximum number of alerts to create per execution
+    cycle. Default is 100. |
+
+    | Max Hours Backwards | String | No | Number of hours before the first connector
+    iteration to retrieve alerts from. Default is 24. |
+
+    | Threat Level | String | No | Filter events by severity level (LOW, MEDIUM, HIGH,
+    CRITICAL). |
+
+    | Policy Action | String | No | Filter by the action performed by Infoblox (Log,
+    Block, Default, Redirect). |
+
+    | Feed Name | String | No | Filter by comma-separated threat feed or custom list
+    names. |
+
+    | Threat Class | String | No | Filter by threat category (e.g., "Malware", "MalwareDownload").
+    |
+
+    | Threat Family | String | No | Filter by threat family (e.g., "Log4Shell", "OPENRESOLVER").
+    |
+
+    | Queried name | String | No | Filter by comma-separated queried domain names.
+    |
+
+    | Threat Indicator | String | No | Filter by comma-separated threat indicators
+    (domains, IPs). |
+
+    | Policy Name | String | No | Filter by comma-separated security policy names.
+    |
+
+    | Network | String | No | Filter by comma-separated network name, on-premises
+    host, endpoint, or DFP name. |
+
+    | Verify SSL | Boolean | No | If enabled, the connector will verify the SSL certificate
+    of the API endpoint. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The connector establishes a session with the Infoblox API
+    using the provided API Key and Root URL.
+
+    2. **Time Window Determination**: It calculates the polling window by checking
+    the timestamp of the last successful run. If no previous timestamp exists, it
+    uses the 'Max Hours Backwards' parameter.
+
+    3. **Event Fetching**: The connector queries the `/api/dnsdata/v2/dns_event` endpoint,
+    applying all configured filters (e.g., Threat Level, Policy Action, Network) to
+    retrieve DNS security events.
+
+    4. **Deduplication**: It compares retrieved events against a list of previously
+    processed IDs stored in the SOAR environment to prevent duplicate alert creation.
+
+    5. **Alert Mapping**: Each unique event is transformed into a Google SecOps `AlertInfo`
+    object. The alert name is dynamically generated using the threat class and queried
+    domain name.
+
+    6. **Case Creation**: The mapped alerts are sent to the Google SecOps platform,
+    where they are converted into cases for analyst review.
+
+    7. **State Persistence**: Upon successful ingestion, the connector saves the latest
+    event timestamp and updated list of processed IDs to ensure the next run starts
+    exactly where the current one finished.
+Infoblox - SOC Insights Connector:
+  ai_description: "### General Description\nThe Infoblox - SOC Insights Connector\
+    \ retrieves high-fidelity Security Operations Center (SOC) insights from the Infoblox\
+    \ Threat Defense platform. These insights represent aggregated security events\
+    \ and detections, allowing security teams to ingest prioritized threat data into\
+    \ Google SecOps for automated investigation, enrichment, and response. The connector\
+    \ supports deduplication and filtering to ensure only relevant, new insights are\
+    \ processed.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| API Root | String | Yes | The base URL of\
+    \ the Infoblox API (e.g., https://csp.infoblox.com/). |\n| API Key | Password\
+    \ | Yes | Unique identifier used to authenticate and authorize access to the Infoblox\
+    \ API. |\n| Verify SSL | Boolean | Yes | If enabled, the connector will verify\
+    \ the SSL certificate for API requests. |\n| PythonProcessTimeout | Integer |\
+    \ Yes | The timeout limit (in seconds) for the python process running the script.\
+    \ |\n| EventClassId | String | Yes | The field name used to determine the event\
+    \ name/sub-type (default: tclass). |\n| DeviceProductField | String | Yes | The\
+    \ field name used to determine the device product (default: Infoblox Threat Defense\
+    \ with DDI). |\n| Status | String | No | Filter Insights by their current status\
+    \ (e.g., ACTIVE, CLOSED). |\n| Threat Type | String | No | Filter Insights by\
+    \ the specific type of threat detected. |\n| Priority | String | No | Filter Insights\
+    \ by priority level (INFO, LOW, MEDIUM, HIGH, CRITICAL). |\n\n### Flow Description\n\
+    1. **Authentication**: Establishes a connection to the Infoblox API using the\
+    \ provided API Key and Root URL.\n2. **Deduplication**: Retrieves the list of\
+    \ previously processed Insight IDs from the system to ensure no duplicate alerts\
+    \ are created.\n3. **Data Retrieval**: Queries the Infoblox `/api/v1/insights`\
+    \ endpoint, applying user-defined filters for Status, Threat Type, and Priority.\n\
+    4. **Validation & Filtering**: \n    * Validates each insight against the `PythonProcessTimeout`\
+    \ to ensure graceful exit if the process runs too long.\n    * Checks for case\
+    \ overflow to prevent system flooding.\n5. **Mapping**: Converts each SOC Insight\
+    \ into the Google SecOps `AlertInfo` format, mapping fields such as `insightId`\
+    \ to `ticket_id`, and translating Infoblox priority text into numerical severity\
+    \ values.\n6. **Ingestion**: Ingests the processed alerts into Google SecOps and\
+    \ updates the persistent storage with the new Insight IDs for future deduplication."

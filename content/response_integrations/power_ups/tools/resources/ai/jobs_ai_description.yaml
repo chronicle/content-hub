@@ -1,0 +1,94 @@
+Close Cases Based On Search:
+  ai_description: >-
+    ### General Description
+
+    This job automates the bulk closure of cases within Google SecOps based on specific
+    search criteria. It is designed for maintenance and cleanup tasks, allowing users
+    to programmatically identify and close multiple cases that match a defined search
+    query. The job ensures that only open cases are targeted and applies a consistent
+    closure reason, root cause, and comment to all affected records.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Search Payload | String | No | A JSON-formatted string representing the search
+    criteria. This should match the payload used in the 'CaseSearchEverything' API
+    call. |
+
+    | Close Comment | String | Yes | The text comment to be added to the case wall
+    of all closed cases. |
+
+    | Close Reason | Integer | Yes | The numeric identifier for the closure reason
+    (e.g., 0 for Malicious, 1 for Not Malicious). |
+
+    | Root Cause | String | Yes | The specific root cause category to assign to the
+    cases, corresponding to values in Settings -> Case Data -> Case Close Root Cause.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialize Search**: The job retrieves the `Search Payload` from the configuration
+    and explicitly sets the `isCaseClosed` filter to `False` to ensure only active
+    cases are processed.
+
+    2. **Execute Search**: It calls the `search_cases_by_everything` API to find all
+    cases matching the provided JSON criteria.
+
+    3. **Identify Cases**: The job extracts the unique Case IDs from the search results.
+
+    4. **Bulk Closure**: If matching cases are found, it executes the `execute_bulk_close_case`
+    command, passing the collected Case IDs along with the user-defined `Close Reason`,
+    `Root Cause`, and `Close Comment`.
+
+    5. **Logging**: The job logs the specific Case IDs that were affected and provides
+    a final count of the successfully closed cases.
+Tag Untouched Cases:
+  ai_description: >-
+    ### General Description
+
+    This job automates the identification and flagging of stagnant incidents within
+    Google SecOps. It monitors all open cases and identifies those that have not been
+    modified within a user-defined timeframe (in hours). Once identified, the job
+    applies specific administrative tags to these cases, enabling SOC managers and
+    analysts to easily filter and prioritize cases that require immediate attention
+    or review.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Tags | String | Yes | A comma-separated list of tags to apply to the cases that
+    meet the inactivity criteria (e.g., "Open Case Review, Stale"). |
+
+    | Unmodified Time | Integer | Yes | The threshold of inactivity in hours. Any
+    open case not updated within this many hours will be tagged. |
+
+
+    ### Flow Description
+
+    1. **Parameter Retrieval**: The job fetches the `Unmodified Time` threshold and
+    the list of `Tags` from the configuration.
+
+    2. **Time Calculation**: It calculates a cutoff timestamp by subtracting the specified
+    number of hours from the current system time.
+
+    3. **Case Filtering**: The job queries the platform for all cases currently in
+    an "OPEN" status that have a "Last Modified" timestamp older than the calculated
+    cutoff.
+
+    4. **Tag Parsing**: The comma-separated string of tags is parsed into an array,
+    removing any leading or trailing whitespace from individual tags.
+
+    5. **Tag Application**: For every case identified in the filtering step, the job
+    iterates through the tag list and applies each tag to the case.
+
+    6. **Logging**: The job logs the IDs of the affected cases and provides a summary
+    of the total number of cases updated.

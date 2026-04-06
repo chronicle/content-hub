@@ -1,11 +1,23 @@
 Add Comment To Alert:
   ai_description: >-
-    ### General Description
+    Adds a comment to a specific alert in Orca Security. This action allows analysts
+    to append notes or documentation directly to an alert record within the Orca Security
+    platform, facilitating better tracking and collaboration on security findings.
 
-    This action allows users to add a comment to a specific alert within the Orca
-    Security platform. It is primarily used for documentation and collaboration purposes,
-    ensuring that analysts can record findings or notes directly on the source alert
-    in Orca Security from within Google SecOps.
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the Orca Security Manager using
+    the provided API Root and either an API Key or API Token.
+
+    2. **Parameter Extraction**: It retrieves the mandatory 'Alert ID' and 'Comment'
+    text from the action parameters.
+
+    3. **API Interaction**: The action sends a PUT request to the Orca Security API
+    endpoint (`/api/alerts/{alert_id}/comment`) containing the comment payload.
+
+    4. **Result Processing**: Upon success, the action returns the JSON representation
+    of the created comment and confirms the operation in the output message.
 
 
     ### Parameters Description
@@ -17,33 +29,14 @@ Add Comment To Alert:
     | Alert ID | String | True | The unique identifier of the alert in Orca Security
     to which the comment will be added. |
 
-    | Comment | String | True | The actual text content of the comment to be posted
-    to the alert. |
+    | Comment | String | True | The text content of the comment to be appended to
+    the alert. |
 
 
     ### Additional Notes
 
-    - This action requires either an **API Key** or an **API Token** to be configured
-    in the integration settings for authentication.
-
-    - The action performs an external state change by modifying the alert metadata
-    in Orca Security.
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action initializes the `OrcaSecurityManager` using
-    the provided API Root and credentials (API Key or Token).
-
-    2. **Parameter Extraction**: It retrieves the `Alert ID` and the `Comment` text
-    from the action's input parameters.
-
-    3. **API Interaction**: The manager executes a `PUT` request to the Orca Security
-    endpoint `/api/alerts/{alert_id}/comment` with the comment payload.
-
-    4. **Result Processing**: The action parses the response into an `AlertComment`
-    object and attaches the raw JSON result to the action output for use in subsequent
-    playbook steps.
+    - This action performs a state change in the external Orca Security system by
+    adding new data to an existing alert record.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -52,9 +45,10 @@ Add Comment To Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action adds a new comment to an existing alert in the Orca Security platform
-      via a PUT request to the API.
-    fetches_data: false
+      The action performs a PUT request to the Orca Security API to add a new comment
+      to an existing alert, thereby modifying the alert's metadata in the external
+      system.
+    fetches_data: true
     internal_data_mutation_explanation: null
   categories:
     enrichment: false
@@ -73,417 +67,98 @@ Add Comment To Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Get Asset Details:
   ai_description: >-
-    ### General Description
+    Retrieves detailed information for specific assets from Orca Security. This action
+    allows users to fetch comprehensive asset metadata and optionally include related
+    vulnerability information filtered by severity. It is designed to provide deep
+    visibility into the security posture of cloud assets by pulling data directly
+    from the Orca Security platform.
 
-    The **Get Asset Details** action retrieves comprehensive information for specific
-    assets within Orca Security using their unique Asset IDs. It provides metadata
-    such as asset name, type, account, category, and current security state. Additionally,
-    the action can be configured to fetch associated vulnerabilities (CVEs) for each
-    asset, filtered by a minimum severity threshold. The retrieved data is presented
-    as a raw JSON result, a structured data table, and optionally as individual Case
-    Insights for each asset.
 
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Asset IDs** | String | Yes | A comma-separated list of unique Orca Security
-    asset identifiers to be queried. |
-
-    | **Return Vulnerabilities Information** | Boolean | No | If enabled (True), the
-    action will also retrieve vulnerability data linked to the specified assets. Default
-    is True. |
-
-    | **Lowest Severity For Vulnerabilities** | DDL | Yes | The minimum severity level
-    required for a vulnerability to be included in the results. Options include: Critical,
-    High, Medium, Low, Unknown. Default is 'Hazardous'. |
-
-    | **Max Vulnerabilities To Fetch** | String | No | The maximum number of vulnerabilities
-    to return per asset. Must be a positive integer between 1 and 100. Default is
-    50. |
-
-    | **Create Insight** | Boolean | No | If enabled (True), the action will generate
-    a Case Insight in Google SecOps for every successfully enriched asset, including
-    a direct link to the asset in the Orca UI. Default is True. |
-
-
-    ### Additional Notes
-
-    - This action does not process entities from the current case scope; it relies
-    entirely on the provided **Asset IDs** parameter.
-
-    - The **Max Vulnerabilities To Fetch** parameter is capped at 100 to ensure performance
-    and API stability.
-
-    - Authentication requires either an **API Key** or an **API Token** to be configured
-    in the integration settings.
-
-
-    ### Flow Description
-
-    1. **Parameter Validation**: The action extracts and validates input parameters,
-    ensuring the vulnerability limit is within the allowed range (1-100).
-
-    2. **Manager Initialization**: Initializes the `OrcaSecurityManager` using the
-    provided API credentials and connection settings.
-
-    3. **Asset Retrieval**: Iterates through the list of provided Asset IDs and performs
-    a query to the Orca Security API to fetch asset metadata.
-
-    4. **Vulnerability Enrichment (Optional)**: If enabled, it performs a secondary
-    query for each asset to retrieve vulnerabilities that meet the specified severity
-    criteria.
-
-    5. **Data Formatting**: Aggregates the asset and vulnerability data into JSON
-    and CSV formats for output.
-
-    6. **Insight Generation (Optional)**: If enabled, creates a Case Insight for each
-    asset, providing a summary of its security posture and a link to the Orca Security
-    console.
-
-    7. **Final Output**: Adds the aggregated JSON results and a summary data table
-    to the action's output and completes the execution.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action creates case insights and adds a data table to the Google SecOps
-      case to display retrieved asset information.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Compliance Info:
-  ai_description: >-
-    ### General Description
-
-    The **Get Compliance Info** action retrieves detailed compliance framework information
-    from Orca Security. It allows security analysts to monitor the compliance posture
-    of their cloud environment by fetching data such as average scores, test results
-    (pass/fail counts), and the active status of specific or all selected frameworks.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Framework Names** | String | No | A comma-separated list of framework names
-    (e.g., 'CIS AWS Foundations', 'SOC2') to retrieve. If left empty, the action returns
-    information for all selected frameworks in the Orca Security account. |
-
-    | **Create Insight** | Boolean | Yes | If enabled (default: true), the action
-    creates a Case Insight in Google SecOps containing a formatted summary of the
-    compliance data. |
-
-    | **Max Frameworks To Return** | Integer | No | Specifies the maximum number of
-    frameworks to include in the results. Default is 50. |
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action extracts API credentials from the integration
-    configuration and user-provided parameters (Framework Names, Insight toggle, and
-    Limit).
-
-    2. **API Query:** The action connects to the Orca Security API and sends a POST
-    request to the `/api/serving-layer/compliance/frameworks/overview` endpoint. If
-    specific framework names were provided, it iterates through them to fetch targeted
-    data.
-
-    3. **Data Parsing:** The raw JSON response is parsed into framework objects, extracting
-    key metrics like `avg_score_percent`, `test_results_fail`, and `test_results_pass`.
-
-    4. **Insight Creation:** If the 'Create Insight' parameter is true, the action
-    generates an HTML-formatted insight with color-coded scores and attaches it to
-    the case.
-
-    5. **Result Output:** The action populates a data table named 'Compliance Details'
-    and adds the raw framework data to the action's JSON results for use in subsequent
-    playbook steps.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action creates a case insight containing compliance information and adds
-      a data table to the case results.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Vulnerability Details:
-  ai_description: >-
-    ### General Description
-
-    The **Get Vulnerability Details** action retrieves comprehensive information about
-    specific vulnerabilities (CVEs) from Orca Security. It allows security analysts
-    to enrich a case with details such as vulnerability summaries, severity levels,
-    affected assets, and remediation availability.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **CVE IDs** | String | Yes | A comma-separated list of CVE identifiers (e.g.,
-    CVE-2021-44228) to be queried. |
-
-    | **Fields To Return** | String | No | A comma-separated list of specific fields
-    to include in the output. If left empty, all available fields are returned. |
-
-    | **Output** | DDL | No | Determines the output format. Options are `JSON` (default)
-    or `CSV`. If `CSV` is selected, a file is created and the path is returned. |
-
-    | **Create Insight** | Boolean | No | If enabled (default), the action creates
-    a detailed case insight for each successfully retrieved CVE. |
-
-    | **Max Assets To Return** | String | No | The maximum number of assets associated
-    with the CVE to retrieve. Default is 50, maximum is 10,000. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action parses the input CVE IDs and validates the `Max
-    Assets To Return` parameter.
-
-    2. **API Interaction**: For each CVE ID provided, the action queries the Orca
-    Security API using a paginated search to retrieve vulnerability and asset data.
-
-    3. **Data Processing**: The retrieved data is filtered based on the `Fields To
-    Return` parameter and formatted for output.
-
-    4. **Insight Generation**: If `Create Insight` is true, the action generates a
-    formatted HTML insight for the case, highlighting severity, description, and affected
-    assets.
-
-    5. **Final Output**: The results are attached to the case as a JSON object or
-    a CSV file, and a "Vulnerability Details" data table is added to the case wall.
-
-
-    ### Additional Notes
-
-    - This action does not operate on existing entities in the case; it relies entirely
-    on the CVE IDs provided in the input parameter.
-
-    - The `Fields To Return` parameter supports flattened JSON keys (e.g., `object_id`
-    for `{"object": {"id": 123}}`).
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Creates case insights and adds a 'Vulnerability Details' data table to the case.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    ### General Description
-
-    The **Ping** action is used to verify the connectivity between Google SecOps and
-    the Orca Security instance. It ensures that the provided configuration parameters,
-    such as the API Root and authentication credentials (API Key or API Token), are
-    correct and that the service is reachable.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the Orca Security API. |
-
-    | API Key | String | No | The API key for authentication. Required if API Token
-    is not provided. |
-
-    | API Token | String | No | The API token for authentication. This is the preferred
-    authentication method. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the API. |
-
-
-    ### Additional Notes
-
-    - Either the **API Key** or the **API Token** must be provided for the action
-    to authenticate successfully.
-
-    - This action does not process any entities and is strictly used for configuration
-    validation.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the API Root, API Key, API Token,
-    and SSL verification settings from the integration configuration.
-
-    2. **Manager Initialization:** An instance of the `OrcaSecurityManager` is created
-    using the extracted credentials.
-
-    3. **Connectivity Test:** The action calls the `test_connectivity` method, which
-    sends a POST request to the Orca Security vulnerability details endpoint with
-    a result limit of 1 to verify the API's responsiveness.
-
-    4. **Result Reporting:** Based on the success or failure of the API call, the
-    action returns a completion or failure status along with a descriptive message.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Scan Assets:
-  ai_description: >-
-    ### General Description
-
-    The **Scan Assets** action initiates and monitors security scans for specific
-    assets within the Orca Security platform. This action is designed to run asynchronously,
-    meaning it triggers the scans and then periodically polls the Orca Security API
-    to check for completion. It is useful for ensuring that assets are scanned for
-    vulnerabilities or compliance issues as part of an automated response workflow.
-
-
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
     | Asset IDs | String | Yes | A comma-separated list of unique Orca Security asset
-    identifiers that you want to scan. |
+    identifiers to retrieve details for. |
+
+    | Return Vulnerabilities Information | Boolean | No | If enabled (default), the
+    action will also fetch vulnerabilities associated with the asset. |
+
+    | Lowest Severity For Vulnerabilities | DDL | Yes | The minimum severity level
+    (Critical, High, Medium, Low, Unknown) to include when fetching vulnerabilities.
+    |
+
+    | Max Vulnerabilities To Fetch | String | No | The maximum number of vulnerabilities
+    to return per asset (Default: 50, Max: 100). |
+
+    | Create Insight | Boolean | No | If enabled (default), creates a Google SecOps
+    case insight for each enriched asset. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the comma-separated list of Asset IDs
-    from the input parameters and initializes the Orca Security manager.
+    1. **Parameter Validation:** The action validates that the 'Max Vulnerabilities
+    To Fetch' is a positive integer and does not exceed the system limit of 100.
 
-    2. **Scan Initiation (First Run)**: For each provided Asset ID, the action sends
-    a POST request to the Orca Security API to start a new scan. If a scan is already
-    in progress for an asset, the action captures the existing scan's ID.
+    2. **Authentication:** Initializes the Orca Security Manager using the provided
+    API/API Token and connection settings.
 
-    3. **Asynchronous Polling**: The action enters an 'In Progress' state, storing
-    the scan identifiers. In subsequent execution cycles, it polls the status of each
-    pending scan.
+    3. **Asset Retrieval:** Iterates through the provided list of Asset IDs, making
+    a request to Orca Security to fetch the core asset metadata.
 
-    4. **Timeout Monitoring**: During polling, the script checks if it is approaching
-    the global SOAR timeout or the Python process timeout to ensure a graceful exit
-    and state preservation.
+    4. **Vulnerability Enrichment:** If requested, it performs a secondary lookup
+    for each asset to retrieve vulnerabilities that meet the specified severity threshold.
 
-    5. **Data Retrieval and Completion**: Once all scans reach a 'done' status, the
-    action retrieves the raw scan data, attaches it to the action's JSON results,
-    and provides a summary of successful and failed scans.
+    5. **Output Generation:** For each successful retrieval, it compiles the data
+    into a JSON result, constructs a CSV data table for the case wall, and generates
+    a detailed case insight containing a direct link to the asset in the Orca Security
+    UI.
 
-
-    ### Additional Notes
-
-    - This action is **asynchronous**. Users should ensure the script timeout value
-    in the Google SecOps IDE is adjusted to accommodate the time required for Orca
-    Security to complete asset scans.
-
-    - The action handles cases where a scan is already running by tracking the existing
-    process instead of failing.
+    6. **Error Handling:** Tracks successful and failed asset lookups, providing a
+    summary message at the end of execution.
   capabilities:
     can_create_case_comments: false
-    can_create_insight: false
+    can_create_insight: true
     can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Initiates new security scan processes for the specified assets within the Orca
-      Security environment via POST requests.
+    external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      The action creates case insights and adds data tables to the case in Google
+      SecOps to display asset and vulnerability details.
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -499,83 +174,262 @@ Scan Assets:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Update Alert:
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Compliance Info:
   ai_description: >-
-    Updates the state of a specific alert in Orca Security. This action allows users
-    to modify an alert's status, initiate a verification process, or manage its snooze
-    state (snooze/unsnooze). It interacts with the Orca Security API via PUT requests
-    to apply changes and then retrieves the updated alert details to provide a final
-    status report.
+    ### General Description
+
+    Retrieves compliance framework information from Orca Security. This action allows
+    security analysts to monitor the compliance posture of their cloud environment
+    by fetching details about various frameworks (e.g., CIS, SOC2, NIST). It provides
+    a summary of compliance scores, as well as the number of passed and failed tests
+    for each framework.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Alert ID** | String | Yes | The unique identifier of the alert in Orca Security
-    that needs to be updated. |
+    | Framework Names | String | No | A comma-separated list of framework names to
+    retrieve. If left empty, the action returns information about all selected frameworks
+    in Orca Security. |
 
-    | **Verify Alert** | Boolean | No | If set to `True`, the action will initiate
-    the verification process for the specified alert. |
+    | Create Insight | Boolean | Yes | If set to true, the action generates a detailed
+    insight on the case wall containing the compliance summary. |
 
-    | **Snooze State** | DDL | No | Determines the snooze status. Options include
-    `Select One`, `Snooze`, or `Unsnooze`. |
-
-    | **Snooze Days** | String | No | The number of days to snooze the alert. This
-    is required if **Snooze State** is set to `Snooze`. Defaults to 1 if not provided.
-    |
-
-    | **Status** | DDL | No | The new status to assign to the alert. Options include
-    `Open`, `In Progress`, `Close`, or `Dismiss`. |
+    | Max Frameworks To Return | Integer | No | Specifies the maximum number of frameworks
+    to return in the results. Default is 50. |
 
 
     ### Additional Notes
 
-    * **Validation Requirement:** At least one of the following parameters must be
-    configured for the action to execute: `Status`, `Verify Alert`, or `Snooze State`.
+    - The action will attempt to find frameworks matching the provided names. If some
+    frameworks are not found, they will be listed in the output message.
 
-    * **Unsnooze Logic:** If `Snooze State` is set to `Unsnooze` and no specific `Status`
-    is provided, the action automatically sets the alert status to `Open`.
+    - If none of the provided frameworks are found, the action will fail.
 
-    * **Duplicate Handling:** If the alert already possesses the requested status,
-    the action will complete successfully while noting that no change was necessary.
+    - Although 'Max Frameworks To Return' is defined as a string in the configuration,
+    the logic treats it as an integer.
 
 
     ### Flow Description
 
-    1. **Initialization:** Extracts configuration (API Root, Key/Token) and action
+    1. **Initialization**: Extracts API credentials (API Root, Key/Token) and action
     parameters.
 
-    2. **Validation:** Ensures that at least one update operation (Status, Verify,
-    or Snooze) is requested and validates `Snooze Days` if applicable.
+    2. **API Request**: Calls the Orca Security `/api/serving-layer/compliance/frameworks/overview`
+    endpoint to fetch framework data.
 
-    3. **Verification:** If `Verify Alert` is enabled, sends a request to the Orca
-    Security verification endpoint.
+    3. **Filtering**: If specific framework names were provided, the action filters
+    the results to match those names.
 
-    4. **Snooze Management:** If `Snooze State` is `Snooze`, sends a request to the
-    snooze endpoint with the specified duration.
+    4. **Insight Creation**: If 'Create Insight' is enabled, it formats the framework
+    scores and test results into an HTML-based case insight.
 
-    5. **Status Update:** Updates the alert status if a new status is provided or
-    if the alert is being unsnoozed.
-
-    6. **Data Retrieval:** Fetches the latest alert data from Orca Security to confirm
-    the current state.
-
-    7. **Output:** Returns the updated alert details as a JSON result and provides
-    a summary message of the operations performed.
+    5. **Result Output**: Populates a data table named 'Compliance Details' and attaches
+    the raw JSON data to the action result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates a case insight and adds a data table to the case in Google
+      SecOps.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Vulnerability Details:
+  ai_description: "Retrieves detailed vulnerability information from Orca Security\
+    \ for a specified list of CVE IDs. This action fetches data regarding the vulnerability's\
+    \ description, severity, fix availability, and associated affected assets. It\
+    \ allows users to filter the returned JSON fields and choose between JSON or CSV\
+    \ output formats. Additionally, the action can generate case insights for each\
+    \ enriched vulnerability and populates a data table with the findings.\n\n###\
+    \ Parameters Description\n\n| Parameter | Type | Mandatory | Description |\n|\
+    \ :--- | :--- | :--- | :--- |\n| CVE IDs | String | Yes | A comma-separated list\
+    \ of CVE identifiers (e.g., CVE-2021-44228) to be enriched. |\n| Fields To Return\
+    \ | String | No | A comma-separated list of specific fields to include in the\
+    \ output. If left empty, all available fields are returned. |\n| Output | DDL\
+    \ | No | The format of the action output. Options are 'JSON' (default) or 'CSV'.\
+    \ If 'CSV' is selected, a file is created and the path is returned. |\n| Create\
+    \ Insight | Boolean | No | If enabled (default), the action creates a detailed\
+    \ case insight for every successfully enriched vulnerability. |\n| Max Assets\
+    \ To Return | String | No | The maximum number of assets related to the CVE to\
+    \ retrieve. Default is 50, with a maximum limit of 10,000. |\n\n### Flow Description\n\
+    \n1. **Parameter Validation**: The action validates the `Max Assets To Return`\
+    \ parameter to ensure it is a positive integer within the allowed limit (10,000).\n\
+    2. **Authentication**: Initializes the Orca Security Manager using the provided\
+    \ API credentials (API Key or Token).\n3. **Data Retrieval**: Iterates through\
+    \ the provided list of CVE IDs and performs a paginated query to the Orca Security\
+    \ API to fetch vulnerability details and related asset information.\n4. **Data\
+    \ Processing**: Filters the results based on the `Fields To Return` parameter\
+    \ and prepares the data for the requested output format (JSON or CSV).\n5. **Internal\
+    \ Mutation**: \n    * If `Create Insight` is true, it generates a formatted HTML\
+    \ insight for the case containing the vulnerability's severity, description, and\
+    \ affected assets.\n    * Adds a data table named 'Vulnerability Details' to the\
+    \ case containing a summary of the enriched CVEs.\n6. **Final Output**: Returns\
+    \ the processed data as a JSON result or a file path to a CSV, along with a success/failure\
+    \ message for each CVE."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates case insights and adds a data table to the case containing
+      vulnerability details.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between Google SecOps and the Orca Security\
+    \ platform. It ensures that the provided configuration parameters\u2014such as\
+    \ the API Root, API Key or Token, and SSL settings\u2014are correct and that the\
+    \ SecOps environment can successfully communicate with the Orca Security API.\n\
+    \n### Parameters Description\nThis action does not require any action-specific\
+    \ parameters. It relies entirely on the global integration configuration provided\
+    \ on the Marketplace tab:\n\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| **API Root** | String | Yes | The base URL of\
+    \ the Orca Security API instance. |\n| **API Key** | String | No | The security\
+    \ token used for cookie-based authentication (if Token is not provided). |\n|\
+    \ **API Token** | String | No | The preferred authentication method using a Bearer-style\
+    \ token. |\n| **Verify SSL** | Boolean | No | If enabled, the action will validate\
+    \ the SSL certificate of the API endpoint. |\n\n### Additional Notes\n- Either\
+    \ the **API Key** or the **API Token** must be configured in the integration settings\
+    \ for the action to succeed.\n- This action is typically used during the initial\
+    \ setup or for troubleshooting connection issues.\n\n### Flow Description\n1.\
+    \ **Initialization**: The action retrieves the global configuration parameters\
+    \ (API Root, Key/Token, and SSL settings) from the integration environment.\n\
+    2. **Manager Setup**: It initializes the `OrcaSecurityManager` which handles authentication\
+    \ (either via cookies for API Keys or headers for API Tokens).\n3. **Connectivity\
+    \ Test**: The manager executes a lightweight query (requesting a single vulnerability\
+    \ record) to the Orca Security `serving-layer/query` endpoint.\n4. **Validation**:\
+    \ The action validates the API response. If the request is successful, it confirms\
+    \ connectivity; otherwise, it catches the exception and reports the failure details.\n\
+    5. **Completion**: The action ends with a success or failure status and a descriptive\
+    \ message for the analyst."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      This action modifies the state of alerts within the Orca Security platform by
-      updating their status, verification status, or snooze settings via API PUT requests.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
@@ -595,3 +449,245 @@ Update Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Scan Assets:
+  ai_description: >-
+    ### General Description
+
+    Initiates and monitors security scans for specific assets within the Orca Security
+    platform. This action is designed to trigger an on-demand assessment of cloud
+    assets and retrieve the resulting security telemetry. It operates asynchronously
+    to accommodate the time required for cloud security scans to complete.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the 'Asset IDs' provided by
+    the user and converts the comma-separated string into a list.
+
+    2. **Scan Initiation**: For each Asset ID, the action calls the Orca Security
+    API to start a scan. If a scan is already running for a particular asset, the
+    action captures the existing scan's identifier to monitor it.
+
+    3. **Asynchronous Monitoring**: The action enters an asynchronous loop. It periodically
+    polls the Orca Security API to check the status of each pending scan using the
+    scan IDs.
+
+    4. **Timeout Management**: The script monitors its own execution time and the
+    global action timeout. If a timeout is approaching, it gracefully exits and reports
+    the pending assets.
+
+    5. **Result Aggregation**: Once scans reach a 'done' status, the action retrieves
+    the raw scan data. Successful results are added to the action's JSON output, and
+    a summary message is generated detailing which scans succeeded or failed.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Asset IDs | string | Yes | A comma-separated list of unique identifiers for
+    the assets in Orca Security that you wish to scan. |
+
+
+    ### Additional Notes
+
+    * **Async Mode**: This action is marked as asynchronous. Users should ensure the
+    script timeout value in the Google SecOps IDE is sufficiently high to allow the
+    external scanning process to finish.
+
+    * **State Persistence**: The action uses the `additional_data` parameter internally
+    to track the state of pending scans across multiple asynchronous execution cycles.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a new security scan process within the Orca Security platform for
+      the specified asset identifiers.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Update Alert:
+  ai_description: >-
+    Updates the state of an alert in Orca Security. This action allows for modifying
+    the alert's status, managing its snooze state, or initiating a verification process.
+    It requires a specific Alert ID and at least one modification parameter to be
+    configured. After performing the requested updates, the action retrieves and returns
+    the updated alert details from Orca Security.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: Checks that at least one update operation (Status,
+    Verify Alert, or Snooze State) is requested. If 'Snooze' is selected, it ensures
+    'Snooze Days' is provided.
+
+    2. **Verification**: If 'Verify Alert' is enabled, it triggers the verification
+    process for the specified alert.
+
+    3. **Snooze Management**: If 'Snooze State' is set to 'Snooze', it snoozes the
+    alert for the defined number of days. If set to 'Unsnooze', it prepares to reset
+    the status.
+
+    4. **Status Update**: Updates the alert status to the specified value (Open, In
+    Progress, Close, or Dismiss). If 'Unsnooze' was selected without a specific status,
+    it defaults to 'Open'.
+
+    5. **Data Retrieval**: Fetches the final state of the alert from Orca Security
+    to confirm changes and provide the updated data as a JSON result.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert to be updated.
+    |
+
+    | Verify Alert | Boolean | No | If enabled, initiates the verification process
+    for the alert. |
+
+    | Snooze State | DDL | No | Sets the snooze state. Options: 'Snooze' or 'Unsnooze'.
+    |
+
+    | Snooze Days | String | No | Number of days to snooze the alert. Mandatory if
+    'Snooze State' is 'Snooze'. Defaults to 1 if not provided. |
+
+    | Status | DDL | No | The new status to assign to the alert. Options: 'Open',
+    'In Progress', 'Close', 'Dismiss'. |
+
+
+    ### Additional Notes
+
+    * At least one of the following parameters must be provided for the action to
+    execute: 'Status', 'Verify Alert', or 'Snooze State'.
+
+    * If 'Snooze State' is set to 'Unsnooze' and no 'Status' is provided, the action
+    automatically sets the alert status to 'Open'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status, snooze state, and verification status of alerts in the Orca
+      Security platform using PUT requests.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: true
+    update_email: false
+    update_identity: false
+    update_ticket: false

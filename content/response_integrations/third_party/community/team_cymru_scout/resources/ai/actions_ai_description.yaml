@@ -2,47 +2,51 @@ Account Usage:
   ai_description: >-
     ### General Description
 
-    The **Account Usage** action retrieves real-time metrics regarding the query consumption
-    and quota limits for the Team Cymru Scout API. It provides security analysts with
-    visibility into their remaining API balance, ensuring that automated workflows
-    or manual investigations do not exceed subscription limits. The action fetches
-    data for both standard queries and foundation API usage.
+    The **Account Usage** action retrieves real-time metrics regarding the API consumption
+    for the Team Cymru Scout integration. It provides visibility into the number of
+    queries used, the remaining quota, and the overall query limits for both the standard
+    Scout API and the Foundation API. This is primarily a utility action used by administrators
+    or analysts to monitor license usage and ensure API availability for automated
+    playbooks.
 
 
     ### Parameters Description
+
+    This action does not require any input parameters.
+
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | N/A | N/A | N/A | This action does not require any input parameters. |
+    | N/A | N/A | N/A | No parameters are required for this action. |
 
 
     ### Additional Notes
 
-    - This action is a utility task used for monitoring integration health and quota
-    status.
+    - The action performs a read-only GET request to the `/usage` endpoint.
 
-    - It does not interact with or require any entities (IPs, Domains, etc.) to execute.
+    - Results are displayed in a structured data table within the Google SecOps case
+    wall.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action retrieves the configured authentication credentials
-    (either API Key or Username/Password) from the Team Cymru Scout integration settings.
+    1. **Initialization**: The action initializes the Siemplify environment and retrieves
+    the integration's authentication configuration (either API Key or Username/Password).
 
-    2. **API Connection**: It initializes a connection to the Team Cymru Scout service
-    via the `ApiManager`.
+    2. **API Connection**: It establishes a session with the Team Cymru Scout API
+    manager, applying SSL verification settings as configured.
 
-    3. **Data Retrieval**: A GET request is dispatched to the `/usage` endpoint to
-    fetch current account statistics.
+    3. **Data Retrieval**: The action executes a GET request to the account usage
+    endpoint to fetch current metric data.
 
-    4. **Metric Extraction**: The logic parses the response to identify key metrics:
-    `used_queries`, `remaining_queries`, `query_limit`, and specific foundation API
-    usage details.
+    4. **Response Handling**: If the request is successful, the raw JSON response
+    is attached to the action results.
 
-    5. **Output Generation**: The action returns the raw JSON response and renders
-    a formatted data table titled "Account Usage" within the Google SecOps case wall.
+    5. **Table Rendering**: The action parses the response into a human-readable format
+    and renders a data table titled "Account Usage" containing specific fields like
+    `Used Queries`, `Remaining Queries`, and `Query Limit`.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -70,15 +74,59 @@ Account Usage:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Advanced Query:
   ai_description: >-
-    ### General Description
+    The Advanced Query action executes a search using the Team Cymru Scout query language
+    to retrieve comprehensive summary information about network indicators. This action
+    is primarily used for threat hunting and deep-dive investigations by allowing
+    analysts to query the Scout platform for specific communication patterns, IP behaviors,
+    and historical metadata.
 
-    The **Advanced Query** action executes a search using the Team Cymru Scout query
-    language to retrieve comprehensive summary information about network indicators.
-    It allows for flexible filtering by date ranges or relative day offsets and returns
-    detailed intelligence across multiple categories, including PDNS, open ports,
-    top peers, and SSL certificates.
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the mandatory 'Query' string
+    and optional filters including 'Start Date', 'End Date', 'Days', and 'Size'.
+
+    2. **Validation:** It validates the date formats (YYYY-MM-DD) and ensures the
+    requested time range does not exceed platform limits (e.g., 90-day lookback, 30-day
+    window).
+
+    3. **API Interaction:** Sends a GET request to the Team Cymru Scout `/search`
+    endpoint with the constructed query and parameters.
+
+    4. **Data Processing:** Parses the returned JSON which includes IP summaries,
+    passive DNS (PDNS) records, open ports, top peers, service counts, fingerprints,
+    and X.509 certificates.
+
+    5. **Output Generation:** Populates multiple data tables in the Google SecOps
+    case and attaches the full raw JSON response for further analysis. It also provides
+    a table detailing current API account usage.
 
 
     ### Parameters Description
@@ -87,62 +135,40 @@ Advanced Query:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Query** | String | Yes | A simple or advanced query following the Scout query
-    language (e.g., `comms.ip="1.1.1.1"`). |
+    | Query | String | Yes | A simple or advanced query using Scout query language
+    (e.g., `comms.ip="1.1.1.1"`). |
 
-    | **Start Date** | String | No | The latest date for results (YYYY-MM-DD). Defaults
-    to 29 days ago if not provided. |
+    | Start Date | String | No | The latest date for results (YYYY-MM-DD). Defaults
+    to 29 days prior to today if not provided. |
 
-    | **End Date** | String | No | The earliest date for results (YYYY-MM-DD). Defaults
-    to today. |
+    | End Date | String | No | The earliest date for results (YYYY-MM-DD). Defaults
+    to today's date. |
 
-    | **Days** | String | No | Relative offset in days from current time. If provided,
+    | Days | String | No | Relative offset in days from current time. If provided,
     this takes priority over Start/End dates. |
 
-    | **Size** | String | No | The number of records to return (Maximum: 5000). |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the query string and optional
-    time/size filters from the user input.
-
-    2. **Validation:** It validates the date formats and ensures the requested range
-    does not exceed platform limits (e.g., a 30-day window).
-
-    3. **API Request:** The action sends a GET request to the Team Cymru Scout `/search`
-    endpoint.
-
-    4. **Data Processing:** The response is parsed to extract various intelligence
-    categories, including PDNS, open ports, top peers, service counts, fingerprints,
-    and SSL certificates.
-
-    5. **Output Generation:** The action populates multiple data tables in the SOAR
-    interface and provides the raw JSON response for further downstream processing.
-
-    6. **Usage Tracking:** It also retrieves and displays the current API account
-    usage to monitor query quotas.
+    | Size | String | No | The number of records to return (Maximum 5000). |
 
 
     ### Additional Notes
 
-    - This action is standalone and does not automatically iterate over entities in
-    the SOAR case; the user must provide the specific query.
+    - This action does not run on specific entities within the case; it relies entirely
+    on the user-provided 'Query' parameter.
 
-    - The **Days** parameter takes precedence over **Start Date** and **End Date**
-    if all are provided.
-
-    - The maximum result size is capped at 5000 records.
+    - The 'Days' parameter overrides specific date ranges if both are provided.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      The action populates multiple data tables (Summary, PDNS, Open Ports, Top Peers,
+      Service Counts, Fingerprints, and Certs) within the Google SecOps case and attaches
+      raw JSON results.
   categories:
     enrichment: false
   entity_usage:
@@ -160,51 +186,82 @@ Advanced Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: true
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Enrich IPs:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address entities using threat intelligence from the Team Cymru Scout
-    platform. This action retrieves reputation ratings, tags, and last enrichment
-    timestamps to provide context for security investigations.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not take any input parameters. |
-
-
-    ### Additional Notes
-
-    The action uses a 24-hour caching mechanism based on the 'TCS_last_enriched' property
-    to prevent redundant API calls. Enrichment data added to entities is prefixed
-    with 'TCS'.
+    The **Enrich IPs** action retrieves threat intelligence for IP Address entities
+    from the Team Cymru Scout platform. It provides critical context such as reputation
+    ratings (e.g., malicious, suspicious) and associated tags to help analysts evaluate
+    the risk of network indicators. To optimize performance and API usage, the action
+    includes a built-in caching mechanism that skips entities enriched within the
+    last 24 hours.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action identifies all `ADDRESS` entities in the current
-    context.
+    1. **Entity Identification:** The action scans the current context for all `ADDRESS`
+    entities.
 
-    2. **Cache Validation**: It checks the `TCS_last_enriched` property of each entity.
-    If the entity was enriched within the last 24 hours, it is skipped.
+    2. **Redundancy Check:** For each identified IP, the action checks the `TCS_last_enriched`
+    field in the entity's `additional_properties`. If the timestamp indicates the
+    entity was enriched within the last 24 hours, it is skipped.
 
-    3. **Data Retrieval**: The action calls the Team Cymru Scout Foundation API to
-    retrieve summary information for the remaining IP addresses.
+    3. **Data Retrieval:** The action fetches IP summary data from the Team Cymru
+    Scout API for all eligible entities using batch processing.
 
-    4. **Reputation Analysis**: It evaluates the 'rating' provided by the API. If
-    the rating is 'malicious' or 'suspicious', the entity's `is_suspicious` flag is
-    set to true.
+    4. **Entity Enrichment:**
+        * **Suspicious Status:** The `is_suspicious` flag is set to `True` if the
+    Team Cymru Scout rating is 'malicious' or 'suspicious'.
+        * **Metadata Update:** The entity's `additional_properties` are updated with
+    the rating, tags, and a new `TCS_last_enriched` timestamp.
+        * **Enrichment Flag:** The entity is marked as `is_enriched = True`.
+    5. **Platform Update:** The action updates the entities within Google SecOps and
+    returns a JSON summary of the enrichment results.
 
-    5. **Entity Enrichment**: The action updates the entity's `additional_properties`
-    with the retrieved data (prefixed with 'TCS') and sets the `is_enriched` flag.
 
-    6. **Platform Update**: Finally, it updates the entities in Google SecOps and
-    returns the raw summary data as a JSON result.
+    ### Parameters Description
+
+    | Parameter Name | Usage | Expected Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | N/A | This action does not have any input parameters. It processes
+    all IP Address entities in the scope using global integration settings. |
+
+
+    ### Additional Notes
+
+    * **Caching:** The 24-hour enrichment cache is stored locally on the entity object
+    within Google SecOps.
+
+    * **Batching:** The action processes IPs in batches of 10 to ensure efficient
+    API communication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -215,8 +272,9 @@ Enrich IPs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity fields including 'is_suspicious', 'is_enriched', and populates
-      'additional_properties' with enrichment data.
+      Updates the entity's suspicious status, enrichment status, and populates additional
+      properties with Team Cymru Scout metadata including reputation ratings, tags,
+      and enrichment timestamps.
   categories:
     enrichment: true
   entity_usage:
@@ -235,680 +293,58 @@ Enrich IPs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Extract Tags:
-  ai_description: >-
-    ### General Description
-
-    This action extracts tags from a specified IP address and its communicating peers
-    using the Team Cymru Scout service. It allows users to search for specific tags
-    within the retrieved data to identify potentially malicious or noteworthy associations.
-    This is useful for identifying if an IP or its immediate network neighborhood
-    is associated with known threats like malware or phishing.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Address | The IP address for which tags and peer information will be retrieved.
-    | String | Yes |
-
-    | Tags to Search | A comma-separated list of tags (e.g., 'malware, phishing')
-    to look for in the results. | String | Yes |
-
-
-    ### Flow Description
-
-    1. **Validation**: The action validates the format of the provided IP address
-    to ensure it is a valid IPv4 or IPv6 address.
-
-    2. **Data Retrieval**: It calls the Team Cymru Scout API's `get_ip_details` endpoint
-    to fetch comprehensive details for the IP, including its metadata and a list of
-    peer IPs it has communicated with.
-
-    3. **Tag Extraction**: The logic processes the API response to compile a map of
-    IPs (the target and its peers) to their respective tags.
-
-    4. **Tag Matching**: It performs an intersection between the tags found in the
-    response and the tags provided in the 'Tags to Search' parameter.
-
-    5. **Reporting**: If matches are found, it returns the matching IPs and tags in
-    JSON format and provides a summary message. It also renders a data table showing
-    the current API account usage statistics.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Communications Info:
-  ai_description: >-
-    ### General Description
-
-    The **Get Communications Info** action retrieves detailed network communication
-    and peer information for a specified list of IP addresses from the Team Cymru
-    Scout platform. This action is designed to provide visibility into the communication
-    patterns of an IP, including protocol details, client/server relationships, geographic
-    locations, and associated autonomous system (AS) information. It is primarily
-    used for network forensics and threat infrastructure mapping.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **IP Addresses** | String | Yes | A comma-separated list of IPv4 or IPv6 addresses
-    to fetch detailed communication information for. |
-
-    | **Limit** | String | Yes | The maximum number of valid IP addresses to process
-    in a single execution. Default is 10. |
-
-    | **Start Date** | String | No | The earliest date for results in the range (formatted
-    YYYY-MM-DD in UTC). If not provided, defaults to 29 days prior to today. |
-
-    | **End Date** | String | No | The latest date for results in the range (formatted
-    YYYY-MM-DD in UTC). If not provided, defaults to the current date. |
-
-    | **Days** | String | No | A relative offset in days from the current time. If
-    provided, this integer value takes priority over the Start and End date parameters.
-    |
-
-    | **Size** | String | No | The number of records to return per IP address (maximum
-    allowed is 1000). |
-
-
-    ### Additional Notes
-
-    - **Date Constraints**: The `Start Date` cannot be older than 90 days from the
-    current time, and the total window between `Start Date` and `End Date` cannot
-    exceed 30 days.
-
-    - **Priority Logic**: The `Days` parameter, if provided, will override any values
-    entered in the `Start Date` and `End Date` fields.
-
-    - **IP Validation**: The action automatically filters out duplicate and invalid
-    IP formats before making API requests.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts the provided IP addresses, limits,
-    and time-range parameters from the environment.
-
-    2. **Validation**: It validates the IP address formats and ensures the requested
-    date range complies with Team Cymru Scout's API limitations (e.g., the 30-day
-    window and 90-day history limit).
-
-    3. **API Interaction**: For each valid IP address (up to the specified limit),
-    the action performs a GET request to the Team Cymru Scout `/details` endpoint,
-    specifically requesting the `comms` (communications) section.
-
-    4. **Data Processing**: The retrieved data is parsed to extract peer connection
-    details, including protocols, country codes, top services, and AS names.
-
-    5. **Output Generation**: The action produces a raw JSON result for further automation
-    and renders a detailed "Peers" data table in the Google SecOps interface. It also
-    provides an "Account Usage" table to track API quota consumption.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Fingerprints Info:
-  ai_description: >-
-    ### General Description
-
-    Retrieves detailed Fingerprints information for specified IP addresses from Team
-    Cymru Scout. This action allows security analysts to gather technical fingerprinting
-    data (such as SSL/TLS or SSH signatures) associated with network indicators to
-    assist in threat profiling and infrastructure analysis.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **IP Addresses** | String | Yes | Comma-separated list of IPv4 or IPv6 addresses
-    to investigate. Default is "1.1.1.1". |
-
-    | **Limit** | String | Yes | The maximum number of valid IP addresses to process
-    in a single execution. Default is "10". |
-
-    | **Start Date** | String | No | The latest date for results (YYYY-MM-DD in UTC).
-    Defaults to 29 days prior to today if not provided. |
-
-    | **End Date** | String | No | The earliest date for results (YYYY-MM-DD in UTC).
-    Defaults to today's date if not provided. |
-
-    | **Days** | String | No | Relative offset in days (integer) from current time
-    in UTC. This takes priority over Start and End dates if all are provided. |
-
-    | **Size** | String | No | The number of records to retrieve per search (Maximum
-    1000). |
-
-
-    ### Additional Notes
-
-    - The action performs validation on the IP formats and date ranges before making
-    API calls.
-
-    - If the number of valid IPs provided exceeds the **Limit**, the additional IPs
-    are skipped and noted in the output message.
-
-    - The **Days** parameter, if provided, will override any values provided in the
-    **Start Date** and **End Date** parameters.
-
-
-    ### Flow Description
-
-    1. **Input Validation**: The action parses the `IP Addresses` parameter, removes
-    duplicates, and validates the format of each IP. It also validates date and size
-    parameters.
-
-    2. **API Connection**: Establishes a connection to the Team Cymru Scout API using
-    the configured authentication method (API Key or Username/Password).
-
-    3. **Data Fetching**: Iterates through the valid IPs (up to the `Limit`) and requests
-    detailed fingerprint information for each from the Team Cymru Scout service.
-
-    4. **Result Compilation**: Aggregates the API responses into a JSON object and
-    formats the data into "Fingerprints" and "Account Usage" data tables.
-
-    5. **Action Completion**: Returns a success or failure status along with a detailed
-    output message summarizing the results for each IP.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get IP Details:
-  ai_description: "### General Description\nRetrieves comprehensive threat intelligence\
-    \ for specific IP addresses from Team Cymru Scout. This action provides deep visibility\
-    \ into IP-related data, including WHOIS information, Passive DNS (PDNS) records,\
-    \ open ports, SSL/TLS certificates, and peer communication patterns. It is designed\
-    \ to assist analysts in investigating the reputation and historical behavior of\
-    \ network indicators.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| **IP Addresses** | String\
-    \ | Yes | A comma-separated list of IPv4 or IPv6 addresses to investigate. |\n\
-    | **Limit** | String | Yes | The maximum number of valid IP addresses to process\
-    \ in a single execution (default is 10). |\n| **Start Date** | String | No | The\
-    \ earliest date for results (YYYY-MM-DD). Defaults to 29 days prior to today if\
-    \ not specified. |\n| **End Date** | String | No | The latest date for results\
-    \ (YYYY-MM-DD). Defaults to today's date. |\n| **Days** | String | No | A relative\
-    \ offset in days from the current time. **Note:** This parameter takes priority\
-    \ over Start Date and End Date if all three are provided. |\n| **Size** | String\
-    \ | No | The number of records to return for specific search results (e.g., PDNS\
-    \ or Ports). Maximum allowed value is 1000. |\n\n### Flow Description\n1. **Validation:**\
-    \ The action parses the input IP addresses, removes duplicates, and validates\
-    \ the format (IPv4/IPv6). It also validates date formats and the 'Days' offset.\n\
-    2. **Authentication:** Connects to the Team Cymru Scout API using either API Key\
-    \ or Username/Password credentials.\n3. **Data Retrieval:** For each valid IP\
-    \ address (up to the specified limit), the action performs a GET request to the\
-    \ Scout API to fetch detailed intelligence.\n4. **Data Processing:** Aggregates\
-    \ the API response, which includes sections for WHOIS, PDNS, communications, open\
-    \ ports, fingerprints, and X.509 certificates.\n5. **Output Generation:** \n \
-    \   *   Adds the raw JSON response to the action results.\n    *   Generates and\
-    \ attaches multiple data tables to the Google SecOps case (Summary, Insights,\
-    \ PDNS, Peers, Ports, Fingerprints, and Certificates).\n    *   Creates an 'Account\
-    \ Usage' table to track API quota consumption.\n\n### Additional Notes\n- The\
-    \ action handles API rate limiting (429) and server errors (500+) with a built-in\
-    \ retry mechanism and backoff factor.\n- If the number of valid IPs exceeds the\
-    \ 'Limit' parameter, the extra IPs are skipped and noted in the output message."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds multiple data tables to the Google SecOps case, including Summary Information,
-      Insights, Top PDNS, Top Peers, Top Open Ports, Top Fingerprints, Top Certificates,
-      and Account Usage.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get PDNS Info:
-  ai_description: >-
-    ### General Description
-
-    The **Get PDNS Info** action retrieves detailed Passive DNS (PDNS) information
-    for a specified list of IP addresses from the Team Cymru Scout platform. This
-    action is used to uncover historical domain associations, providing visibility
-    into which domains have resolved to the target IPs over time. It is particularly
-    useful for threat hunting and incident investigation to identify potentially malicious
-    infrastructure or related domains.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **IP Addresses** | A comma-separated list of IPv4 or IPv6 addresses to fetch
-    PDNS information for. | String | Yes |
-
-    | **Limit** | The maximum number of valid IP addresses to process in a single
-    execution. Default is 10. | String | Yes |
-
-    | **Start Date** | The latest date for results, formatted as YYYY-MM-DD in UTC.
-    If omitted, it defaults to 29 days prior to the current date. | String | No |
-
-    | **End Date** | The earliest date for results, formatted as YYYY-MM-DD in UTC.
-    If omitted, it defaults to the current date. | String | No |
-
-    | **Days** | An integer representing a relative offset in days from the current
-    time. This parameter takes priority over Start Date and End Date if all are provided.
-    | String | No |
-
-    | **Size** | The number of records to return in the search results (maximum 1000).
-    | String | No |
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action extracts the provided IP addresses and configuration
-    parameters from the SOAR environment.
-
-    2. **Validation:** It validates the IP address formats and ensures date/day parameters
-    are within valid ranges (e.g., Start Date must be within the last 90 days, and
-    the range cannot exceed 30 days).
-
-    3. **API Request:** For each valid IP address (up to the defined limit), the action
-    sends a GET request to the Team Cymru Scout API's IP details endpoint, specifically
-    requesting the 'pdns' section.
-
-    4. **Data Processing:** The action parses the API response to extract domain names,
-    event counts, and first/last seen timestamps for each IP.
-
-    5. **Reporting:** It generates a JSON result containing the raw data and renders
-    two data tables: "PDNS" (containing the extracted records) and "Account Usage"
-    (showing API quota information).
-
-
-    ### Additional Notes
-
-    - The action supports both IPv4 and IPv6 addresses.
-
-    - If the number of valid IPs exceeds the `Limit`, the extra IPs are skipped and
-    a warning is logged.
-
-    - The `Days` parameter is the preferred way to define the search window and will
-    override specific date inputs if both are provided.
-
-    - This action does not run on existing SecOps entities but rather on the list
-    of IPs provided in the parameters.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds data tables for PDNS Information and Account Usage to the Google
-      SecOps case.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Ports Info:
-  ai_description: >-
-    ### General Description
-
-    Retrieves detailed open port information for specified IP addresses from Team
-    Cymru Scout. This action allows users to input a list of IPv4 or IPv6 addresses
-    to fetch historical and current port data, including service names, port numbers,
-    protocols, and first/last seen timestamps. The results are presented as a JSON
-    object and formatted into 'Open Ports' and 'Account Usage' data tables within
-    the Google SecOps case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Addresses | String | Yes | Comma-separated list of IPv4 or IPv6 addresses
-    to fetch information for. |
-
-    | Limit | String | Yes | The maximum number of valid IP addresses to be allowed
-    for processing. Default is 10. |
-
-    | Start Date | String | No | The latest date for results, formatted YYYY-MM-DD
-    in UTC. If not provided, defaults to 29 days prior to today. |
-
-    | End Date | String | No | The earliest date for results, formatted YYYY-MM-DD
-    in UTC. If not provided, defaults to today's date. |
-
-    | Days | String | No | Relative offset in days (integer) from current time in
-    UTC. This takes priority over Start Date and End Date if all three are provided.
-    |
-
-    | Size | String | No | Size, in records, of the search results per IP. The maximum
-    allowed size is 1000. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the list of IP addresses, processing
-    limits, and date filters from the user input.
-
-    2. **IP Validation:** It validates each IP address format, filters out duplicates,
-    and ensures the number of IPs processed does not exceed the specified `Limit`.
-
-    3. **Date Validation:** It validates the date range or relative day offset to
-    ensure they fall within the supported 90-day window and 30-day range limit.
-
-    4. **API Request:** It sends a GET request to the Team Cymru Scout API for each
-    valid IP, specifically targeting the 'open_ports' section.
-
-    5. **Data Processing:** The action parses the returned JSON to extract service
-    names, port numbers, protocols, and observation dates.
-
-    6. **Result Reporting:** It attaches the raw JSON response to the action, generates
-    an 'Open Ports' data table for the case, and provides an 'Account Usage' table
-    showing remaining API quota.
-
-
-    ### Additional Notes
-
-    - The `Days` parameter, if provided, overrides the `Start Date` and `End Date`
-    parameters.
-
-    - The maximum allowed `Size` for records is 1000.
-
-    - This action does not automatically iterate over entities in the case; it processes
-    the specific IPs provided in the `IP Addresses` parameter.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds 'Open Ports' and 'Account Usage' data tables to the Google SecOps case.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Proto Info:
-  ai_description: >-
-    ### General Description
-
-    Retrieves detailed protocol information for a list of IP addresses from Team Cymru
-    Scout. This action is designed to provide visibility into the types of network
-    protocols associated with specific IPs, aiding in network traffic analysis and
-    security investigations. It allows users to query protocol data over a specific
-    time window or a relative number of days.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Addresses | String | Yes | A comma-separated list of IPv4 or IPv6 addresses
-    to be queried. |
-
-    | Limit | String | Yes | The maximum number of valid IP addresses to process from
-    the input list. Default is 10. |
-
-    | Start Date | String | No | The latest date for results in YYYY-MM-DD format
-    (UTC). Defaults to 29 days prior to today. |
-
-    | End Date | String | No | The earliest date for results in YYYY-MM-DD format
-    (UTC). Defaults to today. |
-
-    | Days | String | No | Relative offset in days from the current time. If provided,
-    this value takes precedence over Start Date and End Date. |
-
-    | Size | String | No | The number of records to return per IP address (maximum
-    1000). |
-
-
-    ### Additional Notes
-
-    - The action performs validation on the provided IP addresses, filtering out invalid
-    formats and removing duplicates.
-
-    - The time difference between the start and end dates must not exceed 30 days.
-
-    - The action provides information on API usage, including remaining query counts,
-    via an 'Account Usage' table.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves the IP addresses, limit, and
-    date-related parameters from the user input.
-
-    2. **Validation**: It validates the IP addresses and date ranges, ensuring they
-    meet the integration's requirements (e.g., date range < 30 days).
-
-    3. **API Interaction**: For each valid IP address (up to the defined limit), the
-    action sends a GET request to the Team Cymru Scout API's protocol information
-    endpoint (`proto_by_ip`).
-
-    4. **Data Processing**: The retrieved protocol data is processed and formatted
-    into a structured JSON response.
-
-    5. **Reporting**: The action generates a 'Proto By IP' data table and an 'Account
-    Usage' table, which are attached to the Google SecOps case for review.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Whois Info:
-  ai_description: >-
-    ### General Description
-
-    The **Get Whois Info** action retrieves detailed Whois information for a list
-    of provided IP addresses from the Team Cymru Scout platform. This action is designed
-    to provide security analysts with ownership and registration context, including
-    Autonomous System Numbers (ASN), AS names, BGP information, network names, and
-    organizational contact details (admin, tech, and abuse).
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **IP Addresses** | String | Yes | A comma-separated list of IPv4 or IPv6 addresses
-    to fetch Whois information for. |
-
-    | **Limit** | String | Yes | The maximum number of valid IP addresses to process
-    from the input list (default is 10). |
-
-    | **Start Date** | String | No | The latest date for results (YYYY-MM-DD). If
-    not provided, defaults to 29 days prior to today. |
-
-    | **End Date** | String | No | The earliest date for results (YYYY-MM-DD). If
-    not provided, defaults to today's date. |
-
-    | **Days** | String | No | Relative offset in days (integer) from current time.
-    If provided, this takes priority over Start Date and End Date. |
-
-    | **Size** | String | No | The number of records to return in the search results
-    (maximum allowed is 1000). |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts the provided IP addresses and configuration
-    parameters (Limit, Dates, Size).
-
-    2. **Validation**: It validates the format of the IP addresses and ensures the
-    date parameters (Start Date, End Date, Days) are within acceptable ranges (e.g.,
-    Start Date not older than 90 days and date range not exceeding 30 days).
-
-    3. **Data Retrieval**: For each valid IP address (up to the specified limit),
-    the action performs a GET request to the Team Cymru Scout API to fetch detailed
-    IP information.
-
-    4. **Processing**: The action specifically extracts the "Whois" section from the
-    API response for each IP.
-
-    5. **Output Generation**:
-        *   Adds the raw API response as a JSON result.
-        *   Generates a data table named "Whois" containing ASN, Org Name, and contact
-    IDs.
-        *   Generates a data table named "Account Usage" showing remaining API query
-    limits.
-
-    ### Additional Notes
-
-    *   If the number of valid IPs exceeds the **Limit**, the extra IPs are skipped
-    and a warning is logged.
-
-    *   The **Days** parameter, if provided, overrides the **Start Date** and **End
-    Date** parameters.
+  ai_description: "Extracts and searches for specific threat tags associated with\
+    \ a provided IP address and its communicating peers using the Team Cymru Scout\
+    \ intelligence platform. This action is designed to identify if an IP or its network\
+    \ neighbors are linked to known malicious activities like phishing or malware\
+    \ based on a user-defined list of tags.\n\n### Flow Description:\n1. **Parameter\
+    \ Extraction:** Retrieves the target 'IP Address' and the 'Tags to Search' (comma-separated)\
+    \ from the action parameters.\n2. **Validation:** Validates the format of the\
+    \ provided IP address to ensure it is a valid IPv4 or IPv6 string.\n3. **Data\
+    \ Retrieval:** Calls the Team Cymru Scout API (`get_ip_details`) to fetch comprehensive\
+    \ metadata, including tags for the target IP and a list of its communicating peers\
+    \ with their respective tags.\n4. **Tag Processing:** Aggregates all tags found\
+    \ for the primary IP and its peers into a searchable structure.\n5. **Matching\
+    \ Logic:** Performs an intersection between the tags retrieved from the API and\
+    \ the tags provided by the user.\n6. **Result Reporting:** \n    * If matches\
+    \ are found, it identifies which IPs (primary or peers) triggered the match and\
+    \ returns the specific matching tags.\n    * Generates a JSON result containing\
+    \ the matching IPs and their full tag sets.\n    * Always produces an 'Account\
+    \ Usage' data table showing remaining API query limits.\n\n### Parameters Description:\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | IP Address | String | True | The specific IP address to investigate for associated\
+    \ tags. |\n| Tags to Search | String | True | A comma-separated list of tags to\
+    \ look for (e.g., 'malware, phishing, botnet'). |\n\n### Additional Notes:\n*\
+    \ This action does not automatically process entities from the SOAR case; it relies\
+    \ strictly on the 'IP Address' string parameter provided in the input.\n* The\
+    \ search includes 'peers', which are other IP addresses that have communicated\
+    \ with the target IP according to Team Cymru's telemetry."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -936,16 +372,570 @@ Get Whois Info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Get X509 Info:
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Communications Info:
+  ai_description: "### General Description\nThe **Get Communications Info** action\
+    \ retrieves detailed network communication metadata for a list of provided IP\
+    \ addresses from the Team Cymru Scout platform. It focuses on identifying 'peers'\u2014\
+    other IP addresses that the target IP has interacted with\u2014along with protocol\
+    \ details, service ports, and geographic/ASN context for both sides of the communication.\
+    \ This action is primarily used for threat intelligence and network forensics\
+    \ to understand the communication patterns of suspicious indicators.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| **IP Addresses** | String | Yes | A comma-separated list of\
+    \ IPv4 or IPv6 addresses to investigate. |\n| **Limit** | String | Yes | The maximum\
+    \ number of valid IP addresses from the input list to process (default is 10).\
+    \ |\n| **Start Date** | String | No | The latest date for results, formatted YYYY-MM-DD\
+    \ in UTC. If not provided, defaults to 29 days prior to today. |\n| **End Date**\
+    \ | String | No | The earliest date for results, formatted YYYY-MM-DD in UTC.\
+    \ If not provided, defaults to today's date. |\n| **Days** | String | No | Relative\
+    \ offset in days (integer) from current time in UTC. **Note:** This takes priority\
+    \ over Start Date and End Date if all three are provided. |\n| **Size** | String\
+    \ | No | The number of records to return per IP (maximum 1000). |\n\n### Flow\
+    \ Description\n1. **Validation**: The action parses the input IP list, removing\
+    \ duplicates and identifying invalid formats. It also validates date formats and\
+    \ ensures 'Days' and 'Size' are valid integers.\n2. **API Request**: For each\
+    \ valid IP (up to the specified limit), the action queries the Team Cymru Scout\
+    \ `/ip/{ip}/details` endpoint, specifically requesting the 'comms' (communications)\
+    \ section.\n3. **Data Processing**: The response is parsed to extract peer information,\
+    \ including protocol text, client/server IPs, country codes, top services, and\
+    \ AS names for both the target and the peer.\n4. **Output Generation**:\n    *\
+    \   A raw JSON result containing the full API response for all processed IPs is\
+    \ attached.\n    *   A **Peers** data table is created, listing detailed interaction\
+    \ metrics such as First/Last seen, Event counts, and service ports.\n    *   An\
+    \ **Account Usage** table is generated to show remaining API query quotas for\
+    \ the integration.\n\n### Additional Notes\n*   This action does not automatically\
+    \ process entities from the SOAR case; it relies strictly on the manual input\
+    \ provided in the **IP Addresses** parameter.\n*   The **Days** parameter, if\
+    \ provided, overrides any specific **Start Date** or **End Date** configurations."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Fingerprints Info:
+  ai_description: >-
+    Retrieves detailed fingerprint information for specified IP addresses from Team
+    Cymru Scout. This action is used to gather technical metadata about network indicators,
+    including fingerprint types, signatures, and observation timelines (first and
+    last seen). It supports both IPv4 and IPv6 addresses and allows for time-based
+    filtering and result size limits.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | IP Addresses | String | Yes | A comma-separated list of IPv4 or IPv6 addresses
+    to fetch fingerprint information for. |
+
+    | Limit | String | Yes | The maximum number of valid IP addresses to process in
+    a single execution. Default is 10. |
+
+    | Start Date | String | No | The latest date for results in YYYY-MM-DD format
+    (UTC). Defaults to 29 days prior to today if not provided. |
+
+    | End Date | String | No | The earliest date for results in YYYY-MM-DD format
+    (UTC). Defaults to the current date if not provided. |
+
+    | Days | String | No | Relative offset in days from the current time. If provided,
+    this takes priority over Start Date and End Date. |
+
+    | Size | String | No | The number of records to return per search (maximum 1000).
+    |
+
+
+    ### Additional Notes
+
+    - The action performs validation on all input IP addresses, skipping duplicates
+    and invalid formats.
+
+    - If the number of valid IPs exceeds the 'Limit' parameter, the additional IPs
+    are skipped.
+
+    - The 'Days' parameter, if used, overrides any specific date range provided.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves integration credentials (API Key or Username/Password)
+    and validates the 'Limit' and 'IP Addresses' parameters.
+
+    2. **Validation**: Parses the input IP list, identifying valid, invalid, and duplicate
+    addresses. It also validates date formats and ranges.
+
+    3. **API Interaction**: For each valid IP (up to the limit), it calls the Team
+    Cymru Scout API (`/ip/{ip}/details`) with the specified filters (dates, size,
+    and section set to 'fingerprints').
+
+    4. **Data Processing**: Aggregates the API responses, including raw JSON data
+    and usage statistics.
+
+    5. **Output Generation**: Creates a 'Fingerprints' data table containing details
+    like Type, Signature, and Event Count for each IP. It also generates an 'Account
+    Usage' table to track API quota consumption.
+
+    6. **Completion**: Returns the aggregated JSON result and a summary message indicating
+    the number of successfully processed IPs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a 'Fingerprints' data table and an 'Account Usage' data table
+      to the Google SecOps case to display the retrieved intelligence.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get IP Details:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed X509 certificate information for specified IP addresses using
-    the Team Cymru Scout threat intelligence platform. This action allows analysts
-    to investigate SSL/TLS certificates associated with an IP, providing visibility
-    into certificate subjects, issuers, validity periods, and fingerprints. This data
-    is crucial for identifying malicious infrastructure, verifying host identities,
-    or detecting certificate-related anomalies during an investigation.
+    Retrieves detailed threat intelligence for specific IP addresses from Team Cymru
+    Scout. This action provides comprehensive metadata including WHOIS information,
+    Passive DNS (PDNS) records, network peers, open ports, SSL/X509 certificates,
+    and fingerprints. It is designed to help security analysts understand the context,
+    ownership, and historical behavior of IP addresses involved in security incidents.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | IP Addresses | A comma-separated list of IPv4 or IPv6 addresses to investigate.
+    | String | Yes |
+
+    | Limit | The maximum number of valid IP addresses to process in a single execution
+    (default is 10). | String | Yes |
+
+    | Start Date | The latest date for results, formatted as YYYY-MM-DD in UTC. Defaults
+    to 29 days prior to today if not provided. | String | No |
+
+    | End Date | The earliest date for results, formatted as YYYY-MM-DD in UTC. Defaults
+    to today's date if not provided. | String | No |
+
+    | Days | Relative offset in days (integer) from the current time in UTC. This
+    parameter takes priority over Start Date and End Date if all three are provided.
+    | String | No |
+
+    | Size | The number of records to return in the search results (maximum allowed
+    is 1000). | String | No |
+
+
+    ### Additional Notes
+
+    - The action performs validation on all input IP addresses and will skip duplicates
+    or invalid formats, reporting these in the output message.
+
+    - The `Days` parameter is a convenient way to specify a lookback window and will
+    override specific date ranges.
+
+    - Results are presented as a raw JSON object and multiple structured data tables
+    for easy review within the case wall.
+
+
+    ### Flow Description
+
+    1. **Input Validation:** The action extracts the provided IP addresses and parameters,
+    validating IP formats and ensuring the count does not exceed the specified limit.
+
+    2. **Time Range Calculation:** It determines the search window based on the `Days`,
+    `Start Date`, and `End Date` parameters.
+
+    3. **API Query:** For each valid IP address, the action sends a request to the
+    Team Cymru Scout API to retrieve detailed intelligence.
+
+    4. **Data Categorization:** The response is parsed into specific categories such
+    as WHOIS, PDNS, Peers, and Certificates.
+
+    5. **Result Population:** The action attaches the full JSON response to the result
+    and generates several data tables (e.g., 'Summary Information', 'Top PDNS', 'Top
+    Peers') to display the enrichment data in the SecOps platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get PDNS Info:
+  ai_description: >-
+    ### General Description
+
+    The **Get PDNS Info** action retrieves detailed Passive DNS (PDNS) information
+    for a specified list of IP addresses from Team Cymru Scout. This action is designed
+    to provide analysts with historical domain resolution data, including event counts
+    and first/last seen timestamps, which is essential for identifying malicious infrastructure,
+    tracking domain-to-IP relationships, and uncovering related threat activity.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **IP Addresses** | String | Yes | A comma-separated list of IPv4 or IPv6 addresses
+    to fetch PDNS information for. |
+
+    | **Limit** | String | Yes | The maximum number of valid IP addresses to process
+    from the input list. This helps manage API quota and performance. |
+
+    | **Start Date** | String | No | The latest date for results in UTC, formatted
+    as YYYY-MM-DD. If not provided, it defaults to 29 days prior to the current date.
+    |
+
+    | **End Date** | String | No | The earliest date for results in UTC, formatted
+    as YYYY-MM-DD. If not provided, it defaults to the current date. |
+
+    | **Days** | String | No | An integer representing a relative offset in days from
+    the current time. If provided, this value takes priority over the Start and End
+    dates. |
+
+    | **Size** | String | No | The number of records to return in the search results
+    (Maximum allowed is 1000). |
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action initializes the Team Cymru Scout API manager
+    and extracts the user-provided parameters.
+
+    2. **Validation:** It validates the format of the provided IP addresses, ensuring
+    they are valid IPv4 or IPv6 strings. It also validates the date formats and the
+    result size constraints.
+
+    3. **API Request:** For each valid IP address (up to the specified limit), the
+    action performs a GET request to the Team Cymru Scout `/ip/{ip}/details` endpoint,
+    specifically requesting the 'pdns' section.
+
+    4. **Data Processing:** The action parses the API response, extracting domain
+    names, event counts, and visibility windows (first/last seen).
+
+    5. **Output:** The action generates a JSON result containing the raw PDNS data
+    and renders two data tables: one for the detailed PDNS information and another
+    for the integration's Account Usage statistics.
+
+
+    ### Additional Notes
+
+    - This action does not automatically iterate over entities in the Google SecOps
+    case; it processes only the IP addresses provided in the **IP Addresses** parameter.
+
+    - The **Days** parameter is the most efficient way to define a search window and
+    will override specific date parameters if both are supplied.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Ports Info:
+  ai_description: "### General Description\nThe **Get Ports Info** action retrieves\
+    \ detailed information about open ports and associated services for a specified\
+    \ list of IP addresses using the Team Cymru Scout platform. It provides visibility\
+    \ into the network profile of an IP, including service names, port numbers, protocols,\
+    \ and observation timestamps, which is essential for attack surface mapping and\
+    \ vulnerability assessment.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **IP Addresses**\
+    \ | String | Yes | A comma-separated list of IPv4 or IPv6 addresses to fetch port\
+    \ information for. |\n| **Limit** | String | Yes | The maximum number of valid\
+    \ IP addresses to process in a single execution (Default: 10). |\n| **Start Date**\
+    \ | String | No | The earliest date for results (YYYY-MM-DD). Defaults to 29 days\
+    \ prior to the current date if not provided. |\n| **End Date** | String | No |\
+    \ The latest date for results (YYYY-MM-DD). Defaults to the current date if not\
+    \ provided. |\n| **Days** | String | No | A relative offset in days from the current\
+    \ time. If provided, this value takes priority over the Start and End dates. |\n\
+    | **Size** | String | No | The maximum number of records to return per search\
+    \ (Maximum: 1000). |\n\n### Flow Description\n1. **Initialization:** The action\
+    \ extracts the provided IP addresses and time-range parameters (Dates or Days).\n\
+    2. **Validation:** It validates the IP formats, removes duplicates, and ensures\
+    \ the number of IPs does not exceed the specified 'Limit'.\n3. **API Request:**\
+    \ For each valid IP, the action performs a GET request to the Team Cymru Scout\
+    \ `/ip/{ip}/details` endpoint, specifically requesting the `open_ports` section.\n\
+    4. **Data Parsing:** The action processes the API response, extracting fields\
+    \ such as Service, Port, Protocol, and First/Last Seen dates.\n5. **Output Generation:**\
+    \ \n    - A JSON result containing the raw data is added to the action output.\n\
+    \    - An 'Open Ports' data table is rendered in the Google SecOps interface for\
+    \ analyst review.\n    - An 'Account Usage' table is generated to display remaining\
+    \ API quotas.\n\n### Additional Notes\n- The action supports both IPv4 and IPv6\
+    \ addresses.\n- If the `Days` parameter is used, it will override any values provided\
+    \ in `Start Date` or `End Date`."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action populates the 'Open Ports' and 'Account Usage' data tables within
+      the Google SecOps action results.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Proto Info:
+  ai_description: >-
+    ### General Description
+
+    The **Get Proto Info** action retrieves detailed protocol-level communication
+    information for a specified list of IP addresses from the Team Cymru Scout platform.
+    It is primarily used for network forensics and threat hunting to understand the
+    types of protocols an IP has been observed using over a specific timeframe. The
+    action outputs the raw data in JSON format and provides a formatted data table
+    for analyst review.
 
 
     ### Parameters Description
@@ -955,59 +945,45 @@ Get X509 Info:
     | :--- | :--- | :--- | :--- |
 
     | IP Addresses | String | Yes | A comma-separated list of IPv4 or IPv6 addresses
-    to fetch certificate information for. |
+    to fetch protocol information for. |
 
-    | Limit | String | Yes | The maximum number of valid IP addresses to process in
-    a single execution. Must be a positive integer. |
+    | Limit | String | Yes | The maximum number of valid IP addresses from the input
+    list to process in a single execution. Default is 10. |
 
-    | Start Date | String | No | The latest date for results in YYYY-MM-DD format
-    (UTC). If not provided, defaults to 29 days prior to today. |
+    | Start Date | String | No | The start of the time range for the query, formatted
+    as YYYY-MM-DD (UTC). If omitted, it defaults to 29 days prior to the current date.
+    |
 
-    | End Date | String | No | The earliest date for results in YYYY-MM-DD format
-    (UTC). If not provided, defaults to today's date. |
+    | End Date | String | No | The end of the time range for the query, formatted
+    as YYYY-MM-DD (UTC). If omitted, it defaults to the current date. |
 
     | Days | String | No | An integer representing a relative offset in days from
-    the current time in UTC. If provided, this parameter takes priority over Start
-    Date and End Date. |
+    the current time. If provided, this value takes precedence over the Start and
+    End date parameters. |
 
-    | Size | String | No | The number of records to return in the search results.
-    The maximum allowed size is 1000. |
-
-
-    ### Additional Notes
-
-    - The action performs validation on all input IP addresses, filtering out duplicates
-    and invalid formats before processing.
-
-    - If the number of valid IP addresses provided exceeds the specified 'Limit',
-    the additional IPs will be skipped.
-
-    - The 'Days' parameter acts as a priority filter, overriding any values provided
-    in the 'Start Date' or 'End Date' parameters.
+    | Size | String | No | The number of records to retrieve per search. The maximum
+    allowed value is 1000. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify environment and retrieves
-    integration configuration parameters such as API keys or credentials.
+    1. **Parameter Extraction:** The action extracts the list of IP addresses, processing
+    limits, and time-range filters (Dates or Days) from the user input.
 
-    2. **Parameter Extraction**: It extracts the target IP addresses and search filters
-    (dates, limit, size) from the action parameters.
+    2. **Validation:** It validates the format of the IP addresses and ensures the
+    date range is valid (e.g., start date is not after the end date and is within
+    the 90-day historical limit).
 
-    3. **Validation**: The script validates the IP address formats and ensures that
-    date ranges and size limits are within the allowed thresholds defined by the Team
-    Cymru Scout API.
+    3. **API Interaction:** For each valid IP address (up to the defined limit), the
+    action performs a GET request to the Team Cymru Scout API's `/ip/{ip}/details`
+    endpoint, specifically requesting the `proto_by_ip` section.
 
-    4. **API Request**: For each valid IP address (up to the defined limit), the action
-    sends a GET request to the Team Cymru Scout API endpoint, specifically requesting
-    the 'x509' data section.
+    4. **Data Processing:** The retrieved protocol data, which includes protocol types
+    and observation dates, is parsed and aggregated.
 
-    5. **Data Parsing**: The received JSON response is parsed to extract certificate
-    details, including Subject, Issuer, Validity Period, and Fingerprints.
-
-    6. **Output Generation**: The action generates a 'Certificates' data table and
-    an 'Account Usage' table for the SOAR case wall. It also attaches the raw JSON
-    response to the action results for use in subsequent playbook steps.
+    5. **Output Generation:** The action populates the `JsonResult` with the raw API
+    response and generates two data tables: 'Proto By IP' (containing the protocol
+    details) and 'Account Usage' (showing remaining API quota).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1019,7 +995,7 @@ Get X509 Info:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1035,15 +1011,61 @@ Get X509 Info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-List IP Summary:
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Whois Info:
   ai_description: >-
-    ### General Description
+    The 'Get Whois Info' action retrieves detailed Whois information for a provided
+    list of IP addresses from the Team Cymru Scout platform. This action is primarily
+    used for gathering administrative and network context, such as ASN, AS Name, BGP
+    information, and organizational details (Net Name, Org Name, contact emails) for
+    specific indicators. It supports both IPv4 and IPv6 addresses and allows for time-based
+    filtering of the results.
 
-    The **List IP Summary** action retrieves comprehensive summary information for
-    a user-provided list of IP addresses from the Team Cymru Scout platform. It is
-    designed to provide quick visibility into the reputation, geographic location,
-    and associated threat intelligence for multiple IPs simultaneously, without requiring
-    existing entities in the Google SecOps context.
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action extracts the comma-separated list of IP
+    addresses, processing limits, and optional time filters (Start Date, End Date,
+    Days, and Size) from the user input.
+
+    2. **Validation:** It validates the format of the IP addresses and ensures that
+    date parameters are correctly formatted (YYYY-MM-DD) and within allowed ranges
+    (e.g., start date not older than 90 days).
+
+    3. **API Interaction:** For each valid IP address (up to the defined limit), the
+    action performs a GET request to the Team Cymru Scout API's IP details endpoint,
+    specifically requesting the 'whois' section.
+
+    4. **Data Processing:** The action parses the JSON response, extracting key Whois
+    fields like ASN, BGP ASN, and organizational contact information.
+
+    5. **Output Generation:** It generates a data table titled 'Whois' containing
+    the extracted details and another table for 'Account Usage' to track API consumption.
+    The full raw response is also attached as a JSON result.
 
 
     ### Parameters Description
@@ -1052,42 +1074,201 @@ List IP Summary:
 
     | :--- | :--- | :--- | :--- |
 
-    | **IP Addresses** | String | Yes | A comma-separated list of IP addresses to
-    be queried (e.g., "1.1.1.1, 8.8.8.8"). |
+    | IP Addresses | String | Yes | A comma-separated list of IPv4 or IPv6 addresses
+    to fetch Whois information for. |
 
-    | **Limit** | String | Yes | The maximum number of valid IP addresses to process
-    from the provided list. This helps manage API usage and performance. |
+    | Limit | String | Yes | The maximum number of valid IP addresses to process in
+    a single execution (default is 10). |
 
+    | Start Date | String | No | The latest date for results in YYYY-MM-DD format
+    (UTC). Defaults to 29 days prior to today if not provided. |
 
-    ### Flow Description
+    | End Date | String | No | The earliest date for results in YYYY-MM-DD format
+    (UTC). Defaults to today's date if not provided. |
 
-    1. **Parameter Extraction:** The action retrieves the list of IP addresses and
-    the processing limit from the user input.
+    | Days | String | No | Relative offset in days from the current time. If provided,
+    this takes priority over Start/End dates. |
 
-    2. **Validation:** It validates the format of each IP address, identifies duplicates,
-    and filters out invalid entries.
-
-    3. **Batching:** The valid IP addresses are grouped into batches (up to 10 per
-    batch) to optimize API communication.
-
-    4. **API Interaction:** The action sends GET requests to the Team Cymru Scout
-    `/ip/foundation` endpoint for each batch.
-
-    5. **Data Aggregation:** Results from all batches are aggregated into a single
-    dataset.
-
-    6. **Output Generation:** The action populates the action results with a JSON
-    summary and creates multiple data tables, including "Summary Information for IPs",
-    "Insights", and "Account Usage".
+    | Size | String | No | The number of records to return in the search results (maximum
+    1000). |
 
 
     ### Additional Notes
 
-    - This action does not automatically process entities from the Google SecOps context;
-    it relies entirely on the manually provided "IP Addresses" parameter.
+    - If the 'Days' parameter is provided, it will override any values provided in
+    'Start Date' and 'End Date'.
 
-    - If the number of valid IPs exceeds the specified "Limit", the extra IPs are
-    skipped, and a warning is logged.
+    - The action performs validation to skip duplicate or malformed IP addresses and
+    will report these in the output message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables (Whois information and Account Usage) and JSON results
+      to the action output within Google SecOps.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get X509 Info:
+  ai_description: "### General Description\nThe **Get X509 Info** action retrieves\
+    \ detailed X509 certificate information for a list of provided IP addresses from\
+    \ the Team Cymru Scout platform. This action is designed to provide security analysts\
+    \ with visibility into the SSL/TLS certificate history and metadata associated\
+    \ with specific network indicators, aiding in infrastructure mapping and threat\
+    \ intelligence gathering.\n\n### Parameters Description\n| Parameter | Type |\
+    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **IP Addresses**\
+    \ | String | Yes | A comma-separated list of IPv4 or IPv6 addresses to fetch certificate\
+    \ information for. |\n| **Limit** | String | Yes | The maximum number of valid\
+    \ IP addresses to process in a single execution. Default is 10. |\n| **Start Date**\
+    \ | String | No | The latest date for results in UTC (YYYY-MM-DD). If omitted,\
+    \ defaults to 29 days prior to the current date. |\n| **End Date** | String |\
+    \ No | The earliest date for results in UTC (YYYY-MM-DD). If omitted, defaults\
+    \ to the current date. |\n| **Days** | String | No | A relative offset in days\
+    \ (integer) from the current time. If provided, this parameter takes priority\
+    \ over Start Date and End Date. |\n| **Size** | String | No | The number of records\
+    \ to return per search (Maximum allowed is 1000). |\n\n### Flow Description\n\
+    1. **Input Extraction**: The action extracts the target IP addresses and query\
+    \ filters (Limit, Dates, Days, Size) from the user-provided parameters.\n2. **Validation**:\
+    \ It validates the format of the IP addresses and ensures that the date ranges\
+    \ or 'Days' values are within the supported limits (e.g., Start Date must be within\
+    \ the last 90 days).\n3. **API Interaction**: For each valid IP address (up to\
+    \ the specified limit), the action sends a GET request to the Team Cymru Scout\
+    \ API to retrieve data from the 'x509' section.\n4. **Data Processing**: The action\
+    \ parses the API response, extracting certificate details such as issuer, subject,\
+    \ validity period, and fingerprints.\n5. **Output Generation**: \n    *   The\
+    \ raw data is attached as a JSON result.\n    *   A data table named \"Certificates\"\
+    \ is created to display the certificate details for each IP.\n    *   An \"Account\
+    \ Usage\" table is generated to inform the user of their remaining API query quota.\n\
+    \n### Additional Notes\n*   If the `Days` parameter is used, it overrides the\
+    \ `Start Date` and `End Date` parameters.\n*   The action handles duplicate and\
+    \ invalid IP addresses by filtering them out and reporting the count in the final\
+    \ output message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+List IP Summary:
+  ai_description: "### General Description\nThe **List IP Summary** action retrieves\
+    \ comprehensive summary information for a specified list of IP addresses from\
+    \ the Team Cymru Scout platform. It is designed for bulk lookups, allowing analysts\
+    \ to gather threat intelligence, geographic data, and autonomous system (AS) information\
+    \ for multiple indicators in a single execution. The action includes built-in\
+    \ validation to handle duplicate or malformed IP addresses and allows for a processing\
+    \ limit to manage API quota usage.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **IP Addresses**\
+    \ | string | Yes | A comma-separated list of IP addresses (e.g., \"1.1.1.1, 8.8.8.8\"\
+    ) to be queried for summary information. |\n| **Limit** | string | Yes | The maximum\
+    \ number of valid IP addresses to process from the provided list. Defaults to\
+    \ 10. Must be a positive integer. |\n\n### Flow Description\n1.  **Input Parsing:**\
+    \ The action extracts the comma-separated string of IP addresses and the processing\
+    \ limit from the user input.\n2.  **Validation:** It validates each IP address\
+    \ format, identifies duplicates, and filters out invalid entries. If the number\
+    \ of valid IPs exceeds the specified limit, the excess IPs are skipped.\n3.  **API\
+    \ Execution:** The action batches the valid IP addresses (up to 10 per batch)\
+    \ and performs GET requests to the Team Cymru Scout `/ip/foundation` endpoint.\n\
+    4.  **Data Aggregation:** It aggregates the responses from all batches, including\
+    \ summary details, insights, and API usage statistics.\n5.  **Output Generation:**\
+    \ \n    *   Adds the raw summary data as a JSON result.\n    *   Generates a \"\
+    Summary Information for IPs\" data table containing IP, Country Code, ASN, and\
+    \ Insight Ratings.\n    *   Generates an \"Insights\" data table detailing specific\
+    \ threat observations.\n    *   Generates an \"Account Usage\" table showing remaining\
+    \ API query limits.\n\n### Additional Notes\n*   This action does not run on existing\
+    \ SecOps entities; it processes the IP addresses provided directly in the parameter\
+    \ field.\n*   If all provided IP addresses are invalid or if the API calls fail,\
+    \ the action will report a failure state."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1115,28 +1296,53 @@ List IP Summary:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: true
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
-    \ designed to verify the connectivity and authentication configuration between\
-    \ Google SecOps and the Team Cymru Scout platform. Its primary purpose is to ensure\
-    \ that the integration parameters (such as API keys or credentials) are correct\
-    \ and that the Team Cymru Scout API is reachable.\n\n### Parameters Description\n\
-    This action does not require any input parameters. It utilizes the global integration\
-    \ configuration settings (Authentication Type, API Key, Username, Password, and\
-    \ Verify SSL) to perform the connectivity test.\n\n### Flow Description\n1. **Initialization**:\
-    \ The action initializes the Siemplify environment and retrieves the integration's\
-    \ configuration parameters.\n2. **API Manager Setup**: An `ApiManager` instance\
-    \ is created using the provided authentication details (either Token-based or\
-    \ Basic Auth).\n3. **Connectivity Test**: The action calls the `api_usage` method,\
-    \ which sends a GET request to the Team Cymru Scout `/usage` endpoint.\n4. **Result\
-    \ Evaluation**: \n    * If the API returns a successful response (HTTP 200), the\
-    \ action concludes with a success message indicating a valid connection.\n   \
-    \ * If an exception occurs or the API returns an error (e.g., 401 Unauthorized),\
-    \ the action captures the error details and reports a failure.\n5. **Finalization**:\
-    \ The action ends by returning the execution status and a descriptive output message\
-    \ to the SOAR interface.\n\n### Additional Notes\n* This action is strictly for\
-    \ testing purposes and does not process any entities or modify data in either\
-    \ Google SecOps or Team Cymru Scout."
+  ai_description: "### General Description\nThe **Ping** action is designed to verify\
+    \ the connectivity and authentication configuration between Google SecOps and\
+    \ the Team Cymru Scout platform. It serves as a diagnostic tool to ensure that\
+    \ the provided credentials (either API Key or Username/Password) and network settings\
+    \ (like SSL verification) are correct and that the Team Cymru Scout API is reachable.\n\
+    \n### Parameters Description\nThis action does not require any input parameters.\n\
+    \n### Flow Description\n1. **Configuration Retrieval**: The action fetches the\
+    \ integration's global configuration parameters, including the authentication\
+    \ type, credentials, and SSL verification settings.\n2. **API Initialization**:\
+    \ An internal API manager is initialized using the retrieved settings to handle\
+    \ communication with the Team Cymru Scout service.\n3. **Connectivity Test**:\
+    \ The action performs a GET request to the `/usage` endpoint of the Team Cymru\
+    \ Scout API. This endpoint is used to check the current API usage and effectively\
+    \ validates the provided credentials.\n4. **Result Processing**: \n    * If the\
+    \ API call is successful (HTTP 200), the action completes with a success status\
+    \ and a message confirming the connection.\n    * If the API call fails (e.g.,\
+    \ due to invalid credentials or network issues), the action logs the error and\
+    \ completes with a failure status, providing the error details in the output message.\n\
+    \n### Additional Notes\n* This action is typically used during the initial setup\
+    \ of the integration or for troubleshooting connectivity issues.\n* It does not\
+    \ process any entities or modify any data within Google SecOps or Team Cymru Scout."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1164,3 +1370,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

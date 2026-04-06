@@ -1,0 +1,91 @@
+Orca Security - Alerts Connector:
+  ai_description: >-
+    ### General Description
+
+
+    The Orca Security Alerts Connector fetches security findings and risks from the
+    Orca Security platform and ingests them into Google SecOps as cases. It provides
+    a continuous stream of cloud security alerts, including vulnerabilities, misconfigurations,
+    and compromised assets, allowing security teams to centralize their cloud security
+    posture monitoring. The connector supports granular filtering by severity, category,
+    and Orca's proprietary risk score to ensure only relevant alerts are processed.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of your Orca Security instance (e.g.,
+    https://<instance>.orcasecurity.io). |
+
+    | API Key | Password | No | API Key for authentication. Used if API Token is not
+    provided. |
+
+    | API Token | Password | No | API Token for authentication. This is the preferred
+    method and takes precedence over the API Key. |
+
+    | DeviceProductField | String | Yes | The source field name used to populate the
+    Product Name in the SOAR case. Default is 'Product Name'. |
+
+    | EventClassId | String | Yes | The source field name used to retrieve the Event
+    Field name. Default is 'data_RiskFindings_value_type'. |
+
+    | Lowest Severity To Fetch | String | No | The minimum severity level to ingest.
+    Options: Compromised, Imminent compromise, Hazardous, Informational. |
+
+    | Lowest Orca Score To Fetch | String | No | The minimum Orca Risk Score (1-10)
+    required for an alert to be ingested. |
+
+    | Category Filter | String | No | A comma-separated list of Orca categories (e.g.,
+    Vulnerability, Malware) to include. |
+
+    | Alert Type Filter | String | No | A comma-separated list of specific Orca alert
+    types to ingest. |
+
+    | Max Hours Backwards | Integer | No | The lookback window for the first run or
+    if the last run timestamp is missing. Default is 1 hour. |
+
+    | Max Alerts To Fetch | Integer | No | Maximum number of alerts to process per
+    iteration. Default is 100. |
+
+    | Use dynamic list as a blacklist | Boolean | Yes | If enabled, the connector
+    uses the SOAR environment's dynamic list (whitelist) as a blacklist for alert
+    titles. |
+
+    | Verify SSL | Boolean | Yes | If enabled, validates the SSL certificate of the
+    Orca Security API endpoint. |
+
+    | PythonProcessTimeout | Integer | Yes | The maximum execution time allowed for
+    the connector script in seconds. |
+
+
+    ### Flow Description
+
+
+    1.  **Authentication**: The connector establishes a session with the Orca Security
+    API using the provided API Token (Header-based) or API Key (Cookie-based).
+
+    2.  **Timeframe Calculation**: It determines the starting point for data retrieval
+    by checking the timestamp of the last successful execution. If no timestamp exists,
+    it uses the 'Max Hours Backwards' parameter.
+
+    3.  **Query Construction**: A query is built for the Orca 'Serving Layer' API,
+    incorporating filters for severity, categories, alert types, and the Orca Risk
+    Score.
+
+    4.  **Data Retrieval**: The connector fetches a batch of alerts (up to the 'Max
+    Alerts To Fetch' limit) matching the criteria.
+
+    5.  **Deduplication**: It compares retrieved alert IDs against a local cache of
+    previously processed IDs to prevent duplicate case creation.
+
+    6.  **Mapping and Ingestion**: Each unique alert is mapped to the Google SecOps
+    AlertInfo model. The raw alert data is attached as an event, and the alert is
+    ingested as a case.
+
+    7.  **State Persistence**: Upon successful processing, the connector updates the
+    last run timestamp and the list of processed alert IDs to ensure continuity in
+    the next cycle.

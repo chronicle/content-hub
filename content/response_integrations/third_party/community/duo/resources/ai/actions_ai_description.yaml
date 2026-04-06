@@ -1,52 +1,57 @@
 Get Authentication Logs for User:
   ai_description: >-
-    ### General Description
-
-    This action retrieves user profile information and authentication logs from DUO
-    MFA for a specific username. It is designed to provide visibility into a user's
-    authentication patterns over a specified period (defaulting to 1 day). The action
-    also performs a frequency analysis on successful authentication sources (IP addresses,
-    states, operating systems, applications, devices, and factors) and filters them
-    based on a user-defined threshold to identify 'known' or 'safe' sources.
+    Retrieves user profile information and authentication history from Duo Security
+    for a specific username. This action queries the Duo Admin API to fetch logs over
+    a specified lookback period and performs a frequency analysis on successful authentication
+    attempts. It identifies common access patterns such as IP addresses, operating
+    systems, and devices that meet a user-defined 'Authentication Threshold'.
 
 
-    ### Parameters Description
+    ### Flow Description:
+
+    1. **Authentication**: Connects to the Duo Admin API using the configured API
+    Hostname, Secret Key, and Integration Key.
+
+    2. **User Lookup**: Searches for the Duo `user_id` corresponding to the provided
+    `Username` parameter.
+
+    3. **Log Retrieval**: Fetches authentication logs for the identified user within
+    the timeframe defined by the `Number Days Back` parameter.
+
+    4. **Pattern Analysis**: Iterates through successful authentication logs to count
+    occurrences of access IPs, geographic states, OS versions, applications, and hardware
+    devices.
+
+    5. **Threshold Filtering**: Filters the aggregated counts, retaining only those
+    sources that meet or exceed the `Authentication Threshold` value.
+
+    6. **Output Generation**: Returns a JSON object containing the user's Duo profile,
+    raw authentication logs, and the filtered frequency statistics.
+
+
+    ### Parameters Description:
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Authentication Threshold | string | Yes | The minimum number of successful authentications
-    required for an authentication source (e.g., an IP or device) to be included in
-    the summary lists. Default is 2. |
+    | Authentication Threshold | String | Yes | The minimum number of successful authentications
+    required for a source (e.g., IP, device) to be included in the summary results.
+    Default is 2. |
 
-    | Number Days Back | string | Yes | The number of days prior to the current time
-    to retrieve logs for. Default is 1. |
+    | Number Days Back | String | Yes | The number of days prior to the current time
+    to search for authentication logs. Default is 1. |
 
-    | Username | string | No | The DUO username for which to retrieve data. |
+    | Username | String | No | The Duo username for which to retrieve data. |
 
 
-    ### Flow Description
+    ### Additional Notes:
 
-    1. **Authentication**: Connects to the DUO Admin API using the configured Hostname,
-    Integration Key, and Secret Key.
+    - This action does not process entities from the Google SecOps case; it relies
+    entirely on the `Username` parameter.
 
-    2. **User Identification**: Queries DUO to find the `user_id` associated with
-    the provided `Username` parameter.
-
-    3. **Log Retrieval**: Fetches all authentication logs for that user within the
-    time window defined by `Number Days Back`.
-
-    4. **Data Processing**: Iterates through the logs to identify successful authentications.
-
-    5. **Frequency Analysis**: Counts occurrences of specific metadata fields (IP,
-    OS, Location, Device, etc.) for successful logins.
-
-    6. **Filtering**: Removes entries from the frequency counts that do not meet the
-    `Authentication Threshold`.
-
-    7. **Output**: Returns a comprehensive JSON object containing the user's profile,
-    raw logs, and the filtered frequency analysis.
+    - If the `Username` is not found in Duo or not provided, the action will report
+    that no username was provided.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -74,53 +79,73 @@ Get Authentication Logs for User:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: true
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Get Trust Monitor Events:
   ai_description: >-
     ### General Description
 
-    Retrieves Trust Monitor events from DUO Security for a specified lookback period.
-    This action interacts with the DUO Admin API to fetch security events that help
-    monitor trust assessments and potential security anomalies within the DUO environment.
-    It is primarily used for data gathering and auditing purposes.
+    This action retrieves Trust Monitor events from DUO Security for a specified lookback
+    period. It is designed to provide visibility into security events and anomalies
+    detected by DUO's Trust Monitor feature, allowing analysts to review historical
+    event data within Google SecOps.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter Name | Expected Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Number Days Back | String | Yes | The number of days prior to the current time
-    to retrieve events from. The value is converted to an integer and used to calculate
-    the start timestamp for the API request. Default is '1'. |
+    | Number Days Back | String/Number | Yes | The number of days prior to the current
+    time from which to start fetching events. Defaults to '1'. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the DUO API Hostname, Admin
+    Secret Key, and Admin Integration Key from the integration settings.
+
+    2. **Parameter Processing**: It extracts the 'Number Days Back' parameter and
+    calculates the start (mintime) and end (maxtime) timestamps in milliseconds.
+
+    3. **API Interaction**: Using the DUO Python SDK (`duo_client`), the action authenticates
+    to the Admin API and calls the `get_trust_monitor_events_by_offset` method.
+
+    4. **Data Output**: The retrieved events are formatted into a JSON object and
+    added to the action's execution results for use in subsequent playbook steps.
 
 
     ### Additional Notes
 
-    - This action requires valid DUO Admin API credentials (API Hostname, Admin Secret
-    Key, and Admin Integration Key) to be configured in the integration settings.
-
-    - The action does not process specific entities; it performs a global fetch of
+    - This action does not process specific entities; it performs a global fetch of
     events based on the time range provided.
 
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action extracts the DUO API Hostname, Admin
-    Secret Key, and Admin Integration Key from the integration's provider configuration.
-
-    2. **Time Calculation**: It calculates the start and end timestamps in milliseconds.
-    The start timestamp is determined by subtracting the specified number of days
-    (converted from the `Number Days Back` parameter) from the current time.
-
-    3. **API Initialization**: Initializes the DUO Admin API client using the provided
-    credentials.
-
-    4. **Data Retrieval**: Calls the DUO SDK method `get_trust_monitor_events_by_offset`
-    using the calculated time range to fetch Trust Monitor events.
-
-    5. **Result Processing**: Formats the retrieved events into a JSON structure and
-    attaches them to the action's result object for use in subsequent playbook steps.
+    - Ensure the DUO Admin API keys have the necessary permissions to access Trust
+    Monitor data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -148,43 +173,52 @@ Get Trust Monitor Events:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: true
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Get Users by Name:
-  ai_description: >-
-    ### General Description
-
-    Retrieves detailed user information from DUO MFA using the Admin API based on
-    a specific username. This action is designed to fetch user-specific metadata,
-    including user IDs, authentication details, and device data, providing visibility
-    into a user's status within the DUO ecosystem.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Username | String | Yes | The specific username to query in the DUO Admin API
-    to retrieve associated data. |
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: Retrieves the DUO API Hostname, Admin Secret
-    Key, and Admin Integration Key from the integration's configuration settings.
-
-    2. **Parameter Extraction**: Retrieves the target `Username` provided as an action
-    input.
-
-    3. **API Initialization**: Initializes the DUO Admin API client using the extracted
-    credentials.
-
-    4. **Data Retrieval**: Calls the `get_users_by_name` endpoint to fetch all records
-    associated with the provided username.
-
-    5. **Result Processing**: Iterates through the returned data to identify the `user_id`
-    and aggregates the full response into a structured JSON result for use in subsequent
-    playbook steps.
+  ai_description: "### General Description\nThis action queries the DUO Admin API\
+    \ to retrieve detailed information about a specific user based on a provided username.\
+    \ It is designed to fetch contextual data such as user IDs, authentication history,\
+    \ and associated device information from the DUO MFA platform. This information\
+    \ is typically used for investigation and identity verification during security\
+    \ incidents.\n\n### Parameters Description\n| Parameter Name | Type | Mandatory\
+    \ | Description | \n| :--- | :--- | :--- | :--- |\n| Username | string | Yes |\
+    \ The specific DUO username for which to retrieve account and device data. |\n\
+    \n### Flow Description\n1. **Configuration Extraction**: The action retrieves\
+    \ the DUO API Hostname, Admin Secret Key, and Admin Integration Key from the integration's\
+    \ configuration settings.\n2. **Parameter Extraction**: The action extracts the\
+    \ `Username` provided by the user or playbook.\n3. **API Initialization**: It\
+    \ initializes the DUO Admin API client using the provided credentials and hostname.\n\
+    4. **Data Retrieval**: The action calls the `get_users_by_name` method from the\
+    \ DUO SDK to fetch all data associated with the specified username.\n5. **Result\
+    \ Processing**: It extracts the `user_id` from the response and packages the full\
+    \ user data into a structured JSON format.\n6. **Output**: The results are added\
+    \ to the action's JSON output for use in subsequent playbook steps.\n\n### Additional\
+    \ Notes\nThis action does not automatically iterate over entities in a case; it\
+    \ relies strictly on the `Username` parameter provided in the action configuration."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -212,36 +246,50 @@ Get Users by Name:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
-  ai_description: >-
-    ### General Description
-
-    Verifies the connectivity and credentials for the DUO Auth API. This action uses
-    the DUO Python SDK to call the `/check` endpoint, ensuring that the provided API
-    Hostname, Secret Key, and Integration Key are valid and that the request signature
-    is generated correctly.
-
-
-    ### Parameters
-
-    There are no input parameters for this action. It relies entirely on the integration's
-    configuration settings (API Hostname, Auth Secret Key, and Auth Integration Key).
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: Retrieves the `API Hostname`, `Auth Secret Key`,
-    and `Auth Integration Key` from the DUO integration settings.
-
-    2. **Client Initialization**: Initializes the DUO Auth API client using the retrieved
-    credentials.
-
-    3. **Connectivity Check**: Executes the `check()` method against the DUO API to
-    verify the integration setup.
-
-    4. **Result Handling**: If the check is successful, it returns a confirmation
-    message. If an exception occurs, it reports a failure with the specific error
-    details.
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connectivity and authentication configuration between\
+    \ Google SecOps and the DUO Auth API. It validates that the integration's global\
+    \ settings\u2014specifically the API Hostname, Auth Integration Key, and Auth\
+    \ Secret Key\u2014are correct and that the environment can successfully generate\
+    \ the required request signatures to communicate with DUO.\n\n### Parameters Description\n\
+    There are no parameters for this action.\n\n### Additional Notes\nThis action\
+    \ is primarily used for health checks and troubleshooting. It does not process\
+    \ any entities or modify any data within Google SecOps or DUO.\n\n### Flow Description\n\
+    1. **Configuration Retrieval:** The action extracts the `API Hostname`, `Auth\
+    \ Secret Key`, and `Auth Integration Key` from the DUO integration configuration.\n\
+    2. **Client Initialization:** It initializes the DUO Python SDK `Auth` client\
+    \ using the extracted credentials.\n3. **Validation Call:** The action executes\
+    \ the `/check` endpoint via the SDK to verify the validity of the keys and the\
+    \ connectivity to the host.\n4. **Execution Outcome:** If the API call succeeds,\
+    \ the action completes with a success message. If an exception occurs (e.g., authentication\
+    \ failure or network error), the action catches the error and reports a failure\
+    \ status."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -269,3 +317,28 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

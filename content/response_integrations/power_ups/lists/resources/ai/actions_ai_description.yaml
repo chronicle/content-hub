@@ -2,9 +2,10 @@ Add String to Custom List:
   ai_description: >-
     ### General Description
 
-    Adds a user-defined string to a specific Google SecOps custom list category. This
-    action is primarily used for managing internal platform lists, such as allowlists,
-    blocklists, or watchlists, by programmatically inserting new entries.
+    The **Add String to Custom List** action allows users to programmatically add
+    a specific string to a designated Custom List category within Google SecOps. This
+    is a utility action used for managing internal lists such as allowlists, blocklists,
+    or watchlists directly from a playbook without requiring manual entry in the UI.
 
 
     ### Parameters Description
@@ -13,32 +14,34 @@ Add String to Custom List:
 
     | :--- | :--- | :--- | :--- |
 
-    | ListItem | String | Yes | The specific string value to be added to the custom
+    | **ListItem** | string | Yes | The specific string value to be added to the custom
     list. |
 
-    | Category | String | Yes | The name of the custom list category where the string
-    will be stored. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves the `ListItem` (the string to
-    add) and the `Category` (the target list) from the input parameters.
-
-    2. **Object Preparation**: It creates a `CustomList` data object containing the
-    input string, the target category, and the current environment context.
-
-    3. **Internal Mutation**: The action calls the internal SDK method `add_entities_to_custom_list`
-    to update the specified Google SecOps custom list with the new string.
-
-    4. **Finalization**: The action concludes by providing a success message confirming
-    the addition of the item to the category.
+    | **Category** | string | Yes | The name of the custom list category where the
+    string should be added (e.g., "WhiteList"). |
 
 
     ### Additional Notes
 
-    This action does not interact with external APIs; it only modifies internal Google
-    SecOps data structures.
+    This action does not operate on entities within the current context; it uses the
+    provided string parameter. It modifies internal Google SecOps data (Custom Lists)
+    but does not interact with external systems. There are no entity-based filters
+    applied.
+
+
+    ### Flow Description
+
+    1. **Parameter Retrieval**: The action extracts the `ListItem` (the string to
+    add) and the `Category` (the target list) from the input parameters.
+
+    2. **Object Creation**: It constructs a `CustomList` object using the provided
+    string, category, and the current environment context.
+
+    3. **List Update**: It calls the internal SDK method `add_entities_to_custom_list`
+    to add the constructed item to the specified custom list in Google SecOps.
+
+    4. **Completion**: The action returns a success message indicating the string
+    has been added to the category and terminates with a completed status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -49,7 +52,7 @@ Add String to Custom List:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Adds a string entry to an internal Google SecOps custom list category.
+      Adds a string to a specified Custom List category within Google SecOps.
   categories:
     enrichment: false
   entity_usage:
@@ -67,14 +70,56 @@ Add String to Custom List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Is String In Custom List:
   ai_description: >-
-    ### General Description
+    Checks if a specific set of strings exists within a designated Google SecOps Custom
+    List category. This action is primarily used for whitelist or blacklist validation
+    by comparing user-provided identifiers against internal lists stored within the
+    platform.
 
-    This action checks if a specific set of strings exists within a designated Google
-    SecOps Custom List category. It is primarily used for whitelist/blacklist validation
-    or verifying if specific identifiers (like IPs, domains, or usernames) are already
-    known to the system within a specific context.
+
+    ### Flow Description
+
+    1. **Parse Input:** The action retrieves the `IdentifierList` and `Category` parameters.
+    It attempts to parse the `IdentifierList` as a JSON array; if that fails, it treats
+    it as a comma-separated string.
+
+    2. **Iterate Identifiers:** For each string in the list, the action creates a
+    `CustomList` object associated with the specified category and the current environment.
+
+    3. **Query Custom Lists:** It uses the internal SDK method `any_entity_in_custom_list`
+    to check if the identifier exists in the specified category.
+
+    4. **Aggregate Results:** The action tracks which identifiers were found and maintains
+    a total count of matches.
+
+    5. **Finalize:** It outputs a JSON mapping of each identifier to its presence
+    status (true/false) and returns the total count of found items as the result value.
 
 
     ### Parameters Description
@@ -83,41 +128,21 @@ Is String In Custom List:
 
     | :--- | :--- | :--- | :--- |
 
-    | **IdentifierList** | String | Yes | A list of strings to compare against the
-    custom list. This can be provided as a comma-separated string (e.g., `1.2.3.4,google.com`)
-    or a valid JSON array. |
+    | IdentifierList | string | Yes | A list of strings to compare against the custom
+    list. Can be a JSON-formatted list (e.g., `["1.1.1.1", "google.com"]`) or a comma-separated
+    string (e.g., `1.1.1.1,google.com`). |
 
-    | **Category** | String | Yes | The name of the Custom List category (e.g., `WhiteList`,
-    `BlackList`) to search within for the current environment. |
+    | Category | string | Yes | The name of the Custom List category to search within
+    (e.g., 'WhiteList', 'BlackList'). |
 
 
     ### Additional Notes
 
-    - The action handles both comma-separated strings and JSON-formatted arrays for
-    the `IdentifierList` parameter.
+    - This action does not interact with the entities currently present in the alert;
+    it only processes the strings provided in the `IdentifierList` parameter.
 
-    - It performs the check specifically for the environment associated with the current
-    execution context.
-
-
-    ### Flow Description
-
-    1. **Parameter Retrieval**: The action extracts the `Category` and `IdentifierList`
-    from the input parameters.
-
-    2. **Parsing**: It attempts to parse the `IdentifierList` as JSON; if that fails,
-    it splits the string by commas and trims whitespace from each entry.
-
-    3. **Custom List Lookup**: For each identifier in the list, the action creates
-    a `CustomList` object and uses the SOAR SDK method `any_entity_in_custom_list`
-    to verify its existence in the specified category.
-
-    4. **Result Aggregation**: It builds a JSON object mapping each identifier to
-    a boolean value (`true` if found, `false` otherwise) and maintains a counter of
-    total matches found.
-
-    5. **Completion**: The action outputs the total count of found items as the result
-    value and attaches the detailed mapping as a JSON result.
+    - The search is environment-aware, meaning it only checks lists associated with
+    the environment in which the action is running.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -129,7 +154,7 @@ Is String In Custom List:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -145,13 +170,39 @@ Is String In Custom List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Ping:
   ai_description: >-
     ### General Description
 
-    Verifies the connectivity between the Google SecOps (Chronicle) platform and the
-    integration environment. This action serves as a basic health check to ensure
-    that the integration is correctly configured and reachable.
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    between the Google SecOps platform and the Lists integration environment. It serves
+    as a health check to ensure that the integration is correctly configured and that
+    the execution environment can successfully initialize the integration's components.
 
 
     ### Parameters Description
@@ -161,19 +212,18 @@ Ping:
 
     ### Additional Notes
 
-    This is a standard 'Ping' action used for troubleshooting and configuration validation.
-    It does not interact with any external APIs or internal data stores.
+    This action does not interact with any external APIs or internal data stores.
+    It is strictly used for connectivity testing.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify SDK to establish a
-    session.
+    1. **Initialization**: The action initializes the Siemplify API object.
 
-    2. **Connectivity Check**: The script executes a simple completion command to
-    confirm the environment is responsive.
+    2. **Connectivity Check**: The script executes a simple completion command.
 
-    3. **Termination**: The action ends with a success message: 'Siemplify is connected'.
+    3. **Result Reporting**: The action terminates with a success message ('Siemplify
+    is connected') to indicate that the integration logic is reachable and functional.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -201,52 +251,51 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Remove String from Custom List:
   ai_description: >-
-    ### General Description
-
-    The **Remove String from Custom List** action is designed to delete a specific
-    string entry from an internal Google SecOps custom list. This is typically used
-    for managing allowlists, blocklists, or other reference datasets within the SOAR
-    platform.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Category** | String | Yes | The name of the custom list category (e.g., 'WhiteList')
-    from which the item should be removed. |
-
-    | **ListItem** | String | Yes | The specific string value to be removed from the
-    custom list. |
-
-
-    ### Additional Notes
-
-    - This action operates on internal Google SecOps data (Custom Lists) and does
-    not interact with external APIs.
-
-    - **Note**: The parameter description for 'ListItem' in the configuration metadata
-    incorrectly mentions 'adding' the string, but the action logic and name confirm
-    it performs a removal.
-
-
-    ### Flow Description
-
-    1. **Parameter Retrieval**: The action extracts the 'Category' and 'ListItem'
-    values from the user input.
-
-    2. **Object Construction**: It creates a 'CustomList' object using the provided
-    string, category, and the current environment context.
-
-    3. **Removal Execution**: It invokes the 'remove_entities_from_custom_list' method
-    to delete the entry from the internal database.
-
-    4. **Completion**: The action returns a success status and an output message confirming
-    the removal.
+    ### General Description\n\nThe **Remove String from Custom List** action allows
+    users to programmatically delete a specific string entry from an existing Google
+    SecOps custom list. This is typically used to manage internal allowlists, blocklists,
+    or watchlists by removing indicators that are no longer relevant.\n\n### Parameters
+    Description\n\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |
+    :--- | :--- |\n| **Category** | String | Yes | The name of the custom list category
+    (e.g., \"WhiteList\") from which the item will be removed. |\n| **ListItem** |
+    String | Yes | The specific string value to be removed from the custom list. |\n\n###
+    Flow Description\n\n1. **Parameter Extraction**: The action retrieves the target
+    custom list category and the specific string to be removed from the input parameters.\n2.
+    **Object Preparation**: It creates a `CustomList` object containing the string
+    and category information.\n3. **Removal Execution**: The action calls the internal
+    SDK method `remove_entities_from_custom_list` to perform the deletion within the
+    SecOps platform.\n4. **Finalization**: The action returns a success message confirming
+    the removal or a failure message if an error occurs.\n\n### Additional Notes\n\n-
+    This action operates on internal Google SecOps custom lists and does not affect
+    external security controls directly.\n- Ensure the `Category` name matches the
+    existing list name exactly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -257,7 +306,7 @@ Remove String from Custom List:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Removes a string entry from a Google SecOps internal custom list.
+      Removes a string entry from a Google SecOps custom list.
   categories:
     enrichment: false
   entity_usage:
@@ -275,15 +324,40 @@ Remove String from Custom List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Search Custom Lists:
   ai_description: >-
     ### General Description
 
-    Searches for specific strings within Google SecOps Custom Lists. This action allows
-    users to query internal tracking lists for specific identifiers or categories,
-    providing a way to programmatically access and filter custom list data within
-    a playbook. It is primarily used to check if certain values exist within managed
-    lists or to retrieve the contents of specific list categories.
+    This action searches for a specific string within the records of Google SecOps
+    Custom Lists. It allows users to filter the search by specific categories or perform
+    a global search across all custom lists. If no search string or categories are
+    provided, the action retrieves all available custom list records. The results
+    are returned as a JSON object containing the matching records.
 
 
     ### Parameters Description
@@ -292,44 +366,44 @@ Search Custom Lists:
 
     | :--- | :--- | :--- | :--- |
 
-    | String to Search | String | No | The specific string to look for within the
-    `entityIdentifier` field of the custom list records. This performs a substring
-    match. |
+    | String to Search | String | No | The specific substring to look for within the
+    `entityIdentifier` field of the custom list records. If omitted, all records in
+    the specified categories (or all categories) are returned. |
 
-    | Categories | String | No | A comma-separated list of custom list names (categories)
-    to restrict the search to. |
-
-
-    ### Additional Notes
-
-    - If no `Categories` are provided, the action retrieves records from all available
-    custom lists.
-
-    - If no `String to Search` is provided, the action returns all records within
-    the specified categories (or all records if no categories are specified).
-
-    - The action returns a boolean result indicating if any matches were found and
-    provides the matching records in JSON format.
+    | Categories | String | No | A comma-separated list of custom list categories
+    to restrict the search to. If omitted, the action searches across all available
+    custom lists. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the `Categories` and `String
-    to Search` parameters from the input configuration.
+    1. **Parameter Extraction:** The action retrieves the `String to Search` and `Categories`
+    from the input.
 
-    2. **Data Retrieval**: It utilizes the internal SOAR API (`get_traking_list_record`)
-    to fetch records from the custom lists based on the provided categories.
+    2. **Data Retrieval:** It calls the internal SOAR API to fetch custom list records,
+    optionally filtered by the provided categories.
 
-    3. **Category Filtering**: If specific categories were requested, the action ensures
-    the results are filtered to only include records belonging to those categories.
+    3. **Category Filtering:** If categories were provided, the action ensures only
+    records belonging to those categories are processed.
 
-    4. **String Matching**: If a search string is provided, the action iterates through
-    the retrieved records and filters for those where the `entityIdentifier` contains
-    the search string.
+    4. **String Matching:** If a search string is provided, the action iterates through
+    the records and identifies those where the `entityIdentifier` contains the search
+    string (case-sensitive).
 
-    5. **Result Output**: The final set of matching records is added to the action's
-    JSON result. The action completes with a success message indicating the number
-    of records found.
+    5. **Result Compilation:** Matching records are collected into a list.
+
+    6. **Output:** The list of matching records is attached to the action results
+    as a JSON object, and the action completes with a summary message indicating the
+    number of matches found.
+
+
+    ### Additional Notes
+
+    - This action interacts with internal Google SecOps data (Custom Lists) and does
+    not communicate with external third-party services.
+
+    - If no records match the criteria, the action will complete successfully but
+    indicate that no matching records were found.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -357,58 +431,78 @@ Search Custom Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
 Search Environment Custom Lists:
   ai_description: >-
-    ### General Description
-
-    The **Search Environment Custom Lists** action allows users to query and filter
-    records stored within the Google SecOps environment's custom lists. It is a utility
-    action designed to find specific entries (such as indicators, usernames, or identifiers)
-    across various list categories. If no search criteria are provided, the action
-    retrieves all available records from the environment.
+    Searches for a specified string within the records of the environment's custom
+    lists in Google SecOps. This action allows users to filter results by specific
+    categories and search for matches within the entity identifiers of the list records.
+    If no parameters are provided, the action returns all available custom list records.
 
 
-    ### Parameters Description
+    ### Flow Description:
 
-    | Parameter | Description | Type | Mandatory |
+    1. **Parameter Extraction**: The action retrieves the 'Categories' and 'String
+    to Search' parameters from the input.
+
+    2. **Data Retrieval**: It calls the internal SOAR API to fetch custom list records
+    filtered by the provided categories and string.
+
+    3. **Category Filtering**: If categories are specified, the action filters the
+    retrieved records to include only those belonging to the specified categories.
+
+    4. **String Matching**: If a search string is provided, the action iterates through
+    the records and identifies those where the 'entityIdentifier' contains the search
+    string.
+
+    5. **Result Output**: The matching records are added to the action's JSON results,
+    and a summary message indicating the number of matches found is returned.
+
+
+    ### Parameters Description:
+
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **String to Search** | The specific text string to look for within the `entityIdentifier`
-    field of the custom list records. | String | No |
+    | String to Search | String | No | The specific string to look for within the
+    'entityIdentifier' field of the custom list records. |
 
-    | **Categories** | A comma-separated list of categories (e.g., "Suspicious IPs,
-    VIP Users") to narrow the search scope to specific lists. | String | No |
-
-
-    ### Additional Notes
-
-    - If both parameters are left empty, the action will return all records from all
-    custom lists in the environment.
-
-    - The search logic is case-sensitive or case-insensitive depending on the underlying
-    API implementation, but typically matches the string within the `entityIdentifier`
-    field.
+    | Categories | String | No | A comma-separated list of categories used to filter
+    which custom lists are searched. |
 
 
-    ### Flow Description
+    ### Additional Notes:
 
-    1. **Parameter Extraction**: The action extracts the `Categories` and `String
-    to Search` parameters provided by the user.
+    - If both parameters are left empty, the action will attempt to return all records
+    from all custom lists in the environment.
 
-    2. **Data Retrieval**: It fetches custom list records from the internal Google
-    SecOps database using the `get_traking_list_records_filtered` helper method.
-
-    3. **Category Filtering**: If the `Categories` parameter is provided, the action
-    filters the retrieved records to include only those belonging to the specified
-    categories.
-
-    4. **String Matching**: If a `String to Search` is provided, the action filters
-    the records further, keeping only those where the search string is contained within
-    the `entityIdentifier` attribute.
-
-    5. **Result Finalization**: The matching records are added to the action's JSON
-    results, and the action completes with a summary of the number of matches found.
+    - This action interacts with internal Google SecOps data and does not communicate
+    with external third-party services.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -436,3 +530,28 @@ Search Environment Custom Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

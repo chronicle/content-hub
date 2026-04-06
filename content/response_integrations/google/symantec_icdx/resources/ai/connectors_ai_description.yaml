@@ -1,0 +1,78 @@
+SymantecICDX query Connector:
+  ai_description: >-
+    ### General Description
+
+    The SymantecICDX Query Connector enables Google SecOps to ingest security events
+    from Symantec Integrated Cyber Defense Exchange (ICDX). By utilizing custom search
+    queries, the connector fetches specific event data, transforms it into a standardized
+    format, and creates cases for further investigation. This integration allows security
+    teams to centralize Symantec security telemetry and automate incident response
+    workflows.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | DeviceProductField | String | Yes | The field name in the source data used to
+    determine the device product (default: device_product). |
+
+    | EventClassId | String | No | The field name used to determine the event name
+    or sub-type (default: name). |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process running the current script. |
+
+    | Api Root | String | Yes | The base URL of the Symantec ICDX API instance. |
+
+    | Api Token | Password | Yes | The API token used for Basic authentication. |
+
+    | Verify SSL | Boolean | Yes | If set to true, the connector will verify the SSL
+    certificate of the API endpoint. |
+
+    | Search Query | String | Yes | The ICDX query string used to filter and retrieve
+    specific events. |
+
+    | Events Limit | Integer | Yes | The maximum number of events to pull in a single
+    execution cycle. |
+
+    | Max Days Backwards | Integer | Yes | The number of days to look back for events
+    during the initial run. |
+
+    | Proxy Server Address | String | No | The address of the proxy server if one
+    is required for the connection. |
+
+    | Proxy Username | String | No | The username for proxy authentication. |
+
+    | Proxy Password | Password | No | The password for proxy authentication. |
+
+
+    ### Flow Description
+
+    1. **Connection Establishment**: The connector initializes a session with the
+    Symantec ICDX API using the provided API Root and Token.
+
+    2. **Timestamp Calculation**: It determines the search start time by checking
+    the last saved timestamp. If no timestamp exists, it uses the 'Max Days Backwards'
+    parameter.
+
+    3. **Event Retrieval**: A search request is sent to the ICDX `/archives/search`
+    endpoint using the configured 'Search Query' and 'Events Limit'.
+
+    4. **Pagination Handling**: If the API response indicates more data is available
+    via a 'next' token, the connector automatically paginates to retrieve the full
+    set of results.
+
+    5. **Deduplication**: The connector maintains a local cache of processed event
+    UUIDs. It filters out any events that have already been ingested within the last
+    72 hours.
+
+    6. **Case Mapping**: Each unique event is mapped to a Google SecOps CaseInfo object.
+    The 'message' field is typically used for the alert name, and the 'uuid' serves
+    as the unique identifier.
+
+    7. **Ingestion**: The connector performs an overflow check for each alert and
+    then ingests the valid cases into Google SecOps, updating the execution timestamp
+    and ID cache upon completion.

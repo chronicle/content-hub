@@ -1,0 +1,407 @@
+Domain monitor:
+  ai_description: >-
+    ### General Description
+
+    The **Domain Monitor** action retrieves information from the Cyjax Domain Monitor
+    feature. This feature is designed to track specific brands against newly registered
+    global domains and Certificate Transparency Logs (CTL) to identify potential brand
+    impersonation or malicious domain registrations. The action allows users to search
+    for specific domain strings and filter results by a time range.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query** | String | No | A query string used to search for a specific domain
+    or a partial domain match. |
+
+    | **Since** | String | No | The start date and time for the search in ISO8601
+    format (e.g., `2026-02-09T15:01:39Z`). |
+
+    | **Until** | String | No | The end date and time for the search in ISO8601 format
+    (e.g., `2026-02-09T15:01:39Z`). |
+
+
+    ### Additional Notes
+
+    - The action performs automatic pagination and can retrieve up to a maximum of
+    1000 records from the Cyjax API.
+
+    - If the `Since` date is configured to be later than the `Until` date, the action
+    will fail with a validation error.
+
+    - Results are presented both as a data table for quick review and as a raw JSON
+    object for downstream playbook processing.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the API token and SSL verification
+    settings from the integration configuration, followed by the `Query`, `Since`,
+    and `Until` action parameters.
+
+    2. **Validation:** It validates that the provided dates are in the correct ISO8601
+    format and ensures the start date is not after the end date.
+
+    3. **API Interaction:** The action initializes the Cyjax API client and calls
+    the Domain Monitor endpoint. It handles pagination automatically to fetch all
+    available results up to the 1000-record limit.
+
+    4. **Data Processing:** Retrieved records are parsed into a structured data model.
+    If results are found, they are formatted into a CSV-style list for the data table.
+
+    5. **Output Generation:** The action populates a data table named "Domain Monitor
+    Results" in the Google SecOps case wall and attaches the full result set as a
+    JSON object. It then concludes with a status message indicating the number of
+    records found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates a data table named "Domain Monitor Results" within the Google
+      SecOps case to display the retrieved domain monitoring records.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: true
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Enrich IOCs:
+  ai_description: >-
+    Enriches Indicators of Compromise (IOCs) using Cyjax threat intelligence. This
+    action retrieves detailed contextual information for various indicator types,
+    including sightings from monitored sources, GeoIP data, and ASN details. It automatically
+    processes entities within the case, updates their properties with the retrieved
+    intelligence, and provides a summary table for quick analysis.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require manual parameters; it automatically
+    processes all supported entities attached to the case. |
+
+
+    ### Additional Notes
+
+    - Supported IOC types include: Domain, Email, Hostname, FileHash (MD5, SHA1, SHA256),
+    IPv4, IPv6, URL, and CVE.
+
+    - The action clears any existing Cyjax-prefixed enrichment data on the entity
+    before applying new results to ensure data freshness.
+
+
+    ### Flow Description
+
+    1. **Entity Retrieval**: The action identifies all target entities associated
+    with the current case.
+
+    2. **API Interaction**: For each entity, the action queries the Cyjax API's enrichment
+    endpoint using the entity's identifier.
+
+    3. **Data Cleaning**: Existing enrichment properties (prefixed with 'Cyjax_')
+    on the entity are reset to ensure no stale data remains.
+
+    4. **Enrichment**: The action parses the API response to extract GeoIP (city,
+    country), ASN (organization, number), and sighting information.
+
+    5. **Internal Update**: Entity attributes are updated with the new intelligence,
+    and the entity is marked as 'enriched'.
+
+    6. **Reporting**: A data table named 'Enriched IOCs' is added to the case, and
+    a JSON result containing the raw data is attached.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with Cyjax threat intelligence data and
+      adds a data table to the case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+List Data Breaches:
+  ai_description: "### General Description\nThe **List Data Breaches** action retrieves\
+    \ a list of email addresses and associated metadata that have been identified\
+    \ in data breaches, using the Cyjax Threat Intelligence platform. It allows analysts\
+    \ to search for specific email addresses or patterns and filter results by a specific\
+    \ time range. The action provides visibility into leaked credentials, including\
+    \ the source of the breach, the specific data classes exposed (e.g., passwords,\
+    \ usernames), and the discovery date.\n\n### Parameters Description\n\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Query**\
+    \ | string | No | A query string to search for a specific email address or a partial\
+    \ string. If omitted, the action retrieves general breach data based on time filters.\
+    \ |\n| **Since** | string | No | The start date and time for the search in ISO8601\
+    \ format (e.g., `2026-02-09T15:01:39Z`). |\n| **Until** | string | No | The end\
+    \ date and time for the search in ISO8601 format (e.g., `2026-02-09T15:01:39Z`).\
+    \ |\n\n### Additional Notes\n- The action implements automatic pagination and\
+    \ will retrieve up to a maximum of 1,000 records from the Cyjax API.\n- If the\
+    \ `Since` date is configured to be later than the `Until` date, the action will\
+    \ fail with a validation error.\n- Results are presented both as a formatted data\
+    \ table for quick review and as a raw JSON object for downstream playbook processing.\n\
+    \n### Flow Description\n1. **Parameter Extraction:** The action retrieves the\
+    \ `Query`, `Since`, and `Until` parameters provided by the user.\n2. **Validation:**\
+    \ It validates that the provided dates are in the correct ISO8601 format and ensures\
+    \ the start date is not after the end date.\n3. **API Interaction:** The action\
+    \ initializes the Cyjax API client and performs a GET request to the data leak\
+    \ credentials endpoint.\n4. **Pagination:** It automatically iterates through\
+    \ result pages until all matching records are found or the 1,000-record limit\
+    \ is reached.\n5. **Data Processing:** The raw API response is parsed into structured\
+    \ data models.\n6. **Output Generation:** \n    - A data table named \"Data Breach\
+    \ Results\" is added to the case, containing columns for ID, Email, Source, Breach\
+    \ Name, Data Classes, and Discovery Date.\n    - The full result set is attached\
+    \ as a JSON object to the action's output."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table named 'Data Breach Results' to the Google SecOps
+      case to display the retrieved breach information.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: true
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connectivity between the Google SecOps SOAR platform\
+    \ and the Cyjax Threat Intelligence instance. It ensures that the provided API\
+    \ Token is valid, the network path is open, and the integration has the necessary\
+    \ permissions to interact with the Cyjax API.\n\n### Parameters Description\n\
+    There are no input parameters for this action. It relies solely on the global\
+    \ integration configuration (API Token and Verify SSL settings).\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the Siemplify environment and retrieves\
+    \ the global integration parameters, specifically the API Token and SSL verification\
+    \ preference.\n2. **Manager Setup**: It instantiates the `APIManager` using the\
+    \ retrieved credentials.\n3. **Connectivity Test**: The action calls the `ping()`\
+    \ method, which executes an authenticated `GET` request to the Cyjax `/indicator-of-compromise`\
+    \ endpoint with a result limit of 1 to minimize data transfer.\n4. **Result Handling**:\
+    \ \n    * If the request is successful (HTTP 200), the action returns a success\
+    \ message and sets the result value to `True`.\n    * If an exception occurs (e.g.,\
+    \ 401 Unauthorized, 403 Forbidden, or network timeout), the action captures the\
+    \ error, logs the details, and returns a failure status with the result value\
+    \ set to `False`.\n\n### Additional Notes\nThis action is intended for health\
+    \ checks and troubleshooting during the initial setup or when connectivity issues\
+    \ are suspected. It does not process any case entities or modify any data."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+  product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_email: false
+    search_events: false
+    send_email: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false

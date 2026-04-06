@@ -1,0 +1,60 @@
+Slack Connector For Code Defender:
+  ai_description: >-
+    ### General Description
+
+    The Slack Connector For Code Defender allows Google SecOps to ingest security
+    alerts from PerimeterX Code Defender via a Slack integration. It monitors a designated
+    Slack channel where Code Defender posts incident notifications, automatically
+    converting these messages into structured cases and events for security orchestration
+    and response.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Slack Channel | String | Yes | The name of the Slack channel to monitor for
+    alerts (e.g., 'cd_alerts'). Do not include the '#' prefix. |
+
+    | Slack API Key | Password | Yes | The API Key/Token used to authenticate with
+    the Slack API. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process running the current script. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    or sub-type. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product (e.g., 'PerimeterXCodeDefender'). |
+
+
+    ### Flow Description
+
+    1. **Authentication and Setup**: The connector authenticates with the Slack API
+    using the provided API Key and resolves the specified Slack Channel name to a
+    unique Channel ID.
+
+    2. **Timestamp Management**: It retrieves the timestamp of the last successful
+    execution to ensure only new messages are processed, preventing duplicate alerts.
+
+    3. **Message Retrieval**: The connector queries the Slack `conversations.history`
+    endpoint, fetching messages from the channel since the last run. It supports pagination
+    to handle large volumes of messages.
+
+    4. **Alert Filtering**: It filters the retrieved messages to identify specific
+    PerimeterX Code Defender notifications by looking for the title 'Code Defender
+    has detected a new incident' within the message attachments.
+
+    5. **Data Extraction**: For each matching message, the connector parses the attachment
+    fields to extract critical metadata, including Risk Level (Severity), Script Name,
+    Host Domain, and deep links to the PerimeterX console.
+
+    6. **Case Creation**: The extracted data is mapped to the Google SecOps AlertInfo
+    model. Priorities are assigned based on a mapping of Code Defender risk levels
+    (Informative, Low, Medium, High, Critical).
+
+    7. **Ingestion**: The connector packages the alerts and events, ingests them into
+    Google SecOps, and updates the stored timestamp for the next iteration.

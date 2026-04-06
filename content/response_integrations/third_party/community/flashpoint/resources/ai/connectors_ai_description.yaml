@@ -1,0 +1,70 @@
+"Flashpoint - Compromised Credential Connector":
+  ai_description: >-
+    ### General Description
+
+    The Flashpoint Compromised Credential Connector integrates with the Flashpoint
+    platform to monitor and ingest alerts related to compromised credentials. It specifically
+    targets 'credential-sighting' events, which occur when employee credentials are
+    detected as being used or exposed on the web. This connector allows security teams
+    to proactively respond to potential account takeovers by automatically creating
+    cases in Google SecOps for every detected sighting.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Key | Password | Yes | The API key used to authenticate with the Flashpoint
+    API. |
+
+    | DeviceProductField | String | Yes | The field name in the source data used to
+    determine the device product (defaults to 'Flashpoint'). |
+
+    | EventClassId | String | No | The field name used to determine the event name
+    or sub-type. |
+
+    | Limit | Integer | Yes | The maximum number of events to retrieve in a single
+    execution cycle. |
+
+    | Max Days Back | Integer | No | The maximum number of days to look back for data
+    during the first run or if the saved timestamp is invalid. |
+
+    | Proxy Server Address | String | No | The address of the proxy server to use
+    for outgoing requests. |
+
+    | Proxy Username | String | No | The username for proxy authentication. |
+
+    | Proxy Password | Password | No | The password for proxy authentication. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector's
+    execution. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The connector establishes a session with the Flashpoint
+    API using the provided API Key.
+
+    2. **Timestamp Retrieval**: It fetches the last saved timestamp to determine the
+    starting point for the search. If no timestamp is found, it calculates a starting
+    point based on the 'Max Days Back' parameter.
+
+    3. **Search Query**: The connector executes a search against the Flashpoint `/all/search`
+    endpoint, filtering for `basetypes:(credential-sighting)` within the calculated
+    time range.
+
+    4. **Data Flattening**: Each result (hit) from the API is processed and flattened
+    into a single-level dictionary to ensure all metadata is captured within the event.
+
+    5. **Case Mapping**: The connector maps the Flashpoint data to the Google SecOps
+    CaseInfo model, assigning a default priority of 60 and using the sighting's indexed
+    time as the event time.
+
+    6. **Overflow Validation**: It checks each alert against the system's overflow
+    rules to prevent duplicate or excessive ingestion.
+
+    7. **Ingestion and Checkpointing**: Valid cases are ingested into Google SecOps,
+    and the timestamp of the most recent sighting is saved to ensure the next iteration
+    picks up where the last one finished.
