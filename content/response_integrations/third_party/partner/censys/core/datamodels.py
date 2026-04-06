@@ -711,7 +711,7 @@ class RelatedInfraResultModel(BaseModel):
             "Pivot Field(s)": self.pivot_fields,
             "Pivot Value(s)": self.pivot_values,
             "Asset Count": self.count,
-            "Search on Censys": self.search_url,
+            "See results in Censys": self.search_url,
         }
 
     def to_json(self) -> Dict[str, Any]:
