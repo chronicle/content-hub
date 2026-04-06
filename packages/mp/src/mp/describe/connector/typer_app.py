@@ -29,8 +29,12 @@ from .describe_all import describe_all_connectors
 app = typer.Typer(help="Describe connectors in the marketplace.")
 
 
-@app.command()
-def connector(  # noqa: PLR0913
+@app.command(
+    name="connector",
+    help="Describe connectors in an integration or across the entire marketplace using Gemini.",
+    no_args_is_help=True,
+)
+def describe(  # noqa: PLR0913
     connectors: Annotated[list[str] | None, typer.Argument(help="Connector names")] = None,
     integration: Annotated[
         str | None, typer.Option("-i", "--integration", help="Integration name")
@@ -112,14 +116,15 @@ def connector(  # noqa: PLR0913
         if all_marketplace:
             target_connector_file_names = set()
 
-        describer = DescribeConnector(
-            integration,
-            target_connector_file_names,
-            src=src,
-            dst=dst,
-            override=override,
+        asyncio.run(
+            DescribeConnector(
+                integration,
+                target_connector_file_names,
+                src=src,
+                dst=dst,
+                override=override,
+            ).describe(sem=sem)
         )
-        asyncio.run(describer.describe(sem=sem))
     elif all_marketplace:
         asyncio.run(describe_all_connectors(src=src, dst=dst, override=override))
     else:

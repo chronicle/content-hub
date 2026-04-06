@@ -145,13 +145,9 @@ class Integration:
                 python_version = python_version_file.read_text(encoding="utf-8")
 
             ai_metadata: dict[str, Any] = {}
-            ai_dir: Path = path / "resources" / mp.core.constants.AI_DIR
+            ai_dir: Path = path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
             for ai_file in mp.core.constants.AI_DESCRIPTION_FILES:
                 ai_path: Path = ai_dir / ai_file
-                if not ai_path.exists():
-                    # Fallback to resources/
-                    ai_path = path / "resources" / ai_file
-
                 if ai_path.exists():
                     ai_metadata[ai_file] = yaml.safe_load(ai_path.read_text(encoding="utf-8"))
 
@@ -206,13 +202,9 @@ class Integration:
                 python_version = python_version_file.read_text(encoding="utf-8")
 
             ai_metadata: dict[str, Any] = {}
-            ai_dir: Path = path / "resources" / mp.core.constants.AI_DIR
+            ai_dir: Path = path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
             for ai_file in mp.core.constants.AI_DESCRIPTION_FILES:
                 ai_path: Path = ai_dir / ai_file
-                if not ai_path.exists():
-                    # Fallback to resources/
-                    ai_path = path / "resources" / ai_file
-
                 if ai_path.exists():
                     ai_metadata[ai_file] = yaml.safe_load(ai_path.read_text(encoding="utf-8"))
 

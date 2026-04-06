@@ -29,8 +29,12 @@ from .describe_all import describe_all_jobs
 app = typer.Typer(help="Describe jobs in the marketplace.")
 
 
-@app.command()
-def job(  # noqa: PLR0913
+@app.command(
+    name="job",
+    help="Describe jobs in an integration or across the entire marketplace using Gemini.",
+    no_args_is_help=True,
+)
+def describe(  # noqa: PLR0913
     jobs: Annotated[list[str] | None, typer.Argument(help="Job names")] = None,
     integration: Annotated[
         str | None, typer.Option("-i", "--integration", help="Integration name")
@@ -112,14 +116,15 @@ def job(  # noqa: PLR0913
         if all_marketplace:
             target_job_file_names = set()
 
-        describer = DescribeJob(
-            integration,
-            target_job_file_names,
-            src=src,
-            dst=dst,
-            override=override,
+        asyncio.run(
+            DescribeJob(
+                integration,
+                target_job_file_names,
+                src=src,
+                dst=dst,
+                override=override,
+            ).describe(sem=sem)
         )
-        asyncio.run(describer.describe(sem=sem))
     elif all_marketplace:
         asyncio.run(describe_all_jobs(src=src, dst=dst, override=override))
     else:

@@ -75,7 +75,7 @@ class BuiltActionMetadata(TypedDict):
     SimulationDataJson: NotRequired[str]
     DefaultResultValue: NotRequired[str | None]
     Version: float
-    AIDescription: str | None
+    AIDescription: NotRequired[str | None]
     AICategories: NotRequired[list[str] | None]
     EntityTypes: NotRequired[list[str] | None]
     ActionProductCategories: NotRequired[list[str] | None]
@@ -235,10 +235,10 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             default_result_value=built.get("DefaultResultValue"),
             version=version,
             ai_description=built.get("AIDescription"),
-            ai_categories=[ActionAiCategory(c) for c in built.get("AICategories") or []],
-            entity_types=[EntityType(e) for e in built.get("EntityTypes") or []],
+            ai_categories=[ActionAiCategory(c) for c in (built.get("AICategories") or [])],
+            entity_types=[EntityType(e) for e in (built.get("EntityTypes") or [])],
             action_categories=[
-                ActionProductCategory(c) for c in (built.get("ActionCategories") or [])
+                ActionProductCategory(c) for c in (built.get("ActionProductCategories") or [])
             ],
         )
 
@@ -277,10 +277,10 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             default_result_value=non_built.get("default_result_value"),
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
             ai_description=non_built.get("ai_description"),
-            ai_categories=[ActionAiCategory(c) for c in non_built.get("ai_categories") or []],
-            entity_types=[EntityType(e) for e in non_built.get("entity_types") or []],
+            ai_categories=[ActionAiCategory(c) for c in (non_built.get("ai_categories") or [])],
+            entity_types=[EntityType(e) for e in (non_built.get("entity_types") or [])],
             action_categories=[
-                ActionProductCategory(c) for c in (non_built.get("action_categories") or [])
+                ActionProductCategory(c) for c in (non_built.get("action_product_categories") or [])
             ],
         )
 
@@ -392,26 +392,21 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     if not integration_path.exists():
         return empty_results
 
-    # 1. Check in resources/ai/ (new standard)
     actions_desc: Path = (
         integration_path
         / mp.core.constants.RESOURCES_DIR
         / mp.core.constants.AI_DIR
         / mp.core.constants.ACTIONS_AI_DESCRIPTION_FILE
     )
-    if not actions_desc.exists():
-        # 2. Check in resources/ (fallback)
-        actions_desc = (
-            integration_path
-            / mp.core.constants.RESOURCES_DIR
-            / mp.core.constants.ACTIONS_AI_DESCRIPTION_FILE
-        )
 
     if not actions_desc.exists():
         return empty_results
 
     content: dict[str, Any] = mp.core.file_utils.load_yaml_file(actions_desc)
     action_content: dict[str, Any] | None = content.get(action_name)
+    if action_content is None:
+        action_content = content.get(mp.core.utils.str_to_snake_case(action_name))
+
     if action_content is None:
         return empty_results
 

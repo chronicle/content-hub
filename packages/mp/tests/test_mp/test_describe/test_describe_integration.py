@@ -14,20 +14,31 @@
 
 from __future__ import annotations
 
+import shutil
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
+import anyio
 from typer.testing import CliRunner
 
+from mp.core import constants
 from mp.core.data_models.integrations.integration_meta.ai.metadata import IntegrationAiMetadata
 from mp.core.data_models.integrations.integration_meta.ai.product_categories import (
     IntegrationProductCategories,
 )
 from mp.describe.integration.typer_app import app
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 runner = CliRunner()
 
 
-def test_describe_integration_command(non_built_integration):
+def test_describe_integration_command(tmp_path: Path, non_built_integration: Path) -> None:
+    integration: Path = (
+        shutil.copytree(non_built_integration, tmp_path, dirs_exist_ok=True)
+        / non_built_integration.name
+    )
     integration_name = "mock_integration"
 
     # Create AI_DIR if it doesn't exist to avoid issues,
@@ -54,20 +65,26 @@ def test_describe_integration_command(non_built_integration):
             )
         ]
 
-        # We need to mock get_integration_path to return the non_built_integration path
-        with patch("mp.describe.common.utils.paths.get_integration_path") as mock_get_path:
-            import anyio
-
-            mock_get_path.return_value = anyio.Path(non_built_integration)
+        # We need to mock get_integration_path and get_out_path
+        with (
+            patch("mp.describe.common.utils.paths.get_integration_path") as mock_get_path,
+            patch("mp.describe.common.utils.paths.get_out_path") as mock_get_out_path,
+            patch("mp.describe.integration.describe_all.get_integration_path", new=mock_get_path),
+        ):
+            mock_get_path.return_value = anyio.Path(integration)
+            mock_get_out_path.return_value = anyio.Path(integration)
 
             # Run the command
-            result = runner.invoke(app, ["-i", integration_name])
+            result = runner.invoke(app, [integration_name, "--override"])
 
             assert result.exit_code == 0
             mock_bulk.assert_called_once()
 
             # Check if the file was created
             ai_file = (
-                non_built_integration / "RESOURCES" / "AI" / "integrations_ai_description.yaml"
+                integration
+                / constants.RESOURCES_DIR
+                / constants.AI_DIR
+                / constants.INTEGRATIONS_AI_DESCRIPTION_FILE
             )
             assert ai_file.exists()

@@ -509,49 +509,46 @@ Describe Assignment:
     ### General Description
 
     The **Describe Assignment** action retrieves comprehensive details for a specific
-    assignment within the Vectra QUX platform using its unique Assignment ID. This
-    action is primarily used to programmatically inspect the status, ownership, and
-    resolution details of investigative assignments managed in Vectra.
+    assignment within the Vectra QUX platform using its unique ID. This action allows
+    analysts to programmatically fetch metadata about how a detection or entity has
+    been assigned, including the assigned user, the resolution outcome, and any associated
+    notes. It is an informational action used to track the lifecycle and ownership
+    of security tasks in Vectra QUX.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | Parameter | Description | Type | Mandatory | Notes |
 
-    | **Assignment ID** | String | Yes | The unique numerical identifier of the assignment
-    to retrieve. The action validates that this value is a positive integer. |
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Assignment ID | The unique identifier of the assignment to retrieve. | String
+    | Yes | Must be a valid numeric string representing a non-negative integer. |
+
+
+    ### Additional Notes
+
+    - This action does not process SOAR entities (e.g., IP, Hostname) from the case
+    scope; it relies entirely on the provided `Assignment ID` parameter.
+
+    - If the assignment ID does not exist, the action will return a 'not found' error.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the integration's configuration (API
-    Root, Token, and SSL verification settings) and the mandatory `Assignment ID`
-    parameter.
+    1. **Input Validation**: The action extracts the `Assignment ID` from the input
+    parameters and validates that it is a valid integer.
 
-    2. **Validation**: The `Assignment ID` is validated to ensure it is a valid integer.
-    If validation fails, the action returns a failure status.
+    2. **API Request**: It initializes the `VectraQUXManager` and sends a GET request
+    to the assignments endpoint (`/api/v2.5/assignments/{assignment_id}`).
 
-    3. **API Request**: The action communicates with the Vectra QUX API via a GET
-    request to the `/api/v2.5/assignments/{assignment_id}` endpoint.
+    3. **Data Parsing**: The manager parses the JSON response into an internal `Assignment`
+    data model, extracting fields such as `assigned_to`, `resolved_by`, and `outcome`.
 
-    4. **Data Parsing**: Upon a successful response, the action parses the assignment
-    metadata, including the assigned user, the user who resolved it (if applicable),
-    the outcome, and the associated entity (Host or Account).
-
-    5. **Output**: The action produces two main outputs:
-        * A **JSON Result** containing the full raw response from the Vectra API.
-        * A **Data Table** named 'Describe Assignment' that summarizes key fields
-    like Assignment ID, Assigned User, Outcome, and Entity Type.
-
-    ### Additional Notes
-
-    - This action does not process or filter entities from the Google SecOps case;
-    it operates exclusively on the ID provided in the parameters.
-
-    - If the provided ID does not correspond to an existing assignment, the action
-    will return an 'Assignment not found' error.
+    4. **Result Output**: The action attaches the full JSON response to the script
+    results and generates a formatted data table (CSV) containing a summary of the
+    assignment details for display in the SOAR interface.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false

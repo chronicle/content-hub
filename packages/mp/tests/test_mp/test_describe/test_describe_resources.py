@@ -14,9 +14,11 @@
 
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 from unittest import mock
 
+import anyio
 import pytest
 import yaml
 
@@ -55,11 +57,11 @@ def mock_integration_path(tmp_path: Path) -> Path:
 
 
 @pytest.mark.anyio
-async def test_describe_connector(mock_integration_path: Path) -> None:
+async def test_describe_connector(tmp_path: Path, mock_integration_path: Path) -> None:
     describer = DescribeConnector(
         integration="mock_integration",
         connectors={"Test Connector"},
-        src=mock_integration_path.parent,
+        src=shutil.copytree(mock_integration_path, tmp_path, dirs_exist_ok=True),
     )
 
     mock_response = mock.Mock()
@@ -70,7 +72,9 @@ async def test_describe_connector(mock_integration_path: Path) -> None:
         await describer.describe()
 
     # Verify output file
-    ai_dir = mock_integration_path / constants.RESOURCES_DIR / constants.AI_DIR
+    ai_dir: Path = (
+        tmp_path / mock_integration_path.name / constants.RESOURCES_DIR / constants.AI_DIR
+    )
     output_file = ai_dir / constants.CONNECTORS_AI_DESCRIPTION_FILE
     assert output_file.exists()
 
@@ -80,9 +84,11 @@ async def test_describe_connector(mock_integration_path: Path) -> None:
 
 
 @pytest.mark.anyio
-async def test_describe_job(mock_integration_path: Path) -> None:
+async def test_describe_job(tmp_path: Path, mock_integration_path: Path) -> None:
     describer = DescribeJob(
-        integration="mock_integration", jobs={"Test Job"}, src=mock_integration_path.parent
+        integration="mock_integration",
+        jobs={"Test Job"},
+        src=shutil.copytree(mock_integration_path, tmp_path, dirs_exist_ok=True),
     )
 
     mock_response = mock.Mock()
@@ -93,7 +99,9 @@ async def test_describe_job(mock_integration_path: Path) -> None:
         await describer.describe()
 
     # Verify output file
-    ai_dir = mock_integration_path / constants.RESOURCES_DIR / constants.AI_DIR
+    ai_dir: Path = (
+        tmp_path / mock_integration_path.name / constants.RESOURCES_DIR / constants.AI_DIR
+    )
     output_file = ai_dir / constants.JOBS_AI_DESCRIPTION_FILE
     assert output_file.exists()
 
@@ -103,10 +111,16 @@ async def test_describe_job(mock_integration_path: Path) -> None:
 
 
 @pytest.mark.anyio
-async def test_describe_integration(mock_integration_path: Path) -> None:
+async def test_describe_integration(tmp_path: Path, mock_integration_path: Path) -> None:
     # 1. Create AI description files for context
-    ai_dir = mock_integration_path / constants.RESOURCES_DIR / constants.AI_DIR
-    ai_dir.mkdir(parents=True, exist_ok=True)
+    ai_dir: Path = (
+        shutil.copytree(mock_integration_path, tmp_path, dirs_exist_ok=True)
+        / mock_integration_path.name
+        / constants.RESOURCES_DIR
+        / constants.AI_DIR
+    )
+    await anyio.Path(ai_dir).mkdir(parents=True, exist_ok=True)
+
     (ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE).write_text(
         yaml.safe_dump({"test_action": {"description": "Action description"}}),
         encoding="utf-8",

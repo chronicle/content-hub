@@ -133,7 +133,7 @@ async def test_describe_all_content(mock_integration_full: Path) -> None:
 
 
 @pytest.mark.anyio
-async def test_describe_all_all_content(
+async def test_describe_marketplace_all_content(
     mock_integration_full: Path, mock_integration_another: Path
 ) -> None:
     # Mock LLM response to avoid API calls
@@ -143,7 +143,7 @@ async def test_describe_all_all_content(
     with mock.patch(
         "mp.describe.common.utils.llm.call_gemini_bulk", return_value=[integration_response]
     ):
-        await describe_all_all_content(
+        await describe_all_content(
             src=mock_integration_full.parent,
         )
 

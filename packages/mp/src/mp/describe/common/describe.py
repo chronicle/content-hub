@@ -407,7 +407,8 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
                 and resource_name.casefold() == "Ping".casefold()
                 and hasattr(result, "categories")
             ):
-                result.categories.enrichment = False
+                res_any: Any = result
+                res_any.categories.enrichment = False  # ty: ignore[unresolved-attribute]
 
             final_results[i] = DescriptionResult(resource_name, result)
 
@@ -430,9 +431,6 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
     async def _load_metadata(self) -> dict[str, Any]:
         resource_ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         metadata_file: anyio.Path = resource_ai_dir / self.metadata_file_name
-        if not await metadata_file.exists():
-            # Fallback to resources/
-            metadata_file = self.integration / constants.RESOURCES_DIR / self.metadata_file_name
 
         metadata: dict[str, Any] = {}
         if await metadata_file.exists():

@@ -71,7 +71,7 @@ class Metadata(Restructurable):
         if not ai_metadata:
             return
 
-        ai_path: Path = self.out_path / "resources" / mp.core.constants.AI_DIR
+        ai_path: Path = self.out_path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
         ai_path.mkdir(parents=True, exist_ok=True)
         for file_name, content in ai_metadata.items():
             metadata_file: Path = ai_path / file_name

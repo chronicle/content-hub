@@ -121,12 +121,6 @@ class IntegrationPromptConstructor(PromptConstructor):
     async def _get_actions_ai_descriptions(self) -> str:
         ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         actions_ai_file: anyio.Path = ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
-        if not await actions_ai_file.exists():
-            # Fallback to resources/
-            actions_ai_file = (
-                self.integration / constants.RESOURCES_DIR / constants.ACTIONS_AI_DESCRIPTION_FILE
-            )
-
         if await actions_ai_file.exists():
             return await actions_ai_file.read_text(encoding="utf-8")
         return "N/A"
@@ -134,14 +128,6 @@ class IntegrationPromptConstructor(PromptConstructor):
     async def _get_connectors_ai_descriptions(self) -> str:
         ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         connectors_ai_file: anyio.Path = ai_dir / constants.CONNECTORS_AI_DESCRIPTION_FILE
-        if not await connectors_ai_file.exists():
-            # Fallback to resources/
-            connectors_ai_file = (
-                self.integration
-                / constants.RESOURCES_DIR
-                / constants.CONNECTORS_AI_DESCRIPTION_FILE
-            )
-
         if await connectors_ai_file.exists():
             return await connectors_ai_file.read_text(encoding="utf-8")
         return "N/A"
@@ -149,12 +135,6 @@ class IntegrationPromptConstructor(PromptConstructor):
     async def _get_jobs_ai_descriptions(self) -> str:
         ai_dir: anyio.Path = self.integration / constants.RESOURCES_DIR / constants.AI_DIR
         jobs_ai_file: anyio.Path = ai_dir / constants.JOBS_AI_DESCRIPTION_FILE
-        if not await jobs_ai_file.exists():
-            # Fallback to resources/
-            jobs_ai_file = (
-                self.integration / constants.RESOURCES_DIR / constants.JOBS_AI_DESCRIPTION_FILE
-            )
-
         if await jobs_ai_file.exists():
             return await jobs_ai_file.read_text(encoding="utf-8")
         return "N/A"

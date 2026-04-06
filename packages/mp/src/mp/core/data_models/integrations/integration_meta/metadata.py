@@ -269,7 +269,7 @@ class IntegrationMetadata(
             is_powerup=built.get("IsPowerUp", False),
             product_categories=[
                 IntegrationProductCategory(category)
-                for category in built.get("ProductCategories") or []
+                for category in (built.get("ProductCategories") or [])
             ],
         )
 
@@ -301,7 +301,7 @@ class IntegrationMetadata(
             ),
             is_powerup=non_built.get("is_powerup", False),
             product_categories=[
-                IntegrationProductCategory(c) for c in non_built.get("product_categories") or []
+                IntegrationProductCategory(c) for c in (non_built.get("product_categories") or [])
             ],
         )
 
@@ -339,6 +339,7 @@ class IntegrationMetadata(
             IsCustom=self.is_custom,
             IsPowerUp=self.is_powerup,
             IsCertified=self.is_certified,
+            ProductCategories=[c.value for c in self.product_categories],
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -367,6 +368,7 @@ class IntegrationMetadata(
             categories=self.categories,
             svg_logo_path=svg_path.as_posix() if self.svg_logo is not None else None,
             image_path=image.as_posix() if self.image_base64 is not None else None,
+            product_categories=[c.value for c in self.product_categories] or None,
         )
 
         if self.feature_tags is not None:
@@ -380,6 +382,8 @@ class IntegrationMetadata(
 
         if self.is_powerup is True:
             non_built["is_powerup"] = self.is_powerup
+
+        del non_built["product_categories"]
 
         mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
