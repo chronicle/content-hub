@@ -57,7 +57,7 @@ class AiFields(NamedTuple):
     description: str | None
     ai_categories: list[ActionAiCategory]
     entity_types: list[EntityType]
-    product_categories: list[ActionProductCategory]
+    action_product_categories: list[ActionProductCategory]
 
 
 class BuiltActionMetadata(TypedDict):
@@ -144,7 +144,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ai_description: str | None
     ai_categories: list[ActionAiCategory]
     entity_types: list[EntityType]
-    action_categories: list[ActionProductCategory]
+    action_product_categories: list[ActionProductCategory]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -237,7 +237,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=built.get("AIDescription"),
             ai_categories=[ActionAiCategory(c) for c in (built.get("AICategories") or [])],
             entity_types=[EntityType(e) for e in (built.get("EntityTypes") or [])],
-            action_categories=[
+            action_product_categories=[
                 ActionProductCategory(c) for c in (built.get("ActionProductCategories") or [])
             ],
         )
@@ -279,7 +279,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=non_built.get("ai_description"),
             ai_categories=[ActionAiCategory(c) for c in (non_built.get("ai_categories") or [])],
             entity_types=[EntityType(e) for e in (non_built.get("entity_types") or [])],
-            action_categories=[
+            action_product_categories=[
                 ActionProductCategory(c) for c in (non_built.get("action_product_categories") or [])
             ],
         )
@@ -309,7 +309,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,
-            ActionProductCategories=[c.value for c in self.action_categories] or None,
+            ActionProductCategories=[c.value for c in self.action_product_categories] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -387,7 +387,7 @@ def _load_json_examples(
 
 def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     empty_results: AiFields = AiFields(
-        description=None, ai_categories=[], entity_types=[], product_categories=[]
+        description=None, ai_categories=[], entity_types=[], action_product_categories=[]
     )
     if not integration_path.exists():
         return empty_results
@@ -423,13 +423,13 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
             else []
         ),
         entity_types=ai_meta.entity_usage.entity_types if ai_meta.entity_usage else [],
-        product_categories=(
+        action_product_categories=(
             [
                 PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
-                for category, is_true in ai_meta.product_categories.model_dump().items()
+                for category, is_true in ai_meta.action_product_categories.model_dump().items()
                 if is_true
             ]
-            if ai_meta.product_categories
+            if ai_meta.action_product_categories
             else []
         ),
     )
@@ -441,4 +441,4 @@ def _update_non_built_with_ai_fields(
     non_built["ai_description"] = ai_fields.description
     non_built["ai_categories"] = [c.value for c in ai_fields.ai_categories]
     non_built["entity_types"] = [t.value for t in ai_fields.entity_types]
-    non_built["action_product_categories"] = [c.value for c in ai_fields.product_categories]
+    non_built["action_product_categories"] = [c.value for c in ai_fields.action_product_categories]

@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import tomllib
-from typing import TYPE_CHECKING, Any, Self, TypedDict
+from typing import TYPE_CHECKING, Any, Self, TypedDict, cast
 
 import yaml
 
@@ -144,13 +144,6 @@ class Integration:
             if python_version_file.exists():
                 python_version = python_version_file.read_text(encoding="utf-8")
 
-            ai_metadata: dict[str, Any] = {}
-            ai_dir: Path = path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
-            for ai_file in mp.core.constants.AI_DESCRIPTION_FILES:
-                ai_path: Path = ai_dir / ai_file
-                if ai_path.exists():
-                    ai_metadata[ai_file] = yaml.safe_load(ai_path.read_text(encoding="utf-8"))
-
             return cls(
                 python_version=python_version,
                 identifier=integration_meta.identifier,
@@ -167,7 +160,7 @@ class Integration:
                 widgets_metadata={
                     w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)
                 },
-                ai_metadata=ai_metadata,
+                ai_metadata=_get_ai_metadata(path),
             )
         except ValueError as e:
             msg: str = f"Failed to load integration {path.name}"
@@ -189,7 +182,9 @@ class Integration:
         """
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
-        pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # ty: ignore[invalid-assignment]
+        pyproject_toml: PyProjectTomlFile = cast(
+            "PyProjectTomlFile", cast("object", tomllib.loads(file_content))
+        )
         try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
@@ -200,13 +195,6 @@ class Integration:
             python_version: str = ""
             if python_version_file.exists():
                 python_version = python_version_file.read_text(encoding="utf-8")
-
-            ai_metadata: dict[str, Any] = {}
-            ai_dir: Path = path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
-            for ai_file in mp.core.constants.AI_DESCRIPTION_FILES:
-                ai_path: Path = ai_dir / ai_file
-                if ai_path.exists():
-                    ai_metadata[ai_file] = yaml.safe_load(ai_path.read_text(encoding="utf-8"))
 
             return cls(
                 python_version=python_version,
@@ -224,7 +212,7 @@ class Integration:
                 widgets_metadata={
                     w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)
                 },
-                ai_metadata=ai_metadata,
+                ai_metadata=_get_ai_metadata(path),
             )
 
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:
@@ -348,3 +336,13 @@ def _update_integration_meta_form_pyproject(
     integration_meta.python_version = pyproject_toml.project.requires_python
     integration_meta.description = pyproject_toml.project.description
     integration_meta.version = pyproject_toml.project.version
+
+
+def _get_ai_metadata(path: Path) -> dict[str, Any]:
+    ai_metadata: dict[str, Any] = {}
+    ai_dir: Path = path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
+    for ai_file in mp.core.constants.AI_DESCRIPTION_FILES:
+        if (ai_path := ai_dir / ai_file).exists():
+            ai_metadata[ai_file] = yaml.safe_load(ai_path.read_text(encoding="utf-8"))
+
+    return ai_metadata

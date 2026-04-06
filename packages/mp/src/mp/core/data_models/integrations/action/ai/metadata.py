@@ -79,7 +79,7 @@ class ActionAiMetadata(BaseModel):
             ),
         ),
     ]
-    product_categories: Annotated[
+    action_product_categories: Annotated[
         ActionProductCategories,
         Field(
             description=(
