@@ -247,7 +247,9 @@ class Integration(Content):
         self.has_resources = False
         for file in [x for x in self.zipfile.namelist() if not x.endswith("/")]:
             try:
-                if file.startswith("ActionsDefinitions"):
+                if file.startswith("ActionsDefinitions") or (
+                    file.startswith("Actions") and not file.startswith("ActionsScripts")
+                ):
                     self.actions.append(json.loads(self.zipfile.read(file)))
                 elif file.startswith("Jobs") and not file.startswith("JobsScrips"):
                     self.jobs.append(json.loads(self.zipfile.read(file)))
@@ -305,9 +307,9 @@ class Integration(Content):
             integration = {
                 "dependencies": self.dependencies,
                 "definition": self.definition,
-                "actions": [x for x in self.actions if x.get("IsCustom")],
-                "jobs": [x for x in self.jobs if x.get("IsCustom")],
-                "connectors": [x for x in self.connectors if x.get("IsCustom")],
+                "actions": self.actions,
+                "jobs": self.jobs,
+                "connectors": self.connectors,
                 "has_resources": self.has_resources,
             }
             self.readme = readme.render(integration=integration)
@@ -332,6 +334,7 @@ class Integration(Content):
         """
         yield File("README.md", self.readme)
         if not self.isCustom:
+            self.definition["Custom"] = False
             yield File(
                 f"Integration-{self.identifier}.def",
                 json.dumps(self.definition, indent=4),

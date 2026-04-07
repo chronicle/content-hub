@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import json
+
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -254,6 +256,8 @@ def main():
         if features["Visual Families"]:
             siemplify.LOGGER.info("Installing visual families")
             current_vfs = gitsync.api.get_custom_families(chronicle_soar=siemplify)
+            all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify) #vf
+            valid_record_id = all_records[0].get("id") if all_records else None #vf
             for family in gitsync.content.get_visual_families():
                 gitsync.api.add_custom_family(
                     {
@@ -261,6 +265,7 @@ def main():
                             id_validator(family.raw_data, "family", "id", current_vfs)
                         ),
                     },
+                    valid_record_id, #vf
                 )
 
         if features["Mappings"]:
@@ -317,12 +322,42 @@ def main():
 
         if features["Blacklists"]:
             siemplify.LOGGER.info("Installing denylists")
-            for definition in gitsync.content.get_denylists():
+            denylists = gitsync.content.get_denylists()
+            if isinstance(denylists, str):
+                try:
+                    denylists = json.loads(denylists)
+                except Exception:
+                    siemplify.LOGGER.warn(f"Failed to parse denylists string as JSON: {denylists}")
+                    denylists = []
+
+            if isinstance(denylists, dict):
+                denylists = denylists.get("soar_block_entities") or denylists.get("items") or denylists.get("soarBlockEntities") or []
+
+            for definition in denylists:
+                if isinstance(definition, str):
+                    try:
+                        definition = json.loads(definition)
+                    except Exception:
+                        siemplify.LOGGER.warn(f"Skipping invalid denylist definition (not valid JSON): {definition}")
+                        continue
+
+                if not isinstance(definition, dict):
+                    siemplify.LOGGER.warn(f"Skipping invalid denylist definition (expected dict, got {type(definition)}): {definition}")
+                    continue
+
+                action_val = definition.get("action") or definition.get("Action")
+                envs_json_val = definition.get("environmentsJson") or definition.get("EnvironmentsJson")
+
                 definition = (
                     BlockRecord.from_legacy_or_1p(definition).to_1p()
                     if platform_supports_1p_api()
                     else BlockRecord.from_legacy_or_1p(definition).to_legacy()
                 )
+
+                if action_val:
+                    definition["action"] = action_val
+                if envs_json_val:
+                    definition["environmentsJson"] = envs_json_val
                 gitsync.api.update_denylist(siemplify, definition)
 
         if features["SLA Records"]:

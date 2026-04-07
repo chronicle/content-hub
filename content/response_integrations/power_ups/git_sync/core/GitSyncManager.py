@@ -322,7 +322,7 @@ class GitSyncManager:
             )
         self.api.update_connector(connector.raw_data)
 
-    def install_mappings(self, mappings: Mapping) -> None:
+    def install_mappings(self, mappings: Mapping) -> None: #mp
         """Install or update mappings definitions
 
         Args:
@@ -330,17 +330,28 @@ class GitSyncManager:
 
         """
         self.logger.info(f"Installing mappings for {mappings.integrationName}")
-        for rule in mappings.rules:
-            self.api.add_mapping_rules(rule["familyFields"])
-            self.api.add_mapping_rules(rule["systemFields"])
+        
+        all_records = self.api.get_ontology_records(self._siemplify)
+        records = [r for r in all_records if r.get("source") == mappings.integrationName]
+        
+        # If we can't find a record for the specific integration, use the first available or None
+        record_id = records[0].get("id") if records else (all_records[0].get("id") if all_records else None)
 
-        for record in mappings.records:
-            self.api.set_mappings_visual_family(
-                record.get("source"),
-                record.get("product"),
-                record.get("eventName"),
-                record.get("familyName"),
-            )
+        for rule in mappings.rules:
+            self.api.add_mapping_rules(rule["familyFields"], record_id)
+            self.api.add_mapping_rules(rule["systemFields"], record_id)
+
+        # for record in mappings.records:
+        #     matching_live_records = [r for r in all_records if r.get("source") == record.get("source") and r.get("product") == record.get("product") and r.get("eventName") == record.get("eventName")]
+        #     live_record_id = matching_live_records[0].get("id") if matching_live_records else None
+        #     
+        #     self.api.set_mappings_visual_family(
+        #         record.get("source"),
+        #         record.get("product"),
+        #         record.get("eventName"),
+        #         record.get("familyName"),
+        #         record_id=live_record_id
+        #     )
 
     def install_workflows(self, workflows: list[Workflow]) -> None:
         """Install or update playbooks and blocks

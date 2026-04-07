@@ -73,6 +73,7 @@ from TIPCommon.rest.soar_api import (
     import_package,
     import_playbooks,
     import_simulated_case,
+    save_case_title_settings,
     save_integration_instance_settings,
     save_playbook,
     set_mappings_visual_family,
@@ -333,8 +334,8 @@ class SiemplifyApiClient:
             family_id=family_id,
         )
 
-    def add_custom_family(self, visual_family):
-        return add_custom_family(self.siemplify_soar, visual_family)
+    def add_custom_family(self, visual_family, mr_id=None): #vf
+        return add_custom_family(self.siemplify_soar, visual_family, mr_id)
 
     def get_ontology_records(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         """Gets ontology records.
@@ -345,7 +346,8 @@ class SiemplifyApiClient:
         Returns:
             list[SingleJson]: List of ontology records.
         """
-        return get_ontology_records(chronicle_soar=chronicle_soar)
+        res = get_ontology_records(chronicle_soar=chronicle_soar)
+        return res if isinstance(res, list) else res.get("ontologyRecords", [])
 
     def get_mapping_rules(self, source, mr_id, product, event_name):
         return get_mapping_rules(
@@ -356,10 +358,10 @@ class SiemplifyApiClient:
             event_name
         )
 
-    def add_mapping_rules(self, mapping_rule):
-        return add_mapping_rules(self.siemplify_soar, mapping_rule)
+    def add_mapping_rules(self, mapping_rule, mr_id=None): #mp
+        return add_mapping_rules(self.siemplify_soar, mapping_rule, mr_id)
 
-    def set_mappings_visual_family(self, source, product, event_name, visual_family):
+    def set_mappings_visual_family(self, source, product, event_name, visual_family, record_id=None):
         return set_mappings_visual_family(
             self.siemplify_soar,
             source,
@@ -486,9 +488,16 @@ class SiemplifyApiClient:
 
 
     def save_case_title_settings(self, settings):
-        res = self.session.post("settings/SaveCaseTitleSettings", json=settings)
-        self.validate_response(res)
-        return True
+        items = settings.get("items") if isinstance(settings, dict) else settings
+        for item in items:
+            save_case_title_settings(
+                self.siemplify_soar,
+                name=item.get("name"),
+                display_name=item.get("displayName"),
+                value=item.get("value") or "Null",
+                type_=item.get("type"),
+            )
+
 
     def get_case_stages(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         """Gets case stages.
