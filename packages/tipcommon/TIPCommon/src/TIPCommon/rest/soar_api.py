@@ -1759,9 +1759,10 @@ def add_dynamic_env_param(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.id = param.get("id")
     api_client.params.name = param.get("name")
-    api_client.params.type = param.get("type", 0)
+    api_client.params.display_name = param.get("displayName")
+    api_client.params.parameter_type = param.get("parameterType", 0)
     api_client.params.default_value = param.get("defaultValue")
-    api_client.params.optional_json = param.get("optionalValues", [])
+    api_client.params.optional_json = param.get("optionalValuesJson", [])
 
     response = api_client.add_dynamic_env_param()
     return response.json()
@@ -2673,46 +2674,6 @@ def get_ide_item(
     return response.json()
 
 
-def add_custom_family(
-    chronicle_soar: ChronicleSOAR, visual_family: SingleJson
-) -> SingleJson:
-    """Add custom family."""
-    api_client = get_soar_client(chronicle_soar)
-    api_client.params.visual_family = visual_family
-    response = api_client.add_custom_family()
-    validate_response(response, validate_json=False)
-    return response.content
-
-
-def get_mapping_rules(
-    chronicle_soar: ChronicleSOAR,
-    source: str = None,
-    mr_id: int = None,
-    product: str = None,
-    event_name: str = None,
-) -> SingleJson:
-    """Get mapping rules."""
-    api_client = get_soar_client(chronicle_soar)
-    api_client.params.source = source
-    api_client.params.product = product
-    api_client.params.event_name = event_name
-    api_client.params.mr_id = mr_id
-    
-    response = api_client.get_mapping_rules()
-    return safe_json_for_204(response, default_for_204={})
-
-
-def add_mapping_rules(
-    chronicle_soar: ChronicleSOAR, mapping_rule: SingleJson
-) -> SingleJson:
-    """Add mapping rules."""
-    api_client = get_soar_client(chronicle_soar)
-    api_client.params.mapping_rule = mapping_rule
-    response = api_client.add_mapping_rules()
-    validate_response(response, validate_json=False)
-    return response.content
-
-
 def set_mappings_visual_family(
     chronicle_soar: ChronicleSOAR,
     source: str,
@@ -2776,6 +2737,8 @@ def update_connector(
     """Update connector."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.connector_data = connector_data
+    api_client.params.integration_name = connector_data.get("integration")
+    api_client.params.connector_id = connector_data.get("connectorId")
     response = api_client.update_connector()
     validate_response(response, validate_json=False)
     return response
@@ -2837,3 +2800,44 @@ def get_case_close_comment(
     response = api_client.get_case_close_comment(case_id)
     validate_response(response, validate_json=True)
     return CaseCloseComment.from_json(response.json()).comment
+
+
+def add_mapping_rules(
+    chronicle_soar: ChronicleSOAR, mapping_rule: SingleJson, mr_id: str = None
+) -> SingleJson:
+    """Add mapping rules."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.mapping_rule = mapping_rule
+    api_client.params.mr_id = mr_id
+    response = api_client.add_mapping_rules()
+    validate_response(response, validate_json=False)
+    return response.content
+
+
+def get_mapping_rules(
+    chronicle_soar: ChronicleSOAR,
+    source: str = None,
+    mr_id: str = None,
+    product: str = None,
+    event_name: str = None,
+) -> SingleJson:
+    """Get mapping rules."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.source = source
+    api_client.params.mr_id = mr_id
+    api_client.params.product = product
+    api_client.params.event_name = event_name
+    response = api_client.get_mapping_rules()
+    return safe_json_for_204(response, default_for_204={})
+
+
+def add_custom_family(
+    chronicle_soar: ChronicleSOAR, visual_family: SingleJson, mr_id: str = None
+) -> SingleJson:
+    """Add custom visual family."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.visual_family = visual_family
+    api_client.params.mr_id = mr_id
+    response = api_client.add_custom_family()
+    validate_response(response, validate_json=False)
+    return response.content

@@ -588,12 +588,6 @@ class LegacySoarApi(BaseSoarApi):
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=query)
 
-    def add_custom_family(self) -> requests.Response:
-        """Add custom family."""
-        endpoint: str = "/ontology/AddOrUpdateVisualFamily"
-        return self._make_request(
-            HttpMethod.POST, endpoint, json_payload=self.params.visual_family
-        )
 
     def get_mapping_rules(self) -> requests.Response:
         """Get mapping rules."""
@@ -1038,4 +1032,11 @@ class LegacySoarApi(BaseSoarApi):
         }
         return self._make_request(
             method=HttpMethod.POST, endpoint=endpoint, json_payload=payload
+        )
+
+    def add_custom_family(self) -> requests.Response:
+        """Add custom visual family using legacy endpoint."""
+        endpoint = "/ontology/AddOrUpdateVisualFamily"
+        return self._make_request(
+            HttpMethod.POST, endpoint, json_payload=self.params.visual_family
         )
