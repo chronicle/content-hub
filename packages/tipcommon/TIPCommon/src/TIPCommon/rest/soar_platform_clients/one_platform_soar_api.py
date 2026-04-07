@@ -765,10 +765,23 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/settings/dynamicParameters"
         return self._make_request(HttpMethod.GET, endpoint)
 
+    # def add_dynamic_env_param(self) -> requests.Response:
+    #     """Add dynamic env param"""
+    #     endpoint = f"/settings/dynamicParameters/{self.params.id}"
+    #     return self._make_request(HttpMethod.GET, endpoint)
+    
+    # QA Fixes
     def add_dynamic_env_param(self) -> requests.Response:
         """Add dynamic env param"""
-        endpoint = f"/settings/dynamicParameters/{self.params.id}"
-        return self._make_request(HttpMethod.GET, endpoint)
+        endpoint = "/settings/dynamicParameters"
+        payload = {
+            "name": self.params.name,
+            "displayName": self.params.display_name,
+            "parameterType": self.params.parameter_type,
+            "defaultValue": self.params.default_value,
+            "optionalValuesJson": str(self.params.optional_json),
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def add_tags_to_case_in_bulks(self) -> requests.Response:
         """Add tags to case in bulk"""
@@ -1348,10 +1361,20 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/legacyPlaybooks:legacyGetWorkflowCategories"
         return self._make_request(HttpMethod.GET, endpoint)
 
+    # def update_connector(self) -> requests.Response:
+    #     """Update connector."""
+    #     endpoint = "/connectors/AddOrUpdateConnector"
+    #     #integrations/{integration}/connectors
+    #     return self._make_request(
+    #         HttpMethod.POST, endpoint, json_payload=self.params.connector_data
+    #     )
+    
+    # QA Fixes
     def update_connector(self) -> requests.Response:
         """Update connector."""
-        endpoint = "/connectors/AddOrUpdateConnector"
-        #integrations/{integration}/connectors
+        name = self.params.integration_name
+        connector = self.params.connector_id
+        endpoint = f"/integrations/{name}/connectors/{connector}/connectorInstances/"
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=self.params.connector_data
         )

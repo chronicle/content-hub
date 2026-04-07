@@ -1750,7 +1750,22 @@ def get_env_dynamic_parameters(chronicle_soar: ChronicleSOAR) -> list[SingleJson
 
     return response_data
 
+# def add_dynamic_env_param(
+#     chronicle_soar: ChronicleSOAR,
+#     param: SingleJson,
+# ) -> SingleJson:
+#     """Add / Update environment dynamic parameters"""
+#     api_client = get_soar_client(chronicle_soar)
+#     api_client.params.id = param.get("id")
+#     api_client.params.name = param.get("name")
+#     api_client.params.type = param.get("type", 0)
+#     api_client.params.default_value = param.get("defaultValue")
+#     api_client.params.optional_json = param.get("optionalValues", [])
 
+#     response = api_client.add_dynamic_env_param()
+#     return response.json()
+
+#QA fixes
 def add_dynamic_env_param(
     chronicle_soar: ChronicleSOAR,
     param: SingleJson,
@@ -1759,9 +1774,10 @@ def add_dynamic_env_param(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.id = param.get("id")
     api_client.params.name = param.get("name")
-    api_client.params.type = param.get("type", 0)
+    api_client.params.display_name = param.get("displayName")
+    api_client.params.parameter_type = param.get("parameterType", 0)
     api_client.params.default_value = param.get("defaultValue")
-    api_client.params.optional_json = param.get("optionalValues", [])
+    api_client.params.optional_json = param.get("optionalValuesJson", [])
 
     response = api_client.add_dynamic_env_param()
     return response.json()
@@ -2770,12 +2786,26 @@ def get_playbook_categories(chronicle_soar: ChronicleSOAR) -> SingleJson:
     return response.json()
 
 
+# def update_connector(
+#     chronicle_soar: ChronicleSOAR, connector_data: SingleJson
+# ) -> SingleJson:
+#     """Update connector."""
+#     api_client = get_soar_client(chronicle_soar)
+#     api_client.params.connector_data = connector_data
+#     response = api_client.update_connector()
+#     validate_response(response, validate_json=False)
+#     return response
+
+#QA fixes
 def update_connector(
     chronicle_soar: ChronicleSOAR, connector_data: SingleJson
 ) -> SingleJson:
     """Update connector."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.connector_data = connector_data
+    api_client.params.integration_name = connector_data.get("integration")
+    api_client.params.connector_id = connector_data.get("connectorId")
+    
     response = api_client.update_connector()
     validate_response(response, validate_json=False)
     return response
