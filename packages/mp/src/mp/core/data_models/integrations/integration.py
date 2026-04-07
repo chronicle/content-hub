@@ -176,7 +176,7 @@ class Integration:
         """
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
-        pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # type: ignore[assignment]
+        pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # ty: ignore[invalid-assignment]
         try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
