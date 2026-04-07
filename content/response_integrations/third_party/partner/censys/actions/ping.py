@@ -52,7 +52,9 @@ def main():
     except Exception as e:
         output_message = f"Failed to connect to the Censys. {e}"
         connectivity_result = False
-        siemplify.LOGGER.error(f"Connection to API failed, performing action {PING_SCRIPT_NAME}")
+        siemplify.LOGGER.error(
+            f"Connection to API failed, performing action {PING_SCRIPT_NAME}"
+        )
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
 

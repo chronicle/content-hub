@@ -72,7 +72,9 @@ class APIManager:
         self.verify_ssl = verify_ssl
 
         # Build User-Agent header
-        google_secops_version = siemplify.get_system_version() if siemplify else "Unknown"
+        google_secops_version = (
+            siemplify.get_system_version() if siemplify else "Unknown"
+        )
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
         epoch_time = int(time.time())
         user_agent = (
@@ -83,11 +85,13 @@ class APIManager:
         )
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-            "User-Agent": user_agent,
-        })
+        self.session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+                "User-Agent": user_agent,
+            }
+        )
 
     def _get_full_url(self, url_id: str, **kwargs: Any) -> str:
         """Get full URL from URL identifier.
@@ -141,7 +145,9 @@ class APIManager:
         elif body:
             request_kwargs["json"] = body
 
-        response = self.session.request(method, url, verify=self.verify_ssl, **request_kwargs)
+        response = self.session.request(
+            method, url, verify=self.verify_ssl, **request_kwargs
+        )
 
         try:
             self.validate_response(api_identifier, response)
@@ -201,7 +207,9 @@ class APIManager:
                 error_detail = self._parse_validation_error(response)
                 raise ValidationException(error_detail)
             if response.status_code in INTERNAL_SERVER_ERROR_STATUS_CODES:
-                raise InternalServerError(f"Internal server error: {response.status_code}")
+                raise InternalServerError(
+                    f"Internal server error: {response.status_code}"
+                )
             HandleExceptions(api_identifier, error, response, error_msg).do_process()
         except (
             ValidationException,
@@ -237,7 +245,9 @@ class APIManager:
                     msg = err.get("message", "")
                     location = err.get("location", "")
                     if msg:
-                        error_messages.append(f"{msg} (location: {location})" if location else msg)
+                        error_messages.append(
+                            f"{msg} (location: {location})" if location else msg
+                        )
 
                 detail = error_data.get("detail", "Validation failed")
                 if error_messages:
@@ -255,7 +265,9 @@ class APIManager:
 
             # Fallback to detail or title
             if "detail" in error_data or "title" in error_data:
-                return error_data.get("detail", error_data.get("title", "Validation error"))
+                return error_data.get(
+                    "detail", error_data.get("title", "Validation error")
+                )
 
             # Unknown format - return raw response for debugging
             self.siemplify.LOGGER.info(
@@ -279,7 +291,9 @@ class APIManager:
         Raises:
             CensysException: If there's an error in the API response.
         """
-        url = self._get_full_url(PING_ACTION_IDENTIFIER, organization_id=self.organization_id)
+        url = self._get_full_url(
+            PING_ACTION_IDENTIFIER, organization_id=self.organization_id
+        )
 
         self._make_rest_call(PING_ACTION_IDENTIFIER, "GET", url)
 
@@ -556,11 +570,16 @@ class APIManager:
                 "partial_data": False,
                 "truncated": truncation_reason is not None,
                 "truncation_reason": truncation_reason,
-                "pagination_info": {"pages_fetched": page_count, "pages_attempted": page_count},
+                "pagination_info": {
+                    "pages_fetched": page_count,
+                    "pages_attempted": page_count,
+                },
             }
         }
 
-    def enrich_hosts(self, host_ids: List[str], at_time: Optional[str] = None) -> Dict[str, Any]:
+    def enrich_hosts(
+        self, host_ids: List[str], at_time: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Enrich multiple hosts with detailed information.
 
@@ -580,7 +599,9 @@ class APIManager:
         if at_time:
             body["at_time"] = at_time
 
-        response = self._make_rest_call(ENRICH_IPS_ACTION_IDENTIFIER, "POST", url, body=body)
+        response = self._make_rest_call(
+            ENRICH_IPS_ACTION_IDENTIFIER, "POST", url, body=body
+        )
 
         return response
 

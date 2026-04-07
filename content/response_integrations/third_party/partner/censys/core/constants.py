@@ -16,10 +16,16 @@ COMMON_ACTION_ERROR_MESSAGE = "Error while executing action {}. Reason: {}"
 INVALID_AND_COUNT_CONDITIONS_FORMAT = (
     "Invalid format in And Count Conditions: '{}'. Expected format: field:value"
 )
-INVALID_FIELD_VALUE_PAIR = "Invalid field-value pair: '{}'. Both field and value must be non-empty"
+INVALID_FIELD_VALUE_PAIR = (
+    "Invalid field-value pair: '{}'. Both field and value must be non-empty"
+)
 EMPTY_AND_COUNT_CONDITIONS = "And Count Conditions parameter cannot be empty"
-NO_VALID_CONDITIONS_FOUND = "No valid conditions found in And Count Conditions parameter"
-THREAT_HUNTING_ACCESS_REQUIRED = "This action requires active access to the Threat Hunting Module"
+NO_VALID_CONDITIONS_FOUND = (
+    "No valid conditions found in And Count Conditions parameter"
+)
+THREAT_HUNTING_ACCESS_REQUIRED = (
+    "This action requires active access to the Threat Hunting Module"
+)
 DEFAULT_PAGE_SIZE = 1000
 RETRY_COUNT = 3
 WAIT_TIME_FOR_RETRY = 5
@@ -63,9 +69,15 @@ PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
 INITIATE_RESCAN_SCRIPT_NAME = f"{INTEGRATION_NAME} - Initiate Rescan"
 GET_RESCAN_STATUS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Rescan Status"
 GET_HOST_HISTORY_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Host History"
-CREATE_RELATED_INFRA_JOB_SCRIPT_NAME = f"{INTEGRATION_NAME} - Create Related Infrastructure Job"
-GET_RELATED_INFRA_JOB_STATUS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Related Infrastructure Job Status"
-GET_RELATED_INFRA_RESULTS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Related Infrastructure Results"
+CREATE_RELATED_INFRA_JOB_SCRIPT_NAME = (
+    f"{INTEGRATION_NAME} - Create Related Infrastructure Job"
+)
+GET_RELATED_INFRA_JOB_STATUS_SCRIPT_NAME = (
+    f"{INTEGRATION_NAME} - Get Related Infrastructure Job Status"
+)
+GET_RELATED_INFRA_RESULTS_SCRIPT_NAME = (
+    f"{INTEGRATION_NAME} - Get Related Infrastructure Results"
+)
 ENRICH_IPS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich IPs"
 ENRICH_WEB_PROPERTIES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Web Properties"
 ENRICH_CERTIFICATES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Certificates"
@@ -91,9 +103,14 @@ INVALID_PORT_FORMAT_ERROR = "Invalid port value: {}"
 DEFAULT_PORTS = "80,443"
 
 # CensEye Related Infrastructure Error Messages
-INVALID_TARGET_TYPE_ERROR = "Invalid target type: {}. Expected: Host, Web Property, or Certificate"
-INVALID_CERTIFICATE_FORMAT_ERROR = "Invalid certificate fingerprint format. Expected 64 hexadecimal characters (SHA-256)"
-INVALID_WEB_PROPERTY_FORMAT_ERROR = "Invalid Web Property format. Expected format: domain:port (e.g., example.com:443)"
+INVALID_TARGET_TYPE_ERROR = (
+    "Invalid target type: {}. Expected: Host, Web Property, or Certificate"
+)
+INVALID_CERTIFICATE_FORMAT_ERROR = "Invalid certificate fingerprint format. Expected 64" \
+    " hexadecimal characters (SHA-256)"
+INVALID_WEB_PROPERTY_FORMAT_ERROR = (
+    "Invalid Web Property format. Expected format: domain:port (e.g., example.com:443)"
+)
 TARGET_VALUE_REQUIRED_ERROR = "Target Value is required and cannot be empty"
 JOB_ID_REQUIRED_ERROR = "Job ID is required and cannot be empty"
 
@@ -102,16 +119,26 @@ API_VERSION_V3 = "/v3"
 
 # API Endpoints
 ENDPOINTS = {
-    PING_ACTION_IDENTIFIER: (API_VERSION_V3 + "/accounts/organizations/{organization_id}"),
+    PING_ACTION_IDENTIFIER: (
+        API_VERSION_V3 + "/accounts/organizations/{organization_id}"
+    ),
     INITIATE_RESCAN_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/scans/rescan",
     GET_RESCAN_STATUS_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/scans/{scan_id}",
-    GET_HOST_HISTORY_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/asset/host/{host_id}/timeline",
-    CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER: API_VERSION_V3 + "/threat-hunting/censeye/jobs",
-    GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER: API_VERSION_V3 + "/threat-hunting/censeye/jobs/{job_id}",
-    GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER: API_VERSION_V3 + "/threat-hunting/censeye/jobs/{job_id}/results",
+    GET_HOST_HISTORY_ACTION_IDENTIFIER: API_VERSION_V3
+    + "/global/asset/host/{host_id}/timeline",
+    CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER: API_VERSION_V3
+    + "/threat-hunting/censeye/jobs",
+    GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER: API_VERSION_V3
+    + "/threat-hunting/censeye/jobs/{job_id}",
+    GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER: API_VERSION_V3
+    + "/threat-hunting/censeye/jobs/{job_id}/results",
     ENRICH_IPS_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/asset/host",
-    ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER: (API_VERSION_V3 + "/global/asset/webproperty"),
-    ENRICH_CERTIFICATES_ACTION_IDENTIFIER: (API_VERSION_V3 + "/global/asset/certificate"),
+    ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER: (
+        API_VERSION_V3 + "/global/asset/webproperty"
+    ),
+    ENRICH_CERTIFICATES_ACTION_IDENTIFIER: (
+        API_VERSION_V3 + "/global/asset/certificate"
+    ),
 }
 
 # IOC Types for Initiate Rescan

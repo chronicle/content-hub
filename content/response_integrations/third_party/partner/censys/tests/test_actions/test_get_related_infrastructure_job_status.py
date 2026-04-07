@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 from unittest.mock import Mock, patch
 
 from soar_sdk.ScriptResult import (
@@ -48,7 +47,7 @@ class TestGetRelatedInfrastructureJobStatus:
 
         mock_api_manager.get_censeye_job_status.assert_called_once_with("test-job-123")
         mock_siemplify.result.add_result_json.assert_called_once_with(mock_response)
-        
+
         call_args = mock_siemplify.end.call_args[0]
         assert "completed successfully" in call_args[0]
         assert call_args[2] == EXECUTION_STATE_COMPLETED
@@ -103,7 +102,9 @@ class TestGetRelatedInfrastructureJobStatus:
         assert "failed" in call_args[0]
         assert call_args[2] == EXECUTION_STATE_FAILED
 
-    def test_get_status_empty_job_id(self, mock_siemplify_class, mock_api_manager_class):
+    def test_get_status_empty_job_id(
+        self, mock_siemplify_class, mock_api_manager_class
+    ):
         """Test validation error for empty job ID."""
         mock_siemplify = Mock()
         mock_siemplify_class.return_value = mock_siemplify

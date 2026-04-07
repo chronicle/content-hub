@@ -15,7 +15,11 @@ from ..core.constants import (
     RESULT_VALUE_TRUE,
     TRANSPORT_PROTOCOL_UNKNOWN,
 )
-from ..core.utils import get_integration_params, validate_integer_param, validate_ip_address
+from ..core.utils import (
+    get_integration_params,
+    validate_integer_param,
+    validate_ip_address,
+)
 
 
 def validate_rescan_params(
@@ -137,7 +141,9 @@ def main():
 
         # Build output message
         if tracked_scan_id:
-            output_message = f"Successfully initiated rescan. Scan ID: {tracked_scan_id}"
+            output_message = (
+                f"Successfully initiated rescan. Scan ID: {tracked_scan_id}"
+            )
             if create_time:
                 output_message += f", Created: {create_time}"
             if tasks:
@@ -157,7 +163,9 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(INITIATE_RESCAN_SCRIPT_NAME, str(e))
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
+            INITIATE_RESCAN_SCRIPT_NAME, str(e)
+        )
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

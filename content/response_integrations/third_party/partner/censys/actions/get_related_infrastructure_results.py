@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 
 from ..core.api_manager import APIManager
 from ..core.censys_exceptions import CensysException
@@ -12,9 +12,9 @@ from ..core.constants import (
     JOB_ID_REQUIRED_ERROR,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
+    TARGET_TYPE_CERTIFICATE,
     TARGET_TYPE_HOST,
     TARGET_TYPE_WEB_PROPERTY,
-    TARGET_TYPE_CERTIFICATE,
 )
 from ..core.datamodels import RelatedInfraResultModel
 from ..core.utils import get_integration_params
@@ -73,7 +73,7 @@ def main():
 
         result = response.get("result", {})
         results = result.get("results", [])
-        
+
         target_info = result.get("target", {})
         if "host_id" in target_info:
             target_type = TARGET_TYPE_HOST
@@ -100,9 +100,7 @@ def main():
             csv_data = [model.to_csv() for model in result_models]
             if csv_data:
                 siemplify.result.add_data_table(
-                    "Related Infrastructure Pivots",
-                    construct_csv(csv_data),
-                    "Censys"
+                    "Related Infrastructure Pivots", construct_csv(csv_data), "Censys"
                 )
 
             output_message = (
@@ -112,7 +110,9 @@ def main():
             siemplify.LOGGER.info(output_message)
 
         else:
-            output_message = f"No related infrastructure results found for job {job_id}."
+            output_message = (
+                f"No related infrastructure results found for job {job_id}."
+            )
             siemplify.LOGGER.info(output_message)
 
     except ValueError as e:

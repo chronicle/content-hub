@@ -29,23 +29,25 @@ class TestEnrichWebProperties:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful web property enrichment."""
-        censys_manager.set_enrich_web_properties_response({
-            "result": [
-                {
-                    "resource": {
-                        "webproperty_id": "example.com:443",
-                        "hostname": "example.com",
-                        "port": 443,
-                        "http": {
-                            "response": {
-                                "status_code": 200,
-                                "headers": {"Server": "nginx"},
-                            }
-                        },
+        censys_manager.set_enrich_web_properties_response(
+            {
+                "result": [
+                    {
+                        "resource": {
+                            "webproperty_id": "example.com:443",
+                            "hostname": "example.com",
+                            "port": 443,
+                            "http": {
+                                "response": {
+                                    "status_code": 200,
+                                    "headers": {"Server": "nginx"},
+                                }
+                            },
+                        }
                     }
-                }
-            ]
-        })
+                ]
+            }
+        )
 
         enrich_web_properties.main()
 
@@ -68,7 +70,10 @@ class TestEnrichWebProperties:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
-        assert "No ADDRESS or HOSTNAME type entities found" in action_output.results.output_message
+        assert (
+            "No ADDRESS or HOSTNAME type entities found"
+            in action_output.results.output_message
+        )
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,

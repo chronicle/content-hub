@@ -16,7 +16,11 @@ from ..core.constants import (
     RESULT_VALUE_TRUE,
 )
 from ..core.datamodels import HostHistoryEventModel
-from ..core.utils import get_integration_params, validate_ip_address, validate_rfc3339_timestamp
+from ..core.utils import (
+    get_integration_params,
+    validate_ip_address,
+    validate_rfc3339_timestamp,
+)
 
 
 @output_handler
@@ -112,9 +116,8 @@ def main():
         pagination_info = result.get("pagination_info", {})
 
         if not events:
-            output_message = (
-                f"No historical data found for host {host_id} within the specified time range."
-            )
+            output_message = f"No historical data found for host {host_id} within the specified" \
+                " time range."
             siemplify.LOGGER.info(output_message)
         else:
             # Build table data using datamodels (limit to MAX_TABLE_RECORDS for display)
@@ -139,11 +142,10 @@ def main():
                     f"(partial data - {pages_fetched} page(s) fetched)."
                 )
             else:
-                output_message = (
-                    f"Successfully retrieved {total_events} event(s) for host {host_id}."
-                )
+                output_message = f"Successfully retrieved {total_events} event(s)" \
+                    f" for host {host_id}."
 
-            # Add table limit info if we have more events than table can show
+            # Add table limit info if test_get_host_history.py:101we have more events than table can show
             if total_events > MAX_TABLE_RECORDS:
                 output_message += (
                     f"\nDisplaying {MAX_TABLE_RECORDS} events in table view. "
@@ -173,7 +175,9 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(GET_HOST_HISTORY_SCRIPT_NAME, str(e))
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
+            GET_HOST_HISTORY_SCRIPT_NAME, str(e)
+        )
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

@@ -81,26 +81,33 @@ def main():
 
         if job_state == JOB_STATE_COMPLETED:
             status = EXECUTION_STATE_COMPLETED
-            output_message = (
-                f"CensEye job {job_id} completed successfully with {result_count} result(s)."
-            )
+            output_message = f"CensEye job {job_id} completed successfully with" \
+                f" {result_count} result(s)."
             if complete_time:
                 output_message += f" Completed: {complete_time}"
-            siemplify.LOGGER.info(f"Setting status to EXECUTION_STATE_COMPLETED ({EXECUTION_STATE_COMPLETED})")
+            siemplify.LOGGER.info(
+                f"Setting status to EXECUTION_STATE_COMPLETED ({EXECUTION_STATE_COMPLETED})"
+            )
             siemplify.LOGGER.info(output_message)
 
         elif job_state == JOB_STATE_FAILED:
             status = EXECUTION_STATE_FAILED
             output_message = f"CensEye job {job_id} failed."
-            siemplify.LOGGER.error(f"Setting status to EXECUTION_STATE_FAILED ({EXECUTION_STATE_FAILED})")
+            siemplify.LOGGER.error(
+                f"Setting status to EXECUTION_STATE_FAILED ({EXECUTION_STATE_FAILED})"
+            )
             siemplify.LOGGER.error(output_message)
 
         else:
             status = EXECUTION_STATE_INPROGRESS
-            output_message = f"CensEye job {job_id} is still in progress (state: {job_state})."
+            output_message = (
+                f"CensEye job {job_id} is still in progress (state: {job_state})."
+            )
             if create_time:
                 output_message += f" Created: {create_time}"
-            siemplify.LOGGER.info(f"Setting status to EXECUTION_STATE_INPROGRESS ({EXECUTION_STATE_INPROGRESS})")
+            siemplify.LOGGER.info(
+                f"Setting status to EXECUTION_STATE_INPROGRESS ({EXECUTION_STATE_INPROGRESS})"
+            )
             siemplify.LOGGER.info(output_message)
 
     except ValueError as e:

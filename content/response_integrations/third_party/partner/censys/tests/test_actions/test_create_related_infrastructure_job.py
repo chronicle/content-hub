@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import re
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
 from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 
 from censys.actions.create_related_infrastructure_job import (
@@ -49,22 +49,30 @@ class TestValidateCreateJobParams:
 
     def test_validate_web_property_missing_port(self):
         """Test validation fails for Web Property without port."""
-        with pytest.raises(ValueError, match=re.escape(INVALID_WEB_PROPERTY_FORMAT_ERROR)):
+        with pytest.raises(
+            ValueError, match=re.escape(INVALID_WEB_PROPERTY_FORMAT_ERROR)
+        ):
             validate_create_job_params(TARGET_TYPE_WEB_PROPERTY, "example.com")
 
     def test_validate_web_property_invalid_port(self):
         """Test validation fails for Web Property with invalid port."""
-        with pytest.raises(ValueError, match=re.escape(INVALID_WEB_PROPERTY_FORMAT_ERROR)):
+        with pytest.raises(
+            ValueError, match=re.escape(INVALID_WEB_PROPERTY_FORMAT_ERROR)
+        ):
             validate_create_job_params(TARGET_TYPE_WEB_PROPERTY, "example.com:99999")
 
     def test_validate_certificate_invalid_format(self):
         """Test validation fails for invalid certificate format."""
-        with pytest.raises(ValueError, match=re.escape(INVALID_CERTIFICATE_FORMAT_ERROR)):
+        with pytest.raises(
+            ValueError, match=re.escape(INVALID_CERTIFICATE_FORMAT_ERROR)
+        ):
             validate_create_job_params(TARGET_TYPE_CERTIFICATE, "invalid_cert")
 
     def test_validate_invalid_target_type(self):
         """Test validation fails for invalid target type."""
-        with pytest.raises(ValueError, match=INVALID_TARGET_TYPE_ERROR.format("Invalid")):
+        with pytest.raises(
+            ValueError, match=INVALID_TARGET_TYPE_ERROR.format("Invalid")
+        ):
             validate_create_job_params("Invalid", "14.84.5.68")
 
 
@@ -73,7 +81,9 @@ class TestValidateCreateJobParams:
 class TestCreateRelatedInfrastructureJob:
     """Test Create Related Infrastructure Job action."""
 
-    def test_create_job_success_host(self, mock_siemplify_class, mock_api_manager_class):
+    def test_create_job_success_host(
+        self, mock_siemplify_class, mock_api_manager_class
+    ):
         """Test successful job creation for Host target type."""
         mock_siemplify = Mock()
         mock_siemplify_class.return_value = mock_siemplify

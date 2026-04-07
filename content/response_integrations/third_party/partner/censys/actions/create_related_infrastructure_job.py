@@ -112,9 +112,7 @@ def main():
             siemplify=siemplify,
         )
 
-        siemplify.LOGGER.info(
-            f"Creating CensEye job for {target_type}: {target_value}"
-        )
+        siemplify.LOGGER.info(f"Creating CensEye job for {target_type}: {target_value}")
 
         response = censys_manager.create_censeye_job(
             target_type=target_type,
