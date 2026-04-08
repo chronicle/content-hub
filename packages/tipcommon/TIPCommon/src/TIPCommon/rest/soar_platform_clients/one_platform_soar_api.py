@@ -1198,10 +1198,38 @@ class OnePlatformSoarApi(BaseSoarApi):
             HttpMethod.POST, endpoint, json_payload=self.params.api_record
         )
 
+    # def get_store_data(self) -> SingleJson:
+    #     """Get store data."""
+    #     endpoint = "/marketplaceIntegrations"
+    #     return self._make_request(HttpMethod.GET, endpoint).json()
+    
+    #QA fixes
+    
     def get_store_data(self) -> SingleJson:
-        """Get store data."""
+        """Get all store data and return it in the expected dictionary format."""
         endpoint = "/marketplaceIntegrations"
-        return self._make_request(HttpMethod.GET, endpoint).json()
+        all_integrations = []
+        next_page_token = None
+
+        while True:
+            params = {}
+            if next_page_token:
+                params["pageToken"] = next_page_token
+            
+            response_json = self._make_request(HttpMethod.GET, endpoint, params=params).json()
+            
+            page_items = response_json.get("marketplaceIntegrations", [])
+            all_integrations.extend(page_items)
+            
+            next_page_token = response_json.get("nextPageToken")
+            
+            if not next_page_token:
+                break
+                
+        return {
+            "marketplaceIntegrations": all_integrations,
+            "nextPageToken": None
+        }
 
     def import_package(self) -> requests.Response:
         """Import package."""
