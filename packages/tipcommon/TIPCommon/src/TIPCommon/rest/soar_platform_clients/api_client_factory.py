@@ -26,7 +26,7 @@ from .one_platform_soar_api import OnePlatformSoarApi
 if TYPE_CHECKING:
     import requests
 
-    from TIPCommon.types import ChronicleSOAR
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from typing import Protocol
 

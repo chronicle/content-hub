@@ -186,7 +186,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         ),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
-        after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
+        after=after_log(logger, logging.WARNING),
         before_sleep=_log_retry_attempt,
     )
     async def send_message(
@@ -294,7 +294,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         ),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
-        after=after_log(logger, logging.WARNING),  # ty:ignore[invalid-argument-type]
+        after=after_log(logger, logging.WARNING),
         before_sleep=_log_retry_attempt,
     )
     async def _send_single_message_independent(

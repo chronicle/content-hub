@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 
 _PAGE_SIZE = 1000
+_EMAIL_TEMPLATES_PAGE_SIZE = 50
 
 
 class OnePlatformSoarApi(BaseSoarApi):
@@ -503,8 +504,10 @@ class OnePlatformSoarApi(BaseSoarApi):
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_email_template(self) -> requests.Response:
         """Get email template"""
-        endpoint = "/system/settings/emailTemplates"
-        return self._make_request(HttpMethod.GET, endpoint)
+        endpoint = (
+            f"/system/settings/emailTemplates?pageSize={_EMAIL_TEMPLATES_PAGE_SIZE}"
+        )
+        return self._paginate_results(endpoint, "emailTemplates")
 
     def get_siemplify_user_details(self) -> requests.Response:
         """Get siemplify user details"""
