@@ -622,7 +622,6 @@ class RelatedInfraResultModel(BaseModel):
         self,
         raw_data: Dict[str, Any],
         index: int,
-        target_type: str,
     ) -> None:
         """
         Initialize RelatedInfraResultModel.
@@ -630,11 +629,9 @@ class RelatedInfraResultModel(BaseModel):
         Args:
             raw_data: Raw pivot result data from API
             index: Sequential number for this result
-            target_type: Type of target (Host, Web Property, Certificate)
         """
         super().__init__(raw_data)
         self.index = index
-        self.target_type = target_type
 
         self.count = raw_data.get("count", 0)
         self.field_value_pairs = raw_data.get("field_value_pairs", [])

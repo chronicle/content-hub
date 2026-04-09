@@ -145,7 +145,7 @@ def main():
                 output_message = f"Successfully retrieved {total_events} event(s)" \
                     f" for host {host_id}."
 
-            # Add table limit info if test_get_host_history.py:101we have more events than table can show
+            # Add table limit info if we have more events than table can show
             if total_events > MAX_TABLE_RECORDS:
                 output_message += (
                     f"\nDisplaying {MAX_TABLE_RECORDS} events in table view. "

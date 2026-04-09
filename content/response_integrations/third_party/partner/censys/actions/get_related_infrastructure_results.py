@@ -92,7 +92,6 @@ def main():
                 model = RelatedInfraResultModel(
                     raw_data=result_data,
                     index=index,
-                    target_type=target_type,
                 )
                 result_models.append(model)
                 total_assets += model.count

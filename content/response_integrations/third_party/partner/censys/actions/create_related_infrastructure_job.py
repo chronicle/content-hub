@@ -46,7 +46,7 @@ def validate_create_job_params(target_type: str, target_value: str) -> None:
         if ":" not in target_value:
             raise ValueError(INVALID_WEB_PROPERTY_FORMAT_ERROR)
         parts = target_value.split(":")
-        if len(parts) != 2:
+        if len(parts) != 2 or not parts[0]:
             raise ValueError(INVALID_WEB_PROPERTY_FORMAT_ERROR)
         try:
             port = int(parts[1])
@@ -100,9 +100,6 @@ def main():
     output_message = ""
 
     try:
-        if target_value:
-            target_value = target_value.strip()
-
         validate_create_job_params(target_type, target_value)
 
         censys_manager = APIManager(
@@ -139,7 +136,9 @@ def main():
             siemplify.LOGGER.info(output_message)
         else:
             output_message = "CensEye job created but no job ID returned."
-            siemplify.LOGGER.warning(output_message)
+            siemplify.LOGGER.info(output_message)
+            result_value = RESULT_VALUE_FALSE
+            status = EXECUTION_STATE_FAILED
 
     except ValueError as e:
         output_message = str(e)
