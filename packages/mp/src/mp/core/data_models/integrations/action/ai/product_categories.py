@@ -26,263 +26,319 @@ class ActionProductCategories(BaseModel):
         Field(
             title="Enrich IOC (hash, filename, IP, domain, URL, CVE, Threat Actor, Campaign)",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Returns reputation, prevalence, and threat intelligence"
                 " (e.g., malware family, attribution) for the indicator."
             ),
         ),
-    ] = False
+    ]
     enrich_asset: Annotated[
         bool,
         Field(
             title="Enrich Asset (hostname, user or internal resource)",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Returns contextual metadata (e.g., OS version, owner, department, MAC address)"
                 " for a user or resource."
             ),
         ),
-    ] = False
+    ]
     update_alert: Annotated[
         bool,
         Field(
             title="Update Alert",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Changes the status, severity, or assignee of the alert within the SecOps"
                 " platform."
             ),
         ),
-    ] = False
+    ]
     add_alert_comment: Annotated[
         bool,
         Field(
             title="Add Alert Comment",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Appends analyst notes or automated log entries to the alert's activity timeline."
             ),
         ),
-    ] = False
+    ]
     create_ticket: Annotated[
         bool,
         Field(
             title="Create Ticket",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Generates a new record in an external ITSM (e.g., Jira, ServiceNow) and returns"
                 " the Ticket ID."
             ),
         ),
-    ] = False
+    ]
     update_ticket: Annotated[
         bool,
         Field(
             title="Update Ticket",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Synchronizes status, priority, or field changes from SecOps to the external"
                 " ticketing system."
             ),
         ),
-    ] = False
+    ]
     add_ioc_to_blocklist: Annotated[
         bool,
         Field(
             title="Add IOC To Blocklist",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Updates security controls (Firewall, EDR, Proxy) to prevent any future"
                 " interaction with the IOC."
             ),
         ),
-    ] = False
+    ]
     remove_ioc_from_blocklist: Annotated[
         bool,
         Field(
             title="Remove IOC From Blocklist",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Restores connectivity or execution rights for an indicator by removing it from"
                 " restricted lists."
             ),
         ),
-    ] = False
+    ]
     add_ioc_to_allowlist: Annotated[
         bool,
         Field(
             title="Add IOC To Allowlist",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 ' Marks an indicator as "known good" to prevent future security alerts or false'
                 " positives."
             ),
         ),
-    ] = False
+    ]
     remove_ioc_from_allowlist: Annotated[
         bool,
         Field(
             title="Remove IOC From Allowlist",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Re-enables standard security monitoring and blocking for a previously trusted"
                 " indicator."
             ),
         ),
-    ] = False
+    ]
     disable_identity: Annotated[
         bool,
         Field(
             title="Disable Identity (User, Account)",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Revokes active sessions and prevents a user or service account from"
                 " authenticating to the network."
             ),
         ),
-    ] = False
+    ]
     enable_identity: Annotated[
         bool,
         Field(
             title="Enable Identity (User, Account)",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Restores authentication capabilities and system access for a previously disabled"
                 " account."
             ),
         ),
-    ] = False
+    ]
     contain_host: Annotated[
         bool,
         Field(
             title="Contain Host",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Isolates an endpoint from the network via EDR, allowing communication only with"
                 " the management console."
             ),
         ),
-    ] = False
+    ]
     uncontain_host: Annotated[
         bool,
         Field(
             title="Uncontain Host",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Removes network isolation and restores the endpoint's full communication"
                 " capabilities."
             ),
         ),
-    ] = False
+    ]
     reset_identity_password: Annotated[
         bool,
         Field(
             title="Reset Identity Password (User, Account)",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Invalidates the current credentials and triggers a password change or temporary"
                 " password generation."
             ),
         ),
-    ] = False
+    ]
     update_identity: Annotated[
         bool,
         Field(
             title="Update Identity (User, Account)",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Modifies account metadata, such as group memberships, permissions, or contact"
                 " information."
             ),
         ),
-    ] = False
+    ]
     search_events: Annotated[
         bool,
         Field(
             title="Search Events",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Returns a collection of historical logs or telemetry data matching specific"
                 " search parameters."
             ),
         ),
-    ] = False
+    ]
     execute_command_on_the_host: Annotated[
         bool,
         Field(
             title="Execute Command on the Host",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Runs a script or system command on a remote endpoint and returns the standard"
                 " output (STDOUT)."
             ),
         ),
-    ] = False
+    ]
     download_file: Annotated[
         bool,
         Field(
             title="Download File",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Retrieves a specific file from a remote host for local forensic analysis"
                 " or sandboxing."
             ),
         ),
-    ] = False
+    ]
     send_email: Annotated[
         bool,
         Field(
             title="Send Email",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Dispatches an outbound email notification or response to specified recipients."
             ),
         ),
-    ] = False
+    ]
     search_email: Annotated[
         bool,
         Field(
             title="Search Email",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Identifies and lists emails across the mail server based on criteria like sender,"
                 " subject, or attachment."
             ),
         ),
-    ] = False
+    ]
     delete_email: Annotated[
         bool,
         Field(
             title="Delete Email",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Removes a specific email or thread from one or more user mailboxes"
                 " (Purge/Withdraw)."
             ),
         ),
-    ] = False
+    ]
     update_email: Annotated[
         bool,
         Field(
             title="Update Email",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Modifies the state of an email, such as moving it to quarantine, marking as read,"
                 " or applying labels."
             ),
         ),
-    ] = False
+    ]
     submit_file: Annotated[
         bool,
         Field(
             title="Submit File",
             description=(
-                "Expected Outcome:"
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
                 " Uploads a file or sample to a sandbox or analysis engine"
                 " (e.g., VirusTotal, Joe Sandbox) and returns a behavior report or threat score."
             ),
         ),
-    ] = False
+    ]
+    send_message: Annotated[
+        bool,
+        Field(
+            title="Send Message",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
+                " Sends a message to a communication app (e.g., Google Chat, Microsoft Teams)"
+            ),
+        ),
+    ]
+    search_asset: Annotated[
+        bool,
+        Field(
+            title="Search Asset",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
+                " Searches for the asset associated with the alert within the product"
+            ),
+        ),
+    ]
+    get_alert_information: Annotated[
+        bool,
+        Field(
+            title="Get Alert Information",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome: Fetches information about the alert from the 3rd party product"
+            ),
+        ),
+    ]
 
 
 class ActionProductCategory(enum.StrEnum):
@@ -310,6 +366,9 @@ class ActionProductCategory(enum.StrEnum):
     DELETE_EMAIL = "Delete Email"
     UPDATE_EMAIL = "Update Email"
     SUBMIT_FILE = "Submit File"
+    SEND_MESSAGE = "Send Message"
+    SEARCH_ASSET = "Search Asset"
+    GET_ALERT_INFORMATION = "Get Alert Information"
 
 
 PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY: dict[str, ActionProductCategory] = {
@@ -337,4 +396,7 @@ PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY: dict[str, ActionProductCategory] = {
     "delete_email": ActionProductCategory.DELETE_EMAIL,
     "update_email": ActionProductCategory.UPDATE_EMAIL,
     "submit_file": ActionProductCategory.SUBMIT_FILE,
+    "send_message": ActionProductCategory.SEND_MESSAGE,
+    "search_asset": ActionProductCategory.SEARCH_ASSET,
+    "get_alert_information": ActionProductCategory.GET_ALERT_INFORMATION,
 }

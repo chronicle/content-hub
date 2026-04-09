@@ -105,8 +105,37 @@ for entity in suitable_entities:
         "filters_by_is_enriched": false,
         "filters_by_is_pivot": false
     },
-    "tags": {
-        "is_enrichment": true
+    "categories": {
+        "enrichment": true
+    },
+    "action_product_categories": {
+        "add_alert_comment": false,
+        "add_ioc_to_allowlist": false,
+        "add_ioc_to_blocklist": false,
+        "contain_host": false,
+        "create_ticket": false,
+        "delete_email": false,
+        "disable_identity": false,
+        "download_file": false,
+        "enable_identity": false,
+        "enrich_asset": false,
+        "enrich_ioc": true,
+        "execute_command_on_the_host": false,
+        "get_alert_information": false,
+        "remove_ioc_from_allowlist": false,
+        "remove_ioc_from_blocklist": false,
+        "reset_identity_password": false,
+        "search_asset": false,
+        "search_email": false,
+        "search_events": false,
+        "send_email": false,
+        "send_message": false,
+        "submit_file": false,
+        "uncontain_host": false,
+        "update_alert": false,
+        "update_email": false,
+        "update_identity": false,
+        "update_ticket": false
     }
 }
 ```
@@ -170,8 +199,37 @@ if result['success']:
         "filters_by_is_enriched": false,
         "filters_by_is_pivot": false
     },
-    "tags": {
-        "is_enrichment": false
+    "categories": {
+        "enrichment": false
+    },
+    "action_product_categories": {
+        "add_alert_comment": false,
+        "add_ioc_to_allowlist": false,
+        "add_ioc_to_blocklist": false,
+        "contain_host": true,
+        "create_ticket": false,
+        "delete_email": false,
+        "disable_identity": false,
+        "download_file": false,
+        "enable_identity": false,
+        "enrich_asset": false,
+        "enrich_ioc": false,
+        "execute_command_on_the_host": false,
+        "get_alert_information": false,
+        "remove_ioc_from_allowlist": false,
+        "remove_ioc_from_blocklist": false,
+        "reset_identity_password": false,
+        "search_asset": false,
+        "search_email": false,
+        "search_events": false,
+        "send_email": false,
+        "send_message": false,
+        "submit_file": false,
+        "uncontain_host": false,
+        "update_alert": false,
+        "update_email": false,
+        "update_identity": false,
+        "update_ticket": false
     }
 }
 ```
