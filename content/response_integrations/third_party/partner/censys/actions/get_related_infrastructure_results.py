@@ -12,9 +12,6 @@ from ..core.constants import (
     JOB_ID_REQUIRED_ERROR,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
-    TARGET_TYPE_CERTIFICATE,
-    TARGET_TYPE_HOST,
-    TARGET_TYPE_WEB_PROPERTY,
 )
 from ..core.datamodels import RelatedInfraResultModel
 from ..core.utils import get_integration_params
@@ -73,16 +70,6 @@ def main():
 
         result = response.get("result", {})
         results = result.get("results", [])
-
-        target_info = result.get("target", {})
-        if "host_id" in target_info:
-            target_type = TARGET_TYPE_HOST
-        elif "webproperty_id" in target_info:
-            target_type = TARGET_TYPE_WEB_PROPERTY
-        elif "certificate_id" in target_info:
-            target_type = TARGET_TYPE_CERTIFICATE
-        else:
-            target_type = TARGET_TYPE_HOST
 
         if results:
             result_models = []
