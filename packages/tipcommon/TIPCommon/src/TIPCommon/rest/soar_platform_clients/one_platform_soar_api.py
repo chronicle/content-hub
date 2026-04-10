@@ -1253,7 +1253,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             response_json = self._make_request(
                 HttpMethod.GET, endpoint, params=params
             ).json()
-          page_items = response_json.get("marketplaceIntegrations", [])
+            page_items = response_json.get("marketplaceIntegrations", [])
             all_integrations.extend(page_items)
             next_page_token = response_json.get("nextPageToken")
             if not next_page_token:
