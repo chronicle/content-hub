@@ -178,10 +178,31 @@ def main():
             for connector in gitsync.content.get_connectors():
                 siemplify.LOGGER.info(f"Installing {connector.name}")
                 gitsync.install_connector(connector)
+                
+        # if features["Jobs"]:
+        #     siemplify.LOGGER.info("========== Jobs ==========")
+        #     for job in gitsync.content.get_jobs():
+        #         siemplify.LOGGER.info(f"Installing {job.name}")
+        #         gitsync.install_job(job)
 
+        # QA Fixes
         if features["Jobs"]:
             siemplify.LOGGER.info("========== Jobs ==========")
+            current_jobs = gitsync.api.get_jobs(chronicle_soar=siemplify)
+            
             for job in gitsync.content.get_jobs():
+                existing_job = next(
+                    (
+                        x for x in current_jobs 
+                        if x.get("displayName") == job.raw_data.get("displayName") 
+                        or x.get("name") == job.name
+                    ),
+                    None,
+                )
+                
+                if existing_job:
+                    continue
+                    
                 siemplify.LOGGER.info(f"Installing {job.name}")
                 gitsync.install_job(job)
 
@@ -241,6 +262,9 @@ def main():
                     if platform_supports_1p_api()
                     else CaseCloseReasons.from_legacy_or_1p(current_cause).to_legacy()
                 )
+                #QA Fixes
+                if "forCloseReason" in cause:
+                    current_cause["forCloseReason"] = cause["forCloseReason"]
 
                 gitsync.api.add_close_reason(siemplify, current_cause)
 
