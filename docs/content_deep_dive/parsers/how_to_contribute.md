@@ -48,11 +48,68 @@ If these tests fail, you must fix the errors (e.g., structuring, unit tests) and
 
 ### 3b. Validations on SecOps instance (Manual step)
 
-Certain validations that are part of **Validate Google & Parsers** require an execution against a live SecOps instance using customer logs. This is a mandatory step for the parsers that have `verified=True` in the `metadata.json`.
+Certain validations that are part of **Validate Google & Parsers** require an execution against a live SecOps instance using customer logs. This is a mandatory step.
 
 Due to access restrictions, this process must be manually triggered by the contributor.
 
+#### Prerequisites and Setup for `secops` CLI
+
+Besides the Python dependencies, there are a few other prerequisites and setup steps required to actually use the `secops` command successfully, mainly related to Google Cloud and authentication:
+
+1.  **Google Cloud SDK (gcloud)**: If you plan to use Application Default Credentials (recommended for local development), you will need the Google Cloud SDK installed on your system. You use it to authenticate by running:
+    ```bash
+    gcloud auth application-default login
+    ```
+    This creates the credentials that the `secops` command will automatically look for.
+2.  **Google Cloud Project Configuration**: You need a Google Cloud project linked to your Google SecOps (Chronicle) instance. The Chronicle API must be enabled in that project.
+3.  **IAM Permissions**: The user account or service account you use to authenticate must have appropriate permissions. The recommended predefined role is Chronicle API Admin (`roles/chronicle.admin`).
+4.  **Configuration**: Once you have the above, you usually run a config command to tell the CLI which instance to talk to:
+    ```bash
+    secops config set --customer-id "your-instance-id" --project-id "your-project-id" --region "us"
+    ```
+
 *   **Purpose**: To check for negative functional and non-functional requirements (NFR) impact, such as degradation in parsing efficiency or unexpected drops in UDM field coverage, when the parser runs on actual customer data.
-*   **Triggering**: You must call the appropriate API (e.g., the `RunAnalysis` API) to initiate the validation on a small sample of logs.
+*   **Triggering**: You must execute a command to initiate the validation on a small sample of logs. Before running the command make sure to activate your virtual environment:
+    ```bash
+    source .venv/bin/activate
+    ```
+    Example Triggering Command:
+
+    ```bash
+    secops \
+      --project-id <project-id> \
+      --customer-id <customer-id> \
+      log-type trigger-checks \
+      --associated-pr <associated-pr> \
+      --log-type <log-type>
+    ```
+    
+    *Note: The `<log-type>` parameter specifies the log type configured in your SecOps instance where the corresponding data is ingested. This name does not need to match the parser's folder name in the repository.*
+
+*   **Response**: The command will return a JSON response containing the report ID. For example:
+
+    ```json
+    {
+      "name": "operations/githubChecks/<reportId>"
+    }
+    ```
+
+*   **Viewing Report Logs**: To view the detailed logs for the report, you can use the `get-analysis-report` command. Before running the command make sure to activate your virtual environment:
+    ```bash
+     source .venv/bin/activate
+    ```
+    Example Viewing Report Command:
+
+    ```bash
+    secops \
+      --project-id <project-id> \
+      --customer-id <customer-id> \
+      log-type get-analysis-report \
+      --name <report-name>
+    ```
+
+Where `<report-name>` follows the format:
+`projects/{project}/locations/{location}/instances/{customer_id}/logTypes/{logType}/parsers/{parser}/analysisReports/{reportId}`
+
 *   **Required Role**: To trigger this validation, you must have the `chronicle.admin` role in the corresponding SecOps instance.
 *   **Status**: The overall success or failure status of this profiling validation will be reported back to your GitHub PR.
