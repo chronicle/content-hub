@@ -841,9 +841,7 @@ class WorkflowInstaller:
             # Validate the existing instance before copying it.
             # If it's invalid (e.g. from a prior failed import), fall through
             # to the instance-discovery logic below.
-            instance_to_validate = instance
-            if instance == "AutomaticEnvironment":
-                instance_to_validate = fallback
+            instance_to_validate = fallback if instance == "AutomaticEnvironment" else instance
             if instance_to_validate and self._is_valid_existing_instance(
                 step.get("integration"),
                 instance_to_validate,
@@ -962,14 +960,18 @@ class WorkflowInstaller:
         integration_name: str,
         environment: str,
     ) -> list[dict]:
-        """Find integration instances available for integration per environment
+        """Find integration instances available for integration per environment.
+
+        Returns configured instances if any exist; otherwise falls back to
+        unconfigured instances to preserve backward compatibility while still
+        enabling a fallback when no configured instances are available.
 
         Args:
             integration_name: The integration name to look for
             environment: The environment to fetch the integration instances
 
         Returns:
-            A list of configured integration instances
+            A list of integration instances, preferring configured ones.
 
         """
         cache_key = f"integration_instances_{environment}"
@@ -984,11 +986,13 @@ class WorkflowInstaller:
             if x.get("integrationIdentifier") == integration_name
         ]
 
-        filtered_instances.sort(
-            key=lambda x: (not x.get("isConfigured", False), x.get("instanceName"))
-        )
+        configured_instances = [x for x in filtered_instances if x.get("isConfigured")]
+        if configured_instances:
+            return configured_instances
 
-        return filtered_instances
+        # Fallback: return unconfigured instances sorted by name when no configured
+        # instances are available, so callers can still find something to assign.
+        return sorted(filtered_instances, key=lambda x: x.get("instanceName") or "")
 
     def _is_valid_existing_instance(
         self,
@@ -1007,7 +1011,7 @@ class WorkflowInstaller:
             True if the instance exists in any of the playbook's environments
             or in the shared environment.
         """
-        envs_to_check = set(environments) | {ALL_ENVIRONMENTS_IDENTIFIER}
+        envs_to_check = {*environments, ALL_ENVIRONMENTS_IDENTIFIER}
         for env in envs_to_check:
             instances = self._find_integration_instances_for_step(
                 integration_name,
