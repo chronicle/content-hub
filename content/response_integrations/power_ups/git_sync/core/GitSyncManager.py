@@ -988,7 +988,7 @@ class WorkflowInstaller:
 
         configured_instances = [x for x in filtered_instances if x.get("isConfigured")]
         if configured_instances:
-            return configured_instances
+            return sorted(configured_instances, key=lambda x: x.get("instanceName") or "")
 
         # Fallback: return unconfigured instances sorted by name when no configured
         # instances are available, so callers can still find something to assign.
