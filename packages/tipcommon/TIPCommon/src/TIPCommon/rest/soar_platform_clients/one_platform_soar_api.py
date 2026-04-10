@@ -1407,11 +1407,24 @@ class OnePlatformSoarApi(BaseSoarApi):
             HttpMethod.POST, endpoint, json_payload=self.params.connector_data
         )
 
+    # def add_job(self) -> requests.Response:
+    #     """Add job."""
+    #     endpoint = "/jobs/SaveOrUpdateJobData"
+    #     #integrations/{integration}/jobs/{job}/jonInstances/{jobInstance}
+    #     return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
+    
+    #QA fixes
     def add_job(self) -> requests.Response:
         """Add job."""
-        endpoint = "/jobs/SaveOrUpdateJobData"
-        #integrations/{integration}/jobs/{job}/jonInstances/{jobInstance}
-        return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
+        integration = self.params.integration_name
+        job_full_name = self.params.job_name
+        try:
+            job_id = job_full_name.split("jobs/")[1].split("/")[0]
+        except (IndexError, AttributeError):
+            job_id = job_full_name
+            
+        endpoint = f"/integrations/{integration}/jobs/{job_id}/jobInstances/"
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)  
 
     def add_email_template(self) -> requests.Response:
         """Add email template."""

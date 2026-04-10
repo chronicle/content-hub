@@ -2811,10 +2811,21 @@ def update_connector(
     return response
 
 
+# def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
+#     """Add job."""
+#     api_client = get_soar_client(chronicle_soar)
+#     api_client.params.job = job
+#     response = api_client.add_job()
+#     validate_response(response, validate_json=False)
+#     return response.content
+
+#QA fixes
 def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
     """Add job."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.job = job
+    api_client.params.integration_name = job.get("integration")
+    api_client.params.job_name = job.get("name")
     response = api_client.add_job()
     validate_response(response, validate_json=False)
     return response.content
