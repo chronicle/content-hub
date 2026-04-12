@@ -117,6 +117,7 @@ class BuiltIntegrationMetadata(TypedDict):
     IsPowerUp: bool
     IsCertified: bool
     ProductCategories: NotRequired[list[str] | None]
+    GoogleSecOpsProduct: NotRequired[bool]
 
 
 class NonBuiltIntegrationMetadata(TypedDict):
@@ -136,6 +137,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
     is_available_for_community: NotRequired[bool]
     is_powerup: NotRequired[bool]
     product_categories: NotRequired[list[str] | None]
+    google_secops_product: NotRequired[bool]
 
 
 class IntegrationMetadata(
@@ -182,6 +184,7 @@ class IntegrationMetadata(
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
     product_categories: list[IntegrationProductCategory]
+    google_secops_product: bool = False
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -271,6 +274,7 @@ class IntegrationMetadata(
                 IntegrationProductCategory(category)
                 for category in (built.get("ProductCategories") or [])
             ],
+            google_secops_product=built.get("GoogleSecOpsProduct", False),
         )
 
     @classmethod
@@ -303,6 +307,7 @@ class IntegrationMetadata(
             product_categories=[
                 IntegrationProductCategory(c) for c in (non_built.get("product_categories") or [])
             ],
+            google_secops_product=non_built.get("google_secops_product", False),
         )
 
     def to_built(self) -> BuiltIntegrationMetadata:
@@ -340,6 +345,7 @@ class IntegrationMetadata(
             IsPowerUp=self.is_powerup,
             IsCertified=self.is_certified,
             ProductCategories=[c.value for c in self.product_categories],
+            GoogleSecOpsProduct=self.google_secops_product,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -384,6 +390,9 @@ class IntegrationMetadata(
             non_built["is_powerup"] = self.is_powerup
 
         del non_built["product_categories"]
+
+        if self.google_secops_product is True:
+            non_built["google_secops_product"] = self.google_secops_product
 
         mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
