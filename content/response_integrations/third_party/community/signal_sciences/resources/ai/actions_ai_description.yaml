@@ -13,6 +13,9 @@ Add IP to Allow List:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds an IP address to an allow list in an external security product
+      (Signal Sciences). This directly matches the 'Add IOC To Allowlist' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,11 +33,11 @@ Add IP to Allow List:
   ai_description: >-
     ### General Description
 
-    Adds IP addresses to the Signal Sciences allow list for a specific site. This
-    action allows users to provide IP addresses either through a comma-separated parameter
-    or by automatically processing IP entities present in the current SecOps case.
-    It validates the IP format and checks for existing entries to avoid duplicates
-    before performing the update.
+    This action adds one or more IP addresses to the Allow List for a specific site
+    within the Signal Sciences platform. It ensures that traffic from these IP addresses
+    is permitted by updating the site's security configuration. The action supports
+    both manual input of IP addresses and the processing of IP entities attached to
+    the case.
 
 
     ### Parameters Description
@@ -43,47 +46,50 @@ Add IP to Allow List:
 
     | :--- | :--- | :--- | :--- |
 
-    | Site Name | String | Yes | The API name of the site as defined in the Signal
+    | Site Name | string | Yes | The API name of the site as defined in the Signal
     Sciences dashboard. |
 
-    | IP Address | String | No | A comma-separated list of IP addresses to add. If
-    provided, these are processed in addition to any IP entities found in the case.
-    |
+    | IP Address | string | No | A comma-separated list of IP addresses to add to
+    the Signal Sciences allow list. If not provided, the action will attempt to process
+    IP entities from the case. |
 
-    | Note | String | Yes | The descriptive note or justification associated with
-    the allowed IP address. This is required by the Signal Sciences API. |
+    | Note | string | Yes | A descriptive note or justification for adding the IP
+    address to the allow list. This is required by the Signal Sciences API. |
 
 
     ### Additional Notes
 
-    - The action will skip IP addresses that are already present in the site's allow
-    list.
+    - The action will attempt to process IP addresses provided in the 'IP Address'
+    parameter. If no IPs are provided via the parameter, it will fall back to processing
+    any 'ADDRESS' type entities associated with the current case.
 
-    - Both IPv4 and IPv6 addresses are supported and validated before processing.
+    - The action validates that the provided strings are valid IPv4 or IPv6 addresses
+    before attempting to add them.
 
-    - If no IPs are provided via parameters and no IP entities are found in the case,
-    the action will terminate with a message.
+    - If an IP address already exists in the allow list for the specified site, the
+    action will skip the addition for that IP.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves the 'Site Name', 'IP Address' list, and
-    'Note' from the action configuration.
+    1. **Extraction**: The action extracts the 'Site Name', 'IP Address', and 'Note'
+    parameters.
 
-    2. **Entity Collection**: Identifies target IP addresses from the 'IP Address'
-    parameter and filters the case's target entities for those of type ADDRESS.
+    2. **Collection**: It collects target IP addresses from the 'IP Address' parameter
+    and any 'ADDRESS' entities found in the case.
 
-    3. **Deduplication and Validation**: Combines all identified IPs, removes duplicates,
-    and validates that each string is a valid IP address.
+    3. **Validation**: Each collected IP is validated to ensure it is a correct IP
+    format.
 
-    4. **Pre-check**: Fetches the current allow list for the specified site from Signal
-    Sciences to identify IPs that are already allowed.
+    4. **Check Existing**: The action fetches the current allow list for the specified
+    site to avoid duplicate entries.
 
-    5. **External Mutation**: For each valid IP not already on the list, sends a PUT
-    request to the Signal Sciences API to add the IP with the provided note.
+    5. **Execution**: For each unique, valid IP not already in the allow list, the
+    action sends a PUT request to the Signal Sciences API to add the IP with the provided
+    note.
 
-    6. **Finalization**: Aggregates the results, providing a summary of successfully
-    added IPs and any that failed or were skipped.
+    6. **Reporting**: The action constructs a result summary detailing which IPs were
+    successfully added and which failed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -92,12 +98,21 @@ Add IP to Allow List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds specified IP addresses to the Signal Sciences allow list for a specific
-      site using a PUT request.
+      Adds the specified IP address to the allow list configuration for a specific
+      site in the Signal Sciences platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PUT request to the Signal Sciences API to add an IP address
+      to an allow list, which constitutes an external data mutation. It fetches existing
+      allow list data to check for duplicates, but does not modify internal SOAR case
+      data (entities, insights, etc.).
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (adds an IP to an allow list), which violates
+      the 'External State Preservation' rule for enrichment actions. Therefore, it
+      is not an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -114,6 +129,9 @@ Add IP to Allow List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `self.soar_action.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.ADDRESS`. It does not apply other filters.
 Add IP to Block List:
   action_product_categories:
     add_alert_comment: false
@@ -129,6 +147,9 @@ Add IP to Block List:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds an IP address to a blocklist in an external security product
+      (Signal Sciences). This directly matches the 'Add IOC To Blocklist' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,52 +165,52 @@ Add IP to Block List:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    The **Add IP to Block List** action enables security analysts to block specific
+    IP addresses within a designated site in the Signal Sciences platform. This action
+    helps mitigate threats by preventing malicious traffic from interacting with protected
+    resources.
 
-    Use the **Add IP to Block List** action to add specific IP addresses to the block
-    list of a designated site in Signal Sciences. This action helps in mitigating
-    threats by blocking malicious traffic at the WAF level.
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts the `Site Name`, `IP Address`
+    (optional), and `Note` (mandatory) from the action configuration.
+
+    2. **Target Identification**: It aggregates IP addresses from the `IP Address`
+    parameter and any `ADDRESS` type entities present in the current case.
+
+    3. **Pre-check**: It fetches the existing block list for the specified site to
+    identify if any target IPs are already blocked, preventing redundant API calls.
+
+    4. **Execution**: For each new IP address, it performs a PUT request to the Signal
+    Sciences API to add the IP to the block list with the provided justification note.
+
+    5. **Result Reporting**: It compiles the results, indicating which IPs were successfully
+    added and which failed, and updates the action output message accordingly.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Site Name | String | Yes | The API name of the site as defined in the Signal
+    | Site Name | string | Yes | The API name of the site as defined in the Signal
     Sciences dashboard. |
 
-    | IP Address | String | No | A comma-separated list of IP addresses to add. If
-    empty, the action uses ADDRESS entities from the case. |
+    | IP Address | string | No | A comma-separated list of IP addresses to add to
+    the Signal Sciences block list. If not provided, the action will attempt to use
+    IP entities from the case. |
 
-    | Note | String | Yes | The descriptive note or justification for blocking the
-    IP. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the Site Name, IP Address list,
-    and Note.
-
-    2. **IP Collection:** It identifies target IPs from the input parameter and the
-    case's ADDRESS entities, then deduplicates them.
-
-    3. **Validation:** Each IP is checked for valid IPv4/IPv6 format.
-
-    4. **Pre-check:** The action fetches the existing block list for the site to avoid
-    redundant API calls.
-
-    5. **Execution:** It adds new IPs to the Signal Sciences block list using the
-    provided note.
-
-    6. **Finalization:** Success and failure statuses are reported for each IP.
+    | Note | string | Yes | The descriptive note or justification associated with
+    the blocked IP address. |
 
 
     ### Additional Notes
 
-    Either the 'IP Address' parameter must be populated, or the case must contain
-    ADDRESS entities for the action to have targets to process.
+    - The action requires either the `IP Address` parameter to be populated or `ADDRESS`
+    type entities to be present in the case for it to perform any blocking operations.
+    If neither is provided, the action will terminate without performing any changes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -198,12 +219,21 @@ Add IP to Block List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds the specified IP addresses to the Signal Sciences block list for a designated
-      site.
+      Adds the specified IP address to the block list of a designated site in the
+      Signal Sciences platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches existing block list data from the Signal Sciences API to
+      check for duplicates (fetches_data=true). It then performs a PUT request to
+      add new IPs to the block list (can_mutate_external_data=true). It does not modify
+      any internal SOAR case data, entities, or insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs a mutation on an external system (Signal Sciences) to block
+      an IP. It does not meet the criteria for an enrichment action as it is not read-only
+      and does not enrich internal SOAR data.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -220,6 +250,9 @@ Add IP to Block List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `self.soar_action.target_entities` and filters them based
+      on `entity.entity_type == EntityTypes.ADDRESS`.
 List Sites:
   action_product_categories:
     add_alert_comment: false
@@ -235,6 +268,10 @@ List Sites:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of sites from the Signal Sciences API. It does not
+      match any of the provided categories (e.g., Enrich IOC, Enrich Asset, Update
+      Alert, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -249,31 +286,41 @@ List Sites:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **List Sites** action retrieves a\
-    \ list of all sites available within the configured corporation in Signal Sciences.\
-    \ This action is primarily used for discovery purposes, allowing users to identify\
-    \ the specific site names required as inputs for other Signal Sciences actions,\
-    \ such as blocking or allowing IP addresses.\n\n### Parameters Description\n|\
-    \ Parameter Name | Type | Mandatory | Description |\n| :--- | :--- | :--- | :---\
-    \ |\n| Max Sites To Return | String | No | The maximum number of sites to return\
-    \ in the results. If set to 0 or left empty, the action will attempt to retrieve\
-    \ all available sites. The default value is 50. |\n\n### Flow Description\n1.\
-    \ **Parameter Extraction and Validation**: The action extracts the `Max Sites\
-    \ To Return` parameter and validates that it is a valid integer. If the parameter\
-    \ is missing or empty, it defaults to 0 (returning all sites).\n2. **API Interaction**:\
-    \ The action calls the Signal Sciences API to fetch site information. It uses\
-    \ internal pagination logic to ensure that the requested number of records (or\
-    \ all records) are retrieved correctly from the corporation's account.\n3. **Data\
-    \ Transformation**: The raw API response is processed into structured `Site` data\
-    \ models. \n4. **Result Generation**: \n    *   **JSON Results**: The action populates\
-    \ the JSON results with the raw data for each site found.\n    *   **Data Table**:\
-    \ A table named \"Signal Sciences Sites\" is created, displaying the API Name,\
-    \ Display Name, Creation Date, and Agent Level for each site.\n    *   **Output\
-    \ Message**: A summary message is generated listing the names of all successfully\
-    \ fetched sites.\n\n### Additional Notes\n- This action does not operate on specific\
-    \ entities (like IPs or Hostnames) and instead fetches global configuration data\
-    \ for the corporation.\n- If no sites are found, the action will return a successful\
-    \ status with a message indicating that no sites were found."
+  ai_description: >-
+    ### General Description
+
+    Use the **List Sites** action to retrieve a list of all sites available within
+    the corporation in Signal Sciences. This action fetches site information from
+    the Signal Sciences API and presents it as a table and JSON results.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Sites To Return | string | No | The maximum number of sites to return. If
+    set to 0 or left empty, the action returns all available sites. Defaults to 50.
+    |
+
+
+    ### Flow Description
+
+    1. Extract the `Max Sites To Return` parameter from the action configuration.
+
+    2. Call the Signal Sciences API to fetch site information, utilizing pagination
+    if necessary to retrieve the requested number of sites.
+
+    3. Format the retrieved site data into a table and JSON results.
+
+    4. Update the action output with the list of retrieved sites and a success message.
+
+
+    ### Additional Notes
+
+    If no sites are found for the given corporation, the action will return a message
+    indicating that no sites were found.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -284,8 +331,16 @@ List Sites:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Signal Sciences API to retrieve a list
+      of sites. It does not modify any external or internal data, nor does it update
+      entities or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external system (Signal Sciences) but does not
+      enrich specific entities (e.g., IP, User). It is a configuration/utility action,
+      not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -301,6 +356,9 @@ List Sites:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `target_entities` or use entity-specific identifiers.
+      It fetches global corporation data.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -316,6 +374,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      This is a connectivity test action. It does not match any of the functional
+      categories like enrichment, blocking, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -331,56 +392,30 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Ping** action is used to verify the connectivity between Google SecOps and
-    the Signal Sciences platform. It ensures that the provided credentials (Email,
-    API Token) and configuration (API Root, Corporation Name) are correct and that
-    the network allows communication with the Signal Sciences API.
+    Tests connectivity to the Signal Sciences API. This action verifies that the provided
+    connection parameters (API Root, Email, API Token, and Corporation Name) are valid
+    and that the SOAR platform can successfully communicate with the Signal Sciences
+    service.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    There are no action-specific parameters for this action. It relies entirely on
-    the global integration configuration parameters:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | No | The base URL of the Signal Sciences API. Defaults to
-    `https://dashboard.signalsciences.net`. |
-
-    | Email | String | Yes | The email address associated with the Signal Sciences
-    API user. |
-
-    | API Token | String | Yes | The API token for authentication. |
-
-    | Corporation Name | String | Yes | The name of the corporation in Signal Sciences.
-    |
-
-    | Verify SSL | Boolean | No | Whether to verify the SSL certificate of the API
-    server. Defaults to `True`. |
+    There are no parameters for this action.
 
 
     ### Flow Description
 
-    1. **Initialize Client**: The action initializes the Signal Sciences API client
-    using the integration's configuration parameters.
+    1. The action initializes the Signal Sciences API client using the configured
+    integration settings.
 
-    2. **Test Connectivity**: It executes a `GET` request to the `/corps/{corp_name}`
-    endpoint to verify that the API token and corporation name are valid.
+    2. It sends a GET request to the Signal Sciences corporation endpoint to verify
+    connectivity.
 
-    3. **Evaluate Result**: If the request returns a successful status code, the action
-    reports a successful connection. If an exception occurs (e.g., 401 Unauthorized
-    or connection timeout), it captures the error and marks the action as failed.
+    3. If the request is successful, it returns a success message indicating connectivity
+    is established.
 
-
-    ### Additional Notes
-
-    This action does not process any entities or modify any data. It is strictly for
-    diagnostic purposes to ensure the integration is configured correctly.
+    4. If the request fails (e.g., due to invalid credentials or network issues),
+    it logs the error and marks the action as failed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -389,10 +424,16 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to test connectivity. It does not mutate external
+      or internal data, nor does it update entities or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action. According to the instructions, Ping actions must
+      not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -408,6 +449,8 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities.
 Remove IP from Allow List:
   action_product_categories:
     add_alert_comment: false
@@ -423,6 +466,9 @@ Remove IP from Allow List:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action removes an IP from an allow list in Signal Sciences, which directly
+      matches the 'Remove IOC From Allowlist' category.
     remove_ioc_from_allowlist: true
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -438,13 +484,29 @@ Remove IP from Allow List:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    The **Remove IP from Allow List** action removes specified IP addresses from the
+    allow list of a designated site within the Signal Sciences platform. This action
+    helps maintain security posture by ensuring that only authorized IPs remain on
+    the allow list.
 
-    The **Remove IP from Allow List** action is designed to remove specific IP addresses
-    from the allow list (whitelist) of a designated site within the Signal Sciences
-    platform. This action is useful for revoking trusted status from IPs that are
-    no longer considered safe or were added temporarily. It can process IPs provided
-    directly as a parameter or identified as entities within the Google SecOps environment.
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts the `Site Name` and an optional
+    comma-separated list of `IP Address` values from the action parameters.
+
+    2. **Entity Collection**: It collects IP addresses from the provided `IP Address`
+    parameter and identifies any `ADDRESS` entities present in the current SOAR case.
+
+    3. **Data Retrieval**: It fetches the current allow list for the specified site
+    from Signal Sciences to identify the unique `item_id` associated with each target
+    IP.
+
+    4. **Removal**: For each identified IP, the action performs a DELETE request to
+    remove the corresponding entry from the Signal Sciences allow list.
+
+    5. **Finalization**: The action reports the success or failure of the removal
+    process for each IP address.
 
 
     ### Parameters Description
@@ -454,48 +516,19 @@ Remove IP from Allow List:
     | :--- | :--- | :--- | :--- |
 
     | Site Name | string | Yes | The API name of the site as defined in the Signal
-    Sciences dashboard. This determines which site's allow list will be modified.
-    |
+    Sciences dashboard. |
 
-    | IP Address | string | No | A comma-separated list of IP addresses to remove.
-    If this parameter is provided, the action will process these IPs in addition to
-    any IP Address entities found in the context. |
+    | IP Address | string | No | A comma-separated list of IP addresses to remove
+    from the Signal Sciences allow list. If not provided, the action will process
+    `ADDRESS` entities from the case. |
 
 
     ### Additional Notes
 
-    - The action first retrieves the current allow list for the specified site to
-    find the internal IDs associated with the target IP addresses.
-
-    - If an IP address is not found in the allow list, the action treats it as successfully
-    removed (since the desired state is achieved).
-
-    - The action validates that the provided strings are valid IPv4 or IPv6 addresses
-    before attempting removal.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the `Site Name` and the optional
-    `IP Address` list from the input parameters.
-
-    2. **Entity Collection:** It identifies all `ADDRESS` entities within the current
-    alert context.
-
-    3. **Consolidation:** It combines the IPs from the parameters and the entities
-    into a single, deduplicated list of target IPs.
-
-    4. **Allow List Retrieval:** The action calls the Signal Sciences API to fetch
-    the existing allow list for the specified site.
-
-    5. **Validation and Matching:** For each target IP, the action validates the format
-    and searches for a matching entry in the retrieved allow list.
-
-    6. **Removal:** If a match is found, the action sends a DELETE request to Signal
-    Sciences using the specific item ID to remove the IP from the list.
-
-    7. **Finalization:** The action reports the success or failure of the removal
-    process for each IP and sets the final execution status.
+    - The action requires either the `IP Address` parameter to be populated or `ADDRESS`
+    entities to be present in the case for it to perform any removal operations. If
+    neither is provided, the action will terminate with a message indicating no IPs
+    were found.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -504,12 +537,20 @@ Remove IP from Allow List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action performs a DELETE request to the Signal Sciences API to remove specific
-      IP entries from the site's allow list.
+      Removes IP addresses from the Signal Sciences allow list for a specific site.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the current allow list from the external system to identify
+      the correct item IDs for removal (fetches_data=true). It then performs a DELETE
+      request to remove the IP from the allow list, which constitutes an external
+      data mutation (can_mutate_external_data=true). It does not modify internal SOAR
+      data, entities, or insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is not an enrichment action because it mutates external data (removes
+      an IP from an allow list).
   entity_usage:
     entity_types:
     - ADDRESS
@@ -526,6 +567,9 @@ Remove IP from Allow List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `target_entities` and filters for entities where the
+      type is `ADDRESS`.
 Remove IP from Block List:
   action_product_categories:
     add_alert_comment: false
@@ -541,6 +585,10 @@ Remove IP from Block List:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action removes an IP address from the Signal Sciences blocklist, which directly
+      matches the 'Remove IOC From Blocklist' category defined as restoring connectivity
+      or execution rights for an indicator by removing it from restricted lists.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false
@@ -555,33 +603,50 @@ Remove IP from Block List:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Remove IP from Block List** action\
-    \ is used to remove specific IP addresses from the block list of a designated\
-    \ site within Signal Sciences. This action is typically used in response to false\
-    \ positives or when a previously blocked IP is deemed safe, restoring its ability\
-    \ to interact with the protected site.\n\n### Parameters Description\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Site Name\
-    \ | string | True | The API name of the site as defined in the Signal Sciences\
-    \ dashboard. |\n| IP Address | string | False | A comma-separated list of IP addresses\
-    \ to remove from the Signal Sciences block list. If provided, these will be processed\
-    \ alongside any IP entities found in the scope. |\n\n### Additional Notes\n- The\
-    \ action processes both IP addresses provided in the `IP Address` parameter and\
-    \ any `ADDRESS` entities present in the current context.\n- If an IP address is\
-    \ not found in the block list, the action treats it as a success (as the desired\
-    \ state\u2014not being blocked\u2014is already met).\n- The action validates that\
-    \ the provided strings are valid IPv4 or IPv6 addresses before attempting removal.\n\
-    \n### Flow Description\n1. **Parameter Extraction:** The action retrieves the\
-    \ `Site Name` and the optional `IP Address` list from the input parameters.\n\
-    2. **Entity Identification:** It identifies all `ADDRESS` entities in the current\
-    \ SOAR context.\n3. **Target Consolidation:** It combines the IPs from the parameters\
-    \ and the entities into a single, deduplicated list of target IPs.\n4. **Block\
-    \ List Retrieval:** The action fetches the current block list for the specified\
-    \ site from Signal Sciences to identify the internal IDs associated with the target\
-    \ IPs.\n5. **Removal Execution:** For each target IP, the action searches for\
-    \ a matching entry in the retrieved block list. If found, it sends a request to\
-    \ Signal Sciences to delete that specific block list item.\n6. **Finalization:**\
-    \ The action reports which IPs were successfully removed (or were already absent)\
-    \ and which ones failed (e.g., due to invalid format or API errors)."
+  ai_description: >-
+    ### General Description
+
+    The **Remove IP from Block List** action removes specific IP addresses from the
+    block list of a designated site within the Signal Sciences platform. This action
+    helps restore connectivity or access for IPs that were previously blocked.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Site Name | string | Yes | The API name of the site as defined in the Signal
+    Sciences dashboard. |
+
+    | IP Address | string | No | A comma-separated list of IP addresses to remove
+    from the Signal Sciences block list. |
+
+
+    ### Additional Notes
+
+    - The action processes IP addresses provided in the 'IP Address' parameter and
+    any 'ADDRESS' entities attached to the case. If no IPs are provided via parameters
+    or entities, the action will terminate.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the 'Site Name' and 'IP Address' parameters.
+
+    2. **Entity Identification**: Collects IP addresses from the 'IP Address' parameter
+    and identifies any 'ADDRESS' entities from the current case.
+
+    3. **Data Retrieval**: Fetches the current blocklist for the specified site from
+    the Signal Sciences API.
+
+    4. **Validation & Removal**: Iterates through the target IPs, validates their
+    format, checks if they exist in the fetched blocklist, and sends a DELETE request
+    to remove them if found.
+
+    5. **Reporting**: Logs the success or failure of each removal operation and updates
+    the action output message with the final status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -590,12 +655,21 @@ Remove IP from Block List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes specified IP addresses from the Signal Sciences block list for a specific
-      site using a DELETE request.
+      Removes the specified IP address from the block list in the Signal Sciences
+      dashboard.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the current blocklist from the external system to identify
+      the ID of the IP to be removed (fetches_data=true). It then performs a DELETE
+      request to the Signal Sciences API to remove the IP from the blocklist (can_mutate_external_data=true).
+      It does not modify internal SOAR data, entities, or case insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs a mutation on an external system (removing an IP from a
+      blocklist), which violates the 'External State Preservation' constraint required
+      for enrichment actions.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -612,3 +686,6 @@ Remove IP from Block List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `self.soar_action.target_entities` and filters specifically
+      for entities of type `ADDRESS` to include them in the list of IPs to be removed.

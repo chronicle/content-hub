@@ -2,84 +2,68 @@ SymantecICDX query Connector:
   ai_description: >-
     ### General Description
 
-
-    The SymantecICDX Query Connector enables the ingestion of security events from
-    the Symantec Integrated Cyber Defense Exchange (ICDX) into Google SecOps. By utilizing
-    the ICDX Search API, the connector allows security teams to define specific search
-    queries to filter and pull relevant telemetry, which is then transformed into
-    actionable cases within the SOAR platform.
+    This connector integrates with the Symantec ICDX server to fetch security events
+    based on a user-defined query. It enables security teams to ingest relevant logs
+    or alerts into Google SecOps for centralized monitoring, investigation, and case
+    management.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | DeviceProductField | String | Yes | The field name in the ICDX event used to
-    determine the device product (defaults to `device_product`). |
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
 
     | EventClassId | String | No | The field name used to determine the event name
-    or sub-type (defaults to `name`). |
+    (sub-type). |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    python process running the script. |
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    python process. |
 
-    | Api Root | String | Yes | The base URL of the Symantec ICDX API instance. |
+    | Api Root | String | Yes | The base URL of the Symantec ICDX API. |
 
-    | Api Token | Password | Yes | The API token used for Basic Authentication with
-    the ICDX server. |
+    | Api Token | String | Yes | The API token for authentication. |
 
-    | Verify SSL | Boolean | Yes | Specifies whether to verify the SSL certificate
-    of the ICDX server. |
+    | Verify SSL | Boolean | Yes | Whether to use SSL verification for the connection.
+    |
 
-    | Search Query | String | Yes | The ICDX-specific query string used to filter
-    events (e.g., `category_id = 1`). |
+    | Search Query | String | Yes | The query string used to filter events from Symantec
+    ICDX. |
 
-    | Events Limit | Integer | Yes | The maximum number of events to pull in a single
-    execution cycle. |
+    | Events Limit | Integer | Yes | The maximum number of events to pull in one cycle.
+    |
 
     | Max Days Backwards | Integer | Yes | The maximum number of days to look back
-    for events during the initial run or if the timestamp is lost. |
+    when fetching events. |
 
-    | Proxy Server Address | String | No | The address of the proxy server if one
-    is required for the connection. |
+    | Proxy Server Address | String | No | The address of the proxy server to use.
+    |
 
-    | Proxy Username | String | No | The username for proxy authentication. |
+    | Proxy Username | String | No | The proxy username to authenticate with. |
 
-    | Proxy Password | Password | No | The password for proxy authentication. |
+    | Proxy Password | String | No | The proxy password to authenticate with. |
 
 
     ### Flow Description
 
+    1. The connector initializes a connection to the Symantec ICDX API using the provided
+    credentials and API root.
 
-    1.  **Initialization**: The connector initializes the connection to the Symantec
-    ICDX API using the provided API Root and Token.
+    2. It determines the start time for the query based on the last successful run
+    timestamp or the configured 'Max Days Backwards' parameter.
 
-    2.  **Time Management**: It retrieves the last successful execution timestamp.
-    If no timestamp exists, it calculates the start time based on the `Max Days Backwards`
-    parameter.
+    3. It executes the 'Search Query' against the Symantec ICDX API to retrieve events.
 
-    3.  **Data Retrieval**: The connector sends a POST request to the ICDX search
-    endpoint (`/r3_epmp_i/dx/archives/search`) containing the `Search Query`, `start_time`,
-    and `limit`.
+    4. It filters out events that have already been processed by checking against
+    a local 'ids.json' file.
 
-    4.  **Pagination**: If the ICDX response indicates more data is available (via
-    a `next` UUID), the connector iteratively fetches additional pages until the limit
-    is reached or no more data remains.
+    5. For each new event, it maps the data to a Google SecOps 'CaseInfo' object,
+    including relevant fields like device vendor, product, and event time.
 
-    5.  **Deduplication**: It filters out events that have already been processed
-    by comparing event UUIDs against a local tracking file (`ids.json`) that stores
-    IDs from the last 72 hours.
+    6. It checks for overflow conditions to prevent ingestion issues.
 
-    6.  **Case Creation**: For each unique event, the connector maps ICDX fields (such
-    as `message`, `uuid`, and `log_time`) to Google SecOps Case objects. It flattens
-    the event JSON to ensure all data is available within the case events.
-
-    7.  **Overflow Check**: The connector checks if the alert should be filtered out
-    based on configured overflow rules in Google SecOps.
-
-    8.  **Finalization**: Successfully processed cases are ingested, the execution
-    timestamp is updated to the time of the latest event, and the processed IDs are
-    saved to prevent future duplicates.
+    7. Finally, it saves the new timestamp and updates the 'ids.json' file to track
+    processed events for the next cycle.

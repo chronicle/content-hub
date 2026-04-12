@@ -13,6 +13,12 @@ EnrichAssetInformation:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (asset information) for an IP address
+      and updates the entity. This matches the 'Enrich Asset' category. It does not
+      perform threat intelligence lookups (reputation/prevalence) in the traditional
+      sense of 'Enrich IOC', though it enriches an IP. 'Enrich Asset' is the most
+      accurate description.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,55 +36,39 @@ EnrichAssetInformation:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address entities with detailed asset information retrieved from the
-    Cylus platform. This action is designed to provide security analysts with contextual
-    metadata about network assets, such as MAC addresses, operating system details,
-    and custom properties, by querying the Cylus API using the entity's IP address.
+    This action enriches IP address entities with asset information retrieved from
+    the CylusOne platform. It queries the CylusOne API to obtain detailed asset metadata
+    for a given IP address, flattens the retrieved properties, and updates the entity's
+    additional properties within the SOAR platform.
 
 
     ### Parameters Description
 
-    There are no parameters for this action.
+    There are no action-specific parameters. The action relies on global integration
+    configuration parameters (Base URL, API Key, and Verify SSL) to establish connectivity
+    with the CylusOne platform.
 
 
     ### Additional Notes
 
-    - The action specifically targets entities of type `ADDRESS` (IP addresses).
-
-    - It performs a validation check to ensure the IP address is in a valid IPv4 format
-    before making API calls.
-
-    - Enrichment data is prefixed with `Cylus_` to avoid collisions with other data
-    sources.
-
-    - List-based fields (like MACs or IPs) are truncated to a maximum of 5 items and
-    formatted as comma-separated strings.
+    This action is designed to be used for asset enrichment. It does not perform threat
+    intelligence lookups (e.g., reputation scores) and does not modify any external
+    systems.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Cylus API manager using the
-    integration's base URL and API key.
+    1. The action iterates through all target entities provided in the case.
 
-    2. **Entity Filtering**: It iterates through the target entities in the current
-    context, filtering for those of type `ADDRESS`.
+    2. It filters for entities of type `ADDRESS` and validates their format.
 
-    3. **Validation**: For each valid entity, it verifies the IPv4 format of the identifier.
+    3. For each valid IP, it queries the CylusOne API to retrieve associated asset
+    details.
 
-    4. **Data Retrieval**: It performs a GET request to the Cylus `/rest/v1/assets/by-ip`
-    endpoint using the IP address.
+    4. The retrieved asset data is flattened and formatted into key-value pairs.
 
-    5. **Data Processing**: If an asset is found, the action flattens the JSON response,
-    cleans property names (converting them to snake_case), and formats list values.
-
-    6. **Internal Mutation**: The processed data is added to the entity's `additional_properties`
-    and the `is_enriched` flag is set to true.
-
-    7. **Update**: The action updates the entities within Google SecOps to persist
-    the enrichment data.
-
-    8. **Completion**: It returns a summary message indicating which entities were
-    successfully enriched and provides the raw data in the JSON result.
+    5. The action updates the entity's `additional_properties` with this new information
+    and marks the entity as enriched.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -89,10 +79,18 @@ EnrichAssetInformation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the entity's additional properties with asset information from Cylus
-      and sets the 'is_enriched' flag to true.
+      Updates the entity's additional_properties and sets the is_enriched flag to
+      true.
+    reasoning: >-
+      The action fetches asset data from an external API (CylusOne) and updates the
+      internal entity properties within the SOAR platform. It does not modify external
+      systems or create insights/comments.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source and updates internal entity
+      properties without modifying external systems. This meets the criteria for an
+      enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -109,6 +107,9 @@ EnrichAssetInformation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `entity.entity_type
+      == EntityTypes.ADDRESS`.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -124,6 +125,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      product category actions (e.g., enrichment, containment, ticket management).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -138,25 +142,39 @@ Ping:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
-    \ designed to verify the connectivity between the Google SecOps platform and the\
-    \ **CylusOne** instance. It validates that the integration's configuration parameters,\
-    \ such as the Base URL and API Key, are correct and that the network path is open.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| None | N/A | N/A | This action does not require\
-    \ any input parameters as it uses the global integration configuration. |\n\n\
-    ### Additional Notes\nThis action is strictly for connectivity testing and does\
-    \ not interact with any entities in the current case or alert context.\n\n###\
-    \ Flow Description\n1. **Parameter Extraction**: The action retrieves the `Base\
-    \ URL`, `Cylus API Key`, and `Verify SSL` settings from the integration configuration.\n\
-    2. **API Client Initialization**: It initializes the `ApiManager` with the provided\
-    \ credentials and connection settings.\n3. **Connectivity Verification**: The\
-    \ action executes a `GET` request to the assets endpoint using a hardcoded test\
-    \ IP address (`10.0.0.5`) to verify the API's responsiveness.\n4. **Status Reporting**:\
-    \ \n    * If the API returns a successful response (200 OK) or a valid 'Not Found'\
-    \ (404), the action completes successfully.\n    * If the API returns authentication\
-    \ errors (401/403) or connection failures, the action reports a failure with the\
-    \ specific error message."
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the CylusOne platform. This action validates the provided
+    API credentials and ensures the integration can successfully communicate with
+    the CylusOne API endpoint.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Base URL | String | Yes | The base URL of the CylusOne API. |
+
+    | Cylus API Key | String | Yes | The API key used for authentication. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates during API requests.
+    |
+
+
+    ### Flow Description
+
+    1. The action extracts the integration parameters (Base URL, API Key, Verify SSL)
+    from the configuration.
+
+    2. It initializes the `ApiManager` with these parameters.
+
+    3. It calls the `test_connectivity` method, which sends a GET request to the CylusOne
+    API to verify the connection.
+
+    4. The action returns a success or failure status based on the API response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -167,8 +185,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test (Ping) to the CylusOne platform. It
+      does not fetch contextual data for entities, nor does it mutate any external
+      or internal systems.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
+      action per the instructions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -184,3 +209,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it performs a global connectivity
+      test.

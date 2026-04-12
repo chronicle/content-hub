@@ -12,13 +12,16 @@ Export full event:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches specific event details from the Arcanna.ai platform. This
+      aligns with 'Get Alert Information' (fetching details about an event/alert).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: true
+    search_events: false
     send_email: false
     send_message: false
     submit_file: false
@@ -30,11 +33,9 @@ Export full event:
   ai_description: >-
     ### General Description
 
-    The **Export full event** action retrieves the complete raw or processed data
-    for a specific event from Arcanna.ai. By providing a Job ID and an Event ID, analysts
-    can fetch the full context of an event that has been processed by the Arcanna
-    AI engine, which is essential for deep-dive forensic analysis or manual verification
-    of AI decisions.
+    Exports a full event from the Arcanna.ai platform for a specified job and event
+    ID. This action retrieves detailed event data from the external system and provides
+    it as a JSON result within the SOAR platform.
 
 
     ### Parameters Description
@@ -43,35 +44,23 @@ Export full event:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Job ID** | String | Yes | The unique identifier of the Arcanna job where the
-    event is stored. Note: The action internally treats this as an integer. |
+    | Job ID | string | Yes | The unique identifier of the job to fetch the event
+    from. |
 
-    | **Event ID** | String | Yes | The unique identifier of the specific event to
-    be retrieved from the specified job. |
+    | Event ID | string | Yes | The unique identifier of the event to be exported.
+    |
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action extracts the Arcanna URL, API Key,
-    and SSL verification settings from the integration's global configuration.
+    1. Initialize the `ArcannaClient` using the configured API key and URL.
 
-    2. **Input Validation**: The action retrieves the mandatory `Job ID` and `Event
-    ID` from the action parameters provided in the playbook or by the user.
+    2. Extract the `Job ID` and `Event ID` from the action parameters.
 
-    3. **API Request**: The action initializes the Arcanna client and executes an
-    HTTP GET request to the export endpoint: `/api/v1/events/{job_id}/{event_id}/export`.
+    3. Call the `export_event` method, which performs a GET request to the Arcanna
+    API.
 
-    4. **Data Output**: The full JSON response containing the event details is captured
-    and added to the action's result JSON, making it available for subsequent playbook
-    steps.
-
-
-    ### Additional Notes
-
-    - This action does not process or filter entities from the SecOps case; it relies
-    entirely on the provided ID parameters.
-
-    - The action is read-only regarding the external Arcanna.ai system.
+    4. Add the resulting event data to the action's result output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -82,8 +71,17 @@ Export full event:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve event data from an external API
+      (fetches_data=true). It does not modify any external systems (can_mutate_external_data=false)
+      or internal SOAR data (can_mutate_internal_data=false). It does not update entities,
+      create insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external source but does not perform any enrichment
+      on entities or alerts within the SOAR platform (e.g., it does not update entities
+      or create insights). Therefore, it is not classified as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -99,6 +97,9 @@ Export full event:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities` and does not perform
+      any filtering on entities. It operates independently of the case entities.
 Get AI Job by name:
   action_product_categories:
     add_alert_comment: false
@@ -113,7 +114,11 @@ Get AI Job by name:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches job details from the Arcanna.ai platform. This aligns with
+      the 'Get Alert Information' category, as it retrieves metadata about a specific
+      job from the integrated product.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -129,44 +134,35 @@ Get AI Job by name:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves detailed information about a specific AI job from the Arcanna.ai platform
-    using the job's name. This action is primarily used to fetch configuration details,
-    status, or metadata associated with a defined job in Arcanna.ai, which can then
-    be used in subsequent playbook steps.
+    Fetches details for a specific AI job from the Arcanna.ai platform.
 
 
-    ### Flow Description
+    ### Flow
 
-    1. **Configuration Extraction:** The action retrieves the Arcanna.ai URL, API
-    Key, and SSL verification settings from the integration configuration.
+    1. Extracts the required configuration parameters (URL, API Key, SSL verification)
+    and the `Job name` from the action settings.
 
-    2. **Parameter Retrieval:** The action extracts the mandatory `Job name` provided
-    by the user.
+    2. Initializes the `ArcannaClient` to communicate with the Arcanna.ai API.
 
-    3. **API Interaction:** It initializes the Arcanna client and performs a request
-    to the `/api/v1/jobs/get_by_name` endpoint to fetch the job's details.
+    3. Executes a request to retrieve the job details using the provided `Job name`.
 
-    4. **Result Processing:** The retrieved JSON response containing the job details
-    is added to the action's execution results.
+    4. Adds the resulting JSON data to the action results for further use.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Job name | String | Yes | The specific name of the AI job in Arcanna.ai for
-    which details should be retrieved. |
+    | Job name | string | Yes | The name of the AI job for which details should be
+    fetched. |
 
 
     ### Additional Notes
 
-    * This action does not operate on entities; it is a utility action for retrieving
-    system-level job information.
-
-    * Although the underlying API call uses a POST method, it is a read-only operation
-    used for searching/retrieving data based on a name.
+    This action performs a retrieval operation and does not modify any external or
+    internal system state.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -177,8 +173,15 @@ Get AI Job by name:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action retrieves job metadata from the Arcanna.ai API. It does not modify
+      external data (the POST request is for retrieval) or internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches job details from an external system. It does not enrich entities
+      or alerts, nor does it modify internal SOAR data. Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -194,6 +197,9 @@ Get AI Job by name:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `target_entities`. It relies on a user-provided `Job
+      name` parameter.
 Get AI Job decision set:
   action_product_categories:
     add_alert_comment: false
@@ -208,7 +214,12 @@ Get AI Job decision set:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches job decision data from Arcanna.ai. This is external data
+      retrieval. It does not modify external systems, nor does it update SOAR entities
+      or alerts. It fits the 'Get Alert Information' category as it retrieves metadata
+      about an AI job process.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -224,47 +235,38 @@ Get AI Job decision set:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    Fetches the decision set (labels) for a specific AI job from Arcanna.ai. This
+    action retrieves job-specific metadata and decision information, which is then
+    returned as a JSON result for further analysis.
 
-    The **Get AI Job decision set** action retrieves the list of possible labels (the
-    decision set) for a specific AI Job configured in Arcanna.ai. This is a utility
-    action used to understand the classification options or outcomes that a specific
-    AI model is trained to provide. It is particularly useful for workflows that need
-    to map Arcanna's AI decisions to specific downstream logic.
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (URL, API Key, SSL verification).
+
+    2. Extracts the `Job ID` parameter.
+
+    3. Initializes the `ArcannaClient`.
+
+    4. Performs a GET request to the Arcanna API to retrieve the decision set for
+    the specified job.
+
+    5. Adds the retrieved JSON response to the action result.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Job ID | String | Yes | The unique identifier of the Arcanna AI Job. Note: Although
-    provided as a string in the UI, the action logic converts this to an integer for
-    the API call. |
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval:** The action extracts the Arcanna URL, API Key,
-    and SSL verification settings from the integration's global configuration.
-
-    2. **Parameter Extraction:** The action retrieves the `Job ID` provided by the
-    user.
-
-    3. **API Request:** The action initializes the Arcanna client and performs a GET
-    request to the `/api/v1/jobs/{job_id}/labels` endpoint.
-
-    4. **Result Handling:** The action parses the JSON response containing the decision
-    set (labels) and attaches it as the `JsonResult` for use in subsequent playbook
-    steps.
+    | Job ID | string | Yes | The unique identifier of the AI job for which the decision
+    set is requested. |
 
 
     ### Additional Notes
 
-    This action does not process SOAR entities and does not modify any data within
-    the SecOps platform or the external Arcanna system. It is strictly a data retrieval
-    utility.
+    There are no additional notes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -275,8 +277,17 @@ Get AI Job decision set:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Arcanna API to fetch job decision data.
+      It does not mutate external systems (no POST/PUT/DELETE). It does not mutate
+      internal SOAR data (no entity updates, insights, or case comments). It simply
+      returns the fetched JSON as an action result.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external source (Arcanna.ai) but does not enrich
+      entities or alerts within the SOAR platform. It is a utility action for retrieving
+      job-specific information, therefore it is not classified as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -292,6 +303,9 @@ Get AI Job decision set:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `siemplify.target_entities` or perform any operations
+      on entities. It operates on a standalone `Job ID` parameter.
 Get AI Job decision set by job name:
   action_product_categories:
     add_alert_comment: false
@@ -306,7 +320,11 @@ Get AI Job decision set by job name:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
+    reasoning: >-
+      The action retrieves a decision set for a specific job from the Arcanna AI platform.
+      This aligns with fetching information from a 3rd party product, which is categorized
+      as 'Get Alert Information'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -322,48 +340,20 @@ Get AI Job decision set by job name:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Get AI Job decision set by job name** action retrieves the set of possible
-    decisions (labels) associated with a specific AI job in Arcanna.ai using its name.
-    This allows users to programmatically identify the classification categories or
-    labels that a specific AI model is trained to output, which is essential for mapping
-    AI results to downstream logic.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Job name** | String | Yes | The unique name of the AI job for which the decision
-    set (labels) should be retrieved. |
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval:** The action fetches the Arcanna.ai URL, API Key,
-    and SSL verification settings from the integration configuration.
-
-    2. **Parameter Extraction:** It extracts the mandatory `Job name` provided by
-    the user.
-
-    3. **API Interaction:** The action utilizes the `ArcannaClient` to send a request
-    to the `/api/v1/jobs/get_by_name/labels` endpoint.
-
-    4. **Data Processing:** The response from Arcanna.ai, containing the decision
-    set (labels), is captured.
-
-    5. **Output:** The retrieved data is attached to the action's JSON results for
-    use in subsequent playbook steps.
-
-
-    ### Additional Notes
-
-    - This action uses a POST request internally to perform the lookup by name, but
-    it is a read-only operation that does not modify the job configuration or state
-    in Arcanna.ai.
+    Fetches the decision set (labels) for a specific Arcanna AI job by its name. **General
+    Description:** This action retrieves the decision set associated with a specified
+    Arcanna AI job. It interacts with the Arcanna AI platform to fetch labels and
+    decision data, which can then be used for further analysis or reporting within
+    the SOAR platform. **Parameters:** | Name | Type | Mandatory | Description | |
+    --- | --- | --- | --- | | Job name | string | true | The name of the Arcanna AI
+    job to retrieve the decision set for. | **Flow Description:** 1. The action extracts
+    the necessary configuration parameters (URL, API Key, SSL verification) and the
+    'Job name' parameter. 2. It initializes the ArcannaClient with the provided configuration.
+    3. It calls the Arcanna API endpoint '/api/v1/jobs/get_by_name/labels' via a POST
+    request, passing the 'job_name' in the request body. 4. The retrieved decision
+    set JSON is added to the action results using the SOAR SDK. **Additional Notes:**
+    This action does not perform any modifications to external systems or internal
+    SOAR data. It is a read-only operation designed to retrieve information.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -374,8 +364,15 @@ Get AI Job decision set by job name:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action retrieves data from the Arcanna AI platform by sending a POST request
+      with a job name. It does not modify external systems or internal SOAR data (other
+      than adding result JSON).
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external system (Arcanna AI) but does not enrich
+      entities or alerts. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -391,6 +388,10 @@ Get AI Job decision set by job name:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not interact with siemplify.target_entities and the YAML configuration
+      does not define any entity types for simulation, confirming it does not run
+      on entities.
 Get Arcanna decision:
   action_product_categories:
     add_alert_comment: false
@@ -406,6 +407,10 @@ Get Arcanna decision:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: true
+    reasoning: >-
+      The action fetches the status/decision of an event from the Arcanna AI platform.
+      This matches the 'Get Alert Information' category, as it retrieves specific
+      information about an event/alert from the 3rd party product.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -421,63 +426,53 @@ Get Arcanna decision:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    General description:
 
-    Retrieves an AI-driven decision for a specific event from the Arcanna.ai platform.
-    This action is typically used to poll for the results of an inference job after
-    an event has been submitted for analysis. It supports a configurable retry mechanism
-    to account for the time required by the AI engine to process the data and generate
-    a decision.
+    This action retrieves the decision status for a specific Arcanna AI job and event.
+    It polls the Arcanna API until a final decision is available or the retry limit
+    is reached.
 
 
-    ### Parameters Description
+    Parameters description:
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Job Id** | string | Yes | The unique identifier of the Arcanna job associated
-    with the event. |
+    | Job Id | string | Yes | The ID of the Arcanna job to query. |
 
-    | **Event Id** | string | Yes | The unique identifier of the specific event for
-    which the decision is being requested. |
+    | Event Id | string | Yes | The ID of the event to check. |
 
-    | **Retry count** | string | Yes | The maximum number of times the action will
-    poll the Arcanna API if the decision is still pending. Default is 20. |
+    | Retry count | string | Yes | Number of times to retry the request if the status
+    is 'pending_inference'. |
 
-    | **Seconds per retry** | string | Yes | The duration (in seconds) to wait between
-    each polling attempt. Default is 5. |
+    | Seconds per retry | string | Yes | Time in seconds to wait between retry attempts.
+    |
 
 
-    ### Flow Description
+    Flow description:
 
-    1. **Initialization**: Extracts integration configuration (URL, API Key, SSL settings)
-    and action parameters (Job ID, Event ID, Retry settings).
+    1. Extracts configuration parameters (URL, API Key, SSL verification) and action
+    parameters (Job ID, Event ID, Retry count, Seconds per retry).
 
-    2. **Polling Loop**: Enters a loop that executes up to the specified `Retry count`
-    plus one.
+    2. Initializes the ArcannaClient with the provided credentials.
 
-    3. **API Request**: Calls the Arcanna API to retrieve the current status of the
-    event using the provided Job and Event IDs.
+    3. Enters a retry loop to poll the Arcanna API for the event status using the
+    'get_event_status' method.
 
-    4. **Status Evaluation**:
-        * If the status is `pending_inference`, the action logs the status, waits
-    for the specified `Seconds per retry`, and continues to the next iteration.
-        * If the status is `OK`, the action retrieves the decision data, adds it to
-    the JSON results, and terminates successfully.
-        * If the status is `ERROR`, the action logs the error response and terminates
-    with a failure state.
-    5. **Timeout Handling**: If the retry limit is reached without receiving a final
-    decision, the action terminates with a failure message suggesting an increase
-    in the retry window.
+    4. If the status is 'pending_inference', the action waits for the configured duration
+    and retries.
+
+    5. If the status is 'OK', the action adds the response JSON to the result and
+    completes successfully.
+
+    6. If the status is 'ERROR' or the retry limit is reached, the action fails.
 
 
-    ### Additional Notes
+    Additional notes:
 
-    * This action does not operate on SecOps entities; it requires specific IDs provided
-    as input parameters.
-
-    * The total wait time is approximately `Retry count` * `Seconds per retry`.
+    This action performs a GET request to the Arcanna API and does not modify any
+    external systems or internal SOAR data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -488,8 +483,16 @@ Get Arcanna decision:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action polls the Arcanna API for the status of a specific event. It does
+      not modify external systems or internal SOAR data (entities, insights, comments).
+      It only adds the result JSON to the action output.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data but does not perform any of the allowed internal mutations
+      (update entities, create insights, add comments). Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -505,6 +508,9 @@ Get Arcanna decision:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with target_entities. It uses parameters provided
+      in the action configuration.
 Get Jobs:
   action_product_categories:
     add_alert_comment: false
@@ -520,6 +526,9 @@ Get Jobs:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of jobs from Arcanna.AI. It does not match any of
+      the provided categories (e.g., Enrich IOC, Enrich Asset, Update Alert, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -535,46 +544,14 @@ Get Jobs:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Retrieves a list of all available jobs from the Arcanna.AI platform. This action
-    serves as a utility to discover job configurations, including their unique identifiers
-    and names, which are often required as inputs for other Arcanna.AI integration
-    actions such as sending cases or triggering training.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not have any input parameters. It relies
-    solely on the integration's global configuration. |
-
-
-    ### Additional Notes
-
-    - The action uses the integration's global settings (URL, API Key, and SSL Verification)
-    to authenticate and communicate with the Arcanna.AI instance.
-
-    - The results are returned as a JSON array of job objects, which can be used in
-    subsequent playbook steps.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Arcanna.AI client using the
-    base URL and API Key provided in the integration's global configuration.
-
-    2. **API Request**: It executes a GET request to the `/api/v1/jobs` endpoint of
-    the Arcanna.AI API.
-
-    3. **Data Retrieval**: The action captures the JSON response containing the list
-    of all jobs available in the system.
-
-    4. **Output**: The retrieved job data is added to the action's JSON results, and
-    the execution is marked as completed.
+    Retrieves a list of available jobs from the Arcanna.AI platform. The action performs
+    the following steps: 1. Extracts configuration parameters including the Arcanna.AI
+    URL, API Key, and SSL verification setting. 2. Initializes the ArcannaClient with
+    the provided credentials. 3. Executes a GET request to the /api/v1/jobs endpoint
+    to fetch the list of jobs. 4. Adds the retrieved JSON response to the action result.
+    Parameters: Integration.Url (String, Mandatory) - The base URL of the Arcanna.AI
+    instance. Integration.Api Key (String, Mandatory) - The API key for authentication.
+    SSL Verification (Boolean, Mandatory) - Flag to enable or disable SSL verification.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -585,8 +562,16 @@ Get Jobs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Arcanna.AI API to retrieve a list of
+      jobs. It does not modify any external systems or internal SOAR data (entities,
+      insights, comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action retrieves a list of jobs from an external system. It does not enrich
+      entities or alerts, nor does it perform any of the allowed internal mutations
+      (comments, insights, entity updates). Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -602,6 +587,9 @@ Get Jobs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with siemplify.target_entities. It operates globally
+      to fetch job data.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -617,6 +605,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping). It does not perform any of the listed
+      functional operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -634,44 +625,47 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity between Google
-    SecOps and the Arcanna.ai instance. It serves as a diagnostic tool to ensure that
-    the provided API credentials and URL are correct and that the Arcanna.ai service
-    is reachable and healthy.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies entirely on
-    the global integration configuration (URL, API Key, and SSL Verification settings).
+    This action tests the connectivity between the SOAR platform and the Arcanna.ai
+    instance by performing a health check. It verifies that the integration is correctly
+    configured and reachable.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action extracts the integration's base URL,
-    API Key, and SSL verification settings from the environment configuration.
+    1. The action extracts the required configuration parameters: `Integration.Url`,
+    `Integration.Api Key`, and `SSL Verification`.
 
-    2. **Client Initialization**: An `ArcannaClient` is initialized using the retrieved
-    credentials.
+    2. It initializes the `ArcannaClient` using the provided credentials and configuration.
 
-    3. **Health Check**: The action performs a GET request to the `/api/v1/health`
-    endpoint of the Arcanna.ai API.
+    3. It executes a GET request to the `/api/v1/health` endpoint of the Arcanna.ai
+    API.
 
-    4. **Result Processing**: The response from the health endpoint is captured and
-    added to the action's JSON results.
+    4. The response from the health check is returned as a JSON result to the SOAR
+    platform.
 
-    5. **Completion**: The action concludes with a success status if the API responds
-    correctly, or a failure status if an exception occurs (e.g., connection timeout,
-    invalid credentials).
+    5. The action concludes by reporting the success or failure of the connectivity
+    test.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Integration.Url | String | Yes | The base URL of the Arcanna.ai instance. |
+
+    | Integration.Api Key | String | Yes | The API key for authentication. |
+
+    | SSL Verification.Api Key | String | Yes | Whether to verify SSL certificates
+    (expected "true" or "false"). Note: The parameter name in the code is "Api Key".
+    |
 
 
     ### Additional Notes
 
-    * This action is strictly for connectivity testing and does not process any case
-    data or entities.
-
-    * According to standard SOAR practices, Ping actions are excluded from being categorized
-    as enrichment actions.
+    This action is a standard connectivity test (Ping) and does not perform any data
+    enrichment or system mutations.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -682,8 +676,14 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the /api/v1/health endpoint to verify connectivity.
+      It does not modify external systems or internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a "Ping" action designed to test connectivity. Per the instructions,
+      "Actions named Ping must not be categorized as enrichment actions."
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -699,6 +699,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it performs a global connectivity
+      test.
 Send Active Alert from Case to Arcanna:
   action_product_categories:
     add_alert_comment: false
@@ -714,6 +717,10 @@ Send Active Alert from Case to Arcanna:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action transmits alert data to an external AI platform (Arcanna.ai). It
+      does not perform enrichment, containment, ticketing, or alert modification.
+      Therefore, it does not match any of the predefined product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -729,59 +736,41 @@ Send Active Alert from Case to Arcanna:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Sends the current active alert from a Google SecOps case to Arcanna.ai for automated
-    analysis. This action identifies the specific alert context within a case, extracts
-    the raw alert payload, and ingests it into a specified Arcanna Job. It allows
-    for custom mapping of alert identifiers to ensure consistency between systems.
+    Sends an active alert from a Google SecOps case to the Arcanna.ai platform for
+    processing. This action allows users to specify a Job ID and optionally map an
+    alert identifier field to ensure the alert is correctly ingested by Arcanna.ai.
 
 
-    ### Flow Description:
+    ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves the Arcanna URL, API Key, and SSL settings
-    from the integration configuration, along with the Job ID and identifier settings
-    from the action parameters.
+    1. Extracts configuration parameters (URL, API Key, SSL verification).
 
-    2. **Case Context Retrieval:** Fetches the full case details and identifies the
-    `current_alert` being processed.
+    2. Extracts action parameters (Job ID, Alert identifier field, and whether to
+    use the alert ID).
 
-    3. **Alert Matching:** Iterates through the case's `cyber_alerts` to find the
-    one matching the current alert's identifier.
+    3. Retrieves the current case and its associated cyber alerts.
 
-    4. **Identifier Mapping:** If configured, extracts a specific value from the alert
-    payload (using the provided JSON path) to serve as the event ID in Arcanna.
+    4. Identifies the specific alert matching the current alert's identifier.
 
-    5. **Data Ingestion:** Sends the raw alert JSON to the Arcanna API via a POST
-    request to the specified Job ID.
+    5. Sends the alert payload to the Arcanna.ai platform using the provided Job ID.
 
-    6. **Result Handling:** Captures the Arcanna response and attaches it to the action
-    results.
+    6. Adds the API response to the action result.
 
 
-    ### Parameters Description:
+    ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Job ID | string | Yes | The unique identifier of the Job in Arcanna.ai that
-    will process the ingested alert. |
+    | Job ID | string | Yes | Job ID used for sending event to Arcanna.ai. |
 
-    | Alert identifier field | string | No | The JSON path (e.g., "identifier" or
-    "metadata.id") within the alert payload used to extract a custom ID. Defaults
-    to "identifier". |
+    | Alert identifier field | string | No | Identifier field that will be used as
+    an ID in Arcanna.ai when ingesting the alert. |
 
-    | Use Alert ID as ID in Arcanna | boolean | Yes | If set to `True`, the action
-    uses the value from the 'Alert identifier field' as the ID in Arcanna. If `False`,
-    Arcanna generates a new unique ID. |
-
-
-    ### Additional Notes:
-
-    - This action operates on the alert level within a case context and does not process
-    individual entities (IPs, Hosts, etc.).
-
-    - Ensure the 'Alert identifier field' correctly matches the structure of your
-    incoming Google SecOps alerts if you choose to use existing IDs.
+    | Use Alert ID as ID in Arcanna | boolean | Yes | If False, Arcanna generates
+    a new unique ID for the alert. If True, Arcanna uses the id found in the "Alert
+    identifier field". |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -790,12 +779,19 @@ Send Active Alert from Case to Arcanna:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new event record within the Arcanna.ai platform by sending the raw
-      alert payload for analysis.
+      Sends an alert payload to the Arcanna.ai platform for processing.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to send an alert payload to the external Arcanna.ai
+      platform (can_mutate_external_data=true). It does not fetch context data from
+      external systems, nor does it modify internal SOAR case or alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action transmits data to an external system (Arcanna.ai) and does not fetch
+      data for enrichment or modify internal SOAR data. It does not meet the criteria
+      for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -811,6 +807,10 @@ Send Active Alert from Case to Arcanna:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `target_entities`. It retrieves the current
+      case and its associated cyber alerts using `siemplify.current_alert` and `siemplify._get_case()`.
+      Therefore, it does not run on entities.
 Send Analyst Feedback to Arcanna:
   action_product_categories:
     add_alert_comment: false
@@ -826,6 +826,10 @@ Send Analyst Feedback to Arcanna:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action sends feedback to an external system (Arcanna.ai). It does not match
+      any of the predefined categories like 'Enrich IOC', 'Contain Host', or 'Create
+      Ticket'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -843,10 +847,9 @@ Send Analyst Feedback to Arcanna:
   ai_description: >-
     ### General Description
 
-    The **Send Analyst Feedback to Arcanna** action allows analysts to submit feedback
-    or labels for specific events processed by Arcanna AI. This is a crucial step
-    in the human-in-the-loop workflow, enabling the AI model to learn from analyst
-    decisions and improve its future predictions.
+    This action sends analyst feedback to the Arcanna.ai platform for a specific event.
+    It allows analysts to provide input on Arcanna-processed events, which can be
+    used for model training or decision refinement.
 
 
     ### Parameters Description
@@ -855,41 +858,35 @@ Send Analyst Feedback to Arcanna:
 
     | :--- | :--- | :--- | :--- |
 
-    | Event Id | String | Yes | The unique identifier of the event in Arcanna that
-    requires feedback. |
+    | Event Id | string | Yes | The unique identifier of the event in Arcanna. |
 
-    | Username | User | Yes | The username of the analyst providing the feedback.
+    | Username | user | Yes | The username of the analyst providing the feedback.
     |
 
-    | Job Id | String | Yes | The identifier of the Arcanna job that the event belongs
-    to. |
+    | Job Id | string | Yes | The unique identifier of the Arcanna job associated
+    with the event. |
 
-    | Analyst Feedback | String | Yes | The specific feedback or label (e.g., 'True
-    Positive', 'False Positive') to be assigned to the event. |
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action fetches the Arcanna URL, API Key, and
-    SSL verification settings from the integration configuration.
-
-    2. **Parameter Extraction**: It retrieves the Job ID, Event ID, Username, and
-    the feedback content provided by the user.
-
-    3. **API Interaction**: The action uses the Arcanna Client to send a `PUT` request
-    to the Arcanna API endpoint (`/api/v1/events/{job_id}/{event_id}/feedback`).
-
-    4. **Result Processing**: The response from Arcanna is captured and added to the
-    action's JSON results for audit and visibility.
+    | Analyst Feedback | string | Yes | The feedback string provided by the analyst.
+    |
 
 
     ### Additional Notes
 
-    - This action performs an external mutation by updating the state of an event
-    in the Arcanna AI platform.
+    There are no additional notes for this action.
 
-    - Ensure that the `Job Id` and `Event Id` accurately match the records in Arcanna
-    to avoid execution errors.
+
+    ### Flow Description
+
+    1. Extract configuration parameters (URL, API Key, SSL verification).
+
+    2. Extract action parameters (Job ID, Event ID, Username, Feedback).
+
+    3. Initialize the `ArcannaClient` with the provided credentials.
+
+    4. Execute the `send_feedback` method, which performs a PUT request to the Arcanna
+    API.
+
+    5. Add the API response to the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -898,12 +895,19 @@ Send Analyst Feedback to Arcanna:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the feedback and analyst label for a specific event in the Arcanna AI
-      platform via a PUT request.
+      Updates the feedback status for a specific event in the Arcanna.ai platform
+      via a PUT request.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PUT request to an external API (Arcanna.ai) to update
+      feedback for an event. It does not retrieve contextual data about entities or
+      alerts, nor does it modify internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (sending feedback) and does not fetch data for
+      enrichment purposes. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -919,13 +923,16 @@ Send Analyst Feedback to Arcanna:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities`. It operates on
+      specific IDs provided as parameters.
 Send Case to Arcanna:
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
     contain_host: false
-    create_ticket: true
+    create_ticket: false
     delete_email: false
     disable_identity: false
     download_file: false
@@ -934,6 +941,10 @@ Send Case to Arcanna:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action sends case data to an external AI platform (Arcanna.ai). It does
+      not match any of the predefined categories like 'Enrich IOC', 'Create Ticket',
+      'Contain Host', etc.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -949,54 +960,47 @@ Send Case to Arcanna:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Sends the current Google SecOps case data to Arcanna.ai for AI-assisted analysis
-    and decision-making. This action retrieves the full case details, including associated
-    entities, and ingests them into a specific Arcanna.ai job. It allows for mapping
-    a specific case field to be used as the unique identifier within the Arcanna platform.
+    ### General Description
 
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** Retrieves the Arcanna.ai URL, API Key, and SSL settings
-    from the integration configuration, along with the Job ID and identifier settings
-    from the action parameters.
-
-    2. **Data Retrieval:** Fetches the complete case object from Google SecOps and
-    collects all entities currently in the action's context.
-
-    3. **Payload Construction:** Combines the case data and the list of entities into
-    a single JSON payload.
-
-    4. **External Ingestion:** Sends the payload to the Arcanna.ai API via a POST
-    request to the specified Job ID. If configured, it uses a specific case field
-    as the external event ID.
-
-    5. **Result Processing:** Captures the response from Arcanna.ai and attaches it
-    as a JSON result to the action.
+    This action sends the current case data to Arcanna.ai for AI-driven analysis.
+    It retrieves the full case object from Google SecOps, optionally extracts a specific
+    case identifier, and prepares a payload containing the case data and target entities.
+    This payload is then sent to Arcanna.ai via the ArcannaClient, and the API response
+    is added to the action results.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Job ID | string | Yes | The unique identifier of the Arcanna.ai job that will
-    process the ingested case data. |
+    | Job ID | string | Yes | The ID of the job in Arcanna.ai used for sending the
+    event. |
 
-    | Case identifier field | string | No | The field within the Google SecOps case
-    object (e.g., "identifier") to be used as the ID in Arcanna.ai. Defaults to "identifier".
-    |
+    | Case identifier field | string | No | The field in the case to use as an ID
+    in Arcanna.ai. |
 
-    | Use case ID as ID in Arcanna | boolean | Yes | If set to True, the action will
-    use the value from the 'Case identifier field' as the ID in Arcanna. If False,
-    Arcanna generates its own unique ID. |
+    | Use case ID as ID in Arcanna | boolean | Yes | If True, Arcanna uses the ID
+    found in the 'Case identifier field'. If False, Arcanna generates a new unique
+    ID. |
 
 
-    ### Additional Notes
+    ### Flow Description
 
-    - This action is primarily used for exporting case data to Arcanna.ai to leverage
-    its machine learning capabilities for alert disposition or triage.
+    1. Extracts configuration parameters (URL, API Key, SSL verification).
+
+    2. Extracts action parameters (Job ID, Case identifier field, Use case ID flag).
+
+    3. Retrieves the full case object from Google SecOps.
+
+    4. Optionally extracts a specific case identifier if configured.
+
+    5. Prepares a payload containing the case data and target entities.
+
+    6. Sends the payload to Arcanna.ai via the `ArcannaClient`.
+
+    7. Adds the API response to the action results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1005,12 +1009,18 @@ Send Case to Arcanna:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new event or case record within the Arcanna.ai platform for processing
-      and analysis.
+      Sends case data to Arcanna.ai for processing.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action sends case data to an external system (Arcanna.ai) via a POST request.
+      It does not fetch data from external systems, nor does it modify internal SecOps
+      data (entities, insights, or comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is not an enrichment action because it does not fetch data from an
+      external source to enrich the case. It is a data transmission action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1026,6 +1036,10 @@ Send Case to Arcanna:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action retrieves `target_entities` from the case context and includes them
+      in the payload sent to Arcanna.ai, but it does not perform any filtering or
+      operations on the entities themselves.
 Send JSON Document to Arcanna:
   action_product_categories:
     add_alert_comment: false
@@ -1041,6 +1055,10 @@ Send JSON Document to Arcanna:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is an ingestion/sending tool for Arcanna.ai. It does not match the
+      expected outcomes of the provided categories (e.g., it is not an enrichment,
+      containment, ticket creation, or alert modification action).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1056,31 +1074,32 @@ Send JSON Document to Arcanna:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Sends a custom JSON document to Arcanna.ai for processing and analysis. This action
-    allows users to ingest arbitrary data into a specific Arcanna Job, enabling the
-    AI engine to evaluate the document based on its trained models. The action supports
-    using a specific field within the JSON as a unique identifier for the document
-    in Arcanna.
+    Sends a JSON document to the Arcanna.ai platform for processing. This action allows
+    users to ingest custom JSON payloads into specific Arcanna jobs, optionally using
+    a field within the JSON as a unique identifier.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves the Arcanna URL, API Key, and SSL settings
-    from the integration configuration, and the Job ID, Identifier field, and JSON
-    document from the action parameters.
+    1. **Configuration Extraction**: The action retrieves the Arcanna.ai integration
+    configuration (URL, API Key, and SSL verification settings).
 
-    2. **JSON Parsing**: Validates and parses the provided 'JSON Document' string
-    into a Python dictionary. It ensures the root of the document is not a list.
+    2. **Parameter Extraction**: It extracts the action-specific parameters: `Job
+    ID`, `Identifier field`, `Use document ID as ID in Arcanna`, and the `JSON Document`
+    payload.
 
-    3. **ID Extraction (Optional)**: If 'Use document ID as ID in Arcanna' is enabled,
-    the action uses dot notation to extract a specific value from the JSON document
-    to serve as the event identifier.
+    3. **Validation**: The action parses the provided `JSON Document` string. If the
+    JSON is invalid or if the root is a list, the action fails.
 
-    4. **API Interaction**: Sends the JSON payload and Job ID to the Arcanna.ai API
-    via a POST request.
+    4. **Identifier Processing**: If `Use document ID as ID in Arcanna` is set to
+    `true`, the action attempts to extract the identifier from the JSON document using
+    the path provided in `Identifier field`.
 
-    5. **Result Handling**: Captures the API response, adds it to the action's JSON
-    results, and completes the execution.
+    5. **API Interaction**: The action sends the JSON document (and the optional identifier)
+    to the Arcanna.ai API using the `ArcannaClient`.
+
+    6. **Result Handling**: The API response is added to the action result, and the
+    execution status is updated.
 
 
     ### Parameters Description
@@ -1089,28 +1108,26 @@ Send JSON Document to Arcanna:
 
     | :--- | :--- | :--- | :--- |
 
-    | Job ID | string | Yes | The unique identifier of the Arcanna job that will process
-    the document. |
+    | **Job ID** | string | Yes | The ID of the job in Arcanna.ai to which the event
+    will be sent. |
 
-    | Identifier field | string | No | The path (supporting dot notation, e.g., 'metadata.id')
-    to the field in the JSON document that should be used as the unique ID in Arcanna.
+    | **Identifier field** | string | No | The dot-notation field path within the
+    JSON document to be used as an ID. This is used only if 'Use document ID as ID
+    in Arcanna' is set to True. |
+
+    | **Use document ID as ID in Arcanna** | boolean | No | If True, the action uses
+    the value found in the 'Identifier field' as the event ID. If False, Arcanna generates
+    a new unique ID. |
+
+    | **JSON Document** | code | Yes | The JSON document payload to be sent to Arcanna.ai.
     |
-
-    | Use document ID as ID in Arcanna | boolean | Yes | If set to 'true', the action
-    will attempt to extract an ID from the 'Identifier field'. If 'false', Arcanna
-    generates a unique ID automatically. |
-
-    | JSON Document | code | Yes | The actual JSON data to be sent to Arcanna.ai for
-    analysis. |
 
 
     ### Additional Notes
 
-    - The 'JSON Document' must be a valid JSON object. Root-level lists are not supported
-    by this action.
-
-    - Ensure the 'Job ID' corresponds to an existing and active job in your Arcanna.ai
-    instance.
+    - The `Identifier field` parameter is optional, but it is required if `Use document
+    ID as ID in Arcanna` is set to `true` for the action to correctly map the event
+    ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1119,12 +1136,22 @@ Send JSON Document to Arcanna:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a POST request to the Arcanna.ai API to create a new event/document record
-      within a specific job context.
-    fetches_data: true
+      Sends a JSON document to the Arcanna.ai platform for ingestion and processing.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to an external system (Arcanna.ai) to ingest
+      a JSON document. It does not fetch data from external systems (no GET requests
+      for context), nor does it modify internal SOAR case data (entities, insights,
+      etc.). The use of `siemplify.result.add_result_json` is for reporting the API
+      response and is not considered an internal mutation.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is designed to push/ingest data into an external system (Arcanna.ai).
+      It does not retrieve contextual information about entities or alerts, nor does
+      it perform any of the allowed internal mutations (comments, insights, entity
+      updates). Therefore, it does not meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1140,6 +1167,9 @@ Send JSON Document to Arcanna:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates on a raw JSON document provided as a parameter and does
+      not interact with or iterate over the `siemplify.target_entities` list.
 Send event to Arcanna:
   action_product_categories:
     add_alert_comment: false
@@ -1155,6 +1185,11 @@ Send event to Arcanna:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action sends case or alert data to an external AI platform (Arcanna.ai).
+      It does not match any of the predefined categories such as 'Enrich IOC', 'Contain
+      Host', 'Create Ticket', or 'Send Message' (as it is not a communication app).
+      It is a specialized integration/export action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1169,66 +1204,27 @@ Send event to Arcanna:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    Sends event data (either a full case or a specific alert) to Arcanna.ai for processing
-    and AI-assisted decision-making. This action allows security teams to offload
-    event evaluation to Arcanna's AI models by providing the raw event context, associated
-    entities, and audit information. The action can be configured to send the entire
-    case or just the active alert, and it supports mapping specific fields to serve
-    as the reference Event ID in Arcanna.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Job ID | string | Yes | The unique identifier of the Arcanna.ai job that will
-    process the event. |
-
-    | Username | user | Yes | The username registered for audit purposes, identifying
-    who or what triggered the submission. |
-
-    | Event ID mapping field | string | No | A dot-notated path (e.g., `alert.id`)
-    used to extract a specific value from the payload to serve as the Arcanna Event
-    ID. |
-
-    | Send individual alerts from case | boolean | No | If set to `true`, only the
-    current alert context is sent. If `false` (default), the entire case data is sent.
-    |
-
-
-    ### Additional Notes
-
-    - The action requires a valid Job ID from Arcanna.ai to function correctly.
-
-    - If `Send individual alerts from case` is enabled, the action specifically looks
-    for the alert matching the current execution context within the case's alert list.
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval:** Fetches the Arcanna URL and API Key from the integration's
-    global configuration.
-
-    2. **Parameter Extraction:** Retrieves the Job ID, Username, and optional mapping/toggle
-    settings from the action parameters.
-
-    3. **Data Preparation:**
-        - If `Send individual alerts from case` is `true`, the action iterates through
-    the case's alerts to find the one matching the current context and prepares its
-    raw payload.
-        - If `false`, the action prepares the full case object, including all associated
-    target entities and metadata.
-    4. **ID Mapping:** If an `Event ID mapping field` is provided, the action parses
-    the prepared payload using dot-notation to extract the specified reference ID.
-
-    5. **External Submission:** Sends the prepared payload and audit username to the
-    Arcanna.ai API via a POST request to the events endpoint.
-
-    6. **Result Handling:** Captures the API response (which typically includes the
-    Arcanna event status) and attaches it as a JSON result to the action execution.
+  ai_description: "Sends case or alert data to Arcanna.ai for analysis or processing.\
+    \ This action facilitates the integration between the SOAR platform and Arcanna.ai\
+    \ by pushing event data to the external service.\n\n### Flow Description\n1. **Configuration\
+    \ Extraction**: Retrieves the Arcanna.ai API key and base URL from the integration\
+    \ configuration.\n2. **Parameter Parsing**: Extracts action parameters including\
+    \ the Job ID, Username, Event ID mapping field, and the toggle for sending individual\
+    \ alerts.\n3. **Case Retrieval**: Fetches the full case details from the SOAR\
+    \ platform.\n4. **Data Processing**: \n   - If 'Send individual alerts from case'\
+    \ is enabled, it iterates through the case's cyber alerts, identifies the current\
+    \ alert, and prepares the payload.\n   - If disabled, it prepares the full case\
+    \ payload, including target entities.\n5. **External Submission**: Sends the prepared\
+    \ payload to the Arcanna.ai API via a POST request.\n6. **Result Reporting**:\
+    \ Adds the API response to the action results.\n\n### Parameters\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Job ID\
+    \ | String | Yes | The ID of the job in Arcanna.ai used for sending the event.\
+    \ |\n| Username | User | Yes | The username registered for audit purposes. |\n\
+    | Event ID mapping field | String | No | The field used as a reference ID with\
+    \ Arcanna.ai. |\n| Send individual alerts from case | Boolean | No | If true,\
+    \ sends individual alerts; otherwise, sends the full case. |\n\n### Additional\
+    \ Notes\nThis action performs an outbound data push to an external system (Arcanna.ai)\
+    \ and does not perform enrichment or modification of the internal SOAR case data."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1237,12 +1233,21 @@ Send event to Arcanna:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new event record in Arcanna.ai for AI analysis and processing via
-      a POST request.
-    fetches_data: true
+      Sends event or case data to the Arcanna.ai platform via a POST request.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to an external API (Arcanna.ai) to send event
+      data, which constitutes external data mutation (in the context of the external
+      system). It does not fetch data to enrich the SOAR case, nor does it modify
+      internal SOAR data, entities, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is an export/integration action that pushes data to an external system.
+      It does not fetch data to enrich the SOAR case, nor does it perform any of the
+      allowed internal mutations (comments, insights, entity updates). Therefore,
+      it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1258,6 +1263,11 @@ Send event to Arcanna:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action retrieves 'target_entities' from the context data to include them
+      in the payload sent to Arcanna.ai, but it does not iterate over, filter, or
+      perform any operations on the entities themselves. Therefore, it does not run
+      on specific entity types.
 Trigger AI Model training:
   action_product_categories:
     add_alert_comment: false
@@ -1273,6 +1283,10 @@ Trigger AI Model training:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action triggers an AI model training job in the Arcanna.ai platform. This
+      does not match any of the predefined categories such as enrichment, containment,
+      or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1288,50 +1302,17 @@ Trigger AI Model training:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Triggers the training process for a specific AI model job within the Arcanna.ai
-    platform. This action is used to initiate the learning phase of a model based
-    on the feedback and data collected for a particular job ID. It requires an audit
-    username to track who initiated the training.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Job ID | string | Yes | The unique identifier for the Arcanna job where the
-    AI model training will be triggered. |
-
-    | Username | user | Yes | The username of the analyst or system account triggering
-    the training, used for audit purposes within Arcanna.ai. |
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: Retrieves the Arcanna URL, API Key, and SSL verification
-    settings from the integration configuration.
-
-    2. **Parameter Extraction**: Retrieves the `Job ID` and `Username` from the action
-    parameters.
-
-    3. **Client Initialization**: Initializes the `ArcannaClient` with the provided
-    credentials and base URL.
-
-    4. **API Request**: Sends a POST request to the Arcanna API endpoint `/api/v1/jobs/{job_id}/train`
-    with the specified username.
-
-    5. **Result Processing**: Captures the API response, adds it to the action's JSON
-    results, and completes the execution with a success or failure status based on
-    the API's response.
-
-
-    ### Additional Notes
-
-    - This action does not run on entities; it is a standalone task that interacts
-    directly with the Arcanna.ai API using the provided Job ID.
+    This action triggers an AI model training job within the Arcanna.ai platform.
+    The action extracts configuration parameters (URL, API Key, SSL verification)
+    and action parameters (Job ID, Username) to authenticate and initiate the training
+    process via a POST request. The action returns the API response to the SOAR platform
+    for audit and tracking purposes. Flow: 1. Extract configuration and action parameters.
+    2. Initialize the ArcannaClient. 3. Execute the train_model method, which sends
+    a POST request to the Arcanna.ai API to initiate the training process. 4. Return
+    the API response to the SOAR platform. Parameters: | Parameter | Type | Mandatory
+    | Description | | --- | --- | --- | --- | | Job ID | string | Yes | The ID of
+    the job where training will be triggered. | | Username | user | Yes | The username
+    for audit purposes. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1340,12 +1321,19 @@ Trigger AI Model training:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a model training process for a specific job in the Arcanna.ai platform,
-      which changes the state of the AI model.
-    fetches_data: true
+      Triggers an AI model training job in the Arcanna.ai platform.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action triggers an AI model training job in the Arcanna.ai platform via
+      a POST request. It does not fetch contextual data for enrichment, nor does it
+      modify internal SOAR data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action triggers an external process (AI model training) and does not fetch
+      data for enrichment or modify internal SOAR data. Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1361,6 +1349,9 @@ Trigger AI Model training:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It uses action parameters 'Job ID'
+      and 'Username' to perform its task.
 Update alert priority:
   action_product_categories:
     add_alert_comment: false
@@ -1376,6 +1367,9 @@ Update alert priority:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates the priority of the alert within the SecOps platform, which
+      directly matches the 'Update Alert' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1391,44 +1385,34 @@ Update alert priority:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Updates the priority level of the current alert within the Google SecOps platform.
-    This action allows analysts or automated workflows to dynamically adjust the severity
-    of an alert based on external logic or decision-making tools like ArcannaAI.
+    ### General Description
+
+    This action updates the priority of the current alert within the Google SecOps
+    platform. It allows analysts to programmatically change an alert's priority level
+    based on automated decisions or other workflow triggers.
 
 
-    ### Flow Description:
-
-    1. **Identifier Retrieval:** The action first retrieves the unique identifier
-    for the current alert.
-
-    2. **Parameter Validation:** It validates that the provided `Priority` parameter
-    matches one of the allowed values: Informative, Low, Medium, High, or Critical.
-
-    3. **Version Check:** It verifies that the Google SecOps (Siemplify) environment
-    version is 5.6 or higher, as earlier versions do not support this API endpoint.
-
-    4. **Internal API Call:** It executes a POST request to the internal SOAR API
-    (`/external/v1/sdk/UpdateAlertPriority`) with the case ID, alert identifier, and
-    the new priority value.
-
-
-    ### Parameters Description:
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Priority | String | Yes | The new priority level to assign to the alert. Must
-    be one of: `Informative`, `Low`, `Medium`, `High`, or `Critical`. |
+    | Priority | string | Yes | The new priority level for the alert. Must be one
+    of the following values: 'Informative', 'Low', 'Medium', 'High', 'Critical'. |
 
 
-    ### Additional Notes:
+    ### Flow Description
 
-    - This action interacts with the internal Google SecOps API rather than an external
-    ArcannaAI endpoint to perform the update.
+    1. The action extracts the 'Priority' parameter and validates it against the allowed
+    list of priority values.
 
-    - If the alert identifier is missing or the version is unsupported, the action
-    will terminate with a failure message.
+    2. It verifies that the current Siemplify version is 5.6 or higher.
+
+    3. It retrieves the current alert identifier and case ID from the context.
+
+    4. It sends a POST request to the internal SecOps API endpoint (`/external/v1/sdk/UpdateAlertPriority`)
+    to update the alert's priority.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1439,10 +1423,16 @@ Update alert priority:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the priority level of the current alert within the Google SecOps platform
-      via an internal API call.
+      Updates the priority of the current alert within the Google SecOps platform.
+    reasoning: >-
+      The action modifies the alert's priority within the SecOps platform by calling
+      an internal API endpoint. It does not fetch external data or mutate external
+      systems.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (updates alert priority) and does not fetch
+      data for enrichment purposes.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1458,3 +1448,7 @@ Update alert priority:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates on the current alert context (`siemplify.current_alert`)
+      rather than iterating over `target_entities`. Therefore, it does not use any
+      entity types.

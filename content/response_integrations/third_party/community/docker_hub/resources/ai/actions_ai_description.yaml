@@ -13,6 +13,9 @@ Invite User:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action invites a user to a team in Docker Hub. This does not match any of
+      the provided categories (Enrichment, Containment, Ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -25,53 +28,37 @@ Invite User:
     uncontain_host: false
     update_alert: false
     update_email: false
-    update_identity: true
+    update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Invites a user to a specific team within a Docker Hub organization using their
-    email address. This action facilitates access management by programmatically sending
-    membership invitations to external users, allowing them to join collaborative
-    environments in Docker Hub.
+    Invites a user to a specific team in a given organization in Docker Hub. This
+    action automates the process of adding a user to a team by sending an invitation
+    request to the Docker Hub API.
 
 
-    ### Parameters Description
+    ### Flow
+
+    1. Retrieves configuration (credentials) and parameters (Organization, Team, Email).
+
+    2. Initializes the Docker Hub client with the provided credentials.
+
+    3. Sends an invitation request to the specified organization and team using the
+    provided email address.
+
+    4. Logs the outcome and ends the action.
+
+
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Organization | String | Yes | The name of the Docker Hub organization where
-    the invitation will be sent. |
+    | Team | string | Yes | The name of the team within the organization. |
 
-    | Team | String | Yes | The specific team within the organization that the user
-    is being invited to join. |
+    | Organization | string | Yes | The name of the organization. |
 
-    | Email | String | Yes | The email address of the user who will receive the invitation.
-    |
-
-
-    ### Additional Notes
-
-    This action does not run on SOAR entities; it relies entirely on the provided
-    input parameters. It requires valid Docker Hub administrator or owner credentials
-    to perform the invitation.
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action authenticates with Docker Hub using the provided
-    username and password to obtain a JWT token.
-
-    2. **Parameter Retrieval**: It extracts the target Organization, Team, and Email
-    from the action parameters.
-
-    3. **Invitation Request**: It sends a POST request to the Docker Hub API endpoint
-    (`/orgs/{org}/groups/{team}/members/`) with the user's email.
-
-    4. **Completion**: The action returns a success message if the invitation is successfully
-    dispatched or an error message if the request fails.
+    | Email | string | Yes | The email address of the user to invite. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -80,12 +67,19 @@ Invite User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a membership invitation to a user in Docker Hub, which creates a pending
-      invitation record within the specified organization and team.
+      Invites a user to a Docker Hub team by sending a POST request to the Docker
+      Hub API.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Docker Hub API to invite a user to
+      a team. This is an external mutation. It does not fetch data, update entities,
+      or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs an external mutation (inviting a user) and does not fetch
+      data for enrichment. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -101,6 +95,9 @@ Invite User:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `target_entities`. It uses parameters provided
+      in the action settings.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -116,6 +113,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      product category operations (e.g., enrichment, blocking, ticketing).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -133,47 +133,37 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the Docker Hub API. It ensures that the provided credentials (Username and
-    Password) are valid and that the network path to the Docker Hub service is open.
-    This is a standard health check action used to validate integration settings.
+    Verifies connectivity to the Docker Hub API by authenticating with the provided
+    credentials and performing a catalog request. This action is used to ensure that
+    the integration is correctly configured and that the service is reachable from
+    the SOAR platform.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not take any input parameters; it uses the
-    integration's configuration settings (Username and Password). |
+    There are no input parameters for this action. The action utilizes the integration-level
+    configuration (Username and Password) to authenticate and test the connection.
 
 
     ### Additional Notes
 
-    * **Note on Metadata**: While the provided metadata description mentions inviting
-    a user, the actual implementation logic and action name are strictly for connectivity
-    testing (Ping).
-
-    * **Authentication**: The action uses the Username and Password defined in the
-    integration configuration to generate a JWT token for the session.
+    This action is a connectivity test (Ping) and does not perform any data enrichment
+    or state changes. It is intended for diagnostic purposes to validate the integration
+    setup.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the `Username` and `Password`
-    from the Docker Hub integration settings.
+    1. Initialize the `SiemplifyAction` and retrieve the integration configuration
+    (Username and Password).
 
-    2. **Client Initialization**: A `DockerHub` manager instance is created using
-    the retrieved credentials, which involves an authentication step to obtain a JWT
-    token.
+    2. Instantiate the `DockerHub` client with the provided credentials.
 
-    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
-    sends a GET request to the Docker Hub `_catalog` endpoint.
+    3. Execute the `test_connectivity` method, which performs a GET request to the
+    Docker Hub `_catalog` endpoint.
 
-    4. **Result Handling**: If the request is successful, the action completes with
-    a success status. If an HTTP error occurs (other than a 404), the action fails,
-    indicating a configuration or connectivity issue.
+    4. If the request is successful, the action completes successfully. If an authentication
+    or connection error occurs, the action fails.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -184,8 +174,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Docker Hub API to verify connectivity.
+      It does not modify external systems, update internal entities, or create insights.
+      It is a standard connectivity test.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and performs a connectivity test. Per the instructions,
+      'Ping' actions must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -201,3 +198,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it performs a global connectivity
+      check.

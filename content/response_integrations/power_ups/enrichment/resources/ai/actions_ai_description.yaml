@@ -13,6 +13,11 @@ Enrich Entities from List with Field:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates entity properties within the SOAR platform. It does not fetch
+      external data, nor does it perform specific product-related tasks like blocking,
+      ticketing, or searching. It is a generic utility for enriching entity metadata.
+      Therefore, it does not match any of the specific product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,12 +35,24 @@ Enrich Entities from List with Field:
   ai_description: >-
     ### General Description
 
-    The **Enrich Entities from List with Field** action is a utility designed to bulk-update
-    entities within a Google SecOps case. It takes a delimited list of entity identifiers
-    and a specific entity type, searches for matching entities already present in
-    the case, and enriches them by adding or updating a custom field in their `additional_properties`.
-    This action is particularly useful for manual tagging or applying context derived
-    from external lists to existing case entities.
+    This action enriches specific entities within a case by adding a custom field
+    and value to their `additional_properties`. It is a utility action designed to
+    update entity metadata based on a provided list of identifiers.
+
+
+    ### Flow Description
+
+    1. Parses the input `List of Entities` string using the provided `Entity Delimiter`.
+
+    2. Retrieves all entities from the current case alerts.
+
+    3. Matches entities from the input list against the case entities based on identifier
+    and the specified `Entity Type`.
+
+    4. Updates the `additional_properties` of the matched entities with the provided
+    `Enrichment Field` and `Enrichment Value`.
+
+    5. Updates the entities in the SOAR platform.
 
 
     ### Parameters Description
@@ -44,49 +61,18 @@ Enrich Entities from List with Field:
 
     | :--- | :--- | :--- | :--- |
 
-    | **List of Entities** | String | Yes | A delimited string containing the identifiers
-    (e.g., IP addresses, hostnames) of the entities to be enriched. |
+    | List of Entities | string | Yes | A delimited list of entity identifiers to
+    enrich. |
 
-    | **Entity Type** | String | Yes | The type of entities to target (e.g., ADDRESS,
-    HOSTNAME, USER). The action will only update entities that match this type. |
+    | Entity Type | string | Yes | The type of entity to filter for (e.g., "ADDRESS",
+    "HOSTNAME"). |
 
-    | **Entity Delimiter** | String | Yes | The character used to separate the identifiers
-    in the **List of Entities** parameter (default is a comma). |
+    | Entity Delimiter | string | Yes | The character used to separate entities in
+    the list. |
 
-    | **Enrichment Field** | String | Yes | The name of the field (key) to be added
-    to the entity's `additional_properties`. |
+    | Enrichment Field | string | Yes | The key name for the new property. |
 
-    | **Enrichment Value** | String | Yes | The value to be assigned to the specified
-    **Enrichment Field**. |
-
-
-    ### Flow Description
-
-    1. **Parsing**: The action splits the input **List of Entities** into individual
-    strings based on the provided **Entity Delimiter**.
-
-    2. **Retrieval**: It retrieves all entities associated with all alerts in the
-    current Google SecOps case.
-
-    3. **Matching**: For each identifier in the parsed list, the action iterates through
-    the case entities to find a match. A match is confirmed if the entity's identifier
-    (case-insensitive) and its type both match the provided parameters.
-
-    4. **Enrichment**: For every matching entity, the action adds or updates the specified
-    **Enrichment Field** with the **Enrichment Value** in the entity's `additional_properties`
-    dictionary.
-
-    5. **Update**: The action calls the internal SDK to update the modified entities
-    within the platform.
-
-
-    ### Additional Notes
-
-    - This action does not interact with external APIs; it performs internal data
-    manipulation within the SOAR environment.
-
-    - If an identifier in the list does not exist in the case or does not match the
-    specified type, it is skipped without error.
+    | Enrichment Value | string | Yes | The value to assign to the new property. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -95,12 +81,19 @@ Enrich Entities from List with Field:
     can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' attribute of entities within the Google
-      SecOps case.
+      Updates the `additional_properties` of entities within the case.
+    reasoning: >-
+      The action updates the `additional_properties` of entities within the case (internal
+      mutation). It does not fetch external data, nor does it mutate external systems.
+      It updates entities in the SOAR platform.
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      The action updates entity fields/attributes, which is an allowed internal mutation
+      for enrichment actions. However, it does not fetch data from an external source,
+      which is a requirement for an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -151,6 +144,11 @@ Enrich Entities from List with Field:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.case.alerts` and filters entities by `identifier`
+      and `entity_type`. It does not use `target_entities` directly but rather searches
+      through all alert entities. Since it filters by `entity_type` provided as a
+      parameter, it supports all entity types dynamically.
 Enrich Entity From Event Field:
   action_product_categories:
     add_alert_comment: false
@@ -166,6 +164,9 @@ Enrich Entity From Event Field:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds contextual metadata (from event fields) to the entity. This
+      matches the 'Enrich Asset' category. It does not perform any other listed actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -183,56 +184,42 @@ Enrich Entity From Event Field:
   ai_description: >-
     ### General Description
 
-    This action enriches entities by extracting specific field values from the first
-    security event associated with the current alert and mapping them to the entity's
-    additional properties. It is designed to propagate event-level context (such as
-    custom metadata, department info, or specific event tags) directly onto the entities
-    involved in the alert, making that data available for subsequent playbook steps
-    or analyst review.
+    This action enriches entities by extracting specific fields from the associated
+    security event and updating the entity's additional properties. It allows analysts
+    to map event-specific data (e.g., user agents, source ports, or custom metadata)
+    directly onto the entities involved in an alert, facilitating better context and
+    investigation.
 
 
     ### Parameters Description
 
-    | Parameter Name | Expected Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Fields to enrich | String | Yes | A comma-separated list of field names (keys)
-    to look for in the security event's additional properties. These values will be
-    copied to the entity's additional properties if found. |
+    | Fields to enrich | string | Yes | The name of the fields in the event that will
+    be used to enrich the entity. Supports a comma-separated list. |
 
 
     ### Flow Description
 
-    1. **Parameter Parsing**: The action retrieves the comma-separated list of field
-    names from the input parameter.
+    1. The action retrieves the "Fields to enrich" parameter.
 
-    2. **Event Retrieval**: It accesses the first security event (`security_events[0]`)
-    associated with the current alert.
+    2. It accesses the first security event associated with the current alert.
 
-    3. **Entity Iteration**: The action iterates through all target entities in the
-    current scope.
+    3. It iterates through all target entities provided in the action context.
 
-    4. **Field Mapping**: For each entity, it performs a case-insensitive check to
-    see if the requested fields exist within the event's additional properties.
+    4. For each entity, it checks if the specified fields exist in the event's additional
+    properties.
 
-    5. **Internal Mutation**: If matches are found, the entity's `additional_properties`
-    are updated with the values from the event.
+    5. If a match is found, it updates the entity's `additional_properties` with the
+    corresponding value from the event.
 
-    6. **Persistence**: The action calls the internal SDK method to save the updated
-    entity attributes back to the Google SecOps platform.
+    6. If any entities were updated, the action calls `update_entities` to persist
+    the changes in the SOAR platform.
 
-    7. **Result Reporting**: It returns a JSON object containing the enriched fields
-    and a count of how many entities were successfully updated.
-
-
-    ### Additional Notes
-
-    - This action only looks at the **first** security event in the alert. If an alert
-    contains multiple events with different data, only the first one is used for enrichment.
-
-    - The field matching is case-insensitive, but the keys are stored in lowercase
-    in the resulting entity properties.
+    7. Finally, it returns the enriched data in the action results and completes the
+    execution.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -243,10 +230,18 @@ Enrich Entity From Event Field:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' of entities within the Google SecOps platform
-      using data extracted from the alert's security events.
+      Updates entity `additional_properties` with data extracted from the event.
+    reasoning: >-
+      The action retrieves data from the internal security event object and updates
+      the entity's additional properties. It does not interact with external systems.
+      It performs an internal mutation by updating entity fields, which is an allowed
+      operation for enrichment actions.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from the internal event and updates entity fields. This
+      is a valid enrichment action as it does not mutate external systems and only
+      performs allowed internal mutations (updating entity fields).
   entity_usage:
     entity_types:
     - ADDRESS
@@ -297,6 +292,9 @@ Enrich Entity From Event Field:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all `target_entities` without filtering by type, so
+      it supports all entity types.
 Enrich Entity From JSON:
   action_product_categories:
     add_alert_comment: false
@@ -308,10 +306,13 @@ Enrich Entity From JSON:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: true
-    enrich_ioc: true
+    enrich_asset: false
+    enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action does not match any of the predefined product categories. It is a
+      generic utility action for enriching entities from a JSON input.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -327,76 +328,60 @@ Enrich Entity From JSON:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Enriches entities within Google SecOps using data provided in a JSON format. This
-    utility action allows users to map external data (passed as a parameter) to existing
-    entities in a case by matching identifiers. It flattens the provided JSON data
-    and adds it to the entity's additional properties, optionally applying a prefix
-    or filtering the data using JSONPath.
+    ### General Description
+
+    Enriches entities by mapping data from a provided JSON input to the entity's `additional_properties`.
+    This action is a utility tool that allows users to inject custom data into entities
+    based on a JSON structure, facilitating the association of external data with
+    entities within the SOAR platform.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Enrichment JSON | String | Yes | A JSON string representing a list of objects
-    containing the enrichment data. |
+    | Enrichment JSON | string | Yes | The JSON data containing enrichment information.
+    Expected to be a list of JSON objects. |
 
-    | Identifier KeyPath | String | Yes | The path to the field in the JSON that contains
-    the entity identifier. Supports multiple paths separated by newlines. |
+    | Identifier KeyPath | string | Yes | The path to the identifier within the JSON,
+    used to match the JSON data with the entity. |
 
-    | Separator | String | Yes | The character used to separate keys in the `Identifier
-    KeyPath` (default is `.`). |
+    | Separator | string | Yes | The separator used in the key path (e.g., "."). |
 
-    | PrefixForEnrichment | String | No | An optional prefix to prepend to the keys
-    added to the entity's additional properties. |
+    | PrefixForEnrichment | string | No | A prefix to add to the enriched field names
+    in the entity's `additional_properties`. |
 
-    | Enrichment JSONPath | String | No | An optional JSONPath expression to filter
-    or select specific parts of the JSON object for enrichment. |
+    | Enrichment JSONPath | string | No | A JSONPath expression to filter the data
+    to be added to the entity. |
 
 
     ### Additional Notes
 
-
-    - This action is a utility for manual or automated enrichment using static or
-    dynamically generated JSON data within a playbook.
-
-    - It does not interact with external APIs; all data must be provided via the `Enrichment
-    JSON` parameter.
-
-    - The action flattens nested JSON structures into a single-level key-value format
-    suitable for entity additional properties.
+    This action does not perform any external API calls. It relies entirely on the
+    provided `Enrichment JSON` parameter to perform the enrichment. It is a utility
+    action for mapping data to entities.
 
 
     ### Flow Description
 
+    1. The action accepts a JSON string, a key path to identify the entity, and optional
+    configuration (separator, prefix, JSONPath).
 
-    1. **Parse Input:** The action parses the `Enrichment JSON` string into a list
-    of dictionaries.
+    2. It iterates through the target entities in the case.
 
-    2. **Identify Keys:** It processes the `Identifier KeyPath` and `Separator` to
-    determine how to locate identifiers within the JSON objects.
+    3. For each entity, it searches the provided JSON for a matching identifier using
+    the specified `Identifier KeyPath`.
 
-    3. **Iterate Entities:** It iterates through all target entities in the current
-    SOAR context.
+    4. If a match is found, it extracts the relevant data (optionally using the provided
+    `Enrichment JSONPath`).
 
-    4. **Match and Extract:** For each entity, it scans the JSON list. If a matching
-    identifier is found (based on the provided key path), it proceeds to extract the
-    data.
+    5. The extracted data is flattened and added to the entity's `additional_properties`
+    (optionally with a prefix).
 
-    5. **Apply JSONPath (Optional):** If an `Enrichment JSONPath` is provided, the
-    action filters the matching JSON object to extract only the specified data.
-
-    6. **Flatten and Prefix:** The extracted data is flattened into a flat dictionary.
-    If a `PrefixForEnrichment` is specified, it is prepended to all keys.
-
-    7. **Update Entities:** The entity's `additional_properties` are updated with
-    the processed data, and the entity is marked for update in the platform.
-
-    8. **Finalize:** The action concludes by updating all modified entities and returning
-    the total count of enriched entities.
+    6. Finally, the action updates the entities in the SOAR platform with the new
+    properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -405,12 +390,19 @@ Enrich Entity From JSON:
     can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' of the entities within Google SecOps based
-      on the provided JSON data.
+      Updates entity `additional_properties` with data extracted from the provided
+      JSON.
+    reasoning: >-
+      The action updates entity `additional_properties` based on provided JSON input.
+      It does not fetch data from external systems (no API calls), nor does it mutate
+      external data. It performs internal mutation by updating entity fields.
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external source, which is a requirement
+      for the Enrichment category. It is a utility action for mapping data to entities.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -461,6 +453,9 @@ Enrich Entity From JSON:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all `siemplify.target_entities` without applying any
+      filters, therefore it supports all entity types.
 Enrich Entity With Field:
   action_product_categories:
     add_alert_comment: false
@@ -476,6 +471,10 @@ Enrich Entity With Field:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a utility for updating entity metadata. It does not perform any
+      of the defined product-specific actions like enriching IOCs, updating alerts,
+      or managing tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -491,57 +490,38 @@ Enrich Entity With Field:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    General description:
 
-    The **Enrich Entity With Field** action is a utility designed to manually or programmatically
-    inject custom metadata into entities within a Google SecOps case. It allows users
-    to define a list of key-value pairs that are then appended to the `additional_properties`
-    attribute of all entities currently in scope. This action is primarily used for
-    tagging entities with static information, organizational context, or data derived
-    from previous playbook steps that isn't automatically mapped by standard integrations.
+    This action allows users to manually enrich entities by adding custom key-value
+    pairs to their `additional_properties`. It is a utility action designed to update
+    entity metadata within the SOAR platform.
 
 
-    ### Parameters Description
+    Parameters description:
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Fields to enrich** | string | Yes | A JSON-formatted string representing a
-    list of objects. Each object must contain `entity_field_name` and `entity_field_value`.
-    For example: `[{"entity_field_name": "Title", "entity_field_value": "SalesManager"}]`.
+    | Fields to enrich | string | Yes | A JSON-formatted string representing a list
+    of objects, where each object contains `entity_field_name` and `entity_field_value`.
     |
 
 
-    ### Flow Description
+    Flow description:
 
-    1. **Input Parsing**: The action retrieves the JSON string from the `Fields to
-    enrich` parameter and parses it into a list of dictionaries.
+    1. Retrieve the `Fields to enrich` parameter.
 
-    2. **Entity Iteration**: The script iterates through every entity provided in
-    the `target_entities` list of the current context.
+    2. Parse the JSON string into a list of field objects.
 
-    3. **Property Injection**: For each entity, the script loops through the parsed
-    fields and adds or updates the corresponding keys in the entity's `additional_properties`
-    dictionary.
+    3. Iterate through all target entities.
 
-    4. **Platform Update**: The action calls the `update_entities` method to persist
-    these changes within the Google SecOps platform.
+    4. For each entity, update its `additional_properties` with the provided key-value
+    pairs.
 
-    5. **Result Reporting**: The action generates a JSON result for each entity containing
-    the applied fields and concludes with a summary message indicating the number
-    of entities successfully updated.
+    5. Update the entities in the SOAR platform.
 
-
-    ### Additional Notes
-
-    - This action does not communicate with any external APIs; it only processes data
-    provided via parameters.
-
-    - It modifies internal entity data within the SOAR environment by updating the
-    `additional_properties` field.
-
-    - Ensure the JSON provided in the parameter is valid to avoid execution errors.
+    6. Add the enrichment data to the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -552,10 +532,17 @@ Enrich Entity With Field:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' attribute of entities within the Google
-      SecOps case to include custom key-value pairs provided in the action parameters.
+      Updates the `additional_properties` attribute of the target entities with user-provided
+      key-value pairs.
+    reasoning: >-
+      The action takes user-provided key-value pairs and updates the `additional_properties`
+      of the target entities. It does not fetch data from external sources, so it
+      is not an enrichment action. It modifies internal entity data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external source, so it does not meet
+      the criteria for an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -606,6 +593,9 @@ Enrich Entity With Field:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` without any filtering, meaning
+      it applies the enrichment fields to all entities provided in the action scope.
 Enrich Entity from Explorer Attributes:
   action_product_categories:
     add_alert_comment: false
@@ -621,6 +611,11 @@ Enrich Entity from Explorer Attributes:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata for entities from the Entity Explorer
+      and updates the entity objects. This aligns with 'Enrich Asset'. It does not
+      perform IOC-specific threat intelligence lookups (like reputation scores), so
+      'Enrich IOC' is false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -638,10 +633,32 @@ Enrich Entity from Explorer Attributes:
   ai_description: >-
     ### General Description
 
-    Enriches entities within a Google SecOps case by retrieving historical attribute
-    data from the Entity Explorer. This action allows analysts to automatically populate
-    entity properties with previously discovered information, ensuring consistency
-    and providing deeper context without manual data entry.
+    Enriches entities with historical data retrieved from the Entity Explorer. This
+    action allows users to pull specific attributes associated with an entity from
+    the system's historical data and apply them to the current entity object within
+    the SOAR platform.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the 'Field Name' (a comma-delimited
+    list of fields) and the 'Use Field Name as Whitelist' boolean parameter.
+
+    2. **Entity Iteration**: The action iterates through all entities provided in
+    the `target_entities` list.
+
+    3. **Data Retrieval**: For each entity, it calls the `get_entity_data` function
+    to fetch historical attributes from the Entity Explorer.
+
+    4. **Field Filtering**: It filters the retrieved fields based on the 'Field Name'
+    parameter, applying either a whitelist or blacklist logic depending on the 'Use
+    Field Name as Whitelist' setting. System fields are automatically excluded.
+
+    5. **Entity Update**: It updates the entity's attributes or `additional_properties`
+    with the filtered data.
+
+    6. **Result Reporting**: The action updates the entities in the SOAR platform
+    and adds the enrichment results to the action output.
 
 
     ### Parameters Description
@@ -650,47 +667,18 @@ Enrich Entity from Explorer Attributes:
 
     | :--- | :--- | :--- | :--- |
 
-    | Field Name | string | False | A comma-separated list of specific fields to retrieve
-    from the Entity Explorer. If left empty, all available fields will be considered
-    based on the whitelist/denylist logic. |
+    | Field Name | string | No | A comma-delimited string of fields from the Entity
+    Explorer to use for enrichment. If null, all available fields are processed. |
 
-    | Use Field Name as Whitelist | boolean | False | Determines how the 'Field Name'
-    parameter is applied. If set to `true` (default), only the specified fields are
-    enriched. If set to `false`, the specified fields are excluded (denylist), and
-    all other available fields are enriched. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the filtering logic (whitelist
-    vs. denylist) and the list of target field names from the user input.
-
-    2. **Entity Iteration:** The action iterates through all entities currently associated
-    with the case or targeted by the playbook.
-
-    3. **Data Retrieval:** For each entity, it queries the internal Google SecOps
-    API (Entity Explorer) to fetch historical data associated with that specific entity
-    identifier and type.
-
-    4. **Field Filtering:** The retrieved data is filtered to exclude core system
-    fields (e.g., 'Type', 'Environment', 'IsInternalAsset') and then processed according
-    to the user-defined whitelist or denylist.
-
-    5. **Entity Update:** The action updates the entity's attributes or populates
-    its 'additional_properties' dictionary with the filtered values.
-
-    6. **Persistence:** Finally, the action commits the updated entity objects back
-    to the SecOps platform and outputs the results in JSON format.
+    | Use Field Name as Whitelist | boolean | No | When true, 'Field Name' acts as
+    a whitelist. When false, it acts as a blacklist. Defaults to true. |
 
 
     ### Additional Notes
 
-    - Core system fields are protected and cannot be overwritten by this action to
-    maintain data integrity.
-
-    - If no fields are specified in the 'Field Name' parameter and the whitelist mode
-    is active, the action will attempt to enrich the entity with all available historical
-    fields found in the explorer.
+    This action performs internal updates to entity objects. It does not interact
+    with external third-party APIs for data retrieval, relying instead on the internal
+    Entity Explorer data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -701,10 +689,17 @@ Enrich Entity from Explorer Attributes:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes and additional properties within the Google SecOps
-      platform using data retrieved from the Entity Explorer.
+      Updates entity attributes and additional_properties within the SOAR platform.
+    reasoning: >-
+      The action fetches entity data from the internal SOAR system using `get_entity_data`
+      and updates the entity objects within the SOAR platform using `update_entities`.
+      It does not interact with external systems or modify alert/case metadata.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data (enrichment) and updates entities (allowed internal
+      mutation). It does not mutate external systems. It fits the definition of an
+      enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -755,6 +750,9 @@ Enrich Entity from Explorer Attributes:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all `target_entities` without filtering by type, so
+      it supports all entity types.
 Enrich FileName Entity with Path:
   action_product_categories:
     add_alert_comment: false
@@ -770,6 +768,10 @@ Enrich FileName Entity with Path:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds contextual metadata (file path, name, extension) to the entity,
+      which aligns with the 'Enrich Asset' category. It does not fetch threat intelligence
+      (Enrich IOC) or perform any other actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -787,51 +789,29 @@ Enrich FileName Entity with Path:
   ai_description: >-
     ### General Description
 
-    This action parses file paths from entity identifiers to extract and enrich the
-    entity with specific file metadata, including the directory path, the full filename,
-    and the file extension. It is designed to provide better context for entities
-    that represent file system locations by breaking down complex path strings into
-    structured data.
+    This action parses file path strings from entity identifiers to extract the file
+    name, directory path, and file extension. It then updates the entity's `additional_properties`
+    with these extracted details, providing enriched context for further analysis.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not require any input parameters. |
-
-
-    ### Additional Notes
-
-    - The action automatically detects whether a path is Windows-style (e.g., starting
-    with a drive letter like `C:\`) or Unix-style to ensure accurate parsing.
-
-    - Enrichment only occurs if a directory path is successfully identified within
-    the entity's identifier; simple filenames without paths may not be enriched depending
-    on the environment context.
-
-    - Extracted data is stored in the entity's `additional_properties` field, making
-    it available for downstream playbooks and searches.
+    There are no parameters for this action.
 
 
     ### Flow Description
 
-    1. **Retrieve Entities**: The action fetches all target entities from the current
-    SecOps context.
+    1. The action iterates through all target entities provided in the playbook.
 
-    2. **Path Parsing**: For each entity, the identifier is analyzed using regex and
-    path utilities to determine if it contains a valid file path.
+    2. For each entity, it uses `ntpath` (for Windows-style paths) or `os.path` (for
+    POSIX-style paths) to parse the identifier.
 
-    3. **Metadata Extraction**: If a path is found, the logic splits the identifier
-    into the directory path, the filename, and the file extension.
+    3. It extracts the `file_name`, `file_path`, and `file_extension` from the identifier.
 
-    4. **Internal Enrichment**: The extracted metadata (file_name, file_path, file_extension)
-    is added to the entity's `additional_properties` attribute.
+    4. The extracted details are added to the entity's `additional_properties`.
 
-    5. **Update and Report**: The action updates the entities within Google SecOps
-    and returns a JSON summary of the enriched data for all processed entities.
+    5. The action updates the entities in the SOAR platform and adds a JSON result
+    containing the parsed information.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -840,12 +820,20 @@ Enrich FileName Entity with Path:
     can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' attribute of entities with parsed file path,
-      name, and extension.
+      Updates the entity's `additional_properties` with parsed file path details.
+    reasoning: >-
+      The action performs local string manipulation on entity identifiers to extract
+      file path components. It updates the entity's `additional_properties` within
+      the SOAR platform. It does not interact with external systems or fetch external
+      data.
   categories:
     enrichment: true
+    reasoning: >-
+      The action updates entity attributes (enriching the entity's profile) without
+      modifying external systems or fetching external data. This fits the definition
+      of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -896,6 +884,10 @@ Enrich FileName Entity with Path:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` without any type-based filtering.
+      Therefore, it is technically applicable to all entity types, although it is
+      logically intended for file-related entities.
 Enrich Source and Destinations:
   action_product_categories:
     add_alert_comment: false
@@ -911,6 +903,10 @@ Enrich Source and Destinations:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds contextual metadata ('isSource' or 'isDest') to entities, which
+      aligns with the 'Enrich Asset' category. It does not fetch threat intelligence
+      (Enrich IOC), nor does it perform any other listed operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -926,53 +922,39 @@ Enrich Source and Destinations:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    This action enriches entities within a Google SecOps alert by identifying their
-    roles as either a source or a destination. It retrieves detailed alert context
-    via the Chronicle SOAR API, parses the security event data to find source and
-    destination identifiers, and then updates the corresponding entities' metadata
-    with specific flags (`isSource` or `isDest`). This provides analysts with immediate
-    visual context regarding the directionality of network traffic or events directly
-    on the entity objects.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not require any input parameters. |
-
-
-    ### Additional Notes
-
-    - The action specifically targets entities associated with the current alert.
-
-    - It uses case-insensitive matching to link alert metadata identifiers to SecOps
-    entities.
-
-    - While the action logic is generic, it is primarily intended for IP (ADDRESS)
-    and HOSTNAME entities as per the integration's design.
+    Enriches entities within the current alert by identifying them as sources or destinations
+    based on the alert's event data. This action parses the alert's security event
+    cards to extract source and destination identifiers, then updates the corresponding
+    entities in the SOAR platform with contextual metadata.
 
 
     ### Flow Description
 
-    1. **Fetch Context:** The action calls the Chronicle SOAR API to retrieve the
-    full investigator data for the current alert.
+    1. **Fetch Alert Data**: Retrieves the current alert's details from the SOAR platform
+    using `get_investigator_data`.
 
-    2. **Parse Metadata:** It extracts source and destination identifiers from the
-    alert's `securityEventCards` or field groups.
+    2. **Parse Event Data**: Extracts lists of source and destination identifiers
+    from the alert's `securityEventCards` or fields.
 
-    3. **Match Entities:** It iterates through all entities associated with the alert
-    and compares their identifiers with the extracted source/destination lists.
+    3. **Identify Entities**: Iterates through all entities associated with the current
+    alert.
 
-    4. **Update Attributes:** For every match found, it updates the entity's `additional_properties`
-    with `isSource: true` or `isDest: true`.
+    4. **Update Entities**: Compares entity identifiers against the extracted source
+    and destination lists. If a match is found, it updates the entity's `additional_properties`
+    with `isSource: "true"` or `isDest: "true"`.
 
-    5. **Commit Changes:** The updated entity objects are sent back to the SecOps
-    platform to persist the enrichment.
+    5. **Commit Changes**: Updates the modified entities in the SOAR platform.
+
+
+    ### Parameters
+
+    There are no input parameters for this action.
+
+
+    ### Additional Notes
+
+    This action performs internal enrichment by updating entity attributes based on
+    existing alert data. It does not interact with external systems.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -983,10 +965,17 @@ Enrich Source and Destinations:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' of entities within the SecOps case to flag
-      them as sources or destinations based on alert metadata.
+      Updates entity 'additional_properties' to include 'isSource' or 'isDest' flags.
+    reasoning: >-
+      The action fetches alert data from the internal SOAR platform to identify sources
+      and destinations. It then updates the entity's `additional_properties` attribute
+      within the SOAR platform. It does not interact with or mutate any external systems.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches internal alert data and updates entity attributes (enrichment).
+      It does not mutate external systems, nor does it perform forbidden internal
+      mutations. It meets the criteria for an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1025,11 +1014,11 @@ Enrich Source and Destinations:
     - USB
     - USERUNIQNAME
     filters_by_additional_properties: false
-    filters_by_alert_identifier: true
+    filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: false
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -1037,6 +1026,11 @@ Enrich Source and Destinations:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all entities in the current alert using `get_alert_entities(siemplify)`
+      and updates those that match the source or destination identifiers found in
+      the alert data. It does not apply any type-based filtering, so it supports all
+      entity types.
 Mark Entity as Suspicious:
   action_product_categories:
     add_alert_comment: false
@@ -1052,6 +1046,10 @@ Mark Entity as Suspicious:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates the `is_suspicious` flag on entities within the SOAR platform.
+      It does not match any of the provided categories, as it is an internal entity
+      update rather than an enrichment, containment, or ticket management action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1067,41 +1065,24 @@ Mark Entity as Suspicious:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    This action marks all entities within the current scope as suspicious in Google
-    SecOps. It is a utility action used to programmatically flag entities for further
-    investigation or to trigger subsequent automated workflows that filter for suspicious
-    indicators.
+    Marks entities as suspicious within the Google SecOps platform. This action updates
+    the `is_suspicious` attribute of all entities in the current scope to `True`.
 
 
-    ### Parameters Description
+    ### Flow
+
+    1. Iterate through all entities provided in the action's scope.
+
+    2. Update the `is_suspicious` attribute of each entity to `True`.
+
+    3. Update the entities in the SecOps platform using `siemplify.update_entities`.
+
+    4. Return a completion message indicating the number of entities updated.
+
+
+    ### Parameters
 
     There are no parameters for this action.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Siemplify API to access the
-    current case context.
-
-    2. **Entity Iteration**: The script iterates through every entity currently present
-    in the action's scope (`target_entities`).
-
-    3. **Flag Modification**: For each entity, the `is_suspicious` attribute is set
-    to `True`.
-
-    4. **Internal Update**: The action calls the internal update method to commit
-    these changes to the Google SecOps platform.
-
-    5. **Completion**: The action concludes by returning the total count of entities
-    that were successfully updated.
-
-
-    ### Additional Notes
-
-    This action does not interact with any external APIs or services. It only modifies
-    the internal state of entities within the SOAR platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1112,10 +1093,17 @@ Mark Entity as Suspicious:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the 'is_suspicious' attribute of entities within the Google SecOps platform
-      to True.
+      Updates the `is_suspicious` flag of entities within the SOAR platform.
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and sets `entity.is_suspicious
+      = True`. It then calls `siemplify.update_entities(updated_entities)`. It does
+      not fetch data from external sources, nor does it mutate external systems. It
+      only modifies the internal entity state within the SOAR platform.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from any external or internal source, which is
+      a requirement for an enrichment action. Therefore, it is not classified as enrichment.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1166,6 +1154,9 @@ Mark Entity as Suspicious:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` without any filtering, meaning
+      it processes all entity types provided in the scope.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -1181,6 +1172,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity check ('Ping') and does not perform any of the
+      defined product category operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1196,34 +1190,12 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Verifies the connectivity and functional status of the integration within the
-    Google SecOps environment. This action serves as a basic health check to ensure
-    that the integration is correctly configured and that the SOAR platform can successfully
-    execute scripts associated with this integration.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action does not interact with any external APIs, nor does it process or enrich
-    any entities. It is strictly used for connectivity validation.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Siemplify SOAR SDK environment.
-
-    2. **Connectivity Check**: The script executes a simple internal check to confirm
-    the integration environment is responsive.
-
-    3. **Completion**: The action terminates immediately, returning a success message
-    "Siemplify is connected" to the case wall.
+    This action verifies the connectivity between the Google SecOps SOAR platform
+    and the integration. It serves as a health check to ensure the integration is
+    properly configured and reachable. ### Parameters There are no parameters for
+    this action. ### Flow Description 1. The action initializes the SiemplifyAction
+    module. 2. It immediately terminates the execution with a success message, confirming
+    that the connection is established.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1234,8 +1206,14 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a simple connectivity check. It does not fetch data, mutate external
+      or internal systems, or interact with entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action. Per the guidelines, Ping actions are explicitly
+      excluded from being categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1251,6 +1229,8 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not reference target_entities or perform any operations on entities.
 Whois:
   action_product_categories:
     add_alert_comment: false
@@ -1266,6 +1246,10 @@ Whois:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation, registration, and geolocation data for indicators
+      (IPs, Domains). This directly matches the 'Enrich IOC' category. It does not
+      perform containment, ticketing, or other management operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1283,65 +1267,62 @@ Whois:
   ai_description: >-
     ### General Description
 
-    The **Whois** action queries WHOIS servers to retrieve registration information
-    for various entity types, including IP Addresses, URLs, Emails, and Domains. It
-    provides contextual data such as domain age, creation dates, and registrar details.
-    Additionally, it performs geolocation lookups for IP addresses and can automatically
-    create and link new DOMAIN entities to the case based on extracted data.
+    The Whois action queries WHOIS servers and IP geolocation services to retrieve
+    registration and location information for various entity types, including IP Addresses,
+    URLs, Email addresses, and Domains. It enriches these entities with metadata such
+    as geolocation (city, country, coordinates) and domain registration details (creation
+    date, age). Additionally, it supports the creation of linked DOMAIN entities and
+    can mark entities as suspicious based on a configurable domain age threshold.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Create Entities** | boolean | No | If set to `true`, the action will create
-    new DOMAIN entities extracted from URLs or Email addresses and link them to the
-    original entity. Default is `true`. |
+    | Create Entities | boolean | false | If set to true, the action will create and
+    link new DOMAIN entities to the original URL, Email, or User entities. |
 
-    | **Domain Age Threshold** | string | No | Specifies a threshold in days. If a
-    domain's age is less than this value, the entity will be marked as suspicious.
-    If set to `0` or left empty, this check is disabled. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** Retrieves the `Create Entities` toggle and the `Domain
-    Age Threshold` value from the action parameters.
-
-    2. **Entity Iteration:** Processes each target entity associated with the action.
-
-    3. **IP Enrichment:** For `ADDRESS` entities, the action performs an RDAP lookup
-    using the `IPWhois` library and a geolocation lookup via the DB-IP API to retrieve
-    city, region, and country data.
-
-    4. **Domain/URL/Email Enrichment:** For other entities, the action extracts the
-    registered domain using `tldextract` and performs a WHOIS lookup. It calculates
-    the domain's age in days based on the creation date.
-
-    5. **Entity Creation & Linking:** If `Create Entities` is enabled and a domain
-    is extracted from a URL or Email, a new `DOMAIN` entity is created in the case
-    and linked to the source entity.
-
-    6. **Internal Data Enrichment:** Updates the entities' `additional_properties`
-    with the retrieved WHOIS and geolocation data (prefixed with "WHOIS").
-
-    7. **Suspicious Status Evaluation:** Compares the calculated domain age against
-    the `Domain Age Threshold`. If the domain is younger than the threshold, the entity
-    is marked as suspicious.
-
-    8. **Finalization:** Updates the entities within Google SecOps and returns a JSON
-    result containing the full WHOIS and geolocation data.
+    | Domain Age Threshold | string | false | Domains with an age (in days) less than
+    this value will be marked as suspicious. |
 
 
     ### Additional Notes
 
-    - This action requires outbound network connectivity to WHOIS servers and the
-    `api.db-ip.com` endpoint.
+    - The action processes entities based on their type. IP Addresses are processed
+    via RDAP and geolocation services, while other types (Domains, URLs, Emails) are
+    processed via WHOIS lookups.
 
-    - The `Domain Age Threshold` is treated as an integer during logic execution;
-    non-numeric strings may cause the threshold check to be skipped.
+    - If 'Create Entities' is enabled, the action may generate new DOMAIN entities
+    in the case.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `SiemplifyAction` and extracts
+    configuration parameters ('Create Entities', 'Domain Age Threshold').
+
+    2. **Entity Processing**: The action iterates through all target entities in the
+    case.
+
+    3. **IP Enrichment**: If the entity is an 'ADDRESS', it performs an RDAP lookup
+    and retrieves geolocation data using the `DbIpCity` service.
+
+    4. **Domain/Other Enrichment**: If the entity is not an 'ADDRESS', it extracts
+    the domain and performs a WHOIS lookup. It calculates the domain age in days.
+
+    5. **Entity Creation**: If 'Create Entities' is enabled, it creates a new DOMAIN
+    entity linked to the original entity.
+
+    6. **Entity Update**: The action updates the original entities with the retrieved
+    WHOIS and geolocation data in their `additional_properties`.
+
+    7. **Suspicious Marking**: If the domain age is below the 'Domain Age Threshold',
+    the entity is marked as suspicious.
+
+    8. **Finalization**: The action updates the entities in the SOAR platform and
+    adds the full result JSON to the action output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1352,16 +1333,25 @@ Whois:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates new DOMAIN entities and links them to the original entities if 'Create
-      Entities' is enabled. Updates entity attributes including suspicious status,
-      enriched status, and additional properties.
+      The action creates new DOMAIN entities and updates existing entities with enriched
+      metadata (WHOIS/Geo) and suspicious status.
+    reasoning: >-
+      The action fetches external data (WHOIS, IP geolocation) and updates internal
+      SOAR entities (adding properties, marking as suspicious, creating new entities).
+      It does not mutate external systems (read-only). It performs internal mutations
+      by creating and updating entities.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action is designed to fetch supplemental context (WHOIS/Geo) for entities.
+      It does not mutate external systems. It performs allowed internal mutations
+      (updating entities, creating entities). Therefore, it qualifies as an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
-    - DestinationURL
     - DOMAIN
+    - DestinationURL
     - USERUNIQNAME
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
@@ -1376,3 +1366,8 @@ Whois:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all target entities. It explicitly checks for 'ADDRESS'
+      entity types to apply specific logic, while treating others as domains. It supports
+      ADDRESS, DOMAIN, DestinationURL, and USERUNIQNAME types based on the description
+      and logic.

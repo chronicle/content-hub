@@ -1,39 +1,66 @@
 "Luminar IOCs and Leaked Credentials  Connector":
-  ai_description: "### General Description\nThe Luminar IOCs and Leaked Credentials\
-    \ connector integrates with Cognyte Luminar to ingest high-fidelity threat intelligence\
-    \ into Google SecOps. It fetches Indicators of Compromise (IOCs) and leaked credential\
-    \ data provided in STIX format, allowing security teams to monitor for malicious\
-    \ infrastructure and compromised accounts identified by Luminar's intelligence\
-    \ platform.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Luminar API Account ID | Password | Yes\
-    \ | The unique Account ID required for Luminar API authentication. |\n| Luminar\
-    \ API Client ID | Password | Yes | The Client ID used to generate OAuth2 access\
-    \ tokens. |\n| Luminar API Client Secret | Password | Yes | The Client Secret\
-    \ used to generate OAuth2 access tokens. |\n| Luminar Base URL | String | Yes\
-    \ | The base URL of the Luminar API instance (e.g., https://demo.cyberluminar.com).\
-    \ |\n| DeviceProductField | String | Yes | The field name used to determine the\
-    \ device product in the ingested events. |\n| EventClassId | String | Yes | The\
-    \ field name used to determine the event sub-type or name. |\n| PythonProcessTimeout\
-    \ | String | Yes | The maximum execution time (in seconds) allowed for the connector\
-    \ script. |\n| Verify SSL | Boolean | No | If enabled, the connector will verify\
-    \ the SSL certificate of the Luminar API server. |\n| Proxy Server Address | String\
-    \ | No | The address of the proxy server if one is required for outbound communication.\
-    \ |\n| Proxy Port | Integer | No | The port of the proxy server. |\n| Proxy Username\
-    \ | String | No | The username for proxy authentication. |\n| Proxy Password |\
-    \ Password | No | The password for proxy authentication. |\n\n### Flow Description\n\
-    1. **Authentication**: The connector establishes a session with the Luminar API\
-    \ by exchanging the Client ID and Client Secret for an OAuth2 access token.\n\
-    2. **Timestamp Management**: It retrieves the last successful execution timestamp\
-    \ to perform incremental fetching, ensuring only new threat data is processed.\n\
-    3. **Data Ingestion**: The connector queries the `/externalApi/stix` endpoint\
-    \ to retrieve threat objects, including malware, incidents, indicators, and their\
-    \ relationships.\n4. **STIX Processing**: \n    * **IOCs**: Correlates STIX indicators\
-    \ (IPs, Domains, URLs, Hashes) with their associated Malware families using relationship\
-    \ objects.\n    * **Leaked Credentials**: Correlates user account data with specific\
-    \ data breach incidents.\n    * **Expiration Monitoring**: Identifies indicators\
-    \ with valid expiration dates and groups them for lifecycle management.\n5. **Event\
-    \ Aggregation**: To optimize case management, the connector slices large datasets\
-    \ into chunks (maximum 499 events per alert) and groups them by Malware Family,\
-    \ Incident Name, or Expiration Date.\n6. **Alert Creation**: Structured AlertInfo\
-    \ objects are created and sent to Google SecOps, mapping Luminar's threat attributes\
-    \ to standard security event fields."
+  ai_description: >-
+    ### General Description
+
+    The Luminar IOCs and Leaked Credentials connector integrates with the Luminar
+    platform to ingest threat intelligence data. It periodically fetches Indicators
+    of Compromise (IOCs) and leaked credential incidents, maps them to the SOAR data
+    model, and creates actionable alerts within the Google SecOps platform. This enables
+    security teams to proactively monitor for malicious activity and compromised accounts
+    identified by Luminar.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
+
+    | Luminar API Account ID | Password | Yes | The Luminar API Account ID. |
+
+    | Luminar API Client ID | Password | Yes | The Luminar API Client ID. |
+
+    | Luminar API Client Secret | Password | Yes | The Luminar API Client Secret.
+    |
+
+    | Luminar Base URL | String | Yes | The base URL for the Luminar API. |
+
+    | Proxy Password | Password | No | Proxy server password. |
+
+    | Proxy Port | Integer | No | Proxy server port. |
+
+    | Proxy Server Address | String | No | Proxy server address. |
+
+    | Proxy Username | String | No | Proxy server username. |
+
+    | PythonProcessTimeout | String | Yes | Timeout limit (in seconds) for the script
+    execution. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The connector authenticates with the Luminar API using
+    the provided Client ID, Client Secret, and Account ID to obtain an access token.
+
+    2. **Data Fetching**: It queries the `/externalApi/stix` endpoint to retrieve
+    threat intelligence objects, utilizing pagination to handle large datasets.
+
+    3. **Data Processing**: The connector parses the STIX objects, identifying relationships
+    between malware/incidents and their associated indicators.
+
+    4. **Enrichment & Mapping**: It maps STIX patterns (e.g., file hashes, IP addresses,
+    domains) to internal indicator types and enriches the data with relevant metadata.
+
+    5. **Alert Creation**: The processed data is grouped and sliced into manageable
+    chunks (up to 500 items per alert) and converted into SOAR `AlertInfo` objects.
+
+    6. **Ingestion**: The generated alerts are returned to the SOAR platform for further
+    investigation and response.

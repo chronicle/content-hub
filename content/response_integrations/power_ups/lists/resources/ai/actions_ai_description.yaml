@@ -1,7 +1,7 @@
 Add String to Custom List:
   action_product_categories:
     add_alert_comment: false
-    add_ioc_to_allowlist: true
+    add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
     contain_host: false
     create_ticket: false
@@ -13,6 +13,10 @@ Add String to Custom List:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a generic utility for managing custom lists. It does not specifically
+      target blocklists, allowlists, or other predefined categories, so all specific
+      product category flags are set to false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,47 +34,35 @@ Add String to Custom List:
   ai_description: >-
     ### General Description
 
-    This action adds a specific string to a designated custom list category within
-    Google SecOps. It is primarily used for managing internal lists, such as allowlists
-    or blocklists, by programmatically inserting new entries based on user input or
-    playbook logic.
+    This action adds a specified string to a custom list within the Google SecOps
+    SOAR platform. It allows users to dynamically update custom lists, which can be
+    used for various purposes such as maintaining watchlists, blocklists, or allowlists.
 
 
     ### Parameters Description
 
-    | Parameter | Description | Type | Mandatory |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | ListItem | The specific string value that you want to add to the custom list.
-    | String | Yes |
+    | ListItem | string | Yes | The list item string to add to the custom list. |
 
-    | Category | The name of the custom list category (e.g., 'WhiteList', 'BlackList')
-    where the string should be stored. | String | Yes |
-
-
-    ### Additional Notes
-
-    - This action does not process entities from the case; it operates strictly on
-    the provided `ListItem` string parameter.
-
-    - The action uses the current environment context of the SOAR platform when adding
-    the item to the list.
+    | Category | string | Yes | The category of the custom list to which the item
+    will be added. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the `Category` and `ListItem`
-    values from the input parameters.
+    1. The action retrieves the `Category` and `ListItem` values from the provided
+    action parameters.
 
-    2. **Object Creation**: It creates a `CustomList` data object containing the input
-    string, the target category, and the environment identifier.
+    2. It initializes a `CustomList` object using the provided string and category.
 
-    3. **Internal Update**: The action calls the internal SDK method `add_entities_to_custom_list`
-    to save the new entry into the Google SecOps custom list database.
+    3. The action calls `siemplify.add_entities_to_custom_list` to persist the new
+    item into the specified custom list within the SOAR platform.
 
-    4. **Completion**: The action returns a success message indicating the string
-    has been added to the specified category.
+    4. The action concludes by returning the execution status and an output message
+    confirming the addition.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -81,9 +73,17 @@ Add String to Custom List:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Adds a new string entry to an internal Google SecOps custom list category.
+      Modifies internal SOAR custom lists by adding a new string entry.
+    reasoning: >-
+      The action modifies internal SOAR data by adding a string to a custom list.
+      It does not perform any external API calls (fetches_data=false) and does not
+      interact with external systems (can_mutate_external_data=false). It does not
+      update entities, create insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data (it is a push/write operation), therefore it
+      does not meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -99,6 +99,9 @@ Add String to Custom List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize the `target_entities` list. It processes
+      a string parameter directly.
 Is String In Custom List:
   action_product_categories:
     add_alert_comment: false
@@ -114,6 +117,10 @@ Is String In Custom List:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a lookup against a custom list to verify the existence of
+      identifiers. It does not perform any of the defined product-specific actions
+      such as blocking, ticketing, or asset enrichment. It is a utility lookup action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -131,10 +138,10 @@ Is String In Custom List:
   ai_description: >-
     ### General Description
 
-    This action checks if a specific set of strings exists within a designated Google
-    SecOps Custom List category. It is primarily used for logic branching or validation
-    within playbooks, such as checking if an indicator is part of a known whitelist
-    or blacklist maintained internally.
+    This action checks if a list of provided strings exists within a specified Custom
+    List category in the current environment. It is a utility action designed to verify
+    the presence of identifiers (e.g., IPs, domains, or file hashes) against predefined
+    organizational lists.
 
 
     ### Parameters Description
@@ -143,31 +150,31 @@ Is String In Custom List:
 
     | :--- | :--- | :--- | :--- |
 
-    | IdentifierList | string | True | A list of strings to compare against the custom
-    list. This parameter accepts either a JSON-formatted array (e.g., `["1.1.1.1",
-    "google.com"]`) or a comma-separated string (e.g., `1.1.1.1,google.com`). |
+    | IdentifierList | string | Yes | A list of strings (e.g., "1.2.3.4,google.com")
+    to check against the custom list. Can be provided as a JSON-formatted string or
+    a comma-separated string. |
 
-    | Category | string | True | The name of the Custom List category (e.g., 'WhiteList',
-    'BlackList') to search within for the current environment. |
+    | Category | string | Yes | The name of the Custom List category to check against.
+    |
 
 
     ### Flow Description
 
-    1. **Input Parsing**: The action retrieves the `Category` and `IdentifierList`
-    parameters. It attempts to parse the `IdentifierList` as a JSON array; if that
-    fails, it splits the string by commas and strips whitespace from each item.
+    1. **Initialization**: The action initializes the `SiemplifyAction` and retrieves
+    the `Category` and `IdentifierList` parameters.
 
-    2. **Custom List Query**: For each identifier in the list, the action creates
-    a `CustomList` object and uses the SOAR SDK method `any_entity_in_custom_list`
-    to check if that specific string exists in the specified category for the current
-    environment.
+    2. **Parsing**: The `IdentifierList` is parsed into a list of individual strings,
+    handling both JSON and comma-separated formats.
 
-    3. **Result Aggregation**: The action builds a JSON object where each identifier
-    is a key and the value is a boolean (`true` if found, `false` otherwise). It also
-    maintains a counter for the total number of matches found.
+    3. **Lookup**: The action iterates through each identifier and queries the internal
+    Custom List system using `siemplify.any_entity_in_custom_list` for the specified
+    category.
 
-    4. **Completion**: The action outputs the total count of matches as the main result
-    value and provides the detailed boolean mapping in the JSON result.
+    4. **Result Generation**: A JSON result is constructed mapping each identifier
+    to a boolean value (`True` if found, `False` otherwise).
+
+    5. **Output**: The action adds the result JSON to the execution output and returns
+    a summary message indicating the number of items found.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -178,8 +185,17 @@ Is String In Custom List:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the internal Custom List system to verify the existence
+      of provided identifiers. It does not mutate external systems, nor does it modify
+      internal SOAR data (entities, insights, or case comments). It is a read-only
+      lookup operation.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an internal source (Custom Lists) to provide context
+      (existence check) for the provided identifiers. It does not mutate any external
+      or internal systems, fitting the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -195,6 +211,10 @@ Is String In Custom List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on `siemplify.target_entities`. It processes a list
+      of strings provided directly via the `IdentifierList` parameter. Therefore,
+      it does not use or filter any entity types.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -210,6 +230,10 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity check ('Ping') and does not perform any functional
+      operations such as enrichment, containment, ticket management, or alert modification.
+      It simply confirms the integration's connectivity status.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -227,34 +251,22 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    and functional status of the **Lists** integration within Google SecOps. Its primary
-    purpose is to ensure that the integration is correctly configured and that the
-    SOAR environment can successfully communicate with the integration's underlying
-    logic.
+    This action performs a connectivity check to verify that the integration is properly
+    configured and communicating with the SOAR platform. It is typically used to validate
+    the integration setup.
 
 
-    ### Parameters Description
+    ### Parameters
 
     There are no parameters for this action.
 
 
-    ### Additional Notes
-
-    This action does not perform any external API calls, retrieve data, or modify
-    any internal or external records. It is a standard health-check mechanism.
-
-
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify SDK to establish the
-    execution context.
+    1. The action initializes the `SiemplifyAction` object.
 
-    2. **Connectivity Verification**: The script executes a minimal logic path to
-    confirm the integration environment is responsive.
-
-    3. **Execution Completion**: The action concludes by returning a success message
-    ('Siemplify is connected') to the SOAR platform.
+    2. It immediately terminates the execution with a success message, confirming
+    that the integration is connected.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -265,8 +277,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a simple connectivity check by calling `siemplify.end`.
+      It does not interact with external APIs, modify external systems, or update
+      any internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping', which is explicitly excluded from being an enrichment
+      action. Furthermore, it does not fetch any data.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -282,6 +301,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `target_entities` or perform any operations on entities.
+      Therefore, the entity list is empty and no filters are applied.
 Remove String from Custom List:
   action_product_categories:
     add_alert_comment: false
@@ -297,6 +319,9 @@ Remove String from Custom List:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action modifies an internal SOAR custom list. It does not match any of the
+      provided product categories (e.g., enrichment, containment, ticketing).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -314,9 +339,9 @@ Remove String from Custom List:
   ai_description: >-
     ### General Description
 
-    Removes a specific string from a designated Google SecOps custom list. This action
-    is used to manage internal lists (such as allowlists or blocklists) by programmatically
-    deleting entries based on user-provided input.
+    This action removes a specified string item from a custom list category within
+    the Google SecOps SOAR platform. It is a utility action designed to manage internal
+    SOAR configuration data by deleting entries from predefined custom lists.
 
 
     ### Parameters Description
@@ -326,32 +351,28 @@ Remove String from Custom List:
     | :--- | :--- | :--- | :--- |
 
     | Category | string | Yes | The name of the custom list category from which the
-    string should be removed. |
+    item should be removed. |
 
-    | ListItem | string | Yes | The specific string value to be removed from the custom
-    list. |
+    | ListItem | string | Yes | The specific string value to be removed from the list.
+    |
 
 
     ### Additional Notes
 
-    This action operates on internal Google SecOps custom lists and does not interact
-    with external security controls or iterate over entities present in the current
-    case.
+    This action does not interact with external systems or entities. It strictly modifies
+    internal SOAR configuration data.
 
 
     ### Flow Description
 
-    1. **Retrieve Parameters**: The action extracts the `Category` and `ListItem`
-    values from the input parameters.
+    1. Retrieve the `Category` and `ListItem` parameters from the action configuration.
 
-    2. **Prepare List Item**: It creates a `CustomList` object using the provided
-    string, category, and the current environment context.
+    2. Initialize a `CustomList` object with the provided category and item.
 
-    3. **Remove from List**: The action calls the internal SDK method `remove_entities_from_custom_list`
-    to delete the specified string from the internal database.
+    3. Call the `remove_entities_from_custom_list` method to update the internal SOAR
+    custom list.
 
-    4. **Finalize**: The action returns a success message confirming the removal or
-    a failure status if an error occurs.
+    4. Return the execution status and a confirmation message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -362,9 +383,16 @@ Remove String from Custom List:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Removes a string entry from an internal Google SecOps custom list.
+      Removes a string item from a custom list within the SOAR platform.
+    reasoning: >-
+      The action interacts with the internal SOAR `CustomList` object to remove an
+      item. It does not fetch external data or interact with external APIs. It modifies
+      internal SOAR configuration data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for managing internal SOAR custom lists. It does not
+      fetch data, so it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -380,6 +408,9 @@ Remove String from Custom List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `target_entities`. It takes parameters directly from
+      the action configuration.
 Search Custom Lists:
   action_product_categories:
     add_alert_comment: false
@@ -395,6 +426,9 @@ Search Custom Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action searches custom lists for records. It does not match any of the provided
+      product categories (e.g., it is not searching events, assets, or alerts).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -410,58 +444,19 @@ Search Custom Lists:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Searches for specific records within Google SecOps Custom Lists based on a search
-    string and/or specific categories. This action is primarily used to retrieve and
-    filter internal list data for use in playbooks, such as checking if a value exists
-    in a watchlist or global blocklist managed within the SOAR platform.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | String to Search | String | No | The specific string to look for within the
-    `entityIdentifier` field of the custom list records. If omitted, all records in
-    the specified categories are returned. |
-
-    | Categories | String | No | A comma-separated list of custom list categories
-    to search within. If omitted, the action searches across all available custom
-    lists. |
-
-
-    ### Flow Description
-
-
-    1.  **Parameter Extraction:** The action retrieves the `Categories` and `String
-    to Search` from the user input.
-
-    2.  **Data Retrieval:** It calls the internal SOAR API to fetch records from the
-    custom lists. If categories are provided, it limits the initial fetch to those
-    categories.
-
-    3.  **Category Filtering:** If categories were specified, the action filters the
-    retrieved records to ensure they match the requested categories.
-
-    4.  **String Matching:** If a search string is provided, the action iterates through
-    the records and performs a partial match check against the `entityIdentifier`
-    field.
-
-    5.  **Output Generation:** The matching records are formatted into a JSON array
-    and attached to the action's results. If no matches are found, the action completes
-    with a 'False' result value.
-
-
-    ### Additional Notes
-
-
-    *   If both parameters are left empty, the action will attempt to return all records
-    from all custom lists.
-
-    *   This action does not interact with entities in the current case scope; it
-    operates globally on the platform's custom list data.
+    ### General Description\nSearches for records within Google SecOps custom lists
+    based on optional category filtering and string matching. This action allows users
+    to query custom lists to find specific entries, facilitating the retrieval of
+    threat intelligence or other stored data.\n\n### Parameters Description\n| Parameter
+    | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| String to
+    Search | string | No | The string to search for within the `entityIdentifier`
+    field of the custom list records. |\n| Categories | string | No | A comma-separated
+    list of categories to filter the custom list records by. |\n\n### Flow Description\n1.
+    Extracts `Categories` and `String to Search` parameters.\n2. Retrieves custom
+    list records using the `get_traking_list_record` utility.\n3. Filters the retrieved
+    records by the provided categories (if specified).\n4. Filters the remaining records
+    by the `String to Search` (if specified) against the `entityIdentifier` field.\n5.
+    Returns the matching records as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -472,8 +467,16 @@ Search Custom Lists:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action retrieves data from custom lists using `get_traking_list_record`.
+      It does not modify any external systems or internal SOAR data (entities, insights,
+      comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action retrieves data from custom lists. While it fetches data, it does
+      not enrich specific entities or alerts within the case context. It is a utility
+      action for searching custom lists.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -489,6 +492,9 @@ Search Custom Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities`. It operates independently
+      of any specific entity.
 Search Environment Custom Lists:
   action_product_categories:
     add_alert_comment: false
@@ -504,6 +510,10 @@ Search Environment Custom Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action searches custom lists within the environment. It does not match any
+      of the predefined categories (e.g., Enrich IOC, Search Events, etc.) as it is
+      a general utility for custom list management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -521,51 +531,40 @@ Search Environment Custom Lists:
   ai_description: >-
     ### General Description
 
-    Searches for specific records within the Google SecOps environment's custom lists.
-    This action allows users to filter records by category and search for specific
-    strings within the entity identifiers of the list entries. It is primarily used
-    to retrieve internal list data for use in subsequent playbook steps. If no parameters
-    are provided, the action returns all records from the environment's custom lists.
+    This action searches for records within the environment's custom lists. It allows
+    filtering by category and a specific search string to identify relevant entries.
+
+
+    ### Flow Description
+
+    1. Extract `Categories` and `String to Search` parameters.
+
+    2. Retrieve all custom list records using `get_traking_list_records_filtered`.
+
+    3. Filter the records by the provided `Categories` (if specified).
+
+    4. Filter the remaining records by the `String to Search` (if specified) against
+    the `entityIdentifier` field.
+
+    5. Return the matching records as a JSON result.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | String to Search | String | No | The string to search for within the 'entityIdentifier'
-    field of the list records. If omitted, no string filtering is applied. |
+    | String to Search | string | No | The string to search within the `entityIdentifier`
+    of the custom list records. |
 
-    | Categories | String | No | A comma-separated list of categories to filter the
-    custom list records. If omitted, records from all categories are considered. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves the 'Categories' and 'String
-    to Search' parameters from the input.
-
-    2. **Data Retrieval**: It calls an internal API method (`get_traking_list_records_filtered`)
-    to fetch custom list records from the Google SecOps environment.
-
-    3. **Category Filtering**: If the 'Categories' parameter is provided, the action
-    filters the retrieved records to include only those matching the specified categories.
-
-    4. **String Filtering**: If the 'String to Search' parameter is provided, the
-    action iterates through the records and performs a substring match against the
-    'entityIdentifier' field.
-
-    5. **Result Output**: The matching records are formatted as a JSON object and
-    added to the action's results. If no records match the criteria, the action reports
-    that no matching records were found.
+    | Categories | string | No | A comma-separated list of categories to filter the
+    custom list records by. |
 
 
     ### Additional Notes
 
-    This action is a utility for internal data retrieval and does not interact with
-    external systems or modify existing entities or alerts within the case.
+    If no parameters are provided, the action returns all custom list records.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -576,8 +575,16 @@ Search Environment Custom Lists:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the environment's custom lists. It does not mutate
+      external systems or internal SOAR data (entities, insights, comments). It only
+      outputs the search results as a JSON object.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for searching custom lists. It does not operate on entities
+      or alerts to provide enrichment, nor does it modify any system state. Therefore,
+      it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -593,3 +600,6 @@ Search Environment Custom Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `siemplify.target_entities` or perform any operations
+      on entities. It operates on global custom list data.

@@ -13,6 +13,10 @@ Add User:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action creates a new user in an external system (VanillaForums). It does
+      not match any of the provided categories (e.g., Enrich IOC, Create Ticket, Update
+      Identity, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -25,76 +29,68 @@ Add User:
     uncontain_host: false
     update_alert: false
     update_email: false
-    update_identity: true
+    update_identity: false
     update_ticket: false
   ai_description: >-
     ### General Description
 
-    Adds a new user to Vanilla Forums with comprehensive profile details including
-    name, email, role, and password. This action is useful for automated user provisioning
-    or onboarding processes within a community management workflow. It includes built-in
-    logic to handle username collisions by appending or replacing characters based
-    on user-defined separators.
+    This action adds a new user to the VanillaForums platform. It validates the provided
+    password complexity, checks for existing users with the same name to avoid duplicates
+    (optionally appending special characters if needed), and registers the new user
+    with the specified role and details.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | First Name | string | Yes | The first name of the new user. |
+    | First Name | string | Yes | New user's first name. |
 
-    | Last Name | string | Yes | The last name of the new user. |
+    | Last Name | string | Yes | New user's last name. |
 
-    | Email | string | Yes | The email address for the new account. |
+    | Email | string | Yes | New user's email address. |
 
-    | Role ID | string | Yes | The numeric ID of the role to be assigned to the user
-    (e.g., '8'). |
+    | Role ID | string | Yes | The ID of the role to assign to the user. |
 
-    | Password | password | Yes | The password for the new user. Must be at least
-    6 characters long and contain both letters and digits. |
+    | Password | password | Yes | Password for the new user. Must be at least 6 characters
+    and include both letters and digits. |
 
-    | Override Name Duplicity | boolean | No | If set to 'True', the action will attempt
-    to create the user even if the username already exists by using alternative identifiers.
-    Default is 'False'. |
+    | Override Name Duplicity | boolean | No | If true, allows creating a user even
+    if another user with the same name exists (by appending special characters). |
 
-    | Additional Identifiers | string | No | A comma-separated list of characters
-    (e.g., '_,~,-') used to replace the space between first and last names if the
-    primary username is taken. |
+    | Additional Identifiers | string | No | Characters to use as separators if the
+    username already exists. |
 
-    | Email Confirmed | boolean | No | Whether the user's email address is marked
-    as confirmed upon creation. Default is 'True'. |
+    | Photo URL | string | No | URL of the new user's picture. |
 
-    | Photo URL | string | No | The URL for the new user's profile picture. |
+    | Email Confirmed | boolean | No | Whether the email address is confirmed. |
 
 
     ### Additional Notes
 
-    - The action performs a validation check on the password complexity before attempting
-    to communicate with the Vanilla Forums API.
-
-    - If `Override Name Duplicity` is enabled and all provided `Additional Identifiers`
-    result in existing usernames, the action will fail.
+    This action requires valid API credentials (API Token and URL) configured for
+    the VanillaForums integration. The action will fail if the password does not meet
+    the complexity requirements or if a unique username cannot be generated when name
+    duplicity is not allowed.
 
 
     ### Flow Description
 
-    1. **Validation**: Validates that the provided password meets the complexity requirements
-    (minimum 6 characters, includes letters and digits).
+    1. Extracts integration configuration and action parameters.
 
-    2. **Username Check**: Checks if a user with the combined 'First Name' and 'Last
-    Name' already exists in Vanilla Forums.
+    2. Validates the password complexity.
 
-    3. **Collision Handling**: If the name exists and `Override Name Duplicity` is
-    enabled, the action iterates through the `Additional Identifiers` to find a unique
-    username variation.
+    3. Searches for an existing user in VanillaForums using the provided first and
+    last name.
 
-    4. **User Creation**: Sends a POST request to the Vanilla Forums API to create
-    the user account with the specified attributes.
+    4. If the user exists and name duplicity is allowed, attempts to find a unique
+    username by appending characters from the 'Additional Identifiers' list.
 
-    5. **Result Processing**: Returns the created user's details, including the assigned
-    email and password, as a JSON result.
+    5. Registers the new user in VanillaForums via a POST request.
+
+    6. Returns the user details in the result JSON.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -103,12 +99,18 @@ Add User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new user account record in the Vanilla Forums database via a POST
-      request to the /v2/users endpoint.
+      Creates a new user in the VanillaForums platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to search for existing users and a POST request
+      to create a new user in the VanillaForums platform. It does not modify internal
+      SOAR data (like entities or insights).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is not an enrichment action because it mutates external data (creates
+      a new user) and does not meet the criteria for read-only enrichment.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -124,6 +126,10 @@ Add User:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates on user-provided parameters to create a new user in
+      the VanillaForums platform.
 Generate Password:
   action_product_categories:
     add_alert_comment: false
@@ -139,6 +145,10 @@ Generate Password:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action generates a random password string locally. It does not perform any
+      of the listed product category operations (e.g., enrichment, containment, ticket
+      management).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -154,43 +164,13 @@ Generate Password:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Generates a random password string that adheres to Vanilla Forums' complexity
-    requirements. The action creates a password consisting of at least one uppercase
-    letter, one lowercase letter, and a sequence of digits to reach the specified
-    length.
-
-
-    ### Flow Description:
-
-    1. **Parameter Extraction:** Retrieves the desired password length from the action
-    parameters.
-
-    2. **Validation:** Checks if the requested length is at least 6 characters; if
-    not, the action fails.
-
-    3. **Password Generation:** Uses a local utility to construct a string with one
-    uppercase letter, one lowercase letter, and the remaining characters as digits.
-
-    4. **Output:** Returns the generated password string as the script result.
-
-
-    ### Parameters Description:
-
-    | Parameter Name | Expected Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Length | String | No | The total number of characters for the generated password.
-    Must be at least 6. Defaults to 6 if not specified. |
-
-
-    ### Additional Notes:
-
-    * This action does not interact with any external APIs; it performs local string
-    generation logic.
-
-    * The generated password is provided as the raw result of the action for use in
-    subsequent playbook steps (e.g., creating a user).
+    General Description: This action generates a random password string of a specified
+    length. Flow: 1. Extract the Length parameter from the action configuration. 2.
+    Validate that the length is at least 6 characters. 3. Generate a random string
+    containing one uppercase letter, one lowercase letter, and the remaining characters
+    as digits. 4. Return the generated password as the action result. Parameters:
+    Length (string, optional, default: 6): The desired length of the password. Must
+    be at least 6 characters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -201,8 +181,14 @@ Generate Password:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a local string generation based on a user-provided length.
+      It does not interact with any external APIs or modify any internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from any external source; it performs a local
+      calculation. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -218,6 +204,8 @@ Generate Password:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities.
 Get User Details:
   action_product_categories:
     add_alert_comment: false
@@ -229,10 +217,15 @@ Get User Details:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
+    enrich_asset: true
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action fetches detailed user information from the VanillaForums API based
+      on a provided User ID. This aligns with the 'Enrich Asset' category, as it retrieves
+      contextual metadata for a user. It does not perform any mutations on external
+      systems or internal SOAR data, nor does it operate on entities directly.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -250,41 +243,38 @@ Get User Details:
   ai_description: >-
     ### General Description
 
-    The **Get User Details** action retrieves comprehensive profile information for
-    a specific user from Vanilla Forums using their unique User ID. This action is
-    designed to fetch metadata such as usernames, email addresses, roles, and ranks,
-    providing context for investigations involving forum participants.
+    This action retrieves detailed user information from the VanillaForums platform
+    by querying the API with a specific User ID. It is designed to fetch profile data
+    for a given user, which can then be used for further analysis or reporting within
+    the SOAR platform.
 
 
     ### Parameters Description
 
-    | Parameter | Description | Type | Mandatory | Default Value |
+    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | :--- | :--- | :--- | :--- |
 
-    | User ID | The unique identifier of the user whose details you want to fetch.
-    | String | Yes | 0 |
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action initializes the Siemplify environment and retrieves
-    the Vanilla Forums API token and Base URL from the integration configuration.
-
-    2. **Parameter Extraction:** It extracts the `User ID` provided by the user.
-
-    3. **API Interaction:** The action calls the `get_user_details` method in the
-    `VanillaManager`, which executes a GET request to the `/v2/users/{user_id}` endpoint.
-
-    4. **Result Handling:** If successful, the full JSON response from Vanilla Forums
-    is attached to the action results. If the user is not found or an error occurs,
-    the action reports a failure.
+    | User ID | string | true | The unique identifier of the user whose details are
+    to be retrieved. |
 
 
     ### Additional Notes
 
-    - This action does not process SecOps entities; it relies entirely on the manually
-    provided `User ID` parameter.
+    None.
+
+
+    ### Flow Description
+
+    1. The action extracts the `User ID` parameter provided by the user.
+
+    2. It initializes the `VanillaManager` using the configured API token and base
+    URL.
+
+    3. It performs a GET request to the VanillaForums API (`/v2/users/{user_id}`)
+    to fetch the user's profile information.
+
+    4. The retrieved user details are returned as a JSON object in the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -295,8 +285,18 @@ Get User Details:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve user details from the VanillaForums
+      API (fetches_data=true). It does not modify any external systems (can_mutate_external_data=false)
+      or internal SOAR data (can_mutate_internal_data=false). It does not update entities,
+      create insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external source, but it does not operate on
+      SOAR entities (it uses a raw User ID parameter). Therefore, it does not meet
+      the criteria for an Enrichment Action, which requires operating on alerts or
+      entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -312,6 +312,10 @@ Get User Details:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It takes a raw 'User ID' parameter as input. Therefore, it does
+      not run on any entity types.
 Get a Leaderboard Analytics:
   action_product_categories:
     add_alert_comment: false
@@ -327,106 +331,10 @@ Get a Leaderboard Analytics:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: true
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    Fetches analytics for specific leaderboards from Vanilla Forums within a defined
-    date range. This action allows analysts to retrieve performance and activity data
-    (such as top posters or discussion starters) for community management or auditing
-    purposes. It queries the Vanilla Forums API for each specified leaderboard and
-    returns the aggregated data as a JSON result.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Leaderboards | string | Yes | A comma-separated list of leaderboard identifiers
-    to query (e.g., 'top-posters, top-discussion-starters'). |
-
-    | To | string | Yes | The end date of the analytics timeframe in YYYY-MM-DD format.
-    |
-
-    | Amount Limit | string | Yes | The maximum number of rows/records to return for
-    each individual leaderboard. |
-
-    | From | string | Yes | The start date of the analytics timeframe in YYYY-MM-DD
-    format. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Vanilla Forums manager using
-    the provided API Token and Base URL from the integration configuration.
-
-    2. **Parameter Parsing**: It extracts the list of leaderboards, the date range
-    (From/To), and the result limit from the action parameters.
-
-    3. **Data Retrieval**: The action iterates through each requested leaderboard
-    and calls the Vanilla Forums API to fetch the corresponding analytics data for
-    the specified timeframe.
-
-    4. **Result Aggregation**: The retrieved data for each board is collected into
-    a structured JSON list.
-
-    5. **Completion**: The action outputs the aggregated JSON results and a summary
-    message indicating which leaderboards were successfully processed.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
+    reasoning: >-
+      The action fetches leaderboard analytics from an external system. It does not
+      match any of the provided categories (e.g., Enrichment, Ticket, Alert, Identity,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -444,37 +352,50 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Verifies the connectivity between Google SecOps and the VanillaForums instance.
-    This action is used to ensure that the provided API Token and Base URL are valid
-    and that the network path to the service is open.
+    Fetches analytics for specified leaderboards from VanillaForums within a defined
+    date range. This action retrieves leaderboard data, such as top posters or discussion
+    starters, and returns the results as a JSON object for further analysis.
 
 
     ### Parameters Description
 
-    There are no parameters for this action.
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Leaderboards | string | Yes | Comma-separated list of leaderboards to fetch
+    (e.g., "top-posters, top-discussion-starters"). |
+
+    | To | string | Yes | End date of the time frame in yyyy-mm-dd format. |
+
+    | Amount Limit | string | Yes | The maximum number of rows to return for each
+    leaderboard. |
+
+    | From | string | Yes | Start date of the time frame in yyyy-mm-dd format. |
 
 
     ### Additional Notes
 
-    This action relies on the integration's global configuration (API Token and URL)
-    to perform the connectivity test.
+    This action does not operate on entities and does not modify any internal or external
+    data. It is a read-only operation that retrieves analytics data from the VanillaForums
+    API.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the `API Token` and `URL`
-    from the VanillaForums integration configuration.
+    1. Extract the action parameters: `Leaderboards`, `Amount Limit`, `From`, and
+    `To`.
 
-    2. **Manager Initialization**: It initializes the `VanillaManager` with the retrieved
-    credentials.
+    2. Initialize the `VanillaManager` with the API token and base URL.
 
-    3. **Connectivity Test**: The action executes a GET request to the `/v2/categories`
-    endpoint of the VanillaForums API, requesting a single category to minimize data
-    transfer.
+    3. Split the `Leaderboards` parameter into a list of individual boards.
 
-    4. **Response Validation**: It checks the HTTP response status. If the request
-    is successful, it confirms connectivity; otherwise, it catches the exception and
-    reports the failure.
+    4. Iterate through each board and call the `get_leaderboard_analytics` method
+    to fetch the analytics data.
+
+    5. Append the results to a JSON list.
+
+    6. Return the final JSON result using `siemplify.result.add_result_json`.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -485,8 +406,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to fetch analytics data (fetches_data=true).
+      It does not mutate external systems, update entities, create insights, or modify
+      alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data but does not operate on entities or alerts, therefore
+      it does not meet the criteria for an Enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -502,7 +430,10 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Search User By Email and Name:
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities`. It processes
+      parameters provided directly to the action configuration.
+Ping:
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -517,6 +448,106 @@ Search User By Email and Name:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ('Ping'). It does not perform any of the defined
+      functional outcomes such as enriching IOCs, updating tickets, or blocking hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Verifies connectivity to the VanillaForums instance. This action ensures that
+    the SOAR platform can successfully communicate with the VanillaForums API.
+
+
+    ### Parameters
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action is a connectivity test (Ping) and does not perform any functional
+    operations on entities or alerts.
+
+
+    ### Flow Description
+
+    1. Retrieves the API Token and Base URL from the integration configuration.
+
+    2. Initializes the `VanillaManager` with the provided credentials.
+
+    3. Attempts to connect to the VanillaForums API by sending a `GET` request to
+    the `/v2/categories` endpoint.
+
+    4. Returns a success status if the connection is established, or a failure status
+    if an error occurs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to verify connectivity to the VanillaForums
+      API. It does not modify external or internal data, nor does it update entities,
+      create insights, or modify alert data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action. Per the instructions, 'Actions named Ping must
+      not be categorized as enrichment actions.'
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `target_entities`.
+Search User By Email and Name:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for a user in the VanillaForums platform and returns contextual
+      metadata (existence, details). This matches the 'Enrich Asset' category (returning
+      contextual metadata for a user) and the 'Search Asset' category (searching for
+      the asset within the product).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -534,54 +565,39 @@ Search User By Email and Name:
   ai_description: >-
     ### General Description
 
-    The **Search User By Email and Name** action is designed to verify the existence
-    of a user within the VanillaForums platform. It performs two independent searches:
-    one based on a provided email address and another based on a username. This action
-    is primarily used to validate user accounts or retrieve specific user details
-    during investigations or administrative workflows.
+    This action searches for a user within the VanillaForums platform using their
+    email address and username. It retrieves information from the platform to confirm
+    the existence of the user and provides their details if found.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **User Email** | String | Yes | The email address of the user to search for.
-    The search is performed case-insensitively. |
+    | User Email | string | Yes | The email address of the user to search for. |
 
-    | **User Name** | String | Yes | The full name or username of the user to search
-    for in the platform. |
+    | User Name | string | Yes | The full name of the user to search for. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the `User Email` and `User Name`
-    from the input parameters, applying basic cleaning (stripping whitespace and converting
-    the email to lowercase).
+    1. The action extracts the `User Email` and `User Name` from the provided action
+    parameters.
 
-    2. **Email Search**: It queries the VanillaForums API's `/v2/users` endpoint.
-    Since this endpoint returns a list, the action iterates through pages of users
-    to find an exact match for the provided email.
+    2. It initializes the `VanillaManager` using the configured API token and base
+    URL.
 
-    3. **Name Search**: It queries the `/v2/users/by-names` endpoint to check for
-    the existence of the provided username.
+    3. It performs a search in the VanillaForums API for the user by email address.
 
-    4. **Result Consolidation**: The action evaluates if a user was found via either
-    the email or the name search. If found by email, the full user details are captured.
+    4. It performs a search in the VanillaForums API for the user by username.
 
-    5. **Output**: The action returns a boolean result indicating if any match was
-    found, along with a JSON object containing the search status for both identifiers
-    and the user details if available.
+    5. It compiles the findings into a result JSON, indicating whether the user was
+    found by email, by username, or both, and includes the user details if available.
 
-
-    ### Additional Notes
-
-    - This action does not interact with Google SecOps entities; it relies entirely
-    on the string values provided in the parameters.
-
-    - The `UserDetails` field in the JSON output is only populated if a match is found
-    during the email search phase.
+    6. The action concludes by returning the result JSON and a status message to the
+    SOAR platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -592,8 +608,16 @@ Search User By Email and Name:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs GET requests to the VanillaForums API to retrieve user information.
+      It does not modify any external or internal data, nor does it update entities
+      or create insights.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external system (VanillaForums) to provide context
+      about a user. It does not mutate any external or internal data. This qualifies
+      as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -609,6 +633,10 @@ Search User By Email and Name:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action uses action parameters ('User Email', 'User Name') to perform the
+      search, rather than iterating over 'target_entities'. Therefore, it does not
+      run on any specific entity types.
 Update Badge:
   action_product_categories:
     add_alert_comment: false
@@ -624,6 +652,11 @@ Update Badge:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a state-changing operation (assigning a badge) on an external
+      system (VanillaForums). It does not match any of the provided categories (Enrich
+      IOC, Contain Host, Update Identity, etc.) as it is a specific administrative
+      task for a forum platform.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -636,47 +669,18 @@ Update Badge:
     uncontain_host: false
     update_alert: false
     update_email: false
-    update_identity: true
+    update_identity: false
     update_ticket: false
   ai_description: >-
-    Awards a specific badge to a user within Vanilla Forums using their respective
-    IDs. This action interacts with the Vanilla Forums API to grant recognition or
-    status to a community member.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the `User ID` and `Badge ID`
-    from the input parameters.
-
-    2. **Manager Initialization:** It initializes the `VanillaManager` using the integration's
-    API Token and Base URL.
-
-    3. **API Interaction:** The action calls the `give_user_badge` method, which sends
-    a POST request to the Vanilla Forums `/v2/badges/{badge_id}/users` endpoint.
-
-    4. **Result Processing:** It captures the response from the API, updates the action
-    status to completed upon success, and attaches the badge details as a JSON result.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | User ID | String | Yes | The unique identifier of the user who will receive
-    the badge. |
-
-    | Badge ID | String | Yes | The unique identifier of the badge to be awarded to
-    the user. |
-
-
-    ### Additional Notes
-
-    * This action does not run on SecOps entities; it relies entirely on the provided
-    ID parameters.
+    ### General Description: This action assigns a specific badge to a user within
+    the VanillaForums platform. ### Parameters Description: User ID (string, mandatory):
+    The ID of the user to be awarded the badge. Badge ID (string, mandatory): The
+    ID of the badge to be awarded to the user. ### Flow Description: 1. Extracts User
+    ID and Badge ID from the action parameters. 2. Initializes the VanillaManager
+    using the integration configuration (API Token, URL). 3. Executes the give_user_badge
+    method, which sends a POST request to the VanillaForums API to assign the specified
+    badge to the user. 4. Logs the outcome and adds the resulting JSON response to
+    the action results. ### Additional Notes: There are no additional notes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -685,12 +689,18 @@ Update Badge:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Awards a badge to a user in Vanilla Forums, which changes the user's profile
-      state in the external system.
+      Assigns a badge to a user in the VanillaForums platform via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to an external API to assign a badge to a
+      user. It does not fetch contextual data for entities, nor does it modify internal
+      SOAR data (entities, insights, comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (assigning a badge) and does not fetch data
+      for enrichment purposes. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -706,6 +716,9 @@ Update Badge:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use siemplify.target_entities. It relies on user-provided
+      parameters (User ID and Badge ID) to perform the operation.
 Update Rank:
   action_product_categories:
     add_alert_comment: false
@@ -721,6 +734,11 @@ Update Rank:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates a user's rank in the VanillaForums platform. This aligns
+      with the 'Update Identity' category, which involves modifying account metadata,
+      permissions, or roles. It does not match other categories like 'Enrich IOC'
+      or 'Contain Host'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -736,47 +754,36 @@ Update Rank:
     update_identity: true
     update_ticket: false
   ai_description: >-
-    Updates the rank of a specific user within Vanilla Forums. This action allows
-    administrators to programmatically change a user's community standing or permission
-    level by assigning a new Rank ID to a specific User ID.
+    ### General Description
+
+    This action updates the rank of a user within the VanillaForums platform. It allows
+    administrators to modify a user's rank by providing the corresponding Rank ID
+    and User ID.
 
 
-    ### Flow Description:
+    ### Parameters
 
-    1. **Parameter Extraction:** The action retrieves the 'Rank ID' and 'User ID'
-    from the action parameters.
-
-    2. **Manager Initialization:** It initializes the VanillaManager using the integration's
-    API Token and Base URL.
-
-    3. **API Interaction:** The action calls the `change_user_rank` method, which
-    sends a PUT request to the Vanilla Forums API endpoint `/v2/users/{user_id}/rank`
-    with the new rank information.
-
-    4. **Result Handling:** If the request is successful, the action completes with
-    a success message and provides the raw JSON response from the API. If it fails,
-    an error message is logged and the action status is set to failed.
-
-
-    ### Parameters Description:
-
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Rank ID | String | Yes | The unique identifier of the rank you wish to assign
-    to the user. |
+    | Rank ID | string | Yes | The ID of the rank to assign to the user. |
 
-    | User ID | String | Yes | The unique identifier of the user whose rank is being
-    modified. |
+    | User ID | string | Yes | The ID of the user whose rank is being updated. |
 
 
-    ### Additional Notes:
+    ### Flow Description
 
-    - This action performs a direct mutation on the external Vanilla Forums system.
+    1. The action extracts the `Rank ID` and `User ID` from the provided parameters.
 
-    - It does not process SecOps entities (like IP or Hostname) but operates on specific
-    IDs provided as input parameters.
+    2. It initializes the `VanillaManager` using the configured API token and base
+    URL.
+
+    3. It calls the `change_user_rank` method, which sends a `PUT` request to the
+    VanillaForums API to update the user's rank.
+
+    4. The action concludes by returning the operation result and updating the execution
+    status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -785,12 +792,18 @@ Update Rank:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the rank of a user in the Vanilla Forums platform via a PUT request
-      to the user's rank endpoint.
+      Updates the user's rank in the VanillaForums platform via a PUT request.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a `PUT` request to the VanillaForums API to change a user's
+      rank. This is an external mutation. It does not fetch data for enrichment, nor
+      does it modify internal SOAR entities or case data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (updates external system state) and does not
+      fetch data for enrichment purposes. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -806,6 +819,9 @@ Update Rank:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action takes `User ID` as a direct input parameter and does not interact
+      with the `siemplify.target_entities` list. Therefore, it does not run on entities.
 Update User Role:
   action_product_categories:
     add_alert_comment: false
@@ -821,6 +837,9 @@ Update User Role:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates the role of a user in an external system (VanillaForums).
+      This matches the 'Update Identity' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -835,40 +854,17 @@ Update User Role:
     update_email: false
     update_identity: true
     update_ticket: false
-  ai_description: >-
-    Updates the role of a specific user within Vanilla Forums. This action allows
-    an analyst to programmatically change a user's permissions by assigning them a
-    new role ID. It interacts with the Vanilla Forums API via a PATCH request to modify
-    the user's profile data.
-
-
-    ### Flow Description:
-
-    1. **Parameter Extraction:** The action retrieves the `UserID` and `RoleID` from
-    the input parameters.
-
-    2. **API Interaction:** It calls the `give_user_role` method in the VanillaManager,
-    which sends a PATCH request to the `/v2/users/{userID}` endpoint with the new
-    `roleID`.
-
-    3. **Validation:** The action checks the API response to ensure the role was successfully
-    updated and that the provided Role ID was valid.
-
-    4. **Result Reporting:** The updated user details are returned as a JSON result,
-    and the action status is updated to reflect success or failure.
-
-
-    ### Parameters Description:
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | UserID | String | True | The unique identifier of the user whose role needs
-    to be changed. |
-
-    | RoleID | String | True | The unique identifier of the role to be assigned to
-    the user. |
+  ai_description: "This action updates the role of a specific user within the VanillaForums\
+    \ platform. \n\n### Flow Description\n1. The action extracts the `UserID` and\
+    \ `RoleID` from the provided action parameters.\n2. It initializes the `VanillaManager`\
+    \ using the integration configuration (API token and base URL).\n3. The action\
+    \ calls the `give_user_role` method, which sends a `PATCH` request to the VanillaForums\
+    \ API to update the user's role.\n4. The updated user details are returned as\
+    \ a JSON result, and the action completes with a success or failure status.\n\n\
+    ### Parameters Description\n| Parameter | Type | Mandatory | Description |\n|\
+    \ :--- | :--- | :--- | :--- |\n| UserID | string | Yes | The ID of the user whose\
+    \ role is to be changed. |\n| RoleID | string | Yes | The ID of the role to be\
+    \ assigned to the user. |"
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -877,12 +873,17 @@ Update User Role:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the role assignment for a user in the Vanilla Forums platform using
-      a PATCH request.
-    fetches_data: true
+      Updates the user's role in the VanillaForums platform via a PATCH request.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PATCH request to the VanillaForums API to update a user's
+      role, which is an external mutation. It does not perform any internal SOAR data
+      mutations (like updating entities or creating insights).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (updates user role), not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -898,3 +899,6 @@ Update User Role:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `siemplify.target_entities`. It uses action parameters
+      `UserID` and `RoleID` directly.

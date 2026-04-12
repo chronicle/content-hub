@@ -13,6 +13,10 @@ Add Note:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds a note to an entity in the VectraRUX platform. It does not match
+      any of the provided categories (e.g., it is not adding a comment to a SOAR alert,
+      nor is it an enrichment or containment action).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,24 +32,11 @@ Add Note:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Adds a note to a specific entity (Account, Host, or Detection) within the Vectra
-    platform. This action allows analysts to document findings or provide context
-    directly on the Vectra resource from within Google SecOps, ensuring that information
-    is synchronized between the two platforms.
+    ### General Description
 
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: Retrieves the note content, target entity ID, and
-    entity type from the action parameters.
-
-    2. **Validation**: Validates that the provided Entity ID is a valid integer.
-
-    3. **API Interaction**: Executes a POST request to the Vectra API's notes endpoint
-    for the specified entity.
-
-    4. **Result Processing**: Captures the API response (the created note object)
-    and presents it in a data table and JSON format for the analyst.
+    Adds a note to a specific entity (Account, Host, or Detection) within the VectraRUX
+    platform. This action allows analysts to append contextual information or investigation
+    notes directly to an entity in the external system.
 
 
     ### Parameters Description
@@ -54,23 +45,28 @@ Add Note:
 
     | :--- | :--- | :--- | :--- |
 
-    | Note | String | Yes | The text content of the note to be added to the Vectra
-    entity. |
-
-    | Entity ID | String | Yes | The unique numeric identifier of the entity in Vectra.
+    | Note | string | Yes | The text content of the note to be added to the entity.
     |
 
-    | Entity Type | DDL | Yes | The type of entity to which the note will be added.
-    Options: Account, Host, or Detection. |
+    | Entity ID | string | Yes | The unique identifier of the entity in VectraRUX.
+    |
+
+    | Entity Type | ddl | Yes | The type of the entity. Supported values: Account,
+    Host, Detection. |
 
 
-    ### Additional Notes
+    ### Flow Description
 
-    - The Entity ID must be a numeric value corresponding to an existing resource
-    in the Vectra environment.
+    1. Extracts configuration parameters (API Root, Client ID, Client Secret) and
+    action parameters (Note, Entity ID, Entity Type).
 
-    - This action performs a state change in the external Vectra system by creating
-    a new note record.
+    2. Validates the provided Entity ID.
+
+    3. Sends a POST request to the VectraRUX API endpoint (`/entities/{entity_id}/notes`)
+    to create the note.
+
+    4. Adds the API response to the action result as a data table and JSON for reporting
+    purposes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -79,12 +75,18 @@ Add Note:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new note record in the Vectra platform associated with a specific
-      Account, Host, or Detection entity.
+      Adds a note to an entity (Account, Host, or Detection) in the VectraRUX platform.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the VectraRUX API to add a note to an
+      entity. It does not fetch data, nor does it modify internal SOAR case data or
+      entities. It is a mutation action on an external system.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (adding a note to an external system) and does
+      not fetch data for enrichment purposes, therefore it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -100,6 +102,10 @@ Add Note:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `siemplify.target_entities`. It accepts `Entity ID`
+      and `Entity Type` as manual input parameters from the user, rather than operating
+      on entities already present in the case.
 Add Tags:
   action_product_categories:
     add_alert_comment: false
@@ -115,6 +121,10 @@ Add Tags:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates tags on an external system (Vectra RUX). None of the provided
+      categories (e.g., Enrich IOC, Contain Host, Update Identity) perfectly match
+      this 'Update Tags' functionality. Therefore, all categories are set to false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -127,62 +137,56 @@ Add Tags:
     uncontain_host: false
     update_alert: false
     update_email: false
-    update_identity: true
+    update_identity: false
     update_ticket: false
   ai_description: >-
-    Adds tags to specific entities in the Vectra RUX platform. This action allows
-    users to append one or more tags to Accounts, Hosts, or Detections by providing
-    their unique Vectra IDs. The action first retrieves the existing tags for each
-    specified entity to ensure that existing data is preserved and only new, unique
-    tags are added. It then performs a PATCH request to update the entity's tag list
-    in the external system.
+    ### General Description
+
+    Adds tags to specified entities (Account, Host, or Detection) in the Vectra RUX
+    platform. This action retrieves existing tags for the provided entity IDs, merges
+    them with the new tags, and updates the entity's tag list in the external system
+    via a PATCH request. The action logs the status of each update and provides a
+    summary table of the results.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Tags | String | Yes | A comma-separated list of tags to be added to the specified
-    entities. |
+    | Tags | string | Yes | Comma-separated list of tags to add to the account, host,
+    or detection. |
 
-    | Entity IDs | String | Yes | A comma-separated list of the unique Vectra identifiers
-    for the entities to be tagged. |
+    | Entity IDs | string | Yes | Comma-separated list of the Entity IDs to which
+    the user wants to add tags. |
 
-    | Entity Type | DDL | Yes | The category of the entity being tagged. Options include:
-    `Account`, `Host`, or `Detection`. |
-
-
-    ### Additional Notes
-
-    - This action does not process Google SecOps entities automatically; it requires
-    explicit Vectra IDs as input parameters.
-
-    - The action ensures that duplicate tags are not created by merging the new tags
-    with the existing ones retrieved from the API.
+    | Entity Type | ddl | Yes | The type of the entity to which tags will be added
+    (Options: Account, Host, Detection). |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the list of tags, entity IDs,
-    and the entity type from the user input.
+    1. Extracts configuration (API credentials) and action parameters (Tags, Entity
+    IDs, Entity Type).
 
-    2. **Validation:** It validates that the provided Entity IDs are integers and
-    cleans the tag strings.
+    2. Validates and parses the input IDs and tags, removing duplicates.
 
-    3. **Tag Retrieval:** For each entity ID, the action calls the Vectra API to fetch
-    the current list of tags.
+    3. Iterates through each provided Entity ID.
 
-    4. **Merging:** It combines the existing tags with the new tags, removing any
-    duplicates.
+    4. Fetches existing tags for the entity from the Vectra RUX API.
 
-    5. **External Update:** The action sends a PATCH request to Vectra RUX to update
-    the entity with the new combined tag list.
+    5. Merges the existing tags with the new tags.
 
-    6. **Reporting:** It generates a data table and a JSON result summarizing the
-    success or failure of the tag update for each ID.
+    6. Updates the entity's tags in Vectra RUX via a PATCH request.
+
+    7. Logs the status of each update and generates a result table in the SOAR case.
+
+
+    ### Additional Notes
+
+    The action requires valid API credentials for the Vectra RUX integration to be
+    configured.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -191,12 +195,19 @@ Add Tags:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the tag metadata for Accounts, Hosts, or Detections in the Vectra RUX
-      platform via a PATCH request.
+      Updates the tag list for the specified entity in the Vectra RUX platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches existing tags from the Vectra RUX API (fetches_data=true)
+      and then performs a PATCH request to update the tags on the external system
+      (can_mutate_external_data=true). It does not modify internal SOAR case data
+      or entities directly.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (updates tags), so it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -212,6 +223,9 @@ Add Tags:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It takes `Entity
+      IDs` as an input parameter. Therefore, it does not run on SOAR entities.
 Assign Entity:
   action_product_categories:
     add_alert_comment: false
@@ -227,6 +241,10 @@ Assign Entity:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action assigns an entity to a user in the Vectra RUX platform. This does
+      not match any of the provided categories (Enrichment, Containment, Ticket management,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -239,47 +257,48 @@ Assign Entity:
     uncontain_host: false
     update_alert: false
     update_email: false
-    update_identity: true
+    update_identity: false
     update_ticket: false
   ai_description: >-
-    Assigns a Vectra RUX entity (Host or Account) to a specific user. This action
-    creates an assignment record within the Vectra platform, facilitating ownership
-    and accountability for investigation or remediation tasks. It validates that the
-    provided IDs are integers before making the API request and returns the details
-    of the created assignment.
+    ### General Description
+
+    This action assigns a specific entity (either a Host or an Account) to a designated
+    user within the Vectra RUX platform. It facilitates the management of entity assignments
+    by interacting directly with the Vectra RUX API.
 
 
-    ### Parameters
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Entity ID | string | Yes | The unique identifier of the Host or Account in Vectra
-    RUX that will be assigned. |
+    | Entity ID | string | Yes | The unique identifier of the entity (Host or Account)
+    to be assigned. |
 
-    | Entity Type | ddl | Yes | Specifies whether the Entity ID refers to an 'Account'
-    or a 'Host'. |
+    | Entity Type | ddl | Yes | The type of the entity. Supported values are 'Account'
+    or 'Host'. |
 
-    | User ID | string | Yes | The unique identifier of the Vectra RUX user to whom
-    the assignment will be made. |
+    | User ID | string | Yes | The unique identifier of the user to whom the entity
+    will be assigned. |
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts the API configuration and the action parameters
-    (User ID, Entity ID, and Entity Type).
+    1. **Initialization**: The action initializes the `SiemplifyAction` and extracts
+    configuration parameters (API Root, Client ID, Client Secret) and action parameters
+    (User ID, Entity ID, Entity Type).
 
-    2. **Validation**: Validates that the `Entity ID` and `User ID` are valid positive
-    integers.
+    2. **Validation**: The action validates that the provided `Entity ID` and `User
+    ID` are valid integers.
 
-    3. **API Interaction**: Initializes the VectraRUXManager and calls the `assign_entity`
-    method, which sends a POST request to the Vectra RUX assignments endpoint.
+    3. **Execution**: The action initializes the `VectraRUXManager` and calls the
+    `assign_entity` method, which performs a POST request to the Vectra RUX API to
+    create the assignment.
 
-    4. **Result Processing**: Parses the API response into an Assignment object.
-
-    5. **Output**: Adds a data table containing the assignment details and the raw
-    JSON response to the action results in Google SecOps.
+    4. **Result Reporting**: Upon successful assignment, the action adds the assignment
+    details to the action results as a data table and a JSON object containing the
+    raw response data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -288,12 +307,20 @@ Assign Entity:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new assignment record in Vectra RUX, linking a specific entity (Host
-      or Account) to a user.
-    fetches_data: true
+      Assigns an entity (Host or Account) to a user in the Vectra RUX platform via
+      a POST request.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Vectra RUX API to assign an entity
+      to a user. It does not fetch data for enrichment, nor does it modify internal
+      SOAR case data (such as updating entities or adding insights). It only reports
+      the result of the external mutation.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (assigning an entity) and does not fetch data
+      for enrichment purposes. It does not meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -309,6 +336,10 @@ Assign Entity:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `siemplify.target_entities`. It takes `Entity ID` and
+      `Entity Type` as direct input parameters from the action configuration, rather
+      than operating on entities already present in the case.
 Assign Group:
   action_product_categories:
     add_alert_comment: false
@@ -324,6 +355,9 @@ Assign Group:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action modifies group membership in an external system (VectraRUX). This
+      aligns with the 'Update Identity' category, which includes modifying group memberships.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -341,9 +375,9 @@ Assign Group:
   ai_description: >-
     ### General Description
 
-    Adds members to a specific group in Vectra AI. This action allows analysts to
-    manage group memberships dynamically by appending a list of members (such as hosts,
-    IPs, or accounts) to an existing group identified by its ID.
+    Adds members to a specified group in the VectraRUX system. This action allows
+    users to append a list of members to an existing group by providing the group's
+    ID and the list of members to be added.
 
 
     ### Parameters Description
@@ -352,42 +386,36 @@ Assign Group:
 
     | :--- | :--- | :--- | :--- |
 
-    | Group ID | String | True | The unique identifier of the group in Vectra AI.
-    This value must be a positive integer. |
+    | Group ID | string | Yes | The ID of the group to which members will be added.
+    |
 
-    | Members | String | True | A comma-separated list of members to be added to the
-    group. The type of member (e.g., hostname, IP, account UID) should correspond
-    to the group's defined type. |
-
-
-    ### Additional Notes
-
-    - The action uses the 'append' membership action, ensuring that existing group
-    members are preserved and not overwritten.
-
-    - The action provides a detailed HTML view of the group's properties and membership
-    status after the update.
+    | Members | string | Yes | A comma-separated list of members to assign to the
+    group. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the `Group ID` and `Members`
-    list from the input parameters.
+    1. Extracts configuration (API Root, Client ID, Client Secret) and action parameters
+    (Group ID, Members).
 
-    2. **Validation**: It validates that the `Group ID` is a valid integer and processes
-    the `Members` string into a list of unique, stripped strings.
+    2. Validates the `Group ID` as an integer.
 
-    3. **Authentication**: Connects to the Vectra AI API using the provided credentials
-    (API Root, Client ID, and Client Secret).
+    3. Initializes the `VectraRUXManager` with the provided credentials.
 
-    4. **Group Update**: Sends a PATCH request to the Vectra API to add the new members
-    to the specified group using the `append` membership action.
+    4. Calls the API to append the specified members to the group.
 
-    5. **Verification**: Compares the requested members against the updated group
-    membership returned by the API to identify any members that could not be assigned.
+    5. Compares the requested members with the updated group members to identify which
+    were successfully assigned.
 
-    6. **Output Generation**: Returns the updated group details in JSON format and
-    renders an HTML table for the case wall showing the group's current state.
+    6. Generates an HTML view of the group details and adds the raw JSON response
+    to the action results.
+
+
+    ### Additional Notes
+
+    - The action expects the `Group ID` to be a valid integer.
+
+    - The `Members` parameter should be a comma-separated string of member identifiers.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -396,12 +424,19 @@ Assign Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the membership list of a group in Vectra AI using a PATCH request to
-      the groups endpoint.
+      Appends specified members to a group in the VectraRUX system.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PATCH request to update group members in VectraRUX (can_mutate_external_data=true).
+      It retrieves the updated group object from the response (fetches_data=true).
+      It does not modify internal SOAR case data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action modifies group membership in an external system (VectraRUX), which
+      constitutes a mutation of external data. Therefore, it cannot be classified
+      as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -417,6 +452,9 @@ Assign Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `target_entities` or perform any entity-based operations.
+      It uses input parameters `Group ID` and `Members` to perform the action.
 Describe Assignment:
   action_product_categories:
     add_alert_comment: false
@@ -431,7 +469,11 @@ Describe Assignment:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: true
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves details for a specific assignment ID. It does not perform
+      enrichment on IOCs or Assets, nor does it modify alerts, tickets, or identities.
+      It does not fit the specific definitions of the provided categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -446,49 +488,26 @@ Describe Assignment:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    Retrieves comprehensive details for a specific assignment within Vectra RUX using
-    its unique identifier. This action allows analysts to view metadata associated
-    with an assignment, including the assigned user, the resolver, the outcome, and
-    associated entity IDs (Host or Account). It is primarily used to audit or verify
-    the status of tasks within the Vectra platform.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Assignment ID | String | Yes | The unique numerical identifier of the assignment
-    to retrieve. The value is validated as a non-negative integer before processing.
-    |
-
-
-    ### Flow Description
-
-    1. **Parameter Initialization**: The action extracts the `Assignment ID` from
-    the user input and validates that it is a valid integer.
-
-    2. **Authentication**: The action initializes the `VectraRUXManager`, which handles
-    OAuth2 token generation and session management.
-
-    3. **Data Retrieval**: A GET request is sent to the Vectra RUX API endpoint `/api/v3.4/assignments/{assignment_id}`.
-
-    4. **Data Parsing**: The response is parsed into an `Assignment` data model, which
-    extracts key fields such as `Assigned User`, `Outcome Title`, and `Entity ID`.
-
-    5. **Output Generation**: The action returns the full raw JSON response and constructs
-    a data table named 'Describe Assignment' containing the flattened assignment details.
-
-
-    ### Additional Notes
-
-    This action does not process entities from the Google SecOps case; it operates
-    strictly based on the provided `Assignment ID` parameter. If the ID is not found,
-    the action will return a failure status.
+  ai_description: "### General Description\nThis action retrieves detailed information\
+    \ about a specific assignment from the VectraRUX platform. It allows analysts\
+    \ to fetch metadata, user assignments, and resolution details for a given assignment\
+    \ ID, providing visibility into the assignment's status and history within the\
+    \ VectraRUX environment.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Assignment ID | string | Yes\
+    \ | The unique identifier of the assignment to retrieve. |\n\n### Additional Notes\n\
+    - This action requires valid API credentials (API Root, Client ID, Client Secret)\
+    \ configured in the integration settings.\n- The action performs a read-only operation\
+    \ and does not modify any data in VectraRUX or the SOAR platform.\n\n### Flow\
+    \ Description\n1. **Initialization**: The action initializes the `SiemplifyAction`\
+    \ and extracts the required configuration parameters (API Root, Client ID, Client\
+    \ Secret) and the `Assignment ID` action parameter.\n2. **Validation**: The `Assignment\
+    \ ID` is validated to ensure it is a valid integer.\n3. **API Interaction**: The\
+    \ `VectraRUXManager` is initialized, and the `describe_assignment` method is called\
+    \ to fetch the assignment details from the VectraRUX API.\n4. **Result Processing**:\
+    \ \n    - The raw JSON response is added to the action results.\n    - The assignment\
+    \ information is formatted into a CSV-based data table and added to the action\
+    \ output.\n5. **Completion**: The action concludes by setting the execution status\
+    \ and output message, providing the retrieved details to the analyst."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -499,8 +518,17 @@ Describe Assignment:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the VectraRUX API to retrieve assignment
+      details. It does not modify any external systems (no POST/PUT/DELETE), nor does
+      it modify internal SOAR data (no entity updates or insights). It simply fetches
+      and displays information.
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      The action fetches data from an external source, but it does not gather context
+      about alerts or entities (it gathers context about an assignment). Therefore,
+      it does not meet the definition of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -516,6 +544,9 @@ Describe Assignment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It takes an `Assignment ID` as a direct
+      input parameter to fetch details from the VectraRUX API.
 Describe Detection:
   action_product_categories:
     add_alert_comment: false
@@ -531,6 +562,10 @@ Describe Detection:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: true
+    reasoning: >-
+      The action retrieves detailed information about a specific detection from the
+      Vectra RUX platform. This directly aligns with the 'Get Alert Information' category,
+      as it fetches information about an alert (detection) from the 3rd party product.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -545,25 +580,45 @@ Describe Detection:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Describe Detection** action retrieves\
-    \ comprehensive details for a specific detection from the Vectra RUX platform\
-    \ using its unique identifier. It is primarily used for deep-dive investigations\
-    \ where an analyst needs to see the full raw data and metadata associated with\
-    \ a specific security event identified by Vectra.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | **Detection ID** | String | Yes | The unique identifier of the detection to\
-    \ retrieve. This value is validated as an integer before the request is made.\
-    \ |\n\n### Flow Description\n1.  **Parameter Initialization**: The action retrieves\
-    \ the integration configuration (API Root, Client ID, Client Secret) and the mandatory\
-    \ `Detection ID` parameter.\n2.  **Validation**: The `Detection ID` is validated\
-    \ to ensure it is a valid non-negative integer.\n3.  **API Interaction**: The\
-    \ action authenticates with Vectra RUX and performs a GET request to the `/detections/{detection_id}`\
-    \ endpoint.\n4.  **Data Processing**: The raw JSON response is parsed into a `Detection`\
-    \ data model, which extracts key fields such as state, category, type, and source\
-    \ entity information.\n5.  **Output Generation**: \n    *   A data table titled\
-    \ \"Describe Detection\" is added to the case wall, containing a summary of the\
-    \ detection.\n    *   The full raw JSON response is attached to the action results\
-    \ for detailed inspection."
+  ai_description: >-
+    ### General Description
+
+    The **Describe Detection** action retrieves comprehensive details for a specific
+    detection from the Vectra RUX platform. This action is designed to provide analysts
+    with deep-dive information about a detection by querying the Vectra API using
+    a unique Detection ID. The output is presented in both a structured data table
+    and a raw JSON format, facilitating easier investigation and decision-making.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Detection ID | string | Yes | The unique identifier of the detection to be retrieved.
+    This value must be a valid integer. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the necessary API credentials
+    (API Root, Client ID, Client Secret) from the integration configuration.
+
+    2. **Parameter Extraction**: The action extracts the `Detection ID` provided by
+    the user.
+
+    3. **Validation**: The `Detection ID` is validated to ensure it is a valid integer.
+
+    4. **API Interaction**: The action initializes the `VectraRUXManager` and calls
+    the `describe_detection` method to fetch the detection details from the Vectra
+    RUX API.
+
+    5. **Result Formatting**: The retrieved detection data is formatted into a data
+    table and a JSON object, which are then added to the action results.
+
+    6. **Completion**: The action concludes by setting the execution status and providing
+    a success or error message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -574,8 +629,18 @@ Describe Detection:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Vectra RUX API to retrieve detection
+      details based on a provided ID. It does not perform any write operations (POST/PUT/DELETE)
+      on external systems, nor does it modify internal SOAR case data (e.g., updating
+      entities, adding insights, or modifying alert status). It is a read-only enrichment
+      action.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches supplemental context (detection details) from an external
+      source (Vectra RUX) without modifying any external or internal state. This aligns
+      with the definition of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -591,6 +656,10 @@ Describe Detection:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It accepts a `Detection ID` as a direct input parameter to fetch
+      detection details, therefore it does not run on entities.
 Describe Entity:
   action_product_categories:
     add_alert_comment: false
@@ -606,10 +675,13 @@ Describe Entity:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (e.g., state, urgency, tags) for a
+      resource (Account or Host), which directly matches the 'Enrich Asset' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -623,11 +695,10 @@ Describe Entity:
   ai_description: >-
     ### General Description
 
-    The **Describe Entity** action retrieves comprehensive details for a specific
-    entity (either a **Host** or an **Account**) from the Vectra RUX platform using
-    its unique identifier. This action is primarily used for deep-dive investigations
-    where an analyst needs the full metadata associated with a Vectra-tracked asset,
-    including its state, severity, urgency scores, and associated detection IDs.
+    Retrieves detailed information for a specific entity (Account or Host) from the
+    VectraRUX platform. This action fetches comprehensive metadata, including state,
+    urgency scores, and detection history, and presents it in the action results as
+    a data table and raw JSON.
 
 
     ### Parameters Description
@@ -636,36 +707,28 @@ Describe Entity:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Entity ID** | String | Yes | The unique numerical identifier for the entity
-    in Vectra RUX. |
+    | Entity ID | string | Yes | The unique identifier of the entity to retrieve.
+    |
 
-    | **Entity Type** | DDL | Yes | The category of the entity. Must be either `Account`
-    or `Host`. |
+    | Entity Type | ddl | Yes | The type of entity, either 'Account' or 'Host'. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the `Entity ID` and `Entity
-    Type` from the user input.
+    1. Extracts configuration parameters (API Root, Client ID, Client Secret) and
+    action parameters (Entity ID, Entity Type).
 
-    2. **Validation:** It validates that the `Entity ID` is a valid integer.
+    2. Validates the provided Entity ID as an integer.
 
-    3. **API Request:** It calls the Vectra RUX API to fetch the raw data for the
-    specified entity using a GET request.
+    3. Initializes the VectraRUXManager to handle API communication.
 
-    4. **Data Processing:** The response is parsed into a structured Entity object.
+    4. Executes a GET request to the VectraRUX API to describe the specified entity.
 
-    5. **Output Generation:** The action creates a Data Table with key entity attributes
-    and attaches the full raw API response as a JSON result.
+    5. Adds the retrieved entity details to the action result as a data table and
+    raw JSON.
 
-
-    ### Additional Notes
-
-    * This action does not automatically process entities present in the Google SecOps
-    case; it requires a specific ID as input.
-
-    * If the entity is not found, the action will return a failure status with an
-    informative error message.
+    6. Handles potential errors (e.g., invalid ID, item not found) and logs the execution
+    status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -676,8 +739,16 @@ Describe Entity:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve entity details from the VectraRUX
+      API. It does not modify any external systems or internal SOAR data (it only
+      adds result data to the action execution).
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches contextual data about an entity from an external source (VectraRUX)
+      without modifying any external or internal systems. This aligns with the definition
+      of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -693,6 +764,10 @@ Describe Entity:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action takes 'Entity ID' and 'Entity Type' as input parameters rather than
+      iterating over the 'target_entities' list. Therefore, it does not directly operate
+      on SOAR entities.
 Download PCAP:
   action_product_categories:
     add_alert_comment: false
@@ -708,6 +783,10 @@ Download PCAP:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a specific file (PCAP) from the Vectra RUX platform. This
+      directly matches the 'Download File' category. It does not perform enrichment,
+      alert updates, or containment operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -723,65 +802,59 @@ Download PCAP:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Download PCAP** action retrieves a Packet Capture (PCAP) file associated
-    with a specific detection ID from the Vectra RUX platform. This action is designed
-    to facilitate forensic investigations by providing analysts with the raw network
-    traffic data that triggered a specific security detection.
+    Downloads a PCAP file associated with a specific detection ID from the Vectra
+    RUX platform. This action retrieves the forensic PCAP file and attaches it to
+    the action result for further analysis.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Detection ID | String | Yes | The unique identifier of the Vectra detection
-    for which the PCAP file should be downloaded. The value must be a valid integer.
-    |
+    | Detection ID | string | Yes | The unique identifier of the detection for which
+    the PCAP file should be downloaded. |
 
 
     ### Flow Description
 
-    1. **Initialization:** The action initializes the Vectra RUX manager using the
-    provided API credentials and root URL.
+    1. **Initialization**: Extracts API configuration (API Root, Client ID, Client
+    Secret) and the `Detection ID` parameter.
 
-    2. **Validation:** The provided `Detection ID` is validated to ensure it is a
-    valid integer.
+    2. **Manager Setup**: Initializes the `VectraRUXManager` to handle API communication.
 
-    3. **Data Retrieval:** The action makes a GET request to the Vectra RUX API to
-    download the PCAP file content associated with the detection.
+    3. **Validation**: Validates that the provided `Detection ID` is a valid integer.
 
-    4. **File Handling:** The action extracts the filename from the API response headers
-    and saves the file content.
+    4. **Data Retrieval**: Requests the PCAP file content from the Vectra RUX API
+    using the provided detection ID.
 
-    5. **Attachment:** The downloaded PCAP file is encoded and added as an attachment
-    to the action result in Google SecOps, making it available for download by the
-    analyst.
+    5. **File Handling**: Saves the retrieved PCAP file locally and attaches the file
+    content to the SOAR action result.
 
-
-    ### Additional Notes
-
-    - This action does not process entities from the case; it relies solely on the
-    `Detection ID` parameter.
-
-    - If the PCAP file is not available for the specified detection, the action will
-    return a failure status.
+    6. **Completion**: Returns the execution status and a summary message indicating
+    success or failure.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds the downloaded PCAP file as an attachment to the action result within the
-      Google SecOps platform.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve a PCAP file from the Vectra RUX
+      API. It does not modify any external system state (no POST/PUT/DELETE on external
+      resources). It does not modify internal SOAR case data, entities, or insights;
+      it only attaches a file to the action result, which is a standard output mechanism.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a specific file retrieval task ('Download PCAP') rather than a
+      general enrichment action designed to gather context about entities or alerts.
+      Therefore, it does not meet the criteria for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -797,6 +870,10 @@ Download PCAP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It operates based
+      on a provided `Detection ID` parameter, meaning it does not run on specific
+      entity types.
 List Assignments:
   action_product_categories:
     add_alert_comment: false
@@ -812,6 +889,10 @@ List Assignments:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of assignments from an external system. It does
+      not match any of the specific categories like 'Enrich IOC', 'Enrich Asset',
+      'Update Alert', or 'Search Events' as it is specific to assignment management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -826,38 +907,55 @@ List Assignments:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThis action retrieves a list of assignments\
-    \ from the Vectra RUX platform based on various filtering criteria. It allows\
-    \ analysts to search for assignments associated with specific accounts, hosts,\
-    \ assignees, or resolution outcomes. The results are presented as a data table\
-    \ for quick review and as a raw JSON object for further automated processing.\n\
-    \n### Parameters Description\n| Parameter Name | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Accounts IDs | String | No | A comma-separated\
-    \ list of account IDs to filter the assignments. |\n| Assignees IDs | String |\
-    \ No | A comma-separated list of user IDs (assignees) to filter the assignments.\
-    \ |\n| Resolution IDs | String | No | A comma-separated list of outcome/resolution\
-    \ IDs to filter the assignments. |\n| Resolved | DDL | No | Filter assignments\
-    \ by their resolution status. Options: `None` (no filter), `True` (only resolved),\
-    \ `False` (only unresolved). |\n| Created After | String | No | Filter assignments\
-    \ created after a specific timestamp. Supports relative formats (e.g., '2 days')\
-    \ or absolute ISO 8601 formats. |\n| Limit | String | No | The maximum number\
-    \ of assignment records to retrieve. |\n| Hosts IDs | String | No | A comma-separated\
-    \ list of host IDs to filter the assignments. |\n\n### Additional Notes\n- If\
-    \ no filters are provided, the action will attempt to list assignments based on\
-    \ the default limit.\n- The `Limit` parameter is validated to ensure it is a positive\
-    \ integer.\n- The action uses pagination to handle large sets of results from\
-    \ the Vectra API.\n\n### Flow Description\n1. **Parameter Extraction**: The action\
-    \ extracts configuration details (API Root, Credentials) and user-provided filter\
-    \ parameters.\n2. **Input Validation**: Comma-separated ID strings are processed\
-    \ into lists, and the `Limit` parameter is validated as an integer.\n3. **API\
-    \ Request Construction**: A query parameter mapping is built based on the provided\
-    \ filters (e.g., `resolved`, `created_after`, `accounts`, `hosts`).\n4. **Data\
-    \ Retrieval**: The `VectraRUXManager` executes a paginated GET request to the\
-    \ `/assignments` endpoint.\n5. **Result Processing**: The retrieved assignments\
-    \ are parsed into internal data models.\n6. **Output Generation**: \n    - A data\
-    \ table titled \"Assignment Details\" is created containing key fields like Assignment\
-    \ ID, Assigned User, and Outcome.\n    - The full raw JSON response is attached\
-    \ to the action results."
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a list of assignments from the VectraRUX platform based
+    on specified filter criteria. It allows analysts to query assignments by account,
+    host, assignee, resolution status, and creation time, providing visibility into
+    current investigation assignments.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Accounts IDs | string | No | Comma-separated account IDs to filter assignments.
+    |
+
+    | Assignees IDs | string | No | Comma-separated user IDs to filter assignments.
+    |
+
+    | Resolution IDs | string | No | Comma-separated resolution IDs to filter assignments.
+    |
+
+    | Resolved | ddl | No | Filter assignments by resolved status (None, True, False).
+    |
+
+    | Created After | string | No | Filter assignments created after a specific timestamp
+    (e.g., '2 days', 'yyyy-mm-dd'). |
+
+    | Limit | string | No | The maximum number of records to return. |
+
+    | Hosts IDs | string | No | Comma-separated host IDs to filter assignments. |
+
+
+    ### Flow Description
+
+    1. Initialize the VectraRUX manager using the configured API credentials.
+
+    2. Parse and validate the provided action parameters (filters).
+
+    3. Construct the query parameters mapping based on the provided inputs.
+
+    4. Execute a GET request to the VectraRUX API to fetch the assignment list.
+
+    5. Format the retrieved assignment data into a data table for the case wall and
+    a JSON result for further processing.
+
+    6. Return the final output message indicating the number of assignments retrieved.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -868,8 +966,16 @@ List Assignments:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve assignment data from the VectraRUX
+      API. It does not modify any external or internal data, nor does it update entities,
+      create insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external system but does not perform enrichment
+      on specific entities or alerts within the SOAR platform. It is a standalone
+      search/list action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -885,6 +991,9 @@ List Assignments:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or interact with `siemplify.target_entities`.
+      It relies solely on user-provided input parameters to query the API.
 List Detections:
   action_product_categories:
     add_alert_comment: false
@@ -900,6 +1009,10 @@ List Detections:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: true
+    reasoning: >-
+      The action retrieves a collection of detections based on search parameters,
+      which aligns with 'Search Events' and 'Get Alert Information'. It does not perform
+      enrichment on a specific IOC or asset, nor does it perform any mutation actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -915,19 +1028,31 @@ List Detections:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Lists detections from the Vectra AI platform based on a wide variety of filtering
-    criteria. This action allows analysts to query for specific security events (detections)
-    associated with hosts or accounts, or to perform broader searches across the environment.
-    It retrieves detailed metadata for each detection, including threat and certainty
-    scores, timestamps, and detection types.
-
-
     ### General Description
 
-    This action interacts with the Vectra RUX API to retrieve a list of detections.
-    It supports extensive filtering, including by entity ID, detection category, threat/certainty
-    thresholds, and time ranges. The results are presented as a summary data table
-    in the SOAR interface and as a full JSON object for downstream playbook logic.
+    This action retrieves a list of detections from the Vectra RUX platform based
+    on various filtering criteria. It allows analysts to query detections by category,
+    threat score, certainty, timestamp, tags, entity type, and entity ID. The action
+    processes the retrieved detection data, cleans up URLs, and presents the results
+    in a structured data table and raw JSON format for further analysis.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts configuration parameters (API
+    Root, Client ID, Client Secret) and action parameters (filters like Detection
+    Category, Threat GTE, Entity ID, etc.).
+
+    2. **Initialization**: It initializes the `VectraRUXManager` to handle API communication.
+
+    3. **Data Retrieval**: It calls the Vectra RUX API to fetch detections matching
+    the provided filters.
+
+    4. **Data Processing**: The action processes the retrieved detections, including
+    removing API version strings from URLs and extracting relevant fields.
+
+    5. **Output Generation**: It adds the processed detections to the action output
+    as a data table and a raw JSON result.
 
 
     ### Parameters Description
@@ -936,74 +1061,52 @@ List Detections:
 
     | :--- | :--- | :--- | :--- |
 
-    | Detection Category | DDL | No | Filters detections by category (e.g., Exfiltration,
-    Lateral Movement, Reconnaissance). |
+    | Detection Category | ddl | No | Filter detections by Detection Category (e.g.,
+    Info, Exfiltration, Lateral Movement). |
 
-    | Threat GTE | String | No | Filters detections with a threat score greater than
-    or equal to the provided value. |
+    | Threat GTE | string | No | Filter detections whose threat score is greater than
+    or equal to the given value. |
 
-    | Certainty GTE | String | No | Filters detections with a certainty score greater
-    than or equal to the provided value. |
+    | Certainty GTE | string | No | Filter detections whose certainty score is greater
+    than or equal to the given value. |
 
-    | Last Timestamp GTE | String | No | Filters detections with a last seen timestamp
-    greater than or equal to the provided value. |
+    | Last Timestamp GTE | string | No | Filter detections based on the start of the
+    timestamp range. |
 
-    | Last Timestamp LTE | String | No | Filters detections with a last seen timestamp
-    less than or equal to the provided value. |
+    | Last Timestamp LTE | string | No | Filter detections based on the end of the
+    timestamp range. |
 
-    | Tags | String | No | Comma-separated list of tags to filter detections. |
+    | Tags | string | No | Filter detections by comma-separated tags. |
 
-    | Entity Type | DDL | No | The type of entity to filter by (Host or Account).
+    | Entity Type | ddl | No | Filter detections by Entity Type (Host or Account).
     |
 
-    | Entity ID | String | No | The specific ID of the entity to retrieve detections
-    for. |
+    | Entity ID | string | No | Filter detections by the specific ID of the entity.
+    |
 
-    | Is Targeting Key Asset | DDL | No | Filters detections based on whether they
-    target a key asset (True/False). |
+    | Is Targeting Key Asset | ddl | No | Filter detections based on whether they
+    target a key asset. |
 
-    | Note Modified Timestamp GTE | String | No | Filters detections where notes were
-    modified after the specified timestamp. |
+    | Note Modified Timestamp GTE | string | No | Filter detections based on the note
+    modified timestamp. |
 
-    | Limit | String | No | The maximum number of detection records to retrieve. |
+    | Limit | string | No | The maximum number of records to fetch. |
 
-    | Order | DDL | No | Specifies the sort order (Ascending or Descending). |
+    | Order | ddl | No | Order records by Ascending or Descending. |
 
-    | Order By | DDL | No | Specifies the field to sort by (last_timestamp, threat_score,
+    | Order By | ddl | No | Field to order records by (last_timestamp, threat_score,
     certainty_score). |
 
-    | State | DDL | No | Filters detections by their current state (Active, Inactive,
-    Fixed). |
+    | State | ddl | No | Filter detections by State (Active, Inactive, Fixed). |
 
-    | Detection Type | String | No | Filters by a specific detection type string.
-    |
+    | Detection Type | string | No | Filter detections by detection type. |
 
 
     ### Additional Notes
 
-    - The action automatically handles API versioning by stripping version strings
-    from returned URLs to ensure compatibility with the platform's UI.
-
-    - If no detections match the provided filters, the action will complete successfully
-    with an informative message.
-
-
-    ### Flow Description
-
-    1. **Authentication:** Connects to the Vectra API using the configured Client
-    ID and Client Secret to obtain an access token.
-
-    2. **Parameter Validation:** Validates numeric inputs like 'Limit', 'Threat GTE',
-    and 'Certainty GTE' to ensure they are valid integers.
-
-    3. **API Query:** Constructs a GET request to the `/detections` endpoint, applying
-    all provided filter parameters.
-
-    4. **Data Processing:** Iterates through the retrieved detections, cleaning up
-    URL fields and extracting key fields for the summary table.
-
-    5. **Output Generation:** Adds a formatted data table to the case wall and attaches
-    the full raw JSON response to the action results.
+    - This action does not require any specific entity to be selected in the SOAR
+    platform, as it uses the provided `Entity ID` and `Entity Type` parameters to
+    perform the search.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1014,8 +1117,17 @@ List Detections:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Vectra RUX API to retrieve detection
+      data based on provided filters. It does not modify any external or internal
+      system state. It adds a data table and raw JSON to the action results, which
+      is standard for reporting and enrichment actions.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Vectra RUX) and does not mutate
+      any external or internal systems. It fits the criteria for an enrichment action
+      as it provides supplemental context (detections) for investigation.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1031,6 +1143,10 @@ List Detections:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It accepts `Entity
+      ID` and `Entity Type` as input parameters to perform the search, meaning it
+      does not run on specific SOAR entities.
 List Entities:
   action_product_categories:
     add_alert_comment: false
@@ -1046,6 +1162,11 @@ List Entities:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of assets (hosts or accounts) from the Vectra RUX
+      platform based on search criteria. This matches the 'Search Asset' category.
+      It does not enrich specific IOCs or assets, nor does it perform any containment
+      or ticket management actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1060,90 +1181,54 @@ List Entities:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    Retrieves a list of entities (Hosts or Accounts) from the Vectra RUX platform
-    based on user-defined query parameters. This action is useful for broad searches
-    or audits of assets within the Vectra environment, allowing analysts to filter
-    by state, tags, urgency scores, and timeframes.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Entity Type | DDL | Yes | Specifies whether to fetch 'Host' or 'Account' entities.
-    |
-
-    | Order By | DDL | No | Field used to sort the results (e.g., urgency_score, last_detection_timestamp).
-    |
-
-    | Fields | Multi-choice | No | Specific fields to include in the output. |
-
-    | Name | String | No | Filter results by the entity's name. |
-
-    | State | DDL | No | Filter by the entity's state (Active or Inactive). |
-
-    | Last Detection Timestamp GTE | String | No | Filter for entities with a last
-    detection timestamp greater than or equal to this value. |
-
-    | Last Detection Timestamp LTE | String | No | Filter for entities with a last
-    detection timestamp less than or equal to this value. |
-
-    | Tags | String | No | Filter by comma-separated tags. |
-
-    | Note Modified Timestamp GTE | String | No | Filter for entities where notes
-    were modified after this timestamp. |
-
-    | Prioritized | DDL | No | Filter based on whether the entity is prioritized (True/False).
-    |
-
-    | Limit | String | No | The maximum number of entities to retrieve. |
-
-    | Order | DDL | No | Sort order (Ascending or Descending). |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves configuration settings and user-provided
-    filter parameters.
-
-    2. **Validation**: Validates the 'Limit' parameter to ensure it is a valid integer.
-
-    3. **API Request**: Calls the Vectra RUX API's list entities endpoint with the
-    specified filters and pagination logic.
-
-    4. **Data Processing**: Iterates through the returned entities, cleans up internal
-    API URLs, and extracts a subset of mandatory fields (ID, Name, Severity, etc.)
-    for display.
-
-    5. **Output Generation**: Adds a formatted data table 'List Of Entities' to the
-    action results and provides the full raw JSON response for further processing.
-
-
-    ### Additional Notes
-
-    - The 'Entity Type' parameter is mandatory and determines the scope of the search.
-
-    - If no entities match the criteria, the action completes with a message indicating
-    no results were found.
+  ai_description: "Retrieves a list of entities (hosts or accounts) from the Vectra\
+    \ RUX platform based on specified filtering criteria. \n\n### Flow Description\n\
+    1. Extracts configuration parameters (API Root, Client ID, Client Secret).\n2.\
+    \ Extracts action parameters (Entity Type, Limit, Order By, Fields, Name, State,\
+    \ etc.).\n3. Initializes the `VectraRUXManager` and calls the `list_entities`\
+    \ method with the provided filters.\n4. Processes the retrieved entities, removing\
+    \ API version strings from URLs.\n5. Constructs a CSV table of the entities and\
+    \ adds it to the action results.\n6. Adds the full JSON response of the entities\
+    \ to the action results.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Entity Type | ddl | Yes |\
+    \ The type of entity to retrieve (e.g., \"account\", \"host\"). |\n| Order By\
+    \ | ddl | No | Sorts records by fields like `urgency_score`, `last_detection_timestamp`,\
+    \ `name`, or `last_modified_timestamp`. Use \"-\" for descending order. |\n| Fields\
+    \ | multi_choice_parameter | No | Filter the fields to show in the output. |\n\
+    | Name | string | No | Filter based on entity Name. |\n| State | ddl | No | Filter\
+    \ based on State (Active, Inactive). |\n| Last Detection Timestamp GTE | string\
+    \ | No | Filter based on Last Detection Timestamp GTE. |\n| Last Detection Timestamp\
+    \ LTE | string | No | Filter based on Last Detection Timestamp LTE. |\n| Tags\
+    \ | string | No | Filter based on Tags (comma-separated values). |\n| Note Modified\
+    \ Timestamp GTE | string | No | Filter based on Note Modified Timestamp GTE. |\n\
+    | Prioritized | ddl | No | Filter based on if the entity is prioritized or not.\
+    \ |\n| Limit | string | No | Fetch this number of Entities. |\n| Order | ddl |\
+    \ No | Filter based on ascending or descending order. |\n\n### Additional Notes\n\
+    - The action does not modify any external or internal system state; it is a read-only\
+    \ operation that reports data."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table 'List Of Entities' to the action results containing the retrieved
-      entity details.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Vectra RUX API to retrieve a list of
+      entities based on user-provided filters. It does not modify any external system
+      state, nor does it update internal SOAR entities, insights, or case comments.
+      It simply reports the retrieved data in the action results.
   categories:
     enrichment: false
+    reasoning: >-
+      The action retrieves a list of entities from an external system. It does not
+      perform enrichment on existing entities (i.e., it does not update entity attributes
+      or add insights to them), nor does it meet the criteria for an enrichment action
+      as it does not proactively fetch context for existing entities in the case.
+      Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1159,6 +1244,11 @@ List Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or perform operations
+      on specific entities already present in the case. It takes input parameters
+      to query the Vectra RUX API for a list of entities. Therefore, it does not run
+      on entities.
 List Entity Detections:
   action_product_categories:
     add_alert_comment: false
@@ -1170,16 +1260,20 @@ List Entity Detections:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
+    enrich_asset: true
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves detections associated with a specific entity (Host or Account).
+      This provides contextual metadata about the entity's security posture, aligning
+      with the 'Enrich Asset' category. It does not perform any other listed actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: true
+    search_events: false
     send_email: false
     send_message: false
     submit_file: false
@@ -1191,10 +1285,11 @@ List Entity Detections:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of detections associated with a specific entity (Host or Account)
-    from the Vectra RUX platform. This action is useful for security analysts to quickly
-    identify all security events or 'detections' linked to a particular asset or user
-    account, providing context for investigation and incident response.
+    This action retrieves a list of detections associated with a specific entity (Host
+    or Account) from the Vectra RUX platform. It allows analysts to filter detections
+    by their state (Active, Inactive, or Fixed) and limit the number of results returned.
+    The action provides visibility into the security events linked to a particular
+    asset, aiding in investigation and threat hunting.
 
 
     ### Parameters Description
@@ -1203,44 +1298,33 @@ List Entity Detections:
 
     | :--- | :--- | :--- | :--- |
 
-    | Entity ID | string | Yes | The unique numerical identifier of the entity (Host
-    or Account) in Vectra RUX. |
+    | Entity ID | string | Yes | The unique identifier of the entity (Host or Account)
+    in Vectra RUX. |
 
-    | Entity Type | ddl | Yes | Specifies whether the provided ID belongs to an 'Account'
-    or a 'Host'. |
+    | Entity Type | ddl | Yes | The type of the entity. Options: 'Account' or 'Host'.
+    |
 
-    | Limit | string | No | The maximum number of detections to retrieve. If not provided,
-    the system uses a default limit. |
+    | Limit | string | No | The maximum number of detections to return. |
 
-    | State | ddl | Yes | Filters detections by their current state. Options include
-    'Active', 'Inactive', or 'Fixed'. |
-
-
-    ### Additional Notes
-
-    - The action first fetches the entity details to extract the list of associated
-    detection IDs before querying the detection details.
-
-    - Results are presented both as a raw JSON object and a formatted data table for
-    easy viewing in the SOAR interface.
+    | State | ddl | Yes | The state of detections to filter by. Options: 'Active',
+    'Inactive', or 'Fixed'. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the Entity ID, Entity Type,
-    Limit, and State from the user input.
+    1. **Initialization**: Extracts configuration parameters (API Root, Client ID,
+    Client Secret) and action parameters (Entity ID, Entity Type, Limit, State).
 
-    2. **Validation**: It validates that the Entity ID and Limit are valid integers.
+    2. **Validation**: Validates the provided Entity ID and Limit parameters.
 
-    3. **Entity Lookup**: It calls the Vectra RUX API to describe the entity and retrieve
-    its associated `detection_ids`.
+    3. **Entity Retrieval**: Calls the Vectra RUX API to describe the specified entity
+    and retrieve its associated detection IDs.
 
-    4. **Detection Retrieval**: If detections exist, it queries the detections endpoint
-    using the retrieved IDs and applies the state filter and limit.
+    4. **Detection Fetching**: If detections exist, it queries the Vectra RUX API
+    to list the detections based on the provided state and limit.
 
-    5. **Output Generation**: The retrieved detection data is processed into a JSON
-    result and a data table containing key fields like ID, URL, Type, Category, and
-    Last Timestamp.
+    5. **Output**: Returns the retrieved detections as a JSON object and displays
+    them in a data table within the action results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1251,8 +1335,16 @@ List Entity Detections:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs GET requests to retrieve entity and detection information
+      from the Vectra RUX API. It does not modify any external or internal system
+      state. It outputs data to the action result using standard SDK methods.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches contextual data (detections) for an entity. It does not mutate
+      external systems or modify internal SOAR data (like updating entities or adding
+      insights). It meets the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1268,6 +1360,10 @@ List Entity Detections:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It takes `Entity
+      ID` and `Entity Type` as input parameters. Therefore, it does not run on entities
+      in the context of the SOAR entity model.
 List Groups:
   action_product_categories:
     add_alert_comment: false
@@ -1283,6 +1379,10 @@ List Groups:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a listing utility that retrieves group information from the Vectra
+      RUX platform. It does not match any of the specific operational categories like
+      enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1298,77 +1398,59 @@ List Groups:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves a list of groups from Vectra RUX based on specified filtering criteria.
-    This action allows analysts to search for groups by name, type (account, IP, domain,
-    host), importance level, and associated identifiers like hostnames or account
-    names. It is useful for identifying group memberships and organizational structures
-    within the Vectra platform.
+    Lists groups from the Vectra RUX platform based on provided filter criteria. This
+    action allows users to query groups by various attributes such as name, type,
+    importance, and associated network identifiers (IPs, hostnames, etc.).
 
 
-    ### Flow Description:
+    ### Flow Description
 
-    1. **Parameter Initialization**: The action extracts configuration details (API
-    Root, Client ID, Client Secret) and user-provided search filters.
+    1. **Parameter Extraction**: The action retrieves configuration parameters (API
+    credentials) and action-specific filters (e.g., Name, Type, IPs, Limit) from the
+    integration settings.
 
-    2. **Input Processing**: Comma-separated strings for parameters like 'Host Names',
-    'Account Names', 'Domains', and 'IPs' are parsed into lists for the API query.
+    2. **Initialization**: The `VectraRUXManager` is initialized with the provided
+    API credentials to establish a connection.
 
-    3. **Validation**: The 'Limit' parameter is validated to ensure it is a positive
-    integer.
+    3. **Data Retrieval**: The action queries the Vectra RUX API to fetch groups matching
+    the specified filters.
 
-    4. **API Query**: The action calls the Vectra RUX API's group listing endpoint,
-    applying the provided filters and handling pagination to retrieve the requested
-    number of records.
-
-    5. **Output Generation**: If groups are found, they are presented in a structured
-    data table and a full JSON result is attached to the action output.
+    4. **Result Formatting**: If groups are found, the action formats the retrieved
+    data into a table and a JSON result, which are then added to the action output.
 
 
-    ### Parameters Description:
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Last Modified Timestamp GTE | String | No | Filters groups modified on or after
-    this timestamp. |
+    | Last Modified Timestamp GTE | string | No | Last modified timestamp (greater
+    or equal) of the group. |
 
-    | Last Modified By | String | No | Filters groups modified by a specific username.
+    | Last Modified By | string | No | Username who has modified the group. |
+
+    | Name | string | No | Name of the group. |
+
+    | Type | ddl | No | Type of group (account, ip, domain, host). |
+
+    | Limit | string | No | Specify the limit for fetching records. |
+
+    | Account Names | string | No | Comma-separated values of account names. |
+
+    | Domains | string | No | Comma-separated values of domains. |
+
+    | Host Ids | string | No | Comma-separated values of host IDs. |
+
+    | Host Names | string | No | Comma-separated values of host names. |
+
+    | Importance | ddl | No | Importance of the group (low, medium, high, never_prioritize).
     |
 
-    | Name | String | No | Filters groups by their name. |
+    | IPs | string | No | Comma-separated values of IPs. |
 
-    | Type | DDL | No | Filters groups by type: 'account', 'ip', 'domain', or 'host'.
+    | Description | string | No | Description of the group (case-insensitive match).
     |
-
-    | Limit | String | No | The maximum number of group records to retrieve. |
-
-    | Account Names | String | No | Comma-separated list of account names to filter
-    by. |
-
-    | Domains | String | No | Comma-separated list of domains to filter by. |
-
-    | Host Ids | String | No | Comma-separated list of host IDs to filter by. |
-
-    | Host Names | String | No | Comma-separated list of host names to filter by.
-    |
-
-    | Importance | DDL | No | Filters groups by importance level (e.g., low, medium,
-    high). |
-
-    | IPs | String | No | Comma-separated list of IP addresses to filter by. |
-
-    | Description | String | No | Filters groups by description (case-insensitive
-    match). |
-
-
-    ### Additional Notes:
-
-    - This action does not run on entities automatically; it relies entirely on the
-    provided input parameters.
-
-    - If no parameters are provided, the action will attempt to list all groups up
-    to the default limit.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1379,8 +1461,17 @@ List Groups:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Vectra RUX API to retrieve a list of
+      groups based on user-provided filters. It does not modify any external systems,
+      nor does it modify internal case data or entities. It simply reports the retrieved
+      data in the action results.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for listing groups from an external system. It does
+      not proactively fetch context for specific entities or alerts to enrich them,
+      nor does it meet the criteria for an enrichment action as defined.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1396,6 +1487,9 @@ List Groups:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on `siemplify.target_entities`. It uses input parameters
+      to filter the list of groups retrieved from the API.
 List Outcomes:
   action_product_categories:
     add_alert_comment: false
@@ -1411,6 +1505,10 @@ List Outcomes:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of assignment outcomes from the Vectra RUX system.
+      It does not match any of the specific categories like 'Enrich IOC', 'Enrich
+      Asset', or 'Update Alert'. It is a general data retrieval action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1425,45 +1523,56 @@ List Outcomes:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nRetrieves a list of all available assignment\
-    \ outcomes from the Vectra RUX platform. This action provides visibility into\
-    \ the possible resolution states (e.g., 'True Positive', 'False Positive') and\
-    \ categories that can be applied when resolving assignments or detections. The\
-    \ results are presented both as a structured JSON object and a formatted data\
-    \ table for easy review by analysts.\n\n### Parameters Description\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Limit |\
-    \ String | No | Specifies the maximum number of outcome records to fetch from\
-    \ the API. If left empty, the action will attempt to retrieve all available outcomes\
-    \ up to the system's default limit. |\n\n### Flow Description\n1. **Parameter\
-    \ Initialization**: The action extracts the API configuration (Root, Client ID,\
-    \ Client Secret) and the optional 'Limit' parameter.\n2. **Validation**: The 'Limit'\
-    \ parameter is validated to ensure it is a valid non-negative integer.\n3. **API\
-    \ Interaction**: The action connects to the Vectra RUX API and requests the list\
-    \ of assignment outcomes from the `/assignment_outcomes` endpoint, applying pagination\
-    \ if necessary based on the provided limit.\n4. **Data Processing**: The retrieved\
-    \ outcomes are parsed into a standardized model containing the Outcome ID, Title,\
-    \ Category, and whether it is a built-in or user-selectable outcome.\n5. **Output\
-    \ Generation**: \n    *   A data table titled \"Outcome Details\" is created and\
-    \ added to the case.\n    *   The full raw response is attached as a JSON result.\n\
-    \    *   A success message indicates the number of outcomes retrieved.\n\n###\
-    \ Additional Notes\n- If no outcomes are found, the action will complete successfully\
-    \ with a \"No outcomes found\" message.\n- This action is primarily used for administrative\
-    \ or investigative context to understand how alerts can be classified during the\
-    \ resolution phase."
+  ai_description: >-
+    Lists assignment outcomes from the Vectra RUX system. This action retrieves a
+    list of configured outcomes, allowing analysts to view available options for assignment
+    resolution within the Vectra RUX platform.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Limit | string | No | Specifies the maximum number of records to fetch. |
+
+
+    ### Flow Description
+
+    1. Initialize the VectraRUX manager using the provided API credentials (API Root,
+    Client ID, Client Secret).
+
+    2. Validate the 'Limit' parameter to ensure it is a valid non-negative integer.
+
+    3. Call the Vectra RUX API to retrieve the list of assignment outcomes.
+
+    4. If outcomes are found, construct a data table with the outcome details and
+    add it to the action results.
+
+    5. Add the raw list of outcomes as a JSON result to the action output.
+
+    6. Complete the action execution with a success status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table named 'Outcome Details' to the action results within Google
-      SecOps.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve a list of assignment outcomes
+      from the Vectra RUX API. It does not modify any external or internal data, nor
+      does it update entities, create insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data (list of outcomes) but does not enrich entities or alerts,
+      nor does it meet the criteria for an enrichment action (which requires updating
+      entities, insights, or adding comments).
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1479,6 +1588,9 @@ List Outcomes:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with the `target_entities` list or perform operations
+      on specific entities.
 List Users:
   action_product_categories:
     add_alert_comment: false
@@ -1494,6 +1606,10 @@ List Users:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of users from the VectraRUX platform. It does not
+      match any of the provided categories (e.g., it is not an enrichment of an IOC/Asset,
+      nor does it perform any containment or ticket management).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1509,27 +1625,54 @@ List Users:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Lists users from the Vectra RUX platform based on query parameters. This action
-    enables security analysts to search for and retrieve user account information,
-    including roles, email addresses, and login history. It is primarily used for
-    identity verification and investigative research within the Vectra environment.
-    ### Flow Description: 1. **Parameter Extraction:** Retrieves API credentials and
-    filter criteria (Role, Email, Last Login GTE, Limit) from the action configuration.
-    2. **Validation:** Validates the 'Limit' parameter to ensure it is a valid integer.
-    3. **API Interaction:** Connects to the Vectra RUX API and requests the user list
-    using the specified filters. 4. **Pagination:** Handles paginated responses from
-    the API to collect all relevant user records up to the defined limit. 5. **Data
-    Processing:** Parses the raw API response into structured User objects. 6. **Output
-    Generation:** Populates a data table ('List Of Users') in the SOAR case and provides
-    the full JSON response for downstream tasks. ### Parameters Description: | Parameter
-    | Type | Mandatory | Description | | :--- | :--- | :--- | :--- | | Role | String
-    | No | Filters the user list by a specific role (e.g., 'admin', 'readonly'). |
-    | Email | String | No | Filters the user list by a specific email address. | |
-    Last Login GTE | String | No | Filters for users whose last login timestamp is
-    greater than or equal to the provided value. | | Limit | String | No | Specifies
-    the maximum number of user records to retrieve. | ### Additional Notes: - If no
-    users match the criteria, the action completes successfully with an informative
-    message. - The 'Limit' parameter defaults to a system-defined maximum if not provided.
+    ### General Description
+
+    This action retrieves a list of users from the VectraRUX platform based on optional
+    filtering criteria. It allows analysts to query users by role, email, or last
+    login timestamp, providing a structured view of user data within the VectraRUX
+    environment.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration parameters (API Root,
+    Client ID, Client Secret) and action parameters (Role, Email, Last Login GTE,
+    Limit).
+
+    2. **Validation**: The 'Limit' parameter is validated to ensure it is a non-negative
+    integer.
+
+    3. **API Interaction**: The `VectraRUXManager` is initialized to authenticate
+    and communicate with the VectraRUX API.
+
+    4. **Data Retrieval**: The action calls the `get_user_list` method to fetch user
+    records from the VectraRUX API based on the provided filters.
+
+    5. **Output**: If users are found, the action constructs a CSV data table and
+    a JSON result containing the user details. If no users are found, an appropriate
+    message is returned.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Role | string | No | Filter users by their assigned role. |
+
+    | Email | string | No | Filter users by their email address. |
+
+    | Last Login GTE | string | No | Filter users whose login timestamp is greater
+    than or equal to the provided value. |
+
+    | Limit | string | No | Specify the maximum number of records to fetch. |
+
+
+    ### Additional Notes
+
+    This action does not require any specific entity context to run, as it is a standalone
+    utility for listing users from the VectraRUX platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1540,8 +1683,17 @@ List Users:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve user data from the VectraRUX API.
+      It does not modify any external or internal systems. It outputs the results
+      as a data table and JSON, which are standard reporting outputs, not internal
+      mutations.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external source but does not gather supplemental
+      context about specific alerts or entities. It is a standalone list action, not
+      an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1557,6 +1709,9 @@ List Users:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It is a standalone utility action to
+      list users.
 Mark Detection Fixed:
   action_product_categories:
     add_alert_comment: false
@@ -1572,6 +1727,10 @@ Mark Detection Fixed:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a PATCH request to an external system (Vectra RUX) to update
+      the status of detections. It does not match any of the provided categories (Enrichment,
+      Ticket, Blocklist, Containment, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1587,26 +1746,11 @@ Mark Detection Fixed:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Marks specific detections as fixed in the Vectra platform. This action allows
-    analysts to programmatically update the status of one or more detections by providing
-    their unique identifiers. It is useful for closing out handled threats directly
-    from the SOAR workflow.
+    ### General Description
 
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: Retrieves the API configuration (Root, Client ID,
-    Secret) and the list of Detection IDs from the action input.
-
-    2. **Validation**: Parses the comma-separated string of Detection IDs and validates
-    that each ID is a valid integer.
-
-    3. **API Interaction**: Connects to the Vectra API and sends a PATCH request to
-    the detections endpoint, setting the `mark_as_fixed` flag to `True` for all provided
-    IDs.
-
-    4. **Result Handling**: Captures the API response and reports the success or failure
-    of the operation.
+    Marks specific detections as fixed in the Vectra RUX platform. This action updates
+    the status of one or more detections to 'fixed' by sending a PATCH request to
+    the Vectra RUX API.
 
 
     ### Parameters Description
@@ -1615,17 +1759,33 @@ Mark Detection Fixed:
 
     | :--- | :--- | :--- | :--- |
 
-    | Detection IDs | String | Yes | A comma-separated list of numeric IDs for the
-    detections that should be marked as fixed. |
+    | Detection IDs | string | Yes | A comma-separated list of detection IDs to be
+    marked as fixed. |
+
+
+    ### Flow Description
+
+    1. Extracts the API root and authentication credentials (Client ID, Client Secret)
+    from the integration configuration.
+
+    2. Extracts the 'Detection IDs' parameter from the action input.
+
+    3. Initializes the `VectraRUXManager` to handle API communication.
+
+    4. Parses the comma-separated string of Detection IDs into a list of integers.
+
+    5. Sends a `PATCH` request to the Vectra RUX API endpoint (`/api/v3.4/detections`)
+    with the list of detection IDs and the `mark_as_fixed` flag set to `True`.
+
+    6. Adds the API response to the action results using `siemplify.result.add_result_json`.
 
 
     ### Additional Notes
 
-    - This action does not run on entities; it requires explicit IDs provided via
-    the 'Detection IDs' parameter.
+    - The action requires valid API credentials to authenticate with the Vectra RUX
+    platform.
 
-    - The action uses a PATCH request to modify the state of detections in the external
-    Vectra system.
+    - If an invalid detection ID is provided, the action will fail and log an error.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1634,12 +1794,20 @@ Mark Detection Fixed:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'mark_as_fixed' status of detections to 'True' in the Vectra platform
+      Updates the status of specified detections to 'fixed' in the Vectra RUX platform
       via a PATCH request.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PATCH request to an external system (Vectra RUX) to update
+      the status of detections (can_mutate_external_data=true). It does not fetch
+      contextual data (fetches_data=false), nor does it modify internal SOAR case
+      data (can_mutate_internal_data=false).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (PATCH request) and does not fetch data for
+      enrichment purposes, therefore it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1655,6 +1823,10 @@ Mark Detection Fixed:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not use
+      entity-specific identifiers to perform its task. It takes `Detection IDs` as
+      a parameter.
 Mark Entity Fixed:
   action_product_categories:
     add_alert_comment: false
@@ -1670,6 +1842,10 @@ Mark Entity Fixed:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action marks detections as fixed in an external system. This does not align
+      with the provided categories, which are focused on IOCs, tickets, identities,
+      or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1685,48 +1861,39 @@ Mark Entity Fixed:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Marks all detections associated with a specific entity as 'fixed' in the Vectra
-    platform. This action identifies all active detections for a given Host or Account
-    and updates their status to prevent further alerting on those specific instances.
+    ### General Description
+
+    Marks all detections associated with a specific entity (Host or Account) as fixed
+    in the VectraRUX system. This action is used to update the status of security
+    detections in the external Vectra platform based on the provided entity identifier.
 
 
-    ### Flow Description:
+    ### Parameters Description
 
-    1. **Parameter Extraction:** Retrieves the 'Entity ID' and 'Entity Type' (Host
-    or Account) from the action parameters.
+    | Parameter | Type | Mandatory | Description |
 
-    2. **Entity Validation:** Validates that the provided Entity ID is a valid integer.
+    | --- | --- | --- | --- |
 
-    3. **Detection Retrieval:** Calls the Vectra API to describe the entity and retrieve
-    the list of all associated detection IDs.
+    | Entity ID | string | Yes | The unique identifier of the entity to mark as fixed.
+    |
 
-    4. **Status Update:** If detections are found, it sends a PATCH request to the
-    Vectra platform to mark all retrieved detection IDs as fixed.
-
-    5. **Result Reporting:** Returns the API response as a JSON result and provides
-    a summary message of the operation.
+    | Entity Type | ddl | Yes | The type of the entity. Options: Account, Host. |
 
 
-    ### Parameters Description:
+    ### Flow Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    1. Extracts configuration parameters (API Root, Client ID, Client Secret) and
+    action parameters (Entity ID, Entity Type).
 
-    | :--- | :--- | :--- | :--- |
+    2. Initializes the `VectraRUXManager` to handle API communication.
 
-    | Entity ID | string | Yes | The unique numerical identifier of the entity in
-    Vectra whose detections should be marked as fixed. |
+    3. Calls `describe_entity` to retrieve the entity details and its associated detection
+    IDs.
 
-    | Entity Type | ddl | Yes | The category of the entity. Must be either 'Account'
-    or 'Host'. |
+    4. If detections are found, sends a PATCH request to the VectraRUX API to mark
+    the identified detections as fixed.
 
-
-    ### Additional Notes:
-
-    - This action performs a state change in the external Vectra system by updating
-    the status of detections.
-
-    - If no detections are associated with the provided Entity ID, the action will
-    complete successfully with a message indicating no detections were found.
+    5. Adds the API response to the action results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1735,12 +1902,19 @@ Mark Entity Fixed:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of detections in the Vectra platform to 'fixed' via a PATCH
-      request to the /detections endpoint.
+      Marks detections associated with the specified entity as fixed in the external
+      VectraRUX system.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches entity details (GET) to retrieve detection IDs and then performs
+      a PATCH request to update the state of those detections in the external VectraRUX
+      system. It does not modify internal SOAR case data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (marking detections as fixed), which violates
+      the 'Read-Only' constraint required for Enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1756,6 +1930,10 @@ Mark Entity Fixed:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action uses parameters ('Entity ID', 'Entity Type') provided by the user
+      to perform its task. It does not iterate over or process the `siemplify.target_entities`
+      list.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -1771,6 +1949,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      functional outcomes like enriching data, blocking IOCs, or managing tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1786,44 +1967,40 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
     Tests the connectivity of the Chronicle SOAR server to the Vectra platform. This
-    action verifies that the provided API Root, Client ID, and Client Secret are valid
-    and that the SOAR server can reach the Vectra API endpoints by attempting to generate
-    an OAuth2 token.
+    action validates the API credentials by attempting to authenticate with the Vectra
+    RUX API. It retrieves an OAuth token to verify that the integration is correctly
+    configured and that the SOAR server can communicate with the external service.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter | Description | Type | Mandatory |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | None | This action does not have any input parameters. | N/A | N/A |
+    | API Root | string | Yes | The base URL of the Vectra RUX API. |
+
+    | Client ID | string | Yes | The Client ID used for authentication. |
+
+    | Client Secret | string | Yes | The Client Secret used for authentication. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify context and retrieves
-    the integration's global configuration parameters (API Root, Client ID, and Client
-    Secret).
+    1. The action initializes the `VectraRUXManager` using the provided API Root,
+    Client ID, and Client Secret.
 
-    2. **Manager Setup**: It instantiates the `VectraRUXManager` which handles the
-    session and authentication logic.
+    2. It attempts to establish a connection by calling `test_connectivity()`.
 
-    3. **Connectivity Test**: The manager attempts to authenticate with the Vectra
-    platform using the provided credentials. This involves checking for existing tokens
-    or requesting a new one via the OAuth2 token endpoint.
+    3. The manager generates an OAuth token by sending a POST request to the authentication
+    endpoint.
 
-    4. **Result Reporting**: If the authentication is successful, the action returns
-    a success message. If an error occurs (e.g., network timeout, invalid credentials),
-    it logs the error and reports a failure.
+    4. If the authentication is successful, the action logs a success message and
+    completes.
 
-
-    ### Additional Notes
-
-    There are no additional notes for this action.
+    5. If the authentication fails, the action logs the error and marks the execution
+    as failed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1834,8 +2011,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test by attempting to authenticate with the
+      Vectra RUX API. It does not fetch contextual data, mutate external data (other
+      than standard authentication), or modify internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a connectivity test (Ping). Per the instructions, Ping actions
+      are not enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1851,6 +2035,8 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities.
 Remove Assignment:
   action_product_categories:
     add_alert_comment: false
@@ -1866,6 +2052,10 @@ Remove Assignment:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action removes an assignment from an entity in Vectra RUX. This is a state
+      change in the external system. It does not match any of the provided categories
+      (Enrich IOC, Enrich Asset, Update Alert, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1878,14 +2068,14 @@ Remove Assignment:
     uncontain_host: false
     update_alert: false
     update_email: false
-    update_identity: true
+    update_identity: false
     update_ticket: false
   ai_description: >-
     ### General Description
 
-    Removes the assignment associated with a specific entity (either an Account or
-    a Host) in Vectra RUX. This action is used to clear ownership or responsibility
-    status for an entity within the Vectra platform by deleting the assignment record.
+    Removes an assignment from a specified entity (Account or Host) in Vectra RUX.
+    This action identifies the assignment associated with the provided entity ID and
+    type, then deletes the assignment record from the external system.
 
 
     ### Parameters Description
@@ -1894,38 +2084,29 @@ Remove Assignment:
 
     | :--- | :--- | :--- | :--- |
 
-    | Entity ID | String | Yes | The unique identifier of the entity in Vectra RUX
-    from which the assignment should be removed. |
+    | Entity ID | string | Yes | The ID of the entity to remove the assignment from.
+    |
 
-    | Entity Type | DDL | Yes | The type of the entity. Supported values are 'Account'
-    or 'Host'. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** Retrieves the `Entity ID` and `Entity Type` from
-    the action parameters.
-
-    2. **Validation:** Validates that the provided `Entity ID` is a valid integer.
-
-    3. **Entity Lookup:** Fetches the current information for the specified entity
-    from Vectra RUX to verify its state.
-
-    4. **Assignment Check:** Checks if the entity currently has an active assignment
-    associated with it.
-
-    5. **Removal:** If an assignment exists, it extracts the `Assignment ID` and sends
-    a DELETE request to the Vectra RUX API to remove the assignment.
-
-    6. **Completion:** Returns a success message if the assignment was successfully
-    deleted, or an error message if the entity did not have an assignment or if the
-    entity was not found.
+    | Entity Type | ddl | Yes | The type of the entity (Account or Host). |
 
 
     ### Additional Notes
 
-    This action requires valid API credentials (Client ID and Client Secret) and the
-    API Root URL for the Vectra RUX instance to be configured in the integration settings.
+    None.
+
+
+    ### Flow Description
+
+    1. Extracts configuration (API credentials) and action parameters (Entity ID,
+    Entity Type).
+
+    2. Initializes the Vectra RUX manager.
+
+    3. Retrieves the entity information to identify the current assignment.
+
+    4. If an assignment exists, it deletes the assignment using the assignment ID.
+
+    5. Returns the operation status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1934,11 +2115,19 @@ Remove Assignment:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes an assignment record in Vectra RUX associated with the specified entity.
+      Deletes an assignment record from the Vectra RUX system.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches entity information to find an assignment ID and then performs
+      a DELETE request to remove that assignment from the Vectra RUX system. It does
+      not modify internal SOAR data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs a deletion on an external system (Vectra RUX), which violates
+      the 'External State Preservation' rule for enrichment actions. Therefore, it
+      is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1954,6 +2143,10 @@ Remove Assignment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action uses action parameters (`Entity ID`, `Entity Type`) to identify the
+      target, rather than iterating over `siemplify.target_entities`. Therefore, it
+      does not run on entities in the context of the SOAR entity model.
 Remove Group:
   action_product_categories:
     add_alert_comment: false
@@ -1969,6 +2162,10 @@ Remove Group:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action modifies group memberships, which aligns with the 'Update Identity'
+      category definition: 'Modifies account metadata, such as group memberships,
+      permissions, or contact information.'
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1984,58 +2181,42 @@ Remove Group:
     update_identity: true
     update_ticket: false
   ai_description: >-
-    Removes specified members from a group in Vectra AI. This action allows for automated
-    management of Vectra groups by providing a Group ID and a list of members to be
-    detached. It performs a state change in the Vectra platform and provides a detailed
-    summary of the operation, including an HTML visualization of the group's updated
-    state.
+    Removes specified members from a group in the Vectra RUX platform. This action
+    retrieves the current group membership, performs the removal operation, and provides
+    a summary of the changes.
 
 
-    ### Parameters Description
-
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Group ID | String | True | The unique integer ID of the group in Vectra AI.
-    |
+    | Group ID | string | Yes | The ID of the specific group from which members should
+    be removed. |
 
-    | Members | String | True | A comma-separated list of members to remove. The format
-    of the members (e.g., IP, hostname, UID, or domain) must match the group's type
-    configuration in Vectra. |
-
-
-    ### Additional Notes
-
-    - The **Group ID** must be a valid positive integer.
-
-    - The action will identify which members were successfully removed and which were
-    not found in the group.
-
-    - The result includes an HTML table showing the updated group properties and its
-    current member list.
+    | Members | string | Yes | A comma-separated list of members to remove from the
+    group. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves API credentials and action parameters (Group
-    ID and Members).
+    1. **Initialization**: Extracts configuration parameters (API Root, Client ID,
+    Client Secret) and action parameters (Group ID, Members).
 
-    2. **Validation:** Validates that the Group ID is a positive integer and processes
-    the comma-separated Members string into a list.
+    2. **Validation**: Validates that the Group ID is a valid integer.
 
-    3. **Pre-check:** Fetches the current group members from Vectra AI to verify the
-    group's existence and current state.
+    3. **Fetch**: Retrieves the current list of members for the specified group using
+    the Vectra RUX API.
 
-    4. **Mutation:** Executes a PATCH request to the Vectra API endpoint for the specified
-    group with the `membership_action` set to `remove`.
+    4. **Mutation**: Calls the Vectra RUX API to remove the specified members from
+    the group.
 
-    5. **Analysis:** Compares the requested removals against the updated group state
-    returned by the API to determine successful and failed removals.
+    5. **Verification**: Compares the requested removals against the updated group
+    membership to determine which members were successfully removed.
 
-    6. **Output Generation:** Renders an HTML table of the updated group details and
-    returns the full group object as a JSON result.
+    6. **Reporting**: Generates an HTML view of the group details and adds the raw
+    JSON response to the action results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2044,12 +2225,20 @@ Remove Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes specified members from a group in Vectra AI by sending a PATCH request
-      to the `/groups/{group_id}` endpoint with the `membership_action=remove` parameter.
+      Removes specified members from a group in the Vectra RUX platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches current group members to verify the state before performing
+      a removal. It then performs a PATCH request to the Vectra RUX API to remove
+      members from a group, which constitutes an external data mutation. It does not
+      modify internal SOAR case data, entities, or alert status.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs an external mutation (removing members from a group), which
+      violates the 'External State Preservation' rule for enrichment actions. Therefore,
+      it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2065,6 +2254,9 @@ Remove Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize the `target_entities` attribute.
+      It relies solely on input parameters provided by the user.
 Remove Note:
   action_product_categories:
     add_alert_comment: false
@@ -2080,6 +2272,122 @@ Remove Note:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action removes a note from an external system. This does not align with
+      any of the provided categories such as enrichment, containment, ticketing, or
+      alert management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Removes a specific note from an entity within the Vectra RUX system. This action
+    allows analysts to clean up or remove outdated or incorrect notes associated with
+    accounts, hosts, or detections.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Entity ID | string | Yes | The unique identifier of the entity from which the
+    note should be removed. |
+
+    | Note ID | string | Yes | The unique identifier of the note to be removed. |
+
+    | Entity Type | ddl | Yes | The type of the entity (e.g., Account, Host, Detection).
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `SiemplifyAction` and extracts
+    the necessary configuration parameters (API Root, Client ID, Client Secret) and
+    action parameters (Entity ID, Note ID, Entity Type).
+
+    2. **Manager Setup**: It initializes the `VectraRUXManager` to handle API communication.
+
+    3. **Validation**: It validates that the provided Entity ID and Note ID are valid
+    integers.
+
+    4. **Execution**: It calls the `remove_note` method of the `VectraRUXManager`,
+    which performs a DELETE request to the Vectra RUX API to remove the specified
+    note.
+
+    5. **Completion**: It logs the outcome and returns a success or failure message
+    to the SOAR platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action deletes a note from the Vectra RUX system via an API call.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a DELETE request to an external API (Vectra RUX) to remove
+      a note. It does not fetch data (no GET requests for context), does not update
+      internal SOAR entities, and does not create insights or comments. It is a pure
+      external mutation action.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action does not fetch data, so it cannot be an enrichment action. It is
+      a management/mutation action.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action uses input parameters ('Entity ID', 'Entity Type') provided by the
+      user to identify the target, rather than iterating over the `siemplify.target_entities`
+      list. Therefore, it does not run on entities in the context of the SOAR entity
+      model.
+Remove Tags:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates tags on an entity in the VectraRUX platform. None of the
+      provided product categories (e.g., Enrich IOC, Contain Host, Update Alert) specifically
+      cover the modification of entity tags.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2097,162 +2405,45 @@ Remove Note:
   ai_description: >-
     ### General Description
 
-    Removes a specific note from a designated entity within the Vectra RUX platform.
-    This action allows analysts to manage and clean up notes associated with Accounts,
-    Hosts, or Detections by providing the unique identifiers for both the entity and
-    the note.
+    Removes specified tags from an entity (Account, Host, or Detection) within the
+    VectraRUX platform. This action retrieves the current tags for the specified entity,
+    removes the requested tags from the list, and updates the entity's tag configuration
+    in the external system.
 
 
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory | Expected Value |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | Entity ID | The unique identifier of the entity (Account, Host, or Detection)
-    from which the note should be removed. | String | Yes | A numeric string representing
-    the Entity ID. |
-
-    | Note ID | The unique identifier of the specific note to be deleted. | String
-    | Yes | A numeric string representing the Note ID. |
-
-    | Entity Type | The category of the entity from which the note is being removed.
-    | DDL | Yes | One of: 'Account', 'Host', or 'Detection'. |
-
-
-    ### Additional Notes
-
-    This action performs a permanent deletion of the note in the external Vectra RUX
-    system. The 'Entity ID' and 'Note ID' parameters are validated as integers before
-    the request is sent.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Vectra RUX manager using the
-    provided API credentials (API Root, Client ID, and Client Secret).
-
-    2. **Parameter Extraction**: It retrieves the `Entity ID`, `Note ID`, and `Entity
-    Type` from the action inputs.
-
-    3. **Validation**: The `Entity ID` and `Note ID` are validated to ensure they
-    are valid integer values.
-
-    4. **Execution**: The action calls the Vectra RUX API using a DELETE request to
-    the endpoint `api/v3.4/entities/{entity_id}/notes/{note_id}`.
-
-    5. **Completion**: Upon successful deletion, the action returns a confirmation
-    message and sets the result value to true.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes a specific note associated with an entity (Account, Host, or Detection)
-      in the Vectra RUX platform.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Remove Tags:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    Removes specific tags from a Vectra entity (Account, Host, or Detection) identified
-    by its ID. This action first retrieves the current tags associated with the entity,
-    identifies which of the requested tags are present, and then updates the entity's
-    tag list on the Vectra platform by removing those tags. It provides a summary
-    of the operation, including which tags were successfully removed and which were
-    not found.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** Retrieves the target tags (comma-separated), the
-    Entity ID, and the Entity Type (Account, Host, or Detection) from the action parameters.
-
-    2. **Data Retrieval:** Calls the Vectra API to fetch the current list of tags
-    associated with the specified entity ID and type.
-
-    3. **Tag Comparison:** Compares the provided tags against the existing tags. It
-    identifies tags that can be removed and those that do not exist on the entity.
-
-    4. **External Mutation:** If valid tags for removal are found, it constructs a
-    new tag list (excluding the removed tags) and sends a PATCH request to the Vectra
-    platform to update the entity.
-
-    5. **Output Generation:** Adds a JSON result and a data table to the SOAR case
-    detailing the update status, the entity ID, and the final tag list.
-
-
-    ### Parameters Description
-
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Tags | string | Yes | A comma-separated list of tags to be removed from the
-    entity. |
+    | Tags | string | Yes | A comma-separated list of tags to remove from the entity.
+    |
 
-    | Entity ID | string | Yes | The unique identifier of the entity in Vectra from
-    which tags will be removed. |
+    | Entity ID | string | Yes | The unique identifier of the entity (Account, Host,
+    or Detection). |
 
-    | Entity Type | ddl | Yes | The category of the entity. Supported values: Account,
+    | Entity Type | ddl | Yes | The type of the entity. Supported values: Account,
     Host, Detection. |
 
 
-    ### Additional Notes
+    ### Flow Description
 
-    - This action does not process entities from the SOAR entity list; it operates
-    strictly on the ID provided in the 'Entity ID' parameter.
+    1. Extracts configuration parameters (API Root, Client ID, Client Secret) and
+    action parameters (Tags, Entity ID, Entity Type).
 
-    - If none of the specified tags exist on the entity, the action will fail with
-    a 'TagsUpdateFailException'.
+    2. Initializes the VectraRUX manager to handle API communication.
+
+    3. Validates the Entity ID and fetches the current tags for the specified entity
+    using the `get_entity_tags` method.
+
+    4. Compares the requested tags with the existing tags and removes the matches.
+
+    5. Updates the entity's tags in the VectraRUX platform using the `update_tags`
+    method.
+
+    6. Logs the operation status and adds the result to the action output as a JSON
+    object and a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2261,12 +2452,20 @@ Remove Tags:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the entity's metadata in the Vectra platform by removing specified tags
-      via a PATCH request to the tagging API endpoint.
+      Updates the tag list for an entity (Account, Host, or Detection) in the external
+      VectraRUX platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches existing tags from the external VectraRUX system (GET request)
+      and subsequently performs a PATCH request to update the entity's tags. It does
+      not modify internal SOAR case data or update SOAR entity objects directly.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs a mutation on an external system (updating tags), which
+      violates the requirement for an enrichment action to be read-only regarding
+      external systems.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2282,6 +2481,10 @@ Remove Tags:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It accepts `Entity
+      ID` and `Entity Type` as direct input parameters to identify the target, meaning
+      it does not operate on the SOAR entity model.
 Resolve Assignment:
   action_product_categories:
     add_alert_comment: false
@@ -2297,6 +2500,10 @@ Resolve Assignment:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action resolves an assignment in the Vectra RUX platform. This is an operational
+      update to an external record, which aligns with the 'Update Ticket' category
+      as assignments are effectively tickets in this context.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2314,10 +2521,25 @@ Resolve Assignment:
   ai_description: >-
     ### General Description
 
-    Resolves a specific assignment in Vectra AI using its unique assignment ID and
-    a designated outcome ID. This action allows analysts to close out tasks within
-    the Vectra platform directly from Google SecOps, providing options to add notes,
-    apply triage rules, and associate specific detections with the resolution.
+    Resolves an assignment in the Vectra RUX platform. This action allows analysts
+    to update the status of an assignment by providing an outcome ID and optional
+    metadata such as notes, triage rules, and associated detection IDs.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts configuration parameters (API Root, Client ID,
+    Client Secret) and action parameters (Assignment ID, Outcome ID, Note Title, Triage
+    As, Detection IDs).
+
+    2. **Validation**: Validates the provided Assignment ID, Outcome ID, and Triage
+    As parameters to ensure they meet the required format and constraints.
+
+    3. **Execution**: Initializes the `VectraRUXManager` and performs a PUT request
+    to the Vectra API to resolve the specified assignment.
+
+    4. **Output**: Adds the resolution result as a JSON object and a data table to
+    the action results.
 
 
     ### Parameters Description
@@ -2326,50 +2548,24 @@ Resolve Assignment:
 
     | :--- | :--- | :--- | :--- |
 
-    | Assignment ID | String | Yes | The unique integer ID of the assignment to be
-    resolved. |
+    | Assignment ID | string | Yes | The ID of the assignment to resolve. |
 
-    | Outcome ID | String | Yes | The integer ID representing the resolution outcome
-    (e.g., 1 for Benign True Positive, 2 for Malicious True Positive, 3 for False
-    Positive). Custom IDs are also supported. |
+    | Outcome ID | string | Yes | The outcome ID for resolving the assignment (e.g.,
+    1 for Benign True Positive, 2 for Malicious True Positive, 3 for False Positive).
+    |
 
-    | Note Title | String | No | A descriptive note or title to be attached to the
-    resolution record in Vectra. |
+    | Note Title | string | No | A note to be added for resolving the assignment.
+    |
 
-    | Triage As | String | No | A triage rule string to apply to the resolution. Must
-    be at least 4 characters long and contain no special characters. |
+    | Triage As | string | No | Triage rule for resolving the assignment. |
 
-    | Detection IDs | String | No | A comma-separated list of integer detection IDs
-    to be associated with the triage rule. |
+    | Detection IDs | string | No | A list of Integer detection IDs separated by commas
+    or a single detection ID. |
 
 
     ### Additional Notes
 
-    - **Dependency:** If the 'Triage As' parameter is provided, at least one 'Detection
-    ID' must also be provided for the action to succeed.
-
-    - **Validation:** The action performs strict validation on 'Assignment ID' and
-    'Outcome ID' to ensure they are valid non-negative integers.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the Assignment ID, Outcome ID,
-    and optional metadata (Note, Triage, Detections) from the input.
-
-    2. **Validation Logic:** It validates that IDs are integers and checks that 'Triage
-    As' meets the character requirements. It also enforces the requirement that 'Detection
-    IDs' must be present if 'Triage As' is used.
-
-    3. **External API Call:** The action sends a `PUT` request to the Vectra RUX API
-    endpoint `/assignments/{assignment_id}/resolve` with the resolution payload.
-
-    4. **Data Processing:** Upon a successful API response, the action parses the
-    updated assignment details.
-
-    5. **Output Generation:** The action produces a JSON result containing the full
-    API response and creates a data table named 'Resolved Assignment' for the case
-    wall.
+    If 'Triage As' is provided, at least one 'Detection ID' must also be provided.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2378,12 +2574,19 @@ Resolve Assignment:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the state of an assignment in the Vectra AI platform to 'Resolved' and
-      applies outcome, triage, and note metadata.
-    fetches_data: true
+      Resolves an assignment in the Vectra RUX platform via a PUT request.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PUT request to the Vectra API to resolve an assignment.
+      It does not fetch data for enrichment purposes, nor does it modify internal
+      SOAR entities or case data. It is a state-changing operation on an external
+      system.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is not an enrichment action as it does not fetch data to enrich entities
+      or alerts. It is a mutation action on an external system.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2399,6 +2602,9 @@ Resolve Assignment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `siemplify.target_entities`. It operates on an `Assignment
+      ID` provided as a parameter.
 Unmark Detection Fixed:
   action_product_categories:
     add_alert_comment: false
@@ -2414,6 +2620,10 @@ Unmark Detection Fixed:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates the status of detections in an external product (VectraRUX).
+      It does not match any of the provided categories, such as enrichment, containment,
+      or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2431,47 +2641,45 @@ Unmark Detection Fixed:
   ai_description: >-
     ### General Description
 
-    Unmarks specific detections as fixed within the Vectra AI platform. This action
-    is used to revert the status of detections that were previously marked as resolved
-    or fixed, allowing them to be re-evaluated or monitored again in the Vectra dashboard.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detection IDs | A comma-separated list of numeric IDs representing the detections
-    to be unmarked as fixed. | String | Yes |
-
-
-    ### Additional Notes
-
-    - The action validates that each provided ID is a valid integer before attempting
-    the API call.
-
-    - This action performs a bulk update on the external Vectra AI system.
+    Unmarks specific detections as fixed in the VectraRUX platform. This action allows
+    analysts to revert the 'fixed' status of detections, ensuring they remain visible
+    or active for further investigation.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the `Detection IDs` string from
-    the input parameters.
+    1. **Configuration**: The action retrieves the API Root, Client ID, and Client
+    Secret from the integration configuration.
 
-    2. **Validation**: It splits the comma-separated string and validates that each
-    ID is a valid integer using the `validate_integer` utility.
+    2. **Parameter Extraction**: It extracts the comma-separated list of Detection
+    IDs from the action parameters.
 
-    3. **Authentication**: The action initializes the `VectraRUXManager`, which handles
-    OAuth2 token generation or retrieval from the local cache.
+    3. **Initialization**: The `VectraRUXManager` is initialized with the provided
+    credentials to establish a connection to the VectraRUX API.
 
-    4. **External Update**: It calls the `unmark_detection_as_fixed` method, which
-    sends a `PATCH` request to the Vectra API endpoint with the `mark_as_fixed` payload
-    set to `False` for the specified IDs.
+    4. **Validation**: The provided Detection IDs are validated to ensure they are
+    integers.
 
-    5. **Result Processing**: The API response is captured, added to the action's
-    JSON results, and the execution state is set to completed or failed based on the
-    success of the request.
+    5. **Execution**: The action sends a `PATCH` request to the VectraRUX API to update
+    the status of the specified detections, setting `mark_as_fixed` to `False`.
+
+    6. **Result**: The API response is added to the action result as a JSON object.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Detection IDs | string | Yes | A comma-separated list of Detection IDs to be
+    unmarked as fixed. |
+
+
+    ### Additional Notes
+
+    This action performs a state change in the external VectraRUX system. Ensure that
+    the provided Detection IDs are valid and exist within the VectraRUX environment.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2480,12 +2688,21 @@ Unmark Detection Fixed:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'mark_as_fixed' status of specific detections to 'False' in the
-      Vectra AI platform via a PATCH request.
+      Updates the 'fixed' status of detections in the VectraRUX platform by sending
+      a PATCH request.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PATCH request to the VectraRUX API to update the status
+      of specific detections. It does not fetch data for enrichment, nor does it modify
+      internal SOAR entities, case wall, or insights. It only adds the result of the
+      API call to the action output.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (updating detection status) and does not retrieve
+      data for enrichment. Therefore, it does not meet the criteria for an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2501,6 +2718,9 @@ Unmark Detection Fixed:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize `siemplify.target_entities`. It
+      relies entirely on a user-provided parameter for Detection IDs.
 Update Assignment:
   action_product_categories:
     add_alert_comment: false
@@ -2516,6 +2736,10 @@ Update Assignment:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates an assignment in the VectraRUX system. It does not match
+      any of the provided categories (e.g., Enrich IOC, Update Alert, Create Ticket,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2531,54 +2755,39 @@ Update Assignment:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Updates the assigned user for a specific assignment associated with a Host or
-    Account in Vectra AI. This action is used to reassign ownership of a detection
-    or entity investigation within the Vectra platform by modifying the 'assign_to_user_id'
-    field of an existing assignment.
+    Updates the assigned user for a specific assignment in the VectraRUX system. This
+    action retrieves the assignment ID associated with a given entity and then updates
+    that assignment to the specified user.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Entity ID | String | Yes | The unique identifier of the Host or Account in Vectra
-    AI. |
+    | Entity ID | string | Yes | The ID of the entity (Account or Host) whose assignment
+    is being updated. |
 
-    | Entity Type | DDL | Yes | The type of entity to update. Options are 'Account'
-    or 'Host'. |
+    | Entity Type | ddl | Yes | The type of the entity (Account or Host). |
 
-    | User ID | String | Yes | The unique identifier of the user to whom the assignment
-    will be reassigned. |
-
-
-    ### Additional Notes
-
-    The action first retrieves the entity's current information to identify the active
-    `assignment_id`. If the entity does not have an active assignment, the action
-    will fail with an 'ItemNotFound' error.
+    | User ID | string | Yes | The ID of the user to assign the assignment to. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves the Entity ID, Entity Type, and User ID
-    from the action inputs.
+    1. Extract configuration parameters (API Root, Client ID, Client Secret) and action
+    parameters (Entity ID, Entity Type, User ID).
 
-    2. **Validation**: Validates that the Entity ID and User ID are provided as valid
-    integer strings.
+    2. Validate that the provided Entity ID and User ID are valid integers.
 
-    3. **Fetch Assignment ID**: Calls the Vectra API to retrieve the specific entity's
-    metadata and extracts the ID of the current assignment.
+    3. Initialize the VectraRUXManager to handle API interactions.
 
-    4. **Update Assignment**: Sends a PUT request to the Vectra assignments endpoint
-    to update the assigned user to the provided User ID.
+    4. Fetch the specific entity information to retrieve the associated `assignment_id`.
 
-    5. **Result Processing**: Adds the raw API response to the action results and
-    creates a data table named 'Updated Assignment' containing the assignment ID,
-    the new user ID, and the entity details.
+    5. Perform a PUT request to update the assignment with the provided `user_id`.
+
+    6. Add the response data and a summary table to the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2587,12 +2796,18 @@ Update Assignment:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'assign_to_user_id' field for an existing assignment object in the
-      Vectra AI platform via a PUT request.
+      Updates the assigned user for a specific assignment in the VectraRUX system.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches entity information (GET) and updates an assignment (PUT)
+      in the external VectraRUX system. It does not modify internal SOAR data (entities,
+      insights, or case comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (updates an assignment), which violates the
+      'Read-Only' requirement for enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2608,3 +2823,7 @@ Update Assignment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action uses parameters 'Entity ID' and 'Entity Type' provided by the user,
+      rather than iterating over 'siemplify.target_entities'. Therefore, it does not
+      run on entities in the context of the SOAR entity model.

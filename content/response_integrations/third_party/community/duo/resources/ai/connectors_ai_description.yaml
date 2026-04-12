@@ -2,64 +2,53 @@ DUO - Trust Monitor Connector:
   ai_description: >-
     ### General Description
 
-
-    The **DUO - Trust Monitor Connector** integrates with the Cisco Duo Admin API
-    to ingest security events identified by Duo Trust Monitor. Trust Monitor uses
-    machine learning to detect anomalous authentication behavior and potential security
-    risks within your Duo environment. This connector fetches these events and transforms
-    them into cases within Google SecOps for centralized monitoring and incident response.
+    The DUO - Trust Monitor Connector integrates with the Duo Security Admin API to
+    monitor and ingest Trust Monitor events. It retrieves security events from the
+    specified timeframe, maps them into structured cases, and ingests them into Google
+    SecOps for further investigation and response.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
     | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    Python process running the script. Default is 30. |
+    python process running the script. |
 
     | EventClassId | String | Yes | The field name used to determine the event name
-    (sub-type). Default is 'event_name'. |
+    (sub-type). |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product. Default is 'device_product'. |
+    product. |
 
     | Days Back | Integer | Yes | The maximum number of days back to retrieve data
     from. |
 
-    | API Hostname | String | Yes | The API hostname for your Duo tenant (e.g., api-XXXXXXXX.duosecurity.com).
+    | API Hostname | String | Yes | API hostname for your tenant (e.g., api-XXXXXXXX.duosecurity.com).
     |
 
-    | Admin Secret Key | Password | Yes | The Duo Admin API Secret Key used for authentication.
-    |
+    | Admin Secret Key | Password | Yes | DUO Admin API Secret Key. |
 
-    | Admin Integration Key | Password | Yes | The Duo Admin API Integration Key used
-    for authentication. |
+    | Admin Integration Key | Password | Yes | DUO Admin API Integration Key. |
 
 
     ### Flow Description
 
+    1. The connector initializes the connection to the Duo Security Admin API using
+    the provided API Hostname, Integration Key, and Secret Key.
 
-    1.  **Authentication**: The connector establishes a connection to the Duo Admin
-    API using the provided API Hostname, Integration Key, and Secret Key.
+    2. It calculates the time range based on the configured 'Days Back' parameter.
 
-    2.  **Time Window Calculation**: It determines the ingestion time window by calculating
-    the difference between the current time and the number of days specified in the
-    'Days Back' parameter.
+    3. It queries the Duo Trust Monitor API to fetch events that occurred within the
+    specified timeframe.
 
-    3.  **Data Retrieval**: The connector calls the Duo `get_trust_monitor_events_by_offset`
-    endpoint to retrieve all security events that occurred within the calculated time
-    window.
+    4. For each retrieved event, the connector flattens the nested event data into
+    a structured format.
 
-    4.  **Event Flattening**: For each retrieved event, the connector flattens the
-    nested JSON structure into a key-value format suitable for Google SecOps ingestion.
+    5. It maps the event details (such as user, timestamp, and event type) into a
+    Google SecOps CaseInfo object.
 
-    5.  **Case Mapping**: Each Trust Monitor event is mapped to a Google SecOps Case.
-    The connector uses the Duo transaction ID (`txid`) as the unique identifier and
-    sets a default priority of Medium (60).
-
-    6.  **Ingestion**: The mapped cases, containing detailed event data such as the
-    surfaced authentication details and user information, are returned to the Google
-    SecOps platform.
+    6. Finally, it packages the created alerts and returns them to the SOAR platform
+    for ingestion.

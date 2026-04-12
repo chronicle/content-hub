@@ -1,37 +1,60 @@
 Thinkst - Alert Connector:
-  ai_description: "### General Description\nThis connector integrates with the Thinkst\
-    \ Canary Console to ingest security incidents into Google SecOps. It monitors\
-    \ for activity triggered by Canarytokens, Honeypots, and operational events (such\
-    \ as console or flock setting changes). By converting Canary incidents into structured\
-    \ alerts, it provides security teams with immediate visibility into decoy-based\
-    \ detections and potential unauthorized access within their environment.\n\n###\
-    \ Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---\
-    \ | :--- | :--- | :--- |\n| API Key | Password | Yes | The API key used to authenticate\
-    \ with the Canary Console API. |\n| Console Hash | String | Yes | The unique hash\
-    \ of your Canary Console (the subdomain part before .canary.tools). |\n| Verify\
-    \ SSL | Boolean | No | If enabled, the connector verifies the SSL certificate\
-    \ of the Canary Console. Default is True. |\n| Ignore Informative | Boolean |\
-    \ No | If enabled, incidents classified as 'Informative' (e.g., disconnections\
-    \ or setting changes) will not create cases. |\n| PythonProcessTimeout | String\
-    \ | Yes | The timeout limit in seconds for the python process running the connector\
-    \ script. |\n| DeviceProductField | String | Yes | The field name used to determine\
-    \ the device product (default: device_product). |\n| EventClassId | String | Yes\
-    \ | The field name used to determine the event sub-type (default: SourceType).\
-    \ |\n\n### Flow Description\n1. **Authentication**: The connector establishes\
-    \ a secure connection to the Thinkst Canary Console using the provided API Key\
-    \ and Console Hash.\n2. **State Management**: It checks the connector's internal\
-    \ context for the last processed incident ID and timestamp. If no state is found,\
-    \ it defaults to fetching incidents from the last 24 hours.\n3. **Data Retrieval**:\
-    \ The connector queries the `/incidents/unacknowledged` endpoint. It handles pagination\
-    \ using cursors to ensure all pending incidents are retrieved.\n4. **Filtering**:\
-    \ If the 'Ignore Informative' parameter is set to true, the connector filters\
-    \ out incidents with an informative priority level (e.g., logtype 1004, 23001).\n\
-    5. **Mapping & Transformation**: \n    *   Converts Canary incident fields into\
-    \ SOAR-compatible formats.\n    *   Assigns priorities (Informative, Low, Medium,\
-    \ High, Critical) based on the incident's logtype.\n    *   Categorizes events\
-    \ into Source Types: 'Canarytoken', 'Operational', or 'Honeypot'.\n    *   Generates\
-    \ descriptive alert names and includes direct links to the Canary Console portal.\n\
-    6. **Ingestion**: The processed incidents are packaged as `AlertInfo` objects\
-    \ and ingested into Google SecOps as cases.\n7. **Checkpointing**: After successful\
-    \ ingestion, the connector updates its context with the latest incident ID and\
-    \ timestamp to prevent duplicate processing in the next iteration."
+  ai_description: >-
+    ### General Description
+
+    The Thinkst Alert Connector integrates with the Thinkst Canary Console to retrieve
+    security incidents. It periodically polls the Canary API for new, unacknowledged
+    incidents, transforms them into standardized SOAR alerts, and ingests them into
+    Google SecOps. This allows security teams to monitor and respond to honeypot triggers
+    and other Canary-detected events directly within the SOAR platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Key | Password | Yes | The API key for your Thinkst Canary console. |
+
+    | Console Hash | String | Yes | The unique hash for your console (the part before
+    .canary.tools). |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to the console. |
+
+    | Ignore Informative | Boolean | No | If enabled, prevents the creation of cases
+    for informative incidents. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    Python process. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The connector initializes using the provided API Key and
+    Console Hash to establish a secure connection to the Thinkst Canary API.
+
+    2. **Data Fetching**: It queries the `/incidents/unacknowledged` endpoint, handling
+    pagination to retrieve all new incidents since the last successful run (tracked
+    via context properties).
+
+    3. **Filtering**: If the "Ignore Informative" option is enabled, the connector
+    filters out incidents classified as informative (e.g., system configuration changes).
+
+    4. **Transformation**: Each incident is mapped to a SOAR `AlertInfo` object. This
+    includes normalizing timestamps, mapping incident types to priorities, and flattening
+    event data into a format compatible with Google SecOps.
+
+    5. **Ingestion**: The processed alerts are returned to the SOAR platform for case
+    creation.
+
+    6. **State Management**: Upon successful ingestion, the connector updates its
+    context with the latest incident ID and timestamp to ensure subsequent runs only
+    fetch new data.

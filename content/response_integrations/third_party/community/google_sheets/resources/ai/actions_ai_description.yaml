@@ -13,6 +13,10 @@ Add  Permission:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action modifies external permissions on a Google Sheet. It does not match
+      any of the predefined security-specific categories (e.g., IOC enrichment, containment,
+      ticketing, email management).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,28 +32,21 @@ Add  Permission:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    This action adds permissions to a specific Google Sheet for one or more users.
-    It allows administrators or automated workflows to grant 'Owner', 'Writer', or
-    'Reader' access levels to users identified by their email addresses. The action
-    interacts with the Google Sheets and Google Drive APIs via a service account to
-    update the spreadsheet's access control list.
+    Adds permissions to a Google Sheet for specified users. This action allows administrators
+    to grant 'Owner', 'Writer', or 'Reader' access to a target spreadsheet by providing
+    the Sheet ID and a list of email addresses.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the Google Sheets credentials
-    from the integration configuration and the 'Sheet Id', 'Role', and 'Emails' from
-    the action parameters.
+    1. Extract the `Sheet Id`, `Role`, and `Emails` from the action parameters.
 
-    2. **Client Initialization:** It initializes a Google Sheets client using the
-    provided service account credentials and required OAuth scopes.
+    2. Initialize the Google Sheets client using the configured credentials.
 
-    3. **Permission Insertion:** The action processes the semicolon-separated list
-    of emails and calls the Google API to grant the specified role (Owner, Writer,
-    or Reader) to each user for the target spreadsheet.
+    3. Execute the `insert_permission` method to update the spreadsheet's access control
+    list.
 
-    4. **Completion:** The action returns a success message if the permissions are
-    granted or a failure message if an error occurs during the API call.
+    4. Return the execution status (success or failure).
 
 
     ### Parameters Description
@@ -58,15 +55,14 @@ Add  Permission:
 
     | :--- | :--- | :--- | :--- |
 
-    | Sheet Id | string | True | The unique identifier of the spreadsheet, found in
-    the URL (e.g., `https://docs.google.com/spreadsheets/d/{SheetId}/edit`). |
+    | Sheet Id | string | Yes | The unique identifier of the Google Sheet, found in
+    the URL. |
 
-    | Role | ddl | True | The access level to grant: 'Owner' (full control), 'Writer'
-    (can edit/comment), or 'Reader' (view only). |
-
-    | Emails | string | True | A semicolon-separated list of email addresses for the
-    users receiving the permissions (e.g., `user1@example.com;user2@example.com`).
+    | Role | ddl | Yes | The permission level to grant (Owner, Writer, or Reader).
     |
+
+    | Emails | string | Yes | A semicolon-separated list of email addresses to receive
+    the specified permission. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -75,12 +71,18 @@ Add  Permission:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Modifies the access control list (ACL) of a Google Spreadsheet by adding new
-      user permissions (Owner, Writer, or Reader).
+      Updates the sharing permissions of a Google Sheet by adding users with the specified
+      role.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a call to the Google Sheets API to modify permissions (can_mutate_external_data=true).
+      It does not fetch context data or update internal entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action modifies external data (Google Sheets permissions) rather than retrieving
+      data, so it cannot be an Enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -96,6 +98,9 @@ Add  Permission:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `siemplify.target_entities` or any entity-related
+      logic. It operates solely on provided configuration parameters.
 Add Row:
   action_product_categories:
     add_alert_comment: false
@@ -111,6 +116,9 @@ Add Row:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds a row to a Google Sheet. This does not match any of the provided
+      security-specific categories (e.g., IOC enrichment, ticket creation, host containment).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -128,63 +136,48 @@ Add Row:
   ai_description: >-
     ### General Description
 
-    This action adds a new row of data to a specified Google Sheet. It is useful for
-    logging information, tracking incident response progress, or exporting data from
-    Google SecOps to a spreadsheet for external reporting.
+    This action adds a new row to a specified Google Sheet. It allows users to append
+    data to a worksheet by providing the Sheet ID, optional Worksheet Name, optional
+    Row Index, and the values to be inserted.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Sheet Id | String | Yes | The unique identifier of the spreadsheet, found in
-    the URL: `https://docs.google.com/spreadsheets/d/{Sheet-Id}/edit`. |
+    | Sheet Id | string | Yes | The ID of the Google Sheet, which can be found in
+    the sheet URL. |
 
-    | Worksheet Name | String | No | The name of the specific tab (worksheet) within
-    the spreadsheet. Defaults to the first sheet if not provided. Note: This is case-sensitive.
-    |
+    | Worksheet Name | string | No | The name of the tab within the sheet. If not
+    provided, it defaults to "Sheet1". |
 
-    | Row Index | String | No | The one-based index where the row should be inserted.
-    If not provided, the row is typically appended or inserted at a default position
-    defined by the API. |
+    | Row Index | string | No | The row number to insert at (one-based). If not provided,
+    the row is appended to the end. |
 
-    | Values | String | Yes | A comma-separated list of values to be inserted into
-    the new row (e.g., "value1,value2,value3"). |
+    | Values | string | Yes | Comma-separated values to add as a new row. |
 
 
     ### Additional Notes
 
-    - The `Values` parameter must be a comma-separated string. Each comma-separated
-    element will occupy one cell in the new row.
+    - The action uses the Google Sheets API to perform the insertion.
 
-    - Ensure the service account associated with the provided credentials has 'Editor'
-    access to the target spreadsheet.
+    - The `Values` parameter must be a comma-separated string.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction:** The action retrieves the Google Sheets service
-    account credentials from the integration configuration.
+    1. Extract parameters: Sheet Id, Worksheet Name, Row Index, and Values.
 
-    2. **Parameter Parsing:** It extracts the `Sheet Id`, `Worksheet Name`, `Row Index`,
-    and the `Values` string from the action input.
+    2. Authenticate with Google Sheets using the configured credentials.
 
-    3. **Data Preparation:** The `Values` string is split by commas into a list of
-    individual cell values.
+    3. Open the target spreadsheet using the provided Sheet Id.
 
-    4. **Authentication & Connection:** The action initializes a Google Sheets client
-    and opens the spreadsheet using the provided `Sheet Id`.
+    4. Select the specified worksheet (or default to "Sheet1").
 
-    5. **Worksheet Selection:** It selects the specified worksheet by name or defaults
-    to the first worksheet if no name is provided.
-
-    6. **Row Insertion:** The action inserts the prepared values into the worksheet
-    at the specified `Row Index` (or uses the default insertion logic if no index
-    is provided).
-
-    7. **Completion:** The action returns a success status if the row is added successfully.
+    5. Insert the provided comma-separated values as a new row at the specified index
+    (or default position).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -193,12 +186,18 @@ Add Row:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      This action adds a new row of data to an external Google Sheet, modifying the
-      content of the spreadsheet.
+      Adds a new row to the specified Google Sheet.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a write operation to an external Google Sheet. It does not
+      fetch data for enrichment, nor does it modify internal SOAR entities or alerts.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for modifying external data (Google Sheets). It does
+      not meet the criteria for an enrichment action (which must fetch data and not
+      mutate external systems).
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -214,6 +213,9 @@ Add Row:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `siemplify.target_entities` or perform any operations
+      on entities. It operates on external Google Sheets data directly.
 Add or Update Rows:
   action_product_categories:
     add_alert_comment: false
@@ -229,6 +231,10 @@ Add or Update Rows:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      This action is a generic utility for managing data in Google Sheets. It does
+      not match any of the specific security-focused categories such as IOC enrichment,
+      ticket management, or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -243,73 +249,31 @@ Add or Update Rows:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    This action allows users to manage data within a Google Spreadsheet by either
-    updating existing rows or adding new ones. It searches for a specific value within
-    a designated column; if a match is found, the action updates the corresponding
-    row within a specified column range. If no match is found, the data is appended
-    as a new row at the end of the sheet. This is particularly useful for maintaining
-    dynamic lists, logs, or tracking statuses in a centralized spreadsheet.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Column Number | string | Yes | The index of the column (e.g., "1") where the
-    action will search for the value specified by the 'Field Name'. |
-
-    | Start Column | string | Yes | The starting column letter (e.g., "A") for the
-    range to be updated or added. |
-
-    | End Column | string | Yes | The ending column letter (e.g., "C") for the range
-    to be updated or added. |
-
-    | Field Name | string | Yes | The key within the provided JSON object whose value
-    will be used as the search term in the spreadsheet. |
-
-    | Json | code | Yes | A JSON array of objects representing the rows to be processed.
-    Each object should contain the keys to be mapped to the spreadsheet columns. |
-
-    | Sheet Id | string | Yes | The unique identifier of the Google Spreadsheet, found
-    in the URL. |
-
-    | Worksheet Name | string | No | The name of the specific tab/worksheet to use.
-    Defaults to the first sheet if not provided. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action authenticates with the Google Sheets API using
-    the provided service account credentials.
-
-    2. **Initialization**: It opens the spreadsheet using the `Sheet Id` and selects
-    the target worksheet.
-
-    3. **Data Parsing**: The input `Json` string is parsed into a list of row objects.
-
-    4. **Search and Process**: For each row object in the list:
-        * It extracts the value associated with the `Field Name` key.
-        * It searches the specified `Column Number` in the worksheet for this value.
-        * **Update**: If the value is found, the action calculates the target range
-    (using `Start Column`, `End Column`, and the found row index) and updates the
-    cells with the values from the JSON object.
-        * **Append**: If the value is not found, the action appends the values from
-    the JSON object as a new row at the bottom of the worksheet.
-    5. **Completion**: The action returns the total count of rows that were successfully
-    added or updated.
-
-
-    ### Additional Notes
-
-    * The `Json` parameter must be a valid JSON array of objects.
-
-    * Ensure the service account has the necessary permissions (Editor access) to
-    the target spreadsheet.
+  ai_description: "### General Description\nThis action adds or updates rows in a\
+    \ Google Sheet based on a provided JSON payload. It is designed to synchronize\
+    \ data into a spreadsheet by searching for a specific value in a designated column.\
+    \ If the value is found, the action updates the corresponding row; if not, it\
+    \ appends a new row to the sheet.\n\n### Flow Description\n1. **Configuration\
+    \ Extraction**: The action retrieves the Google Sheet ID, column configuration,\
+    \ and the JSON data payload from the action parameters.\n2. **Authentication**:\
+    \ It establishes a connection to the Google Sheets API using the provided credentials.\n\
+    3. **Data Processing**: The action iterates through each item in the provided\
+    \ JSON list.\n4. **Search**: For each item, it searches the specified column in\
+    \ the worksheet for the value associated with the provided Field Name.\n5. **Mutation**:\
+    \ \n   - If the value is found, the action updates the existing row with the new\
+    \ values.\n   - If the value is not found, the action appends a new row to the\
+    \ worksheet.\n6. **Result Reporting**: The action returns the updated range and\
+    \ a summary message indicating the number of rows processed.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Column Number | string | Yes | The column number to search\
+    \ for the value of the given Field Name. |\n| Start Column | string | Yes | The\
+    \ starting column for the update or add operation. |\n| End Column | string |\
+    \ Yes | The ending column for the update or add operation. |\n| Field Name | string\
+    \ | Yes | The field name in the JSON by which to search for its value in the specified\
+    \ column. |\n| Json | code | Yes | The JSON values to add or update. Each item\
+    \ represents a row. |\n| Sheet Id | string | Yes | The ID of the Google Sheet\
+    \ (found in the URL). |\n| Worksheet Name | string | No | The name of the specific\
+    \ worksheet tab. Defaults to 'Sheet1' if not provided. |"
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -318,12 +282,20 @@ Add or Update Rows:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      This action updates existing cell values or appends new rows to a Google Spreadsheet
-      based on the provided input data.
+      The action updates existing rows or appends new rows to the specified Google
+      Sheet.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a search operation (fetches data) on the Google Sheet to
+      determine if a row exists. It then performs a write operation (mutates external
+      data) by either updating an existing row or appending a new one. It does not
+      modify internal SOAR case data, entities, or alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is not an enrichment action because it mutates external data (Google
+      Sheets). Enrichment actions must be read-only regarding external systems.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -339,6 +311,9 @@ Add or Update Rows:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with SOAR entities. It processes a JSON payload
+      provided as a parameter to update a Google Sheet.
 Create Sheet:
   action_product_categories:
     add_alert_comment: false
@@ -354,6 +329,9 @@ Create Sheet:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action creates a Google Sheet and shares it. It does not match any of the
+      defined categories such as 'Create Ticket', 'Enrich IOC', or 'Contain Host'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -369,52 +347,46 @@ Create Sheet:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Creates a new Google Spreadsheet and optionally shares it with specified email
-    addresses. This action is useful for automating the creation of reports, tracking
-    logs, or collaborative documents directly from a SOAR workflow.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory | Notes |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | Sheet Name | The name of the new spreadsheet to be created. | String | Yes |
-    This will be the title of the file in Google Drive. |
-
-    | Share with emails | A semicolon-separated list of email addresses (e.g., `user1@example.com;user2@example.com`)
-    to grant access to the sheet. | String | No | If provided, each user will be granted
-    'writer' permissions. |
-
-
-    ### Additional Notes
-
-    - The action requires valid Google Service Account credentials with the necessary
-    scopes for Google Sheets and Google Drive.
-
-    - Users shared via the 'Share with emails' parameter are granted 'writer' (editor)
-    access by default.
+    Creates a new Google Sheet and optionally shares it with specified users. This
+    action automates the creation of spreadsheets within a Google Drive environment
+    and manages access permissions.
 
 
     ### Flow Description
 
-    1. **Authentication**: Initializes a connection to the Google Sheets API using
-    the provided Service Account credentials.
+    1. **Parameter Extraction**: The action retrieves the `Sheet Name` and the optional
+    `Share with emails` list from the action parameters, and the `Credentials Json`
+    from the integration configuration.
 
-    2. **Spreadsheet Creation**: Creates a new spreadsheet in the service account's
-    Google Drive with the name specified in the 'Sheet Name' parameter.
+    2. **Client Initialization**: A Google Sheets client is initialized using the
+    provided service account credentials.
 
-    3. **Permission Management**: If the 'Share with emails' parameter is populated,
-    the action parses the list and iterates through each email address.
+    3. **Sheet Creation**: A new spreadsheet is created with the specified name.
 
-    4. **Sharing**: For each email, it updates the spreadsheet's permissions to grant
-    'writer' access to that specific user.
+    4. **Permission Management**: If email addresses are provided, the action iterates
+    through the list and grants 'writer' access to each user for the newly created
+    spreadsheet.
 
-    5. **Completion**: Returns the unique ID of the newly created spreadsheet and
-    completes the execution.
+    5. **Completion**: The action returns the status of the operation and the ID of
+    the created sheet.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Sheet Name | string | Yes | The name of the new spreadsheet to be created. |
+
+    | Share with emails | string | No | A semicolon-separated list of email addresses
+    to share the spreadsheet with. |
+
+
+    ### Additional Notes
+
+    - The action requires valid Google service account credentials configured in the
+    integration settings to authenticate with the Google Sheets API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -423,12 +395,20 @@ Create Sheet:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new spreadsheet file in Google Drive and modifies its access control
-      list (ACL) by sharing it with specified email addresses.
+      Creates a new Google Sheet and updates its sharing permissions via the Google
+      Sheets API.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a write operation on an external system (Google Sheets)
+      by creating a new spreadsheet and updating its sharing permissions. It does
+      not fetch data from external systems, nor does it modify any internal SOAR case
+      data, entities, or alert information.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from external sources, which is a requirement
+      for enrichment actions. It performs a mutation on an external system.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -444,6 +424,9 @@ Create Sheet:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any SOAR entities. It operates
+      independently of the case entities.
 Delete Rows:
   action_product_categories:
     add_alert_comment: false
@@ -459,6 +442,10 @@ Delete Rows:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action deletes rows in a Google Sheet. This does not align with any of the
+      provided security-specific categories (e.g., IOC enrichment, ticket management,
+      identity management, or host containment).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -474,54 +461,40 @@ Delete Rows:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Deletes a range of rows from a specified Google Sheets worksheet. This action
-    is useful for cleaning up data, removing processed entries, or managing spreadsheet-based
-    logs directly from a SOAR playbook.
+    Deletes a specified range of rows from a Google Sheet. This action interacts with
+    the Google Sheets API to remove rows based on user-provided row indices.
 
 
-    ### Parameters Description
+    ### Flow
 
-    | Parameter Name | Type | Mandatory | Description |
+    1. Extracts the `Sheet Id`, `Worksheet Name`, `From Row`, and `To Row` parameters.
+
+    2. Authenticates with the Google Sheets API using the configured credentials.
+
+    3. Opens the target spreadsheet using the provided `Sheet Id`.
+
+    4. Identifies the target worksheet (or defaults to the first sheet if no name
+    is provided).
+
+    5. Executes the deletion of the specified row range.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Sheet Id | string | Yes | The unique identifier of the spreadsheet, found in
-    the URL: `https://docs.google.com/spreadsheets/d/{Sheet-Id}/edit`. |
-
-    | Worksheet Name | string | No | The name of the specific tab (worksheet) within
-    the spreadsheet. If not provided, the action defaults to the first sheet (Sheet1).
-    Note: This is case-sensitive. |
-
-    | From Row | string | Yes | The row number where the deletion range starts (inclusive).
+    | Sheet Id | string | Yes | The ID of the Google Sheet, found in the sheet URL.
     |
 
-    | To Row | string | Yes | The row number where the deletion range ends (inclusive).
-    |
+    | Worksheet Name | string | No | The name of the worksheet tab. Defaults to "Sheet1"
+    if not provided. |
 
+    | From Row | string | Yes | The row number from which to start deleting. |
 
-    ### Additional Notes
-
-    - This action does not run on entities; it operates based on the provided spreadsheet
-    parameters.
-
-    - Ensure the service account associated with the provided credentials has 'Editor'
-    permissions on the target spreadsheet.
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action initializes a connection to the Google Sheets
-    API using the provided service account credentials.
-
-    2. **Spreadsheet Access**: It opens the spreadsheet identified by the `Sheet Id`.
-
-    3. **Worksheet Selection**: It selects the worksheet specified by `Worksheet Name`
-    or defaults to the first worksheet if the parameter is empty.
-
-    4. **Row Deletion**: It executes a command to delete the rows within the range
-    defined by `From Row` and `To Row`.
+    | To Row | string | Yes | The row number that defines the end of the range to
+    be deleted. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -530,12 +503,20 @@ Delete Rows:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes rows from a specified Google Sheets worksheet, which permanently modifies
-      the external spreadsheet data.
+      Deletes rows from a specified Google Sheet worksheet.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a destructive operation (`worksheet.delete_rows`) on an
+      external system (Google Sheets). It does not retrieve data, nor does it modify
+      internal SOAR entities or alerts.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for modifying external data (Google Sheets). It does
+      not fetch data for enrichment, nor does it perform any of the allowed internal
+      mutations (like adding comments or insights). Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -551,6 +532,9 @@ Delete Rows:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities`. It operates on
+      external Google Sheet resources identified by parameters.
 Delete Sheet:
   action_product_categories:
     add_alert_comment: false
@@ -566,6 +550,10 @@ Delete Sheet:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action deletes a Google Sheet from Google Drive. This operation does not
+      match any of the predefined categories such as enrichment, ticket management,
+      identity management, or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -581,46 +569,15 @@ Delete Sheet:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Deletes a specific Google Spreadsheet from Google Drive using its unique Sheet
-    ID. This action is designed to programmatically remove spreadsheets, which is
-    useful for automated cleanup of temporary reports or managing data lifecycle within
-    Google Sheets.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Sheet Id | The unique identifier of the spreadsheet. This ID can be found in
-    the spreadsheet's URL: `https://docs.google.com/spreadsheets/d/{SheetId}/edit`.
-    | String | Yes |
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action extracts the `Credentials Json` from
-    the integration settings and the `Sheet Id` from the action parameters.
-
-    2. **Client Initialization**: It uses the `GoogleSheetFactory` to authenticate
-    with Google APIs using the service account credentials and creates a Google Sheets
-    client.
-
-    3. **Spreadsheet Deletion**: The action invokes the `del_spreadsheet` method on
-    the client for the specified `Sheet Id` to remove the file from Google Drive.
-
-    4. **Execution Result**: If the deletion is successful, the action completes with
-    a success message. If an error occurs (e.g., invalid ID or insufficient permissions),
-    the action fails and returns the error details.
-
-
-    ### Additional Notes
-
-    - The service account associated with the `Credentials Json` must have the necessary
-    permissions (Google Drive and Google Sheets scopes) to delete the target spreadsheet.
+    This action deletes a specified Google Sheet from Google Drive. It requires the
+    Sheet ID to identify the target file. Parameters: | Parameter | Type | Mandatory
+    | Description | | --- | --- | --- | --- | | Sheet Id | string | Yes | The unique
+    identifier of the Google Sheet, found in the sheet URL. | Flow description: 1.
+    Extract the Credentials Json from the integration configuration. 2. Extract the
+    Sheet Id from the action parameters. 3. Initialize the GoogleSheetFactory with
+    the provided credentials. 4. Create a gspread client. 5. Call the del_spreadsheet
+    method with the provided Sheet Id to delete the file. 6. Return the execution
+    status (completed or failed).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -629,12 +586,20 @@ Delete Sheet:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes a Google Spreadsheet from the user's Google Drive/Sheets environment
-      using the Google Sheets API.
+      Deletes a Google Sheet from the user's Google Drive.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a destructive operation (deletion) on an external system
+      (Google Sheets/Drive). It does not fetch data, update internal SOAR entities,
+      or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a destructive mutation (deletion) of an external resource. It
+      does not fetch data for enrichment, nor does it perform any of the allowed internal
+      mutations (comments, insights, entity updates). Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -650,6 +615,9 @@ Delete Sheet:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates on a specific Sheet Id provided as a parameter. It does
+      not interact with siemplify.target_entities.
 Get All:
   action_product_categories:
     add_alert_comment: false
@@ -665,6 +633,11 @@ Get All:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves data from a Google Sheet. It does not match any of the
+      predefined categories (Enrich IOC, Enrich Asset, Search Events, etc.) as it
+      is a general-purpose data retrieval tool for spreadsheets, not a security-specific
+      enrichment or containment action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -682,11 +655,9 @@ Get All:
   ai_description: >-
     ### General Description
 
-    The **Get All** action retrieves all rows and columns from a specified worksheet
-    within a Google Spreadsheet. It converts the spreadsheet data into a list of JSON
-    objects, where each object represents a row and the keys correspond to the column
-    headers. This action is primarily used for ingesting reference data, lookup tables,
-    or logs stored in Google Sheets into a Google SecOps workflow for further processing.
+    This action retrieves all records from a specified Google Sheet. It allows users
+    to fetch data from a spreadsheet by providing the Sheet ID and an optional Worksheet
+    Name.
 
 
     ### Parameters Description
@@ -695,40 +666,35 @@ Get All:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Sheet Id** | String | Yes | The unique identifier of the spreadsheet, found
-    in the URL: `https://docs.google.com/spreadsheets/d/{Sheet-Id}/edit`. |
+    | Sheet Id | string | Yes | The unique identifier for the Google Sheet, found
+    in the sheet URL. |
 
-    | **Worksheet Name** | String | No | The name of the specific tab (worksheet)
-    to retrieve data from. If not provided, the action defaults to the first worksheet
-    in the spreadsheet. Note: This value is case-sensitive. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: Extracts the service account credentials from the integration
-    configuration and the Sheet ID and Worksheet Name from the action parameters.
-
-    2. **Connection**: Authenticates with the Google Sheets API using the provided
-    service account credentials.
-
-    3. **Access**: Opens the spreadsheet using the provided `Sheet Id`.
-
-    4. **Selection**: Targets the worksheet specified by the `Worksheet Name` parameter.
-    If the parameter is empty, it defaults to the first sheet in the workbook.
-
-    5. **Data Retrieval**: Fetches all records from the selected worksheet, converting
-    them into a list of dictionaries.
-
-    6. **Output**: Returns the retrieved data as a JSON result and completes the execution.
+    | Worksheet Name | string | No | The name of the specific tab/worksheet within
+    the sheet. Defaults to "Sheet1" if not provided. |
 
 
     ### Additional Notes
 
-    - This action does not interact with or filter entities within the Google SecOps
-    environment.
+    - The action requires a valid `Credentials Json` configuration parameter to authenticate
+    with the Google Sheets API.
 
-    - Ensure the service account associated with the provided Credentials JSON has
-    at least "Viewer" permissions on the target spreadsheet.
+    - The `Worksheet Name` parameter is case-sensitive.
+
+
+    ### Flow Description
+
+    1. Extracts the `Credentials Json` configuration and the `Sheet Id` and `Worksheet
+    Name` action parameters.
+
+    2. Authenticates with the Google Sheets API using the provided credentials.
+
+    3. Opens the specified spreadsheet using the `Sheet Id`.
+
+    4. Accesses the specified worksheet (or the default "Sheet1" if no name is provided).
+
+    5. Retrieves all records from the worksheet.
+
+    6. Returns the retrieved data as a JSON result in the action output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -739,8 +705,15 @@ Get All:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action connects to Google Sheets, reads data, and returns it as a JSON result.
+      It does not modify external systems or internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action retrieves data from an external source (Google Sheets) but does not
+      enrich specific entities or alerts. It is a general data retrieval utility,
+      not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -756,6 +729,9 @@ Get All:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `target_entities`. It operates independently
+      of the case entities.
 Get Range:
   action_product_categories:
     add_alert_comment: false
@@ -771,6 +747,10 @@ Get Range:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves data from a Google Sheet. It does not match any of the
+      security-specific categories such as IOC enrichment, asset enrichment, ticketing,
+      containment, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -786,57 +766,38 @@ Get Range:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Get Range** action retrieves cell values from a specified range within a
-    Google Sheet. This utility action allows users to pull external data stored in
-    spreadsheets into a Google SecOps workflow for further processing, validation,
-    or reporting. It supports A1 notation for defining the data range and can target
-    specific worksheets within a spreadsheet.
+    Retrieves data from a specified range in a Google Sheet. This action allows users
+    to query spreadsheet content by providing the Spreadsheet ID, an optional Worksheet
+    Name, and the target range in A1 notation.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Sheet Id** | String | Yes | The unique identifier of the spreadsheet, which
-    can be found in the URL: `https://docs.google.com/spreadsheets/d/{SheetId}/edit`.
-    |
+    | Sheet Id | string | Yes | The unique identifier of the Google Sheet, found in
+    the spreadsheet URL. |
 
-    | **Worksheet Name** | String | No | The name of the specific tab (worksheet)
-    to query. If not provided, the action defaults to the first worksheet in the file.
-    |
+    | Worksheet Name | string | No | The name of the specific tab/worksheet. Defaults
+    to 'Sheet1' if not provided. |
 
-    | **Range** | String | Yes | The range of cells to retrieve using A1 notation
-    (e.g., 'A1:B10' or 'Sheet1!A1:B10'). |
+    | Range | string | Yes | The range of cells to extract (e.g., 'A1:B1'). |
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes a connection to the Google Sheets
-    API using the service account credentials provided in the integration configuration.
+    1. The action extracts the required parameters: `Sheet Id`, `Worksheet Name`,
+    and `Range`.
 
-    2. **Spreadsheet Access**: It opens the target spreadsheet using the provided
-    **Sheet Id**.
+    2. It initializes a connection to the Google Sheets API using the provided credentials.
 
-    3. **Worksheet Selection**: If a **Worksheet Name** is specified, the action selects
-    that tab; otherwise, it defaults to the first sheet.
+    3. It selects the specified worksheet (or defaults to the first sheet).
 
-    4. **Data Retrieval**: The action executes a batch get request to fetch the values
-    within the defined **Range**.
+    4. It performs a batch get operation to retrieve the values from the defined range.
 
-    5. **Result Processing**: The retrieved data is formatted and added to the action's
-    JSON results for use in subsequent playbook steps.
-
-
-    ### Additional Notes
-
-    - This action does not interact with or filter SecOps entities.
-
-    - Ensure the service account associated with the credentials has at least 'Viewer'
-    permissions on the target Google Sheet.
+    5. The retrieved data is added to the action's result output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -847,8 +808,17 @@ Get Range:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a read-only (GET) operation to retrieve data from an external
+      Google Sheet. It does not modify any external systems, nor does it update any
+      internal Google SecOps data (such as entities, insights, or case comments).
   categories:
     enrichment: false
+    reasoning: >-
+      While the action fetches data, it is a general-purpose utility for retrieving
+      spreadsheet content and does not gather supplemental context about specific
+      alerts or entities within the SOAR platform. Therefore, it does not meet the
+      criteria for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -864,6 +834,10 @@ Get Range:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with the `target_entities` list. It operates on
+      arbitrary data retrieved from a Google Sheet and does not perform any filtering
+      or processing on SecOps entities.
 Get Row:
   action_product_categories:
     add_alert_comment: false
@@ -879,6 +853,9 @@ Get Row:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves data from a Google Sheet. It does not match any of the
+      predefined categories like IOC enrichment, asset enrichment, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -894,51 +871,46 @@ Get Row:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
     Retrieves the values of a single row from a specified Google Sheet. This action
-    is useful for fetching reference data, configuration settings, or logs stored
-    within a spreadsheet for use in subsequent playbook steps.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Sheet Id | string | Yes | The unique identifier of the spreadsheet, which can
-    be found in the spreadsheet's URL. |
-
-    | Worksheet Name | string | No | The name of the specific worksheet (tab) to retrieve
-    data from. If not provided, the action defaults to the first worksheet. |
-
-    | Row Number | string | Yes | The one-based index of the row to retrieve (e.g.,
-    '1' for the first row). |
-
-
-    ### Additional Notes
-
-    - The action uses service account credentials configured in the integration settings
-    to access the Google Sheets API.
-
-    - The result is returned as a JSON array containing the values of the cells in
-    the specified row.
+    allows users to fetch data from a spreadsheet for further processing or analysis
+    within the SOAR platform.
 
 
     ### Flow Description
 
-    1. **Authentication**: Initializes the Google Sheets client using the provided
-    service account credentials.
+    1. **Authentication**: The action authenticates with the Google Sheets API using
+    the provided credentials.
 
-    2. **Spreadsheet Access**: Opens the spreadsheet identified by the `Sheet Id`.
+    2. **Connection**: It connects to the target spreadsheet using the provided `Sheet
+    Id`.
 
-    3. **Worksheet Selection**: Selects the worksheet specified by `Worksheet Name`.
-    If no name is provided, it defaults to the first sheet in the workbook.
+    3. **Worksheet Selection**: It selects the specified worksheet by name, or defaults
+    to the first worksheet if no name is provided.
 
-    4. **Data Retrieval**: Fetches all cell values for the row specified by `Row Number`.
+    4. **Data Retrieval**: It fetches the values from the specified `Row Number`.
 
-    5. **Output**: Returns the row values as a JSON object and completes the action.
+    5. **Output**: The retrieved row data is returned as a JSON result.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Sheet Id | string | Yes | The unique identifier for the Google Sheet, found
+    in the sheet URL. |
+
+    | Worksheet Name | string | No | The name of the specific worksheet to query.
+    If not provided, the first worksheet is used. |
+
+    | Row Number | string | Yes | The row number (one-based) to retrieve. |
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify the spreadsheet or any
+    internal SOAR data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -949,8 +921,15 @@ Get Row:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a read-only operation to fetch data from an external Google
+      Sheet. It does not modify external systems, nor does it update internal SOAR
+      entities or alerts.
   categories:
     enrichment: false
+    reasoning: >-
+      While the action fetches data, it does not perform enrichment on specific alerts
+      or entities within the SOAR platform. It is a generic data retrieval utility.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -966,6 +945,9 @@ Get Row:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with SOAR entities. It operates on generic spreadsheet
+      data.
 Import CSV:
   action_product_categories:
     add_alert_comment: false
@@ -981,6 +963,10 @@ Import CSV:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action imports data into a Google Sheet. This is a general data management
+      task and does not align with any of the provided security-specific categories
+      such as IOC enrichment, ticketing, containment, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -996,45 +982,47 @@ Import CSV:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Imports data from a local CSV file into a Google Spreadsheet. This action targets
-    the first worksheet of the specified spreadsheet, replacing its entire content
-    with the data from the CSV file. Note that this operation is destructive: it removes
-    all other worksheets within the spreadsheet and overwrites the first one.
+    Imports CSV data into a Google Sheet. This action facilitates data synchronization
+    by reading a local CSV file and uploading its contents to a specified Google Sheet,
+    overwriting the existing data in the first worksheet.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves the 'Sheet Id' and 'CSV Path' from the
-    action parameters and the 'Credentials Json' from the integration configuration.
+    1. **Configuration Extraction**: The action retrieves the Google Sheets credentials
+    from the integration configuration.
 
-    2. **Client Initialization:** Authenticates with Google Sheets using the provided
-    service account credentials.
+    2. **Parameter Extraction**: It extracts the `Sheet Id` and `CSV Path` from the
+    action parameters.
 
-    3. **File Reading:** Reads the raw content of the CSV file located at the specified
-    local path.
+    3. **Authentication**: It authenticates with the Google Sheets API using the provided
+    credentials.
 
-    4. **Data Import:** Executes the import command via the Google Sheets API, which
-    overwrites the first sheet and deletes all other sheets in the workbook.
+    4. **Data Import**: It reads the content of the specified CSV file and imports
+    it into the target Google Sheet, replacing the existing content of the first worksheet.
+
+    5. **Completion**: The action concludes by reporting the status and the ID of
+    the updated sheet.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Sheet Id | String | Yes | The unique identifier of the spreadsheet, found in
-    the URL (e.g., `https://docs.google.com/spreadsheets/d/{SheetId}/edit`). |
+    | Sheet Id | string | Yes | The unique identifier of the Google Sheet, found in
+    the sheet URL. |
 
-    | CSV Path | String | Yes | The local file system path to the CSV file that contains
-    the data to be imported. |
+    | CSV Path | string | Yes | The local file path to the CSV file that needs to
+    be imported. |
 
 
     ### Additional Notes
 
-    - **Warning:** This action will delete all worksheets in the spreadsheet except
-    for the first one, which will be overwritten. Use with caution on spreadsheets
-    containing multiple tabs of data.
+    This action performs a destructive write operation on the target Google Sheet
+    (it replaces the content of the first worksheet). Ensure the `Sheet Id` and `CSV
+    Path` are correct before execution.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1043,12 +1031,20 @@ Import CSV:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Replaces the content of the first worksheet and deletes all other worksheets
-      in the specified Google Spreadsheet.
+      The action imports CSV data into a Google Sheet, which overwrites the existing
+      content of the first worksheet.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a write operation to an external system (Google Sheets)
+      by importing CSV data. It does not fetch data for enrichment, nor does it modify
+      internal SecOps case data, entities, or alerts.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a data management utility that modifies external data. It does
+      not fetch data for enrichment purposes, nor does it meet the criteria for an
+      enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1064,6 +1060,9 @@ Import CSV:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process SecOps entities. It operates on
+      file paths and sheet identifiers.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -1079,6 +1078,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      functional outcomes like enriching IOCs, creating tickets, or updating alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1096,10 +1098,23 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to verify the connectivity and authorization between
-    Google SecOps and the Google Sheets API. It ensures that the provided service
-    account credentials are valid and have the appropriate permissions to perform
-    file operations within the Google Drive and Sheets environment.
+    Tests connectivity with Google Sheets by performing a create and delete operation.
+    This action verifies that the provided credentials have the necessary permissions
+    and that the Google Sheets API is reachable.
+
+
+    ### Flow Description
+
+    1. Extract the `Credentials Json` parameter from the integration configuration.
+
+    2. Initialize the Google Sheets client using the provided service account credentials.
+
+    3. Create a temporary spreadsheet with a unique identifier.
+
+    4. Delete the created temporary spreadsheet to ensure no residual data is left
+    behind.
+
+    5. Return the connectivity status (success or failure) to the SOAR platform.
 
 
     ### Parameters Description
@@ -1108,35 +1123,15 @@ Ping:
 
     | :--- | :--- | :--- | :--- |
 
-    | Credentials Json | String | Yes | (Configuration Parameter) The JSON content
-    of the Google Service Account key used for authentication. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action retrieves the service account credentials from
-    the integration's configuration settings.
-
-    2. **Client Initialization**: It initializes a Google Sheets client using the
-    `gspread` library with the required OAuth2 scopes for Spreadsheets and Drive.
-
-    3. **Validation Operation**: To test end-to-end functionality, the action attempts
-    to create a new spreadsheet with a unique name (prefixed with 'Test-' and a UUID).
-
-    4. **Cleanup**: Immediately after a successful creation, the action attempts to
-    delete the temporary spreadsheet to ensure no residual data is left in the user's
-    Google Drive.
-
-    5. **Result Reporting**: If all steps succeed, the action completes with a 'Connected
-    successfully' message. If any step fails (e.g., due to invalid credentials or
-    insufficient API permissions), the action fails and returns the specific error
-    message.
+    | Credentials Json | String | Yes | The JSON service account credentials used
+    to authenticate with the Google Sheets API. |
 
 
     ### Additional Notes
 
-    This action is a diagnostic tool used to confirm that the integration is correctly
-    configured and that the Google Cloud Project has the necessary APIs enabled.
+    This action is a connectivity test ("Ping") and does not perform any functional
+    data processing or enrichment. It is intended solely for verifying integration
+    health.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1145,12 +1140,19 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action creates a temporary spreadsheet and then immediately deletes it to
-      verify that the service account has write and delete permissions.
+      Creates and immediately deletes a temporary spreadsheet to verify API connectivity.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a write operation (create) and a delete operation on the
+      external Google Sheets system to verify connectivity. It does not fetch data
+      for enrichment, nor does it modify internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and is explicitly designed to test connectivity.
+      According to the guidelines, 'Ping' actions must not be categorized as enrichment
+      actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1166,6 +1168,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it only performs a connectivity
+      test against the Google Sheets API.
 Search Row:
   action_product_categories:
     add_alert_comment: false
@@ -1181,6 +1186,10 @@ Search Row:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a search operation on a Google Sheet. It does not match
+      any of the predefined product categories, which are focused on security-specific
+      tasks like IOC enrichment, containment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1196,65 +1205,42 @@ Search Row:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Finds a specific row in a Google Spreadsheet based on a provided search value.
-    This action is useful for retrieving contextual information stored in spreadsheets,
-    such as asset lists, contact information, or historical logs, and bringing that
-    data into the Google SecOps environment for further analysis.
+    The 'Search Row' action allows users to search for a specific value within a designated
+    column of a Google Sheet. This action is useful for retrieving contextual information
+    stored in external spreadsheets.
 
 
-    ### Parameters Description
+    ### Flow:
 
-    | Parameter Name | Type | Mandatory | Description |
+    1. The action extracts the required parameters: `Sheet Id`, `Column Number`, and
+    `Search value`, along with the optional `Worksheet Name`.
+
+    2. It initializes a connection to the Google Sheet using the provided credentials.
+
+    3. It locates the specified worksheet (or defaults to 'Sheet1').
+
+    4. It searches the specified column for the provided value.
+
+    5. If the value is found, it retrieves the entire row's data and returns it as
+    a JSON result.
+
+    6. If the value is not found, the action fails and returns an error message.
+
+
+    ### Parameters:
+
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Sheet Id** | String | Yes | The unique identifier of the spreadsheet, found
-    in the URL: `https://docs.google.com/spreadsheets/d/{Sheet-Id}/edit`. |
+    | Sheet Id | string | Yes | The ID of the Google Sheet (found in the URL). |
 
-    | **Worksheet Name** | String | No | The name of the specific tab within the spreadsheet.
-    Defaults to the first sheet (Sheet1) if not provided. Note: This is case-sensitive.
+    | Worksheet Name | string | No | The name of the worksheet tab (defaults to 'Sheet1').
     |
 
-    | **Column Number** | String | Yes | The column number where the search should
-    be performed. **Note:** In the current implementation, the search is performed
-    across the entire worksheet, and this parameter is primarily used for logging
-    purposes. |
+    | Column Number | string | Yes | The column number to search in. |
 
-    | **Search value** | String | Yes | The specific string or value to search for
-    within the worksheet. |
-
-
-    ### Additional Notes
-
-    - The action uses service account credentials to authenticate with the Google
-    Sheets API.
-
-    - If the search value is found, the action retrieves all values for that specific
-    row and returns them as a JSON array.
-
-    - If the value is not found, the action will return a failed status.
-
-
-    ### Flow Description
-
-    1. **Authentication:** The action authenticates with Google APIs using the provided
-    JSON credentials.
-
-    2. **Spreadsheet Access:** It opens the spreadsheet identified by the `Sheet Id`.
-
-    3. **Worksheet Selection:** It selects the worksheet specified by `Worksheet Name`
-    or defaults to the first tab.
-
-    4. **Search Operation:** It searches the worksheet for the first occurrence of
-    the `Search value`.
-
-    5. **Data Retrieval:** If found, it retrieves all cell values for the row containing
-    the match.
-
-    6. **Output:** The row data is added to the action results as JSON, and the row
-    index is returned as the primary result value.
+    | Search value | string | Yes | The value to search for. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1265,8 +1251,16 @@ Search Row:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action reads data from a Google Sheet (fetches_data=true). It does not perform
+      any write operations on the external Google Sheet (can_mutate_external_data=false).
+      It does not modify any internal SOAR data, entities, or insights (can_mutate_internal_data=false).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for searching external data (Google Sheets). It does
+      not perform enrichment on entities or alerts, nor does it meet the criteria
+      for an enrichment action as it does not operate on entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1282,6 +1276,9 @@ Search Row:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It operates on a Google Sheet
+      based on provided parameters.
 Search Rows:
   action_product_categories:
     add_alert_comment: false
@@ -1297,6 +1294,11 @@ Search Rows:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action searches for data in an external Google Sheet. It does not match
+      any of the specific categories like 'Enrich IOC' or 'Enrich Asset' because it
+      doesn't operate on entities. It is a general utility action for searching Google
+      Sheets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1314,63 +1316,47 @@ Search Rows:
   ai_description: >-
     ### General Description
 
-    The **Search Rows** action allows users to search for specific values within a
-    designated column of a Google Sheet. It is primarily used to retrieve row indices
-    and data for rows that match a search criterion, facilitating the use of Google
-    Sheets as a simple database or lookup table for automation workflows.
+    Searches for rows in a Google Sheet containing a specific value in a designated
+    column. This action retrieves data from a Google Sheet, returning the row numbers
+    and values where the search value is found. It does not modify the sheet or interact
+    with SOAR entities.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Sheet Id | string | Yes | The unique identifier of the spreadsheet, which can
-    be found in the URL: `https://docs.google.com/spreadsheets/d/{Sheet-Id}/edit`.
-    |
+    | Sheet Id | string | Yes | The ID of the Google Sheet. |
 
-    | Worksheet Name | string | No | The name of the specific tab (worksheet) to search
-    in. If not provided, the action defaults to the first worksheet ("Sheet1"). |
+    | Worksheet Name | string | No | The name of the worksheet tab. |
 
-    | Column Number | string | Yes | The numerical index of the column to search (e.g.,
-    "1" for Column A, "2" for Column B). |
+    | Column Number | string | Yes | The column index to search. |
 
-    | Search value | string | Yes | The specific string or value to look for within
-    the specified column. |
+    | Search value | string | Yes | The value to search for. |
 
 
     ### Additional Notes
 
-    - The action returns a list of all row numbers where the search value was found
-    in the specified column.
-
-    - It also provides the values of the first matching row in the JSON result.
-
-    - If the value is not found, the action will return a failed status.
+    If the Worksheet Name is not provided, the action defaults to the first worksheet
+    in the spreadsheet.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes a connection to the Google Sheets
-    API using the provided service account credentials.
+    1. Extract configuration (credentials) and action parameters (Sheet Id, Worksheet
+    Name, Column Number, Search value).
 
-    2. **Spreadsheet Access**: It opens the spreadsheet identified by the `Sheet Id`.
+    2. Authenticate with Google Sheets API using the provided credentials.
 
-    3. **Worksheet Selection**: It selects the worksheet specified by `Worksheet Name`
-    or defaults to the first sheet.
+    3. Open the specified spreadsheet and worksheet.
 
-    4. **Search Execution**: The action performs a global search (`findall`) for the
-    `Search value` across the entire worksheet.
+    4. Search the specified column for the provided search value.
 
-    5. **Column Filtering**: It iterates through the search results and filters for
-    cells that belong to the user-specified `Column Number`.
+    5. Retrieve and return the row numbers and row values where the match was found.
 
-    6. **Data Collection**: It collects the row numbers of all matches and retrieves
-    the full row values for the first match found.
-
-    7. **Output**: The action outputs the list of row numbers, the count of rows found,
-    and the data from the first matching row into the action results.
+    6. Terminate the action with a status message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1381,8 +1367,16 @@ Search Rows:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action reads data from a Google Sheet using the `gspread` library. It does
+      not modify the sheet (read-only) and does not interact with SOAR entities or
+      cases.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not operate on entities or alerts, so it does not qualify as
+      an enrichment action or any other category. It is a general utility action for
+      searching Google Sheets.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1398,6 +1392,9 @@ Search Rows:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `target_entities`. It operates independently of the
+      SOAR entity model.
 Update  Cell:
   action_product_categories:
     add_alert_comment: false
@@ -1413,6 +1410,9 @@ Update  Cell:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates a cell in a Google Sheet. This does not match any of the
+      predefined categories like ticket management, alert management, or IOC management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1428,62 +1428,18 @@ Update  Cell:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Update Cell** action allows users to modify the content of a specific cell
-    within a Google Sheets spreadsheet. This action is primarily used for automated
-    reporting, logging incident metadata, or updating tracking sheets directly from
-    a SOAR playbook.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Sheet Id** | String | Yes | The unique identifier of the spreadsheet, which
-    can be found in the URL: `https://docs.google.com/spreadsheets/d/{SheetId}/edit`.
-    |
-
-    | **Worksheet Name** | String | No | The name of the specific tab (worksheet)
-    to update. If not provided, the action defaults to the first worksheet (Sheet1).
-    Note: This is case-sensitive. |
-
-    | **Cell** | String | Yes | The A1 notation of the cell to update (e.g., "A1",
-    "C10"). |
-
-    | **Value** | String | Yes | The data or text to be written into the specified
-    cell. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts the service account credentials from
-    the integration configuration.
-
-    2. **Connection**: It establishes a connection to the Google Sheets API using
-    the provided credentials.
-
-    3. **Spreadsheet Access**: The action opens the target spreadsheet using the `Sheet
-    Id`.
-
-    4. **Worksheet Selection**: It identifies the correct worksheet based on the `Worksheet
-    Name` parameter or defaults to the first sheet.
-
-    5. **Data Update**: It performs a write operation to update the specified `Cell`
-    with the provided `Value`.
-
-    6. **Finalization**: The action returns a success message if the update is confirmed
-    by the API, or an error message if the operation fails.
-
-
-    ### Additional Notes
-
-    - The service account used in the integration must have "Editor" permissions on
-    the target Google Sheet.
-
-    - If the `Worksheet Name` does not exist, the action will fail.
+    ### General Description: This action updates a specific cell in a Google Sheet.
+    It allows users to programmatically modify spreadsheet data by specifying the
+    Sheet ID, Worksheet Name, Cell coordinate, and the new Value. ### Parameters:
+    | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :--- | |
+    Sheet Id | string | Yes | The unique identifier of the Google Sheet (found in
+    the URL). | | Worksheet Name | string | No | The name of the specific tab/worksheet.
+    Defaults to 'Sheet1'. | | Cell | string | Yes | The cell coordinate to update
+    (e.g., A12). | | Value | string | Yes | The value to write into the specified
+    cell. | ### Flow: 1. Authenticate with Google Sheets using the provided credentials.
+    2. Open the target spreadsheet using the provided Sheet Id. 3. Select the appropriate
+    worksheet (using Worksheet Name if provided, otherwise defaulting to Sheet1).
+    4. Update the specified Cell with the provided Value. ### Additional Notes: None.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1492,12 +1448,17 @@ Update  Cell:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the content of a specific cell within a Google Sheets spreadsheet by
-      writing a new value to it.
+      Updates a specific cell in a Google Sheet with a provided value.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a write operation on an external Google Sheet. It does not
+      fetch data, nor does it modify internal SecOps data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (updating a spreadsheet) and does not fetch
+      data for enrichment purposes.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1513,6 +1474,9 @@ Update  Cell:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with SecOps entities. It operates on external Google
+      Sheets.
 Update Row:
   action_product_categories:
     add_alert_comment: false
@@ -1528,6 +1492,9 @@ Update Row:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates a Google Sheet. It does not match any of the predefined security-related
+      categories such as IOC enrichment, ticket management, or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1545,63 +1512,44 @@ Update Row:
   ai_description: >-
     ### General Description
 
-    Updates a specific row in a Google Spreadsheet with a provided list of values.
-    This action allows users to programmatically modify existing spreadsheet data
-    by specifying the spreadsheet ID, the worksheet name, the row index, and the new
-    cell values.
+    Updates a specific row in a Google Sheet with provided values. This action allows
+    for automated data entry or modification within a Google Sheets document.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Sheet Id | String | Yes | The unique identifier of the spreadsheet, found in
-    the URL: `https://docs.google.com/spreadsheets/d/{Sheet-Id}/edit`. |
+    | Sheet Id | string | Yes | The unique identifier of the Google Sheet, found in
+    the sheet URL. |
 
-    | Worksheet Name | String | No | The name of the specific tab (worksheet) to update.
-    If not provided, the action defaults to the first sheet (Sheet1). Note: This is
-    case-sensitive. |
+    | Worksheet Name | string | No | The name of the specific tab/worksheet. Defaults
+    to "Sheet1" if not provided. |
 
-    | Row Number | String | Yes | The numerical index of the row to be updated (e.g.,
-    "1", "2"). |
+    | Row Number | string | Yes | The row index to update. |
 
-    | Values | String | Yes | A comma-separated list of values to be placed in the
-    row, starting from the first column (e.g., "val1,val2,val3"). |
+    | Values | string | Yes | Comma-separated values to populate the row. |
 
 
     ### Additional Notes
 
-    - The action iterates through the comma-separated values provided in the 'Values'
-    parameter and updates cells sequentially starting from Column A (Column 1) of
-    the specified row.
-
-    - Ensure the service account associated with the provided credentials has 'Editor'
-    access to the target spreadsheet.
+    The action requires valid Google Sheets credentials configured in the integration
+    settings. The `Values` parameter should be a comma-separated string (e.g., "val_1,val_2,val_3").
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts the Google Sheets credentials from the integration
-    configuration and the action parameters (Sheet Id, Worksheet Name, Row Number,
-    and Values).
+    1. Extract parameters (Sheet ID, Worksheet Name, Row Number, Values).
 
-    2. **Connection**: Establishes a connection to the Google Sheets API using the
-    provided service account credentials.
+    2. Authenticate and connect to the Google Sheet using the provided credentials.
 
-    3. **Resource Selection**: Opens the spreadsheet using the 'Sheet Id'. If a 'Worksheet
-    Name' is provided, it selects that specific tab; otherwise, it defaults to the
-    first worksheet.
+    3. Select the target worksheet (or default to 'Sheet1').
 
-    4. **Data Processing**: Splits the 'Values' string into a list based on the comma
-    delimiter.
+    4. Parse the comma-separated values.
 
-    5. **Execution**: Iterates through the list of values, updating each cell in the
-    specified 'Row Number' starting from the first column.
-
-    6. **Completion**: Returns a success message if the row is updated successfully
-    or an error message if the operation fails.
+    5. Update each cell in the specified row with the corresponding value.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1610,12 +1558,19 @@ Update Row:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates cell values within a specific row of a Google Spreadsheet via the Google
-      Sheets API.
+      Updates specific cells in a Google Sheet with provided values.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a write operation (mutation) on an external system (Google
+      Sheets) by updating specific cells. It does not fetch data from the sheet, nor
+      does it modify any internal SOAR data, entities, or alerts.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs a write operation (mutation) on an external system (Google
+      Sheets) and does not retrieve data for enrichment purposes, therefore it is
+      not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1631,6 +1586,9 @@ Update Row:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with SOAR entities; it operates on external Google
+      Sheets data based on provided parameters.
 Update Rows:
   action_product_categories:
     add_alert_comment: false
@@ -1646,6 +1604,10 @@ Update Rows:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates rows in a Google Sheet. This does not align with any of the
+      provided security-specific categories (e.g., IOC enrichment, ticket management,
+      identity management, or containment).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1663,10 +1625,27 @@ Update Rows:
   ai_description: >-
     ### General Description
 
-    Updates specific rows in a Google Sheets spreadsheet with a provided set of values.
-    This action is designed to modify existing data within a spreadsheet, making it
-    useful for maintaining external logs, tracking incident progress, or updating
-    shared records directly from a SOAR playbook.
+    Updates specific rows and columns in a Google Sheet. This action allows users
+    to programmatically modify spreadsheet data by specifying the target sheet, worksheet,
+    row numbers, and the values to be inserted.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts the `Row Number`, `Values`, `Sheet
+    Id`, and optional `Worksheet Name` from the action configuration.
+
+    2. **Client Initialization**: It initializes a Google Sheets client using the
+    provided credentials.
+
+    3. **Spreadsheet Access**: It opens the target spreadsheet using the provided
+    `Sheet Id`.
+
+    4. **Worksheet Selection**: It selects the specified worksheet by name, or defaults
+    to 'Sheet1' if no name is provided.
+
+    5. **Data Update**: It iterates through the provided row numbers and values, updating
+    the corresponding cells in the Google Sheet.
 
 
     ### Parameters Description
@@ -1675,51 +1654,24 @@ Update Rows:
 
     | :--- | :--- | :--- | :--- |
 
-    | Row Number | String | Yes | A comma-separated list of row indices to be updated
-    (e.g., "1, 5, 10"). |
+    | Row Number | string | Yes | Comma-separated list of row numbers to update (e.g.,
+    "1,2"). |
 
-    | Values | Content | Yes | A comma-separated list of values to be written into
-    the cells of the specified rows. The values are applied sequentially starting
-    from the first column (Column A). |
-
-    | Sheet Id | String | Yes | The unique ID of the spreadsheet, which can be extracted
-    from the spreadsheet's URL. |
-
-    | Worksheet Name | String | No | The name of the specific tab (worksheet) within
-    the spreadsheet. If not provided, the action defaults to the first worksheet.
+    | Values | content | Yes | Comma-separated list of values to update (e.g., "value1,value2").
     |
 
+    | Sheet Id | string | Yes | The unique identifier of the Google Sheet, found in
+    the sheet URL. |
 
-    ### Flow Description
-
-    1. **Initialization**: The action retrieves the service account credentials from
-    the integration configuration and the target spreadsheet details from the action
-    parameters.
-
-    2. **Connection**: It establishes a connection to the Google Sheets API using
-    the `gspread` library.
-
-    3. **Worksheet Selection**: The action opens the spreadsheet by its ID and selects
-    the specified worksheet (or the first one by default).
-
-    4. **Data Processing**: It parses the comma-separated strings for row numbers
-    and values.
-
-    5. **Cell Updates**: For every row number provided, the action iterates through
-    the list of values and updates the corresponding cells in that row, starting from
-    column 1.
-
-    6. **Completion**: Returns a success message once all specified cells have been
-    updated.
+    | Worksheet Name | string | No | The name of the specific tab/worksheet. Defaults
+    to "Sheet1" if not provided. |
 
 
     ### Additional Notes
 
-    - The service account used in the configuration must have "Editor" permissions
-    on the target Google Sheet.
-
-    - The action updates cells sequentially; for example, if three values are provided,
-    they will populate columns A, B, and C of the target rows.
+    The action performs a direct write operation to the specified Google Sheet. Ensure
+    the service account associated with the credentials has the necessary permissions
+    to edit the target spreadsheet.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1728,12 +1680,19 @@ Update Rows:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates cell values within a Google Sheets spreadsheet based on the provided
-      row numbers and values.
+      Updates cells in a Google Sheet with provided values.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a write operation (update_cell) on an external Google Sheet.
+      It does not fetch data, nor does it interact with internal SOAR entities or
+      case data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for updating external spreadsheets. It does not fetch
+      data for enrichment, nor does it modify internal SOAR data. Therefore, it is
+      not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1749,3 +1708,6 @@ Update Rows:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with SOAR entities. It operates on parameters provided
+      directly to the action.

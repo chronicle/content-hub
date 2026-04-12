@@ -13,6 +13,10 @@ Enrich IP:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation, risk levels, and threat intelligence for an
+      IP address (IOC). This matches the 'Enrich IOC' category. It does not perform
+      any containment, ticketing, or alert modification actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -27,35 +31,36 @@ Enrich IP:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "Enriches IP Address entities using Pulsedive threat intelligence.\
-    \ This action retrieves comprehensive data about an IP, including its risk level,\
-    \ risk factors, and community comments. It evaluates the risk against a user-defined\
-    \ threshold to automatically mark entities as suspicious within Google SecOps.\n\
-    \n### Flow Description\n1. **Filter Entities:** Identifies all IP Address entities\
-    \ (ADDRESS) within the current context.\n2. **Fetch Intelligence:** For each IP,\
-    \ it queries the Pulsedive API to retrieve indicator details, risk scores, and\
-    \ optionally, community comments.\n3. **Risk Evaluation:** Compares the retrieved\
-    \ Pulsedive risk level (e.g., 'high', 'critical') against the user-provided 'Threshold'\
-    \ parameter.\n4. **Internal Enrichment:** \n    * Updates the entity's additional\
-    \ properties with Pulsedive metadata (prefixed with 'PD').\n    * Marks the entity\
-    \ as 'suspicious' if the risk meets or exceeds the threshold.\n    * Marks the\
-    \ entity as 'enriched'.\n5. **Reporting:** \n    * Generates an Entity Insight\
-    \ containing a formatted HTML report of the risk factors and indicator details.\n\
-    \    * If enabled, creates a Data Table on the case wall containing community\
-    \ comments.\n6. **Finalize:** Updates the entities in the SecOps platform and\
-    \ returns a JSON result summarizing the findings.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | **Threshold** | DDL | Yes | The minimum risk level (verylow, low, medium, high,\
-    \ critical) required for the action to mark an entity as suspicious. |\n| **Retrieve\
-    \ Comments** | Boolean | No | If true, the action fetches and displays community\
-    \ comments from Pulsedive. Default is true. |\n| **Only Suspicious Entity Insight**\
-    \ | Boolean | No | If true, insights will only be created for entities that meet\
-    \ the risk threshold. Default is false. |\n| **Max Comments To Return** | String\
-    \ | No | Limits the number of comments retrieved and displayed in the data table.\
-    \ Default is 50. |\n\n### Additional Notes\n* The action uses a mapping system\
-    \ to convert Pulsedive's string-based risk levels into numerical scores for comparison\
-    \ against the user-defined threshold.\n* Enrichment data is added to entities\
-    \ with the prefix 'PD' to distinguish Pulsedive data from other sources."
+  ai_description: "### General Description\nThis action enriches IP Address entities\
+    \ by retrieving threat intelligence from Pulsedive. It fetches reputation data,\
+    \ risk factors, and comments (if requested) for the specified IP addresses. The\
+    \ action evaluates the risk level of the IP against a user-defined threshold and\
+    \ updates the entity's suspicious status, adds enrichment properties, and generates\
+    \ insights within the Google SecOps platform.\n\n### Flow Description\n1. **Parameter\
+    \ Extraction**: The action retrieves configuration parameters (API Root, API Key,\
+    \ SSL verification) and action-specific parameters (Threshold, Retrieve Comments,\
+    \ etc.).\n2. **Entity Filtering**: It filters the target entities to process only\
+    \ those of type `ADDRESS`.\n3. **Data Retrieval**: For each valid entity, it queries\
+    \ the Pulsedive API to fetch indicator data, including risk levels and comments.\n\
+    4. **Risk Evaluation**: It compares the retrieved risk score against the configured\
+    \ `Threshold`. If the risk meets or exceeds the threshold, the entity is marked\
+    \ as suspicious.\n5. **Enrichment & Insight Creation**: \n   - Updates the entity's\
+    \ `additional_properties` with the retrieved threat data.\n   - Optionally constructs\
+    \ a data table of comments and adds it to the case.\n   - Creates an entity insight\
+    \ summarizing the risk and threat details.\n6. **SOAR Update**: Updates the enriched\
+    \ entities in the SOAR platform and adds a final JSON result containing the processed\
+    \ data.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| Threshold | ddl | Yes | The risk level threshold\
+    \ (verylow, low, medium, high, critical) used to determine if an entity should\
+    \ be marked as suspicious. |\n| Retrieve Comments | boolean | No | If enabled,\
+    \ the action will retrieve and display comments associated with the entity. |\n\
+    | Only Suspicious Entity Insight | boolean | No | If enabled, the action will\
+    \ only create an entity insight if the entity is determined to be suspicious based\
+    \ on the threshold. |\n| Max Comments To Return | string | No | Specifies the\
+    \ maximum number of comments to retrieve for the entity. |\n\n### Additional Notes\n\
+    - The action requires a valid Pulsedive API key and connectivity to the Pulsedive\
+    \ API endpoint.\n- If no entities of type `ADDRESS` are found, the action will\
+    \ not perform any enrichment."
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -66,10 +71,20 @@ Enrich IP:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity suspicious status, adds enrichment properties to the entity objects,
-      creates entity insights, and adds data tables to the case wall.
+      The action updates entity properties, adds entity insights, and adds data tables
+      to the case wall within Google SecOps.
+    reasoning: >-
+      The action fetches threat intelligence data from Pulsedive (fetches_data=true).
+      It does not perform any actions that change the state of external systems (can_mutate_external_data=false).
+      It performs internal mutations by updating entity properties, adding entity
+      insights, and adding data tables to the case (can_mutate_internal_data=true).
   categories:
     enrichment: true
+    reasoning: >-
+      The action is designed to fetch threat intelligence (enrichment) for IP addresses.
+      It does not mutate external systems and only performs allowed internal mutations
+      (updating entities, creating insights, adding data tables). Therefore, it qualifies
+      as an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -86,6 +101,9 @@ Enrich IP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code explicitly filters `siemplify.target_entities` to process only entities
+      where `entity.entity_type == EntityTypes.ADDRESS`.
 Enrich URL:
   action_product_categories:
     add_alert_comment: false
@@ -101,6 +119,10 @@ Enrich URL:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (reputation, risk level) for a URL
+      indicator. This aligns with the 'Enrich IOC' category. It does not perform any
+      other actions like ticketing, blocking, or identity management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -115,62 +137,36 @@ Enrich URL:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    Enriches URL entities using threat intelligence from Pulsedive. This action retrieves
-    comprehensive indicator data, including risk levels, risk factors, and user comments.
-    It evaluates the risk of each URL against a user-defined threshold to determine
-    if the entity should be marked as suspicious within Google SecOps.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Max Comments To Return | String | No | Specifies the maximum number of comments
-    to retrieve from Pulsedive for each entity. Default is 50. |
-
-    | Threshold | DDL | Yes | Defines the risk level at which an entity is marked
-    as suspicious. Options include: `verylow`, `low`, `medium`, `high`, and `critical`.
-    |
-
-    | Retrieve Comments | Boolean | No | If enabled, the action fetches community
-    comments associated with the URL. Default is `true`. |
-
-    | Only Suspicious Entity Insight | Boolean | No | If enabled, entity insights
-    will only be created for URLs that meet or exceed the specified risk threshold.
-    Default is `false`. |
-
-
-    ### Additional Notes
-
-    - The action maps Pulsedive risk levels to numerical scores for comparison: `unknown`
-    (-1), `none` (0), `low` (1), `medium` (2), `high` (3), and `critical` (4).
-
-    - Enrichment data is prefixed with `PD` in the entity's additional properties.
-
-
-    ### Flow Description
-
-    1. **Filter Entities:** Identifies all URL entities within the current context.
-
-    2. **Fetch Intelligence:** For each URL, queries the Pulsedive API to retrieve
-    indicator details, risk scores, and comments.
-
-    3. **Risk Evaluation:** Compares the retrieved risk level against the configured
-    `Threshold` parameter.
-
-    4. **Internal Mutation:** If the threshold is met, marks the entity as suspicious
-    (`is_suspicious = True`).
-
-    5. **Enrichment:** Updates the entity's additional properties with Pulsedive metadata
-    and sets the `is_enriched` flag.
-
-    6. **Reporting:** Adds a data table to the case wall for retrieved comments and
-    generates an entity insight based on the analysis results and user preferences.
+  ai_description: "### General Description\nThis action enriches URL entities by querying\
+    \ the Pulsedive threat intelligence platform. It retrieves detailed indicator\
+    \ information, including risk levels, risk factors, and associated comments. The\
+    \ action evaluates the URL's risk against a user-defined threshold to determine\
+    \ if it should be marked as suspicious within the SOAR platform. It updates the\
+    \ entity's properties, generates insights, and provides a detailed data table\
+    \ of comments for analyst review.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action extracts configuration parameters (API Root, API Key, SSL verification)\
+    \ and action-specific parameters (Threshold, Retrieve Comments, etc.).\n2. **Filtering**:\
+    \ It filters the target entities to process only those with the type `URL`.\n\
+    3. **Enrichment**: For each URL, it queries the Pulsedive API to retrieve indicator\
+    \ data.\n4. **Risk Evaluation**: It compares the retrieved risk level against\
+    \ the configured threshold. If the risk meets or exceeds the threshold, the entity\
+    \ is marked as suspicious.\n5. **Data Update**: \n    - Updates the entity's `additional_properties`\
+    \ with the enrichment data.\n    - Adds a data table containing comments to the\
+    \ case wall if comments are retrieved.\n    - Creates an entity insight summarizing\
+    \ the risk and findings.\n6. **Finalization**: Updates the entities in the SOAR\
+    \ platform and adds a JSON result containing the full enrichment details.\n\n\
+    ### Parameters Description\n| Parameter | Type | Mandatory | Description |\n|\
+    \ :--- | :--- | :--- | :--- |\n| Max Comments To Return | string | No | Specifies\
+    \ the maximum number of comments to retrieve for the entity. Defaults to 50. |\n\
+    | Threshold | ddl | Yes | The risk level threshold (verylow, low, medium, high,\
+    \ critical) used to determine if an entity is marked as suspicious. |\n| Retrieve\
+    \ Comments | boolean | No | If enabled, the action retrieves comments associated\
+    \ with the entity. Defaults to true. |\n| Only Suspicious Entity Insight | boolean\
+    \ | No | If enabled, the action only creates an insight if the entity is determined\
+    \ to be suspicious. Defaults to false. |\n\n### Additional Notes\n- The action\
+    \ requires a valid Pulsedive API key configured in the integration settings.\n\
+    - The `Threshold` parameter is mandatory and dictates the sensitivity of the suspicious\
+    \ status assignment."
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -181,10 +177,21 @@ Enrich URL:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity suspicious status, populates additional properties with enrichment
-      data, creates entity insights, and adds data tables to the case wall.
+      The action updates entity properties, adds entity insights, and adds data tables
+      to the case wall.
+    reasoning: >-
+      The action fetches data from the Pulsedive API (fetches_data=true). It does
+      not modify external systems (can_mutate_external_data=false). It performs internal
+      mutations by updating entity properties, adding insights, and adding data tables
+      to the case (can_mutate_internal_data=true). It updates entities and creates
+      insights, but does not modify alert data or create case comments.
   categories:
     enrichment: true
+    reasoning: >-
+      The action is designed to fetch threat intelligence data from an external source
+      (Pulsedive) to enrich entities. It does not mutate external systems. It performs
+      allowed internal mutations (updating entities, creating insights). Therefore,
+      it qualifies as an enrichment action.
   entity_usage:
     entity_types:
     - DestinationURL
@@ -201,6 +208,9 @@ Enrich URL:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code explicitly filters `siemplify.target_entities` using `entity.entity_type
+      == EntityTypes.URL`. Therefore, it only processes URL entities.
 Get Threat Details:
   action_product_categories:
     add_alert_comment: false
@@ -216,6 +226,185 @@ Get Threat Details:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (risk, description, news, etc.) for
+      a specific threat, which aligns with the 'Enrich IOC' category. It does not
+      perform any other listed actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: "### General Description\nThis action retrieves detailed threat\
+    \ intelligence from Pulsedive based on a provided Threat Name or Threat ID. It\
+    \ fetches comprehensive data including risk summaries, news, and comments, and\
+    \ provides options to visualize this information within the Google SecOps platform\
+    \ via data tables and case insights.\n\n### Parameters\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Threat Name | string | No\
+    \ | The name of the threat to retrieve. Either this or 'Threat ID' must be provided.\
+    \ |\n| Threat ID | string | No | The ID of the threat to retrieve. Either this\
+    \ or 'Threat Name' must be provided. |\n| Retrieve Comments | boolean | No | Whether\
+    \ to fetch and display comments associated with the threat. Defaults to true.\
+    \ |\n| Split Risk | boolean | No | Whether to split indicator counts by risk level.\
+    \ Defaults to true. |\n| Create Insight | boolean | No | Whether to create a case\
+    \ insight containing the threat details. Defaults to false. |\n\n### Additional\
+    \ Notes\nEither 'Threat Name' or 'Threat ID' must be provided for the action to\
+    \ execute successfully. The action does not operate on entities; it uses these\
+    \ parameters to query the Pulsedive API directly.\n\n### Flow Description\n1.\
+    \ **Initialization**: Extracts configuration parameters (API Root, API Key, SSL\
+    \ verification) and action parameters.\n2. **Data Retrieval**: Initializes the\
+    \ PulsediveManager and queries the Pulsedive API using the provided Threat Name\
+    \ or Threat ID.\n3. **Data Processing**: \n    - If comments are retrieved, constructs\
+    \ a data table and adds it to the case results.\n    - If 'Create Insight' is\
+    \ enabled, generates a case insight with the threat details.\n4. **Output**: Returns\
+    \ the threat data as a JSON result and logs the execution status."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates a case insight and adds a data table to the case results.
+    reasoning: >-
+      The action fetches threat intelligence data from the Pulsedive API (fetches_data=true).
+      It does not mutate any external systems. It performs internal mutations by creating
+      a case insight and adding a data table to the case results, which are permitted
+      internal mutations for enrichment actions.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches threat intelligence data from an external source (Pulsedive)
+      and does not mutate external systems. It performs allowed internal mutations
+      (creating an insight and adding a data table). Thus, it qualifies as an enrichment
+      action.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It uses direct input parameters ('Threat
+      Name' or 'Threat ID') to query the Pulsedive API.
+Ping:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined operational
+      tasks like enrichment, containment, or ticketing.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Tests connectivity to the Pulsedive server. This action verifies that the provided
+    API credentials and endpoint are valid by performing a test request to the Pulsedive
+    API. ### Flow 1. Extracts configuration parameters (API Root, API Key, Verify
+    SSL). 2. Initializes the PulsediveManager with the provided credentials. 3. Executes
+    a connectivity test against the Pulsedive API. 4. Returns the success or failure
+    status of the connection. ### Parameters | Parameter | Type | Mandatory | Description
+    | | --- | --- | --- | --- | | API Root | String | Yes | The base URL for the Pulsedive
+    API. | | API Key | String | Yes | The API key for authentication. | | Verify SSL
+    | Boolean | No | Whether to verify SSL certificates. Defaults to True. |
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test by making a GET request to the Pulsedive
+      API. It does not modify external or internal systems, nor does it process entities.
+      It fetches data in the sense that it performs a network request to verify connectivity.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a connectivity test ('Ping'). Per the instructions, Ping actions
+      are explicitly excluded from being categorized as enrichment actions.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It is a global connectivity test.
+Scan Indicator:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation, risk scores, and threat intelligence for indicators
+      from Pulsedive, which aligns with the 'Enrich IOC' category. It does not perform
+      any containment, ticket management, or alert modification actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -233,11 +422,29 @@ Get Threat Details:
   ai_description: >-
     ### General Description
 
-    The **Get Threat Details** action retrieves comprehensive threat intelligence
-    from Pulsedive using either a threat name or a specific threat ID. It provides
-    detailed context including risk levels, categories, wiki summaries, related news,
-    and user comments. This information helps analysts understand the nature and severity
-    of a specific threat actor or campaign.
+    Performs a scan on an indicator (e.g., IP, URL, Hash) using the Pulsedive platform
+    to retrieve threat intelligence, risk assessments, and associated comments. This
+    action automates the submission of indicators for analysis, polls for completion,
+    and enriches the entity within Google SecOps with the gathered intelligence.
+
+
+    ### Flow Description
+
+    1. **Submission**: The action submits the target indicators to Pulsedive for analysis
+    using either a 'Passive' or 'Active' scan type.
+
+    2. **Polling**: The action periodically checks the status of the scan reports
+    until they are completed.
+
+    3. **Retrieval**: Once completed, it fetches the detailed scan data, including
+    risk scores, risk factors, and comments.
+
+    4. **Enrichment**: It updates the entity's `additional_properties` with the retrieved
+    data, marks the entity as suspicious if it meets the configured risk threshold,
+    and generates an entity insight.
+
+    5. **Reporting**: It adds a data table containing comments to the case and returns
+    a JSON result containing the full scan details.
 
 
     ### Parameters Description
@@ -246,243 +453,29 @@ Get Threat Details:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Threat Name** | String | No | The name of the threat to retrieve information
-    for (e.g., "Zeus"). |
+    | **Scan Type** | ddl | Yes | Determines the scan method: 'Passive' (no direct
+    reach-out) or 'Active' (more noisy). |
 
-    | **Threat ID** | String | No | The unique Pulsedive ID for the threat. |
+    | **Threshold** | ddl | Yes | The risk level (verylow, low, medium, high, critical)
+    at which an entity is marked as suspicious. |
 
-    | **Retrieve Comments** | Boolean | No | If set to `True`, retrieves user comments
-    associated with the threat. Default is `True`. |
+    | **Only Suspicious Entity Insight** | boolean | No | If enabled, creates insights
+    only for entities identified as suspicious. |
 
-    | **Split Risk** | Boolean | No | If set to `True`, breaks down indicator counts
-    by risk level. Default is `True`. |
+    | **Retrieve Comments** | boolean | No | If enabled, fetches and includes comments
+    associated with the indicator. |
 
-    | **Create Insight** | Boolean | No | If set to `True`, creates a detailed case
-    insight in Google SecOps. Default is `False`. |
+    | **Max Comments To Return** | string | No | Specifies the maximum number of comments
+    to retrieve. |
 
 
     ### Additional Notes
 
-    - Either **Threat Name** or **Threat ID** should be provided for the action to
-    function correctly.
+    - This action is designed for indicator enrichment and does not perform any external
+    blocking or containment operations.
 
-    - The action adds a data table to the case wall containing threat comments if
-    they are retrieved.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the API configuration and user-provided
-    parameters (Threat Name, ID, and display options).
-
-    2. **Pulsedive Query:** It calls the Pulsedive API to fetch threat data based
-    on the provided identifier.
-
-    3. **Data Processing:** The action parses the response, extracting risk summaries,
-    wiki information, and news.
-
-    4. **Comment Retrieval:** If enabled, it fetches and formats user comments into
-    a CSV-style table.
-
-    5. **Internal Mutation:**
-        - Adds a data table to the case wall for comments.
-        - If **Create Insight** is enabled, it generates a formatted insight with
-    the threat's risk summary and news.
-    6. **Output:** Returns the full threat data as a JSON object and completes the
-    action.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table for threat comments to the case wall and can create a case
-      insight with threat details.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
-    \ designed to verify the connectivity between the Google SecOps platform and the\
-    \ Pulsedive API. Its primary purpose is to ensure that the integration's configuration\
-    \ parameters\u2014such as the API Root, API Key, and SSL verification settings\u2014\
-    are valid and that the Pulsedive service is reachable over the network.\n\n###\
-    \ Parameters Description\nThis action does not require any input parameters.\n\
-    \n### Additional Notes\nThis action is typically used during the initial setup\
-    \ of the Pulsedive integration or when troubleshooting communication failures.\
-    \ It does not process any entities or modify any data within the SOAR or Pulsedive.\n\
-    \n### Flow Description\n1. **Extract Configuration**: The action retrieves the\
-    \ global integration settings, including the `API Root`, `API Key`, and `Verify\
-    \ SSL` preference.\n2. **Initialize Manager**: It instantiates the `PulsediveManager`\
-    \ using the extracted configuration.\n3. **Connectivity Test**: The manager executes\
-    \ a GET request to the Pulsedive search endpoint (`/api/search.php`) to test the\
-    \ API's responsiveness.\n4. **Response Validation**: The script validates the\
-    \ HTTP response. If the status code indicates success, the action proceeds; otherwise,\
-    \ it catches the exception.\n5. **Finalize Execution**: The action returns a success\
-    \ message if the connection is established or a detailed error message if the\
-    \ connection fails."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Scan Indicator:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    Performs a security scan on indicators using Pulsedive to retrieve comprehensive
-    threat intelligence. This action is asynchronous and supports both Passive (metadata
-    lookup) and Active (direct probing) scan types. It evaluates the risk level of
-    each entity against a user-defined threshold, marking entities as suspicious if
-    they meet or exceed the limit. The action enriches entities with Pulsedive-specific
-    properties, generates detailed HTML insights, and creates data tables for community
-    comments.
-
-
-    ### Flow Description:
-
-    1. **Submission**: The action iterates through all target entities and submits
-    them to Pulsedive for analysis based on the selected `Scan Type` (Passive or Active).
-
-    2. **Polling**: As an asynchronous action, it periodically checks the status of
-    the scan using the queue ID (QID) until the report is marked as 'done'.
-
-    3. **Data Retrieval**: Once the scan is complete, the action fetches the full
-    report, including risk scores, risk factors, and community comments.
-
-    4. **Risk Evaluation**: The retrieved risk level is compared against the user-provided
-    `Threshold`. If the risk is equal to or higher than the threshold, the entity's
-    suspicious status is updated in the SOAR.
-
-    5. **Enrichment & Insights**: The action updates the entity's additional properties
-    with Pulsedive metadata, creates an HTML insight for the analyst, and adds a data
-    table containing community comments to the case wall.
-
-
-    ### Parameters Description:
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Only Suspicious Entity Insight | Boolean | No | If enabled, insights will only
-    be created for entities that meet or exceed the risk threshold. Default is false.
-    |
-
-    | Scan Type | DDL | Yes | Choose between 'Passive' (fetch existing data without
-    direct contact) or 'Active' (perform a live, more intrusive scan). |
-
-    | Max Comments To Return | String | No | The maximum number of community comments
-    to retrieve for the indicator. Default is 50. |
-
-    | Threshold | DDL | Yes | The risk level (verylow, low, medium, high, critical)
-    required to mark an entity as suspicious. |
-
-    | Retrieve Comments | Boolean | No | If enabled, community comments from Pulsedive
-    will be retrieved and displayed in a data table. Default is true. |
-
-
-    ### Additional Notes:
-
-    - The action uses the `OriginalIdentifier` property of the entity if available,
-    otherwise it uses the standard identifier.
-
-    - Risk scores are mapped internally to numerical values (0-4) to facilitate threshold
-    comparison.
+    - The action supports asynchronous execution, allowing it to wait for scan results
+    without blocking the entire workflow.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -493,10 +486,22 @@ Scan Indicator:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity suspicious status, adds enrichment properties to entities, and
-      creates entity insights and data tables within the SOAR case.
+      The action updates entity properties, adds entity insights, and adds data tables
+      to the case.
+    reasoning: >-
+      The action fetches threat intelligence data from Pulsedive (fetches_data=true).
+      It does not perform any external mutations (can_mutate_external_data=false).
+      It performs internal mutations by updating entity properties, adding insights,
+      and adding data tables to the case (can_mutate_internal_data=true). It updates
+      entities and creates insights, but does not modify alert data or create case
+      comments.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Pulsedive) to enrich entities.
+      It does not mutate external systems. It performs allowed internal mutations
+      (updating entities, creating insights). Therefore, it qualifies as an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -547,3 +552,6 @@ Scan Indicator:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` without applying any type-based
+      filtering. Therefore, it is considered to run on all supported entity types.

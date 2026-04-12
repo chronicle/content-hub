@@ -2,12 +2,11 @@ Generate Alert from GreyNoise GNQL:
   ai_description: >-
     ### General Description
 
-    This connector retrieves threat intelligence data from GreyNoise using GreyNoise
-    Query Language (GNQL) and generates security alerts in Google SecOps. It allows
-    security teams to monitor for specific IP behaviors, classifications (malicious,
-    suspicious, benign), or actors seen across the internet. Each unique IP matching
-    the query criteria is ingested as an alert, providing enriched context such as
-    actor names, associated CVEs, and VPN/TOR status.
+    This connector integrates with GreyNoise to automatically fetch threat intelligence
+    data based on GNQL (GreyNoise Query Language) queries. It identifies malicious,
+    suspicious, benign, or unknown IP addresses and generates corresponding security
+    alerts within Google SecOps SOAR, enabling proactive threat monitoring and automated
+    incident response.
 
 
     ### Parameters Description
@@ -16,47 +15,42 @@ Generate Alert from GreyNoise GNQL:
 
     | :--- | :--- | :--- | :--- |
 
-    | GN API Key | Password | Yes | The API key used to authenticate with GreyNoise
-    services. |
-
-    | Query | String | Yes | The GNQL query to execute (e.g., `last_seen:1d`). If
-    left empty, it defaults to `last_seen:1d`. |
+    | GN API Key | Password | Yes | The API key used to authenticate with the GreyNoise
+    service. |
 
     | Max Results | Integer | No | The maximum number of results to fetch in a single
-    execution. Default is 100. |
+    execution. |
+
+    | Query | String | Yes | The GNQL query string used to filter the data to be fetched.
+    |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product in the SOAR. Default is 'GreyNoise'. |
+    product in the generated alert. |
 
     | EventClassId | String | Yes | The field name used to determine the event name
     (sub-type). |
 
-    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
-    python process running the script. Default is 1200. |
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    Python process running the script. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The connector initializes the GreyNoise API client using
-    the provided API Key and retrieves previously processed event IDs from the local
-    state to prevent duplicate alerts.
+    1. The connector initializes and retrieves configuration parameters, including
+    the API key and the GNQL query.
 
-    2. **Query Execution**: It executes the configured GNQL query against the GreyNoise
-    API to find matching IP indicators.
+    2. It reads existing event IDs from the system to perform deduplication and prevent
+    redundant alert creation.
 
-    3. **Pagination & Fetching**: The connector iterates through the results, supporting
-    pagination via scroll tokens until the `Max Results` limit is reached or all available
-    data is fetched.
+    3. It connects to the GreyNoise API and executes the specified GNQL query to retrieve
+    relevant IP intelligence data.
 
-    4. **Deduplication**: Each result is checked against the list of already processed
-    event IDs (a unique combination of IP and timestamp).
+    4. For each retrieved event, the connector maps the data to a standard SOAR AlertInfo
+    object, including severity, timestamps, and environment details.
 
-    5. **Alert Mapping**: Matching IP records are transformed into SOAR Alert objects.
-    Severity is dynamically assigned based on GreyNoise classification: 'Malicious'
-    maps to High, 'Suspicious' to Medium, and 'Benign' or 'Unknown' to Low.
+    5. It filters out duplicate events and checks for system overflow limits.
 
-    6. **Ingestion**: The connector performs an overflow check and then ingests the
-    unique alerts into the system.
+    6. Valid alerts are ingested into Google SecOps SOAR as new cases.
 
-    7. **State Persistence**: Processed IDs are saved back to the system to ensure
-    they are skipped in subsequent runs.
+    7. Finally, the connector updates the stored event IDs to ensure future runs only
+    process new data.

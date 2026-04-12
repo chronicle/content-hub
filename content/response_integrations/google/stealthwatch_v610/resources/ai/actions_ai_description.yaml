@@ -13,6 +13,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      product category operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -27,27 +30,25 @@ Ping:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Ping** action is a utility designed\
-    \ to verify the connectivity between the Google SecOps platform and the Cisco\
-    \ Stealthwatch (v6.10) instance. Its primary purpose is to ensure that the integration's\
-    \ configuration parameters\u2014specifically the API Root, Username, and Password\u2014\
-    are correct and that the Stealthwatch server is reachable and responding to requests.\n\
-    \n### Parameters Description\nThis action does not require any input parameters.\
-    \ It relies entirely on the integration's global configuration settings.\n\n###\
-    \ Additional Notes\n*   The action performs a live authentication check by requesting\
-    \ a JWT token from the Stealthwatch server.\n*   It further validates the connection\
-    \ by attempting to retrieve a list of available domains (tenants) from the system.\n\
-    *   If any step in the authentication or domain retrieval fails, the action will\
-    \ report a failure, indicating a configuration or network issue.\n\n### Flow Description\n\
-    1.  **Configuration Retrieval:** The action fetches the 'Api Root', 'Username',\
-    \ and 'Password' from the StealthwatchV6-10 integration settings.\n2.  **Manager\
-    \ Initialization:** It initializes the `StealthwatchManager`, which triggers an\
-    \ authentication request (`POST /token/v2/authenticate`) to obtain a session cookie/JWT.\n\
-    3.  **Connectivity Test:** The action calls the `test_connectivity` method, which\
-    \ executes a `GET` request to the `/sw-reporting/v1/tenants` endpoint to verify\
-    \ that the authenticated session can successfully read data.\n4.  **Result Reporting:**\
-    \ If the requests are successful, the action concludes with a 'Connected Successfully'\
-    \ message and returns a boolean `True` status."
+  ai_description: "General Description: The Ping action is a utility designed to verify\
+    \ the connectivity between the Google SecOps platform and the Cisco Stealthwatch\
+    \ (v6.10) instance. Its primary purpose is to ensure that the integration's configuration\
+    \ parameters\u2014specifically the API Root, Username, and Password\u2014are correct\
+    \ and that the Stealthwatch server is reachable and responding to requests. Parameters\
+    \ Description: There are no parameters for this action. Additional Notes: The\
+    \ action performs a live authentication check by requesting a JWT token from the\
+    \ Stealthwatch server. It further validates the connection by attempting to retrieve\
+    \ a list of available domains (tenants) from the system. If any step in the authentication\
+    \ or domain retrieval fails, the action will report a failure, indicating a configuration\
+    \ or network issue. Flow Description: 1. Configuration Retrieval: The action fetches\
+    \ the 'Api Root', 'Username', and 'Password' from the StealthwatchV6-10 integration\
+    \ settings. 2. Manager Initialization: It initializes the StealthwatchManager,\
+    \ which triggers an authentication request (POST /token/v2/authenticate) to obtain\
+    \ a session cookie/JWT. 3. Connectivity Test: The action calls the test_connectivity\
+    \ method, which executes a GET request to the /sw-reporting/v1/tenants endpoint\
+    \ to verify that the authenticated session can successfully read data. 4. Result\
+    \ Reporting: If the requests are successful, the action concludes with a 'Connected\
+    \ Successfully' message and returns a boolean True status."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -58,8 +59,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test by authenticating (POST) and fetching
+      data (GET) from the Cisco Stealthwatch API. It does not mutate external or internal
+      data, nor does it update entities or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and is a connectivity test. Per the instructions,
+      Ping actions are not categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -75,6 +83,8 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It is a global connectivity test.
 Search Events:
   action_product_categories:
     add_alert_comment: false
@@ -90,6 +100,10 @@ Search Events:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves security events for an IP, providing threat intelligence
+      and context, which matches 'Enrich IOC'. It also performs a search for historical
+      logs, which matches 'Search Events'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -159,10 +173,19 @@ Search Events:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action attaches security event data to the case as JSON results and creates
-      entity-level data tables for the processed IP addresses.
+      Adds JSON results and entity data tables to the case.
+    reasoning: >-
+      The action fetches security event data from Cisco Stealthwatch by performing
+      search queries. It does not modify external system state (no blocking or configuration
+      changes). It performs internal mutations by attaching JSON results and entity
+      data tables to the case, which is standard for enrichment actions.
   categories:
     enrichment: true
+    reasoning: >-
+      The action retrieves security events (contextual data) for IP entities and attaches
+      them to the case. It does not mutate external systems and the internal mutations
+      (adding tables/JSON) are standard enrichment practices. Therefore, it is classified
+      as an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -179,6 +202,9 @@ Search Events:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where `entity.entity_type == EntityTypes.ADDRESS`.
 Search Flows:
   action_product_categories:
     add_alert_comment: false
@@ -191,9 +217,13 @@ Search Flows:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: false
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves network flow data for IP addresses, which provides context
+      for investigation, matching the 'Enrich IOC' category. Additionally, it performs
+      a search for historical telemetry data, which matches the 'Search Events' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -274,8 +304,18 @@ Search Flows:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches network flow data from an external system (Cisco Stealthwatch)
+      based on IP entities. It does not modify any external system state (no blocking/quarantining)
+      nor does it modify internal case data (it does not update entities, create insights,
+      or add case comments). It only attaches results to the action output.
   categories:
     enrichment: true
+    reasoning: >-
+      The action is designed to fetch contextual data (network flows) for entities.
+      It does not mutate external systems or internal case data, and it does not perform
+      any forbidden actions (like ping or file downloads). Therefore, it qualifies
+      as an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -292,3 +332,6 @@ Search Flows:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where `entity.entity_type == EntityTypes.ADDRESS`.

@@ -2,13 +2,11 @@
   ai_description: >-
     ### General Description
 
-    The Flashpoint Compromised Credential Connector integrates with the Flashpoint
-    API to monitor and ingest alerts related to compromised credentials. It specifically
-    tracks "credential-sighting" events, which occur when employee credentials (such
-    as emails and passwords) are discovered in external data sources like the deep
-    or dark web. This connector enables security teams to proactively respond to potential
-    account takeovers by automatically creating cases in Google SecOps for every detected
-    sighting.
+    The Flashpoint - Compromised Credential Connector integrates with the Flashpoint
+    intelligence platform to monitor and ingest compromised credential sightings.
+    It periodically queries the Flashpoint API for new credential-related alerts and
+    automatically creates cases within Google SecOps, enabling security teams to respond
+    to potential account takeovers or credential leaks.
 
 
     ### Parameters Description
@@ -17,27 +15,27 @@
 
     | :--- | :--- | :--- | :--- |
 
-    | API Key | Password | Yes | The API key used to authenticate with the Flashpoint
-    v4 API. |
+    | API Key | Password | Yes | The API Key used to authenticate with the Flashpoint
+    service. |
 
-    | DeviceProductField | String | Yes | The field name in the source data used to
-    determine the device product (defaults to 'Flashpoint'). |
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product in the case. |
 
     | EventClassId | String | No | The field name used to determine the event name
-    or sub-type. |
+    (sub-type). |
 
-    | Limit | Integer | Yes | The maximum number of events to retrieve per execution
-    cycle. |
+    | Limit | Integer | Yes | The maximum number of events to retrieve per execution.
+    |
 
-    | Max Days Back | Integer | No | The maximum number of days to look back for data
-    during the first run or if no previous timestamp exists. |
+    | Max Days Back | Integer | No | The maximum number of days to look back when
+    fetching data. |
 
-    | Proxy Server Address | String | No | The address of the proxy server to use
-    for network communication. |
+    | Proxy Password | Password | No | The proxy password to authenticate with. |
 
-    | Proxy Username | String | No | The username for proxy authentication. |
+    | Proxy Server Address | String | No | The address of the proxy server to use.
+    |
 
-    | Proxy Password | Password | No | The password for proxy authentication. |
+    | Proxy Username | String | No | The proxy username to authenticate with. |
 
     | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
     Python process running the script. |
@@ -45,24 +43,19 @@
 
     ### Flow Description
 
-    1. **Timestamp Retrieval**: The connector fetches the last saved timestamp from
-    the SOAR database. If no timestamp is found, it uses the "Max Days Back" parameter
-    to define the starting point.
+    1. The connector initializes a connection to the Flashpoint API using the provided
+    API Key and optional proxy settings.
 
-    2. **API Query**: It connects to the Flashpoint `/all/search` endpoint using a
-    Bearer token. It specifically queries for `basetypes:(credential-sighting)` within
-    the time range from the last timestamp to the current time.
+    2. It calculates the time range for data retrieval based on the last successful
+    fetch timestamp or the configured "Max Days Back" parameter.
 
-    3. **Data Processing**: The connector retrieves a list of hits (up to the configured
-    Limit) and flattens the nested JSON structure of each alert for easier mapping.
+    3. It queries the Flashpoint API for "credential-sighting" events that occurred
+    within the calculated time window.
 
-    4. **Case Creation**: Each sighting is mapped to a Google SecOps `CaseInfo` object.
-    The priority is set to 60 (Medium), and the event name is hardcoded as "Credential
-    Sighting".
+    4. For each retrieved alert, the connector flattens the data structure and maps
+    it to a Google SecOps case format.
 
-    5. **Overflow Validation**: Before ingestion, the connector checks if the alert
-    matches overflow criteria to prevent redundant case creation.
+    5. It checks for alert overflow to prevent duplicate case creation.
 
-    6. **Ingestion and State Management**: Valid cases are ingested into the platform,
-    and the timestamp of the most recent alert is saved to ensure the next run starts
-    from where the current one ended.
+    6. Valid cases are ingested into the SOAR platform, and the latest timestamp is
+    saved to ensure subsequent runs only fetch new data.

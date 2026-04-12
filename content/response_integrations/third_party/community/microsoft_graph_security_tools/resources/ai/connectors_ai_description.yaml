@@ -2,11 +2,11 @@ MS SecureScore Alert:
   ai_description: >-
     ### General Description
 
-    The **MS SecureScore Alert** connector monitors the Microsoft Secure Score for
-    a given tenant using the Microsoft Graph API. It is designed to proactively alert
-    security teams when the organization's security posture, as measured by the Secure
-    Score, falls below a predefined threshold. This allows for rapid response to changes
-    in security configurations or compliance across Microsoft 365 environments.
+    This connector monitors the Microsoft 365 Secure Score via the Microsoft Graph
+    Security API. It allows security teams to define a threshold; if the organization's
+    Secure Score falls below this value, the connector automatically generates an
+    alert within Google SecOps, enabling proactive remediation of security posture
+    degradation.
 
 
     ### Parameters Description
@@ -15,94 +15,110 @@ MS SecureScore Alert:
 
     | :--- | :--- | :--- | :--- |
 
-    | Client ID | String | Yes | The Application (client) ID from the Azure App Registration.
-    |
+    | Threshold | Integer | No | The Secure Score threshold. An alert is raised if
+    the score drops below this value. |
 
-    | Secret ID | Password | Yes | The Client Secret from the Azure App Registration
-    (required if not using certificates). |
+    | Tenant ID | String | Yes | The Azure Tenant ID. |
 
-    | Tenant ID | String | Yes | The Directory (tenant) ID from Azure. |
+    | Secret ID | Password | Yes | The Azure Secret ID. |
 
-    | Threshold | Integer | No | The numerical value representing the minimum acceptable
-    Secure Score. An alert is raised if the score drops below this. |
+    | Client ID | String | Yes | The Azure Client ID. |
 
-    | Default Priority | Integer | Yes | The priority assigned to the created alert
-    (-1: Informative, 40: Low, 60: Medium, 80: High, 100: Critical). |
+    | Certificate Path | String | No | Path to the certificate file on the Siemplify
+    server (if using certificate-based authentication). |
 
-    | Certificate Path | String | No | Local path to a certificate file on the server
-    if using certificate-based authentication. |
+    | Certificate Password | Password | No | Password for the certificate file. |
 
-    | Certificate Password | Password | No | The password for the certificate file,
-    if applicable. |
+    | PythonProcessTimeout | String | Yes | Timeout limit (in seconds) for the Python
+    process. |
 
     | EventClassId | String | Yes | The field name used to determine the event name
-    (default: SecureScore). |
+    (sub-type). |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product (default: Microsoft 365). |
+    product. |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the script
-    execution. |
+    | Default Priority | Integer | Yes | The default priority for the alert (-1 to
+    100). |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector authenticates with the Microsoft Graph API
-    using either the Client Secret or a provided Certificate.
+    1. Authenticates with the Microsoft Graph Security API using the provided Client
+    ID and Secret (or Certificate).
 
-    2. **Data Retrieval**: It queries the Microsoft Graph Beta endpoint (`/security/secureScores`)
-    to retrieve the most recent Secure Score data.
+    2. Retrieves the current Secure Score from the Microsoft 365 environment.
 
-    3. **Threshold Comparison**: The script extracts the `currentScore` from the API
-    response and compares it against the user-configured `Threshold` parameter.
+    3. Compares the current score against the user-defined Threshold.
 
-    4. **Alert Generation**: If the current score is strictly less than the threshold,
-    the connector initiates the alert creation process.
+    4. If the score is below the threshold, it constructs an alert containing relevant
+    metrics, including active user counts, enabled services, and comparative industry/tenant
+    averages.
 
-    5. **Event Mapping**: The connector creates a detailed event containing the current
-    score, active user counts, and comparative averages (Industry, Total Seats, and
-    Tenant averages).
-
-    6. **Ingestion**: The alert and its associated event data are packaged and ingested
-    into Google SecOps for analyst review.
+    5. Ingests the generated alert into the Google SecOps platform for further investigation.
 MS365 MFA Alert:
-  ai_description: "### General Description\nThe **MS365 MFA Alert** connector integrates\
-    \ with the Microsoft Graph API to monitor and alert on the Multi-Factor Authentication\
-    \ (MFA) registration status of users within a Microsoft 365 tenant. Its primary\
-    \ purpose is to identify security gaps, such as users who have not registered\
-    \ for MFA or users who have self-service password reset capabilities enabled,\
-    \ which could pose a risk if not properly managed. By ingesting these status changes\
-    \ as alerts, security teams can proactively enforce MFA policies and secure user\
-    \ accounts.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Tenant ID | String | Yes | The Azure Active\
-    \ Directory Tenant ID. |\n| Client ID | String | Yes | The Application (client)\
-    \ ID of the Azure App Registration. |\n| Secret ID | Password | Yes | The Client\
-    \ Secret for the Azure App Registration. Required if not using certificate-based\
-    \ authentication. |\n| Certificate Path | String | No | The local file path to\
-    \ a certificate on the server if using certificate-based authentication instead\
-    \ of a secret. |\n| Certificate Password | Password | No | The password for the\
-    \ certificate file, if applicable. |\n| MFA Registration Alert | Boolean | No\
-    \ | If enabled (true), the connector creates alerts for users who are not registered\
-    \ for MFA. |\n| Self Service Reset Alert | Boolean | No | If enabled (true), the\
-    \ connector creates alerts for users who have the ability to perform a self-service\
-    \ password reset. |\n| Exclude Guests | Boolean | No | If enabled (true), the\
-    \ connector will ignore guest/external users (identified by '#EXT#' in their UPN).\
-    \ |\n| EventClassId | String | Yes | The value used to populate the event name/sub-type\
-    \ (default: 'MFA Alert'). |\n| DeviceProductField | String | Yes | The value used\
-    \ to identify the device product in the SOAR (default: 'Microsoft 365'). |\n|\
-    \ PythonProcessTimeout | String | Yes | The maximum time in seconds allowed for\
-    \ the connector execution. |\n\n### Flow Description\n1. **Authentication**: The\
-    \ connector authenticates to the Microsoft Graph API using the provided Tenant\
-    \ ID, Client ID, and either a Client Secret or a Certificate.\n2. **Data Retrieval**:\
-    \ It queries the Microsoft Graph `credentialUserRegistrationDetails` report endpoint\
-    \ to fetch MFA registration and capability statistics for all users in the tenant.\n\
-    3. **Filtering**: \n    * It checks the global allowlist (whitelist) to exclude\
-    \ specific service accounts or legacy users.\n    * If 'Exclude Guests' is active,\
-    \ it filters out any user principal names containing '#EXT#'.\n4. **Alert Evaluation**:\
-    \ For each remaining user, the connector checks:\n    * If the user is not MFA-registered\
-    \ and 'MFA Registration Alert' is enabled.\n    * If the user is capable of self-service\
-    \ reset and 'Self Service Reset Alert' is enabled.\n5. **Case Creation**: For\
-    \ every user meeting the alert criteria, the connector generates a SOAR Alert\
-    \ containing user identity details (UPN, Display Name) and their specific MFA\
-    \ registration status.\n6. **Ingestion**: The generated alerts and associated\
-    \ events are packaged and sent to Google SecOps for case management and investigation."
+  ai_description: >-
+    ### General Description
+
+    The MS365 MFA Alert connector monitors Microsoft 365 user MFA registration status.
+    It retrieves credential registration details from the Microsoft Graph API and
+    generates alerts in Google SecOps for users who are not registered for MFA or
+    have self-service password reset capabilities enabled, helping security teams
+    identify potential account vulnerabilities.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Tenant ID | String | Yes | Tenant ID from Azure. |
+
+    | Secret ID | Password | Yes | Secret ID from Azure. |
+
+    | Client ID | String | Yes | Client ID from Azure. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
+
+    | Self Service Reset Alert | Boolean | No | Create alert when a user has the ability
+    to self-service reset their password/MFA. |
+
+    | MFA Registration Alert | Boolean | No | Create alert when a user is not registered
+    for MFA. |
+
+    | Exclude Guests | Boolean | No | Exclude guests/external users from alerts (emails
+    containing #EXT#). |
+
+    | Certificate Path | String | No | Path to the certificate on the Siemplify server
+    for certificate-based authentication. |
+
+    | Certificate Password | Password | No | Password for the certificate file, if
+    applicable. |
+
+
+    ### Flow Description
+
+    1. Authenticates with the Microsoft Graph API using the provided Client ID/Secret
+    or Certificate credentials.
+
+    2. Retrieves user MFA registration statistics from the `credentialUserRegistrationDetails`
+    endpoint.
+
+    3. Iterates through the retrieved user data, applying filters to exclude guests
+    if configured.
+
+    4. Checks each user against the system allowlist.
+
+    5. Evaluates if the user meets the criteria for an alert (e.g., not registered
+    for MFA or has self-service reset enabled).
+
+    6. Creates and ingests an alert into Google SecOps for each user matching the
+    criteria.

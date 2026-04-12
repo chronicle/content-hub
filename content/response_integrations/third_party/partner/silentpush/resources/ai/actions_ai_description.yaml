@@ -13,6 +13,9 @@ Add Feed:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action creates a new feed in the Silent Push platform. This does not align
+      with any of the provided categories (Enrich IOC, Contain Host, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,56 +33,50 @@ Add Feed:
   ai_description: >-
     ### General Description
 
-    The **Add Feed** action allows users to create a new feed within the Silent Push
-    platform. This is a management action used to define new sources or categories
-    of threat intelligence data by providing metadata such as name, type, and tags.
+    This action adds a new feed to the Silent Push platform. It interacts with the
+    Silent Push API to create a feed based on the provided parameters, such as name,
+    type, category, vendor, description, and tags.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Name** | string | Yes | The unique name for the new feed. |
+    | Name | string | Yes | Name of the feed. |
 
-    | **Type** | string | Yes | The classification type of the feed (e.g., 'domain',
-    'ip'). |
+    | Type | string | Yes | Feed Type. |
 
-    | **Category** | string | No | The category the feed belongs to. |
+    | Category | string | No | Feed Category. |
 
-    | **Vendor** | string | No | The provider or vendor of the feed data. |
+    | Vendor | string | No | Vendor. |
 
-    | **Feed Description** | string | No | A detailed description of the feed's purpose
-    or content. |
+    | Feed Description | string | No | URL for the screenshot. |
 
-    | **Tags** | string | No | A comma-separated list of tags to associate with the
-    feed. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the Silent Push server URL and
-    API key from the integration configuration, along with the feed details from the
-    action parameters.
-
-    2. **Manager Initialization:** Initializes the `SilentPushManager` to handle API
-    communication.
-
-    3. **API Request:** Executes a POST request to the Silent Push `/api/v1/feeds/`
-    endpoint with the provided feed metadata.
-
-    4. **Result Handling:** Processes the API response. If successful, it returns
-    the feed details; otherwise, it reports a failure.
+    | Tags | string | No | Tags that should be attached with the feed. |
 
 
     ### Additional Notes
 
-    - The `Tags` parameter should be provided as a comma-separated string (e.g., 'malware,phishing').
+    This action does not perform any operations on entities. It is a configuration/management
+    action that interacts with the Silent Push API.
 
-    - This action does not interact with or modify SecOps entities directly, although
-    it may log entity identifiers present in the context for debugging purposes.
+
+    ### Flow Description
+
+    1. Extract the integration configuration (Server URL, API Key).
+
+    2. Extract the action parameters (Name, Type, Category, Vendor, Feed Description,
+    Tags).
+
+    3. Initialize the `SilentPushManager` with the extracted configuration.
+
+    4. Call the `add_feed` method, which sends a POST request to the Silent Push API
+    to create the new feed.
+
+    5. Handle the API response, log the outcome, and end the action with the appropriate
+    status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -88,12 +85,17 @@ Add Feed:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new feed resource on the Silent Push server via a POST request to
-      the /api/v1/feeds/ endpoint.
+      Creates a new feed in the Silent Push platform.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Silent Push API to create a new feed.
+      It does not fetch data or modify internal SecOps data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action creates external data (a feed) rather than retrieving data, so it
+      cannot be an Enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -109,6 +111,9 @@ Add Feed:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print them, but does
+      not use them to perform the action. Therefore, no entities are used.
 Add Feed Tags:
   action_product_categories:
     add_alert_comment: false
@@ -124,6 +129,10 @@ Add Feed Tags:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates tags on a feed in the Silent Push platform. This does not
+      align with any of the provided categories (Enrich IOC, Update Alert, Create
+      Ticket, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -141,48 +150,33 @@ Add Feed Tags:
   ai_description: >-
     ### General Description
 
-    Adds tags to a specific feed in the Silent Push platform. This action allows users
-    to organize and categorize threat intelligence feeds by appending a list of descriptive
-    tags to a feed identified by its unique UUID.
+    Adds tags to a specific feed in the Silent Push platform. This action takes a
+    Feed UUID and a comma-separated list of tags as input, and performs a POST request
+    to the Silent Push API to update the tags associated with the specified feed.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    |---|---|---|---|
 
-    | Feed UUID | string | Yes | The unique identifier (UUID) of the feed to which
-    the tags will be added. |
+    | Feed UUID | string | No | The unique identifier of the feed to update. |
 
-    | Tags | string | Yes | A comma-separated list of tags to be updated to the feed.
-    |
-
-
-    ### Additional Notes
-
-    - Although the parameters are marked as optional in the configuration, they are
-    functionally required for the action to execute its logic successfully.
-
-    - This action does not interact with or enrich SecOps entities; it is a management
-    action performed directly on the Silent Push platform.
+    | Tags | string | No | Comma-separated tags to be updated to the feed. |
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: Retrieves the Silent Push Server URL and API
-    Key from the integration settings.
+    1. Extract configuration parameters (Server URL, API Key).
 
-    2. **Parameter Extraction**: Retrieves the `Feed UUID` and the `Tags` string from
-    the action parameters.
+    2. Extract action parameters (Feed UUID, Tags).
 
-    3. **API Interaction**: Calls the Silent Push Manager's `add_feed_tags` method,
-    which sends a POST request to the `/api/v1/feeds/{feed_uuid}/tags/` endpoint with
-    the provided tags.
+    3. Initialize `SilentPushManager`.
 
-    4. **Result Handling**: Checks the API response. If data is returned, the action
-    completes successfully; otherwise, it logs an error and terminates with a failure
-    status.
+    4. Call `add_feed_tags` with the provided UUID and tags.
+
+    5. Log the result and end the action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -191,12 +185,17 @@ Add Feed Tags:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds tags to a specific feed in the Silent Push platform via a POST request
-      to the feeds API.
+      Updates the tags associated with a feed in the Silent Push platform.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Silent Push API to update tags for
+      a feed. It does not fetch data, nor does it modify internal SOAR data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (POST request) that updates external data (feed
+      tags). It does not retrieve data for enrichment purposes.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -212,11 +211,15 @@ Add Feed Tags:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers.
+      It does not use these entities to perform the API call or filter the action's
+      logic. Therefore, it does not run on entities.
 Add Indicators:
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: true
+    add_ioc_to_blocklist: false
     contain_host: false
     create_ticket: false
     delete_email: false
@@ -227,6 +230,10 @@ Add Indicators:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds indicators to a feed in the Silent Push platform. This does
+      not match any of the provided categories (e.g., blocklist, allowlist, ticket,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -242,55 +249,47 @@ Add Indicators:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Adds indicators to a specified feed in the Silent Push platform. This action allows
-    users to programmatically update threat intelligence feeds by providing a Feed
-    UUID and a list of indicators (such as domains or IP addresses). The indicators
-    are provided as a comma-separated string, which the action parses into a list
-    and submits via a POST request to the Silent Push API.
+    Adds indicators to a specified feed in the Silent Push platform. This action facilitates
+    the management of threat intelligence feeds by pushing new indicators to a target
+    feed.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration parameters (Silent Push Server
+    URL and API Key) and action parameters (Feed UUID, Indicators, and ASN) from the
+    integration settings.
+
+    2. It initializes the `SilentPushManager` with the provided credentials.
+
+    3. It calls the `add_indicators` method, which performs a POST request to the
+    Silent Push API to add the provided indicators to the specified feed.
+
+    4. The action logs the outcome of the API request and terminates with the appropriate
+    execution status.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Feed UUID | string | No | The unique identifier (UUID) of the feed where indicators
-    will be added. If not provided, a default UUID is used. |
+    | Feed UUID | string | No | The unique identifier of the feed to which indicators
+    will be added. |
 
-    | Indicators | string | No | A comma-separated list of indicators (e.g., 'example.com,
-    1.2.3.4') to be added to the feed. |
+    | Indicators | string | No | A comma-separated list of indicators to be added
+    to the feed. |
+
+    | ASN | string | No | An optional ASN parameter extracted by the script, though
+    not explicitly used in the primary API call logic. |
 
 
     ### Additional Notes
 
-
-    * **Entity Usage:** Although the script iterates through the target entities in
-    the scope, it does not use their data to perform the action. The action relies
-    entirely on the provided 'Indicators' parameter.
-
-    * **ASN Parameter:** The code attempts to extract an 'ASN' parameter, but it is
-    not defined in the action's configuration and is only referenced in error messages.
-
-
-    ### Flow Description
-
-
-    1. **Configuration Extraction:** Retrieves the Silent Push server URL and API
-    Key from the integration settings.
-
-    2. **Parameter Extraction:** Retrieves the 'Feed UUID' and the 'Indicators' string
-    from the action parameters.
-
-    3. **Manager Initialization:** Initializes the Silent Push Manager to handle API
-    communication.
-
-    4. **API Request:** Sends a POST request to the Silent Push endpoint `/api/v1/feeds/{feed_uuid}/indicators/`
-    with the list of indicators.
-
-    5. **Result Handling:** Evaluates the API response. If successful, the action
-    completes; otherwise, it logs an error and fails.
+    - The action does not perform any operations on the entities present in the case,
+    despite iterating over them for logging purposes. It is strictly an external mutation
+    action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -299,12 +298,18 @@ Add Indicators:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds new indicators to a specified feed within the Silent Push platform via
-      a POST request.
+      Adds indicators to a specified feed in the Silent Push platform via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to an external API (Silent Push) to add indicators
+      to a feed. It does not fetch data for enrichment, nor does it modify internal
+      SOAR data (entities, insights, etc.).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (adding data to an external system) and does
+      not retrieve data for enrichment, therefore it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -320,6 +325,10 @@ Add Indicators:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers,
+      but does not use them for any logic or API calls. Therefore, it does not run
+      on entities.
 Add Indicators Tags:
   action_product_categories:
     add_alert_comment: false
@@ -335,6 +344,10 @@ Add Indicators Tags:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates tags for an indicator in an external system (Silent Push).
+      This does not match any of the provided categories (Enrich IOC, Contain Host,
+      Update Ticket, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -352,54 +365,45 @@ Add Indicators Tags:
   ai_description: >-
     ### General Description
 
-    Adds tags to a specific indicator within a Silent Push feed. This action allows
-    analysts to categorize and organize threat indicators directly on the Silent Push
-    platform by updating their associated metadata. It is primarily used for threat
-    intelligence management and feed curation.
+    This action updates the tags of a specific indicator within a feed on the Silent
+    Push platform. It allows analysts to manage and categorize indicators by adding
+    custom tags directly to the Silent Push system.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Feed UUID | string | Yes | The unique identifier (UUID) of the target feed in
-    Silent Push. |
+    | Feed UUID | string | Yes | The unique identifier (UUID) of the feed containing
+    the indicator. |
 
-    | Indicator Name | string | Yes | The name of the indicator (e.g., a domain or
-    IP address) that will receive the new tags. |
+    | Indicator Name | string | Yes | The name of the indicator to be tagged. |
 
-    | Tags | string | Yes | The specific tags to be added to the indicator. Multiple
-    tags should be provided as a single string (the format depends on the Silent Push
-    API requirements, typically comma-separated). |
+    | Tags | string | Yes | The tags to be added to the indicator. |
 
 
     ### Additional Notes
 
-    This action does not process Google SecOps entities. It relies entirely on the
-    provided parameters to identify the feed and the indicator. The action uses a
-    `PUT` request to update the external system state.
+    The action requires a valid Silent Push API key and server URL configured in the
+    integration settings. All parameters (Feed UUID, Indicator Name, Tags) are mandatory
+    for the action to execute successfully.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction:** Retrieves the Silent Push Server URL and API
-    Key from the integration settings.
+    1. Extract the integration configuration (Server URL, API Key) from the environment.
 
-    2. **Parameter Extraction:** Collects the `Feed UUID`, `Indicator Name`, and `Tags`
-    from the action input.
+    2. Extract the action parameters (Feed UUID, Indicator Name, Tags).
 
-    3. **API Initialization:** Initializes the `SilentPushManager` with the provided
-    credentials.
+    3. Initialize the `SilentPushManager` with the provided configuration.
 
-    4. **External Mutation:** Executes a `PUT` request to the Silent Push endpoint:
-    `/api/v1/feeds/{feed_uuid}/indicators/{indicator_name}/update-tags/` with the
-    provided tags in the payload.
+    4. Call the `add_indicators_tags` method via the manager, which performs a `PUT`
+    request to the Silent Push API to update the tags for the specified indicator.
 
-    5. **Result Handling:** Validates the API response. If successful, it completes
-    the action; otherwise, it logs an error and fails the execution.
+    5. Log the result of the operation and terminate the action with the appropriate
+    status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -408,12 +412,18 @@ Add Indicators Tags:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the tags of a specific indicator within a Silent Push feed using a PUT
-      request to the Silent Push API.
+      Updates the tags for a specific indicator within a feed on the Silent Push platform.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a `PUT` request to the Silent Push API to update tags for
+      an indicator. This is an external mutation. It does not fetch data, nor does
+      it modify internal SecOps data (entities, insights, etc.).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (updating tags in an external system) and does
+      not fetch data for enrichment. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -429,6 +439,10 @@ Add Indicators Tags:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers.
+      It does not use them to perform the API call or filter the action. Therefore,
+      it does not run on entities.
 Density Lookup:
   action_product_categories:
     add_alert_comment: false
@@ -444,6 +458,11 @@ Density Lookup:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves density information (DNS/IP parameters) for indicators,
+      which provides threat intelligence and context. This aligns with the 'Enrich
+      IOC' category. It does not perform any other actions like ticketing, blocking,
+      or asset management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -458,32 +477,44 @@ Density Lookup:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Density Lookup** action queries\
-    \ the Silent Push platform to retrieve granular density information for various\
-    \ DNS and IP parameters. This data helps analysts understand the prevalence and\
-    \ associations of specific infrastructure components, such as Name Servers (NS),\
-    \ Mail Exchange (MX) servers, IP addresses, and Autonomous System Numbers (ASNs).\
-    \ It is primarily used for infrastructure analysis and identifying commonalities\
-    \ across different network assets.\n\n### Parameters Description\n\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Qtype**\
-    \ | string | Yes | The type of density lookup to perform. Supported types include\
-    \ `nssrv`, `mxsrv`, `nshash`, `mxhash`, `ipv4`, `ipv6`, `asn`, and `chv`. |\n\
-    | **Query** | string | Yes | The specific value (e.g., a domain name, IP address,\
-    \ or server hostname) to query for density information. |\n| **Scope** | string\
-    \ | No | Defines the match level or scope for the lookup to filter results. |\n\
-    \n### Additional Notes\n- This action requires a valid API Key and Server URL\
-    \ configured in the Silent Push integration settings.\n- If the query returns\
-    \ no records, the action will result in a failure status with an error message\
-    \ indicating that no density records were found.\n\n### Flow Description\n1. **Initialization:**\
-    \ The action extracts the integration configuration (Server URL and API Key) and\
-    \ the action parameters (`Qtype`, `Query`, and `Scope`).\n2. **API Request:**\
-    \ It initializes the `SilentPushManager` and executes a GET request to the Silent\
-    \ Push density lookup endpoint using the provided parameters.\n3. **Data Validation:**\
-    \ The action parses the response and checks for the presence of records in the\
-    \ `response.records` field.\n4. **Execution Outcome:** \n    - If records are\
-    \ found, the action completes successfully and returns the data in a JSON format.\n\
-    \    - If no records are found or an API error occurs, the action fails and logs\
-    \ the corresponding error message."
+  ai_description: >-
+    The action queries granular DNS/IP parameters (e.g., NS servers, MX servers, IP
+    addresses, ASNs) for density information using the Silent Push platform. This
+    action is used to retrieve threat intelligence and contextual data about indicators.
+
+
+    ### Flow
+
+    1. Extracts configuration parameters (`Silent Push Server`, `API Key`) and action
+    parameters (`Qtype`, `Query`, `Scope`).
+
+    2. Initializes the `SilentPushManager` with the provided credentials.
+
+    3. Executes a `GET` request to the Silent Push API endpoint `explore/padns/lookup/density/{qtype}/{query}`.
+
+    4. Retrieves and processes the density records.
+
+    5. Logs the results and completes the action.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Qtype | string | Yes | Query Type (e.g., nssrv, mxsrv, nshash, mxhash, ipv4,
+    ipv6, asn, chv). |
+
+    | Query | string | Yes | Value to query. |
+
+    | Scope | string | No | Match level. |
+
+
+    ### Additional Notes
+
+    The action does not use the target entities provided in the case, even though
+    it iterates over them in the code.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -494,8 +525,14 @@ Density Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve density
+      records. It does not modify any external or internal data.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) and does not mutate
+      any external or internal systems, making it an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -511,6 +548,11 @@ Density Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers,
+      but it does not use these entities to perform the density lookup. The lookup
+      is performed using the `Qtype` and `Query` action parameters. Therefore, the
+      action does not run on entities.
 Forward Padns Lookup:
   action_product_categories:
     add_alert_comment: false
@@ -523,15 +565,18 @@ Forward Padns Lookup:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: false
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a PADNS lookup, which provides threat intelligence and context
+      about a domain or DNS record. This aligns with the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: true
+    search_events: false
     send_email: false
     send_message: false
     submit_file: false
@@ -541,14 +586,25 @@ Forward Padns Lookup:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    Performs a forward Passive DNS (PADNS) lookup using the Silent Push API to retrieve
+    DNS record information. This action is useful for gathering threat intelligence
+    and infrastructure context regarding specific DNS records.
 
-    This action performs a forward Passive DNS (PADNS) lookup using the Silent Push
-    API. It allows analysts to retrieve historical DNS records (such as A, AAAA, MX,
-    NS, etc.) for a specific domain name. The action supports extensive filtering
-    capabilities, including date ranges (first/last seen), regular expressions, and
-    network masks, making it a powerful tool for infrastructure analysis and threat
-    hunting.
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
+    and API key from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the required `Qname` (DNS record name)
+    and optional filtering parameters (e.g., `Qtype`, `Netmask`, `Regex`, `Limit`)
+    from the action settings.
+
+    3. **API Request**: The action calls the Silent Push API to perform a forward
+    PADNS lookup using the provided parameters.
+
+    4. **Response Handling**: It validates the API response. If records are found,
+    it returns the data; otherwise, it logs an error and fails the execution.
 
 
     ### Parameters Description
@@ -557,82 +613,50 @@ Forward Padns Lookup:
 
     | :--- | :--- | :--- | :--- |
 
-    | Qname | string | Yes | The DNS record name (domain) to lookup. |
+    | Qname | string | Yes | The DNS record name to lookup. |
 
-    | Qtype | string | No | The DNS record type to query (e.g., 'ns', 'a', 'mx').
-    Defaults to 'ns'. |
+    | Qtype | string | No | DNS record type (e.g., ns, a, mx). Defaults to 'ns'. |
 
-    | Netmask | string | No | Filter results by a specific netmask. |
+    | Netmask | string | No | The netmask to filter the lookup results. |
 
-    | subdomain | string | No | Flag to include subdomains in the lookup results.
+    | Subdomains | string | No | Flag to include subdomains in the lookup results.
     |
 
-    | Regex | string | No | A regular expression to filter the returned DNS records.
-    |
+    | Regex | string | No | Regular expression to filter the DNS records. |
 
-    | Match | string | No | Specifies the type of match for the query (e.g., 'exact',
-    'partial'). |
+    | Match | string | No | Type of match for the query (e.g., exact, partial). |
 
-    | First Seen After | string | No | Filter records first observed after this date
-    (YYYY-MM-DD). |
+    | First Seen After | string | No | Filter results to include only records first
+    seen after this date. |
 
-    | First Seen Before | string | No | Filter records first observed before this
-    date (YYYY-MM-DD). |
+    | First Seen Before | string | No | Filter results to include only records first
+    seen before this date. |
 
-    | Last Seen After | string | No | Filter records last observed after this date
-    (YYYY-MM-DD). |
+    | Last Seen After | string | No | Filter results to include only records last
+    seen after this date. |
 
-    | Last Seen Before | string | No | Filter records last observed before this date
-    (YYYY-MM-DD). |
+    | Last Seen Before | string | No | Filter results to include only records last
+    seen before this date. |
 
-    | As Of | string | No | Retrieve DNS records as they appeared at a specific point
+    | As Of | string | No | Date or time to get the DNS records as of a specific point
     in time. |
 
-    | Sort | string | No | Field by which to sort the results (e.g., 'date', 'score').
+    | Sort | string | No | Sort the results by the specified field (e.g., date, score).
     |
 
-    | Output Format | string | No | The desired format for the returned results (e.g.,
-    JSON, XML). |
+    | Output Format | string | No | The format in which the results should be returned
+    (e.g., JSON, XML). |
 
     | Prefer | string | No | Preference for specific DNS servers or sources. |
 
-    | With Metadata | string | No | Boolean flag to include additional metadata in
-    the records. |
+    | With Metadata | string | No | Flag to include metadata in the DNS records. |
 
-    | Max Wait | string | No | Maximum seconds to wait for the API response (0-25).
-    |
+    | Max Wait | string | No | Maximum number of seconds to wait for results before
+    timing out. |
 
-    | Skip | string | No | Number of results to skip for pagination. |
+    | Skip | string | No | Number of results to skip for pagination purposes. |
 
     | Limit | string | No | Maximum number of results to return. |
-
-
-    ### Additional Notes
-
-    *   **Entity Usage:** Although the script contains logic to iterate over target
-    entities, it does not currently use them as inputs for the lookup. The action
-    relies entirely on the `Qname` parameter provided by the user.
-
-    *   **Pagination:** Use the `Skip` and `Limit` parameters to manage large result
-    sets.
-
-
-    ### Flow Description
-
-    1.  **Initialization:** The action initializes the Silent Push manager using the
-    configured Server URL and API Key.
-
-    2.  **Parameter Extraction:** It retrieves the mandatory `Qname` and all optional
-    filtering/pagination parameters from the action configuration.
-
-    3.  **API Request:** A GET request is dispatched to the Silent Push PADNS lookup
-    endpoint (`explore/padns/lookup/query/{qtype}/{qname}`) with the specified filters.
-
-    4.  **Error Handling:** The script checks the API response for errors or empty
-    record sets. If no records are found, the action fails with a descriptive message.
-
-    5.  **Completion:** Upon success, the action returns the retrieved DNS records
-    and sets the execution state to completed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -643,8 +667,15 @@ Forward Padns Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve DNS records.
+      It does not modify external systems or internal SOAR data (entities, insights,
+      comments).
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) and does not mutate
+      any external or internal systems. It fits the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -660,6 +691,10 @@ Forward Padns Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print them, but does
+      not use them for the lookup logic. The lookup is performed based on the `Qname`
+      parameter provided in the action settings. Therefore, it does not run on entities.
 Get ASN Reputation:
   action_product_categories:
     add_alert_comment: false
@@ -675,6 +710,10 @@ Get ASN Reputation:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation history and threat intelligence for an ASN.
+      This aligns with the 'Enrich IOC' category. It does not perform any other actions
+      like ticketing, containment, or alert updates.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -692,10 +731,28 @@ Get ASN Reputation:
   ai_description: >-
     ### General Description
 
-    Retrieves historical reputation data for a specific Autonomous System Number (ASN)
-    using the Silent Push platform. This action provides insights into the threat
-    landscape associated with an ASN, including reputation scores and historical changes.
-    It is primarily used for threat intelligence and risk assessment of network infrastructure.
+    This action retrieves historical reputation data for a specific Autonomous System
+    Number (ASN) from the Silent Push platform. It provides analysts with insights
+    into the reputation history of an ASN, which can be used to assess the risk associated
+    with network infrastructure.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
+    and API key from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the `ASN` (mandatory), `Explain` (optional),
+    and `Limit` (optional) parameters provided by the user.
+
+    3. **Data Retrieval**: The action initializes the `SilentPushManager` and performs
+    an API request to fetch the ASN reputation history.
+
+    4. **Data Processing**: The raw response is parsed, and the reputation entries
+    are sorted by date in descending order.
+
+    5. **Result Generation**: The processed data is formatted into a table and added
+    to the action's result JSON for display in the SecOps platform.
 
 
     ### Parameters Description
@@ -704,43 +761,19 @@ Get ASN Reputation:
 
     | :--- | :--- | :--- | :--- |
 
-    | **ASN** | string | Yes | The Autonomous System Number (ASN) to lookup (e.g.,
-    '12345'). |
+    | ASN | string | Yes | The Autonomous System Number (ASN) to look up. |
 
-    | **Explain** | boolean | No | If set to `true`, the action retrieves additional
-    information explaining how the reputation score was calculated. Defaults to `false`.
+    | Explain | boolean | No | If set to true, includes detailed information used
+    to calculate the reputation score. |
+
+    | Limit | string | No | The maximum number of reputation history records to retrieve.
     |
-
-    | **Limit** | string | No | Specifies the maximum number of historical reputation
-    records to retrieve. |
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction:** Retrieves the Silent Push Server URL and API
-    Key from the integration settings.
-
-    2. **Parameter Retrieval:** Extracts the target `ASN`, the `Explain` flag, and
-    the `Limit` value from the action inputs.
-
-    3. **API Interaction:** Calls the Silent Push Manager's `get_asn_reputation` method,
-    which performs a GET request to the ASN reputation history endpoint.
-
-    4. **Data Processing:** Extracts the reputation data from the raw API response
-    and sorts the history entries by date in descending order.
-
-    5. **Table Preparation:** Formats the sorted data into a structured list, including
-    the ASN, reputation score, AS name, and date. If the `Explain` parameter is enabled,
-    it also includes the explanation field.
-
-    6. **Result Output:** Adds the processed data to the action's JSON results and
-    completes the execution with a success message.
 
 
     ### Additional Notes
 
-    While the action metadata description mentions IPv4, the technical implementation
-    and parameters specifically target Autonomous System Numbers (ASNs).
+    This action does not perform any operations on entities present in the case; it
+    relies solely on the `ASN` parameter provided by the user.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -751,8 +784,16 @@ Get ASN Reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to an external API (Silent Push) to retrieve
+      reputation data. It does not modify any external systems, nor does it update
+      internal SecOps data such as entities, insights, or case comments.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches reputation data from an external source (Silent Push) and
+      returns it to the user. It does not mutate any external or internal systems.
+      This fits the definition of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -768,6 +809,10 @@ Get ASN Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use entities to perform its logic. It relies on the 'ASN'
+      parameter provided by the user. The code iterates over 'siemplify.target_entities'
+      only for logging purposes, which does not constitute processing entities.
 Get ASN Takedown Reputation:
   action_product_categories:
     add_alert_comment: false
@@ -783,6 +828,10 @@ Get ASN Takedown Reputation:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation and threat intelligence for an ASN, which is
+      a form of indicator. This aligns with the 'Enrich IOC' category. It does not
+      perform any other actions like ticket creation, containment, or alert modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -800,47 +849,49 @@ Get ASN Takedown Reputation:
   ai_description: >-
     ### General Description
 
-    The **Get ASN Takedown Reputation** action retrieves historical takedown reputation
-    data for a specific Autonomous System Number (ASN) from the Silent Push platform.
-    This information helps analysts understand the threat profile and historical malicious
-    activity associated with an ASN.
+    This action retrieves takedown reputation history for a specific Autonomous System
+    Number (ASN) from the Silent Push platform. It provides threat intelligence regarding
+    the ASN's involvement in takedown activities, which can be used to assess the
+    risk associated with infrastructure.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Default | Description |
+    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | :--- | :--- | :--- | :--- |
 
-    | ASN | string | Yes | 211298 | The Autonomous System Number (ASN) to investigate.
+    | ASN | string | Yes | The Autonomous System Number (ASN) to lookup. |
+
+    | Explain | boolean | No | If set to true, includes detailed information used
+    to calculate the reputation score. |
+
+    | Limit | string | No | The maximum number of reputation history records to retrieve.
     |
-
-    | Explain | boolean | No | true | If enabled, the response includes the specific
-    data points used to calculate the reputation score. |
-
-    | Limit | string | No | | The maximum number of historical reputation records
-    to retrieve. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the target ASN and optional
-    configuration (Explain, Limit) from the user input.
+    1. The action extracts the integration configuration (Server URL, API Key) and
+    the action parameters (ASN, Explain, Limit).
 
-    2. **API Interaction:** It sends a GET request to the Silent Push `explore/takedownreputation/asn`
-    endpoint using the provided ASN.
+    2. It initializes the `SilentPushManager` to handle communication with the Silent
+    Push API.
 
-    3. **Data Processing:** The action parses the `takedown_reputation` history from
-    the API response.
+    3. The action calls the `get_asn_takedown_reputation` method, which performs a
+    GET request to the Silent Push API endpoint.
 
-    4. **Result Output:** The retrieved history is returned as a JSON object for use
-    in subsequent playbook steps.
+    4. If reputation data is successfully retrieved, the action adds the result as
+    a JSON object to the action results.
+
+    5. If no data is found or an error occurs during the API call, the action logs
+    the error and terminates with a failed status.
 
 
     ### Additional Notes
 
-    - This action does not automatically process entities from the SecOps case; it
-    requires the ASN to be provided as a direct parameter.
+    This action does not perform any modifications to the entities or the case. It
+    is strictly a data retrieval action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -851,8 +902,17 @@ Get ASN Takedown Reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to an external API (Silent Push) to retrieve
+      reputation data. It does not modify any external systems, nor does it update
+      internal entities, create insights, or modify case data. It simply returns the
+      retrieved data as a JSON result.
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      While the action fetches data (reputation), it does not meet the strict criteria
+      for an Enrichment Action because it does not update entities, create insights,
+      or add case comments. It only returns a result JSON.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -868,6 +928,10 @@ Get ASN Takedown Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers
+      to the logs. It does not use these entities to filter the API request or perform
+      any logic on them. Therefore, the action does not run on entities.
 Get ASNs for Domain:
   action_product_categories:
     add_alert_comment: false
@@ -883,6 +947,10 @@ Get ASNs for Domain:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (ASNs) for a domain. This matches the
+      'Enrich IOC' category as it provides contextual intelligence for an indicator.
+      It does not perform any other actions like ticketing or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -897,30 +965,33 @@ Get ASNs for Domain:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Get ASNs for Domain** action retrieves\
-    \ Autonomous System Numbers (ASNs) associated with a specific domain and its subdomains\
-    \ using the Silent Push API. By querying Passive DNS (PADNS) data, the action\
-    \ identifies the network infrastructure (ASNs) that have hosted the domain's A\
-    \ records over the last 30 days. This provides security analysts with critical\
-    \ context regarding the hosting environment of a domain, which is useful for infrastructure\
-    \ mapping and identifying potentially malicious network patterns.\n\n### Parameters\
-    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
-    \ :--- | :--- |\n| **Domain** | String | Yes | The domain name to search ASNs\
-    \ for (e.g., `silentpush.com`). The action retrieves ASNs associated with A records\
-    \ for this domain and its subdomains from the last 30 days. |\n\n### Flow Description\n\
-    1. **Configuration Extraction**: The action retrieves the Silent Push Server URL\
-    \ and API Key from the integration's global configuration.\n2. **Parameter Retrieval**:\
-    \ The target `Domain` is extracted from the action's input parameters.\n3. **API\
-    \ Interaction**: The action initializes the `SilentPushManager` and calls the\
-    \ `get_asns_for_domain` method, which performs a GET request to the `explore/padns/lookup/domain/asns/{domain}`\
-    \ endpoint.\n4. **Data Processing**: The action parses the API response to extract\
-    \ the list of ASN records.\n5. **Result Handling**: \n    - If ASN records are\
-    \ found, the action completes successfully, returning the list of ASNs in the\
-    \ output message and script result.\n    - If no records are found, the action\
-    \ logs an error and terminates with a failed status.\n\n### Additional Notes\n\
-    - This action does not automatically update entities or create insights within\
-    \ Google SecOps; it primarily serves to fetch and return raw ASN data for use\
-    \ in subsequent playbook steps."
+  ai_description: >-
+    ### General Description
+
+    This action retrieves Autonomous System Numbers (ASNs) associated with a specific
+    domain using the Silent Push platform. It queries the Silent Push API to fetch
+    the associated ASNs for the provided domain, providing valuable threat intelligence.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Domain | string | Yes | The domain name to search for associated ASNs. |
+
+
+    ### Flow Description
+
+    1. Extracts the `Domain` parameter from the action configuration.
+
+    2. Initializes the `SilentPushManager` with the provided API credentials.
+
+    3. Queries the Silent Push API (`explore/padns/lookup/domain/asns/{domain}`) to
+    fetch associated ASNs.
+
+    4. Logs the results or errors and terminates the action with the retrieved data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -931,45 +1002,18 @@ Get ASNs for Domain:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve ASN data for a domain. It does
+      not mutate external systems, nor does it update internal SOAR entities or insights.
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      The action fetches data but does not update entities, create insights, or add
+      comments. It does not meet the criteria for an Enrichment Action as defined,
+      because it does not perform any internal mutations (like updating the entity
+      profile).
   entity_usage:
-    entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
+    entity_types: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -983,6 +1027,10 @@ Get ASNs for Domain:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers.
+      It does not use them to perform the lookup or update them. Therefore, it does
+      not process entities.
 Get Data Exports:
   action_product_categories:
     add_alert_comment: false
@@ -998,6 +1046,9 @@ Get Data Exports:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action downloads a file from a remote host. This matches the 'Download File'
+      category. It does not perform any other operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1013,45 +1064,34 @@ Get Data Exports:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Downloads exported feed data from Silent Push. This action retrieves the content
-    of a specific data export (such as indicator lists in CSV format) from the Silent
-    Push platform using a provided Feed URL. It is primarily used to ingest threat
-    intelligence feeds or exported datasets for further processing within the SOAR
-    platform.
+    Downloads data export files from the Silent Push platform. This action retrieves
+    a file from a specified URL and logs the content.
 
 
-    ### Flow Description
+    ### Flow
 
-    1. **Configuration Retrieval:** Extracts the Silent Push server URL and API key
-    from the integration settings.
+    1. Extracts configuration (Server URL, API Key) and the `Feed URL` parameter.
 
-    2. **Parameter Extraction:** Retrieves the mandatory 'Feed URL' parameter which
-    specifies the file to be downloaded.
+    2. Initializes the `SilentPushManager`.
 
-    3. **API Interaction:** Constructs the full export URL and performs an authenticated
-    HTTP GET request to the Silent Push export endpoint.
+    3. Sends a GET request to the specified `Feed URL` to retrieve the export data.
 
-    4. **Response Handling:** Validates the response status. If successful, it captures
-    the file content and determines a filename based on the URL string.
-
-    5. **Output:** Returns the exported data content as the action result.
+    4. Logs the status and the content of the downloaded file.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Feed URL | string | Yes | The specific URL suffix or identifier for the feed
-    data to be exported (e.g., '9b38bd50-ea46-4280-8739-9b71fc3a9291_indicators.csv').
-    |
+    | Feed URL | string | Yes | The URL from which to export the feed data. |
 
 
     ### Additional Notes
 
-    - This action is classified as a download action because its primary purpose is
-    to retrieve raw file content from an external service.
+    This action is a utility for downloading data and does not perform any operations
+    on entities or alerts.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1062,8 +1102,16 @@ Get Data Exports:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to download a file from an external URL. It
+      does not modify any external systems, nor does it update any internal SOAR entities
+      or insights. It only logs the result.
   categories:
     enrichment: false
+    reasoning: >-
+      The action downloads a file. It does not associate the data with any entity
+      or alert, nor does it perform any enrichment logic. Therefore, it is not an
+      enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1079,6 +1127,9 @@ Get Data Exports:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` but only prints their identifiers
+      to the log. It does not use the entities to perform any logic or filtering.
 Get Domain Certificates:
   action_product_categories:
     add_alert_comment: false
@@ -1094,6 +1145,11 @@ Get Domain Certificates:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves SSL certificate information for a domain, which provides
+      threat intelligence and context about the domain's infrastructure. This aligns
+      with the 'Enrich IOC' category. It does not perform any other actions like updating
+      tickets, blocking IOCs, or managing identities.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1108,44 +1164,31 @@ Get Domain Certificates:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThis action retrieves SSL/TLS certificate\
-    \ data collected from domain scanning using the Silent Push platform. It allows\
-    \ analysts to query specific domains for their certificate history and details,\
-    \ providing valuable context for infrastructure analysis and threat hunting. The\
-    \ action supports various filters such as date ranges, certificate issuers, and\
-    \ regular expressions to narrow down the results.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Domain | string | True | The specific domain to query for certificate data.\
-    \ |\n| Domain Regex | string | False | A regular expression used to filter the\
-    \ domains in the certificate results. |\n| Certificate Issuer | string | False\
-    \ | Filters the results to only include certificates issued by a specific authority.\
-    \ |\n| Date Min | string | False | Filters for certificates issued on or after\
-    \ this date (e.g., YYYY-MM-DD). |\n| Date Max | string | False | Filters for certificates\
-    \ issued on or before this date (e.g., YYYY-MM-DD). |\n| Prefer | string | False\
-    \ | Determines the API behavior for long-running queries: whether to wait for\
-    \ results or return a `job_id` immediately. |\n| Max Wait | string | False | The\
-    \ number of seconds (0 to 25) to wait for results before the API returns a `job_id`.\
-    \ |\n| With Metadata | string | False | If set to true, the response will include\
-    \ a metadata object containing result counts and job identifiers. |\n| Skip |\
-    \ string | False | The number of initial results to skip (used for pagination).\
-    \ |\n| Limit | string | False | The maximum number of certificate records to return\
-    \ in the response. |\n\n### Additional Notes\n- If the query is complex or the\
-    \ system requires more time, the action may return a `job_id` and status instead\
-    \ of immediate certificate data. In such cases, the `Get Job Status` action should\
-    \ be used to retrieve the final results.\n- The action returns data in a structured\
-    \ JSON format (`JsonResult`) for use in subsequent playbook logic.\n\n### Flow\
-    \ Description\n1. **Configuration Extraction:** The action retrieves the Silent\
-    \ Push Server URL and API Key from the integration settings.\n2. **Parameter Parsing:**\
-    \ It extracts the target domain and all optional filter parameters (regex, issuer,\
-    \ dates, pagination settings) from the action input.\n3. **API Request:** The\
-    \ action initializes the `SilentPushManager` and sends a GET request to the `explore/domain/certificates/{domain}`\
-    \ endpoint with the specified filters.\n4. **Response Handling:** \n    - If the\
-    \ API returns a `job_status`, the action completes by providing the job details\
-    \ for asynchronous tracking.\n    - If the API returns certificate data directly,\
-    \ it extracts the list of certificates and any associated metadata.\n5. **Result\
-    \ Finalization:** The action outputs the retrieved data and sets the execution\
-    \ status to completed. If no certificates are found or an error occurs, it logs\
-    \ the issue and fails the action."
+  ai_description: "### General Description\nThis action retrieves SSL certificate\
+    \ details for a specified domain using the Silent Push platform. It allows for\
+    \ advanced filtering of certificate data, including regex matching, issuer filtering,\
+    \ and date range constraints. The action is designed to provide contextual intelligence\
+    \ about a domain's infrastructure by querying historical and current certificate\
+    \ records.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| Domain | string | Yes | The domain to query\
+    \ certificates for. |\n| Domain Regex | string | No | Regular expression to match\
+    \ domains. |\n| Certificate Issuer | string | No | Filter by certificate issuer.\
+    \ |\n| Date Min | string | No | Filter certificates issued on or after this date.\
+    \ |\n| Date Max | string | No | Filter certificates issued on or before this date.\
+    \ |\n| Prefer | string | No | Prefer to wait for results for longer running queries\
+    \ or to return job_id immediately. |\n| Max Wait | string | No | Number of seconds\
+    \ to wait for results before returning a job_id (0-25 seconds). |\n| With Metadata\
+    \ | string | No | Includes a metadata object in the response. |\n| Skip | string\
+    \ | No | Number of results to skip. |\n| Limit | string | No | Number of results\
+    \ to return. |\n\n### Flow Description\n1. **Configuration Extraction**: The action\
+    \ retrieves the Silent Push server URL and API key from the integration configuration.\n\
+    2. **Parameter Parsing**: It extracts and validates the provided action parameters,\
+    \ including domain, filters, and pagination settings.\n3. **API Request**: The\
+    \ action calls the Silent Push API (`/explore/domain/certificates/{domain}`) to\
+    \ fetch certificate data.\n4. **Response Handling**: \n    - If the API returns\
+    \ a job status, the action reports the job details.\n    - If certificate data\
+    \ is returned, it processes the certificates and metadata.\n5. **Output**: The\
+    \ action returns the certificate information and metadata as the script result."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1156,8 +1199,17 @@ Get Domain Certificates:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve certificate
+      data. It does not modify any external systems (no POST/PUT/DELETE) and does
+      not modify any internal Google SecOps data (no entity updates, insights, or
+      comments).
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) to provide context
+      about a domain. It does not mutate external systems or modify internal Google
+      SecOps data. Therefore, it qualifies as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1173,6 +1225,11 @@ Get Domain Certificates:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action uses the 'Domain' parameter provided in the action settings to perform
+      the query. While it iterates over `siemplify.target_entities` for logging purposes,
+      it does not use these entities to drive the logic or filter the request. Therefore,
+      it does not run on specific entity types.
 Get Enrichment Data:
   action_product_categories:
     add_alert_comment: false
@@ -1188,6 +1245,11 @@ Get Enrichment Data:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action fetches enrichment data for domains or IP addresses from the Silent
+      Push API. This matches the 'Enrich IOC' expected outcome. It does not mutate
+      external systems or modify internal case data, so it is not a containment or
+      update action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1203,63 +1265,45 @@ Get Enrichment Data:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Get Enrichment Data** action retrieves comprehensive threat intelligence
-    and enrichment information for a specific resource, such as a domain, IPv4 address,
-    or IPv6 address, from the Silent Push platform. This action provides deep visibility
-    into the reputation, infrastructure, and metadata associated with an indicator,
-    supporting analysts in threat analysis and investigation.
+    This action retrieves comprehensive enrichment information for a given resource
+    (domain, IPv4, or IPv6) from the Silent Push platform. It allows users to specify
+    the resource type and value, and optionally include detailed calculation explanations
+    or scan data for IPv4 resources.
 
 
-    ### Parameters Description
+    ### Parameters
+
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Resource** | String | Yes | The type of resource to enrich. Supported values:
-    `domain`, `ipv4`, `ipv6`. Default is `ipv4`. |
+    | Resource | string | Yes | Type of resource for which information needs to be
+    retrieved (e.g., domain, ipv4, ipv6). |
 
-    | **Value** | String | Yes | The specific indicator value (e.g., an IP address
-    or domain name) to be enriched. Default is `142.251.188.102`. |
+    | Value | string | Yes | Value corresponding to the selected "resource" for which
+    information needs to be retrieved (e.g., silentpush.com). |
 
-    | **Explain** | Boolean | No | If set to `true`, the response will include detailed
-    explanations of how the data calculations (like risk scores) were derived. Default
-    is `false`. |
+    | Explain | boolean | No | Include explanation of data calculations. |
 
-    | **Scan Data** | Boolean | No | If set to `true`, the action will include additional
-    scan data. This is only applicable when the resource type is `ipv4`. Default is
-    `false`. |
+    | Scan Data | boolean | No | Include scan data (IPv4 only). |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Silent Push manager using the
-    provided server URL and API key from the integration configuration.
 
-    2. **Parameter Extraction**: It retrieves the resource type, the indicator value,
-    and the optional flags for explanations and scan data from the action parameters.
+    1.  **Initialization**: The action extracts the Silent Push API credentials and
+    the action parameters (`Resource`, `Value`, `Explain`, `Scan Data`).
 
-    3. **Validation**: If the resource is an IP address, it validates the format against
-    the specified type (IPv4 or IPv6) using internal validation logic.
+    2.  **Validation**: It validates the `Resource` type against allowed values and
+    performs IP address validation if the resource is an IPv4 or IPv6 address.
 
-    4. **Data Retrieval**: It sends a GET request to the Silent Push enrichment endpoint
-    (`explore/enrich/{resource}/{value}`) with the specified query parameters.
+    3.  **Data Retrieval**: The action queries the Silent Push API to fetch enrichment
+    data based on the provided resource and value.
 
-    5. **Output**: The retrieved enrichment data is returned as a JSON object. If
-    no data is found, the action fails with an error message.
-
-
-    ### Additional Notes
-
-    - This action is a standalone enrichment tool that operates on a single input
-    value provided via parameters rather than automatically iterating through all
-    entities in the current scope.
-
-    - The **Scan Data** parameter is specifically intended for use with the `ipv4`
-    resource type and may be ignored or return no additional data for other resource
-    types.
+    4.  **Result Processing**: If enrichment data is successfully retrieved, it is
+    added to the action's result JSON. If no data is found or an error occurs, the
+    action fails with an appropriate error message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1270,8 +1314,17 @@ Get Enrichment Data:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve enrichment
+      data. It does not mutate external systems or modify internal SOAR data (entities,
+      insights, or case comments). It only returns the retrieved data as a result
+      JSON.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) to provide context
+      for IOCs. It does not mutate external systems or modify internal SOAR data.
+      This aligns with the definition of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1287,6 +1340,11 @@ Get Enrichment Data:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action uses action parameters (`Resource` and `Value`) to perform the lookup.
+      While it iterates over `siemplify.target_entities` for logging purposes, it
+      does not use them to perform the enrichment logic. Therefore, no entity types
+      are processed.
 Get Future Attack Indicatiors:
   action_product_categories:
     add_alert_comment: false
@@ -1302,6 +1360,10 @@ Get Future Attack Indicatiors:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of indicators from a feed. It does not enrich a
+      specific IOC, update an alert, or perform any of the other listed actions. It
+      is a data retrieval action for threat intelligence feeds.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1319,12 +1381,27 @@ Get Future Attack Indicatiors:
   ai_description: >-
     ### General Description
 
-    The **Get Future Attack Indicatiors** action retrieves threat intelligence indicators
-    from the Silent Push platform based on a specific Feed UUID. This action is designed
-    to gather proactive intelligence about potential future attacks by fetching ranked
-    indicators associated with a designated threat feed. It is primarily used for
-    threat hunting and situational awareness by providing a list of indicators that
-    have been identified as part of emerging threat campaigns.
+    This action fetches indicators of potential future attacks from the Silent Push
+    platform using a provided Feed UUID. It retrieves threat intelligence data based
+    on the specified feed and pagination settings.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action extracts the `Silent Push Server`
+    URL and `API Key` from the integration configuration.
+
+    2. **Parameter Extraction**: The action extracts the `Feed UUID`, `Page No`, and
+    `Page Size` from the action parameters.
+
+    3. **Manager Initialization**: The `SilentPushManager` is initialized with the
+    server URL and API key.
+
+    4. **Data Retrieval**: The action calls the `get_future_attack_indicators` method
+    of the `SilentPushManager` to fetch the threat ranking data.
+
+    5. **Result Output**: The retrieved indicators are returned as a JSON object in
+    the action results.
 
 
     ### Parameters Description
@@ -1333,46 +1410,19 @@ Get Future Attack Indicatiors:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Feed UUID** | String | Yes | The unique identifier for the Silent Push feed
-    from which to fetch indicators. |
+    | Feed UUID | string | Yes | Unique ID for the feed to fetch records for. |
 
-    | **Page No** | String | No | The specific page number of results to retrieve
-    from the feed. Defaults to "1". |
+    | Page No | string | No | The page number to fetch results from (default: 1).
+    |
 
-    | **Page Size** | String | No | The number of indicator records to return per
-    page. Defaults to "10000". |
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
-    and API key from the integration's global configuration.
-
-    2. **Parameter Parsing**: It extracts the `Feed UUID`, `Page No`, and `Page Size`
-    from the action's input parameters, applying default values for pagination if
-    they are not provided.
-
-    3. **API Interaction**: The action initializes the `SilentPushManager` and calls
-    the `get_future_attack_indicators` method, which performs a GET request to the
-    Silent Push `/api/v2/iocs/threat-ranking/` endpoint using the provided Feed UUID
-    and pagination criteria.
-
-    4. **Data Processing**: The response is parsed to extract the list of indicators.
-    If the response is empty or no indicators are found, the action logs an error
-    and terminates with a failure status.
-
-    5. **Result Reporting**: The retrieved indicators are added to the action's JSON
-    results (`ScriptResult`) for use in subsequent playbook steps. The action then
-    concludes with a success message containing the indicator data.
+    | Page Size | string | No | The number of indicators to fetch per page (default:
+    10000). |
 
 
     ### Additional Notes
 
-    - This action is a global fetch operation and does not target or filter specific
-    entities within the Google SecOps case.
-
-    - The action name contains a typographical error ("Indicatiors") which is preserved
-    from the integration metadata.
+    If no indicators are found for the provided `Feed UUID`, the action will fail
+    and log an error message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1383,8 +1433,16 @@ Get Future Attack Indicatiors:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to an external API to retrieve threat intelligence
+      data (future attack indicators). It does not modify any external systems or
+      internal SOAR data (entities, insights, comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external source but does not operate on specific
+      entities or alerts to enrich them. It is a data retrieval task, not an enrichment
+      action as defined by the SOAR framework.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1400,6 +1458,10 @@ Get Future Attack Indicatiors:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `target_entities` to perform its task. It only iterates
+      over them for logging purposes, which does not constitute processing or filtering
+      entities.
 Get IPV4 Reputation:
   action_product_categories:
     add_alert_comment: false
@@ -1415,6 +1477,10 @@ Get IPV4 Reputation:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation history for an IPv4 address, which directly
+      matches the 'Enrich IOC' category. It does not perform any other operations
+      like updating alerts, tickets, or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1430,52 +1496,42 @@ Get IPV4 Reputation:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Retrieves historical reputation data for a specific IPv4 address using the Silent
-    Push platform. This action provides detailed insights into the threat history
-    and reputation scores associated with a network indicator, allowing analysts to
-    assess the risk level based on historical behavior.
+    Retrieves reputation information for an IPv4 address from the Silent Push platform.
+    This action fetches historical reputation data, including detailed calculation
+    explanations if requested, and returns the results as a JSON response.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Nameserver | String | Yes | The IPv4 address for which reputation information
+    | Nameserver | string | Yes | The IPv4 address for which reputation information
     needs to be retrieved. |
 
-    | Explain | Boolean | No | If set to true, the response includes the specific
-    information and logic used to calculate the reputation score. Defaults to false.
-    |
+    | Explain | boolean | No | If set to true, includes detailed information used
+    to calculate the reputation score. Defaults to false. |
 
-    | Limit | String | No | The maximum number of reputation history entries to retrieve
-    from the service. |
+    | Limit | string | No | The maximum number of reputation history entries to retrieve.
+    |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action extracts the target IPv4 address (Nameserver),
-    the explanation flag, and the result limit from the user-provided parameters.
+    1. The action extracts the integration configuration (Server URL, API Key) and
+    the action parameters (Nameserver, Explain, Limit).
 
-    2. **API Request**: It calls the Silent Push `explore/ipreputation/history/ipv4`
-    endpoint via the `get_ipv4_reputation` manager method.
+    2. It initializes the `SilentPushManager` with the provided credentials.
 
-    3. **Data Validation**: The action verifies if the response contains reputation
-    history data. If the history is empty, it logs an error and terminates with a
-    failure status.
+    3. It calls the `get_ipv4_reputation` method of the `SilentPushManager` to fetch
+    the reputation history for the specified IPv4 address.
 
-    4. **Result Output**: The raw API response is attached to the action's JSON results,
-    making the reputation data available for downstream playbook logic.
+    4. If the reputation data is successfully retrieved, it is added to the action's
+    result JSON.
 
-
-    ### Additional Notes
-
-    This action is parameter-driven and does not automatically iterate through or
-    update entities in the Google SecOps case. It is primarily used to fetch raw intelligence
-    data for a specific indicator provided in the 'Nameserver' field.
+    5. If no data is found or an error occurs during the API call, the action logs
+    the error and terminates with a failed status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1486,8 +1542,16 @@ Get IPV4 Reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external API (Silent Push) using a GET request.
+      It does not mutate any external systems, nor does it modify internal Google
+      SecOps data (entities, insights, or comments).
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) to provide context
+      (reputation history) for an IPv4 address. It does not mutate external systems
+      or internal data, fulfilling the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1503,6 +1567,11 @@ Get IPV4 Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` only to print them, but
+      it does not use them to perform the reputation lookup. The lookup is performed
+      using the 'Nameserver' parameter provided by the user. Therefore, it does not
+      run on entities.
 Get Nameserver Reputation:
   action_product_categories:
     add_alert_comment: false
@@ -1518,6 +1587,11 @@ Get Nameserver Reputation:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation history for a nameserver, which is a form of
+      threat intelligence for an indicator. This aligns with the 'Enrich IOC' category.
+      It does not perform any other operations like ticket creation, host containment,
+      or alert updates.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1535,10 +1609,11 @@ Get Nameserver Reputation:
   ai_description: >-
     ### General Description
 
-    Retrieves historical reputation data for a specified nameserver using the Silent
-    Push API. This action provides reputation scores and can optionally include detailed
-    information about how the score was calculated. It is primarily used to assess
-    the risk associated with specific DNS infrastructure.
+    This action retrieves historical reputation data for a specified nameserver from
+    the Silent Push platform. It provides insights into the nameserver's reputation
+    history, which can be used to assess the risk associated with specific DNS infrastructure.
+    The action supports optional parameters to include detailed calculation explanations
+    and to limit the number of history entries returned.
 
 
     ### Parameters Description
@@ -1547,41 +1622,32 @@ Get Nameserver Reputation:
 
     | :--- | :--- | :--- | :--- |
 
-    | Nameserver | string | Yes | The name of the nameserver (e.g., a.dns-servers.net.ru)
-    for which reputation information needs to be retrieved. |
+    | Nameserver | string | Yes | The nameserver name for which reputation information
+    needs to be retrieved. |
 
-    | Explain | string | No | If set to a truthy value, the action retrieves the specific
-    information used to calculate the reputation score. |
+    | Explain | string | No | If provided, includes detailed information used to calculate
+    the reputation score. |
 
-    | Limit | string | No | The maximum number of historical reputation records to
-    retrieve from the service. |
+    | Limit | string | No | The maximum number of reputation history entries to retrieve.
+    |
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: Retrieves the Silent Push Server URL and API
-    Key from the integration's global configuration.
+    1. **Configuration Extraction**: The action extracts the Silent Push server URL
+    and API key from the integration configuration.
 
-    2. **Parameter Extraction**: Collects the target Nameserver, the Explain flag,
-    and the Limit value from the action's input parameters.
+    2. **Parameter Extraction**: It retrieves the `Nameserver`, `Explain`, and `Limit`
+    parameters provided by the user.
 
-    3. **API Interaction**: Initializes the Silent Push Manager and calls the `get_nameserver_reputation`
-    endpoint to fetch historical data.
+    3. **API Request**: The action initializes the `SilentPushManager` and calls the
+    `get_nameserver_reputation` method to fetch data from the Silent Push API.
 
-    4. **Data Transformation**: Iterates through the retrieved reputation history
-    items and converts integer-based date values (formatted as YYYYMMDD) into standard
-    ISO format strings for better readability.
+    4. **Data Processing**: It processes the returned reputation data, specifically
+    parsing date fields into ISO format.
 
-    5. **Result Finalization**: If valid reputation data is found, the action completes
-    successfully. If no data is returned or an error occurs during the API call, the
-    action terminates with a failure status.
-
-
-    ### Additional Notes
-
-    This action does not automatically update entities or create insights within the
-    Google SecOps case. It returns the retrieved data as a JSON result for use in
-    subsequent playbook logic.
+    5. **Output**: The action logs the status and reputation data, then terminates
+    with the result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1592,8 +1658,16 @@ Get Nameserver Reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve reputation
+      data for a nameserver. It does not modify any external systems, nor does it
+      modify any internal Google SecOps data (entities, insights, or case comments).
   categories:
     enrichment: true
+    reasoning: >-
+      The action is a read-only operation that fetches threat intelligence (reputation
+      data) from an external source (Silent Push). It does not mutate external or
+      internal data, satisfying the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1609,6 +1683,11 @@ Get Nameserver Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action relies on the 'Nameserver' parameter provided in the action settings
+      to perform its task. Although the code iterates over `siemplify.target_entities`
+      to print them, it does not use these entities to perform the logic or filter
+      the request. Therefore, it does not run on entities.
 Get Subnet Reputation:
   action_product_categories:
     add_alert_comment: false
@@ -1624,6 +1703,11 @@ Get Subnet Reputation:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation history for a subnet, which is a form of threat
+      intelligence for an indicator (IOC). This matches the 'Enrich IOC' category.
+      It does not perform any other actions like updating tickets, blocking IOCs,
+      or managing identities.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1639,45 +1723,50 @@ Get Subnet Reputation:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves the reputation history for a specific IPv4 subnet using the Silent Push
-    platform. This action allows analysts to understand the historical threat context
-    and reputation scores associated with a network range, which is useful for identifying
-    malicious infrastructure or assessing the risk of network traffic.
+    ### General Description
+
+    This action retrieves the reputation history for a specific IPv4 subnet using
+    the Silent Push API. It allows analysts to gather historical threat intelligence
+    regarding a subnet to assess its risk profile.
 
 
-    ### Parameters
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
+    and API key from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the `Subnet`, `Explain` (optional), and
+    `Limit` (optional) parameters provided by the user.
+
+    3. **Data Retrieval**: The action initializes the `SilentPushManager` and performs
+    a GET request to the Silent Push API to fetch the reputation history for the specified
+    subnet.
+
+    4. **Result Handling**: If data is found, it logs the reputation history. If no
+    data is found or the request fails, it logs an error and terminates the action
+    with a failed status.
+
+
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Subnet | string | True | The IPv4 subnet (e.g., 192.168.0.0/16) for which reputation
-    information needs to be retrieved. |
+    | Subnet | string | Yes | The IPv4 subnet for which reputation information needs
+    to be retrieved. |
 
-    | Explain | string | False | If provided, the API returns detailed information
-    and the logic used to calculate the reputation score. |
+    | Explain | string | No | A flag to show detailed information used to calculate
+    the reputation score. |
 
-    | Limit | string | False | Specifies the maximum number of reputation history
-    entries to retrieve from the service. |
+    | Limit | string | No | The maximum number of reputation history entries to retrieve.
+    |
 
 
-    ### Flow Description
+    ### Additional Notes
 
-    1. **Configuration Extraction:** The action retrieves the Silent Push Server URL
-    and API Key from the integration settings.
-
-    2. **Parameter Retrieval:** It extracts the target `Subnet`, the `Explain` flag,
-    and the `Limit` value from the action input.
-
-    3. **API Interaction:** The action initializes the `SilentPushManager` and calls
-    the `get_subnet_reputation` method, which performs a GET request to the Silent
-    Push `explore/ipreputation/history/subnet` endpoint.
-
-    4. **Data Processing:** It parses the response to extract the `subnet_reputation_history`.
-    If no history is found, the action reports a failure.
-
-    5. **Completion:** The action returns the reputation history data as a JSON result
-    and completes the execution with a summary message.
+    This action does not perform any mutations on external systems or internal Google
+    SecOps data. It is a read-only operation designed for enrichment purposes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1688,8 +1777,16 @@ Get Subnet Reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve reputation
+      data. It does not modify any external systems, nor does it update any internal
+      Google SecOps data (entities, insights, or comments).
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches reputation data from an external source (Silent Push) and
+      does not modify any external or internal state. This aligns with the definition
+      of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1705,6 +1802,11 @@ Get Subnet Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers
+      for logging purposes. The actual logic for fetching reputation relies solely
+      on the `Subnet` parameter provided in the action settings, not on the entities
+      themselves. Therefore, the action does not run on entities.
 Get job status:
   action_product_categories:
     add_alert_comment: false
@@ -1720,6 +1822,10 @@ Get job status:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves the status of a job from an external service. It does not
+      match any of the specific categories like 'Enrich IOC', 'Enrich Asset', 'Create
+      Ticket', etc. It is a utility action for job monitoring.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1737,11 +1843,9 @@ Get job status:
   ai_description: >-
     ### General Description
 
-    The **Get job status** action retrieves the current status or the final results
-    of an asynchronous job previously initiated within the Silent Push platform. This
-    utility is essential for workflows involving long-running processes, such as bulk
-    domain lookups or complex scans, allowing playbooks to poll for completion and
-    ingest the resulting data once available.
+    This action retrieves the status of a running job or the results of a completed
+    job from the Silent Push platform. It is used to monitor the progress of asynchronous
+    tasks initiated by other Silent Push actions.
 
 
     ### Parameters Description
@@ -1750,49 +1854,37 @@ Get job status:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Job ID** | string | Yes | The unique identifier of the job to check, typically
-    returned by other Silent Push actions. |
+    | Job ID | string | Yes | The unique identifier of the job to retrieve status
+    for. |
 
-    | **Max Wait** | string | No | The number of seconds the action should wait for
-    the job to complete before returning the current status (valid range: 0-25 seconds).
-    Defaults to 20 seconds if not specified. |
+    | Max Wait | string | No | The number of seconds to wait for results (0-25 seconds).
+    Defaults to 20 if not provided. |
 
-    | **Status Only** | boolean | No | If enabled, the action will return only the
-    job's status metadata, even if the job has already finished and results are available.
-    |
+    | Status Only | boolean | No | If set to true, returns the job status even if
+    the job is already complete. |
 
-    | **Force Metadata On** | boolean | No | When enabled, the response will always
-    include query metadata, regardless of the settings used when the job was originally
-    created. |
+    | Force Metadata On | boolean | No | If set to true, always returns query metadata,
+    even if the original request did not include it. |
 
-    | **Force Metadata Off** | boolean | No | When enabled, the response will never
-    include query metadata, regardless of the settings used when the job was originally
-    created. |
-
-
-    ### Additional Notes
-
-    - This action is primarily a utility for job orchestration and does not directly
-    enrich entities or modify case data within Google SecOps.
-
-    - The `Max Wait` parameter is capped at 25 seconds by the Silent Push API logic.
+    | Force Metadata Off | boolean | No | If set to true, never returns query metadata,
+    even if the original request included it. |
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts the integration configuration (API Key and Server
-    URL) and the user-provided action parameters.
+    1. **Configuration Extraction**: The action retrieves the Silent Push Server URL
+    and API Key from the integration configuration.
 
-    2. **Validation**: Converts the `Max Wait` parameter to an integer and ensures
-    it falls within the default range (defaulting to 20 if empty).
+    2. **Parameter Extraction**: The action extracts the `Job ID`, `Max Wait`, `Status
+    Only`, `Force Metadata On`, and `Force Metadata Off` parameters.
 
-    3. **API Request**: Sends a GET request to the Silent Push `explore/job/{job_id}`
-    endpoint with the specified query parameters.
+    3. **API Request**: The action calls the `get_job_status` method of the `SilentPushManager`,
+    which performs a GET request to the Silent Push API using the provided `Job ID`
+    and parameters.
 
-    4. **Response Handling**: Parses the job status and results from the API response.
-
-    5. **Completion**: Returns the job data as the action output. If no job status
-    is found for the provided ID, the action fails.
+    4. **Result Handling**: The action processes the API response. If the job status
+    is found, it returns the status information as the output message. If no status
+    is found or an error occurs, it logs the error and fails the action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1803,45 +1895,20 @@ Get job status:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve the status
+      of a job. It does not modify any external systems, nor does it perform any internal
+      mutations such as updating entities, creating insights, or adding case comments.
+      It simply fetches and returns data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data (job status) but does not meet the criteria for an enrichment
+      action because it does not perform any of the allowed internal mutations (updating
+      entities, creating insights, or adding case comments). It is a utility action
+      for job monitoring.
   entity_usage:
-    entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
+    entity_types: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1855,6 +1922,10 @@ Get job status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers,
+      but it does not use them in the API request or any logic. Therefore, it does
+      not run on entities.
 List Domain Information:
   action_product_categories:
     add_alert_comment: false
@@ -1870,6 +1941,10 @@ List Domain Information:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation, risk scores, and WHOIS information for domains,
+      which aligns with the 'Enrich IOC' category. It does not perform any other actions
+      like ticket creation, containment, or alert updates.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1884,34 +1959,49 @@ List Domain Information:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **List Domain Information** action\
-    \ retrieves comprehensive metadata for a list of domains from the Silent Push\
-    \ platform. It provides core domain information and can be optionally configured\
-    \ to include Silent Push risk scores (with detailed explanations) and live WHOIS\
-    \ data. This action is designed for bulk enrichment and threat assessment of domain\
-    \ indicators provided as input parameters.\n\n### Parameters Description\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Domains**\
-    \ | String | Yes | A comma-separated list of domains to query (e.g., \"example.com,\
-    \ test.org\"). The action supports a maximum of 100 domains per request. |\n|\
-    \ **Fetch Risk Score** | Boolean | No | If set to `true`, the action retrieves\
-    \ the Silent Push risk score and a detailed explanation for each domain. Default\
-    \ is `false`. |\n| **Fetch Whois Info** | Boolean | No | If set to `true`, the\
-    \ action retrieves live WHOIS information, including registrant details, registration\
-    \ dates, and nameservers. Default is `false`. |\n\n### Flow Description\n1. **Initialization**:\
-    \ The action extracts the Silent Push server URL and API key from the integration\
-    \ configuration.\n2. **Input Processing**: It parses the `Domains` string into\
-    \ a list and evaluates the boolean flags for risk scores and WHOIS data.\n3. **Data\
-    \ Retrieval**: \n    - The action calls the Silent Push API to fetch bulk domain\
-    \ information for the provided list.\n    - If `Fetch Risk Score` is enabled,\
-    \ it retrieves risk assessment data for each domain.\n    - If `Fetch Whois Info`\
-    \ is enabled, it performs individual WHOIS lookups for each domain.\n4. **Result\
-    \ Formatting**: The retrieved data is aggregated into a structured JSON object\
-    \ and a Markdown-formatted summary is generated for the Google SecOps interface.\n\
-    5. **Completion**: The action returns the results to the SOAR platform, indicating\
-    \ success or failure based on the API response.\n\n### Additional Notes\n- This\
-    \ action does not automatically update entities within the Google SecOps case;\
-    \ it returns the enrichment data as a script result for use in subsequent playbook\
-    \ steps.\n- A maximum of 100 domains can be submitted in a single execution."
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed domain information from the Silent Push platform.
+    It allows users to query multiple domains simultaneously and optionally fetch
+    associated risk scores and WHOIS information. The results are returned in both
+    Markdown format for readability and JSON format for further processing.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Domains | string | Yes | Comma-separated list of domains to query. |
+
+    | Fetch Risk Score | boolean | No | Whether to fetch risk scores for the domains.
+    Defaults to false. |
+
+    | Fetch Whois Info | boolean | No | Whether to fetch WHOIS information for the
+    domains. Defaults to false. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action extracts the necessary integration
+    configuration, including the Silent Push Server URL and API Key.
+
+    2. **Parameter Extraction**: It retrieves the `Domains`, `Fetch Risk Score`, and
+    `Fetch Whois Info` parameters provided by the user.
+
+    3. **Manager Initialization**: The `SilentPushManager` is initialized with the
+    extracted configuration.
+
+    4. **Data Retrieval**: The action calls the `list_domain_information` method of
+    the `SilentPushManager` to fetch the requested data from the Silent Push API.
+
+    5. **Response Formatting**: The API response is formatted into a Markdown string
+    for display and a JSON object for the action result.
+
+    6. **Result Output**: The JSON response is added to the action result, and the
+    action completes successfully.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1922,8 +2012,15 @@ List Domain Information:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches domain information (risk score, WHOIS) from the Silent Push
+      API. It does not modify any external or internal systems, nor does it update
+      entities or create insights.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) and does not mutate
+      any external or internal state. It qualifies as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1939,6 +2036,11 @@ List Domain Information:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action processes a comma-separated list of domains provided via the 'Domains'
+      parameter. Although the script iterates over `siemplify.target_entities` for
+      logging purposes, it does not perform any operations on these entities. Therefore,
+      it does not run on entities.
 List Domain Infratags:
   action_product_categories:
     add_alert_comment: false
@@ -1954,6 +2056,11 @@ List Domain Infratags:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves infrastructure tags for domains, which provides threat
+      intelligence and context about the domain's infrastructure. This aligns with
+      the 'Enrich IOC' category. It does not perform any other actions like ticket
+      creation, host containment, or alert modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1969,55 +2076,62 @@ List Domain Infratags:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves infrastructure tags (infratags) for multiple domains using the Silent
-    Push API. This action allows analysts to identify common infrastructure patterns
-    and cluster domains based on shared attributes, which is useful for threat hunting
-    and attribution. It supports both live data and historical Passive DNS (PADNS)
-    data.
+    ### General Description
+
+    This action retrieves infrastructure tags (infratags) for a specified list of
+    domains from the Silent Push platform. It allows for optional clustering of results
+    and supports different lookup modes (e.g., live or padns) to provide detailed
+    infrastructure context for the provided domains.
 
 
-    ### Parameters
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action extracts the necessary API credentials
+    and action parameters (Domain, Cluster, Mode, Match, As Of, Origin UID, Use Get)
+    from the integration configuration and action settings.
+
+    2. **API Request**: It initializes the `SilentPushManager` and calls the `list_domain_infratags`
+    method, which performs a POST request to the Silent Push API to fetch infrastructure
+    tags for the provided domains.
+
+    3. **Response Processing**: The action parses the API response. If clustering
+    is enabled, it formats the tag clusters into a readable structure.
+
+    4. **Result Output**: The retrieved infratags and optional cluster data are added
+    to the action's result JSON for use in the SOAR platform.
+
+
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Domain | string | Yes | A comma-separated list of domains to investigate. |
+    | Domain | string | Yes | A comma-separated list of domains to retrieve infrastructure
+    tags for. |
 
-    | Cluster | boolean | No | If set to true, the action will return clustered results
-    based on shared infrastructure tags. |
-
-    | Mode | string | No | The lookup mode to use: 'live' (default) or 'padns'. |
-
-    | Match | string | No | Specifies how to handle self-hosted infrastructure (defaults
-    to 'self'). |
-
-    | As Of | string | No | A timestamp used to filter PADNS data between first and
-    last seen dates. |
-
-    | Use Get | boolean | No | Internal flag for request method (defaults to true).
+    | Cluster | boolean | No | Whether to cluster the results. Defaults to false.
     |
 
-    | Origin UID | string | No | An optional unique identifier for the request origin.
+    | Mode | string | No | Mode for lookup (live/padns). Defaults to "live". |
+
+    | Match | string | No | Handling of self-hosted infrastructure. Defaults to "self".
     |
 
+    | As Of | string | No | Build infratags from padns data where the as_of timestamp
+    equivalent is between the first_seen and the last_seen timestamp. |
 
-    ### Flow Description
+    | Origin UID | string | No | Unique identifier for the API user. |
 
-    1. **Parameter Extraction:** The action retrieves the API key, server URL, and
-    user-provided parameters, including the list of domains.
+    | Use Get | boolean | No | Flag to indicate if GET should be used (though the
+    implementation defaults to POST). |
 
-    2. **Data Retrieval:** It sends a POST request to the Silent Push 'explore/bulk/domain/infratags'
-    endpoint with the specified domains and filtering criteria.
 
-    3. **Response Validation:** The action verifies that the returned data matches
-    the requested mode.
+    ### Additional Notes
 
-    4. **Result Processing:** If clustering is enabled, it formats the tag clusters
-    into a readable structure.
-
-    5. **Output Generation:** The retrieved infratags and optional clusters are attached
-    to the action result as JSON.
+    The action relies on the `Domain` parameter to perform the lookup. While it iterates
+    over `siemplify.target_entities` for logging purposes, it does not use these entities
+    to filter or drive the API request logic.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2028,8 +2142,17 @@ List Domain Infratags:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Silent Push API to retrieve infrastructure
+      tags for domains. It does not modify any external systems, nor does it update
+      internal SOAR entities, create insights, or modify alert data. It is a read-only
+      data retrieval operation.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action is designed to fetch contextual infrastructure data (infratags) for
+      domains. It does not mutate external systems or modify internal SOAR data (entities,
+      insights, comments). Therefore, it qualifies as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2045,6 +2168,11 @@ List Domain Infratags:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action extracts the domains to query from the 'Domain' action parameter,
+      not from the `target_entities` list. Although the code iterates over `siemplify.target_entities`
+      for logging purposes, it does not use them to perform the lookup or filter the
+      results. Therefore, it does not run on entities.
 List IP Information:
   action_product_categories:
     add_alert_comment: false
@@ -2060,6 +2188,10 @@ List IP Information:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation and threat intelligence (ASN data) for IP addresses,
+      which aligns with the 'Enrich IOC' category. It does not perform any other operations
+      like ticket creation, host containment, or alert modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2074,27 +2206,39 @@ List IP Information:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "Retrieves comprehensive IP information, specifically IP-to-ASN\
-    \ (Autonomous System Number) mapping, for multiple IPv4 and IPv6 addresses using\
-    \ the Silent Push API. This action allows for bulk lookups by accepting a comma-separated\
-    \ list of IP addresses, validating their format, and fetching network ownership\
-    \ and routing data.\n\n### Parameters Description\n\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Ips | String | Yes | A comma-separated\
-    \ list of IPv4 or IPv6 addresses (e.g., \"142.251.188.102, 2001:4860:4860::8888\"\
-    ) to be queried. |\n\n### Flow Description\n\n1.  **Initialization:** The action\
-    \ retrieves the Silent Push Server URL and API Key from the integration's global\
-    \ configuration.\n2.  **Input Parsing:** It extracts the `Ips` parameter and splits\
-    \ the comma-separated string into a list of individual IP strings.\n3.  **Validation:**\
-    \ The action iterates through the list, using the `SilentPushManager` to categorize\
-    \ each address as either IPv4 or IPv6 based on standard IP formatting.\n4.  **Bulk\
-    \ Querying:** \n    *   If IPv4 addresses are present, it performs a bulk POST\
-    \ request to the Silent Push `ipv4` lookup endpoint.\n    *   If IPv6 addresses\
-    \ are present, it performs a bulk POST request to the Silent Push `ipv6` lookup\
-    \ endpoint.\n5.  **Data Aggregation:** The results from both queries (containing\
-    \ ASN, CIDR, and registry information) are combined into a single result set.\n\
-    6.  **Finalization:** The action returns the aggregated IP information in the\
-    \ output message and sets the execution status to completed. If no information\
-    \ is found for any of the provided IPs, the action fails."
+  ai_description: >-
+    Retrieves comprehensive IP information (such as ASN details) for a provided list
+    of IPv4 and IPv6 addresses using the Silent Push API. This action validates the
+    input IPs, categorizes them into IPv4 and IPv6, and queries the Silent Push platform
+    for ASN information. The gathered data is returned in the action output.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Ips | string | Yes | Comma-separated list of IP addresses to retrieve information
+    for. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
+    and API key from the integration configuration.
+
+    2. **Input Processing**: The `Ips` parameter is extracted and split into a list
+    of individual IP addresses.
+
+    3. **Validation**: The action validates each IP address to determine if it is
+    IPv4 or IPv6 using the `SilentPushManager`.
+
+    4. **Data Retrieval**: The action queries the Silent Push API (`explore/bulk/ip2asn`)
+    for the validated IPv4 and IPv6 addresses.
+
+    5. **Output**: The gathered IP information is formatted and returned as the action
+    result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2105,8 +2249,17 @@ List IP Information:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET/POST request to an external API to retrieve IP information
+      (enrichment). It does not modify the state of the external system (no blocking/quarantine),
+      nor does it modify internal Google SecOps data (no entity updates, insights,
+      or comments).
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) to provide context
+      (enrichment). It does not mutate external systems or modify internal data, satisfying
+      the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2122,6 +2275,11 @@ List IP Information:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use the `target_entities` list to perform its logic; it
+      relies solely on the `Ips` parameter provided in the action settings. The iteration
+      over `target_entities` in the code is for logging purposes only and does not
+      influence the action's execution or data processing.
 Live URL Scan:
   action_product_categories:
     add_alert_comment: false
@@ -2137,6 +2295,9 @@ Live URL Scan:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves hosting metadata for a URL, which is an indicator of compromise
+      (IOC). This matches the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2152,67 +2313,51 @@ Live URL Scan:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Scans a specific URL using the Silent Push platform to retrieve detailed hosting
-    metadata and scan results. This action allows analysts to perform on-demand URL
-    analysis by specifying various scanning profiles, including the platform, operating
-    system, browser, and geographic region from which the scan should originate. The
-    results provide insights into the infrastructure and behavior of the target URL,
-    which are returned as a structured JSON object for further investigation or automated
-    decision-making.
+    ### General Description
+
+    This action performs a live scan of a specified URL using the Silent Push platform
+    to retrieve detailed hosting metadata. It allows analysts to gather intelligence
+    on a URL by specifying the environment (platform, OS, browser, and region) in
+    which the scan should be executed.
 
 
     ### Parameters Description
 
+    | Parameter | Type | Mandatory | Description |
 
-    | Parameter | Type | Mandatory | Default Value | Description |
+    | :--- | :--- | :--- | :--- |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | URL | string | Yes | The URL to be scanned. |
 
-    | URL | string | True | https://silentpush.com | The specific URL to be scanned
-    by Silent Push. |
+    | Platform | string | No | The device platform to perform the scan with (e.g.,
+    Desktop, Mobile, Crawler). |
 
-    | Platform | string | False | N/A | The device type to simulate during the scan.
-    Supported values: `Desktop`, `Mobile`, `Crawler`. |
+    | Os | string | No | The operating system to perform the scan with (e.g., Windows,
+    Linux, MacOS, iOS, Android). |
 
-    | Os | string | False | N/A | The operating system to simulate during the scan.
-    Supported values: `Windows`, `Linux`, `MacOS`, `iOS`, `Android`. |
+    | Browser | string | No | The browser to perform the scan with (e.g., Firefox,
+    Chrome, Edge, Safari). |
 
-    | Browser | string | False | N/A | The web browser to simulate during the scan.
-    Supported values: `Firefox`, `Chrome`, `Edge`, `Safari`. |
-
-    | Region | string | False | N/A | The geographic region from which the scan should
-    be initiated. Supported values: `US`, `EU`, `AS`, `TOR`. |
-
-
-    ### Additional Notes
-
-    - The action performs strict validation on the `Platform`, `Os`, `Browser`, and
-    `Region` parameters. If an invalid value is provided, the action will fail before
-    making the API call.
-
-    - This action does not automatically iterate over entities; it relies on the provided
-    `URL` parameter. If you wish to scan a URL entity, you must map the entity's identifier
-    to the `URL` parameter in the playbook.
+    | Region | string | No | The region from where the scan should be performed (e.g.,
+    US, EU, AS, TOR). |
 
 
     ### Flow Description
 
-    1. **Configuration Extraction:** Retrieves the Silent Push Server URL and API
-    Key from the integration settings.
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
+    and API key from the integration configuration.
 
-    2. **Parameter Retrieval:** Extracts the target URL and optional scanning profile
-    parameters (Platform, OS, Browser, Region).
+    2. **Parameter Extraction**: It extracts the URL and optional environment parameters
+    (Platform, OS, Browser, Region) provided by the user.
 
-    3. **Validation:** Validates the optional parameters against a list of allowed
-    values (e.g., ensuring the OS is one of the supported types like Windows or Linux).
+    3. **Validation**: The action validates the provided environment parameters against
+    a predefined list of allowed values.
 
-    4. **API Interaction:** Sends a GET request to the Silent Push `scanondemand`
-    endpoint with the specified URL and profile settings.
+    4. **API Interaction**: It calls the Silent Push `explore/tools/scanondemand`
+    endpoint to initiate the live URL scan.
 
-    5. **Data Processing:** Parses the API response to extract the `scan` metadata.
-
-    6. **Output Generation:** Formats the scan results into a JSON object and completes
-    the action, providing a summary message of the scan outcome.
+    5. **Result Processing**: The action formats the scan results and returns them
+    as a JSON object in the action output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2223,8 +2368,15 @@ Live URL Scan:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve scan data
+      for a URL. It does not modify any external or internal systems, nor does it
+      update entities or create insights.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Silent Push) and does not mutate
+      any external or internal state. It fits the definition of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2240,6 +2392,10 @@ Live URL Scan:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use entities to perform the scan; it uses the provided URL
+      parameter. The code iterates over `target_entities` only for logging purposes,
+      not for processing.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -2255,6 +2411,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      functional operations such as enrichment, ticketing, containment, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2269,28 +2428,41 @@ Ping:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
-    \ designed to verify the connectivity and authentication between Google SecOps\
-    \ and the Silent Push API. Its primary purpose is to ensure that the integration's\
-    \ configuration parameters, specifically the Server URL and API Key, are valid\
-    \ and that the Silent Push service is reachable.\n\n### Parameters Description\n\
-    This action does not require any input parameters. It relies entirely on the integration's\
-    \ global configuration:\n\n| Parameter Name | Expected Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| N/A | N/A | N/A | This action has no specific\
-    \ input parameters. |\n\n### Flow Description\n1. **Parameter Extraction**: The\
-    \ action retrieves the 'Silent Push Server' URL and 'API Key' from the integration's\
-    \ configuration settings.\n2. **Credential Validation**: It checks if both the\
-    \ URL and API Key are provided; if either is missing, the action fails immediately.\n\
-    3. **Connection Attempt**: The action initializes the `SilentPushManager` and\
-    \ calls the `test_connection` method. This method performs a lightweight `GET`\
-    \ request (searching for a single domain) to the Silent Push API to verify the\
-    \ credentials.\n4. **Execution Outcome**: \n    * If the API responds successfully,\
-    \ the action completes with a success message.\n    * If an exception occurs (e.g.,\
-    \ 401 Unauthorized, 403 Forbidden, or network timeout), the action catches the\
-    \ error and returns a failure status with the specific error details.\n\n### Additional\
-    \ Notes\n* This action is strictly for connectivity testing and does not interact\
-    \ with or modify any entities within the SOAR case.\n* Per standard SOAR conventions,\
-    \ Ping actions are not classified as enrichment actions."
+  ai_description: >-
+    ### General Description
+
+    This action tests the connectivity to the Silent Push platform to ensure that
+    the provided API credentials and server URL are valid and functional. It performs
+    a lightweight API request to verify the connection, providing immediate feedback
+    on the integration's status.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Silent Push Server | String | Yes | The base URL of the Silent Push API server.
+    |
+
+    | API Key | String | Yes | The API key used for authenticating requests to the
+    Silent Push platform. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the `Silent Push Server`
+    URL and `API Key` from the integration configuration.
+
+    2. **Initialization**: The `SilentPushManager` is initialized with the provided
+    credentials.
+
+    3. **Connectivity Test**: The action calls the `test_connection` method, which
+    performs a sample API request (e.g., `search_domains`) to validate the connection.
+
+    4. **Result Reporting**: Based on the response, the action logs the success or
+    failure of the connection and terminates with the appropriate status message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2301,8 +2473,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test by making a GET request to the Silent
+      Push API. It does not modify external or internal data, nor does it interact
+      with entities or alerts.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action, which is explicitly excluded from being categorized
+      as an enrichment action per the provided instructions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2318,6 +2497,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it is a global connectivity
+      test.
 Reverse Padns Lookup:
   action_product_categories:
     add_alert_comment: false
@@ -2330,15 +2512,18 @@ Reverse Padns Lookup:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: false
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves Passive DNS records, which provides threat intelligence
+      and context for an indicator. This aligns with the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: true
+    search_events: false
     send_email: false
     send_message: false
     submit_file: false
@@ -2347,101 +2532,41 @@ Reverse Padns Lookup:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    The **Reverse Padns Lookup** action performs a reverse Passive DNS (pDNS) query
-    using the Silent Push platform. It allows security analysts to identify DNS records
-    (such as NS or MX records) that point to a specific domain or record name. This
-    capability is essential for infrastructure mapping, identifying shared infrastructure
-    between malicious actors, and uncovering related assets during an investigation.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Qname** | String | Yes | The DNS record name to lookup (e.g., a nameserver
-    like `ns1.example.com` or a mail server). |
-
-    | **Qtype** | String | No | The DNS record type to filter the results by (e.g.,
-    `ns`, `mx`). Defaults to `ns`. |
-
-    | **Netmask** | String | No | A network mask to filter the lookup results. |
-
-    | **subdomain** | String | No | A flag to include subdomains in the lookup results.
-    |
-
-    | **Regex** | String | No | A regular expression used to filter the returned DNS
-    records. |
-
-    | **Match** | String | No | The type of match for the query (e.g., `exact`, `partial`).
-    |
-
-    | **First Seen After** | String | No | Filter results to include only records
-    first observed after this date. |
-
-    | **First Seen Before** | String | No | Filter results to include only records
-    first observed before this date. |
-
-    | **Last Seen After** | String | No | Filter results to include only records last
-    observed after this date. |
-
-    | **Last Seen Before** | String | No | Filter results to include only records
-    last observed before this date. |
-
-    | **As Of** | String | No | Retrieve DNS records as they appeared at a specific
-    point in time. |
-
-    | **Sort** | String | No | Sort the results by a specified field (e.g., `date`,
-    `score`). |
-
-    | **Output Format** | String | No | The format in which results should be returned
-    (e.g., `JSON`, `XML`). |
-
-    | **Prefer** | String | No | Preference for specific DNS servers or sources. |
-
-    | **With Metadata** | String | No | Flag to include additional metadata in the
-    DNS records. |
-
-    | **Max Wait** | String | No | Maximum number of seconds to wait for results before
-    timing out. |
-
-    | **Skip** | String | No | Number of results to skip for pagination purposes.
-    |
-
-    | **Limit** | String | No | Maximum number of results to return. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Silent Push manager using the
-    provided Server URL and API Key from the integration configuration.
-
-    2. **Parameter Extraction**: It extracts the mandatory `Qname` and all optional
-    filtering/pagination parameters from the action input.
-
-    3. **API Request**: The action sends a GET request to the Silent Push `explore/padns/lookup/answer`
-    endpoint, passing the `Qtype`, `Qname`, and all provided filters.
-
-    4. **Response Validation**: It checks the API response for errors. If the API
-    returns an error or no records are found, the action logs the failure and terminates.
-
-    5. **Output**: If records are found, they are formatted into an output message
-    and the action completes successfully.
-
-
-    ### Additional Notes
-
-    - This is a **Global Action** and does not automatically iterate over entities
-    in the SecOps case. It relies entirely on the `Qname` parameter provided in the
-    input.
-
-    - There is a minor discrepancy between the YAML parameter name (`subdomain`) and
-    the Python script's extraction logic (`Subdomains`); ensure the parameter is correctly
-    mapped in the environment.
+  ai_description: "### General Description\nThis action performs a reverse Passive\
+    \ DNS (PADNS) lookup using the Silent Push platform. It retrieves historical DNS\
+    \ record associations for a given query name (`Qname`) and record type (`Qtype`),\
+    \ allowing analysts to identify infrastructure linked to specific domains or IP\
+    \ addresses. This provides valuable threat intelligence and context for investigations.\n\
+    \n### Flow Description\n1. **Configuration Extraction**: The action retrieves\
+    \ the Silent Push API key and server URL from the integration configuration.\n\
+    2. **Parameter Extraction**: It extracts the required `Qname` and `Qtype`, along\
+    \ with optional filtering parameters (e.g., `Netmask`, `Regex`, `Date` filters,\
+    \ `Limit`).\n3. **API Request**: The action sends a GET request to the Silent\
+    \ Push `explore/padns/lookup/answer` endpoint with the specified parameters.\n\
+    4. **Response Handling**: \n   - If records are found, the action returns the\
+    \ data and marks the execution as completed.\n   - If no records are found or\
+    \ an API error occurs, the action logs the failure and terminates.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Qtype | string | No | DNS record type (e.g., 'ns', 'a', 'mx').\
+    \ Defaults to 'ns'. |\n| Qname | string | Yes | The DNS record name to lookup.\
+    \ |\n| Netmask | string | No | The netmask to filter the lookup results. |\n|\
+    \ Subdomains | string | No | Flag to include subdomains in the lookup results.\
+    \ |\n| Regex | string | No | Regular expression to filter the DNS records. |\n\
+    | Match | string | No | Type of match for the query (e.g., exact, partial). |\n\
+    | First Seen After | string | No | Filter results to include only records first\
+    \ seen after this date. |\n| First Seen Before | string | No | Filter results\
+    \ to include only records first seen before this date. |\n| Last Seen After |\
+    \ string | No | Filter results to include only records last seen after this date.\
+    \ |\n| Last Seen Before | string | No | Filter results to include only records\
+    \ last seen before this date. |\n| As Of | string | No | Date or time to get the\
+    \ DNS records as of a specific point in time. |\n| Sort | string | No | Sort the\
+    \ results by the specified field (e.g., date, score). |\n| Output Format | string\
+    \ | No | The format in which the results should be returned (e.g., JSON, XML).\
+    \ |\n| Prefer | string | No | Preference for specific DNS servers or sources.\
+    \ |\n| With Metadata | string | No | Flag to include metadata in the DNS records.\
+    \ |\n| Max Wait | string | No | Maximum number of seconds to wait for results\
+    \ before timing out. |\n| Skip | string | No | Number of results to skip for pagination\
+    \ purposes. |\n| Limit | string | No | Maximum number of results to return. |"
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2452,8 +2577,16 @@ Reverse Padns Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to retrieve Passive
+      DNS data. It does not modify any external systems, nor does it update internal
+      SOAR data (entities, insights, or comments).
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches contextual threat intelligence (Passive DNS records) from
+      an external source without modifying any external or internal systems. It meets
+      all criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2469,6 +2602,11 @@ Reverse Padns Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize entities to perform its lookup; it relies entirely
+      on the 'Qname' parameter provided in the action configuration. The loop over
+      'target_entities' in the code is used only for logging purposes and does not
+      influence the API request logic.
 Run Threat check:
   action_product_categories:
     add_alert_comment: false
@@ -2484,6 +2622,11 @@ Run Threat check:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (reputation/threat check) for a given
+      indicator (IP or domain) from the Silent Push platform. This matches the 'Enrich
+      IOC' category. It does not perform any containment, ticket creation, or alert
+      modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2498,57 +2641,29 @@ Run Threat check:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    Runs a threat check against the Silent Push Threat Check API to retrieve reputation
-    and threat intelligence for a specific indicator. This action is parameter-driven
-    and queries the Silent Push database for a provided value (IP or domain) against
-    a specified data source. It returns the raw threat check results to the action
-    output.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Data | string | Yes | The name of the data source to query (e.g., 'iofa'). |
-
-    | Query | string | Yes | The specific value to check for threats (e.g., an IP
-    address or domain name). |
-
-    | Type | string | Yes | The type of the value being queried (e.g., 'ip', 'domain').
-    |
-
-    | User Identifier | string | Yes | A unique identifier for the user making the
-    request, used for tracking and auditing. |
-
-
-    ### Additional Notes
-
-    - This action does not automatically process entities from the Google SecOps case;
-    it relies entirely on the values provided in the action parameters.
-
-    - The action performs a GET request to the Silent Push Threat Check API endpoint.
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction:** Retrieves the Silent Push server URL and API
-    key from the integration settings.
-
-    2. **Parameter Retrieval:** Extracts the 'Data', 'Query', 'Type', and 'User Identifier'
-    from the action input.
-
-    3. **API Interaction:** Initializes the Silent Push Manager and executes a threat
-    check query via a GET request to the external API.
-
-    4. **Result Processing:** Evaluates the API response. If data is found, it formats
-    the output message; otherwise, it logs an error and fails the action.
-
-    5. **Completion:** Ends the action execution, returning the threat check results
-    as the final output message.
+  ai_description: "The 'Run Threat check' action retrieves threat intelligence for\
+    \ a specified indicator (such as an IP address or domain) from the Silent Push\
+    \ platform. This action is designed to provide context on potential threats by\
+    \ querying the Silent Push API with user-provided parameters.\n\n### Flow Description\n\
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL\
+    \ and API key from the integration configuration.\n2. **Parameter Extraction**:\
+    \ It extracts the required input parameters: `Data`, `Type`, `User Identifier`,\
+    \ and `Query`.\n3. **Threat Check Execution**: The action initializes the `SilentPushManager`\
+    \ and calls the `run_threat_check` method, which performs a GET request to the\
+    \ Silent Push API to fetch threat information.\n4. **Result Handling**: \n   -\
+    \ If the API returns data, the action logs the result and completes successfully.\n\
+    \   - If the API fails or returns no data, the action logs an error and terminates\
+    \ with a failed status.\n5. **Logging**: The action logs the status, result value,\
+    \ and output message for audit purposes.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Data |\
+    \ string | Yes | The name of the data source to query (e.g., 'iofa'). |\n| Query\
+    \ | string | Yes | The value to check for threats (e.g., an IP address or domain).\
+    \ |\n| Type | string | Yes | The type of the value being queried (e.g., 'ip',\
+    \ 'domain'). |\n| User Identifier | string | Yes | A unique identifier for the\
+    \ user making the request. |\n\n### Additional Notes\nThis action does not perform\
+    \ any operations on entities within the Google SecOps platform, despite iterating\
+    \ over them for logging purposes. It relies entirely on the provided action parameters\
+    \ to execute the threat check."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2559,8 +2674,16 @@ Run Threat check:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches threat intelligence data from the Silent Push API using the
+      `run_threat_check` method. It does not perform any external or internal mutations,
+      nor does it update entities, create insights, or modify alert data.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches threat intelligence data from the Silent Push API. It does
+      not mutate any external or internal data. It meets the criteria for an enrichment
+      action as it proactively fetches data and preserves system states.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2576,6 +2699,11 @@ Run Threat check:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to log their identifiers,
+      but does not perform any filtering or operations on the entities themselves.
+      The action relies on provided action parameters for its execution rather than
+      entity data.
 Screenshot URL:
   action_product_categories:
     add_alert_comment: false
@@ -2591,6 +2719,11 @@ Screenshot URL:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action generates a screenshot of a URL and returns the URL of the screenshot.
+      It does not perform any of the defined actions such as enriching IOCs, updating
+      alerts, or containing hosts. Therefore, it does not match any of the product
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2608,47 +2741,36 @@ Screenshot URL:
   ai_description: >-
     ### General Description
 
-    Generates a visual screenshot of a specified URL using the Silent Push platform.
-    This action is primarily used for visual verification of potentially malicious
-    websites or for documenting the state of a web resource during an investigation.
-    It retrieves a URL pointing to the captured image and verifies that the image
-    is accessible.
+    Generates a screenshot of a specified URL using the Silent Push API. This action
+    retrieves a visual representation of the target URL, validates the screenshot's
+    accessibility, and returns the screenshot URL as a result.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Default Value | Description |
+    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | :--- | :--- | :--- | :--- |
 
-    | URL | string | True | https://www.virustotal.com/gui/domain/tbibank-bg.com |
-    The specific URL for which a screenshot should be generated. |
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: Retrieves the Silent Push Server URL and API
-    Key from the integration settings.
-
-    2. **Parameter Retrieval**: Extracts the target URL from the action parameters.
-
-    3. **API Request**: Calls the Silent Push `scanondemand` endpoint to initiate
-    a screenshot capture for the provided URL.
-
-    4. **Response Validation**: Checks the API response for errors and ensures a `screenshot_url`
-    is returned.
-
-    5. **Image Verification**: Performs a secondary HTTP GET request to the returned
-    screenshot URL to verify that the image was successfully generated and is reachable.
-
-    6. **Result Reporting**: Outputs the original URL and the resulting screenshot
-    URL as a JSON result for use in subsequent playbook steps.
+    | URL | string | Yes | The URL for the screenshot. |
 
 
     ### Additional Notes
 
-    This action does not automatically attach the image to the case wall or update
-    entity attributes; it provides the URL of the screenshot as a result output.
+    None.
+
+
+    ### Flow Description
+
+    1. Extract configuration (Server URL, API Key) and the `URL` parameter.
+
+    2. Call the Silent Push API to generate the screenshot.
+
+    3. Validate the API response and ensure the screenshot URL is present.
+
+    4. Download the image to verify it is accessible.
+
+    5. Return the screenshot URL in the action result JSON.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2659,8 +2781,16 @@ Screenshot URL:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Silent Push API (fetches_data=true). It does
+      not mutate external data (no POST/PUT/DELETE). It does not mutate internal data
+      (no updates to entities, insights, or comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data (a screenshot URL) but does not update entities, create
+      insights, or add comments. It does not meet the criteria for an Enrichment Action
+      as defined.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2676,6 +2806,10 @@ Screenshot URL:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` but only to print them. It
+      does not use them to perform the action, relying instead on the `URL` parameter.
+      Therefore, it does not run on entities.
 Search Scan Data:
   action_product_categories:
     add_alert_comment: false
@@ -2691,6 +2825,11 @@ Search Scan Data:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action searches scan data repositories using SPQL queries. This aligns with
+      the 'Search Events' category, which involves returning historical logs or telemetry
+      data matching specific search parameters. It does not match enrichment, ticket
+      management, or containment categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2706,55 +2845,50 @@ Search Scan Data:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Searches Silent Push scan data repositories using SPQL (Silent Push Query Language)
-    queries. This action allows analysts to perform complex searches across raw scan
-    data to identify infrastructure patterns, historical changes, or specific attributes
-    associated with malicious activity. The action returns raw scan data records based
-    on the provided query and filtering parameters.
+    Searches Silent Push scan data repositories using SPQL queries. This action retrieves
+    raw scan data based on a provided query string and optional filtering parameters.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
+    and API key from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the SPQL query, fields, limit, skip,
+    and metadata settings from the action parameters.
+
+    3. **Data Retrieval**: It calls the Silent Push API to perform a search on scan
+    data repositories using the provided query and filters.
+
+    4. **Result Processing**: The action processes the API response. If scan data
+    is found, it logs the records and completes the action. If no data is found or
+    an error occurs, it logs the failure and terminates.
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Query | string | True | The SPQL query string used to search the scan data (e.g.,
-    'tld=cool'). |
+    | Query | string | Yes | The SPQL query string used to search the scan data. |
 
-    | Fields | string | False | A comma-separated list of specific fields to return
-    in the response. |
+    | Fields | string | No | Specific fields to return in the response. |
 
-    | sort | string | False | Criteria used to sort the results. |
+    | sort | string | No | Sorting criteria for the returned results. |
 
-    | Skip | string | False | The number of records to skip in the response (useful
-    for pagination). |
+    | Skip | string | No | The number of records to skip in the response. |
 
-    | Limit | string | False | The maximum number of results to return. |
+    | Limit | string | No | The maximum number of results to return. |
 
-    | With Metadata | boolean | False | Whether to include metadata in the response.
+    | With Metadata | boolean | No | Whether to include metadata in the response.
     Defaults to true. |
 
 
-    ### Flow Description
+    ### Additional Notes
 
-
-    1.  **Configuration Extraction:** Retrieves the Silent Push Server URL and API
-    Key from the integration settings.
-
-    2.  **Parameter Parsing:** Extracts the SPQL query and optional filtering parameters
-    (Fields, Limit, Skip, Sort, Metadata) from the action input.
-
-    3.  **API Interaction:** Initializes the Silent Push Manager and executes a POST
-    request to the `explore/scandata/search/raw` endpoint.
-
-    4.  **Data Processing:** Parses the JSON response to extract the `scandata_raw`
-    records.
-
-    5.  **Result Handling:** If records are found, it returns them as a JSON result
-    and completes the action. If no records are found or an error occurs, the action
-    is marked as failed.
+    This action does not perform any operations on entities, despite iterating over
+    them for logging purposes. It is strictly a search and retrieval action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2765,8 +2899,17 @@ Search Scan Data:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Silent Push API to search for scan
+      data. It retrieves data (fetches_data=true) but does not modify any external
+      systems (can_mutate_external_data=false) or internal SecOps data (can_mutate_internal_data=false).
+      It does not update entities, create insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      While the action fetches data, it is not an enrichment action because it does
+      not gather context about specific entities or alerts. It is a general search
+      operation against an external repository.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2782,6 +2925,10 @@ Search Scan Data:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers
+      for logging purposes. It does not use these entities to filter the search or
+      perform any logic, therefore it does not run on entities.
 search domains:
   action_product_categories:
     add_alert_comment: false
@@ -2797,6 +2944,11 @@ search domains:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action searches for domains based on criteria and returns a list of records.
+      This aligns with the 'Search Events' category, which involves returning historical
+      logs or telemetry data matching specific search parameters. It does not enrich
+      a specific IOC, update alerts, or perform containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2812,30 +2964,15 @@ search domains:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Searches for domains within the Silent Push platform using a variety of optional
-    filters such as domain names, regex patterns, name servers, and ASN details. This
-    action is primarily used for threat hunting and gathering a list of domains that
-    match specific infrastructure or registration characteristics. It retrieves a
-    list of records containing domain metadata from the Silent Push 'explore' API.
+    ### General Description
+
+    The `search_domains` action allows analysts to query the Silent Push platform
+    for domains based on a wide range of filtering criteria. This action is useful
+    for threat hunting and intelligence gathering, enabling users to identify domains
+    associated with specific infrastructure, registrars, or risk profiles.
 
 
-    ### Flow Description:
-
-    1. **Parameter Extraction:** Retrieves the Silent Push server URL, API key, and
-    all search filters provided by the user (e.g., Domain, Regex, ASN, Registrar).
-
-    2. **Manager Initialization:** Initializes the `SilentPushManager` to handle API
-    communication using the provided credentials.
-
-    3. **API Request:** Sends a GET request to the `explore/domain/search` endpoint
-    with the specified query parameters and filters.
-
-    4. **Result Processing:** Parses the JSON response to extract domain records.
-    If records are found, they are returned as a JSON result; otherwise, a 'no domains
-    found' message is generated.
-
-
-    ### Parameters Description:
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
@@ -2844,8 +2981,7 @@ search domains:
     | Domain | string | No | Name or wildcard pattern of domain names to search for.
     |
 
-    | Domain Regex | string | No | A valid RE2 regex pattern to match domains. Overrides
-    the 'Domain' argument. |
+    | Domain Regex | string | No | A valid RE2 regex pattern to match domains. |
 
     | Name Server | string | No | Name server name or wildcard pattern of the name
     server used by domains. |
@@ -2865,27 +3001,41 @@ search domains:
     |
 
     | Certificate Issuer | string | No | Filter domains that had SSL certificates
-    issued by the specified certificate issuer. Wildcards supported. |
+    issued by the specified certificate issuer. |
 
     | Whois Date After | string | No | Filter domains with a WHOIS creation date after
     this date (YYYY-MM-DD). |
 
-    | Skip | string | No | Number of results to skip in the search query for pagination.
-    |
+    | Skip | string | No | Number of results to skip in the search query. |
 
-    | Limit | string | No | Number of results to return. Defaults to the SilentPush
-    API's behavior. |
+    | Limit | string | No | Number of results to return. |
+
+    | Start Date | string | No | Start date for domain search (YYYY-MM-DD). |
+
+    | End Date | string | No | End date for domain search (YYYY-MM-DD). |
+
+    | Risk Score Min | string | No | Minimum risk score filter. |
+
+    | Risk Score Max | string | No | Maximum risk score filter. |
 
 
-    ### Additional Notes:
+    ### Flow Description
 
-    - The action logic also supports 'Start Date', 'End Date', and 'Risk Score' range
-    parameters if they are passed through the integration, though they may not be
-    visible in all UI configurations.
+    1. **Configuration Extraction**: The action retrieves the Silent Push server URL
+    and API key from the integration configuration.
 
-    - This action does not automatically update entities or create insights in the
-    SecOps case; it returns the raw search results for use in subsequent playbook
-    steps.
+    2. **Parameter Extraction**: It extracts all provided search filters from the
+    action parameters.
+
+    3. **Initialization**: The `SilentPushManager` is initialized with the retrieved
+    credentials.
+
+    4. **Execution**: The action calls the `search_domains` method of the manager,
+    passing all filters to the Silent Push API.
+
+    5. **Result Processing**: The action processes the API response. If records are
+    found, they are returned in the output message; otherwise, a 'No domains found'
+    message is returned.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2896,8 +3046,17 @@ search domains:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Silent Push API to search for domains
+      based on provided parameters. It does not modify any external systems, nor does
+      it update internal SOAR entities or case data. It is a read-only search operation.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a search/query tool that retrieves data from an external API.
+      It does not meet the criteria for an Enrichment Action because it does not operate
+      on specific entities to enrich them; rather, it performs a broad search based
+      on user-provided parameters.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2913,3 +3072,7 @@ search domains:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` only to print their identifiers
+      to the logs. It does not use these entities to filter the search or perform
+      any logic on them. Therefore, it does not run on entities.

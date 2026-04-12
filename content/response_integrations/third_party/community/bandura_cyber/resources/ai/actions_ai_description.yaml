@@ -13,6 +13,10 @@ Add Domain to Allowed Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds a domain to an allowed list in Bandura Cyber, which directly
+      matches the 'Add IOC To Allowlist' category. It does not perform enrichment,
+      alert updates, or other containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,9 +34,9 @@ Add Domain to Allowed Lists:
   ai_description: >-
     ### General Description
 
-    Adds URL entities to a specified Domain Allowed List in Bandura Cyber. This action
-    extracts the domain from the URL and adds it to the target list, allowing for
-    optional descriptions and expiration dates for the entry.
+    This action adds a domain to a specified Allowed List within the Bandura Cyber
+    platform. It processes URL entities, extracts the domain component, and performs
+    an API request to update the external allowlist configuration.
 
 
     ### Parameters Description
@@ -41,38 +45,32 @@ Add Domain to Allowed Lists:
 
     | :--- | :--- | :--- | :--- |
 
-    | List Name | String | Yes | The case-sensitive name of the Allowed List where
-    the domain will be added. |
+    | List Name | string | Yes | The name of the Allowed List to which the domain
+    should be added. This value is case-sensitive. |
 
-    | Description | String | No | A description or note to associate with the allowed
-    list entry. |
+    | Description | string | No | A description for the entry being added to the list.
+    |
 
-    | Expiration Date | String | No | The date and time when the entity should be
-    automatically removed from the list (Format: YYYY-MM-DDTHH:MM:SS.mmm+00:00). |
+    | Expiration Date | string | No | The date and time when the entity should be
+    removed from the list. Format: 2020-01-01T12:00:00.000+00:00. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves the API configuration and action parameters
-    (List Name, Description, Expiration Date).
+    1. **Initialization**: The action initializes the Bandura Cyber Manager using
+    the provided API credentials.
 
-    2. **Entity Filtering:** Identifies URL entities from the target entities list.
+    2. **Entity Filtering**: It iterates through the `target_entities` and filters
+    for those with the `URL` entity type.
 
-    3. **Domain Extraction:** For each URL, the domain (netloc) is extracted using
-    URL parsing.
+    3. **Domain Extraction**: For each valid entity, it extracts the domain (netloc)
+    from the URL.
 
-    4. **List Identification:** Queries Bandura Cyber to find the unique identifier
-    (UUID) for the specified list name.
+    4. **API Interaction**: It retrieves the list UUID from Bandura Cyber and then
+    sends a POST request to add the domain to the specified Allowed List.
 
-    5. **Addition:** Sends a POST request to Bandura Cyber to add the domain to the
-    identified allowed list.
-
-
-    ### Additional Notes
-
-    The action specifically targets URL entities and will parse them to extract the
-    domain name before submission. If no URL entities are found, the action will complete
-    without adding any entries.
+    5. **Result Output**: The action adds the result of the operation to the JSON
+    output and terminates with a success message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -81,11 +79,20 @@ Add Domain to Allowed Lists:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a domain to a specific allowed list in Bandura Cyber.
+      Adds a domain to the specified allowed list in the Bandura Cyber platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Bandura Cyber API to add a domain
+      to an allowed list, which constitutes external data mutation. It also performs
+      a GET request to retrieve the list UUID, so it fetches data. It does not modify
+      internal SOAR data, update entities, or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (adds to an allowlist), which violates the
+      'External State Preservation' rule for enrichment actions. Therefore, it is
+      not an enrichment action.
   entity_usage:
     entity_types:
     - DestinationURL
@@ -102,6 +109,9 @@ Add Domain to Allowed Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == URL`. This indicates the action processes URL entities.
 Add Domain to Denied Lists:
   action_product_categories:
     add_alert_comment: false
@@ -117,6 +127,9 @@ Add Domain to Denied Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds a domain to a 'Denied List' in Bandura Cyber, which is an external
+      security control. This directly aligns with the 'Add IOC To Blocklist' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -132,61 +145,48 @@ Add Domain to Denied Lists:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Adds URL entities to a specified Denied List in Bandura Cyber. This action extracts
-    the domain (netloc) from the provided URL entities and performs a state-changing
-    operation on the Bandura Cyber platform to block future traffic associated with
-    those domains. It allows for setting an optional description and an expiration
-    date for the block entry.
+    Adds a domain to a specific Denied List in the Bandura Cyber platform. This action
+    extracts the domain from URL entities, queries the Bandura Cyber API to identify
+    the target list's UUID, and then performs a POST request to add the domain to
+    that list.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | List Name | String | Yes | The name of the Denied List where the domain will
-    be added. Note: This value is case-sensitive. |
+    | List Name | string | Yes | The name of the Denied List to which the entity should
+    be added. This is case-sensitive. |
 
-    | Description | String | No | A descriptive note to associate with the entry in
-    the denied list for administrative tracking. |
-
-    | Expiration Date | String | No | The date and time when the domain should be
-    automatically removed from the list. Expected format: 2020-01-01T12:00:00.000+00:00.
+    | Description | string | No | A description for the entry being added to the list.
     |
+
+    | Expiration Date | string | No | The date and time for the entity to be removed
+    from the list. Format: 2020-01-01T12:00:00.000+00:00. |
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves API credentials (API Root, Username, Password)
-    and action parameters (List Name, Description, Expiration Date).
+    1. **Configuration Initialization**: Retrieves API credentials (API Root, Username,
+    Password) and SSL verification settings.
 
-    2. **Entity Filtering**: Identifies and collects all URL entities from the target
-    entities list.
+    2. **Entity Filtering**: Iterates through the `target_entities` and filters for
+    entities of type `URL`.
 
-    3. **Domain Extraction**: For each URL entity, it extracts the network location
-    (domain) using URL parsing logic.
+    3. **Domain Extraction**: For each valid entity, parses the URL to extract the
+    domain (netloc).
 
-    4. **List Identification**: Queries the Bandura Cyber API to retrieve the unique
-    identifier (UUID) for the Denied List specified by the 'List Name' parameter.
+    4. **List Identification**: Queries the Bandura Cyber API to retrieve the list
+    of denied domains and matches the provided `List Name` to obtain its UUID.
 
-    5. **External Mutation**: Executes a POST request to the Bandura Cyber API to
-    add the extracted domain to the identified Denied List, including the provided
-    description and expiration date.
+    5. **Mutation**: Sends a POST request to the Bandura Cyber API to add the domain
+    to the identified Denied List, including the optional description and expiration
+    date.
 
-    6. **Reporting**: Aggregates the API responses and provides a summary message
-    to the SOAR platform indicating which entities were successfully added.
-
-
-    ### Additional Notes
-
-    - The action specifically targets the domain portion of a URL. If a full URL is
-    provided, only the domain will be blocked.
-
-    - The 'List Name' must match exactly (including case) with an existing list in
-    Bandura Cyber for the action to succeed.
+    6. **Result Reporting**: Updates the action result with the status of the operation
+    and provides a summary message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -195,12 +195,19 @@ Add Domain to Denied Lists:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a domain entry to a specific Denied List in Bandura Cyber via a POST request
-      to the /denied-lists/domain/{uuid}/entries endpoint.
+      Adds a domain to a denied list in the Bandura Cyber platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve list information (fetches_data=true)
+      and a POST request to add a domain to a denied list (can_mutate_external_data=true).
+      It does not modify internal SOAR case data, update entities, or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by adding an IOC to a blocklist. It does not
+      meet the criteria for an enrichment action as it performs a state change on
+      an external system.
   entity_usage:
     entity_types:
     - DestinationURL
@@ -217,6 +224,9 @@ Add Domain to Denied Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == URL`. This maps to the 'DestinationURL' entity type in the provided schema.
 Add IP to Allowed Lists:
   action_product_categories:
     add_alert_comment: false
@@ -232,6 +242,9 @@ Add IP to Allowed Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds an IP address to an allowed list in Bandura Cyber, which directly
+      matches the 'Add IOC To Allowlist' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -247,64 +260,46 @@ Add IP to Allowed Lists:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Add IP to Allowed Lists** action allows analysts to add IP Address entities
-    to a specific IPv4 Allowed List within the Bandura Cyber platform. This action
-    is primarily used for allowlisting known-good or trusted IP addresses to prevent
-    them from being blocked by security policies. It supports defining the network
-    range via maskbits and setting an expiration date for the entry.
+    Adds an IP address to a specified IPv4 Allowed List in Bandura Cyber. This action
+    allows security analysts to whitelist IP addresses directly from the SOAR platform,
+    ensuring that traffic from these IPs is permitted by the Bandura Cyber security
+    controls.
 
 
-    ### Parameters Description
+    ### Flow Description
 
+    1. **Initialization**: The action initializes the Bandura Cyber manager using
+    the provided credentials and API root.
+
+    2. **Entity Filtering**: It filters the target entities to process only those
+    of type `ADDRESS`.
+
+    3. **List Retrieval**: For each entity, the action performs a GET request to retrieve
+    the UUID of the specified Allowed List by name.
+
+    4. **Addition**: It performs a POST request to add the IP address, along with
+    optional parameters like maskbit, description, and expiration date, to the identified
+    Allowed List.
+
+    5. **Result Reporting**: The action returns the result of the operation and updates
+    the SOAR result JSON.
+
+
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **List Name** | String | Yes | The case-sensitive name of the Allowed List in
-    Bandura Cyber where the IP should be added. |
+    | List Name | string | Yes | The name of the Allowed List to which the entity
+    should be added. This is case-sensitive. |
 
-    | **Description** | String | No | A descriptive note to associate with the IP
-    entry in the allowed list. |
+    | Description | string | No | A description for the allowed list entity. |
 
-    | **Maskbit** | Integer | No | The CIDR mask bit defining the IP range. Defaults
-    to 32 (single IP). |
+    | Maskbit | integer | No | The range of IP addresses to add (default is 32). |
 
-    | **Expiration Date** | String | No | The date and time when the IP should be
-    automatically removed from the list. Expected format: `YYYY-MM-DDTHH:MM:SS.SSS+00:00`.
-    |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action retrieves the integration configuration (API
-    Root, credentials) and the user-provided parameters (List Name, Maskbit, etc.).
-
-    2. **Entity Filtering**: It identifies all `ADDRESS` (IP) entities within the
-    current alert scope.
-
-    3. **List Resolution**: For each entity, the action queries Bandura Cyber to find
-    the unique identifier (UUID) of the Allowed List matching the provided **List
-    Name**.
-
-    4. **Addition**: It sends a POST request to the Bandura Cyber API to add the IP
-    address, along with the specified mask, description, and expiration date, to the
-    target list.
-
-    5. **Reporting**: The action collects the API responses and provides a summary
-    of which entities were successfully added.
-
-
-    ### Additional Notes
-
-    * The **List Name** parameter is strictly case-sensitive. If the name does not
-    match exactly what is configured in Bandura Cyber, the action will fail to find
-    the list UUID and will not add the entity.
-
-    * If no **Maskbit** is provided, the action defaults to `32`, targeting only the
-    specific IP address of the entity.
+    | Expiration Date | string | No | The date and time when the entity should be
+    removed from the list (e.g., 2020-01-01T12:00:00.000+00:00). |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -313,12 +308,20 @@ Add IP to Allowed Lists:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds IP address entries to a specified allowed list in the Bandura Cyber platform
-      via a POST request.
+      Adds the IP address to the specified allowed list in the Bandura Cyber system.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve the list UUID and a POST request
+      to add the IP to the allowed list. It mutates external data (Bandura Cyber allowlist).
+      It does not mutate internal SOAR data (no entity updates, insights, or case
+      comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (adds to allowlist), which violates the 'External
+      State Preservation' rule for enrichment actions. Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -335,6 +338,9 @@ Add IP to Allowed Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters specifically
+      for `ADDRESS` entities using `entity.entity_type == ADDRESS`.
 Add IP to Denied Lists:
   action_product_categories:
     add_alert_comment: false
@@ -350,6 +356,10 @@ Add IP to Denied Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds an IP address to a 'Denied List' in Bandura Cyber, which directly
+      aligns with the 'Add IOC To Blocklist' category. It does not perform enrichment,
+      host containment, or other listed actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -367,10 +377,10 @@ Add IP to Denied Lists:
   ai_description: >-
     ### General Description
 
-    Adds IP Address entities to a specified Denied List in Bandura Cyber. This action
-    is used to enforce security policies by blocking traffic from specific indicators.
-    It allows for granular control by specifying CIDR maskbits and expiration dates
-    for the entries.
+    This action adds an IP address to a specified Denied List within the Bandura Cyber
+    platform. It allows analysts to block malicious IP addresses by adding them to
+    existing denied lists, supporting optional parameters like description, subnet
+    mask, and expiration date.
 
 
     ### Parameters Description
@@ -379,45 +389,35 @@ Add IP to Denied Lists:
 
     | :--- | :--- | :--- | :--- |
 
-    | List Name | string | Yes | The exact name of the Denied List in Bandura Cyber
-    where the IP will be added. Note: This is case-sensitive. |
+    | List Name | string | Yes | The name of the Denied List to which the entity should
+    be added. This is case-sensitive. |
 
-    | Description | string | No | A descriptive note to associate with the entry in
-    the denied list. |
+    | Description | string | No | A description for the denied list entry. |
 
-    | Maskbit | integer | No | Defines the CIDR range for the IP address. Defaults
-    to 32 (single host). |
+    | Maskbit | integer | No | The subnet mask for the IP address. Defaults to 32.
+    |
 
-    | Expiration Date | string | No | The date and time when the IP should be automatically
-    removed from the list. Expected format: `YYYY-MM-DDTHH:MM:SS.SSS+00:00`. |
-
-
-    ### Additional Notes
-
-    The action first performs a lookup to find the internal UUID of the list provided
-    in the 'List Name' parameter before attempting to add the entity. If the list
-    name does not exist, the action will fail for that entity.
+    | Expiration Date | string | No | The date and time when the entity should be
+    removed from the list. Format: 2020-01-01T12:00:00.000+00:00. |
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves API credentials and connection settings from
-    the integration configuration.
+    1. **Initialization**: The action initializes the Bandura Cyber Manager using
+    the provided credentials.
 
-    2. **Parameter Extraction**: Collects the target list name, description, maskbit,
-    and expiration date from the action inputs.
+    2. **Entity Filtering**: It iterates through the `target_entities` and filters
+    for those with the type `ADDRESS`.
 
-    3. **Entity Filtering**: Identifies all `ADDRESS` (IP) entities within the current
-    scope.
+    3. **List Retrieval**: For each valid entity, the action retrieves the UUID of
+    the target Denied List by name.
 
-    4. **List Lookup**: For each entity, the action queries the Bandura Cyber API
-    to find the unique identifier (UUID) of the specified Denied List.
+    4. **Mutation**: It performs a POST request to the Bandura Cyber API to add the
+    IP address to the specified Denied List with the provided configuration (maskbit,
+    description, expiration).
 
-    5. **Entity Addition**: Sends a POST request to the Bandura Cyber API to add the
-    IP address to the identified Denied List with the provided metadata.
-
-    6. **Result Processing**: Aggregates the API responses and provides a summary
-    of which entities were successfully added.
+    5. **Result Reporting**: The action adds the result of the operation to the JSON
+    result output and completes the execution.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -426,12 +426,19 @@ Add IP to Denied Lists:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds IP address entries to a Denied List within the Bandura Cyber platform,
-      which modifies the active security policy of the external system.
+      Adds the IP address to the specified Denied List in the Bandura Cyber platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (GET) to retrieve the list UUID and performs a mutation
+      (POST) to add the IP to the denied list in the external Bandura Cyber system.
+      It does not modify internal SOAR data (entities, insights, or case comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (adds an IP to a blocklist) and does not meet
+      the criteria for an enrichment action (which must be read-only regarding external
+      systems).
   entity_usage:
     entity_types:
     - ADDRESS
@@ -448,6 +455,9 @@ Add IP to Denied Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters specifically
+      for entities where `entity.entity_type == ADDRESS`.
 Get Allowed Domain Lists:
   action_product_categories:
     add_alert_comment: false
@@ -463,6 +473,10 @@ Get Allowed Domain Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of allowed domains from an external system. It does
+      not match the expected outcomes for enrichment (as it does not enrich an indicator),
+      alert management, or containment. It is a general information retrieval action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -477,44 +491,43 @@ Get Allowed Domain Lists:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Get Allowed Domain Lists** action\
-    \ retrieves information about domain lists configured in the Bandura Cyber 'Allowed'\
-    \ category. This action is used to audit current configurations or verify if specific\
-    \ domains are part of an existing allowlist. It provides the data in multiple\
-    \ formats, including a raw JSON result, a formatted data table, and a text attachment\
-    \ for forensic or reporting purposes.\n\n### Parameters Description\n| Parameter\
-    \ | Description | Type | Mandatory |\n| :--- | :--- | :--- | :--- |\n| List Name\
-    \ | The specific name of the allowed domain list to retrieve. If left empty, the\
-    \ action retrieves all available allowed domain lists. Note: This parameter is\
-    \ case-sensitive. | String | No |\n\n### Flow Description\n1. **Parameter Extraction:**\
-    \ The action retrieves the integration credentials (API Root, Username, Password)\
-    \ and the optional `List Name` parameter.\n2. **Authentication:** It establishes\
-    \ a session with the Bandura Cyber API using the provided credentials.\n3. **Data\
-    \ Retrieval:** The action calls the Bandura Cyber API to fetch allowed domain\
-    \ lists. If a `List Name` was provided, it filters the API response to return\
-    \ only the matching list.\n4. **Session Termination:** The action logs out of\
-    \ the Bandura Cyber session to ensure security.\n5. **Output Generation:** \n\
-    \    * It attaches the full JSON response as a file named `allowed_domain_lists.txt`.\n\
-    \    * It creates a data table named `Bandura Allowed Domain Lists` within the\
-    \ case.\n    * It populates the JSON result for use in playbooks.\n\n### Additional\
-    \ Notes\n* If no lists are found (either globally or matching the provided name),\
-    \ the action will complete with a 'False' result value.\n* This action does not\
-    \ require or process specific entities from the case; it operates based on the\
-    \ provided parameter or fetches global configuration data."
+  ai_description: "Retrieves a list of allowed domains from the Bandura Cyber platform.\
+    \ This action allows users to query the system for specific allowed domain lists\
+    \ by name or retrieve all available lists if no name is provided.\n\n### Flow\
+    \ Description\n1. **Initialization**: The action initializes the Bandura Cyber\
+    \ manager using the provided API credentials (API Root, Username, Password).\n\
+    2. **Data Retrieval**: It performs a GET request to the Bandura Cyber API to fetch\
+    \ the allowed domain lists. If a 'List Name' is provided, the results are filtered\
+    \ accordingly.\n3. **Output Generation**: \n   - If lists are found, the action\
+    \ attaches the raw JSON response as a file, adds a data table to the action results,\
+    \ and sets the result JSON.\n   - If no lists are found, it returns a message\
+    \ indicating no results were found.\n4. **Cleanup**: The session is closed via\
+    \ the manager's logout method.\n\n### Parameters\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| List Name | string | No |\
+    \ The name of the specific allowed domain list to retrieve. If left empty, all\
+    \ lists are returned. |\n\n### Additional Notes\nThis action is a read-only operation\
+    \ and does not modify any external or internal system state."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table and a file attachment to the case to display the
-      retrieved domain list information.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Bandura Cyber API to retrieve domain
+      list information. It does not perform any POST/PUT/DELETE operations on external
+      systems, nor does it modify internal SOAR case data such as entities, alerts,
+      or insights. It simply outputs the retrieved data to the action results.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external system but does not enrich specific
+      entities or alerts. It is a general data retrieval action and does not meet
+      the criteria for an Enrichment Action as defined.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -530,6 +543,9 @@ Get Allowed Domain Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or iterate over any entities. It operates
+      independently of the case entities.
 Get Allowed IP Lists:
   action_product_categories:
     add_alert_comment: false
@@ -545,6 +561,11 @@ Get Allowed IP Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of allowed IPs from an external system. It does
+      not match any of the specific categories like 'Enrich IOC' (as it doesn't take
+      an IOC as input), 'Search Events', or others. It is a configuration retrieval
+      action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -559,48 +580,24 @@ Get Allowed IP Lists:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    Retrieves information about Allowed IPv4 Lists from the Bandura Cyber GMC platform.
-    This action allows users to fetch metadata for all configured allowed lists or
-    filter for a specific list by name. The retrieved data includes list UUIDs, names,
-    descriptions, and status, which are then presented as a data table and a file
-    attachment within the case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | List Name | String | No | The specific name of the Allowed IPv4 List to retrieve.
-    This field is case-sensitive. If left empty, the action returns all available
-    allowed lists. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: Connects to the Bandura Cyber API using the provided credentials
-    to establish a session.
-
-    2. **Data Retrieval**: Executes a request to the Bandura Cyber API to fetch the
-    collection of Allowed IPv4 Lists.
-
-    3. **Filtering**: If a `List Name` is provided, the action filters the returned
-    data to find the specific list matching that name.
-
-    4. **Output Generation**: Formats the retrieved list data into a JSON result,
-    a CSV-formatted data table, and a text attachment for the case wall.
-
-    5. **Cleanup**: Terminates the session by logging out of the Bandura Cyber manager.
-
-
-    ### Additional Notes
-
-    This action does not process or require any entities from the Google SecOps case;
-    it operates as a global data retrieval utility.
+  ai_description: "Retrieves a list of allowed IPv4 addresses from the Bandura Cyber\
+    \ platform. This action fetches the configured allowed IP lists, optionally filtered\
+    \ by a specific list name, and provides the results as a data table and JSON attachment\
+    \ for analysis.\n\n### Flow Description\n1. **Configuration Extraction**: The\
+    \ action retrieves the necessary API credentials (API Root, Username, Password)\
+    \ and optional parameters (List Name) from the integration configuration.\n2.\
+    \ **Authentication**: It initializes the `BanduraCyberManager` and authenticates\
+    \ with the Bandura Cyber API.\n3. **Data Retrieval**: It calls the `show_allowed_ip_list`\
+    \ method to fetch the allowed IP lists from the external system.\n4. **Result\
+    \ Processing**: \n   - If lists are found, it attaches the raw JSON results to\
+    \ the action, adds a data table to the case, and returns the JSON results.\n \
+    \  - If no lists are found, it returns a message indicating no results were found.\n\
+    5. **Cleanup**: It logs out of the Bandura Cyber session.\n\n### Parameters\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | List Name | string | No | The name of the specific allowed IP list to retrieve.\
+    \ If not provided, all lists are returned. |\n\n### Additional Notes\n- This action\
+    \ does not modify any external or internal data. It is a read-only operation used\
+    \ for information retrieval."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -611,8 +608,16 @@ Get Allowed IP Lists:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve allowed IP lists from the Bandura
+      Cyber API. It does not modify any external systems or internal SOAR case data.
+      It only reports results via data tables and JSON attachments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action retrieves data from an external system but does not act on specific
+      entities or alerts to enrich them. It is a general utility action for retrieving
+      configuration lists, thus it does not meet the criteria for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -628,6 +633,9 @@ Get Allowed IP Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities. It operates independently
+      of the SOAR entity model.
 Get Denied Domain Lists:
   action_product_categories:
     add_alert_comment: false
@@ -640,9 +648,13 @@ Get Denied Domain Lists:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: false
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of denied domains, which provides threat intelligence
+      and reputation context. This aligns with the 'Enrich IOC' category. It does
+      not perform any other actions such as blocking, ticket creation, or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -658,49 +670,37 @@ Get Denied Domain Lists:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Retrieves Denied Domain Lists from the Bandura Cyber platform. This action allows
-    users to fetch all configured denied domain lists or filter for a specific list
-    by name. The retrieved data is presented as a data table, a JSON result, and a
-    file attachment for further analysis.
+    Retrieves a list of denied domains from the Bandura Cyber platform. This action
+    fetches the configured denied domain lists, optionally filtered by a specific
+    list name, and presents the results within the SOAR case as an attachment, a data
+    table, and a JSON result.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter | Description | Type | Mandatory |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | List Name | The name of the specific denied domain list to retrieve. This parameter
-    is case-sensitive. If omitted, the action returns all available denied domain
-    lists. | String | No |
+    | List Name | string | No | The name of the specific denied domain list to retrieve.
+    If not provided, all lists are returned. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The action authenticates with the Bandura Cyber API using
-    the provided Username and Password to obtain an access token.
+    1. Extracts integration configuration parameters (API Root, Username, Password,
+    Verify SSL).
 
-    2. **Data Retrieval**: It sends a GET request to the Bandura Cyber API to fetch
-    the denied domain lists.
+    2. Initializes the `BanduraCyberManager` to establish a session with the Bandura
+    Cyber API.
 
-    3. **Filtering**: If a 'List Name' is provided, the action filters the retrieved
-    lists to find a match (case-sensitive).
+    3. Calls the `show_denied_domain_list` method to retrieve the requested denied
+    domain lists.
 
-    4. **Session Termination**: The action performs a logout to invalidate the session
-    token.
+    4. If results are found, adds the data to the SOAR case using `add_attachment`,
+    `add_data_table`, and `add_result_json`.
 
-    5. **Output Generation**: The results are processed and added to the action output
-    as a JSON result, a formatted data table, and a text file attachment containing
-    the raw JSON data.
-
-
-    ### Additional Notes
-
-    This action does not operate on specific entities within the case; it is a global
-    retrieval action used to audit or verify the state of denied domain lists in Bandura
-    Cyber.
+    5. Logs the outcome and terminates the action with a success or failure status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -711,8 +711,19 @@ Get Denied Domain Lists:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Bandura Cyber API to retrieve denied
+      domain lists. It does not mutate external systems. It adds results to the SOAR
+      case using standard output methods (attachments, data tables), which is standard
+      for enrichment actions and does not constitute a mutation of existing internal
+      case data.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches threat intelligence data (denied domain lists) from an external
+      system and presents it within the SOAR case. It does not mutate external systems
+      or modify existing internal case data, fitting the criteria for an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -728,6 +739,9 @@ Get Denied Domain Lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize `siemplify.target_entities`. It
+      operates globally based on the provided configuration and parameters.
 Get Denied IP Lists:
   action_product_categories:
     add_alert_comment: false
@@ -743,83 +757,11 @@ Get Denied IP Lists:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: "### General Description\nRetrieves information about denied IPv4\
-    \ lists from the Bandura Cyber platform. This action allows analysts to view the\
-    \ metadata of existing denied lists, which is useful for verifying configurations\
-    \ or identifying specific list UUIDs for subsequent management actions.\n\n###\
-    \ Parameters Description\n| Parameter Name | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| List Name | String | No | The specific name of\
-    \ the denied IP list to retrieve. If provided, the action filters the results\
-    \ to match this name (case-sensitive). If omitted, all denied IP lists are returned.\
-    \ |\n\n### Additional Notes\nThis action does not process specific entities; it\
-    \ retrieves global list information from the Bandura Cyber integration. The results\
-    \ are provided as a data table and a file attachment for analyst review.\n\n###\
-    \ Flow Description\n1. **Authentication**: Establishes a session with the Bandura\
-    \ Cyber API using the configured credentials.\n2. **Data Retrieval**: Executes\
-    \ a GET request to the `/denied-lists/ipv4` endpoint to fetch all denied IP lists.\n\
-    3. **Filtering**: If the `List Name` parameter is provided, the action filters\
-    \ the API response to find the specific list matching that name.\n4. **Output\
-    \ Generation**: \n    *   Adds the raw JSON response as a file attachment named\
-    \ `denied_ip_lists.txt` to the case.\n    *   Constructs a data table named `Bandura\
-    \ Denied IP Lists` containing the list details.\n    *   Returns the list data\
-    \ as a JSON result for use in downstream playbook logic.\n5. **Session Termination**:\
-    \ Logs out of the Bandura Cyber API."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of denied IPs from an external system. It does not
+      match any of the specific categories like 'Enrich IOC' (no entity input), 'Contain
+      Host', or 'Search Events' (which typically refers to logs/telemetry). It is
+      a general data retrieval action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -835,57 +777,47 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    Retrieves a list of denied IPv4 addresses from the Bandura Cyber platform. This
+    action allows users to optionally filter by a specific list name to narrow down
+    the results. The retrieved data is returned as a JSON object, a data table, and
+    an attached text file for further analysis.
 
-    Tests the connectivity between Google SecOps and the Bandura Cyber GMC (Global
-    Management Center) API. This action verifies that the integration can successfully
-    authenticate using the provided configuration credentials and reach the specified
-    API endpoint.
+
+    ### Flow Description
+
+    1. **Configuration Initialization**: The action initializes the integration using
+    the provided API Root, Username, Password, and SSL verification settings.
+
+    2. **Manager Instantiation**: A `BanduraCyberManager` instance is created to handle
+    the API communication.
+
+    3. **Data Retrieval**: The action calls the `show_denied_ip_list` method, passing
+    the optional `List Name` parameter to fetch the relevant denied IP list from the
+    Bandura Cyber API.
+
+    4. **Result Processing**:
+       - If data is returned, the action attaches the raw JSON output as a file, displays
+    the results in a data table, and adds the JSON result to the action output.
+       - If no data is found, the action returns a message indicating that no lists
+    were found.
+    5. **Session Termination**: The action logs out of the Bandura Cyber session.
 
 
     ### Parameters Description
-
-    This action does not have any action-specific parameters. It utilizes the following
-    integration configuration parameters:
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | API Root | String | Yes | The base URL for the Bandura Cyber API. |
-
-    | Username | String | Yes | The username used for authentication. |
-
-    | Password | String | Yes | The password used for authentication. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the API server. |
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: Retrieves the API Root, Username, Password, and
-    SSL verification settings from the integration's global configuration.
-
-    2. **Authentication Attempt**: Initializes the `BanduraCyberManager`, which automatically
-    attempts to log in to the Bandura Cyber API via a POST request to the `/auth/login`
-    endpoint to obtain an access token.
-
-    3. **Session Termination**: Immediately calls the `logout` method to close the
-    session created during the connectivity test via a POST request to the `/auth/logout`
-    endpoint.
-
-    4. **Connectivity Validation**: Evaluates whether an access token was successfully
-    obtained during the login process.
-
-    5. **Status Reporting**: Outputs a 'Connection Established' message if successful,
-    or 'Connection Failed' if the authentication or network request failed.
+    | List Name | string | No | The name of the specific denied IP list to retrieve.
+    This parameter is case-sensitive. If left empty, the action retrieves all available
+    denied IP lists. |
 
 
     ### Additional Notes
 
-    This is a health-check action and does not interact with any entities or modify
-    any data within the SOAR or the external system.
+    - This action is a read-only operation and does not modify any data in the Bandura
+    Cyber platform or the SOAR environment.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -894,10 +826,18 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Bandura Cyber API to retrieve denied
+      IP lists. It does not modify any external systems or internal SOAR data. It
+      does not interact with entities, create insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not take entities as input and does not enrich them. It is a
+      standalone utility to fetch data from an external system. Therefore, it does
+      not meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -913,3 +853,112 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or use `siemplify.target_entities`. It operates
+      independently of any specific entity.
+Ping:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      functional operations like enriching IOCs, blocking, or creating tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Tests connectivity to the Bandura Cyber API. This action verifies the integration's
+    ability to communicate with the external service by performing an authentication
+    request and subsequently terminating the session.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters: **API Root**, **Username**, **Password**,
+    and **Verify SSL**.
+
+    2. Initializes the `BanduraCyberManager` which performs an authentication request
+    (POST) to the Bandura Cyber API to retrieve an access token.
+
+    3. Performs a logout request (POST) to terminate the session.
+
+    4. Checks if the access token was successfully retrieved to determine the connection
+    status.
+
+    5. Returns a success or failure message to the SOAR platform.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL for the Bandura Cyber API. |
+
+    | Username | String | Yes | The username for authentication. |
+
+    | Password | String | Yes | The password for authentication. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates. Defaults to
+    False. |
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Performs authentication (login) and session termination (logout) POST requests
+      against the Bandura Cyber API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to authenticate and a POST request to logout.
+      This constitutes external state mutation (session creation/destruction). It
+      does not fetch data for enrichment or modify internal SOAR data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
+      action per the instructions.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities.

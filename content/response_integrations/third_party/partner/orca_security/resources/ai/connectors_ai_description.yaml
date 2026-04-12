@@ -2,12 +2,12 @@ Orca Security - Alerts Connector:
   ai_description: >-
     ### General Description
 
-    The Orca Security Alerts Connector fetches security findings and alerts from the
-    Orca Security platform and ingests them into Google SecOps as cases. It provides
-    comprehensive visibility into cloud risks, including vulnerabilities, misconfigurations,
-    and compromised assets, by querying Orca's serving layer API. The connector supports
-    advanced filtering by severity, Orca score, and categories to ensure only relevant
-    security data is ingested.
+    This connector integrates with Orca Security to ingest security alerts into Google
+    SecOps. It enables automated monitoring of security findings by fetching alerts
+    from the Orca Security platform, allowing users to apply granular filters such
+    as severity, category, alert type, and Orca score to ensure only relevant data
+    is ingested. The connector supports authentication via API Key or Token and provides
+    options for proxy configuration and environment mapping.
 
 
     ### Parameters Description
@@ -16,70 +16,75 @@ Orca Security - Alerts Connector:
 
     | :--- | :--- | :--- | :--- |
 
+    | API Root | String | Yes | The base URL of the Orca Security instance. |
+
+    | API Key | Password | No | API Key for authentication. Used if API Token is not
+    provided. |
+
+    | API Token | Password | No | API Token for authentication. Preferred over API
+    Key. |
+
     | DeviceProductField | String | Yes | The source field name used to retrieve the
     Product Field name. |
 
     | EventClassId | String | Yes | The source field name used to retrieve the Event
     Field name. |
 
-    | API Root | String | Yes | The API root URL of your Orca Security instance (e.g.,
-    https://<instance>.orcasecurity.io). |
+    | Category Filter | String | No | Comma-separated list of category names to filter
+    ingested alerts. |
 
-    | API Key | Password | No | API Key for authentication. If both Key and Token
-    are provided, the Token is used. |
-
-    | API Token | Password | No | API Token for authentication. This is the preferred
-    authentication method. |
-
-    | Verify SSL | Boolean | Yes | If enabled, verifies the SSL certificate for the
-    connection to the Orca Security server. |
-
-    | Category Filter | String | No | A comma-separated list of category names to
-    include during ingestion (case-sensitive). |
-
-    | Alert Type Filter | String | No | Specific alert types to fetch (e.g., aws_s3_bucket_accessible_to_unmonitored_account).
+    | Alert Type Filter | String | No | Specific alert types to ingest (e.g., aws_s3_bucket_accessible_to_unmonitored_account).
     |
 
-    | Lowest Severity To Fetch | String | No | The minimum severity level to ingest
-    (Compromised, Imminent compromise, Hazardous, Informational). |
+    | Lowest Severity To Fetch | String | No | Minimum severity level to fetch (Compromised,
+    Imminent compromise, Hazardous, Informational). |
 
-    | Lowest Orca Score To Fetch | String | No | The minimum Orca Score (1-10) required
-    for an alert to be ingested. |
+    | Lowest Orca Score To Fetch | String | No | Minimum Orca score (1-10) to filter
+    alerts. |
 
-    | Max Hours Backwards | Integer | No | The number of hours to look back for alerts
-    during the initial run or as a fallback. |
+    | Max Hours Backwards | Integer | No | Time range in hours to fetch alerts from
+    during the initial run or after expiration. |
 
-    | Max Alerts To Fetch | Integer | No | The maximum number of alerts to process
-    in a single connector iteration (default: 100). |
+    | Max Alerts To Fetch | Integer | No | Maximum number of alerts to process per
+    connector iteration. |
 
-    | Use dynamic list as a blacklist | Boolean | Yes | If enabled, the SOAR dynamic
-    list will be used to exclude alerts based on their title. |
+    | Use dynamic list as a blacklist | Boolean | Yes | If enabled, uses dynamic lists
+    as a blacklist for alert titles. |
+
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate of the Orca
+    Security server. |
+
+    | PythonProcessTimeout | Integer | Yes | Timeout limit in seconds for the connector
+    script execution. |
+
+    | Environment Field Name | String | No | Field name where the environment name
+    is stored. |
+
+    | Environment Regex Pattern | String | No | Regex pattern to manipulate the environment
+    field value. |
+
+    | Proxy Server Address | String | No | Address of the proxy server. |
+
+    | Proxy Username | String | No | Username for proxy authentication. |
+
+    | Proxy Password | Password | No | Password for proxy authentication. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector initializes a session with Orca Security
-    using either an API Token (Header-based) or an API Key (Cookie-based via a login
-    request).
+    1. **Authentication**: Connects to the Orca Security API using the provided API
+    Key or Token and verifies the connection.
 
-    2. **Time Management**: It calculates the fetch window by checking the last successful
-    execution timestamp or falling back to the 'Max Hours Backwards' setting.
+    2. **Querying**: Fetches alerts from the Orca Security API, applying filters for
+    severity, score, category, and alert type as configured.
 
-    3. **Query Construction**: An alert query is built using the `AlertQueryBuilder`,
-    incorporating user-defined filters for severity, Orca score, categories, and alert
-    types.
+    3. **Deduplication**: Filters out alerts that have already been processed by checking
+    against a local state file of alert IDs.
 
-    4. **Data Retrieval**: The connector sends a POST request to the Orca Serving
-    Layer API to retrieve matching alerts.
+    4. **Mapping**: Maps the retrieved alert data into the standard Google SecOps
+    case format, applying environment and product field mappings.
 
-    5. **Deduplication & Filtering**: It filters out previously ingested alerts using
-    a local ID cache and applies dynamic list logic (whitelist or blacklist) against
-    the alert titles.
+    5. **Ingestion**: Creates cases in Google SecOps for the filtered, new alerts.
 
-    6. **Case Mapping**: Each valid alert is transformed into a Google SecOps `AlertInfo`
-    object. The raw alert data is attached as an event, and environment/product fields
-    are mapped based on configuration.
-
-    7. **Ingestion & State Persistence**: The connector ingests the alerts into the
-    SOAR platform, updates the last run timestamp, and saves the IDs of processed
-    alerts to prevent duplicates in future cycles.
+    6. **State Management**: Updates the last success timestamp and saves the list
+    of processed alert IDs to ensure subsequent runs only fetch new data.

@@ -13,6 +13,10 @@ Analyze EML Headers:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs heuristic analysis on email headers provided as input. It
+      does not match any of the predefined product categories (e.g., it is not an
+      enrichment, containment, or ticketing action).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,6 +32,8 @@ Analyze EML Headers:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Analyzes email headers provided either as a base64-encoded EML file or a JSON-formatted
     list of headers. The action performs a security-focused heuristic analysis to
     identify potential spoofing, misconfigurations, or suspicious patterns. It evaluates
@@ -39,7 +45,6 @@ Analyze EML Headers:
 
 
     ### Parameters Description
-
 
     | Parameter | Type | Mandatory | Description |
 
@@ -93,8 +98,16 @@ Analyze EML Headers:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action parses provided email data and performs heuristic analysis. It does
+      not make external API calls (fetches_data=false), does not mutate external systems,
+      and does not modify internal SOAR case data (entities, insights, comments).
+      It only returns a result JSON.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external source (it processes provided
+      input) and does not meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -110,6 +123,9 @@ Analyze EML Headers:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `target_entities` or perform any entity-based operations.
+      It processes email data provided via input parameters.
 Analyze Headers:
   action_product_categories:
     add_alert_comment: false
@@ -122,9 +138,13 @@ Analyze Headers:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: true
+    enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action analyzes email headers and returns a structured JSON result. It does
+      not match any of the predefined product categories (e.g., it does not enrich
+      an IOC entity, update an alert, or interact with an external ticketing system).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -140,14 +160,15 @@ Analyze Headers:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Analyzes email headers provided in JSON format to perform a comprehensive security
     audit of an email's origin and routing path. The action validates authentication
     records (SPF, DMARC, DKIM, ARC), traces the relay hops, and enriches the data
-    with threat intelligence including RBL status, WHOIS information, and geographic
-    location.
+    with threat intelligence.
 
 
-    ### Parameters
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
@@ -155,6 +176,13 @@ Analyze Headers:
 
     | Headers JSON | String | Yes | A JSON object containing the email headers to
     be analyzed. This is typically extracted from an email parsing action. |
+
+
+    ### Additional Notes
+
+    This action does not operate on SOAR entities directly. It requires a JSON object
+    containing email headers as input. The action performs external lookups (DNS,
+    WHOIS, GeoIP, RBLs) to analyze the email's origin and routing.
 
 
     ### Flow Description
@@ -175,10 +203,12 @@ Analyze Headers:
     reverse order to reconstruct the email's journey.
 
     6. **Threat Intelligence Enrichment:** For each relay server identified in the
-    hops, the action checks the IP or domain against multiple Real-time Block Lists
-    (RBLs), performs RDAP/WHOIS lookups to determine ownership, and retrieves geographic
-    location data (City, Country, Coordinates).
-
+    hops:
+        *   Checks the IP or domain against multiple Real-time Block Lists (RBLs)
+    using `pydnsbl` to identify known malicious senders.
+        *   Performs RDAP/WHOIS lookups via `IPWhois` to determine ownership information.
+        *   Retrieves geographic location data (City, Country, Coordinates) using
+    the `DbIpCity` service.
     7. **Timing Analysis:** Calculates the delay (in seconds) between each relay hop
     to identify potential anomalies in delivery time.
 
@@ -195,8 +225,16 @@ Analyze Headers:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action parses email headers and performs external lookups (DNS, WHOIS, GeoIP,
+      RBLs) to analyze the email's origin and routing. It does not modify any external
+      or internal systems, nor does it operate on SOAR entities.
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      The action does not operate on entities and does not meet the criteria for an
+      enrichment action as defined (which requires operating on alerts or entities).
+      It is a utility action for email header analysis.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -212,6 +250,9 @@ Analyze Headers:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `target_entities`. It processes a JSON string provided
+      as a parameter.
 Parse Base64 Email:
   action_product_categories:
     add_alert_comment: false
@@ -227,6 +268,9 @@ Parse Base64 Email:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a utility for parsing email content. It does not match any of
+      the defined product categories (e.g., enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -260,7 +304,7 @@ Parse Base64 Email:
 
     | :--- | :--- | :--- | :--- |
 
-    | EML/MSG Base64 String | String | Yes | The Base64 encoded string representing
+    | EML/MSG Base64 String | Content | Yes | The Base64 encoded string representing
     the EML or MSG file to be parsed. |
 
     | Stop Transport At Header | String | No | A specific header field name. If provided,
@@ -318,8 +362,16 @@ Parse Base64 Email:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action parses a Base64 encoded email blob (EML/MSG) provided as input. It
+      performs local processing to extract headers, body, attachments, and IOCs. It
+      does not interact with external APIs or modify internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a local utility for parsing email blobs. It does not fetch data
+      from external systems, nor does it modify internal SOAR data. Therefore, it
+      does not meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -335,6 +387,9 @@ Parse Base64 Email:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It processes a raw Base64 string provided
+      as a parameter.
 Parse Case Wall Email:
   action_product_categories:
     add_alert_comment: false
@@ -347,9 +402,13 @@ Parse Case Wall Email:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: true
+    enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action parses email files to extract indicators and create entities. It
+      does not match any of the specific product categories like 'Enrich IOC' (which
+      implies reputation fetching), 'Contain Host', or 'Create Ticket'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -446,19 +505,27 @@ Parse Case Wall Email:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates new entities for email participants and indicators, uploads nested attachments
-      to the case wall, and updates existing Filename entities with attachment IDs.
+      Creates new entities (User, Subject, Indicators) and updates existing FILENAME
+      entities with attachment IDs.
+    reasoning: >-
+      The action reads email attachments from the case wall (fetches_data=true). It
+      creates new entities (User, Subject, Indicators) and updates existing FILENAME
+      entities with attachment IDs (can_mutate_internal_data=true, can_update_entities=true).
+      It does not mutate external systems.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data (email attachments) and performs internal mutations
+      (creating/updating entities) to enrich the case with indicators. It does not
+      mutate external systems. This fits the definition of an enrichment action.
   entity_usage:
-    entity_types:
-    - FILENAME
+    entity_types: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_entity_type: false
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -466,6 +533,9 @@ Parse Case Wall Email:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on `target_entities` as input. It operates on attachments
+      found in the case/alert wall.
 Parse EML Base64 Blob:
   action_product_categories:
     add_alert_comment: false
@@ -481,6 +551,9 @@ Parse EML Base64 Blob:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a utility for parsing EML content. It does not match any of the
+      defined product categories (Enrichment, Containment, Ticket management, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -499,11 +572,11 @@ Parse EML Base64 Blob:
     ### General Description
 
     The **Parse EML Base64 Blob** action is a utility designed to decode a base64-encoded
-    string and parse its contents as an EML (Email) file. This action extracts structured
-    information from raw email data, including headers, metadata, and body content.
-    It is particularly useful in workflows where email files are passed as encoded
-    strings, allowing for automated analysis of sender information, recipient lists,
-    and message bodies without requiring external services.
+    string and parse its contents as an EML (Email) file. This action is used to extract
+    structured information from raw email data, including headers, metadata, and body
+    content. It is particularly useful in workflows where email files are passed as
+    encoded strings, allowing for automated analysis of sender information, recipient
+    lists, and message bodies without requiring external services.
 
 
     ### Parameters Description
@@ -518,8 +591,8 @@ Parse EML Base64 Blob:
 
     ### Additional Notes
 
-    - This action performs local parsing using standard Python libraries and does
-    not interact with external APIs or Google SecOps entities.
+    - This action performs local parsing and does not interact with external APIs
+    or Google SecOps entities.
 
     - It supports recursive parsing of nested EML attachments found within the primary
     blob.
@@ -560,8 +633,17 @@ Parse EML Base64 Blob:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a pure utility that parses a provided base64 string into an EML
+      object. It does not perform any external API calls (fetches_data=false), does
+      not mutate any external systems (can_mutate_external_data=false), and does not
+      modify any internal SOAR data such as entities, insights, or comments (can_mutate_internal_data=false).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for parsing data. It does not fetch data from external
+      sources (not enrichment) and does not mutate any systems. Therefore, it does
+      not meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -577,6 +659,8 @@ Parse EML Base64 Blob:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not reference or process any entities from the SOAR platform.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -592,6 +676,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a health check/ping. It does not match any of the defined product
+      categories (e.g., Enrich IOC, Contain Host, Create Ticket, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -644,8 +731,14 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a simple connectivity check by returning a success message.
+      It does not fetch data, mutate external systems, or modify internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action, which is explicitly excluded from enrichment
+      by the provided rules. It does not fetch data or perform any enrichment tasks.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -661,3 +754,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. The SimulationDataJson indicates
+      an empty list of entities, and the code does not reference target_entities.

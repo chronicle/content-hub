@@ -1,40 +1,73 @@
 DataDog Connector:
-  ai_description: "### General Description\nThe DataDog Connector enables the ingestion\
-    \ of events and alerts from DataDog into Google SecOps. It specifically monitors\
-    \ for triggered alerts from DataDog monitors, focusing on 'error' and 'warning'\
-    \ states. The connector transforms these events into structured alerts, providing\
-    \ security teams with visibility into infrastructure and application issues detected\
-    \ by DataDog.\n\n### Parameters Description\n| Parameter | Type | Mandatory |\
-    \ Description |\n| :--- | :--- | :--- | :--- |\n| API Key | Password | Yes | The\
-    \ API Key used to authenticate with the DataDog API. |\n| APP Key | Password |\
-    \ Yes | The Application Key used to authenticate with the DataDog API. |\n| Base\
-    \ URL | String | Yes | The base URL for the DataDog API (e.g., `https://api.datadoghq.com`).\
-    \ |\n| DeviceProductField | String | Yes | The field name used to determine the\
-    \ device product in the SOAR platform. |\n| EventClassId | String | Yes | The\
-    \ field name used to determine the event name or sub-type. |\n| Max Days Back\
-    \ | Integer | Yes | The number of days to look back for events during the initial\
-    \ run. |\n| Priority | String | No | Filter events by priority. Options include\
-    \ 'low', 'normal', or 'all'. |\n| PythonProcessTimeout | String | Yes | The timeout\
-    \ limit (in seconds) for the python process running the script. |\n| Sources |\
-    \ String | Yes | The sources to retrieve events from (e.g., 'alert' for monitor\
-    \ triggers). |\n| Tags | String | No | A comma-separated list of tags to filter\
-    \ the list of monitors by scope (e.g., 'monitor'). |\n| Unaggregated | Boolean\
-    \ | No | If true, retrieves the full list of events; if false, retrieves an aggregated\
-    \ list. |\n\n### Flow Description\n1. **Authentication**: The connector initializes\
-    \ a session with DataDog using the provided API Key and Application Key.\n2. **Timestamp\
-    \ Tracking**: It retrieves the last saved timestamp to ensure only new events\
-    \ are processed. On the first run, it uses the 'Max Days Back' parameter.\n3.\
-    \ **Event Fetching**: Queries the DataDog Events API for events within the time\
-    \ range, filtered by the configured sources, tags, and priority.\n4. **Alert Filtering**:\
-    \ The connector iterates through the results, specifically selecting events with\
-    \ an `alert_type` of 'error' or 'warning'.\n5. **Child Event Processing**: If\
-    \ a parent event contains 'children' events, the connector treats each child as\
-    \ an individual alert to ensure granular visibility.\n6. **Detail Enrichment**:\
-    \ For each identified event, the connector fetches full details (including the\
-    \ payload) to extract metrics, monitor names, and snapshot URLs.\n7. **Mapping\
-    \ and Normalization**: \n    *   Extracts tags into key-value pairs.\n    *  \
-    \ Determines the `device_product` based on the metric name (e.g., identifying\
-    \ AWS services).\n    *   Maps DataDog alert types to SOAR priority levels (Error:\
-    \ 100, Warning: 80).\n8. **Ingestion**: The processed events are converted into\
-    \ `AlertInfo` objects and ingested into Google SecOps as cases. The latest event\
-    \ timestamp is then saved for the next iteration."
+  ai_description: >-
+    ### General Description
+
+    The DataDog Connector is designed to ingest events from DataDog into Google SecOps.
+    It allows security teams to monitor DataDog-generated incidents, such as monitor
+    triggers, by fetching event data based on configurable filters like tags, priority,
+    and source types.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Key | Password | Yes | The API Key used to authenticate with the DataDog
+    API. |
+
+    | APP Key | Password | Yes | The Application Key used to authenticate with the
+    DataDog API. |
+
+    | Base URL | String | Yes | The base URL for the DataDog API (default: https://api.datadoghq.com).
+    |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
+
+    | Max Days Back | Integer | Yes | The maximum number of days to look back when
+    fetching events. |
+
+    | Priority | String | No | The priority of events to retrieve (e.g., 'low', 'normal',
+    'all'). |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    Python process. |
+
+    | Sources | String | Yes | The sources to retrieve events from (e.g., 'alert').
+    |
+
+    | Tags | String | No | A comma-separated list of tags to filter the list of monitors.
+    |
+
+    | Unaggregated | Boolean | No | If true, retrieves the full list of events; if
+    false, retrieves an aggregated list. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the DataDog API using the provided API and
+    Application keys.
+
+    2. **Time Range Calculation**: Determines the time range for fetching events based
+    on the last successful run's timestamp or the configured `Max Days Back`.
+
+    3. **Event Retrieval**: Queries the DataDog API (`/api/v1/events`) for events
+    matching the specified sources, tags, priority, and aggregation settings.
+
+    4. **Filtering**: Iterates through the retrieved events, filtering for those with
+    "error" or "warning" alert types.
+
+    5. **Data Processing**: For each relevant event, fetches full details, maps the
+    data (including tags, metrics, and URLs) into a standardized `AlertInfo` format,
+    and identifies child events if present.
+
+    6. **Ingestion**: Creates and ingests the processed alerts into the Google SecOps
+    platform.
+
+    7. **State Management**: Updates the last saved timestamp to ensure subsequent
+    runs only fetch new events.

@@ -13,6 +13,10 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping). It does not match any of the specific
+      functional categories like Enrich IOC, Contain Host, etc. It is a utility action
+      for verifying integration settings.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,50 +32,20 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Ping** action is a utility designed to verify the connectivity between the
-    Google SecOps platform and a specific Azure DevOps instance. It ensures that the
-    provided credentials (Personal Access Token) and configuration (Organization and
-    Base URL) are valid and that the network path is open.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies entirely on
-    the integration's global configuration parameters:
-
-    * **Personal Access Token**: The token used for authentication.
-
-    * **Organization**: The Azure DevOps organization name.
-
-    * **Base URL**: The base URL of the Azure DevOps instance.
-
-
-    ### Additional Notes
-
-    This action is typically used during the initial setup of the integration or for
-    troubleshooting connection issues. It does not process any entities or modify
-    any data.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves the `Personal Access Token`,
-    `Organization`, and `Base URL` from the integration configuration.
-
-    2. **Authentication**: It initializes a basic authentication object using the
-    provided token.
-
-    3. **Connection Initialization**: It establishes a connection to the Azure DevOps
-    API using the constructed organization URL.
-
-    4. **Connectivity Test**: The action attempts to fetch a list of projects using
-    the `get_projects` method from the Azure DevOps Core Client to verify API access.
-
-    5. **Result Reporting**: If the request is successful, it reports a successful
-    connection. If an exception occurs, it captures the error and reports a connection
-    failure.
+    General description: This action tests the connectivity between the SOAR platform
+    and the Azure DevOps integration. It verifies that the provided credentials and
+    configuration settings are valid by attempting to retrieve the list of projects
+    from the Azure DevOps instance. Parameters description: The action requires the
+    following parameters: Personal Access Token (String, Mandatory): The personal
+    access token used for authentication with Azure DevOps. Organization (String,
+    Mandatory): The name of the Azure DevOps organization. Base URL (String, Mandatory):
+    The base URL for the Azure DevOps instance. Additional notes: This action is a
+    connectivity test and does not perform any data enrichment or modification of
+    external or internal systems. Flow description: 1. Extract the configuration parameters
+    (Personal Access Token, Organization, Base URL). 2. Initialize the Azure DevOps
+    connection using the provided credentials. 3. Attempt to retrieve the list of
+    projects using the core client. 4. Return a success or failure message based on
+    the outcome of the connection attempt.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -80,10 +54,19 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action attempts to connect to an external service (Azure DevOps) to verify
+      credentials and connectivity. It performs a GET-like operation (get_projects)
+      to test the connection. It does not mutate external data, nor does it interact
+      with internal SOAR entities or case data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named Ping. According to the instructions, Actions named Ping
+      must not be categorized as enrichment actions. Even though it fetches data (projects),
+      it is a connectivity test, not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -99,6 +82,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference siemplify.target_entities or any entity objects.
+      It is a global connectivity test.
 Trigger Azure Build:
   action_product_categories:
     add_alert_comment: false
@@ -114,6 +100,11 @@ Trigger Azure Build:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action triggers an external build process in Azure DevOps and monitors its
+      status. It does not perform enrichment, containment, or ticketing operations.
+      It is an automation/orchestration action. Therefore, it does not match any of
+      the provided categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -129,52 +120,41 @@ Trigger Azure Build:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    Triggers an Azure DevOps pipeline build and monitors its status asynchronously.
+    This action allows users to initiate automated workflows in Azure DevOps by providing
+    a build definition ID and associated variables.
 
-    Triggers a specific build pipeline in Azure DevOps using a Build Definition ID
-    and optional variables. This action is asynchronous, meaning it initiates the
-    build and then periodically polls Azure DevOps to monitor the progress until the
-    build completes, fails, or is canceled.
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (Project, Organization, Token, Base URL)
+    and action parameters (Build Definition ID, Build Variables).
+
+    2. Sends a POST request to the Azure DevOps API to initiate the build.
+
+    3. Returns the triggered build ID.
+
+    4. Asynchronously polls the Azure DevOps API (via `query_job`) to check the build
+    status until completion.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Build Definition Id | String | Yes | The unique identifier of the build definition
-    (pipeline) you want to trigger. |
+    | Build Definition Id | string | Yes | The build definition ID of the pipeline
+    you want to trigger. |
 
-    | Build Variables | Code (JSON) | Yes | A JSON-formatted string containing the
-    variables to be passed to the pipeline execution. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: Retrieves integration configuration (Organization, Project,
-    Personal Access Token, and Base URL) and action parameters.
-
-    2. **Trigger Build**: Sends a POST request to the Azure DevOps Build API to queue
-    a new build for the specified definition ID with the provided variables.
-
-    3. **Capture Build ID**: Extracts the unique ID of the newly created build from
-    the API response.
-
-    4. **Status Polling (Async)**: Enters a polling phase where it sends GET requests
-    to the Azure DevOps API to check the current status (`status`) and outcome (`result`)
-    of the build.
-
-    5. **Completion**: The action finishes with a 'Completed' status if the build
-    succeeds or partially succeeds, and 'Failed' if the build fails or is canceled.
+    | Build Variables | code | Yes | The variables to pass for the given pipeline.
+    |
 
 
     ### Additional Notes
 
-    - This action requires a Personal Access Token (PAT) with sufficient permissions
-    to trigger and view builds in the specified Azure DevOps project.
-
-    - The `Build Variables` parameter must be a valid JSON string.
+    This action is asynchronous and will continue to run until the build is completed
+    or failed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -183,12 +163,18 @@ Trigger Azure Build:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a new build pipeline execution in the Azure DevOps environment via
-      a POST request.
+      Triggers a new build pipeline in Azure DevOps.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action triggers an external build (POST) and polls for status (GET). It
+      does not modify internal SOAR entities or case data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is an automation/orchestration task that triggers an external process.
+      It does not fetch context for entities (enrichment) or perform any of the other
+      defined categories.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -204,6 +190,9 @@ Trigger Azure Build:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It uses configuration and action
+      parameters to trigger a build.
 Wait Until Web Resource Is Up:
   action_product_categories:
     add_alert_comment: false
@@ -219,6 +208,10 @@ Wait Until Web Resource Is Up:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a health check on a URL to determine if it is reachable.
+      It does not fit into any of the provided categories (Enrichment, Containment,
+      Ticket management, etc.). It is a workflow utility action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -234,41 +227,38 @@ Wait Until Web Resource Is Up:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Wait Until Web Resource Is Up is a utility action designed to monitor the availability
-    of a specific URL. It functions as an asynchronous polling mechanism that repeatedly
-    checks the status of a web resource until it becomes accessible.
+    This action polls a specified URL to check if a web resource is available (HTTP
+    200 OK). It is designed to be used in asynchronous workflows where the system
+    needs to wait for a service or endpoint to become reachable.
 
 
-    ### Flow Description:
-
-    1. **Parameter Extraction:** The action retrieves the target URL from the input
-    parameters.
-
-    2. **Connectivity Check:** It performs an HTTP GET request to the specified URL
-    with a 5-second timeout.
-
-    3. **Status Evaluation:** The action checks if the HTTP response indicates success
-    (status code < 400).
-
-    4. **Execution State Management:**
-        * If the resource is accessible, the action state is set to `COMPLETED`.
-        * If the resource is inaccessible or the request fails, the action state is
-    set to `IN_PROGRESS`, allowing the SOAR platform to retry the check after a delay.
-
-    ### Parameters Description:
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | URL | String | Yes | The full web address (e.g., https://example.com) of the
-    resource to monitor. |
+    | URL | string | Yes | The URL of the web resource to check. |
 
 
-    ### Additional Notes:
+    ### Flow Description
 
-    This action is typically used in playbooks to ensure a service or endpoint is
-    fully operational before proceeding to subsequent steps that depend on that resource.
+    1. Extract the `URL` parameter.
+
+    2. Perform an HTTP GET request to the provided URL.
+
+    3. Check if the response status is successful (HTTP 200-299).
+
+    4. If successful, return `True` and set the execution state to `COMPLETED`.
+
+    5. If unsuccessful, return `False` and set the execution state to `INPROGRESS`
+    (triggering a retry/wait).
+
+
+    ### Additional Notes
+
+    This is an orchestration utility action used for workflow control. It does not
+    perform enrichment or modify any system state.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -279,8 +269,17 @@ Wait Until Web Resource Is Up:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs an HTTP GET request to check the availability of a web resource.
+      It does not modify any external or internal data. It is an orchestration/utility
+      action used to control workflow execution flow (wait/retry).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility/orchestration action used to poll a URL for availability.
+      It does not retrieve context about alerts or entities, nor does it update entity
+      profiles or case data. Therefore, it does not meet the criteria for an Enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -296,3 +295,6 @@ Wait Until Web Resource Is Up:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities` or any entity-specific
+      logic. It operates on a standalone URL parameter.

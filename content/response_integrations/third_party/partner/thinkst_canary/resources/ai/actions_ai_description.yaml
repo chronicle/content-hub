@@ -13,6 +13,12 @@ Acknowledge Console Alert:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action acknowledges an incident on the external Canary Console. It does
+      not modify the alert status within the SecOps platform (which is the requirement
+      for 'Update Alert'), nor does it perform any of the other listed actions (e.g.,
+      ticket creation, IOC management, host containment). Therefore, it does not match
+      any of the defined product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,43 +36,48 @@ Acknowledge Console Alert:
   ai_description: >-
     ### General Description
 
-    The **Acknowledge Console Alert** action is designed to mark a specific incident
-    as acknowledged on the Thinkst Canary Console. This action is primarily used to
-    synchronize alert statuses between Google SecOps and the Canary platform, ensuring
-    that once an analyst has addressed an alert in the SOAR, the corresponding event
-    is updated in the source system to prevent duplicate effort.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not have any input parameters. |
-
-
-    ### Additional Notes
-
-    This action relies on metadata (specifically the `AlertId`) that must be present
-    in the `additional_properties` of the security events associated with the alert.
-    This metadata is typically populated by the Thinkst Canary connector during the
-    ingestion process. If the `AlertId` is missing, the action will fail.
+    The Acknowledge Console Alert action is used to mark an incident as acknowledged
+    on the Thinkst Canary Console. This action helps synchronize the state of an incident
+    between the Canary Console and the SOAR platform, ensuring that acknowledged alerts
+    are tracked appropriately in the external system.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval:** The action retrieves the integration's global
-    settings, including the API Key and Console Hash.
+    1. **Configuration Extraction**: The action retrieves the required `API Key`,
+    `Console Hash`, and `Verify SSL` settings from the integration configuration.
 
-    2. **Metadata Extraction:** It accesses the `security_events` of the current alert
-    in Google SecOps and extracts the `AlertId` from the first event's `additional_properties`.
+    2. **Validation**: It verifies that the `API Key` and `Console Hash` are not set
+    to their default values. If they are, the action fails.
 
-    3. **External API Call:** It executes a POST request to the Thinkst Canary API
-    endpoint `/incident/acknowledge` using the extracted `AlertId` as the identifier.
+    3. **Incident Identification**: The action accesses the `current_alert` object
+    in the SOAR platform to retrieve the `AlertId` from the `security_events` property.
 
-    4. **Execution Finalization:** The action concludes by reporting whether the acknowledgment
-    was successful based on the response from the Canary Console.
+    4. **Acknowledgment**: It sends a POST request to the Canary Console API (`/incident/acknowledge`)
+    using the retrieved `AlertId` to acknowledge the incident.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Key | String | Yes | The API key used to authenticate with the Canary Console.
+    |
+
+    | Console Hash | String | Yes | The unique hash/domain identifier for the Canary
+    Console. |
+
+    | Verify SSL | Boolean | No | Determines whether to verify SSL certificates when
+    making API requests. |
+
+
+    ### Additional Notes
+
+    - This action requires that the alert was originally ingested by the Thinkst Canary
+    Connector, as it relies on the `AlertId` being present in the `additional_properties`
+    of the alert's security events.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -75,13 +86,21 @@ Acknowledge Console Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Acknowledges an incident on the Thinkst Canary Console, changing its status
-      from unacknowledged to acknowledged via a POST request to the /incident/acknowledge
-      endpoint.
+      The action sends a POST request to the Canary Console API to acknowledge an
+      incident, changing its status in the external system.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to an external API (Canary Console) to acknowledge
+      an incident. It does not fetch data for enrichment, nor does it modify any internal
+      SOAR data (entities, insights, or case comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a state-changing operation (acknowledgment) on an external system.
+      It does not fetch data for enrichment, nor does it perform any of the allowed
+      internal mutations (comments, insights, entity updates). Therefore, it is not
+      an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -97,6 +116,9 @@ Acknowledge Console Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates on the `current_alert` object to retrieve the `AlertId`
+      from its security events. It does not iterate over or filter `target_entities`.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -112,6 +134,10 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity check (Ping) to verify API credentials and console
+      accessibility. It does not perform any of the listed functional operations such
+      as enriching IOCs, updating tickets, or modifying alert data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -127,48 +153,46 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Verifies connectivity to the Thinkst Canary Console by testing the provided API
-    Key and Console Hash against the `/ping` endpoint. This action is primarily used
-    to ensure that the integration is correctly configured and can communicate with
-    the external service.
+    Verifies connectivity to the Thinkst Canary Console by validating the provided
+    API credentials and console hash. This action ensures that the integration is
+    correctly configured and can communicate with the external service.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves the 'API Key', 'Console Hash', and 'Verify
-    SSL' settings from the integration configuration.
+    1. **Configuration Extraction**: The action retrieves the 'API Key', 'Console
+    Hash', and 'Verify SSL' settings from the integration configuration.
 
-    2. **Validation:** Checks if the API Key and Console Hash have been changed from
-    their default placeholder values.
+    2. **Validation**: It checks if the 'API Key' and 'Console Hash' are provided
+    and not set to their default placeholder values. If missing, the action fails.
 
-    3. **Connectivity Test:** Initializes the Thinkst Manager and sends a GET request
-    to the `/ping` endpoint of the Canary Console.
+    3. **Connectivity Check**: It initializes the `ThinkstActionManager` and sends
+    a GET request to the `/ping` endpoint of the Canary Console API.
 
-    4. **Result Handling:** Evaluates the response from the console. If the response
-    indicates success, the action completes successfully; otherwise, it reports a
-    failure.
+    4. **Result**: Based on the API response, it determines if the connection was
+    successful and terminates the action with the appropriate status and message.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | API Key | String | Yes (Config) | The authentication token used to access the
-    Thinkst Canary API. |
+    | API Key | String | Yes | The API key used to authenticate with the Canary Console.
+    |
 
-    | Console Hash | String | Yes (Config) | The unique identifier/subdomain for your
-    Canary Console (e.g., the 'mycompany' part of 'mycompany.canary.tools'). |
+    | Console Hash | String | Yes | The unique domain hash for the Canary Console
+    (e.g., 'example' in 'example.canary.tools'). |
 
-    | Verify SSL | Boolean | No (Config) | Determines whether to verify the SSL certificate
-    of the Canary Console. |
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to the console. |
 
 
     ### Additional Notes
 
-    * This action does not process any entities and is used solely for configuration
-    validation.
+    This action is strictly for connectivity verification and does not perform any
+    data enrichment or system mutations.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -177,10 +201,18 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a simple connectivity check (ping) against the Thinkst Canary
+      Console API. It does not fetch contextual data for entities, nor does it mutate
+      any external or internal system state. It is a utility action for configuration
+      validation.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and performs a connectivity check. Per the provided
+      instructions, actions named 'Ping' must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -196,3 +228,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It operates solely based on
+      configuration parameters provided in the integration settings.

@@ -13,6 +13,10 @@ Generate QR Code:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action generates a QR code image and attaches it to the case. It does not
+      match any of the predefined categories (Enrich IOC, Contain Host, etc.). It
+      is a utility action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,70 +34,54 @@ Generate QR Code:
   ai_description: >-
     ### General Description
 
-    Use the **Generate QR Code** action to create a QR code image from a provided
-    string of data, such as a URL, text, or identifier. This utility action is useful
-    for visual representation of data within a case. The generated image is automatically
-    attached to the case wall for easy access by analysts.
+    Generates a QR code image from a provided string of data. This action interacts
+    with an external QR code generation service to create an image based on user-defined
+    parameters such as size, format, and error correction level. The resulting image
+    is saved as a temporary file and attached to the current case.
 
 
     ### Parameters Description
 
-
-    | Parameter | Description | Expected Type | Mandatory |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Content | The data, URL, or text string to encode into the QR code. | String
-    | Yes |
+    | Content | string | Yes | The data, URL, or text string to encode into the QR
+    code. |
 
-    | Size | The dimensions of the generated image in pixels in the format {width}x{height}.
-    The maximum value is 1000x1000. Default is 200x200. | String | No |
+    | Size | string | No | The dimensions of the generated image in pixels in the
+    format {width}x{height}. The maximum value is 1000x1000. Default: 200x200. |
 
-    | Image Format | The file format for the output image. Options: png, jpg, gif,
-    svg. Default is png. | DDL | No |
+    | Image Format | ddl | No | The file format for the output image (png, jpg, gif,
+    svg). Default: png. |
 
-    | Error Correction | The level of data redundancy applied to the QR code. Higher
-    levels increase damage resistance but result in a more complex image. Options:
-    Low (7%), Medium (15%), Quartile (25%), High (30%). Default is Low. | DDL | No
-    |
+    | Error Correction | ddl | No | The level of data redundancy applied to the QR
+    code. Higher levels increase damage resistance, but result in a more complex image.
+    Default: Low. |
 
-    | Margin | The width of the blank border (quiet zone) around the QR code, measured
-    in pixels. Default is 1. | String | No |
+    | Margin | string | No | The width of the blank border (quiet zone) around the
+    QR code, measured in pixels. Default: 1. |
 
-    | Foreground Color | The color of the QR code modules in R-G-B format. Default:
-    0-0-0 (black). | String | No |
+    | Foreground Color | string | No | The color of the QR code modules in R-G-B format.
+    Default: 0-0-0 (black). |
 
-    | Background Color | The color of the image background in R-G-B format. Default:
-    255-255-255 (white). | String | No |
-
-
-    ### Additional Notes
-
-    - This action does not run on Google SecOps entities.
-
-    - The generated QR code is saved as a temporary file and then uploaded as a case
-    attachment.
-
-    - The action returns a base64 encoded string of the image in the JSON results
-    for use in subsequent playbook steps.
+    | Background Color | string | No | The color of the image background in R-G-B
+    format. Default: 255-255-255 (white). |
 
 
     ### Flow Description
 
-    1. **Extract Parameters:** The action retrieves the input string and optional
-    formatting parameters (size, colors, error correction) from the user configuration.
+    1. Extract configuration parameters (Content, Size, Image Format, Error Correction,
+    Margin, Foreground Color, Background Color).
 
-    2. **API Request:** It sends a request to the GOQR API to generate the QR code
-    image based on the provided specifications.
+    2. Invoke the external QR code generation API with the provided parameters.
 
-    3. **File Handling:** The received image bytes are saved to a temporary file on
-    the system.
+    3. Save the returned image bytes to a temporary file.
 
-    4. **Case Integration:** The temporary file is attached to the Google SecOps case
-    wall.
+    4. Attach the generated file to the case wall.
 
-    5. **Result Reporting:** The action populates the JSON results with the base64-encoded
-    image and metadata, then cleans up temporary files.
+    5. Return a JSON result containing the base64-encoded image and configuration
+    details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -101,12 +89,19 @@ Generate QR Code:
     can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: false
-    external_data_mutation_explanation: 'null'
+    external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds the generated QR code image as an attachment to the case wall.
+    internal_data_mutation_explanation: Adds an attachment to the case wall.
+    reasoning: >-
+      The action calls an external API to generate a QR code image (fetches_data=true).
+      It does not mutate external systems (can_mutate_external_data=false). It adds
+      an attachment to the case wall, which is an internal mutation (can_mutate_internal_data=true).
   categories:
     enrichment: false
+    reasoning: >-
+      The action generates a QR code image and attaches it to the case. It does not
+      gather supplemental context about alerts or entities, so it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -122,6 +117,9 @@ Generate QR Code:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It generates a QR code from a provided
+      string and attaches it to the case.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -137,6 +135,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      functional operations like enriching IOCs, updating tickets, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -152,39 +153,15 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Ping** action is a diagnostic tool used to verify the connectivity between
-    the Google SecOps platform and the QR Server API. It ensures that the integration
-    is correctly configured and that the network path to the API endpoint is open.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action uses the 'API Root' and 'Verify SSL' settings defined in the integration
-    configuration to establish the connection. It performs a lightweight request to
-    a specific endpoint to confirm the service is responsive.
-
-
-    ### Flow Description
-
-    1. **Initialize API Client**: The action starts by retrieving the integration's
-    global configuration, including the API Root URL and SSL verification settings.
-
-    2. **Execute Connectivity Test**: It sends a test request to the QR Server API
-    (specifically targeting the QR code creation endpoint with a 'PingCheck' payload).
-
-    3. **Evaluate Response**: The action checks if the API responds successfully without
-    errors.
-
-    4. **Report Status**: If the connection is successful, it returns a confirmation
-    message; otherwise, it provides an error message indicating a configuration or
-    connectivity issue.
+    Tests connectivity to the QR Server API. This action verifies that the integration
+    is correctly configured and the server is reachable. ### Flow 1. The action initializes
+    the API client using the configured API Root and Verify SSL settings. 2. It sends
+    a request to the QR Server API using the ping endpoint. 3. The action returns
+    a success message if the connection is established, or an error message if the
+    connection fails. ### Parameters | Parameter | Type | Mandatory | Description
+    | | :--- | :--- | :--- | :--- | | API Root | String | Yes | The base URL of the
+    QR Server API. | | Verify SSL | Boolean | Yes | Whether to verify SSL certificates
+    when connecting to the API. | ### Additional Notes There are no additional notes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -193,10 +170,18 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity check (ping) to the external QR Server API.
+      It does not fetch contextual data for entities, nor does it mutate any external
+      or internal data. It is a diagnostic action.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action. According to the instructions, 'Actions named
+      Ping must not be categorized as enrichment actions.' Therefore, it is not an
+      enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -212,6 +197,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a global connectivity
+      test.
 Scan QR Code:
   action_product_categories:
     add_alert_comment: false
@@ -227,6 +215,9 @@ Scan QR Code:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action decodes a QR code from an image. It does not match any of the defined
+      categories such as enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -244,50 +235,39 @@ Scan QR Code:
   ai_description: >-
     ### General Description
 
-    The **Scan QR Code** action allows users to extract and decode information from
-    a QR code image. The image must be provided as a Base64-encoded string. This utility
-    is particularly useful for security analysts who need to programmatically inspect
-    the contents of QR codes found in phishing emails, documents, or other suspicious
-    artifacts.
+    Use the Scan QR Code action to extract and read data from a QR code image provided
+    in Base64 format. This action interacts with an external QR code scanning API
+    to decode the image content and return the results.
 
 
     ### Parameters Description
 
-    | Parameter | Description | Type | Mandatory | Default Value |
+    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | QR Image Base64 Blob | The Base64-encoded string representing the QR code image
-    file to be scanned. | string | True | "" |
+    | QR Image Base64 Blob | string | Yes | The Base64-encoded string representing
+    the QR code image file. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the Base64-encoded image string
-    from the input parameters.
+    1. Accepts a Base64-encoded string representing a QR code image.
 
-    2. **Base64 Decoding**: The string is decoded into raw image bytes. If the string
-    is not valid Base64, the action raises a `GOQRError`.
+    2. Decodes the Base64 string into binary image data.
 
-    3. **API Request**: The image bytes are sent to the GOQR API's `read-qr-code`
-    endpoint.
+    3. Sends the image data to the configured QR code scanning API.
 
-    4. **Response Validation**: The action checks if the API successfully identified
-    and decoded any QR code symbols within the image.
+    4. Parses the API response to extract the decoded QR code data.
 
-    5. **Data Extraction**: If valid symbols are found, the action extracts the decoded
-    data and metadata (such as the QR code type).
-
-    6. **Output Generation**: The decoded results are formatted into a JSON object,
-    and the action completes successfully.
+    5. Returns the decoded information as a JSON result.
 
 
     ### Additional Notes
 
-    - The action expects a valid image file (e.g., PNG, JPG) encoded in Base64 format.
-
-    - If the image does not contain a recognizable QR code or if the API cannot decode
-    it, the action will fail with a descriptive error message.
+    The action requires a valid Base64-encoded string of a QR code image to function.
+    If the provided string is not a valid Base64-encoded image or does not contain
+    a QR code, the action will fail.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -298,8 +278,16 @@ Scan QR Code:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a read-only operation by sending an image to an external
+      API to decode its contents. It does not modify any external systems or internal
+      SOAR data (entities, insights, or comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for decoding QR codes. It does not perform enrichment
+      on entities or alerts, nor does it meet the criteria for an enrichment action
+      as it does not operate on SOAR entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -315,3 +303,6 @@ Scan QR Code:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `target_entities`. It processes a user-provided Base64
+      string directly.

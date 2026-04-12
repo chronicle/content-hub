@@ -1,46 +1,85 @@
 Vectra QUX - Entities Connector:
-  ai_description: "### General Description\nThe Vectra QUX - Entities Connector enables\
-    \ the ingestion of security data from the Vectra QUX platform into Google SecOps.\
-    \ Unlike standard alert connectors, this integration focuses on **Entities** (Hosts\
-    \ or Accounts). It retrieves entities that have active detections and maps each\
-    \ entity to a Google SecOps alert, while the individual detections associated\
-    \ with that entity are ingested as alert events. This provides a consolidated,\
-    \ asset-centric view of malicious activity.\n\n### Parameters Description\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| API Root\
-    \ | String | Yes | The base URL of the Vectra QUX API (e.g., `https://<address>:<port>`).\
-    \ |\n| API Token | Password | Yes | A unique identifier used to authenticate and\
-    \ authorize access to the API. |\n| Entity Type | String | Yes | The type of entity\
-    \ to fetch. Supported values: `Host`, `Account`. Default is `Host`. |\n| DeviceProductField\
-    \ | String | Yes | The field name used to determine the device product. Default:\
-    \ `Vectra QUX`. |\n| EventClassId | String | Yes | The field name used to determine\
-    \ the event name/sub-type. Default: `detection_type`. |\n| Max Hours Backwards\
-    \ | Integer | No | Number of hours before the first connector iteration to retrieve\
-    \ data from. Default: `0`. |\n| Threat Score GTE | Integer | No | Filters for\
-    \ entities with threat scores greater than or equal to this value. |\n| Certainty\
-    \ Score GTE | Integer | No | Filters for entities with certainty scores greater\
-    \ than or equal to this value. |\n| Detection Category | String | No | Filters\
-    \ results by category (e.g., Command & Control, Lateral Movement, Exfiltration).\
-    \ |\n| Detection Type | String | No | Filters results by a specific Vectra detection\
-    \ type. |\n| Specific Tag | String | No | Filters results by a specific tag assigned\
-    \ in Vectra. |\n| Partial Tag | String | No | Filters results by a partial tag\
-    \ match. |\n| Query | String | No | A custom query string used to specify advanced\
-    \ conditions for filtering results. |\n| Limit | Integer | No | Maximum number\
-    \ of entities to fetch in a single iteration. |\n| Verify SSL | Boolean | No |\
-    \ If enabled, the connector will verify the SSL certificate of the API Root. |\n\
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the\
-    \ python process running the script. |\n\n### Flow Description\n1. **Initialization**:\
-    \ The connector authenticates with the Vectra QUX API and retrieves the timestamp\
-    \ of the last successful run and a list of previously processed entity IDs to\
-    \ avoid duplicates.\n2. **Entity Fetching**: It queries the Vectra `/search/hosts`\
-    \ or `/search/accounts` endpoint for entities modified since the last execution,\
-    \ applying user-defined filters such as Threat/Certainty scores, tags, and categories.\n\
-    3. **Detection Enrichment**: For every entity identified, the connector performs\
-    \ a secondary API call to fetch all associated \"active\" detections for that\
-    \ specific asset.\n4. **Data Mapping**: \n    *   The **Entity** metadata (ID,\
-    \ Name, Severity) is mapped to a Google SecOps **Alert**.\n    *   Each **Detection**\
-    \ associated with the entity is transformed into a SecOps **Event**.\n    *  \
-    \ Vectra severity levels (Low, Medium, High, Critical) are mapped to corresponding\
-    \ SecOps priority values.\n5. **Case Creation**: The connector packages the mapped\
-    \ data into `AlertInfo` objects and ingests them into Google SecOps.\n6. **State\
-    \ Persistence**: Upon successful ingestion, the connector updates the last modification\
-    \ timestamp and the list of processed IDs to ensure continuity in the next iteration."
+  ai_description: >-
+    ### General Description
+
+    The Vectra QUX - Entities Connector integrates Google SecOps (SOAR) with the Vectra
+    QUX platform. It is designed to periodically retrieve security entities, such
+    as Hosts or Accounts, and their associated detections. By mapping these entities
+    to alerts and their detections to events, the connector enables security teams
+    to monitor, investigate, and respond to threats identified by Vectra directly
+    within the SOAR platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Vectra QUX API. |
+
+    | API Token | Password | Yes | Authentication token for the Vectra QUX API. |
+
+    | Certainty Score GTE | Integer | No | Filters entities with a certainty score
+    greater than or equal to this value. |
+
+    | Detection Category | String | No | Filters results by detection category (e.g.,
+    Command & Control, Botnet Activity). |
+
+    | Detection Type | String | No | Filters results by specific detection type. |
+
+    | DeviceProductField | String | Yes | Field name used to determine the device
+    product. |
+
+    | Entity Type | String | Yes | The type of entity to fetch (e.g., Host, Account).
+    |
+
+    | EventClassId | String | Yes | Field name used to determine the event name. |
+
+    | Limit | Integer | No | Maximum number of entities to fetch per iteration. |
+
+    | Max Hours Backwards | Integer | No | Number of hours to look back for initial
+    data retrieval. |
+
+    | Partial Tag | String | No | Partial tag to filter results. |
+
+    | PythonProcessTimeout | String | Yes | Timeout limit (in seconds) for the script
+    execution. |
+
+    | Query | String | No | Custom query string for advanced filtering. |
+
+    | Specific Tag | String | No | Specific tag to filter results. |
+
+    | Threat Score GTE | Integer | No | Filters entities with a threat score greater
+    than or equal to this value. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates for API requests.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The connector initializes the connection to the Vectra
+    QUX API using the provided API Root and Token.
+
+    2. **Validation**: Input parameters are validated to ensure correct entity types
+    and score formats.
+
+    3. **Data Retrieval**: The connector queries the Vectra QUX API for entities (Hosts
+    or Accounts) based on the configured filters (e.g., threat score, certainty, tags,
+    and time range).
+
+    4. **Deduplication**: It checks against previously processed alert IDs to avoid
+    creating duplicate cases.
+
+    5. **Processing**: For each retrieved entity, the connector fetches associated
+    detections.
+
+    6. **Mapping**: Each entity is mapped to a SOAR alert, and its detections are
+    mapped as alert events.
+
+    7. **Ingestion**: The processed alerts are ingested into Google SecOps as cases
+    for further investigation.
+
+    8. **Cleanup**: Timestamps and processed IDs are saved to maintain state for the
+    next iteration.

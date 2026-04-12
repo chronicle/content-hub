@@ -13,6 +13,10 @@ Gather Remote Agent Datapoints:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic tool that collects local logs and system information.
+      It does not perform any of the defined product category operations (e.g., enrichment,
+      containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,55 +32,51 @@ Gather Remote Agent Datapoints:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Gathers diagnostic information and logs from a Google SecOps Remote Agent to assist
-    in troubleshooting integration or connector issues. This action collects a wide
-    range of telemetry, including agent status, system resource utilization (CPU,
-    memory, uptime), file system structure, and recent error logs from both the core
-    agent and specific integration components.
+    ### General Description
+
+    The 'Gather Remote Agent Datapoints' action is a diagnostic tool designed to collect
+    comprehensive system and log information from a remote agent machine. It executes
+    a series of local shell commands to gather data such as system load, environment
+    variables, file information, and agent logs. This information is then logged to
+    the SOAR logger for troubleshooting and support purposes.
 
 
-    ### Flow Description:
-
-    1. **Parameter Extraction:** Retrieves the target `IntegrationName` and optional
-    `ConnectorName` from the action configuration.
-
-    2. **Agent Status Collection:** Reads and parses the `agent_status.json` file
-    to identify installed versions and general agent health.
-
-    3. **System Load Analysis:** Executes system commands (`lscpu`, `uptime`, `free`)
-    to capture the current performance state of the host machine.
-
-    4. **File Metadata Retrieval:** Lists files within the agent's installation directory
-    to verify deployment structure.
-
-    5. **Log Parsing:** Scans `/var/log/SiemplifyAgent/agent.log` and specific connector
-    log files for recent error patterns, filtering out sensitive information like
-    tokens or keys.
-
-    6. **Diagnostic Logging:** Outputs all gathered data to the action's execution
-    logs for analyst review.
-
-
-    ### Parameters Description:
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | IntegrationName | String | Yes | The name of the integration for which diagnostic
-    data is being collected. |
+    | IntegrationName | string | Yes | The name of the integration for which to analyze
+    logs. |
 
-    | ConnectorName | String | No | The specific name of the connector to analyze
-    for errors. |
+    | ConnectorName | string | No | The name of the connector to filter logs. |
 
 
-    ### Additional Notes:
+    ### Additional Notes
 
-    - This action is primarily a support and debugging tool. It does not modify the
-    state of the agent or the external systems it monitors.
+    This action does not interact with external APIs or modify any internal SOAR data.
+    It is strictly a diagnostic tool that reads local system information and logs
+    it to the SOAR logger.
 
-    - Sensitive data such as IP addresses, MAC addresses, and environment tokens are
-    automatically truncated or filtered from the logs.
+
+    ### Flow Description
+
+    1. **Extract Parameters**: The action extracts the `IntegrationName` and `ConnectorName`
+    parameters from the configuration.
+
+    2. **Initialize Collectors**: It initializes several collector classes (`RALogsCollector`,
+    `AgentLoadInfoCollector`, `CollectFileInformation`, `CollectAgentLogs`) to prepare
+    for data gathering.
+
+    3. **Execute Commands**: The action runs local shell commands (e.g., `cat`, `lscpu`,
+    `uptime`, `free`, `env`, `ls`, `date`) on the agent machine to collect diagnostic
+    data.
+
+    4. **Log Information**: The collected data is logged to the `siemplify.LOGGER`
+    for analyst review.
+
+    5. **Complete**: The action returns a completed status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -85,10 +85,21 @@ Gather Remote Agent Datapoints:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes local shell commands (e.g., `cat`, `lscpu`, `uptime`, `free`,
+      `env`, `ls`, `date`) on the agent machine to collect diagnostic logs and system
+      information. It does not interact with external APIs, nor does it modify any
+      internal SOAR data (entities, insights, comments). It is a diagnostic tool for
+      support purposes.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a diagnostic tool that collects local logs and system information.
+      It does not fetch data from external sources to enrich alerts or entities, nor
+      does it modify any internal or external data. Therefore, it does not meet the
+      criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -104,3 +115,6 @@ Gather Remote Agent Datapoints:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It operates based on configuration
+      parameters provided to the action.

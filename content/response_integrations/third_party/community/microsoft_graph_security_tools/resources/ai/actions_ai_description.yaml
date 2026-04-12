@@ -13,6 +13,9 @@ Delete Attachment:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action modifies the state of an email by removing an attachment. This aligns
+      with the 'Update Email' category, which covers modifications to email state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,25 +31,44 @@ Delete Attachment:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description\nDeletes a specific attachment from a user's mailbox using
-    the Microsoft Graph API. This action is primarily used as a remediation step to
-    remove malicious or unauthorized files from an email message after they have been
-    identified.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description
-    |\n| :--- | :--- | :--- | :--- |\n| **User ID** | String | Yes | The email address
-    or `userPrincipalName` of the user whose mailbox contains the message. |\n| **Message
-    ID** | String | Yes | The unique identifier of the email message containing the
-    attachment. |\n| **Attachment ID** | String | Yes | The unique identifier of the
-    specific attachment to be deleted. |\n\n### Flow Description\n1. **Authentication**:
-    The action connects to Microsoft Graph using the configured Client ID, Tenant
-    ID, and either a Client Secret or a Certificate.\n2. **Parameter Extraction**:
-    It retrieves the `User ID`, `Message ID`, and `Attachment ID` from the action
-    input parameters.\n3. **API Execution**: It sends a `DELETE` request to the Microsoft
-    Graph endpoint for the specific attachment: `https://graph.microsoft.com/v1.0/users/{user_id}/messages/{message_id}/attachments/{attachment_id}`.\n4.
-    **Result Handling**: The action evaluates the response. A `204 No Content` status
-    indicates a successful deletion. The result is logged and returned as a JSON object.\n\n###
-    Additional Notes\n- This action performs a permanent deletion of the attachment.\n-
-    The integration must have the `Mail.ReadWrite` permission granted in the Azure
-    portal for this action to function correctly.
+    Deletes a specific attachment from a user's email message using the Microsoft
+    Graph API. This action is useful for removing malicious or sensitive attachments
+    from user mailboxes.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (Client ID, Secret ID, Tenant ID, Certificate
+    details) and action parameters (User ID, Message ID, Attachment ID).
+
+    2. Initializes the `MicrosoftGraphSecurityManager` to authenticate with the Microsoft
+    Graph API.
+
+    3. Executes a DELETE request to the Microsoft Graph API endpoint for the specified
+    attachment.
+
+    4. Returns the status and output message of the deletion request.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | User ID | string | Yes | The email address or user principal name of the user
+    whose mailbox contains the message. |
+
+    | Message ID | string | Yes | The unique identifier of the email message. |
+
+    | Attachment ID | string | Yes | The unique identifier of the attachment to be
+    deleted. |
+
+
+    ### Additional Notes
+
+    This action performs a destructive operation on external data (Microsoft 365).
+    Ensure the provided IDs are correct before execution.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -55,12 +77,20 @@ Delete Attachment:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes a specific attachment from a user's email message in Microsoft Graph
-      (Office 365).
+      Deletes an attachment from a user's email message in Microsoft 365 via the Microsoft
+      Graph API.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a DELETE request to the Microsoft Graph API to remove an
+      attachment from an email. It does not fetch data, nor does it mutate internal
+      Google SecOps data (like case comments or insights). It is a direct mutation
+      of external data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (deleting an attachment) and does not fetch
+      data for enrichment purposes. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -76,6 +106,9 @@ Delete Attachment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It extracts parameters
+      directly from the action configuration using `siemplify.extract_action_param`.
 Delete Message:
   action_product_categories:
     add_alert_comment: false
@@ -91,86 +124,9 @@ Delete Message:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: "### General Description\nDeletes a specific email message from\
-    \ one or more Microsoft 365 mailboxes using the Microsoft Graph API. This action\
-    \ is primarily used for remediation purposes, such as removing phishing emails\
-    \ or unauthorized communications from user inboxes.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Message ID | String | Yes | The unique identifier of the email message to be\
-    \ deleted. |\n| User ID | String | Yes | The email address or userPrincipalName\
-    \ of the user. This parameter supports a comma-separated list (CSV) to perform\
-    \ the deletion across multiple mailboxes in a single execution. |\n\n### Flow\
-    \ Description\n1. **Authentication**: The action initializes a connection to the\
-    \ Microsoft Graph API using the configured Client ID, Tenant ID, and either a\
-    \ Client Secret or Certificate.\n2. **Input Processing**: It extracts the target\
-    \ Message ID and the User ID(s) provided in the action parameters.\n3. **Deletion\
-    \ Logic**: \n    - If a single User ID is provided, the action sends a DELETE\
-    \ request to the Microsoft Graph endpoint for that specific message.\n    - If\
-    \ a CSV list of User IDs is provided, the action iterates through each user and\
-    \ attempts to delete the message from their respective mailbox.\n4. **Completion**:\
-    \ The action captures the API response status (expecting HTTP 204 for success)\
-    \ and returns a summary of the operation's success or failure.\n\n### Additional\
-    \ Notes\n- This action does not process SecOps entities; it relies entirely on\
-    \ the provided Message ID and User ID parameters.\n- Ensure the Azure Application\
-    \ has the appropriate permissions (e.g., `Mail.ReadWrite`) to perform deletions."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes email messages from Microsoft 365 mailboxes via the Microsoft Graph
-      API.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Message:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
+    reasoning: >-
+      The action deletes a message from a user's mailbox, which directly matches the
+      'Delete Email' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -186,65 +142,40 @@ Get Message:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Get Message** action retrieves the full details of a specific email message
-    from a user's Microsoft 365 inbox using the Microsoft Graph API. This action is
-    primarily used for forensic investigation or automated response flows where the
-    content or metadata of a specific email (identified by its unique ID) needs to
-    be analyzed.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **User ID** | string | Yes | The `userPrincipalName` (typically the email address)
-    of the user whose mailbox is being accessed. |
-
-    | **Message ID** | string | Yes | The unique identifier of the specific email
-    message to retrieve. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action initializes a connection to the Microsoft Graph
-    API using the integration's Client ID, Secret, and Tenant ID.
-
-    2. **Parameter Extraction**: It extracts the target **User ID** and **Message
-    ID** from the action parameters.
-
-    3. **API Retrieval**: The action performs a GET request to the Microsoft Graph
-    endpoint: `https://graph.microsoft.com/v1.0/users/{User ID}/messages/{Message
-    ID}`.
-
-    4. **Data Processing**: The retrieved JSON data, containing message properties
-    such as subject, body, sender, and timestamps, is processed.
-
-    5. **Output**: The action returns the message details as a JSON result and completes
-    with a success status.
-
-
-    ### Additional Notes
-
-    - This action is read-only and does not modify the state of the email or the mailbox.
-
-    - Ensure the registered Azure AD application has the `Mail.Read` or `Mail.ReadWrite`
-    permissions.
+    General Description: This action deletes a specific message from a user's mailbox
+    using the Microsoft Graph API. It is designed to remove unwanted or malicious
+    emails from one or more user mailboxes based on the provided Message ID and User
+    ID. Parameters Description: | Parameter | Type | Mandatory | Description | | ---
+    | --- | --- | --- | | Message ID | string | Yes | The unique identifier of the
+    message to be deleted. | | User ID | string | Yes | The email address or user
+    principal name of the user whose mailbox contains the message. Supports CSV input
+    to delete from multiple mailboxes. | Flow Description: 1. The action extracts
+    the necessary integration configuration (Client ID, Secret ID, Tenant ID, and
+    Certificate details) and action parameters (User ID, Message ID). 2. It initializes
+    the Microsoft Graph Security Manager using the provided credentials. 3. It executes
+    a DELETE request to the Microsoft Graph API endpoint for the specified user and
+    message ID. 4. The action returns the result of the deletion operation, indicating
+    success or failure.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: false
+    can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
+    external_data_mutation_explanation: >-
+      Deletes a message from a user's mailbox in Microsoft Graph.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a DELETE request to the Microsoft Graph API to remove a
+      message from a user's mailbox. It does not fetch data, update internal SOAR
+      entities, or create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (deletion) and does not retrieve data for enrichment
+      purposes.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -260,6 +191,121 @@ Get Message:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize siemplify.target_entities. It operates on parameters
+      provided directly by the user.
+Get Message:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a specific email message from the mail server. This aligns
+      with the 'Search Email' category, which involves identifying and retrieving
+      email data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: true
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    Retrieves a specific email message from a user's inbox using the Microsoft Graph
+    API. This action authenticates with the Microsoft Graph API using the provided
+    integration credentials, then executes a GET request to fetch the message details
+    based on the provided User ID and Message ID. The retrieved message data is returned
+    as a JSON result in the action output.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | User ID | string | Yes | The email address or userPrincipalName of the user
+    whose inbox to search. |
+
+    | Message ID | string | Yes | The unique identifier of the message to retrieve.
+    |
+
+
+    ### Additional Notes
+
+    There are no additional notes for this action.
+
+
+    ### Flow Description
+
+    1. Extracts `User ID` and `Message ID` from the action parameters.
+
+    2. Authenticates with the Microsoft Graph API using the configured integration
+    credentials.
+
+    3. Sends a GET request to the Microsoft Graph API to retrieve the specified message
+    details.
+
+    4. Returns the message data as a JSON result in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Microsoft Graph API to retrieve message
+      details. It does not modify any external systems or internal SecOps data (no
+      entity updates, insights, or comments).
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action retrieves data (a message) but does not perform any of the allowed
+      internal mutations (add comments, create insights, update entities) to enrich
+      an entity or alert. Therefore, it does not meet the strict criteria for an Enrichment
+      Action.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers to perform its task. It uses parameters provided directly in the
+      action configuration.
 Get User MFA:
   action_product_categories:
     add_alert_comment: false
@@ -275,6 +321,10 @@ Get User MFA:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves MFA registration details for a user, which provides contextual
+      metadata about the user's security posture. This matches 'Enrich Asset'. It
+      also searches for the user/asset, matching 'Search Asset'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -292,36 +342,34 @@ Get User MFA:
   ai_description: >-
     ### General Description
 
-    Retrieves Multi-Factor Authentication (MFA) registration and status details for
-    users from Microsoft Graph. This action is designed to provide visibility into
-    a user's security posture by identifying whether they have registered for MFA,
-    if it is enabled, and which authentication methods are configured. It processes
-    a specific email address provided as a parameter and also automatically scans
-    all entities in the case that appear to be email addresses.
+    This action retrieves Multi-Factor Authentication (MFA) registration statistics
+    for a specified user email address from Microsoft Graph. It can also process email-like
+    entities found within the current case to provide a comprehensive view of MFA
+    status across multiple users.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the Microsoft Graph API using the provided
-    Client ID, Secret ID (or Certificate), and Tenant ID.
+    1. Extracts configuration parameters (Client ID, Secret ID, Tenant ID, etc.) and
+    action parameters (User Email, Create Insight).
 
-    2. **Parameter Processing**: Fetches MFA statistics for the primary user email
-    specified in the `User Email` action parameter.
+    2. Initializes the Microsoft Graph Security manager to authenticate and connect
+    to the Microsoft Graph API.
 
-    3. **Entity Processing**: Iterates through all entities associated with the current
-    case. It identifies entities whose identifiers contain an "@" symbol (treating
-    them as potential user principal names).
+    3. Retrieves MFA registration statistics for the provided `User Email`.
 
-    4. **Data Retrieval**: For each identified user (from parameters and entities),
-    it queries the Microsoft Graph beta reports endpoint to retrieve credential registration
-    details.
+    4. If `Create Insight` is enabled, it generates a case insight containing the
+    MFA statistics for the provided email.
 
-    5. **Insight Generation**: If the `Create Insight` parameter is enabled, the action
-    generates a detailed case insight for each user, summarizing their MFA registration
-    status, capabilities, and methods.
+    5. Iterates through all `target_entities` in the case, identifying those that
+    appear to be email addresses (containing an '@' symbol).
 
-    6. **Output**: Returns a comprehensive JSON array containing the MFA statistics
-    for all processed users.
+    6. Retrieves MFA statistics for each identified email entity.
+
+    7. If `Create Insight` is enabled, it generates a case insight for each identified
+    email entity.
+
+    8. Aggregates all retrieved MFA statistics and returns them as a JSON result.
 
 
     ### Parameters Description
@@ -330,21 +378,16 @@ Get User MFA:
 
     | :--- | :--- | :--- | :--- |
 
-    | User Email | string | True | The primary userPrincipalName (email) to search
-    for. This user's data will always be the first entry in the results. |
+    | User Email | string | Yes | The email address to search for (userPrincipalName).
+    Valid target entities (emails) will also be checked. |
 
-    | Create Insight | boolean | False | If set to `true`, the action will create
-    a detailed insight in the Google SecOps case for every user successfully queried.
-    Defaults to `false`. |
+    | Create Insight | boolean | No | If true, creates a case insight for each email
+    checked with MFA stats. |
 
 
     ### Additional Notes
 
-    - The action uses the Microsoft Graph Beta API endpoint (`/beta/reports/credentialUserRegistrationDetails`)
-    to fetch detailed MFA statistics.
-
-    - The JSON result will always return the data for the `User Email` input at index
-    zero, followed by any data found for matching entities.
+    The action filters entities by checking if the identifier contains an '@' symbol.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -355,46 +398,20 @@ Get User MFA:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates case insights containing MFA registration and capability details for
-      the specified users.
+      Creates case insights for the retrieved MFA statistics.
+    reasoning: >-
+      The action fetches MFA statistics from Microsoft Graph for a specific user email
+      and optionally for email-like entities in the case. It creates case insights
+      if configured. It does not mutate external data.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches contextual data (MFA stats) about users and adds insights
+      to the case. It does not mutate external systems. This fits the definition of
+      an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
     - USERUNIQNAME
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
@@ -409,6 +426,10 @@ Get User MFA:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if the identifier contains an '@' symbol. It does not filter by specific entity
+      types or other attributes.
 List Attachments:
   action_product_categories:
     add_alert_comment: false
@@ -424,11 +445,15 @@ List Attachments:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of attachments from a specific email message. This
+      does not align with the provided categories, as it is not searching for emails,
+      enriching IOCs/assets, or performing containment/ticket actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
-    search_email: true
+    search_email: false
     search_events: false
     send_email: false
     send_message: false
@@ -439,53 +464,41 @@ List Attachments:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Retrieves a list of attachment objects associated with a specific email message
-    in a user's mailbox using the Microsoft Graph API. This action provides metadata
-    for all files or items attached to the message, which is essential for forensic
-    analysis and email investigations.
+    Retrieves a list of attachment objects from a specific email message in Microsoft
+    Graph.
 
 
-    ### Parameters Description
+    ### Flow Description
+
+    1. Extracts the `User ID` (userPrincipalName) and `Message ID` from the action
+    parameters.
+
+    2. Authenticates with the Microsoft Graph API using the provided integration credentials
+    (Client ID, Secret/Certificate, Tenant ID).
+
+    3. Queries the Microsoft Graph API endpoint `https://graph.microsoft.com/v1.0/users/{user_id}/messages/{message_id}/attachments`
+    to fetch the list of attachments.
+
+    4. Returns the retrieved attachment data as a JSON result to the action output.
+
+
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | User ID | string | Yes | The email address (userPrincipalName) or the unique
-    identifier of the user whose mailbox is being accessed. |
+    | User ID | string | Yes | The email address (userPrincipalName) of the user.
+    |
 
-    | Message ID | string | No | The unique identifier of the message from which to
-    retrieve the attachment list. Note: While marked as non-mandatory in configuration,
-    the underlying API call requires this ID to target a specific message. |
+    | Message ID | string | No | The ID of the message to retrieve the attachment
+    list from. |
 
 
     ### Additional Notes
 
-    - This action performs a read-only operation and does not modify the mailbox or
-    the attachments.
-
-    - The results are returned as a JSON array containing attachment metadata (e.g.,
-    name, content type, size).
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action initializes the Microsoft Graph Security Manager
-    using the provided Client ID, Secret/Certificate, and Tenant ID.
-
-    2. **Parameter Extraction**: It retrieves the `User ID` and `Message ID` from
-    the action input parameters.
-
-    3. **API Request**: It executes a GET request to the Microsoft Graph endpoint:
-    `https://graph.microsoft.com/v1.0/users/{user_id}/messages/{message_id}/attachments`.
-
-    4. **Data Processing**: The action validates the API response and extracts the
-    list of attachment objects.
-
-    5. **Output**: The retrieved data is attached to the action results as a JSON
-    object, and the action completes successfully.
+    This action is a read-only operation that fetches data from Microsoft Graph. It
+    does not modify any external or internal system state.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -496,8 +509,16 @@ List Attachments:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Microsoft Graph API to retrieve attachment
+      metadata for a specific email message. It does not modify any external or internal
+      data, nor does it operate on SOAR entities.
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      The action retrieves data (attachments) from an external system (Microsoft Graph)
+      but does not operate on SOAR entities or update internal SOAR data. Therefore,
+      it is not classified as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -513,6 +534,9 @@ List Attachments:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers to perform its task. It uses direct parameters provided by the user.
 List Mail Rules:
   action_product_categories:
     add_alert_comment: false
@@ -528,6 +552,10 @@ List Mail Rules:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves mail rules for a user's inbox, which is contextual metadata
+      for a resource. This matches the `enrich_asset` category. It does not perform
+      any other actions like updating alerts, tickets, or blocking IOCs.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -543,45 +571,36 @@ List Mail Rules:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    The 'List Mail Rules' action retrieves all message rules defined for a specific
-    user's inbox within Microsoft Graph. This is useful for identifying potentially
-    malicious or suspicious mail forwarding, deletion, or redirection rules that could
-    indicate account compromise or data exfiltration.
+    ### General Description
+
+    Retrieves all message rule objects defined for a user's inbox using the Microsoft
+    Graph API. This action allows analysts to inspect mail forwarding or filtering
+    rules configured on a specific user's account.
 
 
-    ### Flow Description:
-
-    1. **Authentication:** The action establishes a connection to the Microsoft Graph
-    API using the provided Client ID, Secret/Certificate, and Tenant ID.
-
-    2. **Parameter Extraction:** It retrieves the 'User ID' (email address) from the
-    action parameters.
-
-    3. **API Request:** It sends a GET request to the Microsoft Graph endpoint: `https://graph.microsoft.com/v1.0/users/{user_id}/mailFolders/inbox/messageRules`.
-
-    4. **Data Processing:** The action receives the list of rule objects from the
-    response.
-
-    5. **Output:** The retrieved mail rules are attached to the action result as a
-    JSON object for further analysis or playbook logic.
-
-
-    ### Parameters Description:
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | User ID | string | True | The userPrincipalName or email address of the user
-    whose inbox rules are being queried. |
+    | User ID | string | True | The email address (userPrincipalName) of the user
+    whose mail rules are to be retrieved. |
 
 
-    ### Additional Notes:
+    ### Flow Description
 
-    - This action does not modify any data in Microsoft Graph; it is strictly a read-only
-    operation.
+    1. Extract integration configuration parameters (Client ID, Secret ID, Tenant
+    ID, Certificate details).
 
-    - The results are returned in the `JsonResult` field of the action output.
+    2. Extract the `User ID` parameter.
+
+    3. Authenticate with Microsoft Graph using the provided credentials.
+
+    4. Query the Microsoft Graph API for the inbox message rules associated with the
+    specified `User ID`.
+
+    5. Return the retrieved mail rules as the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -592,8 +611,16 @@ List Mail Rules:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Microsoft Graph API to retrieve mail
+      rules. It does not perform any POST/PUT/DELETE operations (no external mutation).
+      It does not update any internal SOAR data (entities, insights, comments).
   categories:
-    enrichment: true
+    enrichment: false
+    reasoning: >-
+      The action fetches data, but it does not operate on `target_entities` or update
+      internal SOAR data (entities, insights, comments). Therefore, it does not meet
+      the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -609,6 +636,9 @@ List Mail Rules:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code takes a `User ID` as a parameter but does not iterate over the `target_entities`
+      list provided by the SOAR platform. Therefore, it does not run on entities.
 List Messages:
   action_product_categories:
     add_alert_comment: false
@@ -624,6 +654,10 @@ List Messages:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of messages from a user's mailbox, which directly
+      matches the 'Search Email' category. It does not perform any other actions like
+      blocking, ticket creation, or alert modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -641,58 +675,43 @@ List Messages:
   ai_description: >-
     ### General Description
 
-    Lists email messages from a specific user's Microsoft 365 mailbox using the Microsoft
-    Graph API. This action allows analysts to retrieve a collection of messages based
-    on specific criteria, which is essential for investigating phishing attempts,
-    data exfiltration, or verifying user communications. It supports OData query parameters
-    for advanced filtering and field selection to optimize the data returned.
+    This action retrieves a list of messages from a specific user's mailbox using
+    the Microsoft Graph API. It allows for filtering and selecting specific fields
+    to refine the returned data, providing visibility into email communications for
+    investigation purposes.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | User ID | String | Yes | The email address or userPrincipalName of the target
-    user whose mailbox will be queried. |
+    | User ID | string | Yes | The email address (userPrincipalName) of the user whose
+    mailbox messages are to be listed. |
 
-    | Select Filter | String | No | A comma-separated list of specific fields to return
-    for each message (e.g., `sender,subject,receivedDateTime`). This helps reduce
-    the payload size. |
-
-    | Query Parameters | String | No | Standard Microsoft Graph OData query parameters.
-    Should begin with '$'. For example: `$filter=subject eq 'test'` or `$top=10`.
+    | Select Filter | string | No | A CSV list of fields to return (e.g., 'sender,subject').
     |
+
+    | Query Parameters | string | No | OData query parameters to filter or sort the
+    results (e.g., '$filter=subject eq \'test\''). Must begin with '$'. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the integration's connection details
-    (Client ID, Secret, Tenant ID) and the user-provided parameters (User ID, Select
+    1. **Initialization**: The action extracts integration configuration (Client ID,
+    Secret ID, Tenant ID, Certificate details) and action parameters (User ID, Select
     Filter, Query Parameters).
 
-    2. **Authentication**: It establishes a connection to Microsoft Graph using the
-    provided credentials (either client secret or certificate-based authentication).
+    2. **Authentication**: Initializes the `MicrosoftGraphSecurityManager` to authenticate
+    with Microsoft Graph using the provided credentials.
 
-    3. **Request Construction**: The action constructs the API request URL targeting
-    the `/users/{user_id}/messages` endpoint, appending the `$select` and other OData
-    query parameters if provided.
+    3. **Execution**: Calls the `list_messages` method, which constructs the API request
+    to the Microsoft Graph endpoint (`/users/{user_email}/messages`) with the specified
+    filters and query parameters.
 
-    4. **Data Retrieval**: It executes a GET request to the Microsoft Graph API to
-    fetch the list of messages.
-
-    5. **Result Processing**: The retrieved message data is returned as a JSON object
-    and the action execution state is set to completed.
-
-
-    ### Additional Notes
-
-    - Ensure the Azure App Registration has the necessary permissions (e.g., `Mail.Read`
-    or `Mail.Read.All`) to access user mailboxes.
-
-    - The `Query Parameters` must follow the Microsoft Graph OData syntax to avoid
-    API errors.
+    4. **Output**: The retrieved message data is added to the action result as a JSON
+    object, and the action completes successfully.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -703,8 +722,16 @@ List Messages:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Microsoft Graph API to retrieve email
+      messages. It does not modify any external systems, nor does it update internal
+      SOAR entities or case data. It is a read-only operation.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data (messages) from an external source (Microsoft Graph)
+      without modifying any external or internal state. This aligns with the definition
+      of an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -720,6 +747,10 @@ List Messages:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SOAR entities. It takes a 'User ID' as a direct
+      input parameter to identify the mailbox to query, rather than iterating over
+      `target_entities`.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -735,6 +766,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      product category operations such as enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -752,10 +786,10 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Verifies the connectivity between Google SecOps and the Microsoft Graph Security
-    API. This action validates the integration's configuration by attempting to authenticate
-    and retrieve an OAuth2 access token using the provided credentials (Client ID,
-    Secret ID, or Certificate and Tenant ID).
+    This action performs a connectivity test (Ping) to the Microsoft Graph Security
+    API. It validates the provided credentials by attempting to generate an access
+    token, ensuring that the integration is correctly configured and able to communicate
+    with the Microsoft Graph Security service.
 
 
     ### Parameters Description
@@ -764,33 +798,42 @@ Ping:
 
     | :--- | :--- | :--- | :--- |
 
-    | None | N/A | N/A | This action does not have any input parameters. It relies
-    solely on the integration's configuration settings. |
+    | Client ID | String | Yes | The Application ID for the Microsoft Graph Security
+    integration. |
 
+    | Secret ID | String | Yes | The application secret for the Microsoft Graph Security
+    integration. |
 
-    ### Flow Description
+    | Tenant ID | String | Yes | The domain name from the Azure portal. |
 
-    1. **Configuration Extraction**: The action retrieves the integration's global
-    configuration parameters, including the Client ID, Secret ID, Tenant ID, and certificate
-    details.
+    | Certificate Path | String | No | Path to the certificate on the Siemplify server
+    if using certificate-based authentication. |
 
-    2. **Manager Initialization**: It instantiates the `MicrosoftGraphSecurityManager`
-    using the extracted configuration.
-
-    3. **Authentication Check**: Upon initialization, the manager attempts to perform
-    an OAuth2 handshake with the Microsoft identity platform to acquire an access
-    token.
-
-    4. **Execution Outcome**: If the authentication is successful, the action returns
-    a success status and a 'Connection Established' message. If the authentication
-    fails or a network error occurs, the action catches the exception and returns
-    a failure status with the error details.
+    | Certificate Password | String | No | Password for the certificate if it is password-protected.
+    |
 
 
     ### Additional Notes
 
-    This is a standard diagnostic action used to ensure that the integration is correctly
-    configured and has the necessary permissions to communicate with Microsoft Graph.
+    Either Client Secret or Certificate authentication must be configured for the
+    action to run. This action does not perform any data retrieval or modification
+    operations.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration parameters (Client ID, Secret
+    ID, Tenant ID, Certificate Path, and Certificate Password).
+
+    2. It initializes the `MicrosoftGraphSecurityManager` using the provided credentials.
+
+    3. The manager attempts to authenticate with the Microsoft Graph Security API.
+
+    4. If authentication is successful, the action returns a success message and a
+    result value of "true".
+
+    5. If an exception occurs during initialization or authentication, the action
+    returns a failure message and a result value of "false".
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -801,8 +844,16 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test (Ping) to the Microsoft Graph Security
+      API. It validates credentials by attempting to generate an access token. It
+      does not fetch contextual data, mutate external systems, or modify internal
+      SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
+      action per the instructions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -818,3 +869,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it only performs a connectivity
+      check using configuration parameters.

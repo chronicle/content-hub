@@ -13,10 +13,15 @@ Enrich Device:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (security status, location, hardware
+      info) for a device (IP/MAC). This matches the 'Enrich Asset' category. It does
+      not provide threat intelligence (reputation/prevalence) for an IOC, so it is
+      not 'Enrich IOC'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -78,10 +83,18 @@ Enrich Device:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the entity's additional properties with flattened device metadata and
-      sets the 'is_enriched' attribute to true.
+      Updates entity `additional_properties` and `is_enriched` status.
+    reasoning: >-
+      The action queries the Portnox API to retrieve device information based on IP
+      or MAC address. It does not modify external systems (the POST request is a search
+      query). It updates internal entity properties (`additional_properties`) and
+      marks them as enriched in Google SecOps.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external system (Portnox) to enrich entities.
+      It does not mutate external systems. It performs allowed internal mutations
+      (updating entity properties). Therefore, it is an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -99,6 +112,9 @@ Enrich Device:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks for
+      `EntityTypes.ADDRESS` and `EntityTypes.MACADDRESS` to perform the enrichment.
 Get Device History:
   action_product_categories:
     add_alert_comment: false
@@ -114,10 +130,15 @@ Get Device History:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves historical activity logs for a device, which provides contextual
+      metadata about the asset. This aligns with the 'Enrich Asset' category. It does
+      not provide threat intelligence for an IOC (not 'Enrich IOC'), nor does it perform
+      any containment or ticket management actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -183,10 +204,20 @@ Get Device History:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action updates the entities in Google SecOps to reflect that enrichment
-      has occurred and attaches a data table containing the retrieved device history.
+      The action updates entity objects and adds entity-specific data tables to the
+      case.
+    reasoning: >-
+      The action fetches device history data from the Portnox API (GET requests) and
+      performs a search (POST request) to identify the device ID. It does not mutate
+      external systems. It performs internal mutations by adding data tables to entities
+      and updating the entities themselves using the SOAR SDK.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Portnox) to provide context
+      for an investigation. It does not mutate external systems. It performs allowed
+      internal mutations (updating entities and adding data tables). Therefore, it
+      qualifies as an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -204,6 +235,9 @@ Get Device History:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where the type is `ADDRESS` or `MACADDRESS`.
 Get Device Locations:
   action_product_categories:
     add_alert_comment: false
@@ -219,6 +253,11 @@ Get Device Locations:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual location metadata for a device (asset), which
+      matches 'Enrich Asset'. It also performs a search for the device in the Portnox
+      platform, matching 'Search Asset'. It does not provide threat intelligence (Enrich
+      IOC) or perform containment/blocking.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -238,46 +277,44 @@ Get Device Locations:
 
     The **Get Device Locations** action retrieves physical or logical location information
     for devices associated with IP Address or MAC Address entities from the Portnox
-    NAC platform. This action helps analysts identify where a specific device is connected
+    NAC platform. It helps analysts understand where a specific device is connected
     within the network infrastructure by providing details such as switch names, ports,
     or site locations.
 
 
     ### Parameters Description
 
-    This action does not have any user-configurable parameters. It utilizes the integration's
-    global configuration (API Root, Username, Password) and processes the entities
-    available in the current context.
+    There are no user-configurable parameters for this action. It relies on the integration's
+    global configuration (API Root, Username, Password) and the entities present in
+    the current context.
 
 
     ### Flow Description
 
     1. **Entity Identification**: The action iterates through the target entities
-    in the case, specifically filtering for `ADDRESS` (IP) and `MacAddress` types.
+    in the case, specifically looking for `ADDRESS` (IP) and `MacAddress` types.
 
-    2. **Device Search**: For each supported entity, it queries the Portnox API to
-    find a matching device record using the IP or MAC address as the search key via
-    a search query.
+    2. **Device Search**: For each supported entity, it queries Portnox to find a
+    matching device record using the IP or MAC address as the search key.
 
-    3. **Location Retrieval**: If a matching device is found, the action retrieves
-    its current location data from the Portnox `/locations` endpoint using the device's
-    unique ID.
+    3. **Location Retrieval**: If a device is found, the action retrieves its current
+    location data from the Portnox API.
 
     4. **Data Sanitization**: The retrieved location data is cleaned by removing internal
-    or irrelevant fields, such as `portIds`, to ensure the output is concise.
+    or irrelevant fields (e.g., `portIds`).
 
     5. **Enrichment**: The location details are formatted into a CSV table and attached
-    to the specific entity as an entity table. Finally, the action updates the entities
-    within Google SecOps to reflect the enrichment.
+    to the entity within Google SecOps. The entity is then updated to reflect the
+    enrichment.
 
 
     ### Additional Notes
 
     - This action is strictly read-only regarding the Portnox system; it does not
-    modify device status or network access policies.
+    change device status or network access policies.
 
-    - If no device is found for a specific entity, that entity is skipped, and the
-    action continues processing others.
+    - If no device is found for a specific entity, that entity is skipped without
+    failing the entire action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -288,10 +325,18 @@ Get Device Locations:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entities and adds entity tables containing device location information
-      retrieved from Portnox.
+      Updates entity data in Google SecOps and adds a data table to the entity.
+    reasoning: >-
+      The action queries the Portnox API to retrieve location information for devices
+      identified by IP or MAC address. It does not modify external system state (the
+      POST request is a search query). It updates internal entity data in Google SecOps
+      and adds a data table to the entity.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data (location) from an external system (Portnox) and updates
+      internal entities without modifying external state. This fits the definition
+      of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -309,6 +354,10 @@ Get Device Locations:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and checks `entity.entity_type`
+      against `EntityTypes.ADDRESS` and `EntityTypes.MACADDRESS`. It filters entities
+      based on their type.
 Get Installed Applications:
   action_product_categories:
     add_alert_comment: false
@@ -324,6 +373,10 @@ Get Installed Applications:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action searches for a device (asset) in Portnox and retrieves its installed
+      applications, which is contextual metadata for an asset. This matches 'Enrich
+      Asset' and 'Search Asset'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -371,25 +424,24 @@ Get Installed Applications:
     ### Flow Description
 
     1. **Initialization**: The action initializes the Portnox manager using the provided
-    integration credentials (API Root, Username, Password, and SSL verification settings).
+    integration credentials.
 
     2. **Entity Filtering**: It iterates through the target entities in the current
-    context, filtering for those of type **ADDRESS** (IP) and **MacAddress**.
+    context, filtering for IP Addresses and MAC Addresses.
 
-    3. **Device Search**: For each valid entity, it performs a search in Portnox using
-    the IP or MAC Address as the key to find the unique device ID.
+    3. **Device Search**: For each valid entity, it performs a search in Portnox (using
+    the IP or MAC Address as the key) to find the unique device ID.
 
     4. **Data Retrieval**: Once a device is identified, the action calls the Portnox
     API to fetch the list of installed applications associated with that device ID.
 
-    5. **Data Formatting**: The list of applications is converted into a CSV format
-    using the `construct_csv` utility.
+    5. **Data Formatting**: The list of applications is converted into a CSV format.
 
     6. **Internal Update**: The CSV data is added as an entity-specific table in the
-    SOAR platform, and the entities are updated to reflect the enrichment process.
+    SOAR, and the entities are updated to reflect the enrichment process.
 
-    7. **Completion**: The action concludes by providing a summary message indicating
-    which entities were successfully enriched with application data.
+    7. **Completion**: The action concludes by providing a summary message of which
+    entities were successfully enriched.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -400,10 +452,16 @@ Get Installed Applications:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action adds a CSV table containing installed applications to the entity's
-      data and updates the entity objects within the Google SecOps platform.
+      Updates entities and adds entity tables with the retrieved application list.
+    reasoning: >-
+      The action fetches device application data from Portnox using IP or MAC address.
+      It does not change external system state. It updates internal SOAR entities
+      with the retrieved data using `add_entity_table` and `update_entities`.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data (enrichment) and adds it to the entity without modifying
+      external systems. It fits the definition of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -421,6 +479,9 @@ Get Installed Applications:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters for `ADDRESS`
+      and `MacAddress` types to perform the lookup.
 Get Open Ports:
   action_product_categories:
     add_alert_comment: false
@@ -436,6 +497,11 @@ Get Open Ports:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves open ports for a device, which is contextual metadata for
+      an asset, matching 'Enrich Asset'. It also performs a search for the device
+      in the product, matching 'Search Asset'. It does not match other categories
+      like IOC enrichment, ticket creation, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -461,21 +527,19 @@ Get Open Ports:
     ### Flow Description
 
     1. **Initialization**: Connects to the Portnox API using the provided credentials
-    and configuration (API Root, Username, Password).
+    and configuration.
 
     2. **Device Search**: For each IP Address or MAC Address entity, the action queries
-    the Portnox `/devices` endpoint to find a matching device record and retrieve
-    its unique `deviceId`.
+    Portnox to find a matching device record.
 
     3. **Port Retrieval**: If a device is found, the action requests the list of open
-    ports from the `/devices/{deviceId}/details/openports` endpoint.
+    ports associated with that device's ID.
 
     4. **Data Presentation**: Converts the retrieved port data into a CSV format and
-    attaches it as an entity-specific data table to the entity in the Google SecOps
-    case.
+    attaches it as an entity table to the specific entity in the case.
 
     5. **Entity Update**: Marks the entities as enriched and updates their status
-    within the platform.
+    within the Google SecOps platform.
 
 
     ### Parameters Description
@@ -486,11 +550,8 @@ Get Open Ports:
 
     ### Additional Notes
 
-    - If multiple devices match a search query in Portnox, the action selects the
-    first device returned by the API.
-
-    - If no open ports are found for an entity, no table is added for that specific
-    entity.
+    This action is designed to enrich asset information by querying the Portnox NAC.
+    It does not perform any destructive actions or state changes on the external system.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -501,10 +562,20 @@ Get Open Ports:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entities to mark them as enriched and adds entity-specific data tables
-      containing the list of open ports retrieved from Portnox.
+      Updates entity status and adds an entity table to the case.
+    reasoning: >-
+      The action fetches data from the Portnox API (fetches_data=true) to retrieve
+      open ports for a device. It does not mutate external data (can_mutate_external_data=false)
+      as it only performs search and GET requests. It performs internal mutations
+      by updating entities and adding an entity table (can_mutate_internal_data=true,
+      can_update_entities=true). It does not create insights, modify alert data, or
+      create case comments.
   categories:
     enrichment: true
+    reasoning: >-
+      The action is an enrichment action because it fetches contextual data (open
+      ports) about an asset from an external system (Portnox) and updates the entity
+      within the SOAR platform without modifying any external system state.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -522,6 +593,9 @@ Get Open Ports:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on their type, specifically supporting 'ADDRESS' and 'MacAddress' entities.
 Get Services:
   action_product_categories:
     add_alert_comment: false
@@ -537,10 +611,14 @@ Get Services:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action searches for a device (asset) in the Portnox system and retrieves
+      its services, which constitutes contextual metadata. This matches the 'Enrich
+      Asset' and 'Search Asset' categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: false
+    search_asset: true
     search_email: false
     search_events: false
     send_email: false
@@ -572,12 +650,11 @@ Get Services:
     (`MacAddress`) types.
 
     2. **Device Search**: For each valid entity, it queries the Portnox API to find
-    a matching device record using the IP or MAC address as the search key via a POST
-    request to the `/devices` endpoint.
+    a matching device record using the IP or MAC address as the search key.
 
     3. **Service Retrieval**: If a device is successfully identified, the action makes
-    a follow-up GET request to Portnox to retrieve the full list of services associated
-    with that specific device ID from the `/details/services` endpoint.
+    a follow-up request to Portnox to retrieve the full list of services associated
+    with that specific device ID.
 
     4. **Data Presentation**: The retrieved service list is converted into a CSV format
     and attached to the entity as an 'Entity Table' for easy review within the Google
@@ -595,10 +672,19 @@ Get Services:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entities to reflect enrichment and adds an entity table containing the
-      list of services retrieved from Portnox.
+      The action updates the entity within Google SecOps and adds an entity table
+      containing the retrieved service information.
+    reasoning: >-
+      The action fetches device service information from Portnox by searching for
+      devices via IP or MAC address. It then attaches this information to the entity
+      as a table and updates the entity. It does not modify external systems, making
+      it a read-only operation regarding external state.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data (services) to enrich the entity's context. It does not
+      mutate external systems and only performs allowed internal mutations (updating
+      entities and adding an entity table). This fits the enrichment criteria.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -616,6 +702,9 @@ Get Services:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters by
+      `EntityTypes.ADDRESS` and `EntityTypes.MACADDRESS` to perform the device search.
 Get User History:
   action_product_categories:
     add_alert_comment: false
@@ -631,10 +720,15 @@ Get User History:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (user history) for a resource (device),
+      which matches 'Enrich Asset'. It also performs a search for the asset within
+      the product, matching 'Search Asset'. It does not perform IOC enrichment, alert
+      updates, or containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: false
+    search_asset: true
     search_email: false
     search_events: false
     send_email: false
@@ -664,30 +758,27 @@ Get User History:
     This action performs a two-step process: first, it searches for the device in
     Portnox to obtain an internal device ID, and then it fetches the user history
     associated with that ID. The results are attached directly to the entity as a
-    data table. If no history is found or the device is not located in Portnox, the
-    action will complete without enriching that specific entity.
+    data table.
 
 
     ### Flow Description
 
-    1. **Identify Entities**: The action iterates through the target entities and
-    filters for those of type `ADDRESS` (IP) or `MacAddress`.
+    1. **Identify Entities**: The action filters the target entities to find those
+    of type `ADDRESS` (IP) or `MacAddress`.
 
-    2. **Device Search**: For each valid entity, it queries the Portnox API using
-    a POST request to find a matching device record and retrieve its unique internal
-    ID.
+    2. **Device Search**: For each valid entity, it queries the Portnox API to find
+    a matching device record.
 
-    3. **Fetch History**: If a device is found, the action performs a GET request
-    to retrieve the user authentication history associated with that device ID.
+    3. **Fetch History**: If a device is found, the action retrieves its user authentication
+    history using the Portnox device ID.
 
-    4. **Data Formatting**: The retrieved history list is converted into a CSV format
-    using the `construct_csv` utility.
+    4. **Data Formatting**: The retrieved history is converted into a CSV format.
 
     5. **Enrichment**: The CSV data is attached to the entity as a data table named
     "[Identifier] - User History".
 
-    6. **Update**: The action updates the entities in Google SecOps to persist the
-    newly attached data tables.
+    6. **Update**: The action updates the entities in Google SecOps to save the newly
+    attached data tables.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -698,10 +789,21 @@ Get User History:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action attaches data tables containing authentication history to the entities
-      and updates the entity objects within the Google SecOps platform.
+      The action updates entities in Google SecOps by attaching a data table containing
+      the retrieved user history.
+    reasoning: >-
+      The action fetches user authentication history from the Portnox API (fetches_data=true).
+      It does not mutate external systems (search_device is a read-only query). It
+      performs internal mutations by updating entities with new data tables (can_mutate_internal_data=true,
+      can_update_entities=true). It does not create insights, modify alert data, or
+      create case comments.
   categories:
     enrichment: true
+    reasoning: >-
+      The action is designed to gather supplemental context (user history) about entities
+      (devices). It does not mutate external systems and only performs allowed internal
+      mutations (updating entities). Therefore, it is classified as an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -719,6 +821,10 @@ Get User History:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks for
+      `EntityTypes.ADDRESS` and `EntityTypes.MACADDRESS`. It does not apply any other
+      filters.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -734,6 +840,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic test to verify connectivity. It does not perform
+      any of the listed functional outcomes (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -789,8 +898,16 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to verify connectivity to the Portnox API.
+      It does not modify external or internal data, nor does it update entities or
+      create insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action. Per the instructions, 'Actions named Ping must
+      not be categorized as enrichment actions.' Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -806,6 +923,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use any entities, as indicated by the empty `SimulationDataJson`
+      and the lack of entity processing in the code.
 Revalidate Device:
   action_product_categories:
     add_alert_comment: false
@@ -821,6 +941,12 @@ Revalidate Device:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action triggers a policy revalidation on a device in the Portnox NAC system.
+      This is a remediation/management action. It does not fit the specific categories
+      provided (e.g., it is not 'Contain Host' as it does not isolate the device,
+      nor is it an 'Update Identity' or 'Enrich' action). Therefore, no specific category
+      is selected.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -839,9 +965,9 @@ Revalidate Device:
     ### General Description
 
     The **Revalidate Device** action triggers a policy revalidation for a specific
-    device within the Portnox Network Access Control (NAC) system. This is used to
-    force a device to undergo a fresh security posture check or authentication cycle
-    to ensure it complies with current network policies.
+    device within the Portnox Network Access Control (NAC) system. This action is
+    used to force a device to undergo a fresh security posture check or authentication
+    cycle to ensure it complies with current network policies.
 
 
     ### Parameters Description
@@ -857,13 +983,13 @@ Revalidate Device:
     ### Flow Description
 
     1. **Initialization**: The action connects to the Portnox API using the provided
-    credentials (API Root, Username, Password) and SSL configuration.
+    credentials and configuration.
 
-    2. **Trigger Revalidation**: It sends a POST request to the Portnox endpoint `/devices/actions/revalidation`
-    to initiate the revalidation process for the specified `DeviceId`.
+    2. **Trigger Revalidation**: It sends a POST request to the Portnox endpoint to
+    initiate the revalidation process for the specified `DeviceId`.
 
     3. **Status Polling**: The action enters a polling loop, calling the device information
-    endpoint `/devices/{deviceId}` to monitor the `securityStatus` of the device.
+    endpoint to monitor the `securityStatus` of the device.
 
     4. **Completion**: It waits until the device status reaches 'AuthorizationPassed'
     or a timeout occurs. Once the status is confirmed, the action completes with a
@@ -885,13 +1011,20 @@ Revalidate Device:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a policy revalidation process for a specific device in Portnox NAC,
-      which initiates a fresh security posture check or authentication cycle on the
-      network access control system.
+      Triggers a policy revalidation for a device in the Portnox NAC system.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to trigger a revalidation process in the
+      external Portnox NAC system (external mutation). It also performs GET requests
+      to poll the device status (fetches data). It does not interact with internal
+      SOAR entities or modify internal case data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action performs a mutation on an external system (Portnox NAC) and does
+      not meet the criteria for an enrichment action, which must be read-only regarding
+      external systems.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -907,6 +1040,9 @@ Revalidate Device:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SOAR entities. It accepts a `DeviceId` as a direct
+      input parameter and does not iterate over `target_entities`.
 Revalidate Device By Address:
   action_product_categories:
     add_alert_comment: false
@@ -922,10 +1058,14 @@ Revalidate Device By Address:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action triggers a revalidation of a device's NAC policy in Portnox. This
+      does not fit the specific categories provided (e.g., it is not blocking, isolating,
+      or updating an alert). It is a control action on a NAC system.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -987,12 +1127,21 @@ Revalidate Device By Address:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a re-authentication and validation cycle for the device in the Portnox
-      NAC system.
+      Triggers a re-evaluation of the network access control (NAC) policy for the
+      device in the Portnox system.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action interacts with the Portnox API to search for devices and trigger
+      a revalidation process. This involves both GET requests (searching/polling)
+      and POST requests (triggering revalidation). Triggering revalidation is a state
+      change in the external Portnox system. It does not modify internal SOAR data
+      (entities, insights, etc.).
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (triggers revalidation), so it is not an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1010,3 +1159,6 @@ Revalidate Device By Address:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `entity.entity_type`
+      for `ADDRESS` and `MACADDRESS` types.

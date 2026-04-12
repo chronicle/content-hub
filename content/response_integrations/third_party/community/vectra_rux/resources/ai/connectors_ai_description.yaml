@@ -2,13 +2,12 @@ Vectra RUX - Entities Connector:
   ai_description: >-
     ### General Description
 
-    The Vectra RUX - Entities Connector integrates with the Vectra RUX platform to
-    ingest security entities (Hosts or Accounts) and their associated detections into
-    Google SecOps. It transforms each Vectra entity into a SOAR alert, where individual
-    detections are represented as events within that alert. This allows for a consolidated
-    view of all malicious activity related to a specific host or account within a
-    single case. The connector supports stateful tracking, ensuring that updates to
-    existing entities are correctly grouped and duplicates are avoided.
+    The Vectra RUX - Entities Connector is designed to integrate the Vectra RUX platform
+    with Google SecOps (SOAR). It periodically retrieves security entities (such as
+    Hosts or Accounts) and their associated detections from Vectra RUX, mapping them
+    into structured alerts and events within the SOAR platform for further investigation
+    and response. This connector ensures that security teams can monitor and act upon
+    high-priority entities identified by Vectra RUX.
 
 
     ### Parameters Description
@@ -17,65 +16,54 @@ Vectra RUX - Entities Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | API Root | String | Yes | The base URL of the Vectra RUX API (e.g., https://<address>:<port>).
-    |
+    | API Root | String | Yes | The base URL of the Vectra RUX API. |
 
-    | Client ID | String | Yes | Unique identifier assigned to the client for API
-    authentication. |
+    | Client ID | String | Yes | Unique identifier for API authentication. |
 
-    | Client Secret | Password | Yes | Confidential key associated with the Client
-    ID for secure authorization. |
+    | Client Secret | Password | Yes | Confidential key for API authentication. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product (default: Vectra RUX). |
+    product. |
 
-    | Entity Type | String | Yes | The type of entity to retrieve: 'Host' or 'Account'.
+    | Entity Type | String | Yes | The type of entity to fetch (Account or Host).
     |
 
-    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
-    (default: detection_type). |
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
 
-    | Limit | Integer | No | Maximum number of entities to fetch in a single execution.
+    | Limit | Integer | No | Maximum number of entities to fetch per iteration. |
+
+    | Max Hours Backwards | Integer | No | Time window (in hours) to look back for
+    new entities. |
+
+    | Prioritized | Boolean | No | If enabled, only fetches entities with a priority
+    score above the threshold. |
+
+    | PythonProcessTimeout | String | Yes | Timeout limit (in seconds) for the connector
+    script. |
+
+    | Specific Tag | String | No | A specific tag used to filter the retrieved entities.
     |
-
-    | Max Hours Backwards | Integer | No | Number of hours to look back for entities
-    during the first connector iteration. |
-
-    | Prioritized | Boolean | No | If enabled, only entities with a priority score
-    above the configured threshold are fetched. |
-
-    | Specific Tag | String | No | A specific tag used to filter the entity results.
-    |
-
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    python process running the script. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector authenticates with the Vectra RUX API using
-    OAuth2 (Client ID and Secret) and manages access/refresh tokens stored in a local
-    configuration file.
+    1. The connector initializes and authenticates with the Vectra RUX API using the
+    provided credentials.
 
-    2. **Entity Discovery**: It queries the Vectra RUX `/entities` endpoint, filtering
-    by the configured `Entity Type` (Host or Account), `Specific Tag`, and `Prioritized`
-    status.
+    2. It calculates the start time based on the `Max Hours Backwards` parameter to
+    determine the data retrieval window.
 
-    3. **Time-based Filtering**: The connector retrieves entities modified since the
-    last successful execution or within the `Max Hours Backwards` window for the initial
-    run.
+    3. It queries the Vectra RUX API to list entities (Hosts or Accounts) based on
+    the configured filters (e.g., entity type, priority, tags).
 
-    4. **Detection Retrieval**: For each discovered entity, the connector fetches
-    all associated active detections from the `/detections` endpoint.
+    4. For each retrieved entity, the connector fetches associated active detections.
 
-    5. **Assignment Enrichment**: It retrieves assignment information (assigned user,
-    resolution status, and outcomes) for the entity and attaches it to the alert metadata.
+    5. It maps each entity to a SOAR alert and its associated detections to alert
+    events, including relevant metadata and assignments.
 
-    6. **Alert Mapping**: The connector maps the Vectra entity to a Google SecOps
-    alert and its detections to individual events. It generates a `source_grouping_identifier`
-    based on the Entity ID to ensure that updates to the same entity are grouped into
-    the same SOAR case.
+    6. The connector checks for duplicates and overflow conditions before ingesting
+    the alerts into the SOAR platform.
 
-    7. **Ingestion and State Management**: The constructed `AlertInfo` objects are
-    ingested into the system. The connector then saves the last processed timestamp
-    and entity IDs to prevent duplicate ingestion in future cycles.
+    7. Finally, it updates the internal state (timestamps and processed IDs) to ensure
+    subsequent iterations only fetch new data.

@@ -1,6 +1,6 @@
 Add Attachment:
   action_product_categories:
-    add_alert_comment: true
+    add_alert_comment: false
     add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
     contain_host: false
@@ -13,6 +13,10 @@ Add Attachment:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action adds an attachment to the case wall. This does not align with any
+      of the provided categories (e.g., Enrich IOC, Create Ticket, etc.), as it is
+      a specific case management utility.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,54 +32,51 @@ Add Attachment:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Adds a file attachment to the case wall of the current Google SecOps case. This
-    action allows analysts to programmatically upload evidence, logs, or reports directly
-    to the case timeline by providing the file content in Base64 format. It supports
-    marking attachments as favorites and adding descriptive metadata to the case wall
-    entry.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter | Description | Type | Mandatory | Notes |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | Name | The name of the attachment file. | string | True | This will be the filename
-    displayed in the case wall. |
-
-    | IsFavorite | Whether the attachment should be marked as a favorite in the case
-    wall. | boolean | False | Defaults to false if not provided. |
-
-    | Base64 Blob | The actual content of the attachment encoded in Base64. | string
-    | True | Ensure the string is a valid Base64 representation of the file. |
-
-    | Type | The file extension or type of the attachment (e.g., .txt, .pdf, .png).
-    | string | True | Used to identify the file format. |
-
-    | Description | A brief description of the attachment's purpose or content. |
-    string | True | This text appears alongside the attachment in the case wall. |
+    This action adds a file attachment to the Google SecOps case wall. It allows users
+    to upload files (provided as Base64 encoded strings) directly to the case, facilitating
+    evidence management and documentation within the platform.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the filename, Base64 content,
-    file type, description, and favorite status from the input parameters.
+    1. The action retrieves the provided parameters: Name, Base64 Blob, Type, Description,
+    and IsFavorite status.
 
-    2. **Context Retrieval:** It identifies the current case ID from the active Google
-    SecOps environment.
+    2. It constructs a `CaseWallAttachment` object using the provided details and
+    the current case identifier.
 
-    3. **Attachment Construction:** A `CaseWallAttachment` data model is created using
-    the provided inputs.
+    3. The action calls the internal SOAR API `save_attachment_to_case_wall` to upload
+    the file to the case wall.
 
-    4. **Internal API Call:** The action invokes the internal SOAR API (`save_attachment_to_case_wall`)
-    to upload the file content and metadata to the case wall.
+    4. Upon success, it returns the attachment metadata as a JSON result.
 
-    5. **Result Processing:** Upon successful upload, the action parses the API response
-    to return detailed metadata about the new attachment, including its unique ID
-    and creation timestamps.
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | string | Yes | The name of the attachment. |
+
+    | Base64 Blob | string | Yes | The attachment's content encoded in Base64. |
+
+    | Type | string | Yes | The file extension or type (e.g., .txt). |
+
+    | Description | string | Yes | A description of the attachment. |
+
+    | IsFavorite | boolean | No | Whether the attachment is marked as a favorite in
+    the case wall. Defaults to false. |
+
+
+    ### Additional Notes
+
+    This action does not interact with external systems and is strictly used for internal
+    case management within Google SecOps.
   capabilities:
-    can_create_case_comments: true
+    can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
@@ -84,10 +85,16 @@ Add Attachment:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Adds a file attachment to the case wall of the current Google SecOps case, creating
-      a new entry in the case timeline.
+      Adds a new attachment to the case wall within the SOAR platform.
+    reasoning: >-
+      The action interacts with the internal SOAR API to upload a file to the case
+      wall. It does not fetch external data or mutate external systems. It mutates
+      internal SOAR data by creating a new attachment record.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from external sources, nor does it perform any
+      enrichment tasks. It is a utility action for case management.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -103,6 +110,9 @@ Add Attachment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on specific entities; it operates on the case level
+      using the case identifier.
 Add Entity to File:
   action_product_categories:
     add_alert_comment: false
@@ -118,6 +128,11 @@ Add Entity to File:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a local file operation to append entity identifiers. It
+      does not interact with any external security products, ticketing systems, or
+      identity providers, nor does it modify alert or case data. Therefore, it does
+      not match any of the defined product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -133,26 +148,39 @@ Add Entity to File:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description\nThis action adds the identifier of target entities to
-    a local file stored on the system. It is primarily used for tracking entities
-    across different executions or playbooks. The action ensures that each entity
-    identifier is only added once; if an entity already exists in the file, it is
-    skipped, and the action's final result value is set to False to indicate that
-    not all entities were newly added.\n\n### Parameters Description\n| Parameter
-    | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Filename
-    | String | Yes | The name of the file (located in /tmp/) where the entity identifiers
-    will be stored. |\n\n### Flow Description\n1. **Parameter Extraction:** The action
-    retrieves the `Filename` parameter.\n2. **File Access:** It attempts to open and
-    lock the specified file in the `/tmp/` directory to prevent concurrent access
-    issues.\n3. **Entity Processing:** It iterates through all target entities in
-    the current context.\n4. **Duplicate Check:** For each entity, it checks if the
-    identifier already exists in the file's content.\n5. **File Update:** If the identifier
-    is new, it is added to the list. If it already exists, the action logs the occurrence
-    and prepares to return a False result.\n6. **Finalization:** The updated list
-    is written back to the file, the lock is released, and the action completes with
-    a summary message.\n\n### Additional Notes\n- The file is stored in the `/tmp/`
-    directory of the execution environment.\n- The action uses a file-locking mechanism
-    to ensure data integrity during concurrent executions.
+    ### General Description
+
+    This action appends the identifier of target entities to a specified local file
+    on the SOAR server. It ensures uniqueness by checking if the entity identifier
+    already exists in the file before adding it. This is useful for maintaining local
+    lists of entities for further processing or auditing.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Filename | string | Yes | The name of the file to write the entities to. |
+
+
+    ### Flow Description
+
+    1. Extract the `Filename` parameter from the action configuration.
+
+    2. Initialize the `EntityFileManager` to handle file locking and access, ensuring
+    thread-safe operations.
+
+    3. Iterate through the `target_entities` provided in the action.
+
+    4. For each entity, check if its identifier is already present in the file.
+
+    5. If the identifier is not present, append it to the file.
+
+    6. If the identifier is already present, log the occurrence and skip adding it.
+
+    7. Finalize the action with a summary of added entities and the execution status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -163,8 +191,17 @@ Add Entity to File:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a local file operation on the SOAR server. It does not fetch
+      data from external APIs (fetches_data=false), does not mutate external systems
+      (can_mutate_external_data=false), and does not modify SOAR case data such as
+      entities, insights, or alert data (can_mutate_internal_data=false).
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from any external or internal source, nor does
+      it perform any enrichment. It performs a local file operation, which does not
+      meet the criteria for an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -215,6 +252,9 @@ Add Entity to File:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` without any filtering, meaning
+      it processes all entity types provided in the action.
 Count Files:
   action_product_categories:
     add_alert_comment: false
@@ -230,6 +270,10 @@ Count Files:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a utility for counting files on the local filesystem. It does
+      not perform any of the defined product category operations such as enrichment,
+      containment, ticketing, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -245,58 +289,48 @@ Count Files:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Count Files** action is a utility designed to calculate the total number
-    of files within a specified directory. It allows users to filter results based
-    on file extensions and provides the option to perform a recursive search through
-    subdirectories. This is particularly useful for monitoring directory growth, verifying
-    file transfers, or identifying the presence of specific file types in a filesystem.
+    The 'Count Files' action performs a local filesystem operation to count the number
+    of files within a specified directory that match a given file extension. This
+    utility action is useful for verifying the presence or volume of files on the
+    SOAR worker node.
 
 
-    ### Parameters Description
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the 'Folder' path, 'Is Recursive'
+    flag, and 'File Extension' from the action configuration.
+
+    2. **Path Construction**: It constructs the full search path using the provided
+    folder and extension (defaulting to '*.*' if no extension is provided).
+
+    3. **File Counting**: It utilizes the `glob` library to identify and count all
+    files matching the criteria, optionally traversing subdirectories if 'Is Recursive'
+    is enabled.
+
+    4. **Result Reporting**: The action returns the total count of files found as
+    the execution result.
+
+
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Folder | String | Yes | The directory path where the file count should be performed.
+    | Folder | string | Yes | The absolute or relative path of the folder to search.
     |
 
-    | File Extension | String | No | A glob-style pattern (e.g., `*.txt` or `*.log`)
-    used to filter the files. If left empty, the action defaults to `*.*` (counting
-    all files). |
+    | File Extension | string | No | The file extension to filter by (e.g., '*.txt').
+    Defaults to '*.*'. |
 
-    | Is Recursive | Boolean | No | If enabled (`true`), the action will search for
-    matching files in the specified folder and all of its subdirectories. Defaults
-    to `false`. |
+    | Is Recursive | boolean | No | If enabled, the action will recursively count
+    files in all subdirectories. Defaults to 'false'. |
 
 
     ### Additional Notes
 
-    - The action uses the standard Python `glob` library for pattern matching.
-
-    - If the provided folder path does not exist or is inaccessible, the action will
-    return a count of 0 or fail depending on environment permissions.
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action extracts the `Folder`, `File Extension`, and
-    `Is Recursive` parameters from the input.
-
-    2. **Path Preparation:** If no file extension is provided, it defaults to `*.*`.
-    It then constructs a full search path by joining the folder and the extension
-    pattern.
-
-    3. **File Search:** The action executes a search using the `glob` module, applying
-    the recursion flag if specified.
-
-    4. **Result Calculation:** It determines the length of the list of discovered
-    files.
-
-    5. **Execution Completion:** The action returns the total count as the final result
-    and completes with a success state.
+    This action operates strictly on the local filesystem of the SOAR worker node
+    and does not interact with external APIs or internal case data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -305,10 +339,19 @@ Count Files:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a local filesystem operation using the `glob` library to
+      count files. It does not interact with any external APIs, modify external systems,
+      or update internal SOAR data (entities, insights, or comments). Therefore, it
+      has no mutation or enrichment capabilities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch contextual data for entities or alerts, nor does it
+      modify internal or external state. It is a utility action for local file counting
+      and does not meet the criteria for an Enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -324,6 +367,9 @@ Count Files:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `target_entities` or any entity-related data
+      models. It operates solely on a provided file path string.
 Create Archive:
   action_product_categories:
     add_alert_comment: false
@@ -339,6 +385,9 @@ Create Archive:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      This action is a file utility for creating archives. It does not perform any
+      of the listed security operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -356,73 +405,65 @@ Create Archive:
   ai_description: >-
     ### General Description
 
-    The **Create Archive** action is a utility designed to package files or directories
-    into a compressed archive format directly on the Google SecOps (Chronicle) server.
-    It supports multiple archive formats including ZIP and various TAR configurations.
-    This action is primarily used for organizing forensic artifacts, preparing logs
-    for export, or consolidating multiple files into a single container for subsequent
-    processing steps.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Archive Type** | Dropdown | Yes | Specifies the compression format. Supported
-    values: `zip`, `tar` (uncompressed), `gztar` (gzip), `bztar` (bzip2), and `xztar`
-    (xz). |
-
-    | **Archive Base Name** | String | Yes | The desired name for the resulting archive
-    file (do not include the file extension). |
-
-    | **Archive Input** | String | Yes | A comma-separated list of absolute file paths
-    or a single directory path to be archived. |
+    This action creates an archive file (e.g., zip, tar) from a provided list of files
+    or a directory. It is a utility action designed to package data for further processing
+    or storage.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the archive format, the base
-    name for the output file, and the input paths (files or directory) from the user
-    configuration.
+    1. Extract parameters: `Archive Type`, `Archive Input`, and `Archive Base Name`.
 
-    2. **Environment Preparation:** It checks for the existence of the default destination
-    directory (`/opt/siemplify/siemplify_server/Scripting/FileUtilities/Archives`)
-    on the server and creates it if it does not exist.
+    2. Validate and create the destination directory if it does not exist.
 
-    3. **Input Validation:** The action determines if the provided input is a single
-    directory or a list of individual files.
+    3. If the input is a directory, archive it directly.
 
-    4. **Archiving Logic:**
-        * If a **directory** is provided, it archives the entire directory structure.
-        * If a **list of files** is provided, it copies the files to a temporary directory,
-    archives that directory, and then cleans up the temporary files.
-    5. **Completion:** Upon success, the action returns the full file path of the
-    newly created archive and provides a JSON result containing the success status
-    and the archive location.
+    4. If the input is a list of files, copy them to a temporary directory, archive
+    the temporary directory, and then remove the temporary directory.
+
+    5. Return the path of the created archive file.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Archive Type | ddl | Yes | The format of the archive to create (zip, tar, gztar,
+    bztar, xztar). |
+
+    | Archive Base Name | string | Yes | The name of the archive file to be created,
+    excluding the extension. |
+
+    | Archive Input | string | Yes | A comma-delimited list of files or a directory
+    path to be archived. |
 
 
     ### Additional Notes
 
-    * This action operates on the local filesystem of the SOAR server. Ensure that
-    the paths provided in **Archive Input** are accessible by the SOAR execution environment.
-
-    * The resulting archive is stored in a specific internal directory: `/opt/siemplify/siemplify_server/Scripting/FileUtilities/Archives`.
+    This action performs local file system operations on the SOAR server. It does
+    not interact with external APIs or modify SOAR case data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: false
-    internal_data_mutation_explanation: >-
-      Creates a directory and an archive file on the local SOAR server's filesystem
-      at /opt/siemplify/siemplify_server/Scripting/FileUtilities/Archives.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local file system operations (creating an archive) on the
+      SOAR server. It does not interact with external APIs, fetch data, or modify
+      SOAR case data/entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a file utility that creates archives. It does not fetch data from
+      external sources, nor does it modify internal SOAR data or entities. Therefore,
+      it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -438,6 +479,9 @@ Create Archive:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It operates on file paths provided
+      as input parameters.
 Create Hash From Base64:
   action_product_categories:
     add_alert_comment: false
@@ -453,6 +497,10 @@ Create Hash From Base64:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action performs a local computation (hashing) on provided input strings.
+      It does not interact with external systems, fetch threat intelligence, or modify
+      case data. It does not fit any of the defined categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -467,65 +515,22 @@ Create Hash From Base64:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    The **Create Hash From Base64** action is a utility designed to generate cryptographic
-    hashes from one or more Base64 encoded strings. This is particularly useful for
-    identifying files or data payloads when only the encoded content is available.
-    The action supports multiple hashing algorithms and can process a list of strings
-    in a single execution.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Base64** | Content | Yes | One or more Base64 encoded strings to be hashed.
-    Multiple strings should be separated by the 'Base64 Separator'. |
-
-    | **Hash Algorythm** | DDL | Yes | The cryptographic hash function to apply (e.g.,
-    md5, sha1, sha256, sha512). |
-
-    | **Names** | String | No | An optional list of names (like filenames) to associate
-    with each Base64 string. Must match the count of Base64 strings. |
-
-    | **Names Separator** | String | Yes | The character used to separate the list
-    of names (default is ','). |
-
-    | **Include Base64** | Boolean | No | If set to 'true', the original Base64 input
-    string will be included in the output JSON. |
-
-    | **Base64 Separator** | String | Yes | The character used to separate the input
-    Base64 strings (default is ','). |
-
-
-    ### Flow Description
-
-    1. **Input Parsing:** The action retrieves the Base64 strings and optional names
-    from the parameters, splitting them into lists based on the provided separators.
-
-    2. **Decoding:** Each string is decoded from Base64 format into raw bytes using
-    the standard base64 library.
-
-    3. **Hashing:** The selected hashing algorithm is dynamically invoked from the
-    `hashlib` library and applied to the decoded bytes to produce a hexadecimal digest.
-
-    4. **Result Compilation:** A dictionary is created for each input, containing
-    the calculated hash, the algorithm name, and optionally the name and original
-    Base64 string.
-
-    5. **Output:** The resulting list of hash objects is returned as a JSON result
-    and added to the action's execution context.
-
-
-    ### Additional Notes
-
-    If the 'Names' parameter is provided, ensure that the number of names matches
-    the number of Base64 strings to ensure correct mapping in the output.
+  ai_description: "This action calculates cryptographic hashes for provided base64-encoded\
+    \ strings. It is a utility action used to generate hashes (e.g., MD5, SHA256)\
+    \ from raw data represented in base64 format. \n\n### Parameters\n| Name | Type\
+    \ | Mandatory | Description |\n| --- | --- | --- | --- |\n| Base64 | content |\
+    \ Yes | One or more base64 encoded strings. Strings should be separated by the\
+    \ defined separator. |\n| Hash Algorythm | ddl | Yes | The algorithm to use (e.g.,\
+    \ sha1, sha256, md5). |\n| Names | string | No | List of names identifying the\
+    \ base64 strings. |\n| Names Separator | string | Yes | A character to separate\
+    \ the list of names by. |\n| Include Base64 | boolean | No | Include the base64\
+    \ input strings in the output. |\n| Base64 Separator | string | Yes | A character\
+    \ to separate the base64 strings by. |\n\n### Flow Description\n1. The action\
+    \ accepts base64 strings and a hash algorithm as input parameters.\n2. It decodes\
+    \ the provided base64 strings.\n3. It computes the hash of the decoded data using\
+    \ the specified algorithm (e.g., sha1, sha256, md5).\n4. The action returns the\
+    \ resulting hashes, optionally including the original base64 strings and associated\
+    \ names, in the action results."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -536,8 +541,16 @@ Create Hash From Base64:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a local cryptographic hash calculation on provided input
+      strings. It does not fetch data from external sources, mutate external systems,
+      or modify internal SOAR data (entities, insights, or comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external or internal source; it performs
+      a local computation on provided input parameters. Therefore, it does not meet
+      the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -553,6 +566,10 @@ Create Hash From Base64:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates solely on input parameters provided by the user and does
+      not interact with the `siemplify.target_entities` object. Therefore, it does
+      not process any entity types.
 Decode Base64:
   action_product_categories:
     add_alert_comment: false
@@ -568,6 +585,10 @@ Decode Base64:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      This action is a utility for decoding strings. It does not perform any of the
+      defined product-specific operations such as enrichment, containment, ticketing,
+      or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -585,46 +606,35 @@ Decode Base64:
   ai_description: >-
     ### General Description
 
-    The **Decode Base64** action is a utility designed to convert Base64 encoded strings
-    back into their original text format. It allows users to specify the character
-    encoding (UTF-8 or ASCII) to ensure the resulting string is correctly interpreted.
-    This is particularly useful for decoding obfuscated data found in logs, emails,
-    or script arguments during an investigation.
+    The Decode Base64 action is a utility tool designed to decode a Base64 encoded
+    string into its original format. It allows users to specify the input string and
+    the character encoding to be used during the decoding process.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Base64 Input** | string | Yes | The Base64 encoded string that you want to
-    decode. |
+    | Base64 Input | string | Yes | The Base64 encoded string that needs to be decoded.
+    |
 
-    | **Encoding** | ddl | Yes | The character encoding to use for the decoded output.
-    Options include **UTF-8** and **ASCII**. |
+    | Encoding | ddl | Yes | The character encoding to use for the decoded string
+    (e.g., UTF-8, ASCII). |
 
 
     ### Flow Description
 
-    1. **Parameter Retrieval**: The action retrieves the `Base64 Input` string and
-    the selected `Encoding` from the user configuration.
+    1. The action retrieves the 'Base64 Input' string and the 'Encoding' type from
+    the provided parameters.
 
-    2. **Decoding Process**: The input string is decoded from Base64 format into raw
-    bytes using Python's standard library.
+    2. It attempts to decode the Base64 input using the specified encoding.
 
-    3. **String Conversion**: The raw bytes are converted into a string based on the
-    provided encoding (UTF-8 or ASCII).
+    3. If successful, it returns the decoded content as a JSON object in the action
+    results.
 
-    4. **Result Output**: The decoded string is packaged into a JSON object (`decoded_content`)
-    and returned as the action's result. If decoding fails (e.g., due to invalid Base64
-    format), the action reports a failure.
-
-
-    ### Additional Notes
-
-    This action does not interact with external APIs or modify any SOAR entities;
-    it performs local data transformation.
+    4. If an error occurs during decoding, the action fails and returns an error message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -635,8 +645,15 @@ Decode Base64:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a local string manipulation (Base64 decoding). It does not
+      interact with external systems, fetch data, or modify internal SOAR data (entities,
+      insights, comments). It only returns a result JSON to the playbook.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a utility for data transformation (decoding). It does not fetch
+      data from external sources, so it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -652,6 +669,8 @@ Decode Base64:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities.
 Extract Archive:
   action_product_categories:
     add_alert_comment: false
@@ -667,6 +686,9 @@ Extract Archive:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action extracts files from an archive. It does not match any of the defined
+      product categories (Enrichment, Containment, Ticket Management, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -682,67 +704,60 @@ Extract Archive:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Extracts one or more archive files to a specific directory on the Google SecOps
-    server. This action supports multiple archive formats including ZIP, TAR, GZTAR,
-    BZTAR, and XTAR. It processes a comma-separated list of file paths, creates a
-    dedicated output directory for each archive, and unpacks the contents. The action
-    returns a detailed JSON structure representing the extracted file hierarchy, including
-    file names, extensions, and full system paths.
+    Extracts archive files (zip, tar, gztar, bztar, xtar) to a designated directory
+    on the server. This utility action simplifies the process of accessing contents
+    within compressed files for further analysis or processing within the SOAR environment.
 
 
     ### Flow Description
 
-    1. **Parameter Parsing:** The action retrieves the `Archive` parameter and splits
-    it into a list of individual file paths.
+    1. The action parses the `Archive` parameter to retrieve a list of file paths.
 
-    2. **Directory Preparation:** For each archive, it determines a destination path
-    within the predefined directory `/opt/siemplify/siemplify_server/Scripting/FileUtilities/Extract`.
-    It creates the directory if it does not already exist.
+    2. It iterates through each provided archive path.
 
-    3. **Extraction:** It utilizes the `shutil.unpack_archive` library to extract
-    the contents of the archive into the designated folder.
+    3. A target directory is created for each archive to store the extracted contents.
 
-    4. **Metadata Collection:** After extraction, it recursively scans the output
-    directory to build a dictionary-based representation of the files and folders
-    created.
+    4. The action uses `shutil.unpack_archive` to extract the contents of the archive.
 
-    5. **Result Reporting:** It compiles a JSON result containing success/failure
-    status for each archive, the destination folder path, and a list of all extracted
-    files (both as a simple list and with full paths).
+    5. A JSON structure is generated, detailing the extracted files and their paths.
+
+    6. The final result is returned to the SOAR platform using `add_result_json`.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Archive | String | Yes | A comma-delimited list of full file system paths to
-    the archives that need to be extracted. Example: `/path/to/file1.zip, /path/to/file2.tar.gz`.
-    |
+    | Archive | string | Yes | The path of the archive to be extracted. Supports comma-delimited
+    paths. |
 
 
     ### Additional Notes
 
-    * This action operates directly on the local filesystem of the execution environment.
-    It does not interact with external APIs or SecOps entity models (like IP or Hostname).
-
-    * The extraction destination is hardcoded to a specific subdirectory within the
-    Siemplify scripting folder.
+    This action performs local file system operations on the SOAR server. It does
+    not interact with external systems or modify SOAR case data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: false
-    internal_data_mutation_explanation: >-
-      The action creates directories and writes extracted files to the local filesystem
-      of the Google SecOps server at /opt/siemplify/siemplify_server/Scripting/FileUtilities/Extract.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local file system operations (extracting archives) on the
+      SOAR server. It does not interact with external APIs, modify SOAR case data,
+      or update entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external source, nor does it perform
+      any of the allowed internal mutations (creating insights, updating entities,
+      adding comments). It is a utility action for file extraction.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -758,6 +773,9 @@ Extract Archive:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities` or any SOAR entity
+      objects. It operates on file paths provided as parameters.
 Extract Zip Files:
   action_product_categories:
     add_alert_comment: false
@@ -773,6 +791,11 @@ Extract Zip Files:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action extracts files from a ZIP archive and manages them within the SOAR
+      platform (adding to case wall, creating entities). It does not match any of
+      the predefined product categories such as 'Enrich IOC', 'Contain Host', or 'Create
+      Ticket'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -787,71 +810,40 @@ Extract Zip Files:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    The **Extract Zip Files** action is a utility designed to process ZIP archives
-    associated with a case. It identifies `FILENAME` entities that contain an `attachment_id`,
-    retrieves the corresponding file from the Google SecOps internal storage, and
-    extracts its contents. The action supports password-protected archives through
-    either a provided list of passwords or a brute-force mechanism using a predefined
-    wordlist. Extracted files can be re-uploaded to the case wall, used to create
-    new entities (FILENAME and FILEHASH), and included as base64 data in the action's
-    JSON output.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Include Data In JSON Result | boolean | No | If set to `true`, the base64 encoded
-    content of the extracted files will be included in the `JsonResult` output. Default
-    is `false`. |
-
-    | Create Entities | boolean | No | If set to `true`, the action will automatically
-    create new `FILENAME` and `FILEHASH` entities for each file found inside the ZIP
-    archive. Default is `true`. |
-
-    | Zip File Password | string | No | A string containing one or more passwords
-    used to attempt extraction of protected ZIP files. |
-
-    | BruteForce Password | boolean | No | If set to `true`, the action will attempt
-    to brute-force the ZIP password using an internal wordlist if the provided passwords
-    fail. Default is `false`. |
-
-    | Add to Case Wall | boolean | No | If set to `true`, each extracted file will
-    be uploaded back to the case wall as a new attachment. Default is `true`. |
-
-    | Zip Password List Delimiter | string | Yes | The character used to separate
-    multiple passwords provided in the `Zip File Password` parameter (e.g., a comma).
-    Default is `,`. |
-
-
-    ### Flow Description
-
-    1.  **Entity Filtering:** The action scans the target entities for those of type
-    `FILENAME` that possess an `attachment_id` attribute in their additional properties.
-
-    2.  **Attachment Retrieval:** For each valid entity, the action fetches the binary
-    content of the ZIP file from the SOAR platform.
-
-    3.  **Extraction Logic:**
-        *   It attempts to open the ZIP file.
-        *   If the file is encrypted, it first tries the passwords provided in the
-    `Zip File Password` parameter (split by the delimiter).
-        *   If still locked and `BruteForce Password` is enabled, it iterates through
-    a wordlist to find the correct password.
-    4.  **Metadata Calculation:** For every file extracted, the action calculates
-    MD5, SHA1, SHA256, and SHA512 hashes, and determines the MIME type.
-
-    5.  **Internal Updates:**
-        *   If `Add to Case Wall` is enabled, files are uploaded to the case wall.
-        *   If `Create Entities` is enabled, new `FILENAME` and `FILEHASH` entities
-    are generated and linked to the parent ZIP file entity.
-    6.  **Result Reporting:** The action returns a JSON object mapping the original
-    ZIP filename to the list of extracted file metadata.
+  ai_description: "### General Description\nThis action extracts files from ZIP archives\
+    \ that are attached to FILENAME entities within the case. It supports password-protected\
+    \ ZIP files by allowing users to provide a specific password or by enabling a\
+    \ brute-force mechanism using a predefined wordlist. The action can optionally\
+    \ add the extracted files to the Case Wall and create new entities for the extracted\
+    \ files, linking them to the original ZIP file.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the `AttachmentsManager` and retrieves configuration\
+    \ parameters.\n2. **Entity Filtering**: It iterates through the `target_entities`\
+    \ and filters for those with `entity_type` equal to `FILENAME` that contain an\
+    \ `attachment_id` in their `additional_properties`.\n3. **Extraction**: For each\
+    \ valid entity, it downloads the attachment from the Case Wall, checks if it is\
+    \ a valid ZIP file, and extracts the contents. If password protection is encountered,\
+    \ it attempts to unlock the file using the provided password or the brute-force\
+    \ list.\n4. **Case Wall & Entity Management**: \n   - If `Add to Case Wall` is\
+    \ enabled, extracted files are uploaded as new attachments to the case.\n   -\
+    \ If `Create Entities` is enabled, new entities are created for the extracted\
+    \ files and linked to the parent file.\n5. **Result Generation**: The action returns\
+    \ a JSON result containing the extracted file metadata (and optionally the raw\
+    \ data) and updates the original entities with new properties if applicable.\n\
+    \n### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| Include Data In JSON Result | boolean | false | If true,\
+    \ includes the base64 encoded data of the extracted files in the action's JSON\
+    \ result. |\n| Create Entities | boolean | false | If true, creates new entities\
+    \ for the extracted files. |\n| Zip File Password | string | false | A password\
+    \ or list of passwords (separated by the delimiter) to attempt extraction of password-protected\
+    \ ZIP files. |\n| BruteForce Password | boolean | false | If true, attempts to\
+    \ brute-force password-protected ZIP files using a built-in wordlist. |\n| Add\
+    \ to Case Wall | boolean | false | If true, adds the extracted files as attachments\
+    \ to the case wall. |\n| Zip Password List Delimiter | string | true | The character\
+    \ used to separate multiple passwords in the 'Zip File Password' parameter. |\n\
+    \n### Additional Notes\n- The action requires the `FILENAME` entity to have an\
+    \ `attachment_id` attribute to successfully download the file from the Case Wall.\n\
+    - If `Create Entities` is enabled, the action will create new entities and link\
+    \ them to the parent file or email subject if applicable."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -862,10 +854,22 @@ Extract Zip Files:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action creates new FILENAME and FILEHASH entities within the Google SecOps
-      case and uploads extracted files as new attachments to the case wall.
+      The action adds new attachments to the case wall and creates new entities within
+      the SOAR platform.
+    reasoning: >-
+      The action fetches attachment data from the SOAR platform (fetches_data=true).
+      It does not mutate external systems (can_mutate_external_data=false). It performs
+      internal mutations by adding attachments to the case wall and creating new entities
+      (can_mutate_internal_data=true). It updates existing entities with new properties
+      (can_update_entities=true). It does not create insights, modify alert data,
+      or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      While the action fetches data, it performs internal mutations (creating new
+      entities) that are not included in the allowed list for enrichment actions (which
+      are limited to adding comments, creating insights, or updating existing entity
+      fields). Therefore, it is not classified as an enrichment action.
   entity_usage:
     entity_types:
     - FILENAME
@@ -882,6 +886,10 @@ Extract Zip Files:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == 'FILENAME'`. It also checks for the
+      presence of the 'attachment_id' key in the entity's `additional_properties`.
 Get Attachment:
   action_product_categories:
     add_alert_comment: false
@@ -891,12 +899,16 @@ Get Attachment:
     create_ticket: false
     delete_email: false
     disable_identity: false
-    download_file: true
+    download_file: false
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves attachments from the case wall. It does not match any of
+      the specific product categories defined, such as enriching IOCs, updating tickets,
+      or performing containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -911,28 +923,46 @@ Get Attachment:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThe **Get Attachment** action retrieves\
-    \ file attachments from the Google SecOps case wall or a specific alert wall.\
-    \ It fetches the metadata for the attachments and then downloads the actual file\
-    \ content, converting it into a Base64-encoded string. This is useful for downstream\
-    \ actions that need to process file content (e.g., sandboxing, hash calculation,\
-    \ or parsing) without requiring direct access to the SecOps storage.\n\n### Parameters\
-    \ Description\n| Parameter Name | Type | Mandatory | Description |\n| :--- | :---\
-    \ | :--- | :--- |\n| Attachment Scope | DDL | Yes | Determines the scope of the\
-    \ search. If set to **Case**, the action retrieves all attachments associated\
-    \ with the entire case. If set to **Alert**, it only retrieves attachments specifically\
-    \ linked to the current alert context. |\n\n### Flow Description\n1. **Parameter\
-    \ Retrieval**: The action identifies the user-defined scope (Case or Alert).\n\
-    2. **Metadata Fetching**: It calls the internal API to retrieve a list of all\
-    \ attachment metadata associated with the current case identifier.\n3. **Filtering**:\
-    \ \n    * It filters the list to include only items of type 'Attachment' (Type\
-    \ 4).\n    * If the scope is set to **Alert**, it further filters the list to\
-    \ include only those attachments whose `alertIdentifier` matches the current alert.\n\
-    4. **Content Retrieval**: For every matching attachment, the action uses the `evidenceId`\
-    \ to download the raw file content.\n5. **Encoding**: The raw binary content of\
-    \ each file is encoded into a Base64 string.\n6. **Output Generation**: The action\
-    \ appends the Base64 string to the attachment's metadata and returns the complete\
-    \ list as a JSON result."
+  ai_description: >-
+    ### General Description
+
+    The 'Get Attachment' action retrieves attachments from the Google SecOps (Chronicle)
+    case wall. It allows users to fetch attachments based on a specified scope (either
+    the entire case or the current alert) and returns the file content encoded in
+    Base64 format.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Attachment Scope | ddl | Yes | The scope of the attachment that needs to be
+    retrieved. Options are 'Case' or 'Alert'. |
+
+
+    ### Additional Notes
+
+    This action is a utility tool for retrieving files from the internal case wall.
+    It does not perform any external API calls to third-party services or modify any
+    data within the SOAR platform.
+
+
+    ### Flow Description
+
+    1. The action retrieves the 'Attachment Scope' parameter.
+
+    2. It fetches the metadata for all attachments associated with the current case.
+
+    3. It filters the attachments based on the selected scope ('Case' or 'Alert').
+
+    4. For each matching attachment, it retrieves the file content from the case wall.
+
+    5. The file content is encoded into a Base64 string.
+
+    6. The action returns the list of attachments, including their metadata and Base64
+    content, as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -943,8 +973,16 @@ Get Attachment:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches attachment data from the case wall (internal). It does not
+      mutate external or internal data. It does not update entities, create insights,
+      or modify alerts.
   categories:
     enrichment: false
+    reasoning: >-
+      The action retrieves data (attachments) but does not add context to entities
+      or alerts, nor does it update the SOAR platform state. It is a utility action
+      for file retrieval, not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -960,6 +998,10 @@ Get Attachment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `target_entities` or perform operations on
+      specific entities. It retrieves attachments based on the case or alert scope,
+      which are internal identifiers, not entity objects.
 Get Files as Base64:
   action_product_categories:
     add_alert_comment: false
@@ -975,6 +1017,10 @@ Get Files as Base64:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a file utility for base64 conversion. It does not match any of
+      the defined product categories (Enrichment, Containment, Ticket management,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -992,49 +1038,30 @@ Get Files as Base64:
   ai_description: >-
     ### General Description
 
-    The **Get Files as Base64** action is a utility designed to read local files from
-    the system and convert their contents into Base64-encoded strings. This is primarily
-    used to prepare binary file data for transmission to external APIs, sandboxes,
-    or for inclusion in structured reports where raw binary data is not supported.
+    This action converts local files to base64-encoded strings. It is a utility action
+    that reads files from the local file system and encodes them into base64 format
+    for further processing or analysis.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **File Paths** | String | Yes | A comma-delimited list of absolute file paths
-    to be processed (e.g., `/tmp/malware.exe, /home/user/evidence.log`). |
+    * **File Paths** (string, mandatory): A comma-delimited list of files, including
+    their path.
 
 
     ### Flow Description
 
-    1. **Input Parsing**: The action retrieves the `File Paths` parameter and splits
-    it into a list of potential file locations.
+    1. Parse the `File Paths` parameter into a list of file paths.
 
-    2. **Path Resolution**: It executes a custom resolution logic (`get_filenames`)
-    to verify the existence of the files on the local filesystem, handling cases where
-    filenames might contain commas.
+    2. Iterate through the provided paths, verifying the existence of each file.
 
-    3. **File Processing**: For each identified file:
-        - It extracts metadata including the directory path, filename, and file extension.
-        - It opens the file in binary read mode.
-        - It encodes the binary content into a Base64 string.
-    4. **Data Aggregation**: The action constructs a JSON object containing the list
-    of processed filenames and a data array with the metadata and Base64 strings for
-    each file.
+    3. Read the content of each valid file in binary mode.
 
-    5. **Output**: The resulting JSON is added to the action's execution results,
-    and the action completes with a success message listing the converted files.
+    4. Encode the file content into a base64 string.
 
+    5. Compile the results (filename, path, extension, base64 data) into a JSON object.
 
-    ### Additional Notes
-
-    - This action operates on the local filesystem of the environment where the Google
-    SecOps agent or runner is active.
-
-    - Large files may consume significant memory during the Base64 encoding process.
+    6. Add the JSON result to the action output and terminate the action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1045,8 +1072,15 @@ Get Files as Base64:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a local file system operation to convert files to base64.
+      It does not interact with external APIs, modify internal case data, or update
+      entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a file utility that converts local files to base64. It does not
+      fetch external data or perform enrichment on entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1062,6 +1096,9 @@ Get Files as Base64:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `target_entities`. It operates on file paths provided
+      as a parameter.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -1077,6 +1114,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity check ('Ping') and does not perform any of the
+      defined functional outcomes like enrichment, containment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1092,34 +1132,23 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    and functional status of the File Utilities integration within Google SecOps.
-    It performs a basic handshake to ensure that the integration environment is correctly
-    configured and that the SOAR platform can successfully execute scripts associated
-    with this integration.
+    Checks connectivity to the File Utilities integration. This action performs a
+    simple connectivity test to verify that the integration is properly configured
+    and communicating with the SOAR platform. It does not perform any data retrieval
+    or modification.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    There are no parameters required for this action.
-
-
-    ### Additional Notes
-
-    This action does not interact with any external APIs or process any entity data.
-    It is strictly used for health checks.
+    There are no parameters for this action.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify API context.
+    1. The action initializes the `SiemplifyAction` object.
 
-    2. **Connectivity Check**: The script executes a simple completion command.
-
-    3. **Finalization**: The action ends with a success message 'Siemplify is connected',
-    confirming the integration is active.
+    2. It immediately terminates the execution by calling `siemplify.end` with a success
+    message, confirming that the integration is reachable.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1130,8 +1159,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a simple connectivity check by calling `siemplify.end`.
+      It does not interact with external APIs, fetch data, or modify any internal
+      or external systems.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
+      action per the instructions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1147,6 +1183,8 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities.
 Remove Entity from File:
   action_product_categories:
     add_alert_comment: false
@@ -1162,6 +1200,10 @@ Remove Entity from File:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a file utility that removes entries from a local file. It does
+      not perform any of the defined product actions (Enrichment, Containment, Ticket,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1177,73 +1219,59 @@ Remove Entity from File:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Removes the identifiers of target entities from a specified local file. This utility
-    action is designed to manage local lists or flat-file databases by ensuring that
-    specific entity strings are deleted from the file content. It employs a file-locking
-    mechanism to ensure thread safety and prevent data corruption during concurrent
-    access.
+    This action removes the identifier of a target entity from a specified local file
+    on the SOAR server. It iterates through the provided target entities, checks if
+    each identifier exists in the file, and removes it if found. The action returns
+    a success or failure status based on whether all entities were successfully processed.
 
 
-    ### Flow Description
-
-    1. **Parameter Initialization**: The action retrieves the `Filename` parameter
-    provided by the user.
-
-    2. **Path Construction**: It constructs the full file path by appending the filename
-    to the default directory (`/tmp/`).
-
-    3. **File Locking and Reading**: The `EntityFileManager` context manager is used
-    to acquire a lock on the file (creating a `.lock` file) and read its current contents
-    into memory.
-
-    4. **Entity Iteration**: The action iterates through all `target_entities` provided
-    in the current SOAR context.
-
-    5. **Removal Logic**: For each entity, the action checks if its identifier exists
-    in the file's content. If it exists, the identifier is removed from the list.
-    If it does not exist, the action logs this and prepares to return a failure status
-    for the overall result.
-
-    6. **Persistence**: After processing all entities, the updated list is written
-    back to the file, and the file lock is released.
-
-    7. **Final Output**: The action returns a summary message detailing which entities
-    were removed and which were not found, along with a boolean result indicating
-    if all entities were successfully located and removed.
-
-
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Filename | string | True | The name of the file (located in `/tmp/`) from which
-    the entity identifiers should be removed. |
+    | Filename | string | Yes | The name of the file from which to remove the entities.
+    |
 
 
-    ### Additional Notes
+    ### Flow Description
 
-    - The action will return `False` as its result value if even one of the target
-    entities is not found in the file, although it will still proceed to remove any
-    other entities that *are* found.
+    1. Extract the `Filename` parameter.
 
-    - The file is expected to be a line-delimited text file where each line represents
-    an entity identifier.
+    2. Initialize `EntityFileManager` with the file path and a timeout.
+
+    3. Iterate through the provided `target_entities`.
+
+    4. Check if each entity's identifier exists in the file.
+
+    5. If found, remove the identifier from the file's content.
+
+    6. Update the file with the modified list.
+
+    7. Return a success/failure status based on whether all entities were successfully
+    removed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Modifies a file on the local filesystem by removing specific entity identifier
-      strings.
+    external_data_mutation_explanation: null
     fetches_data: false
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Modifies a local file on the SOAR server by removing entity identifiers.
+    reasoning: >-
+      The action modifies a local file on the SOAR server. It does not fetch external
+      data, mutate external systems, or update SOAR entities/insights. It is a file
+      utility operation.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external source, nor does it perform
+      any of the allowed internal mutations (Case Comments, Insights, Entity updates).
+      It is a file utility.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1294,6 +1322,9 @@ Remove Entity from File:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all `target_entities` without filtering by type, so
+      it supports all entity types.
 Save Base64 to File:
   action_product_categories:
     add_alert_comment: false
@@ -1309,6 +1340,10 @@ Save Base64 to File:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      This action is a utility for saving files to the local filesystem. It does not
+      perform any of the defined product category operations (e.g., enrichment, containment,
+      ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1323,32 +1358,50 @@ Save Base64 to File:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "Saves one or more base64-encoded strings as files on the local\
-    \ filesystem of the Google SecOps runner or agent. This action is primarily used\
-    \ to convert encoded data\u2014such as email attachments, forensic artifacts,\
-    \ or exported logs\u2014into physical files that can be processed by subsequent\
-    \ actions in a playbook. It supports batch processing through comma-separated\
-    \ input lists.\n\n### Parameters Description\n\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Base64 Input | String | Yes\
-    \ | A comma-separated list of base64-encoded strings to be converted into files.\
-    \ |\n| Filename | String | Yes | A comma-separated list of filenames to be used\
-    \ for the saved files. The order must match the 'Base64 Input' list. |\n| File\
-    \ Extension | String | No | An optional comma-separated list of file extensions\
-    \ (e.g., 'txt', '.png') to append to the filenames. If fewer extensions are provided\
-    \ than filenames, the last extension in the list is applied to all remaining files.\
-    \ |\n\n### Flow Description\n\n1. **Input Parsing:** The action retrieves the\
-    \ `Base64 Input`, `Filename`, and `File Extension` parameters, splitting them\
-    \ into lists based on comma delimiters.\n2. **Directory Setup:** It identifies\
-    \ the appropriate storage path (either a local 'downloads' folder or the agent's\
-    \ download directory) and creates the directory if it does not already exist.\n\
-    3. **Filename Sanitization:** Each provided filename is sanitized to remove invalid\
-    \ characters and spaces, ensuring compatibility with the filesystem.\n4. **Decoding\
-    \ and Writing:** For each input pair, the action decodes the base64 string into\
-    \ binary data and writes it to the calculated file path, appending the extension\
-    \ if provided.\n5. **Result Compilation:** It generates a JSON object containing\
-    \ metadata for all successfully saved files, including the original filename,\
-    \ the full file path, and the extension.\n6. **Completion:** The action ends by\
-    \ returning a success message listing the paths of the saved files."
+  ai_description: >-
+    ### General Description
+
+    The **Save Base64 to File** action converts a provided base64-encoded string into
+    a binary file and saves it to the local filesystem of the SOAR engine or agent.
+    This utility is useful for extracting files from base64 data, such as attachments
+    or payloads, for further analysis or storage.
+
+
+    ### Flow Description
+
+    1. **Input Parsing**: The action retrieves the `Base64 Input` and `Filename` parameters.
+    Both support comma-separated lists to process multiple files in a single execution.
+
+    2. **Directory Setup**: It determines the target directory (the `downloads` folder)
+    based on whether the action is running locally or on a remote agent.
+
+    3. **File Processing**: It iterates through the provided inputs, decodes the base64
+    strings, and writes the resulting binary data to the specified file paths.
+
+    4. **Result Generation**: It constructs a JSON object containing the details of
+    the saved files (name, path, and extension) and returns this as the action result.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | `Base64 Input` | String | Yes | The base64 encoded string(s) to be converted.
+    Supports comma-separated values for multiple files. |
+
+    | `Filename` | String | Yes | The name(s) to assign to the saved files. Supports
+    comma-separated values. |
+
+    | `File Extension` | String | No | An optional extension to append to the output
+    filename(s). |
+
+
+    ### Additional Notes
+
+    - The action does not interact with external systems or SOAR entities. It performs
+    purely local filesystem operations.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1359,8 +1412,17 @@ Save Base64 to File:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local file system operations (writing files) based on provided
+      input. It does not interact with external APIs, nor does it modify SOAR case
+      data or entities. It does not fetch data, mutate external systems, or update
+      internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from external sources, nor does it perform any
+      enrichment or modification of SOAR entities. It is a utility action for file
+      creation on the local filesystem.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1376,3 +1438,5 @@ Save Base64 to File:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or reference any SOAR entities.

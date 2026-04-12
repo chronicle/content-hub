@@ -13,6 +13,10 @@ Execute GNQL Query:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action executes a GNQL query to search GreyNoise threat intelligence data
+      and returns the results. This matches the 'Search Events' category as it retrieves
+      a collection of data matching specific search parameters.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -28,28 +32,11 @@ Execute GNQL Query:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Executes custom GreyNoise Query Language (GNQL) queries to search GreyNoise threat
-    intelligence data. This action allows users to perform complex searches across
-    the GreyNoise dataset, retrieving information about IP addresses, classifications,
-    and scanning behavior. It supports pagination to handle large result sets and
-    provides options to simplify the output or exclude raw data for performance.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the GNQL query, maximum results
-    limit, and output preferences (Quick mode and Exclude Raw).
-
-    2. **Validation:** Validates that the 'Max Results' parameter is a positive integer.
-
-    3. **API Interaction:** Connects to the GreyNoise API and executes the query.
-
-    4. **Pagination:** If the result set exceeds the page size, the action automatically
-    uses scroll tokens to fetch subsequent pages until the 'Max Results' limit is
-    reached or all data is retrieved.
-
-    5. **Result Aggregation:** Collects all fetched records and returns them as a
-    JSON object.
+    intelligence data. This action supports automatic pagination to retrieve large
+    datasets based on the provided query and configuration parameters.
 
 
     ### Parameters Description
@@ -58,23 +45,36 @@ Execute GNQL Query:
 
     | :--- | :--- | :--- | :--- |
 
-    | GNQL Query | String | Yes | The GreyNoise Query Language query string to execute
-    (e.g., 'last_seen:1d'). |
+    | GNQL Query | string | Yes | The GreyNoise Query Language query string to execute.
+    |
 
-    | Max Results | String | No | The maximum number of records to return. Default
-    is 1000. |
+    | Max Results | string | No | Number of results to return per request (max 5000).
+    Defaults to 1000. |
 
-    | Quick | Boolean | No | If set to true, the response will only include the IP
-    address and the classification or trust level. |
+    | Quick | boolean | No | If true, the response will only include the IP address
+    and the classification or trust level. Defaults to false. |
 
-    | Exclude Raw | Boolean | No | If set to true, raw scan data will be excluded
-    from the response to reduce payload size. |
+    | Exclude Raw | boolean | No | Whether to exclude raw scan data from the response.
+    Defaults to true. |
+
+
+    ### Flow Description
+
+    1. Extracts action parameters (GNQL Query, Max Results, Quick, Exclude Raw).
+
+    2. Initializes the `APIManager` with the configured API key.
+
+    3. Executes the GNQL query using the `APIManager`, handling pagination automatically
+    until the `Max Results` limit is reached or no more data is available.
+
+    4. Collects all retrieved data into a list.
+
+    5. Returns the collected data as a JSON result in the action output.
 
 
     ### Additional Notes
 
-    - This action does not operate on specific entities within the SecOps case; it
-    performs a global search based on the provided query string.
+    None.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -85,8 +85,16 @@ Execute GNQL Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the GreyNoise API by executing a GNQL query. It
+      does not mutate external or internal data, nor does it update entities, create
+      insights, or modify alert data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action executes a query to search GreyNoise data and returns the results.
+      It does not perform enrichment on specific entities, nor does it modify any
+      internal or external data. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -102,6 +110,9 @@ Execute GNQL Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It takes a query string as input
+      and returns search results from the GreyNoise API.
 Get CVE Details:
   action_product_categories:
     add_alert_comment: false
@@ -117,6 +128,11 @@ Get CVE Details:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (CVSS, EPSS, threat activity) for CVE
+      indicators and updates the entity profile. This directly matches the 'Enrich
+      IOC' category. It does not perform any other actions such as ticket creation,
+      alert updates, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -131,42 +147,29 @@ Get CVE Details:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    Enriches CVE entities using GreyNoise intelligence to provide deep context on
-    vulnerabilities and active exploitation. This action retrieves critical data points
-    including CVSS scores, EPSS (Exploit Prediction Scoring System) scores, CISA KEV
-    (Known Exploited Vulnerabilities) status, and real-time threat activity counts.
-    It helps analysts prioritize vulnerabilities by identifying which ones are being
-    actively exploited in the wild.
-
-
-    ### Parameters Description
-
-    There are no specific action parameters for this action. It automatically processes
-    all CVE entities present in the current context using the integration's global
-    API key.
-
-
-    ### Flow Description
-
-    1. **Entity Identification**: The action scans the current case for entities of
-    type CVE.
-
-    2. **Format Validation**: Each CVE identifier is validated against the standard
-    format (CVE-YYYY-NNNN).
-
-    3. **GreyNoise Lookup**: For each valid CVE, the action queries the GreyNoise
-    API to retrieve vulnerability details and exploitation intelligence.
-
-    4. **Data Enrichment**: The retrieved data (CVSS, EPSS, description, etc.) is
-    mapped to entity attributes prefixed with `GN_`.
-
-    5. **Insight Generation**: A detailed HTML insight is generated for each CVE,
-    featuring color-coded severity levels, exploit availability badges, and active
-    threat IP counts.
-
-    6. **Internal Update**: The action updates the CVE entities in Google SecOps with
-    the new enrichment data and attaches the generated insights to the case wall.
+  ai_description: "### General Description\nThis action enriches CVE (Common Vulnerabilities\
+    \ and Exposures) entities by retrieving threat intelligence from the GreyNoise\
+    \ API. It fetches critical vulnerability data, including CVSS scores, EPSS scores,\
+    \ and active threat activity, to provide analysts with context regarding the exploitability\
+    \ and prevalence of the vulnerability. The action updates the entity's properties\
+    \ within the SOAR platform and generates a detailed HTML insight for quick reference.\n\
+    \n### Flow Description\n1. **Initialization**: The action initializes the GreyNoise\
+    \ API manager using the configured API key.\n2. **Entity Retrieval**: It identifies\
+    \ all CVE-type entities associated with the current case.\n3. **Validation**:\
+    \ For each CVE entity, the action validates the identifier format (CVE-YYYY-NNNN).\n\
+    4. **Data Fetching**: It queries the GreyNoise API to retrieve detailed vulnerability\
+    \ information.\n5. **Enrichment**: \n    * Updates the entity's `additional_properties`\
+    \ with retrieved data (e.g., `GN_CVSS_Score`, `GN_EPSS_Score`, `GN_Exploit_Found`).\n\
+    \    * Marks the entity as enriched.\n6. **Insight Generation**: Creates an HTML-formatted\
+    \ insight containing the vulnerability assessment and adds it to the entity.\n\
+    7. **Finalization**: Updates the entities in the SOAR platform and adds the raw\
+    \ result data to the action output.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| GN API\
+    \ Key | String | Yes | The API key used to authenticate with the GreyNoise service.\
+    \ |\n\n### Additional Notes\n* The action requires at least one CVE entity to\
+    \ be present in the case to execute successfully.\n* If no data is found for a\
+    \ specific CVE in the GreyNoise dataset, the entity will not be enriched, and\
+    \ the action will log the event."
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -177,10 +180,19 @@ Get CVE Details:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates CVE entities with enrichment attributes (CVSS, EPSS, threat counts)
-      and creates detailed HTML insights within the Google SecOps case.
+      Updates entity properties and adds insights to the entity within the SOAR platform.
+    reasoning: >-
+      The action fetches data from the GreyNoise API (fetches_data=true). It does
+      not perform any external mutations (can_mutate_external_data=false). It performs
+      internal mutations by updating entity properties and adding insights to the
+      SOAR platform (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
   categories:
     enrichment: true
+    reasoning: >-
+      The action is designed to fetch threat intelligence for CVE entities and update
+      their internal representation (properties and insights). It does not mutate
+      external systems or perform unauthorized internal modifications. Therefore,
+      it qualifies as an enrichment action.
   entity_usage:
     entity_types:
     - CVE
@@ -197,6 +209,10 @@ Get CVE Details:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code explicitly filters `siemplify.target_entities` for entities of type
+      `EntityTypes.CVE`. It does not filter by other attributes like creation time
+      or modification time.
 IP Lookup:
   action_product_categories:
     add_alert_comment: false
@@ -212,6 +228,10 @@ IP Lookup:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation, classification, and threat intelligence for
+      IP addresses from GreyNoise. This directly matches the 'Enrich IOC' category.
+      It does not perform any containment, ticketing, or alert modification actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -226,32 +246,27 @@ IP Lookup:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "Enriches IP Address entities using GreyNoise intelligence to provide\
-    \ comprehensive context on internet-wide scanning activity and business service\
-    \ associations. The action identifies whether an IP is a known scanner, its classification\
-    \ (benign, suspicious, or malicious), associated threat actors, and any related\
-    \ CVEs. It automatically adapts its execution logic based on the API key tier\
-    \ (Community vs. Enterprise), utilizing batch lookups for Enterprise users to\
-    \ optimize performance.\n\n### Flow Description:\n1. **Entity Identification:**\
-    \ Filters the target entities to identify all IP Address (ADDRESS) entities within\
-    \ the current context.\n2. **Tier Detection:** Checks the provided GreyNoise API\
-    \ key to determine if it belongs to the Community or Enterprise tier.\n3. **Data\
-    \ Retrieval:** \n    * For **Enterprise** keys: Performs a batch lookup for all\
-    \ identified IPs simultaneously.\n    * For **Community** keys: Performs individual\
-    \ lookups for each IP.\n4. **Enrichment & Classification:** Processes the API\
-    \ response to extract classification, actor names, tags, and CVE data. It updates\
-    \ the entity's suspicious status if the classification is 'suspicious' or 'malicious'.\n\
-    5. **Internal Updates:** Populates the entity's additional properties with GreyNoise\
-    \ metadata (prefixed with `GN_`) and marks the entity as enriched.\n6. **Insight\
-    \ Generation:** Creates a detailed HTML insight for each successfully processed\
-    \ IP, providing a visual summary of the intelligence gathered.\n\n### Parameters\
-    \ Description:\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
-    \ | :--- | :--- |\n| GN API Key | String | Yes | The API key used to authenticate\
-    \ with GreyNoise services. This is configured at the integration level. |\n\n\
-    ### Additional Notes:\n* This action is strictly read-only regarding external\
-    \ systems and is classified as an enrichment action.\n* If no IP Address entities\
-    \ are found, the action will complete successfully with a message indicating no\
-    \ entities were processed."
+  ai_description: "### General Description\nThis action performs comprehensive IP\
+    \ enrichment using the GreyNoise API. It retrieves threat intelligence, including\
+    \ classification, actor information, tags, CVEs, and business service intelligence\
+    \ for IP Address entities. The action supports both Community and Enterprise API\
+    \ tiers, automatically adjusting the lookup method (individual vs. batch) based\
+    \ on the API key provided.\n\n### Parameters\n| Parameter | Type | Mandatory |\
+    \ Description |\n| :--- | :--- | :--- | :--- |\n| GN API Key | String | Yes |\
+    \ The API key used to authenticate with the GreyNoise service. |\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the `APIManager` using the provided\
+    \ API key and determines the API tier (Community or Enterprise).\n2. **Entity\
+    \ Identification**: It retrieves all IP Address entities from the current case.\n\
+    3. **Data Retrieval**: \n    - If using the **Community tier**, it processes IPs\
+    \ individually.\n    - If using the **Enterprise tier**, it performs a batch lookup\
+    \ for efficiency.\n4. **Enrichment**: For each IP found in the GreyNoise dataset,\
+    \ the action:\n    - Updates the entity's `additional_properties` with retrieved\
+    \ intelligence (e.g., classification, actor, tags).\n    - Sets the `is_enriched`\
+    \ flag to true.\n    - Updates the `is_suspicious` status based on the classification\
+    \ (e.g., 'malicious' or 'suspicious').\n    - Generates an HTML insight containing\
+    \ the detailed intelligence and adds it to the entity.\n5. **Result Reporting**:\
+    \ The action updates the entities in the case and attaches the full JSON response\
+    \ to the action results."
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -262,10 +277,21 @@ IP Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes with GreyNoise intelligence (classification, actor,
-      tags, CVEs) and creates detailed entity insights.
+      Updates entity properties (is_enriched, is_suspicious, additional_properties)
+      and adds entity insights within Google SecOps.
+    reasoning: >-
+      The action fetches threat intelligence data from the GreyNoise API (fetches_data=true).
+      It does not perform any actions that change the state of external systems (can_mutate_external_data=false).
+      It updates internal entity data (is_enriched, is_suspicious, additional_properties)
+      and creates entity insights (can_mutate_internal_data=true, can_update_entities=true,
+      can_create_insight=true).
   categories:
     enrichment: true
+    reasoning: >-
+      The action is designed to fetch supplemental context (threat intelligence) for
+      IP entities. It does not mutate external systems and only performs allowed internal
+      mutations (updating entities and creating insights). Therefore, it qualifies
+      as an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -282,6 +308,9 @@ IP Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action explicitly filters target entities using `get_ip_entities`, which
+      selects only entities of type `ADDRESS` (EntityTypes.ADDRESS).
 IP Timeline Lookup:
   action_product_categories:
     add_alert_comment: false
@@ -297,6 +326,10 @@ IP Timeline Lookup:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (timeline data) for an IP address,
+      which matches the 'Enrich IOC' category. It does not perform any other actions
+      like ticketing, blocking, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -312,59 +345,56 @@ IP Timeline Lookup:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves the historical activity timeline for IP Address entities from GreyNoise,
-    providing visibility into how an IP's behavior and classification have changed
-    over time. This action allows analysts to visualize trends in scanning activity,
-    port usage, or tag associations.
+    ### General Description
+
+    This action retrieves the activity timeline for IP addresses from the GreyNoise
+    platform. It provides visibility into how an IP address's classification or other
+    fields have changed over a specified period, helping analysts understand the historical
+    behavior of an indicator.
 
 
-    ### Flow Description:
+    ### Flow Description
 
-    1. **Parameter Initialization:** Extracts the 'Days', 'Field', and 'Granularity'
-    parameters from the action configuration and validates that 'Days' is a positive
-    integer.
+    1. **Parameter Extraction**: The action extracts the `Days`, `Field`, and `Granularity`
+    parameters from the configuration.
 
-    2. **Entity Filtering:** Identifies all IP Address entities within the current
-    context.
+    2. **Validation**: It validates that the `Days` parameter is a positive integer.
 
-    3. **External Lookup:** For each IP, it queries the GreyNoise Timeline API using
-    the specified field (e.g., classification, tag_ids) and time range.
+    3. **Entity Retrieval**: It identifies all `ADDRESS` type entities within the
+    current case.
 
-    4. **Metadata Enrichment:** If the 'Field' is set to 'tag_ids', the action performs
-    additional lookups to fetch descriptive metadata for each tag identified in the
-    timeline.
+    4. **API Interaction**: For each IP entity, it queries the GreyNoise API to fetch
+    the activity timeline based on the provided parameters.
 
-    5. **Internal Updates:** Enriches the SOAR entities with the retrieved timeline
+    5. **Enrichment**: It updates the entity's `additional_properties` with the retrieved
+    timeline data (e.g., first seen, timeline field).
+
+    6. **Insight Generation**: It generates an HTML insight containing the timeline
+    data and attaches it to the entity.
+
+    7. **Entity Update**: It updates the entities in the case with the new enrichment
     data and marks them as enriched.
 
-    6. **Insight Generation:** Creates a detailed HTML insight for each entity, featuring
-    a formatted timeline overview and links to the GreyNoise Visualizer.
 
-
-    ### Parameters Description:
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | Field | DDL | No | The specific attribute to track over time. Options include:
-    destination_port, http_path, http_user_agent, source_asn, source_org, source_rdns,
-    tag_ids, or classification (default). |
+    | Field | ddl | No | The field over which to show the activity breakdown (e.g.,
+    classification, destination_port). Default is 'classification'. |
 
-    | Granularity | String | No | The time bucket size for the timeline. Supports
-    hours (e.g., 1h to 24h) or days (e.g., 1d to 90d). Default is '1d'. |
+    | Granularity | string | No | The granularity of activity date ranges. Can be
+    in hours (e.g., 'Xh') or days (e.g., 'Xd'). Default is '1d'. |
 
-    | Days | String | No | The total lookback period in days. Must be a positive integer.
-    Default is '30'. |
+    | Days | string | No | The number of days to show data for. Default is '30'. |
 
 
-    ### Additional Notes:
+    ### Additional Notes
 
-    - This action is primarily used for historical context and trend analysis rather
-    than real-time reputation checks.
-
-    - If 'tag_ids' is selected as the field, the action will automatically fetch tag
-    names and descriptions to provide more context in the insights.
+    This action is strictly for enrichment purposes and does not perform any blocking
+    or external system modifications.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -375,10 +405,17 @@ IP Timeline Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with GreyNoise timeline data and creates
-      entity insights containing activity summaries.
+      Updates entity properties and adds insights to the entity within the SOAR platform.
+    reasoning: >-
+      The action fetches timeline data from the GreyNoise API for IP entities. It
+      updates the entities with this enrichment data and creates an HTML insight on
+      the entity. It does not mutate external systems.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (GreyNoise) and updates internal
+      entities/insights without modifying external systems. This fits the definition
+      of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -395,6 +432,9 @@ IP Timeline Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code uses `get_ip_entities` which filters `siemplify.target_entities` for
+      `EntityTypes.ADDRESS`.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -410,6 +450,10 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      product category operations such as enrichment, ticketing, containment, or alert
+      modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -424,35 +468,24 @@ Ping:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: >-
-    Tests the connectivity to the GreyNoise API and validates the provided API key.
-    This action is primarily used to ensure that the integration is correctly configured
-    and that the SOAR platform can communicate with GreyNoise services. It checks
-    the validity of the API key and, for enterprise-tier keys, verifies that the key
-    has not expired.
-
-
-    ### Parameters
-
-    There are no action-specific parameters for this action. It relies on the global
-    integration configuration (GN API Key).
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Siemplify context and retrieves
-    the GreyNoise API key from the integration's configuration settings.
-
-    2. **Connectivity Test**: It uses the GreyNoise API Manager to call the `test_connection`
-    endpoint of the GreyNoise API.
-
-    3. **Expiration Check**: If the connection is successful and the API key is not
-    a 'community' tier key, the action parses the expiration date from the response
-    and compares it against the current date to ensure the key is still valid.
-
-    4. **Result Handling**: The action captures any exceptions (such as rate limits
-    or request failures) and returns a success or failure message to the SOAR platform
-    along with the execution status.
+  ai_description: "### General Description\nThe Ping action is a diagnostic tool designed\
+    \ to verify connectivity between the Google SecOps SOAR platform and the GreyNoise\
+    \ API. It validates that the provided API key is authenticated and that the integration\
+    \ can successfully communicate with the GreyNoise server. This action is typically\
+    \ used to troubleshoot integration issues or confirm that the environment is correctly\
+    \ configured before running more complex operations.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | GN API Key | String | Yes | The API key used to authenticate requests to the\
+    \ GreyNoise service. |\n\n### Flow Description\n1. **Initialization**: The action\
+    \ initializes the `SiemplifyAction` and retrieves the `GN API Key` from the integration\
+    \ configuration.\n2. **Connectivity Test**: It instantiates the `APIManager` and\
+    \ invokes the `test_connectivity` method, which performs a request to the GreyNoise\
+    \ API to validate the credentials.\n3. **Error Handling**: \n    * If a `RateLimitError`\
+    \ occurs, the action logs the error and returns a failure status.\n    * If a\
+    \ `RequestFailure` occurs, the action logs the failure and returns a failure status.\n\
+    \    * Any other exceptions are caught, logged, and result in a failure status.\n\
+    4. **Completion**: The action logs the final status and terminates with a success\
+    \ or failure message, providing immediate feedback on the connectivity state."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -461,10 +494,19 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test (Ping) against the GreyNoise API. It
+      does not fetch contextual data about entities, nor does it mutate any external
+      or internal systems. It is a diagnostic action used solely for verifying API
+      connectivity.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a connectivity test ('Ping'). Per the instructions, actions named
+      'Ping' must not be categorized as enrichment actions. Furthermore, it does not
+      fetch data or modify state, failing the criteria for enrichment.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -480,6 +522,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a global connectivity
+      test that does not require entity context.
 Quick IP Lookup:
   action_product_categories:
     add_alert_comment: false
@@ -495,6 +540,11 @@ Quick IP Lookup:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation, classification, and threat intelligence for
+      IP addresses from GreyNoise and updates the entity in the SOAR platform. This
+      aligns perfectly with the 'Enrich IOC' category. It does not perform any other
+      actions such as ticketing, blocking, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -510,52 +560,46 @@ Quick IP Lookup:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Performs a lightweight IP classification lookup using the GreyNoise service to
-    identify internet scanners and business services. This action is designed for
-    high-speed enrichment of IP Address entities, providing immediate context on whether
-    an IP is known for 'noise' (mass scanning) or belongs to a trusted business service.
+    ### General Description
 
-
-    ### Flow Description
-
-    1. **Entity Extraction:** Identifies all IP Address entities within the current
-    alert or case context.
-
-    2. **GreyNoise Query:** Executes a bulk 'quick lookup' request to the GreyNoise
-    API for all identified IP addresses.
-
-    3. **Data Processing:** Iterates through the API responses to determine if GreyNoise
-    has data ('noise') for each IP.
-
-    4. **Entity Enrichment:** For IPs found in the dataset, it updates the entity's
-    additional properties with trust levels and classifications.
-
-    5. **Risk Assessment:** Automatically marks entities as suspicious if GreyNoise
-    classifies them as 'malicious' or 'suspicious'.
-
-    6. **Insight Generation:** Creates and attaches a formatted HTML insight to each
-    enriched entity, providing a visual summary of the intelligence.
-
-    7. **Result Reporting:** Returns a comprehensive JSON object containing the lookup
-    results for all processed entities.
+    This action performs a lightweight IP classification lookup using the GreyNoise
+    API. It retrieves trust levels, internet scanner status, and business service
+    status for provided IP addresses. The action enriches the IP entities within the
+    SOAR platform by updating their properties, setting their suspicious status, and
+    generating visual insights for analysts.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | None | N/A | N/A | This action does not require any input parameters beyond
-    the global integration configuration (API Key). |
+    | GN API Key | String | Yes | The API key used to authenticate with the GreyNoise
+    service. |
 
 
-    ### Additional Notes
+    ### Flow Description
 
-    * This action specifically targets `ADDRESS` entities.
+    1. **Initialization**: The action initializes the GreyNoise API manager using
+    the provided API key.
 
-    * It uses the GreyNoise 'quick' endpoint, which is optimized for performance and
-    provides a subset of the full IP context (classification and trust level).
+    2. **Entity Retrieval**: It identifies and filters all `ADDRESS` type entities
+    from the current case.
+
+    3. **Data Lookup**: It sends the list of IP addresses to the GreyNoise API to
+    perform a quick lookup.
+
+    4. **Processing**: For each IP address found in the GreyNoise dataset:
+        * It updates the entity's `additional_properties` with enrichment data (e.g.,
+    classification, trust level).
+        * It sets the entity's `is_enriched` flag to `True`.
+        * It evaluates the classification to determine if the entity should be marked
+    as `is_suspicious`.
+        * It generates an HTML insight summarizing the IP intelligence and adds it
+    to the entity.
+    5. **Update**: The action updates the enriched entities within the SOAR platform
+    and returns the results as a JSON object.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -566,11 +610,20 @@ Quick IP Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with GreyNoise metadata, sets the entity's
-      suspicious status based on classification, and adds HTML insights to the entity
-      context.
+      Updates entity properties and adds insights to entities within the SOAR platform.
+    reasoning: >-
+      The action fetches threat intelligence data from the GreyNoise API (fetches_data=true).
+      It does not perform any actions that change the state of external systems (can_mutate_external_data=false).
+      It performs internal mutations by updating entity properties and adding insights
+      to entities within the SOAR platform (can_mutate_internal_data=true, can_update_entities=true,
+      can_create_insight=true).
   categories:
     enrichment: true
+    reasoning: >-
+      The action is an enrichment action because it fetches data from an external
+      source (GreyNoise) to provide context on IP entities. It does not mutate external
+      systems. It performs allowed internal mutations (updating entities and creating
+      insights).
   entity_usage:
     entity_types:
     - ADDRESS
@@ -587,3 +640,6 @@ Quick IP Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action uses the `get_ip_entities` utility, which filters `siemplify.target_entities`
+      to include only those with `entity_type == EntityTypes.ADDRESS`.

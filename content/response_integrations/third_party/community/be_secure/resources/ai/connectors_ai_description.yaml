@@ -2,11 +2,12 @@ Pull reports:
   ai_description: >-
     ### General Description
 
-    The beSECURE connector integrates Google SecOps with Beyond Security's beSECURE
-    Vulnerability Assessment and Management solution. It automatically retrieves vulnerability
-    scan results for networks and hosts, converting identified vulnerabilities into
-    actionable alerts. This allows security teams to monitor scan progress and respond
-    to newly discovered vulnerabilities directly within the SOAR platform.
+    The beSECURE Connector integrates with the Beyond Security beSECURE vulnerability
+    assessment platform to ingest vulnerability scan data into Google SecOps. It periodically
+    polls the beSECURE API for completed scans, retrieves detailed vulnerability reports,
+    and converts them into actionable alerts within the SOAR platform. This allows
+    security teams to monitor and respond to vulnerabilities identified by beSECURE
+    directly within their incident response workflows.
 
 
     ### Parameters Description
@@ -15,53 +16,45 @@ Pull reports:
 
     | :--- | :--- | :--- | :--- |
 
-    | Verify SSL Ceritifcate? | Boolean | No | If set to true, the connector will
-    verify the SSL certificate of the beSECURE server. |
+    | Verify SSL Ceritifcate? | Boolean | No | Whether to verify the SSL certificate
+    of the beSECURE server. |
 
-    | Check Every X Minutes | String | Yes | The lookback window (in minutes) to check
-    for completed scans during each execution. |
+    | Check Every X Minutes | String | Yes | The interval in minutes to check for
+    new scans. |
 
-    | URL | String | Yes | The base URL of the beSECURE instance (e.g., `https://besecure.yourdomain.com`).
-    |
+    | URL | String | Yes | The base URL of the beSECURE instance. |
 
-    | API Key | Password | Yes | The API key required to authenticate with the beSECURE
-    JSON API. |
+    | API Key | Password | Yes | The API key for authenticating with the beSECURE
+    API. |
 
-    | DeviceProductField | String | Yes | The field name used to identify the device
-    product in the ingested events (default: beSECURE Pull Reports). |
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
 
     | EventClassId | String | No | The field name used to determine the event name
-    or sub-type. |
+    (sub-type). |
 
-    | PythonProcessTimeout | String | Yes | The maximum execution time allowed for
-    the connector script in seconds. |
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The connector extracts configuration parameters and cleans
-    the API key of any non-alphanumeric characters.
+    1. The connector initializes and connects to the beSECURE API using the provided
+    URL and API Key.
 
-    2. **Scan Discovery**: It queries the beSECURE API (`returnnetworks` action) to
-    identify scans that have finished within the specified rotation time.
+    2. It queries the API for network scans that have completed within the configured
+    "Check Every X Minutes" window.
 
-    3. **Deduplication**: The connector maintains a local state file (`previous_scans.json`)
-    to track processed scan IDs and scan numbers, ensuring that duplicate alerts are
-    not created for the same scan results.
+    3. It maintains a local `previous_scans.json` file to track processed scan IDs
+    and avoid duplicate ingestion.
 
-    4. **Report Retrieval**: For each new scan identified, the connector fetches the
-    detailed vulnerability report in JSON format using the `getreport` action.
+    4. For each new scan, it fetches the detailed vulnerability report in JSON format.
 
-    5. **Vulnerability Parsing**: It iterates through the `VulnerableHosts` list.
-    It filters out vulnerabilities with a `RiskFactor` of 0 (informational) to focus
-    on actionable security risks.
+    5. It iterates through the vulnerable hosts, filtering for vulnerabilities with
+    a `RiskFactor` of 1 or higher.
 
-    6. **Alert Creation**: For each valid vulnerability, it creates a Google SecOps
-    alert. The alert priority is dynamically mapped based on the beSECURE `RiskFactor`
-    (8 = High, 4 = Medium, 1 = Low).
+    6. Valid vulnerabilities are mapped to `AlertInfo` objects, including relevant
+    details like `VulnID`, `RiskFactor`, and `ScanDate`.
 
-    7. **Event Mapping**: Detailed host information, including HostID, Port, Service,
-    and TestID, is mapped into the event structure associated with the alert.
-
-    8. **Ingestion**: The final set of alerts and events is returned to Google SecOps
-    for case creation and further investigation.
+    7. The connector creates events for each vulnerability and returns the aggregated
+    alerts to the SOAR platform for case creation.

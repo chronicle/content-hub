@@ -13,6 +13,10 @@ Create Abuse Alert:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action creates a new record (abuse alert) in an external system. This aligns
+      with the 'Create Ticket' category, which involves generating a new record in
+      an external system.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -30,40 +34,43 @@ Create Abuse Alert:
   ai_description: >-
     ### General Description
 
-    Creates an abuse alert for a specified entity within the Doppel system. This action
-    is primarily used to report suspicious entities, such as URLs, to the Doppel abuse
-    box for investigation. It will fail if the provided entity is invalid or belongs
-    to a protected list (e.g., well-known domains like google.com).
+    Creates an abuse alert in the DoppelVision system for a specified entity (e.g.,
+    URL). This action automates the reporting process by sending a request to the
+    DoppelVision API.
 
 
     ### Parameters Description
 
-    | Parameter | Description | Type | Mandatory | Default Value |
+    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | :--- | :--- | :--- | :--- |
 
-    | Entity | The specific entity (e.g., a URL) that should be reported to the Doppel
-    abuse box. | string | Yes | https://dummyabuseurl.com |
+    | Entity | string | Yes | The entity (e.g., URL) for which to create the abuse
+    alert. |
+
+
+    ### Additional Notes
+
+    This action requires valid API credentials (API Key, User API Key, and Organization
+    Code) to be configured in the DoppelVision integration settings. The action will
+    fail if the provided entity is invalid or protected in the DoppelVision system.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the necessary API credentials
-    (API Key, User API Key, Organization Code) from the integration configuration
-    and the target entity from the action parameters.
+    1. Extracts the required API credentials (API Key, User API Key, Organization
+    Code) from the integration configuration.
 
-    2. **Manager Initialization**: Initializes the `DoppelManager` with the provided
-    credentials to facilitate communication with the Doppel API.
+    2. Extracts the target `Entity` from the action parameters.
 
-    3. **API Interaction**: Executes a POST request to the `/alert/abuse` endpoint
-    of the Doppel API, passing the entity identifier.
+    3. Initializes the `DoppelManager` with the provided credentials.
 
-    4. **Result Processing**: If the API call is successful, the resulting alert data
-    is stored in the action's JSON results. If the call fails or the entity is protected/invalid,
-    an exception is raised and the action is marked as failed.
+    4. Sends a POST request to the DoppelVision API (`/alert/abuse`) to create an
+    abuse alert for the specified entity.
 
-    5. **Completion**: Logs the execution status and returns the final output message
-    to the Google SecOps platform.
+    5. Stores the API response in the action result JSON.
+
+    6. Completes the action with a success or failure status based on the API response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -72,11 +79,18 @@ Create Abuse Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new abuse alert record in the Doppel external system via a POST request.
-    fetches_data: true
+      Creates an abuse alert in the external DoppelVision system.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to create an abuse alert in an external system
+      (DoppelVision). It does not fetch data for enrichment, nor does it modify internal
+      SOAR data (entities, insights, comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (creating an alert), not an enrichment action,
+      as it does not fetch data for context.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -92,6 +106,9 @@ Create Abuse Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action takes a string parameter named 'Entity' from the action configuration.
+      It does not iterate over or process `siemplify.target_entities`.
 Create Alert:
   action_product_categories:
     add_alert_comment: false
@@ -107,6 +124,10 @@ Create Alert:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action creates a new alert record in the external DoppelVision system. This
+      aligns with the 'Create Ticket' category, which covers generating new records
+      in external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -121,28 +142,38 @@ Create Alert:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nThis action creates a new alert within\
-    \ the DoppelVision platform for a specified entity. It is primarily used to programmatically\
-    \ trigger Doppel's internal monitoring or investigation workflows for a specific\
-    \ indicator (such as a URL). The action communicates with the Doppel API via a\
-    \ POST request and returns the details of the created alert.\n\n### Parameters\
-    \ Description\n| Parameter | Description | Type | Mandatory | Notes |\n| :---\
-    \ | :--- | :--- | :--- | :--- |\n| Entity | The specific entity (e.g., a URL or\
-    \ identifier) for which the alert should be created in DoppelVision. | string\
-    \ | Yes | Default value is 'https://dummyrul.com'. |\n\n### Flow Description\n\
-    1. **Configuration Extraction**: The action retrieves the API Key, User API Key,\
-    \ and Organization Code from the integration configuration.\n2. **Parameter Extraction**:\
-    \ The action retrieves the 'Entity' string provided by the user.\n3. **Manager\
-    \ Initialization**: A `DoppelManager` instance is initialized with the provided\
-    \ credentials.\n4. **API Interaction**: The action calls the `create_alert` method,\
-    \ which sends a POST request to the DoppelVision `/alert` endpoint with the entity\
-    \ payload.\n5. **Result Processing**: \n    * If the API returns a successful\
-    \ response, the alert data is stored in the action's JSON results.\n    * If the\
-    \ API call fails or returns an empty response, an exception is raised.\n6. **Completion**:\
-    \ The action concludes by reporting the execution status and an output message\
-    \ to the Google SecOps workbench.\n\n### Additional Notes\nThis action does not\
-    \ iterate over SecOps entities automatically; it requires the 'Entity' parameter\
-    \ to be explicitly passed, typically from a playbook variable or manual input."
+  ai_description: >-
+    Creates a new alert in the DoppelVision system for a specified entity. This action
+    allows users to trigger the creation of an alert record externally by providing
+    the entity identifier.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Entity | string | Yes | The entity (e.g., URL, IP) for which to create the alert
+    in DoppelVision. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the necessary API credentials
+    (API Key, User API Key, and Organization Code) from the integration configuration.
+
+    2. **Parameter Extraction**: The `Entity` parameter is extracted from the action
+    input.
+
+    3. **Manager Initialization**: The `DoppelManager` is initialized with the provided
+    credentials.
+
+    4. **Alert Creation**: The action calls the `create_alert` method, which sends
+    a POST request to the DoppelVision API to create the alert for the specified entity.
+
+    5. **Result Handling**: The API response is stored in the action result JSON.
+    If the creation fails, an exception is raised, and the action is marked as failed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -151,12 +182,18 @@ Create Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new alert record in the DoppelVision platform via a POST request to
-      the /alert endpoint.
+      Creates a new alert in the DoppelVision system.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to create an alert in an external system
+      (DoppelVision). It does not fetch data for enrichment, nor does it modify internal
+      SecOps data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a creation/mutation action, not an enrichment action, as it does
+      not retrieve data for the purpose of enriching existing entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -172,6 +209,10 @@ Create Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action takes an 'Entity' parameter as input, but it does not iterate over
+      or process the 'siemplify.target_entities' list. Therefore, it does not run
+      on specific entity types.
 Get Alert:
   action_product_categories:
     add_alert_comment: false
@@ -187,6 +228,11 @@ Get Alert:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: true
+    reasoning: >-
+      The action retrieves alert details from the DoppelVision platform via an API
+      GET request. This directly matches the 'Get Alert Information' category. It
+      does not perform any other actions such as updating alerts, creating tickets,
+      or modifying IOCs.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -202,49 +248,45 @@ Get Alert:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves detailed information about a specific alert from the DoppelVision platform.
-    The action allows users to fetch alert data using either a specific Alert ID or
-    an entity identifier (such as a URL). It is primarily used to gather context about
-    existing alerts within the Doppel ecosystem and returns the raw JSON data for
-    use in subsequent playbook steps.
+    Retrieves alert details from the DoppelVision platform. This action allows users
+    to fetch specific alert information by providing either an entity identifier or
+    a unique Alert ID. The action interacts with the DoppelVision API to retrieve
+    the alert data and stores the resulting JSON in the action's output for further
+    analysis.
 
 
-    ### Parameters Description
+    ### Parameters
 
+    | Parameter | Type | Mandatory | Description |
 
-    | Parameter | Description | Type | Mandatory | Notes |
+    | :--- | :--- | :--- | :--- |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | Entity | string | No | The entity identifier to search for. Either this or 'Alert_ID'
+    must be provided. |
 
-    | Entity | The entity identifier (e.g., a URL) associated with the alert. | String
-    | No | Either 'Entity' or 'Alert_ID' must be provided, but not both. |
-
-    | Alert_ID | The unique identifier of the alert in the Doppel tenant. | String
-    | No | Either 'Entity' or 'Alert_ID' must be provided, but not both. |
+    | Alert_ID | string | No | The unique ID of the alert to fetch. Either this or
+    'Entity' must be provided. |
 
 
     ### Additional Notes
 
-    - This action does not process entities from the Google SecOps case; it relies
-    strictly on the provided input parameters.
-
-    - The action will fail if both parameters are provided or if both are omitted.
+    Either the 'Entity' or 'Alert_ID' parameter must be configured for the action
+    to run. If both or neither are provided, the action will fail.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the API credentials from the
-    integration configuration and the 'Entity' or 'Alert_ID' from the action parameters.
+    1. Extract configuration parameters (API Key, User API Key, Organization Code)
+    and action parameters (Entity, Alert_ID).
 
-    2. **Validation:** It checks that exactly one of the two search parameters ('Entity'
-    or 'Alert_ID') is populated.
+    2. Validate that exactly one of 'Entity' or 'Alert_ID' is provided.
 
-    3. **API Request:** It calls the DoppelVision API's GET endpoint for alerts using
-    the provided identifier.
+    3. Call the DoppelVision API to fetch the alert details using the provided identifier.
 
-    4. **Result Processing:** If an alert is found, the full JSON response is added
-    to the action's results. If no alert is found or the API returns an error, the
-    action fails.
+    4. If the alert is found, store the JSON response in the action result.
+
+    5. If the alert is not found or an error occurs, the action fails and logs the
+    error.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -255,8 +297,17 @@ Get Alert:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve alert information from an external
+      API (DoppelVision). It does not perform any write operations on external systems
+      (no mutation) and does not modify any internal Google SecOps case data (no entity
+      updates, insights, or comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data from an external source, but it does not perform any
+      of the allowed internal mutations (updating entities, creating insights, or
+      adding comments) required to be classified as an Enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -272,6 +323,10 @@ Get Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process Google SecOps entities (e.g., `siemplify.target_entities`).
+      It accepts an 'Entity' string as an input parameter for the API query, which
+      is distinct from the SOAR entity object model.
 Get Alerts:
   action_product_categories:
     add_alert_comment: false
@@ -287,12 +342,16 @@ Get Alerts:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: true
+    reasoning: >-
+      The action fetches a list of alerts from the Doppel platform based on user-defined
+      filters. This aligns with the 'Get Alert Information' category. It does not
+      perform any other actions like enrichment, containment, or ticket creation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: true
+    search_events: false
     send_email: false
     send_message: false
     submit_file: false
@@ -304,11 +363,11 @@ Get Alerts:
   ai_description: >-
     ### General Description
 
-    This action fetches alerts from the Doppel Vision platform based on specified
-    filtering criteria. It is designed to retrieve a list of alerts for review or
-    further processing within Google SecOps. The action interacts with the Doppel
-    API's `/alerts` endpoint using a GET request, making it a read-only operation
-    relative to the external system.
+    The **Get Alerts** action retrieves a list of alerts from the Doppel platform
+    based on specified filtering criteria. This action allows analysts to query the
+    Doppel tenant for alerts, supporting various filters such as search keys, product
+    categories, creation dates, sorting preferences, and queue states. The retrieved
+    alerts are returned as a JSON object in the action results for further analysis.
 
 
     ### Parameters Description
@@ -317,58 +376,49 @@ Get Alerts:
 
     | :--- | :--- | :--- | :--- |
 
-    | Search Key | string | No | Filters alerts by a specific key, currently supporting
-    search by URL. |
-
-    | Product | ddl | No | Filters alerts by product category (e.g., domains, social_media,
-    mobile_apps, ecommerce, crypto, emails, paid_adds). |
-
-    | Created Before | string | No | Filters alerts created before a specific timestamp
-    (ISO 8601 format, e.g., '2024-01-05T13:45:30'). |
-
-    | Created After | string | No | Filters alerts created after a specific timestamp
-    (ISO 8601 format, e.g., '2024-01-05T13:45:30'). |
-
-    | Sort Type | ddl | No | The field to sort the results by. Options include 'date_sourced'
-    (default) or 'date_last_actioned'. |
-
-    | Sort Order | ddl | No | The order of sorting. Options are 'asc' or 'desc' (default).
+    | Search Key | string | No | A search term to filter alerts by URL or other identifiers.
     |
 
-    | Page | string | No | Page number for pagination; defaults to 0. |
+    | Product | ddl | No | The product category to filter by (e.g., domains, social_media,
+    mobile_apps, ecommerce, crypto, emails, paid_adds). |
 
-    | Queue State | ddl | No | Filters alerts by their current queue status (e.g.,
+    | Created Before | string | No | Filter alerts created before this date (format:
+    'YYYY-MM-DDTHH:MM:SS'). |
+
+    | Created After | string | No | Filter alerts created after this date (format:
+    'YYYY-MM-DDTHH:MM:SS'). |
+
+    | Sort Type | ddl | No | The field to sort the reports by. Defaults to 'date_sourced'.
+    Options: 'date_sourced', 'date_last_actioned'. |
+
+    | Sort Order | ddl | No | The order to sort the reports by. Defaults to 'desc'.
+    Options: 'asc', 'desc'. |
+
+    | Page | string | No | Page number for pagination. Defaults to 0. |
+
+    | Queue State | ddl | No | Filter alerts by their current queue status (e.g.,
     doppel_review, actioned, needs_confirmation, taken_down, monitoring, archived).
     |
 
-    | Tags | string | No | A comma-separated list of tags to filter the alerts. |
-
-
-    ### Additional Notes
-
-    - This action does not require any input entities to run; it fetches data globally
-    for the configured tenant.
-
-    - All parameters are optional. If no parameters are provided, the action fetches
-    the most recent alerts based on default API behavior.
+    | Tags | string | No | A comma-separated list of tags to filter alerts. |
 
 
     ### Flow Description
 
-    1. **Configuration Extraction:** The action retrieves the API Key, User API Key,
-    and Organization Code from the integration settings.
+    1. **Configuration Extraction**: The action retrieves the necessary API credentials
+    (API Key, User API Key, Organization Code) from the DoppelVision integration configuration.
 
-    2. **Parameter Parsing:** It extracts optional filters such as `Search Key`, `Product`,
-    `Queue State`, and date ranges from the action input.
+    2. **Parameter Parsing**: It extracts the optional action parameters provided
+    by the user and constructs a `filters` dictionary, removing any empty or null
+    values.
 
-    3. **Filter Construction:** A filter dictionary is built, removing any null values
-    and splitting the `Tags` string into a list.
+    3. **Data Retrieval**: The action instantiates the `DoppelManager` and calls the
+    `get_alerts` method, passing the constructed filters to the Doppel API.
 
-    4. **API Interaction:** The `DoppelManager` is initialized and calls the `get_alerts`
-    method, which performs a GET request to the Doppel API.
-
-    5. **Result Processing:** The retrieved list of alerts is added to the action's
-    JSON results. If no alerts are found, the action fails with an informative message.
+    4. **Result Handling**: If alerts are successfully retrieved, the action stores
+    the JSON response in the action result using `siemplify.result.add_result_json`
+    and logs the total count. If no alerts are found or an error occurs, the action
+    fails gracefully with an appropriate error message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -379,8 +429,17 @@ Get Alerts:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Doppel API to retrieve alert data based
+      on user-provided filters. It does not modify any external systems (no POST/PUT/DELETE)
+      and does not modify any internal SOAR data (no entity updates, insights, or
+      case comments).
   categories:
     enrichment: false
+    reasoning: >-
+      The action retrieves data from an external system but does not enrich specific
+      entities or alerts within the case context. It is a data retrieval action, not
+      an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -396,6 +455,9 @@ Get Alerts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on `siemplify.target_entities`. It is a global action
+      that fetches alerts from the Doppel platform based on provided filters.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -411,6 +473,9 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ("Ping") and does not perform any of the defined
+      functional outcomes like enriching IOCs, updating tickets, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -428,38 +493,45 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is used to verify the connectivity between Google SecOps and
-    the DoppelVision platform. It validates the provided configuration parameters,
-    such as the API Key, User API Key, and Organization Code, by attempting a basic
-    API request to the Doppel service to ensure the integration is correctly configured.
+    Validates connectivity to the DoppelVision API by performing a test request. This
+    action ensures that the provided credentials are correct and that the integration
+    can successfully communicate with the DoppelVision service.
 
 
     ### Parameters Description
 
-    There are no input parameters for this action. It relies entirely on the integration's
-    global configuration settings (API Key, User API Key, and Organization Code).
+    | Parameter | Type | Mandatory | Description |
 
+    | :--- | :--- | :--- | :--- |
 
-    ### Flow Description
+    | API Key | String | Yes | The primary API key used for authentication with the
+    DoppelVision service. |
 
-    1. **Configuration Extraction**: The action retrieves the API Key, User API Key,
-    and Organization Code from the integration's shared configuration.
+    | User API Key | String | No | An optional user-specific API key for authentication.
+    |
 
-    2. **Manager Initialization**: An instance of the DoppelManager is created using
-    the extracted credentials.
-
-    3. **Connectivity Test**: The action executes a connection test by performing
-    a GET request to the Doppel `/alerts` endpoint.
-
-    4. **Result Reporting**: If the API responds with a success status, the action
-    ends with a 'Connection successful' message. If the request fails or the credentials
-    are invalid, it returns a failure message.
+    | Organization Code | String | No | An optional code for multi-tenant environment
+    configurations. |
 
 
     ### Additional Notes
 
-    This action is strictly for connectivity testing and does not interact with entities
-    or modify any data within Google SecOps or DoppelVision.
+    This action is intended for configuration validation and does not perform any
+    operational tasks on entities or alerts.
+
+
+    ### Flow Description
+
+    1. The action extracts the configuration parameters: `API Key`, `User API Key`,
+    and `Organization Code`.
+
+    2. It initializes the `DoppelManager` instance using these credentials.
+
+    3. It executes the `connection_test` method, which sends a GET request to the
+    `/alerts` endpoint of the DoppelVision API.
+
+    4. If the request is successful, it returns a "Connection successful" message;
+    otherwise, it returns a "Connection failed" message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -470,8 +542,14 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to verify connectivity. It does not modify
+      external systems, update entities, or create insights. It is a diagnostic action.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a "Ping" action. According to the instructions, "Actions named
+      Ping must not be categorized as enrichment actions."
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -487,6 +565,9 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `target_entities`. It is a global configuration
+      validation task.
 Update Alert:
   action_product_categories:
     add_alert_comment: false
@@ -502,6 +583,10 @@ Update Alert:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action updates an alert in an external system (DoppelVision). It does not
+      update an alert within the SecOps platform, nor does it fit any other category
+      like ticket creation or IOC management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -519,12 +604,9 @@ Update Alert:
   ai_description: >-
     ### General Description
 
-    The **Update Alert** action allows users to modify the status and state of an
-    existing alert within the DoppelVision platform. It specifically targets the `Queue_State`
-    (e.g., moving an alert to 'actioned' or 'archived') and the `Entity_State` (e.g.,
-    marking a URL as 'active', 'down', or 'parked'). This action is primarily used
-    to synchronize remediation or review progress from Google SecOps back to the DoppelVision
-    source system.
+    Updates an alert's status (queue state and entity state) in the DoppelVision platform.
+    This action allows users to modify the state of an alert by providing either an
+    Alert ID or an Entity identifier.
 
 
     ### Parameters Description
@@ -533,46 +615,32 @@ Update Alert:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Alert_ID** | String | No | The unique identifier for the specific alert in
-    the Doppel tenant. |
-
-    | **Entity** | String | No | The entity (usually a URL) associated with the alert.
+    | Alert_ID | string | No | Unique identity for each specific alert in Doppel tenant.
     |
 
-    | **Queue_State** | DDL | Yes | The target queue state for the alert. Supported
-    values: `doppel_review`, `needs_confirmation`, `monitoring`, `taken_down`, `actioned`,
-    `archived`. |
+    | Entity | string | No | Entity to be alerted (e.g., URL). |
 
-    | **Entity_State** | DDL | Yes | The target state of the entity. Supported values:
-    `active`, `down`, `parked`. |
+    | Queue_State | ddl | Yes | Queue state value of the Alerts (doppel_review, needs_confirmation,
+    monitoring, taken_down, actioned, archived). |
+
+    | Entity_State | ddl | Yes | Entity state of Alerts (active, down, parked). |
 
 
     ### Additional Notes
 
-    - **Validation Logic**: The action requires exactly one identifier to be provided.
-    You must provide **either** the `Alert_ID` or the `Entity` parameter. Providing
-    both or neither will result in a validation error and action failure.
-
-    - This action performs an external state change (PUT request) in the DoppelVision
-    API.
+    Either `Alert_ID` or `Entity` must be provided for the action to run. If both
+    are provided, the action will fail.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the integration configuration
-    (API Key, User API Key, Organization Code) and the action parameters (`Alert_ID`,
-    `Entity`, `Queue_State`, `Entity_State`).
+    1. Extract parameters (API keys, Alert_ID/Entity, Queue_State, Entity_State).
 
-    2. **Input Validation**: It verifies that either `Alert_ID` or `Entity` is provided,
-    ensuring they are not both present or both missing.
+    2. Validate that either `Alert_ID` or `Entity` is provided, but not both.
 
-    3. **API Interaction**: It calls the DoppelVision API's update endpoint using
-    a PUT request, passing the selected identifier and the new state values.
+    3. Call the DoppelVision API to update the alert using a PUT request.
 
-    4. **Result Processing**: Upon a successful response, the action stores the updated
-    alert details in the JSON results and completes with a success message. If the
-    update fails or returns an empty response, the action terminates with a failure
-    status.
+    4. Store the API response in the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -581,12 +649,19 @@ Update Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'queue_state' and 'entity_state' of an alert record within the DoppelVision
-      platform via a PUT request.
-    fetches_data: true
+      Updates the alert's queue state and entity state in the DoppelVision platform
+      via a PUT request.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PUT request to an external API (DoppelVision) to update
+      an alert's state. It does not fetch data, nor does it modify internal SecOps
+      data or entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a mutation action (updating an external alert) and does not fetch
+      data for enrichment purposes, therefore it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -602,3 +677,6 @@ Update Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It takes `Entity`
+      as a parameter, which is a string input, not a SecOps entity object.

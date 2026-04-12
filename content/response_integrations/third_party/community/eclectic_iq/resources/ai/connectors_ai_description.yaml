@@ -2,10 +2,11 @@ EclecticIQ - Feed Connector:
   ai_description: >-
     ### General Description
 
-    This connector integrates with the EclecticIQ Intelligence Center to ingest threat
-    intelligence data from configured outgoing feeds. It retrieves indicators and
-    observables from specific feeds and converts them into alerts and cases within
-    Google SecOps, enabling security teams to monitor and act on external threat intelligence.
+    This connector facilitates the ingestion of threat intelligence data from an EclecticIQ
+    Intelligence Center instance into Google SecOps SOAR. By polling a configured
+    outgoing feed, it retrieves new content blocks and transforms them into actionable
+    alerts, enabling security teams to integrate EclecticIQ's threat intelligence
+    directly into their incident response workflows.
 
 
     ### Parameters Description
@@ -14,51 +15,47 @@ EclecticIQ - Feed Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | API Token | Password | Yes | The API token used to authenticate with the EclecticIQ
-    Intelligence Center. |
-
-    | EclecticIQ URL | String | Yes | The base URL of the EclecticIQ instance (e.g.,
-    https://eclecticiq.local). |
-
-    | Outgoing Feed ID | String | Yes | The specific ID of the outgoing feed from
-    which to fetch data. |
+    | API Token | Password | Yes | The API token used for authentication with the
+    EclecticIQ instance. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product (default: EclecticIQ). |
+    product. |
 
-    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
-    (default: Threat Intelligence). |
+    | EclecticIQ URL | String | Yes | The base URL of the EclecticIQ Intelligence
+    Center instance. |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the script
-    execution. |
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
 
-    | Verify SSL | Boolean | No | Whether to verify the SSL certificate of the EclecticIQ
-    server. |
+    | Outgoing Feed ID | String | Yes | The ID of the outgoing feed from which to
+    fetch entities. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    Python process. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to the EclecticIQ API. |
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the EclecticIQ Intelligence Center using the
-    provided API Token and URL.
+    1. The connector initializes a connection to the EclecticIQ Intelligence Center
+    using the provided URL and API token.
 
-    2. **Feed Validation**: Validates that the specified `Outgoing Feed ID` exists
-    and is accessible.
+    2. It validates the existence of the specified `Outgoing Feed ID`.
 
-    3. **Content Discovery**: Retrieves a list of available content blocks (data batches)
-    associated with the configured feed.
+    3. It retrieves a list of available content blocks from the feed.
 
-    4. **Checkpointing**: Reads the last processed block ID from the internal database
-    to ensure only new data is ingested.
+    4. The connector checks the local state to identify and skip previously processed
+    content blocks.
 
-    5. **Data Retrieval**: Fetches the CSV-formatted data for each new content block
-    identified.
+    5. For each new content block, it fetches the raw data from the EclecticIQ API.
 
-    6. **Parsing and Mapping**: Parses the CSV records, extracting entity details
-    such as titles, descriptions, confidence levels, tags, and platform URLs.
+    6. The retrieved data is parsed and mapped into `AlertInfo` objects, including
+    relevant metadata like entity titles, descriptions, and source information.
 
-    7. **Alert Creation**: Maps the extracted data into Google SecOps Alert and Event
-    objects, assigning a default priority and categorizing them under the EclecticIQ
-    product.
+    7. The generated alerts are returned to the SOAR platform for case creation and
+    further investigation.
 
-    8. **Ingestion**: Ingests the alerts into the system and updates the checkpoint
-    with the latest processed block ID to maintain state for the next run.
+    8. The connector updates the local state with the latest processed block ID to
+    ensure subsequent runs only fetch new data.

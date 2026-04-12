@@ -1,63 +1,91 @@
 Sync ActOn Updates To Case:
-  ai_description: "### General Description\nThis job synchronizes ActOn\u2122 data\
-    \ from Netenrich's Resolution Intelligence Cloud (RIC) to Google SecOps cases.\
-    \ It manages the entire lifecycle of a case by handling initial creation, field\
-    \ updates, and comment synchronization. The job ensures that critical information\
-    \ such as case priority, status, stage, and assignee are aligned between the two\
-    \ systems, while also enriching cases with detailed scoring evidence and entity\
-    \ data.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| CREATE | String (JSON) | No | A JSON payload\
-    \ containing the initial ActOn data used to create a new case in Google SecOps.\
-    \ |\n| UPDATE | String (JSON) | No | A JSON payload containing updated ActOn information\
-    \ to synchronize with an existing case. |\n| COMMENT | String (JSON) | No | A\
-    \ JSON payload containing new comments or attachments to be added to the case\
-    \ wall. |\n\n*Note: While the job metadata defines no static parameters, the script\
-    \ logic dynamically processes one of the three JSON payloads above depending on\
-    \ the trigger event.*\n\n### Flow Description\n1. **Payload Extraction**: The\
-    \ job identifies the operation type by checking for `CREATE`, `UPDATE`, or `COMMENT`\
-    \ data in the input parameters.\n2. **Case Management**: It either creates a new\
-    \ case or retrieves an existing one using the external ticket identifier from\
-    \ the Resolution Intelligence Cloud.\n3. **Field Synchronization**: The job updates\
-    \ core case attributes including the title, description, priority, and status\
-    \ to match the external ActOn state.\n4. **Assignee & Stage Mapping**: It fetches\
-    \ and maps SOC roles and case stages from the SOAR API to ensure the case is assigned\
-    \ to the correct team and reflects the proper workflow stage.\n5. **Comment &\
-    \ Attachment Processing**: New comments are added to the case wall. If attachments\
-    \ are present, the job decodes the base64 content and uploads the files directly\
-    \ to the case.\n6. **Metadata Enrichment**: It manages a specialized custom entity\
-    \ within the case to store complex metadata such as scoring evidence, incident\
-    \ categories, and alert counts.\n7. **Entity Delta Sync**: The job compares entities\
-    \ in the incoming payload with existing case entities and adds any missing assets\
-    \ or indicators.\n8. **External Notification**: Upon successful creation or update,\
-    \ the job sends a confirmation back to the Netenrich inbound webhook to maintain\
-    \ bi-directional synchronization."
+  ai_description: >-
+    ### General Description
+
+    This job synchronizes case information from Resolution Intelligence Cloud (RIC)
+    to Google SecOps (SOAR). It acts as a bridge to ensure that case details, such
+    as descriptions, titles, priorities, assignees, and statuses, remain consistent
+    across both platforms. Additionally, it handles the synchronization of comments,
+    attachments, and entities, while updating custom entity properties with relevant
+    scoring evidence and alert data.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | CREATE | JSON String | No | Payload containing data for creating a new case.
+    |
+
+    | UPDATE | JSON String | No | Payload containing data for updating an existing
+    case. |
+
+    | COMMENT | JSON String | No | Payload containing data for adding a comment to
+    a case. |
+
+
+    ### Flow Description
+
+    1. Parses the incoming payload to determine the action type (CREATE, UPDATE, or
+    COMMENT).
+
+    2. Retrieves or creates the corresponding case in Google SecOps based on the provided
+    ticket ID.
+
+    3. If the action is a COMMENT, it adds the comment and any attachments to the
+    case and exits.
+
+    4. For CREATE or UPDATE actions, it synchronizes case metadata including description,
+    title, priority, assignee, stage, and status.
+
+    5. Updates custom entity properties with scoring evidence, alert data, and service
+    information.
+
+    6. Synchronizes new entities into the case.
+
+    7. If a new case is created, it posts a confirmation message back to the Resolution
+    Intelligence Cloud inbound webhook.
 Sync Case Updates To ActOn:
-  ai_description: "### General Description\nThis job synchronizes case updates from\
-    \ Google SecOps to the Netenrich Resolution Intelligence Cloud (ActOn). It is\
-    \ designed to run at frequent intervals (typically every minute) to ensure that\
-    \ manual activities, such as comments, attachments, status changes, and assignee\
-    \ updates performed within a SecOps case, are reflected in the corresponding ActOn\
-    \ ticket. This maintains data parity between the two platforms during incident\
-    \ response.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| RI Inbound Webhook URL | String | Yes |\
-    \ The Netenrich Resolution Intelligence webhook endpoint used to receive case\
-    \ updates. |\n| Token | String | Yes | The authentication token required to authorize\
-    \ requests to the Netenrich inbound webhook. |\n| Environment | String | Yes |\
-    \ The specific Google SecOps environment name used to filter which cases should\
-    \ be synchronized. |\n\n### Flow Description\n1. **Check Last Sync**: Retrieves\
-    \ the timestamp of the last successful execution from the job's scoped context\
-    \ to determine the time window for updates.\n2. **Fetch Updated Cases**: Queries\
-    \ Google SecOps for all cases modified since the last synchronization timestamp.\n\
-    3. **Filter by Environment**: Filters the retrieved cases to ensure only those\
-    \ belonging to the configured 'Environment' are processed.\n4. **Retrieve Wall\
-    \ Activities**: For each updated case, the job fetches the case wall activities\
-    \ and filters for manual comments, attachments, and assignee changes (ignoring\
-    \ automated system updates).\n5. **Process Attachments**: If new attachments are\
-    \ detected, the job retrieves the file data and converts it to a base64-encoded\
-    \ string for transmission.\n6. **Map Metadata**: Maps SecOps case attributes\u2014\
-    including status (e.g., Closed), stage IDs, tags, and assigned SOC roles\u2014\
-    to the Netenrich ActOn data schema.\n7. **Transmit Updates**: Constructs a JSON\
-    \ payload containing the updates and posts it to the Netenrich Resolution Intelligence\
-    \ inbound webhook.\n8. **Update Context**: Saves the current execution timestamp\
-    \ to the job context to serve as the starting point for the next synchronization\
-    \ cycle."
+  ai_description: >-
+    ### General Description
+
+    This job synchronizes case updates from Google SecOps SOAR to the Netenrich Resolution
+    Intelligence Cloud (ActOn). It periodically monitors case wall activities, processes
+    relevant comments and attachments, and pushes these updates to the external platform
+    via a webhook to ensure data consistency between the two systems.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | RI Inbound Webhook URL | String | Yes | The URL endpoint for the Resolution
+    Intelligence Cloud inbound webhook. |
+
+    | Token | String | Yes | The authentication token required for the webhook. |
+
+    | Environment | String | Yes | The specific environment name to filter cases for
+    synchronization. |
+
+
+    ### Flow Description
+
+    1. Retrieves the `last_sync_time` from the job context.
+
+    2. Queries Google SecOps for cases updated since the last sync interval.
+
+    3. Filters cases based on the configured environment.
+
+    4. For each case, fetches wall activities and filters for relevant updates (e.g.,
+    manual comments, assignee changes).
+
+    5. Transforms case data and activities into the required payload format, including
+    attachments and tags.
+
+    6. Sends the payload to the Resolution Intelligence Cloud via the configured webhook.
+
+    7. Updates the `last_sync_time` in the job context for the next run.

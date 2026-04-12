@@ -13,6 +13,10 @@ Enrich CVE:
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (DVE scores, exploitability) for CVE
+      entities, which aligns with the 'Enrich IOC' category as it provides context
+      for a vulnerability indicator.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -27,25 +31,39 @@ Enrich CVE:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "Enriches CVE entities with Cybersixgill\u2019s Dynamic Vulnerability\
-    \ Exploit (DVE) Score and associated threat intelligence. This action retrieves\
-    \ deep and dark web context for vulnerabilities, including trending status, exploit\
-    \ probability, and NVD metadata. The gathered intelligence is used to update entity\
-    \ attributes, create detailed case insights, and generate data tables for analyst\
-    \ review.\n\n### Flow Description:\n1. **Credential Extraction:** Retrieves the\
-    \ Cybersixgill Client ID and Client Secret from the integration configuration.\n\
-    2. **Entity Filtering:** Identifies CVE entities within the current case scope.\n\
-    3. **External Enrichment:** Queries the Cybersixgill API for each CVE to fetch\
-    \ DVE scores and vulnerability context.\n4. **Internal Data Update:** Updates\
-    \ the SecOps entities with enriched properties (prefixed with 'Cybersixgill')\
-    \ and marks them as enriched.\n5. **Insight & Table Generation:** Creates a case\
-    \ insight summarizing the vulnerability risk and adds a detailed data table containing\
-    \ CVSS scores, NVD links, and exploitability metrics.\n\n### Parameters Description:\n\
-    | Parameter Name | Expected Type | Mandatory | Description |\n| :--- | :--- |\
-    \ :--- | :--- |\n| None | N/A | N/A | This action does not have any specific input\
-    \ parameters; it operates on the CVE entities present in the case. |\n\n### Additional\
-    \ Notes:\n- This action specifically targets entities of type `CVE`.\n- The enrichment\
-    \ includes both Cybersixgill proprietary scores (DVE) and standard NVD data."
+  ai_description: >-
+    Enriches CVE entities using the Cybersixgill Dynamic Vulnerability Exploit (DVE)
+    intelligence service. This action retrieves comprehensive vulnerability data,
+    including DVE scores, exploitability probabilities, and NVD details, to help analysts
+    prioritize remediation efforts.
+
+
+    ### Flow
+
+    1. The action retrieves the configured Cybersixgill `Client Id` and `Client Secret`.
+
+    2. It iterates through the provided `CVE` entities.
+
+    3. For each entity, it queries the Cybersixgill API to fetch the latest DVE intelligence.
+
+    4. It updates the entity's `additional_properties` with the retrieved data and
+    marks the entity as enriched.
+
+    5. It generates a case insight and an entity table containing the vulnerability
+    details and adds them to the SOAR case.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Client Id | String | Yes | The Client ID for authenticating with the Cybersixgill
+    API. |
+
+    | Client Secret | String | Yes | The Client Secret for authenticating with the
+    Cybersixgill API. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -56,10 +74,17 @@ Enrich CVE:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes with Cybersixgill DVE data, sets the 'is_enriched'
-      flag on entities, and creates case insights and entity tables.
+      Updates entity properties and adds insights/tables to the case.
+    reasoning: >-
+      The action fetches external threat intelligence (DVE scores) for CVE entities.
+      It updates the entity's internal properties and creates case insights and tables.
+      It does not perform any external mutations.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Cybersixgill) and performs
+      allowed internal mutations (updating entities, creating insights). It does not
+      mutate external systems. Therefore, it is classified as an enrichment action.
   entity_usage:
     entity_types:
     - CVE
@@ -76,6 +101,9 @@ Enrich CVE:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.CVE`.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -91,6 +119,10 @@ Ping:
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ('Ping') used to verify authentication credentials
+      with the Cybersixgill API. It does not perform any enrichment, containment,
+      or other operational tasks defined in the product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -106,41 +138,43 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
+    ### General description
 
-    The Ping action is a diagnostic utility designed to verify the connectivity between
-    the Google SecOps platform and the Cybersixgill API. It ensures that the provided
-    credentials (Client ID and Client Secret) are valid and that the network path
-    to the Cybersixgill service is open. This action is typically used during the
-    initial setup of the integration or for troubleshooting purposes.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
+    Tests connectivity to the Cybersixgill API. This action validates the provided
+    Client ID and Client Secret by attempting to retrieve an access token from the
+    Cybersixgill service. It returns a success or failure status based on the ability
+    to authenticate.
 
 
-    ### Additional Notes
+    ### Parameters description
 
-    This action does not process any entities or modify any data within the SOAR or
-    the external Cybersixgill environment. It strictly performs an authentication
-    check.
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Client Id | String | Yes | The Client ID for authentication with the Cybersixgill
+    API. |
+
+    | Client Secret | String | Yes | The Client Secret for authentication with the
+    Cybersixgill API. |
 
 
-    ### Flow Description
+    ### Additional notes
 
-    1. **Configuration Extraction:** The action retrieves the 'Client Id' and 'Client
-    Secret' from the integration's global configuration.
+    None.
 
-    2. **Manager Initialization:** It initializes the `SixgillEnrichManager` using
-    the extracted credentials.
 
-    3. **Connectivity Test:** The manager attempts to authenticate with the Cybersixgill
-    service by requesting an access token via the `SixgillBaseClient`.
+    ### Flow description
 
-    4. **Result Reporting:** Based on whether the token retrieval was successful,
-    the action returns a completion status (Success/Failed) and a descriptive message
-    to the user interface.
+    1. Extract Client ID and Client Secret from configuration.
+
+    2. Initialize the SixgillEnrichManager.
+
+    3. Call test_connectivity().
+
+    4. Attempt to retrieve an access token using the provided credentials.
+
+    5. Return success or failure status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -149,10 +183,18 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test by attempting to authenticate with the
+      Cybersixgill API. It does not fetch contextual data, mutate external or internal
+      data, or interact with entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping', which is explicitly excluded from being an enrichment
+      action. It does not fetch contextual data about entities or alerts, nor does
+      it mutate any systems.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -168,3 +210,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a standalone connectivity
+      test.

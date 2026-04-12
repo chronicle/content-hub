@@ -1,34 +1,52 @@
 Vectra QUX - Clear Empty Cases Job:
-  ai_description: "### General Description\nThe **Vectra QUX - Clear Empty Cases Job**\
-    \ is a maintenance utility designed to reduce noise and redundancy within Google\
-    \ SecOps. It identifies and closes cases or individual alerts that contain duplicate\
-    \ security events already being tracked in other open cases. By analyzing the\
-    \ unique detection IDs provided by Vectra QUX, the job ensures that analysts are\
-    \ not investigating the same underlying threat across multiple tickets, effectively\
-    \ streamlining the incident response workflow.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Max Hours Backwards | String | No | The maximum number of hours to look back\
-    \ for open cases. Setting this to '0' will cause the job to process all open cases\
-    \ regardless of their creation time. Default is '24'. |\n| Environments | String\
-    \ | Yes | A comma-separated list of environments to include in the cleanup process.\
-    \ Only cases within these environments will be processed. Default is 'Default\
-    \ Environment'. |\n| Products | String | Yes | A comma-separated list of product\
-    \ names to filter alerts. The job only evaluates alerts where the 'DeviceProduct'\
-    \ matches these values. Default is 'Vectra QUX'. |\n\n### Flow Description\n1.\
-    \  **Initialization**: The job retrieves the configuration parameters and calculates\
-    \ the time range for processing based on the last successful execution and the\
-    \ `Max Hours Backwards` setting.\n2.  **Case Fetching**: It queries the SOAR platform\
-    \ for all cases currently in an \"OPEN\" status that fall within the specified\
-    \ time window.\n3.  **Filtering and Extraction**: For each retrieved case, the\
-    \ job verifies if it belongs to the allowed `Environments` and `Products`. It\
-    \ then extracts the unique detection (event) IDs from the alerts associated with\
-    \ those cases.\n4.  **Duplicate Analysis**: The job builds a map of event IDs\
-    \ to identify overlaps between different cases and alerts. It determines if an\
-    \ alert's events are entirely contained within other active cases.\n5.  **Case\
-    \ and Alert Closure**: \n    *   If an entire case consists of alerts that are\
-    \ duplicates of events in other cases, the job closes the case with the root cause:\
-    \ \"Similar case already under investigation\".\n    *   If only specific alerts\
-    \ within a case are redundant, those individual alerts are closed with the root\
-    \ cause: \"Similar alert already under investigation\".\n6.  **Timestamp Update**:\
-    \ Finally, the job saves the current execution timestamp to the internal database\
-    \ to serve as the starting point for the next scheduled run."
+  ai_description: >-
+    ### General Description
+
+    This job automates the maintenance of the Google SecOps (Chronicle) SOAR case
+    queue by identifying and closing empty or duplicate cases originating from the
+    Vectra QUX integration. It helps reduce investigation noise by analyzing open
+    cases, filtering them based on specific environments and product names, and automatically
+    closing cases that contain redundant or identical alerts.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Hours Backwards | String | No | The maximum number of hours to look back
+    for open cases. Defaults to 24 hours. Set to '0' to process all open cases. |
+
+    | Environments | String | Yes | A comma-separated list of environments to filter
+    cases by. Defaults to 'Default Environment'. |
+
+    | Products | String | Yes | A comma-separated list of product field names to filter
+    alerts by. Defaults to 'Vectra QUX'. |
+
+
+    ### Flow Description
+
+    1. Extracts and validates the job configuration parameters (Max Hours Backwards,
+    Environments, and Products).
+
+    2. Calculates the start time for the job based on the last successful execution
+    timestamp to ensure incremental processing.
+
+    3. Fetches all open cases from the SOAR platform that match the specified time
+    range.
+
+    4. Iterates through each open case to retrieve associated entities and their corresponding
+    detections.
+
+    5. Filters the retrieved detections to include only those matching the provided
+    environment and product name criteria.
+
+    6. Analyzes the filtered cases to identify identical alerts or cases that are
+    effectively empty.
+
+    7. Closes redundant cases or removes duplicate alerts from cases as identified
+    by the analysis logic.
+
+    8. Updates the job's last success timestamp in the database to track progress
+    for the next execution.
