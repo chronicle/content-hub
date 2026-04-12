@@ -195,7 +195,7 @@ class IntegrationMetadata(
         try:
             metadata_content: BuiltIntegrationMetadata = json.loads(built)
             metadata: Self = cls.from_built(metadata_path.name, metadata_content)
-            metadata.is_certified = mp.core.file_utils.is_commercial_integration(path)
+            metadata.is_certified = mp.core.file_utils.is_certified_integration(path)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
@@ -222,7 +222,7 @@ class IntegrationMetadata(
             metadata_content: NonBuiltIntegrationMetadata = yaml.safe_load(built)
             _read_image_files(metadata_content, path)
             metadata: Self = cls.from_non_built(metadata_path.name, metadata_content)
-            metadata.is_certified = mp.core.file_utils.is_commercial_integration(path)
+            metadata.is_certified = mp.core.file_utils.is_certified_integration(path)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e

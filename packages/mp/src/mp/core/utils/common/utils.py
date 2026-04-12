@@ -99,7 +99,7 @@ def remove_none_entries_from_mapping(d: _TypedDictType, /) -> None:
     """
     keys_to_remove: list[str] = [k for k, v in d.items() if v is None]
     for k in keys_to_remove:
-        del d[k]  # type: ignore[misc]
+        del d[k]  # ty: ignore[invalid-argument-type]
 
 
 def str_to_snake_case(s: str) -> str:

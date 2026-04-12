@@ -500,6 +500,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = {"casesIds": [self.params.case_id], "userName": self.params.assign_to}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_email_template(self) -> list[SingleJson]:
         """Get email template"""
         endpoint = (

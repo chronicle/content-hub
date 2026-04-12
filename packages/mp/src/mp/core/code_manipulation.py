@@ -473,6 +473,6 @@ def _get_attribute_list(node: cst.ImportFrom) -> list[cst.Attribute]:
     current_node: cst.Name | cst.Attribute | None = node.module
     while isinstance(current_node, cst.Attribute):
         nodes.append(current_node)
-        current_node = current_node.value  # type: ignore[assignment]
+        current_node = current_node.value  # ty: ignore[invalid-assignment]
 
     return nodes

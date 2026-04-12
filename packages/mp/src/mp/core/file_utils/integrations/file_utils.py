@@ -351,11 +351,11 @@ def _validate_matching_files(directory: Path, primary_suffix: str, secondary_suf
             raise RuntimeError(msg)
 
 
-def is_commercial_integration(path: Path) -> bool:
-    """Check if the given integration path corresponds to a commercial integration.
+def is_certified_integration(path: Path) -> bool:
+    """Check if the given integration path corresponds to a certified integration.
 
     This function evaluates whether the provided integration path belongs to the
-    directory designated for commercial integrations.
+    directory designated for certified integrations, i.e., the `commercial` directory or `powerups`.
 
     Args:
         path: The path to the integration directory.
@@ -365,10 +365,9 @@ def is_commercial_integration(path: Path) -> bool:
             otherwise.
 
     """
-    return (
-        is_integration(path)
-        and path.parent.name
-        in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_REPO_NAME]
+    return is_integration(path) and (
+        path.parent.name in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_REPO_NAME]
+        or path.parent.name == constants.POWERUPS_DIR_NAME
     )
 
 
