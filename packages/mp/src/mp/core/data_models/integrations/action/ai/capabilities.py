@@ -20,6 +20,18 @@ from pydantic import BaseModel, Field
 
 
 class ActionCapabilities(BaseModel):
+    reasoning: Annotated[
+        str,
+        Field(
+            title="Categorization Reasoning",
+            description=(
+                "Step-by-step reasoning evaluating the action's capabilities. Explicitly "
+                "state why the action fetches data, mutates external data, mutates internal "
+                "data, updates entities, creates insights, modifies alert data, or creates "
+                "case comments before setting the boolean flags."
+            ),
+        ),
+    ]
     fetches_data: Annotated[
         bool,
         Field(

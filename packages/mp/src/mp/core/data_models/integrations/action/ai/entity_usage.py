@@ -22,6 +22,17 @@ from .entity_types import EntityType  # noqa: TC001
 
 
 class EntityUsage(BaseModel):
+    reasoning: Annotated[
+        str,
+        Field(
+            title="Categorization Reasoning",
+            description=(
+                "Step-by-step reasoning evaluating how the action uses entities. Explicitly "
+                "state the entity types used and why each filtering condition is met or not "
+                "met before setting the boolean flags."
+            ),
+        ),
+    ]
     entity_types: Annotated[
         list[EntityType],
         Field(

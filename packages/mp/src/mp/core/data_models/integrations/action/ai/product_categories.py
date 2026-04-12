@@ -21,6 +21,17 @@ from pydantic import BaseModel, Field
 
 
 class ActionProductCategories(BaseModel):
+    reasoning: Annotated[
+        str,
+        Field(
+            title="Categorization Reasoning",
+            description=(
+                "Step-by-step reasoning evaluating the action against all available product "
+                "categories. Explicitly state why the action matches or does not match the "
+                "'Expected Outcome' of relevant categories before setting their boolean flags."
+            ),
+        ),
+    ]
     enrich_ioc: Annotated[
         bool,
         Field(

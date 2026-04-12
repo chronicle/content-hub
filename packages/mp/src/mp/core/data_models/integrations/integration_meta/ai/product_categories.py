@@ -21,6 +21,17 @@ from pydantic import BaseModel, Field
 
 
 class IntegrationProductCategories(BaseModel):
+    reasoning: Annotated[
+        str,
+        Field(
+            title="Categorization Reasoning",
+            description=(
+                "Step-by-step reasoning evaluating the integration against all available product "
+                "categories. Explicitly state why the integration matches or does not match the "
+                "criteria of relevant categories before setting their boolean flags."
+            ),
+        ),
+    ]
     siem: Annotated[
         bool,
         Field(
