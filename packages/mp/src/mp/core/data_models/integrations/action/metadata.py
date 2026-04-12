@@ -416,8 +416,8 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
         ai_categories=(
             [
                 AI_CATEGORY_TO_DEF_AI_CATEGORY[category]
-                for category, is_true in ai_meta.categories.model_dump().items()
-                if is_true
+                for category, val in ai_meta.categories.model_dump().items()
+                if category != "reasoning" and val is True
             ]
             if ai_meta.categories
             else []
@@ -426,8 +426,8 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
         action_product_categories=(
             [
                 PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
-                for category, is_true in ai_meta.action_product_categories.model_dump().items()
-                if is_true
+                for category, val in ai_meta.action_product_categories.model_dump().items()
+                if category != "reasoning" and val is True
             ]
             if ai_meta.action_product_categories
             else []

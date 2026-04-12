@@ -61,6 +61,7 @@ def test_describe_integration_command(tmp_path: Path, non_built_integration: Pat
                     vulnerability_management=False,
                     asset_inventory=False,
                     collaboration=False,
+                    reasoning="Some reason",
                 )
             )
         ]

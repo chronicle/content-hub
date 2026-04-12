@@ -187,16 +187,14 @@ class DeconstructIntegration:
             ai_file: Path = ai_dir / file_name
             mp.core.file_utils.write_yaml_to_file(content, ai_file)
 
-        categories_dict: dict[str, bool] = {
-            category: (
-                PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
-                in self.integration.metadata.product_categories
-            )
-            for category in PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY
+        categories_dict: dict[str, bool | str] = {
+            category: value in self.integration.metadata.product_categories
+            for category, value in PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY.items()
         }
+        categories_dict["reasoning"] = ""
 
         ai_meta = IntegrationAiMetadata(
-            product_categories=IntegrationProductCategories(**categories_dict)
+            product_categories=IntegrationProductCategories.model_validate(categories_dict)
         )
 
         ai_file: Path = ai_dir / mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE

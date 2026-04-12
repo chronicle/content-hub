@@ -437,8 +437,8 @@ def _get_ai_fields(integration_path: Path) -> AiFields:
     return AiFields(
         product_categories=[
             PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
-            for category, is_true in ai_meta.product_categories.model_dump().items()
-            if is_true
+            for category, val in ai_meta.product_categories.model_dump().items()
+            if category != "reasoning" and val is True
         ],
     )
 
