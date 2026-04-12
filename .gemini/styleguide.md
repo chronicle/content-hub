@@ -154,11 +154,112 @@ require explicit documentation of the output schema.
     * Assignments to `self.json_results = ...`
 * **Requirement:** If a JSON result is detected, a corresponding JSON example file **must** exist in
   the integration's `resources/` directory.
-* **Naming Convention:** The example file must match the action's filename (e.g., `action_name.py`
-  or `action_name.yaml` requires `resources/action_name_json_example.json`).
+* **Naming Convention:** The example file must match the action's filename:
+  `action_name.py` requires `resources/action_name_JsonResult_example.json`.
+  (Note: the repo uses `_JsonResult_example.json` convention, not `_json_example.json`.)
 
 > **Gemini Action:** If a JSON result assignment is detected but the corresponding
-`_json_example.json` file is missing in the `resources/` folder, alert the contributor and offer to
-> generate a placeholder JSON structure based on the code's logic.
+> `_JsonResult_example.json` file is missing in `resources/`, alert the contributor.
+
+---
+
+## Content Design Guide (for Response Integrations)
+
+The target persona is a **Security Analyst** (not a software engineer). Design all
+content for non-technical users who work primarily through playbooks.
+
+### Integration Configuration
+
+* All integrations must have an **API Root** parameter (exception: SDK-based like boto3).
+* All integrations must have a **Verify SSL** boolean parameter, default `true`.
+* Parameter names: 2-4 words, capitalized, no special characters.
+  Example: "Organization ID" not "org_id".
+* Partner integrations must include a support email in `pyproject.toml` description.
+
+### Ping Action Requirements
+
+Every integration must have a Ping action with these **exact** output messages:
+
+* **Success:** "Successfully connected to the {integration name} server with the provided
+  connection parameters!"
+* **Failure:** "Failed to connect to the {product name} server! Error is {error}"
+
+> **Gemini Action:** If a Ping action uses different message formats, flag it and suggest
+> the standard format above.
+
+### Action Naming
+
+* 2-4 words describing the expected outcome.
+* Capitalized words (except to, a, an, from). No special characters.
+* Examples: `Contain Host`, `Create Ticket`, `Submit File`, `Add IP to Hotlist`
+* Match the product's UI terminology (if product says "quarantine", use "Quarantine Endpoint").
+
+### is_success / Playbook Failure Rules
+
+* **Do NOT fail the playbook** for "no results found" — that's a normal outcome.
+* **Only fail** for unrecoverable misconfigurations (invalid org name, invalid blocklist,
+  wrong query syntax) or async timeouts.
+* Enrichment with 0 results → `is_success=false`, NOT failing the playbook.
+* Query with valid syntax but no results → `is_success=true`.
+
+> **Gemini Action:** If an action sets `EXECUTION_STATE_FAILED` for a "no results" scenario,
+> flag it as a potential issue.
+
+### Output Message Templates
+
+* Generic success: "Successfully {activity} on the following entities using {integration}: {ids}"
+* Generic failure: "Action wasn't able to {activity} on the following entities using {integration}: {ids}"
+* Error prefix: `Error executing action "{action name}". Reason: {error}`
+
+### JSON Result Structures
+
+All JSON results must follow one of 4 standard structures:
+1. Generic: `{"field": "value"}`
+2. List: `[{"field": "value"}, ...]`
+3. Entity: `[{"Entity": "id", "EntityResult": {...}}, ...]`
+4. Entity List: `[{"Entity": "id", "EntityResult": [{...}, ...]}, ...]`
+
+> **Gemini Action:** If a JSON result uses dynamic top-level keys (e.g., `{"1": {...}, "2": {...}}`),
+> flag it — these break playbook placeholders.
+
+---
+
+## PR Review Checklist (Common Issues)
+
+Based on analysis of ~30 historical PRs, these are the most frequent review comments.
+Gemini should check for these on every PR:
+
+### Structure & Metadata
+* `pyproject.toml` version must match latest `release_notes.yaml` version.
+* `release_notes.yaml` publish_time must be valid `YYYY-MM-DD` date.
+* New integrations: version must be `1.0`.
+* `__init__.py` files in `actions/`, `core/`, `connectors/`, `jobs/` must be empty
+  (only license headers allowed).
+
+### Dependencies & Versioning
+* `requires-python` should be `">=3.11,<3.12"`.
+* `soar-sdk` must be a dev-only dependency, never production.
+* Always use latest TIPCommon and integration_testing wheel versions from `packages/`.
+* If `pyproject.toml` version is bumped, `uv.lock` must also be updated (run `uv lock`).
+
+> **Gemini Action:** If a PR changes `version` in `pyproject.toml` but does not include
+> a corresponding `uv.lock` change, flag it: "Version was bumped but `uv.lock` was not
+> updated. Run `uv lock` to sync."
+
+### Imports
+* `from __future__ import annotations` required at top of every file.
+* SDK imports must use `soar_sdk.*` namespace: `from soar_sdk.SiemplifyAction import ...`
+* Internal imports must be relative: `from ..core.Manager import ...` not `from Manager import ...`
+* TIPCommon imports should use submodules (for TIPCommon 2.x+):
+  `from TIPCommon.extraction import extract_action_param`
+  not `from TIPCommon import extract_action_param`.
+  (Note: older integrations using TIPCommon 1.x may still use flat imports.)
+
+### Security
+* No `subprocess.run(..., shell=True)` — use argument lists.
+* No `eval()`, `exec()`, or `input()` in production code.
+* No PII/secrets in logs — don't log `response.content` directly.
+* No bare `except:` without `as e` — always bind the exception variable.
+* Use `yaml.safe_load()` not `yaml.load()`.
 
 ---
