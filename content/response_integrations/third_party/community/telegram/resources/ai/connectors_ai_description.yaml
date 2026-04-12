@@ -1,30 +1,60 @@
 Telegram Connector:
-  ai_description: "### General Description\nThe Telegram Connector allows Google SecOps\
-    \ to ingest messages from Telegram channels, supergroups, and private chats where\
-    \ a configured bot is a member. It enables security teams to monitor communication\
-    \ platforms for potential threats, data leaks, or automated alerts. \n\n**Note:**\
-    \ For the connector to function, the bot must be an administrator in channels\
-    \ or have message access enabled in groups. Additionally, this connector uses\
-    \ polling and cannot operate if an active Webhook is configured for the same bot\
-    \ token.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| API Token | Password | Yes | The unique\
-    \ API token provided by Telegram's BotFather for authentication. |\n| DeviceProductField\
-    \ | String | Yes | The field name used to determine the device product in the\
-    \ SOAR platform (Default: device_product). |\n| EventClassId | String | Yes |\
-    \ The field name used to determine the event name or sub-type (Default: event_name).\
-    \ |\n| PythonProcessTimeout | String | Yes | The maximum time in seconds allowed\
-    \ for the connector script to execute (Default: 30). |\n\n### Flow Description\n\
-    1. **Authentication**: The connector initializes a connection to the Telegram\
-    \ Bot API using the provided API Token.\n2. **State Tracking**: It retrieves the\
-    \ `update_id` of the last processed message from the internal storage to ensure\
-    \ only new data is ingested.\n3. **Data Fetching**: The connector polls the Telegram\
-    \ `getUpdates` endpoint, starting from the next available `update_id`.\n4. **Message\
-    \ Processing**: \n    * It identifies whether the update is a standard message\
-    \ (private/group) or a channel post.\n    * The message payload is flattened into\
-    \ a structured format.\n    * Timestamps and product metadata are assigned to\
-    \ the event.\n5. **Alert Creation**: Each message is encapsulated into a SOAR\
-    \ Alert with a default priority of Medium (60).\n6. **Checkpointing**: After successful\
-    \ processing, the connector saves the latest `update_id` back to the internal\
-    \ storage to prevent duplicate ingestion in the next cycle.\n7. **Ingestion**:\
-    \ The generated alerts are returned to Google SecOps for case creation and further\
-    \ investigation."
+  ai_description: >-
+    ### General Description
+
+
+    The Telegram Connector ingests messages from Telegram channels, supergroups, and
+    private chats into Google SecOps as alerts. This integration allows security teams
+    to monitor Telegram communications for potential threats, data leaks, or malicious
+    activity. The connector utilizes a Telegram Bot to poll for new updates. For successful
+    ingestion, the bot must be an administrator in channels or have message access
+    in groups. Additionally, this connector is incompatible with active Telegram webhooks;
+    any existing webhooks must be disabled for the polling mechanism to work.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Token | Password | Yes | The unique API Token for your Telegram Bot. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product in the ingested event (Default: device_product). |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    or sub-type (Default: event_name). |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    Python process running the script (Default: 30). |
+
+
+    ### Flow Description
+
+
+    1. **Authentication**: The connector establishes a session with the Telegram Bot
+    API using the provided API Token.
+
+    2. **State Management**: It retrieves the `update_id` of the last processed message
+    from the Google SecOps connector context to ensure only new data is ingested.
+
+    3. **Data Retrieval**: The connector polls the Telegram `getUpdates` endpoint,
+    using the saved `update_id` as an offset to fetch all messages sent since the
+    last execution.
+
+    4. **Message Processing**: The script iterates through the retrieved updates,
+    distinguishing between standard messages (private/group) and channel posts.
+
+    5. **Event Mapping**: Each message is flattened and mapped to a Google SecOps
+    event structure, capturing the message content, sender details, and timestamps.
+
+    6. **Alert Creation**: The events are encapsulated into `AlertInfo` objects with
+    a default priority of Medium (60) and a standardized naming convention.
+
+    7. **System Ingestion**: The alerts are returned to Google SecOps for case creation
+    and further analysis.
+
+    8. **Checkpointing**: Upon successful processing, the connector saves the `update_id`
+    of the most recent message back to the context storage for the next polling cycle.

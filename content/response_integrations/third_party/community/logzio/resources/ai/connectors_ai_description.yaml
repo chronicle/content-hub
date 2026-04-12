@@ -2,12 +2,11 @@ LOGZIO fetch-security-events:
   ai_description: >-
     ### General Description
 
-    The Logz.io connector fetches security rule events from a Logz.io security account
-    and ingests them as cases into Google SecOps. It provides a seamless integration
-    for monitoring security alerts generated within Logz.io, supporting multi-region
-    environments and custom API endpoints. The connector allows for granular filtering
-    based on rule names and severities, ensuring that only relevant security incidents
-    are escalated for investigation.
+    The Logz.io Fetch Security Events connector integrates with the Logz.io Cloud
+    SIEM to automatically ingest security rule events into Google SecOps. It allows
+    security teams to centralize their monitoring by converting Logz.io security alerts
+    into actionable cases, ensuring that triggered rules are investigated within the
+    SOAR platform.
 
 
     ### Parameters Description
@@ -16,63 +15,61 @@ LOGZIO fetch-security-events:
 
     | :--- | :--- | :--- | :--- |
 
-    | logzio_token | Password | Yes | API token for your Logz.io security account.
-    |
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product (default: `device_product`). |
 
-    | from_date | String | Yes | Earliest time to search on the first run. Supports
-    Unix timestamps, relative time (e.g., '1 day ago'), or ISO 8601 format. |
+    | EventClassId | String | Yes | The field name used to determine the event name
+    or sub-type (default: `event_name`). |
 
-    | logzio_region | String | No | 2-letter region code for your Logz.io account
-    (e.g., 'us', 'eu', 'wa'). Defaults to 'us'. |
+    | from_date | String | Yes | The earliest time to search for events during the
+    first run. Supports Unix timestamps, relative time (e.g., '1 day ago'), or ISO
+    8601 format. |
 
     | logzio_custom_endpoint | String | No | Optional custom URL for the Logz.io API.
-    If provided, it overrides the region setting. |
+    If provided, it overrides the `logzio_region` parameter. |
 
-    | search_term | String | No | Filter to fetch only events where the rule name
-    matches this string. |
+    | logzio_region | String | No | The 2-letter region code for your Logz.io account
+    (e.g., 'us', 'eu', 'uk'). Defaults to 'us' if left empty. |
 
-    | severities | String | No | A comma-delimited list of severities to fetch: INFO,
-    LOW, MEDIUM, HIGH, SEVERE. |
+    | logzio_token | Password | Yes | The API token for your Logz.io security account
+    used for authentication. |
 
-    | page_size | Integer | No | Controls the number of results per API page. Valid
-    range is 1 to 1000 (Default: 25). |
+    | page_size | Integer | No | The number of results to retrieve per API call. Valid
+    range is 1 to 1000 (default: 25). |
 
-    | DeviceProductField | String | Yes | The field name used to determine the device
-    product in the SOAR (Default: 'device_product'). |
-
-    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
-    (Default: 'event_name'). |
-
-    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector
+    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector's
     execution process. |
+
+    | search_term | String | No | A filter string to match against the security rule
+    names. |
+
+    | severities | String | No | A comma-delimited list of severities to fetch (e.g.,
+    "HIGH, SEVERE"). Supported values: INFO, LOW, MEDIUM, HIGH, SEVERE. |
 
 
     ### Flow Description
 
-    1. **Timestamp Management**: The connector retrieves the last successful execution
-    timestamp. If it's the first run, it uses the `from_date` parameter. The search
-    window ends at the current time minus 3 minutes to account for data ingestion
-    latency in Logz.io.
+    1. **Endpoint Resolution**: The connector determines the Logz.io API endpoint
+    using the provided region or custom endpoint URL.
 
-    2. **Endpoint Configuration**: It determines the correct API endpoint using either
-    the `logzio_custom_endpoint` or by constructing a regional URL based on the `logzio_region`
-    parameter.
+    2. **Time Window Calculation**: It identifies the start time for the search. On
+    the first run, it uses the `from_date` parameter; on subsequent runs, it uses
+    the timestamp of the last ingested event plus a 100ms offset. The end time is
+    set to 3 minutes prior to the current time to ensure data consistency.
 
-    3. **Data Fetching**: The connector queries the Logz.io `v2/security/rules/events/search`
-    API. It applies filters for the time range, search terms, and specified severities.
+    3. **Event Querying**: A POST request is sent to the Logz.io Security Events Search
+    API with filters for time range, search terms, and severities.
 
-    4. **Concurrent Pagination**: If the result set exceeds the page size, the connector
-    utilizes a thread pool to concurrently fetch all remaining pages of event data
-    to optimize performance.
+    4. **Concurrent Pagination**: If the search results span multiple pages, the connector
+    utilizes a thread pool to fetch all pages concurrently, optimizing data retrieval
+    speed.
 
-    5. **Alert Mapping**: Each retrieved Logz.io event is transformed into a Google
-    SecOps `AlertInfo` object. This includes mapping Logz.io severities to SOAR priorities
-    and extracting metadata such as tags, hits, and 'group by' fields into the event
-    context.
+    5. **Data Transformation**: Each Logz.io event is mapped to a Google SecOps Alert
+    object. This includes mapping Logz.io severities to platform priorities and extracting
+    metadata such as rule descriptions, tags, and group-by fields.
 
-    6. **Case Creation**: The mapped alerts are returned to Google SecOps to be created
-    as cases.
+    6. **Timestamp Persistence**: The connector tracks the latest event timestamp
+    and saves it to the system state to prevent duplicate ingestion in future cycles.
 
-    7. **Checkpointing**: The connector saves the timestamp of the most recent event
-    (or one hour ago, whichever is later) to ensure the next execution starts from
-    where the previous one finished.
+    7. **Case Ingestion**: The compiled list of alerts is returned to Google SecOps
+    for case creation and further orchestration.

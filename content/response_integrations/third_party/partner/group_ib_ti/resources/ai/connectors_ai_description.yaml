@@ -2,11 +2,12 @@ TI IoC Hash Connector:
   ai_description: >-
     ### General Description
 
-    This connector integrates with the Group-IB Threat Intelligence (TI) Portal to
-    ingest File Hash Indicators of Compromise (IoCs). It specifically monitors the
-    `ioc/common` collection for new hash-based threats and creates cases in Google
-    SecOps. This allows security teams to stay updated on malicious file signatures
-    identified by Group-IB's global intelligence network.
+    The **TI IoC Hash Connector** integrates Google SecOps with the Group-IB Threat
+    Intelligence (TI) Portal to ingest file hash Indicators of Compromise (IoCs).
+    It specifically monitors the `ioc/common` collection for new malicious file hashes,
+    allowing security teams to stay updated on global file-based threats. The connector
+    aggregates these indicators into cases within Google SecOps for automated response
+    and investigation.
 
 
     ### Parameters Description
@@ -17,29 +18,32 @@ TI IoC Hash Connector:
 
     | API key | Password | Yes | API key generated at your Group-IB TI Profile. |
 
-    | API login | Email | Yes | Email address used to enter the Group-IB TI Portal.
+    | API login | Email | Yes | Your email address used to enter the Group-IB TI Portal.
     |
 
-    | API URL | String | Yes | Group-IB TI Portal API URL (default: https://tap.group-ib.com/api/v2/).
+    | API URL | String | Yes | Group-IB TI Portal URL (default: `https://tap.group-ib.com/api/v2/`).
     |
 
-    | Case name | String | Yes | The name to be displayed for the created cases (default:
-    IoC Hash). |
+    | Case name | String | Yes | The name to display for the created cases in the
+    SOAR. |
 
-    | Case severity | String | Yes | Severity level for the cases: Informative, Low,
-    Medium, High, Critical. |
+    | Case severity | String | Yes | Severity level for the cases (Informative, Low,
+    Medium, High, Critical). |
 
-    | Case type | String | Yes | The case type used to trigger specific playbooks
-    or actions (default: IoC). |
+    | Case type | String | Yes | Case type used to trigger specific playbooks or actions.
+    |
 
-    | DeviceProductField | String | Yes | Field name used to determine the device
-    product (default: title). |
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product (default: `title`). |
 
-    | EventClassId | String | Yes | Field name used to determine the event name/sub-type
-    (default: id). |
+    | EventClassId | String | Yes | The field name used to determine the event name
+    or sub-type (default: `id`). |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    script execution. |
 
     | Start date | String | No | Initial date to start downloading data (YYYY-MM-DD).
-    If not provided, defaults to 1 day back. |
+    If not provided, it defaults to one day back. |
 
     | Verify SSL | Boolean | Yes | Whether to verify SSL certificates for API requests.
     |
@@ -47,40 +51,38 @@ TI IoC Hash Connector:
 
     ### Flow Description
 
-    1. **Authentication**: The connector connects to the Group-IB TI Portal using
-    the provided API Login and API Key.
+    1. **Authentication**: The connector establishes a connection to the Group-IB
+    TI Portal using the provided API Login and API Key.
 
-    2. **State Management**: It retrieves the last processed sequence update number
-    from the Google SecOps internal storage to ensure only new data is fetched.
+    2. **State Retrieval**: It fetches the last processed sequence update number (timestamp)
+    from the internal storage. If no timestamp is found, it uses the `Start date`
+    parameter or defaults to 24 hours ago to determine the starting point.
 
-    3. **Initialization**: If no previous state exists, it uses the "Start date" parameter
-    (or defaults to 24 hours ago) to determine the starting sequence update number
-    for the `ioc/common` collection.
+    3. **Data Ingestion**: The connector queries the `ioc/common` collection for new
+    updates. It uses a generator to fetch data in portions (limit of 50 per batch)
+    to ensure efficient processing.
 
-    4. **Data Retrieval**: It queries the Group-IB API for new IoC updates starting
-    from the saved sequence number, limited to 50 items per cycle.
+    4. **Filtering and Parsing**: It filters the incoming data to extract valid file
+    hashes and associated metadata (such as the Group-IB object ID).
 
-    5. **Filtering**: The connector parses the retrieved data, specifically filtering
-    for entries containing file hash indicators (`file_ioc__hash`).
+    5. **Alert Aggregation**: Extracted hashes are mapped to SOAR events and aggregated
+    into a single `AlertInfo` object representing a case.
 
-    6. **Event Creation**: For each identified hash, it creates an event object containing
-    the hash value, event type ("FileHash"), and associated metadata.
+    6. **Case Creation**: The aggregated alert is ingested into Google SecOps with
+    the configured severity, name, and type.
 
-    7. **Case Ingestion**: Events are aggregated into a single Alert/Case using the
-    configured "Case name", "Case type", and "Case severity".
-
-    8. **Checkpointing**: The connector saves the latest sequence update number back
-    to the internal storage to mark the progress for the next execution.
+    7. **Checkpointing**: Upon successful processing, the connector saves the latest
+    sequence update number to the internal storage to ensure the next execution resumes
+    from the last processed record.
 TI IoC IP Connector:
   ai_description: >-
     ### General Description
 
-    This connector integrates with the Group-IB Threat Intelligence (TI) Portal to
-    automatically fetch Indicators of Compromise (IoCs), specifically focusing on
-    malicious IP addresses. It monitors the `ioc/common` collection within the Group-IB
-    TI platform and ingests these indicators into Google SecOps as cases. This allows
-    security teams to proactively identify and respond to network-based threats based
-    on Group-IB's global threat intelligence data.
+    The TI IoC IP Connector integrates Google SecOps with the Group-IB Threat Intelligence
+    (TI) Portal to ingest IP-based Indicators of Compromise (IoCs). It periodically
+    monitors the Group-IB `ioc/common` collection to fetch the latest malicious IP
+    addresses and automatically creates cases within Google SecOps for security analysis
+    and automated response.
 
 
     ### Parameters Description
@@ -89,62 +91,63 @@ TI IoC IP Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | API login | Email | Yes | Your email address used to access the Group-IB TI
-    Portal. |
+    | API login | Email | Yes | Your email address used to enter the Group-IB TI Portal.
+    |
 
-    | API URL | String | Yes | The base URL for the Group-IB TI Portal API (e.g.,
+    | API URL | String | Yes | The base URL for the Group-IB TI Portal API (default:
     https://tap.group-ib.com/api/v2/). |
 
-    | Case name | String | Yes | The display name for the cases created in Google
-    SecOps. |
+    | Case name | String | Yes | The name to be displayed for the created cases in
+    Google SecOps. |
 
-    | Case severity | String | Yes | The severity level assigned to created cases
-    (Informative, Low, Medium, High, Critical). |
+    | Case severity | String | Yes | The severity level for the created cases (Informative,
+    Low, Medium, High, Critical). |
 
-    | Case type | String | Yes | The case type used to categorize the alert and trigger
-    specific playbooks. |
+    | Case type | String | Yes | The case type used to trigger specific playbooks
+    or actions. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
     product in the event metadata. |
 
-    | EventClassId | String | Yes | The field name used to determine the event name
-    or sub-type. |
+    | EventClassId | String | Yes | The field name used to determine the event name/sub-type.
+    |
 
-    | PythonProcessTimeout | String | Yes | The maximum execution time (in seconds)
-    allowed for the connector script. |
+    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector
+    execution. |
 
-    | Start date | String | No | The initial date (YYYY-MM-DD) to begin fetching data
-    if no previous checkpoint exists. Defaults to 1 day back. |
+    | Start date | String | No | The starting date (YYYY-MM-DD) to fetch data if no
+    previous checkpoint exists. Defaults to one day back. |
 
     | API key | Password | Yes | The API key generated from your Group-IB TI Profile.
     |
 
-    | Verify SSL | Boolean | Yes | If enabled, the connector will verify SSL certificates
-    for API requests. |
+    | Verify SSL | Boolean | Yes | Whether to verify SSL certificates for API requests.
+    |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector authenticates with the Group-IB TI Portal
-    using the provided API Login and API Key.
+    1. **Authentication**: The connector establishes a connection to the Group-IB
+    TI Portal using the provided API login and API key.
 
-    2. **State Tracking**: It retrieves the last processed 'sequence update' number
-    from the internal storage. If this is the first run, it uses the `Start date`
-    parameter or defaults to fetching data from the last 24 hours.
+    2. **Checkpoint Retrieval**: It checks the Google SecOps internal storage for
+    the last processed sequence update number (timestamp) to ensure data continuity.
 
-    3. **Data Collection**: The connector queries the `ioc/common` collection for
-    new threat intelligence updates released since the last successful execution.
+    3. **Initial Sync**: If no previous checkpoint is found, the connector uses the
+    configured `Start date` (or defaults to 24 hours ago) to determine the starting
+    sequence update number from the Group-IB API.
 
-    4. **Parsing and Filtering**: It iterates through the retrieved intelligence portions,
-    specifically extracting network profiles that contain valid IP addresses.
+    4. **Data Ingestion**: The connector queries the `ioc/common` collection for new
+    threat data using the sequence update number.
 
-    5. **Alert Construction**: For each identified malicious IP, the connector creates
-    an internal event and aggregates them into a single Alert/Case structure defined
-    by the `Case name` and `Case severity` parameters.
+    5. **Filtering and Parsing**: It parses the retrieved data, specifically filtering
+    for indicators that contain IP address information within the `network_profile`
+    section.
 
-    6. **Ingestion**: The aggregated alert and its associated events are returned
-    to Google SecOps for case creation.
+    6. **Case and Event Creation**: For the identified IoCs, the connector generates
+    a Google SecOps case containing individual events for each malicious IP address,
+    applying the configured severity and case type.
 
-    7. **Checkpointing**: Upon successful processing, the connector saves the latest
-    sequence update number to ensure that the next run only fetches new, unprocessed
-    indicators.
+    7. **State Persistence**: Upon successful ingestion, the connector saves the latest
+    sequence update number back to the internal storage to prevent duplicate ingestion
+    in the next run.

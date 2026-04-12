@@ -1,92 +1,4 @@
 Check IP Reputation:
-  ai_description: >-
-    Enriches IP Address entities by retrieving reputation data from AbuseIPDB. This
-    action checks if an IP address has been reported for malicious activity, providing
-    details such as the abuse confidence score, ISP, domain, and country. It allows
-    for filtering out internal addresses to conserve API quota and can automatically
-    mark entities as suspicious based on a configurable threshold.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Exclude Internal Addresses | boolean | No | If set to true, the action will
-    skip any address entities marked as internal in Google SecOps. Default is true.
-    |
-
-    | Suspicious Threshold | string | Yes | An abuse confidence score (0-100) equal
-    to or above this value will mark the entity as suspicious. Set to 0 to disable
-    this logic. |
-
-    | Create Insight | boolean | No | If true, creates a detailed insight on the entity's
-    case wall containing the reputation report summary. Default is true. |
-
-    | Max Age in Days | string | Yes | Specifies the timeframe (in days) for the reputation
-    report (e.g., check reports from the last 90 days). |
-
-
-    ### Additional Notes
-
-    - The action specifically targets `ADDRESS` entities.
-
-    - Data retrieved from AbuseIPDB is mapped to the entity's additional properties
-    with the prefix `AbuseIPDB_`.
-
-
-    ### Flow Description
-
-    1. **Filter Entities:** Identifies all `ADDRESS` entities in the current scope.
-    If `Exclude Internal Addresses` is enabled, it filters out entities where `is_internal`
-    is true.
-
-    2. **API Request:** For each valid IP, it queries the AbuseIPDB API using the
-    provided API key and the `Max Age in Days` parameter.
-
-    3. **Data Mapping:** Parses the API response and populates the entity's additional
-    properties (e.g., `AbuseIPDB_isp`, `AbuseIPDB_abuseConfidenceScore`).
-
-    4. **Suspicious Evaluation:** Compares the retrieved `abuseConfidenceScore` against
-    the `Suspicious Threshold`. If the score meets or exceeds the threshold, the entity
-    is marked as suspicious.
-
-    5. **Insight Creation:** If `Create Insight` is enabled, a formatted HTML insight
-    is added to the entity in the SecOps case.
-
-    6. **Update Entities:** Updates the entities in the Google SecOps platform with
-    the new enrichment data and status.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes with reputation data, sets the suspicious status of
-      entities, and creates case insights.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-      - ADDRESS
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: true
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -100,97 +12,84 @@ Check IP Reputation:
     enrich_asset: false
     enrich_ioc: true
     execute_command_on_the_host: false
+    get_alert_information: false
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
     update_email: false
     update_identity: false
     update_ticket: false
-Ping:
-  ai_description: >-
-    ### General Description
-
-    The Ping action is a utility designed to verify the connectivity between Google
-    SecOps and the AbuseIPDB API. It ensures that the provided API key is valid and
-    that the network path to the service is open. This is typically used during the
-    initial setup or troubleshooting of the integration.
-
-
-    ### Parameters Description
-
-    This action does not have any action-specific parameters. It relies solely on
-    the integration's global configuration parameters:
-
-
-    | Parameter Name | Expected Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Key | String | Yes | The API key used to authenticate requests to AbuseIPDB.
-    |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the AbuseIPDB API endpoint. Defaults to False. |
-
-
-    ### Additional Notes
-
-    *   The action performs a test lookup for a dummy IP address (1.1.1.1) to validate
-    the API response.
-
-    *   If the API key is invalid, the action will return a failure state with a specific
-    error message regarding forbidden access.
-
-
-    ### Flow Description
-
-    1.  **Initialization**: The action retrieves the global configuration (API Key
-    and SSL verification settings).
-
-    2.  **Connectivity Test**: The action calls the AbuseIPDB manager to perform a
-    `test_connectivity` operation.
-
-    3.  **API Request**: The manager executes a GET request to the AbuseIPDB 'check'
-    endpoint using a hardcoded dummy IP (1.1.1.1).
-
-    4.  **Validation**: The response is checked for HTTP errors (e.g., 403 Forbidden
-    for invalid keys or 204 for rate limits).
-
-    5.  **Outcome**: If the request is successful, the action returns 'true'. If an
-    exception occurs or the key is invalid, it returns 'false' and logs the error.
+  ai_description: "### General Description\nEnriches IP Address entities by retrieving\
+    \ reputation data from AbuseIPDB. This action checks if an IP address has been\
+    \ reported for malicious activity, providing details such as the abuse confidence\
+    \ score, country, ISP, and domain. It helps analysts quickly identify potentially\
+    \ harmful network actors and automatically flags suspicious entities based on\
+    \ configurable thresholds.\n\n### Parameters Description\n| Parameter Name | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Exclude Internal\
+    \ Addresses | boolean | No | If set to `true`, the action will skip any IP entities\
+    \ marked as internal in the environment, preserving API quota. |\n| Suspicious\
+    \ Threshold | string | Yes | An integer value (0-100). If the Abuse Confidence\
+    \ Score returned by AbuseIPDB is equal to or higher than this value, the entity\
+    \ is marked as suspicious in Google SecOps. Set to 0 to disable this behavior.\
+    \ |\n| Create Insight | boolean | No | If set to `true`, a detailed HTML insight\
+    \ will be created for each processed IP entity, summarizing the reputation report.\
+    \ |\n| Max Age in Days | string | Yes | Defines the time window (in days) for\
+    \ which AbuseIPDB should search for reports. Only reports within this age limit\
+    \ contribute to the score. |\n\n### Additional Notes\n- The action specifically\
+    \ targets entities of type `ADDRESS`.\n- If an IP is not found in the AbuseIPDB\
+    \ database, it will be noted in the action output but will not result in a failure.\n\
+    \n### Flow Description\n1. **Initialization**: Extracts the API key and configuration\
+    \ settings, then validates the `Max Age in Days` parameter.\n2. **Entity Filtering**:\
+    \ Identifies all `ADDRESS` entities in the current scope. If `Exclude Internal\
+    \ Addresses` is enabled, it filters out entities where `is_internal` is true.\n\
+    3. **API Request**: For each valid entity, it performs a GET request to the AbuseIPDB\
+    \ `/check` endpoint using the entity's identifier and the specified `Max Age`.\n\
+    4. **Data Mapping**: \n    - Appends the raw report data to the entity's additional\
+    \ properties with the prefix `AbuseIPDB_`.\n    - Compares the `abuseConfidenceScore`\
+    \ against the `Suspicious Threshold` to potentially update the entity's suspicious\
+    \ status.\n5. **Insight Generation**: If enabled, constructs an HTML summary of\
+    \ the IP's reputation (score, ISP, domain, etc.) and attaches it as an entity\
+    \ insight.\n6. **Finalization**: Updates the entities in the Google SecOps platform\
+    \ and returns a summary of successful, failed, or missing IPs."
   capabilities:
     can_create_case_comments: false
-    can_create_insight: false
+    can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
+    can_mutate_internal_data: true
+    can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties, sets the 'is_suspicious' flag based on
+      reputation scores, and creates entity-level insights.
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
-    entity_types: [ ]
+    entity_types:
+    - ADDRESS
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
-    filters_by_entity_type: false
+    filters_by_entity_type: true
     filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
-    filters_by_is_internal: false
+    filters_by_is_internal: true
     filters_by_is_pivot: false
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+Ping:
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -204,15 +103,93 @@ Ping:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
+    get_alert_information: false
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
     update_email: false
     update_identity: false
     update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    the Google SecOps platform and the AbuseIPDB API. It ensures that the provided
+    API key is valid and that the network configuration allows for successful communication
+    with the external service.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Key | String | Yes | The API key used to authenticate requests to AbuseIPDB.
+    This is retrieved from the integration configuration. |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the AbuseIPDB API. Defaults to `False`. |
+
+
+    ### Additional Notes
+
+    * This action does not process any entities from the case. It uses a hardcoded
+    dummy IP address (`1.1.1.1`) to perform a test lookup.
+
+    * If the API key is invalid, the action will return a failed status with a specific
+    error message regarding forbidden access.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify context and retrieves
+    the integration configuration parameters (API Key and SSL verification setting).
+
+    2. **Manager Setup**: An instance of the `AbuseIPDBManager` is created using the
+    provided credentials.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    performs a GET request to the AbuseIPDB 'check' endpoint for the IP `1.1.1.1`.
+
+    4. **Validation**: The response is validated for HTTP errors and specific status
+    codes (e.g., 403 for invalid keys).
+
+    5. **Completion**: If the request is successful, the action returns a "Connection
+    Established" message. If an error occurs, it logs the exception and returns a
+    failure status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

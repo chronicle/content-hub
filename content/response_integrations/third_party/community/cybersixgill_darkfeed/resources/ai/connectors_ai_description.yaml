@@ -2,11 +2,11 @@ Cybersixgill - Darkfeed Connector:
   ai_description: >-
     ### General Description
 
-    The Cybersixgill Darkfeed connector integrates Google SecOps with Cybersixgill's
-    automated feed of malicious indicators of compromise (IOCs). It fetches real-time
-    data from the deep and dark web, including domains, URLs, hashes, and IP addresses.
-    This connector allows security teams to preemptively ingest actionable threat
-    intelligence into the SOAR platform for automated blocking and investigation.
+    The Cybersixgill Darkfeed connector integrates with Cybersixgill's automated threat
+    intelligence platform to ingest malicious Indicators of Compromise (IOCs) sourced
+    from the deep and dark web. It provides real-time, actionable data including domains,
+    URLs, hashes, and IP addresses, enabling security teams to preemptively identify
+    and block threats within the Google SecOps environment.
 
 
     ### Parameters Description
@@ -19,46 +19,41 @@ Cybersixgill - Darkfeed Connector:
     python process running the current script. |
 
     | EventClassId | String | Yes | The field name used to determine the event name
-    (sub-type). Default is 'Cybersixgill Darkfeed '. |
+    (sub-type). |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product. Default is 'Cybersixgill Darkfeed '. |
+    product. |
 
-    | Client Secret | Password | Yes | The Secret Key provided by Cybersixgill for
-    API authentication. |
+    | Client Secret | Password | Yes | The Secret Key used for authentication with
+    Cybersixgill. |
 
-    | Client Id | String | Yes | The Client ID provided by Cybersixgill for API authentication.
+    | Client Id | String | Yes | The Client ID used for authentication with Cybersixgill.
     |
 
-    | Alerts Limit | Integer | Yes | The maximum number of indicators/alerts to be
-    ingested into the platform per execution cycle. |
+    | Alerts Limit | Integer | Yes | The maximum number of alerts to be ingested into
+    the platform per execution cycle. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector establishes a connection with the Cybersixgill
-    API using the provided Client ID and Client Secret.
+    1. **Authentication**: The connector authenticates with the Cybersixgill API using
+    the provided Client ID and Client Secret.
 
-    2. **Data Retrieval**: It queries the Cybersixgill Darkfeed stream to retrieve
-    a bundle of indicators, limited by the 'Alerts Limit' parameter.
+    2. **Data Retrieval**: It queries the Cybersixgill Darkfeed stream for a batch
+    of indicators, limited by the "Alerts Limit" parameter.
 
-    3. **Filtering**: The script filters the retrieved objects to identify valid indicators
-    and excludes any that have been marked as 'revoked'.
+    3. **Filtering**: The connector filters the retrieved objects to ensure they are
+    valid indicators and have not been revoked.
 
-    4. **IOC Extraction**: It parses the STIX-formatted patterns within the indicators
-    using regular expressions to extract specific IOC values, such as MD5/SHA hashes,
-    URLs, domains, and IPv4 addresses.
+    4. **Parsing**: For each indicator, the connector parses the STIX pattern to extract
+    specific IOC types such as MD5, SHA-1, SHA-256 hashes, URLs, domains, and IPv4
+    addresses.
 
-    5. **Metadata Enrichment**: Each event is enriched with Cybersixgill-specific
-    metadata, including actor information, feed source, confidence levels, severity,
-    and external references (such as VirusTotal positive rates or MITRE ATT&CK tactics).
+    5. **Enrichment**: It enriches the event data with additional context, including
+    VirusTotal positive rates and MITRE ATT&CK tactics/descriptions where available.
 
-    6. **Alert Creation**: The connector maps the processed indicator data into Google
-    SecOps AlertInfo objects, assigning a default priority of 'Medium' (60).
+    6. **Case Creation**: Each indicator is mapped to a Google SecOps Alert and Event,
+    then ingested into the system.
 
-    7. **Checkpointing**: It calls the `commit_indicators` method to acknowledge the
-    processed data, ensuring that the same indicators are not ingested multiple times
-    in subsequent runs.
-
-    8. **Ingestion**: The final list of alerts is returned to the Google SecOps platform
-    for case creation.
+    7. **Checkpointing**: The connector commits the processed indicators back to the
+    Cybersixgill client to ensure subsequent runs fetch only new data.

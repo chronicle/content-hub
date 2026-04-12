@@ -1,63 +1,89 @@
 Get Country Flag:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **Get Country Flag** action retrieves a country's flag image in Base64 format.
-    It is designed to provide visual context for geographic data by converting 2-digit
-    ISO country codes (e.g., 'US', 'FR') into encoded image strings. The action can
-    process country codes provided manually as a parameter or dynamically extracted
-    from the `additional_properties` of entities within a case. It utilizes an external
-    service (`countryflags.io`) to fetch flags and maintains a local cache file (`flags.json`)
-    to optimize performance and reduce redundant API calls.
+    The **Get Country Flag** action retrieves a base64-encoded string representing
+    a country's flag image from an external service. It is designed to provide visual
+    context for entities or specific country codes within a playbook. The action supports
+    extracting country codes from entity properties or via direct manual input and
+    utilizes a local caching mechanism to minimize external API calls.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | **Country Code Two Digit** | String | No | A manual 2-digit ISO country code
-    (e.g., 'us', 'gb') to fetch a flag for. |
+    | Country Code Two Digit | String | No | A specific 2-digit ISO country code (e.g.,
+    'us', 'uk') to fetch the flag for. |
 
-    | **Country Code From Entity Field** | String | No | A comma-separated list of
-    field names to look for in the `additional_properties` of entities. If found,
-    the value of that field is used as the country code. |
+    | Country Code From Entity Field | String | No | A comma-separated list of field
+    names to look for in the `additional_properties` of the target entities. The action
+    will extract the country code from the first matching field found. |
 
 
     ### Additional Notes
 
-    - If neither parameter is provided, the action will not perform any lookups.
+    - At least one of the parameters should be provided for the action to return meaningful
+    data.
 
-    - The action maintains a local cache file named `flags.json` in the execution
-    folder to store previously fetched flags.
-
-    - The results are returned as a JSON object mapping the identifier (entity or
-    country code) to the Base64 string.
+    - The action returns the base64 data in the `JsonResult` but does not update the
+    entity attributes or create insights automatically.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes and attempts to load the `flags.json`
-    cache file from the local execution environment.
+    1. **Cache Loading**: The action attempts to read a local `flags.json` file from
+    the execution environment to retrieve previously cached flag data.
 
-    2. **Parameter Retrieval**: It retrieves the manual `Country Code Two Digit` and
-    the list of entity fields to check from `Country Code From Entity Field`.
+    2. **Entity Analysis**: If `Country Code From Entity Field` is specified, the
+    action iterates through all target entities and checks their `additional_properties`
+    for the provided keys to find a country code.
 
-    3. **Entity Processing**: For each entity in the case, the action checks if any
-    of the specified fields exist in the entity's `additional_properties`. If a country
-    code is found, it proceeds to fetch the flag.
+    3. **Manual Input**: If `Country Code Two Digit` is provided, the action adds
+    this code to the processing queue.
 
-    4. **Flag Retrieval**: For each identified country code (from entities or manual
-    input), the action checks the local cache. If the flag is missing, it performs
-    a GET request to `https://www.countryflags.io/`, encodes the resulting image to
-    Base64, and updates the cache.
+    4. **External Retrieval**: For each unique country code found (and not present
+    in the cache), the action sends a GET request to `countryflags.io` to fetch the
+    flag image.
 
-    5. **Cache Update**: If new flags were fetched, the action overwrites the local
-    `flags.json` file with the updated data.
+    5. **Base64 Encoding**: The fetched image content is converted into a base64-encoded
+    string.
 
-    6. **Output**: The action attaches the Base64 flag data to the action's JSON results
-    and completes the execution.
+    6. **Result Mapping**: The base64 strings are mapped to their respective entity
+    identifiers or country codes in the final JSON output.
+
+    7. **Cache Persistence**: If new flags were fetched, the local cache file is updated
+    with the new data for future executions.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -69,44 +95,44 @@ Get Country Flag:
     fetches_data: true
     internal_data_mutation_explanation: null
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
     entity_types:
-      - ADDRESS
-      - ALERT
-      - APPLICATION
-      - CHILDHASH
-      - CHILDPROCESS
-      - CLUSTER
-      - CONTAINER
-      - CREDITCARD
-      - CVE
-      - CVEID
-      - DATABASE
-      - DEPLOYMENT
-      - DESTINATIONDOMAIN
-      - DOMAIN
-      - EMAILSUBJECT
-      - EVENT
-      - FILEHASH
-      - FILENAME
-      - GENERICENTITY
-      - HOSTNAME
-      - IPSET
-      - MacAddress
-      - PARENTHASH
-      - PARENTPROCESS
-      - PHONENUMBER
-      - POD
-      - PROCESS
-      - SERVICE
-      - SOURCEDOMAIN
-      - THREATACTOR
-      - THREATCAMPAIGN
-      - THREATSIGNATURE
-      - DestinationURL
-      - USB
-      - USERUNIQNAME
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
     filters_by_additional_properties: true
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -120,6 +146,7 @@ Get Country Flag:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+Ping:
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -133,56 +160,59 @@ Get Country Flag:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
+    get_alert_information: false
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
     update_email: false
     update_identity: false
     update_ticket: false
-Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Country Flags service by attempting to retrieve the
-    flag for a hardcoded country code ('us'). This action is primarily used to verify
-    that the integration is correctly configured and can reach the external API.
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Country Flags service. It serves as a health check to ensure that the
+    integration can successfully reach the external API and process image data.
 
 
     ### Parameters Description
 
-    There are no parameters for this action.
+    There are no parameters configured for this action.
 
 
     ### Additional Notes
 
-    This is a standard 'Ping' action. It utilizes a local cache file (`flags.json`)
-    to store retrieved flag data in base64 format to optimize subsequent requests.
-    It does not process any entities from the case.
+    This action uses a hardcoded country code ('us') to perform the connectivity test.
+    It also utilizes a local cache file (`flags.json`) to store and retrieve previously
+    fetched flag data in base64 format to optimize performance during the test.
 
 
     ### Flow Description
 
-    1. **Initialize Action**: Sets up the Siemplify action context and identifies
-    the script as 'GetCountryFlag'.
+    1. **Initialize Action:** The script initializes the Siemplify action context.
 
-    2. **Load Cache**: Attempts to read the `flags.json` file from the execution folder
-    to retrieve previously cached flags. If the file is missing or invalid, it initializes
-    an empty cache.
+    2. **Load Cache:** It attempts to read a local JSON file named `flags.json` from
+    the execution folder to load existing flag data.
 
-    3. **Connectivity Test**: Uses a hardcoded country code ('us') to check for a
-    flag.
+    3. **Check Cache:** The script checks if the flag for the country code 'us' is
+    already present in the loaded cache.
 
-    4. **External Request**: If the flag for 'us' is not in the cache, it performs
-    a GET request to the Country Flags API (https://www.countryflags.io/us/flat/64.png).
+    4. **External API Call:** If the flag is not in the cache, it performs a GET request
+    to the Country Flags API (`https://www.countryflags.io/us/flat/64.png`).
 
-    5. **Finalize**: Returns a success status if the flag data is retrieved or found
-    in the cache; otherwise, it terminates with a failure state.
+    5. **Process Response:** Upon a successful API response, the image content is
+    encoded into a base64 string.
+
+    6. **Finalize:** If the base64 data is successfully retrieved (either from cache
+    or API), the action terminates with a 'Successful' status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -196,7 +226,7 @@ Ping:
   categories:
     enrichment: false
   entity_usage:
-    entity_types: [ ]
+    entity_types: []
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -210,28 +240,3 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_email: false
-    search_events: false
-    send_email: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false

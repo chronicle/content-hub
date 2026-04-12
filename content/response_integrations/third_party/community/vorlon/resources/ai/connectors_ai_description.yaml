@@ -2,10 +2,11 @@ Vorlon Connector:
   ai_description: >-
     ### General Description
 
-    The Vorlon Connector enables the ingestion of security alerts from the Vorlon
-    platform into Google SecOps. It provides visibility into service-to-service interactions,
-    secret usage, and potential security risks by fetching detailed alert data and
-    converting it into actionable cases within the SOAR environment.
+    The Vorlon Connector integrates Google SecOps with the Vorlon platform to automate
+    the ingestion of security alerts. It monitors for unauthorized or suspicious service-to-service
+    connections and secret usage, converting these alerts into structured cases for
+    investigation within the SOAR platform. This allows security teams to centralize
+    their monitoring of service interactions and potential secret exposures.
 
 
     ### Parameters Description
@@ -14,57 +15,54 @@ Vorlon Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | API Root | String | Yes | The base URL of your Vorlon instance (e.g., `https://<domain_name>.vorlon.io`).
+    | API Root | String | Yes | The base URL of the Vorlon instance (e.g., `https://<domain_name>.vorlon.io`).
     |
 
-    | Client ID | String | Yes | The Client ID used for OAuth2 authentication with
-    the Vorlon API. |
+    | Client ID | String | Yes | The Client ID used for OAuth2 authentication. |
 
-    | Client Secret | Password | Yes | The Client Secret used for OAuth2 authentication
-    with the Vorlon API. |
+    | Client Secret | Password | Yes | The Client Secret used for OAuth2 authentication.
+    |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product in the ingested events. Default is 'Vorlon'. |
+    product (Default: Vorlon). |
 
-    | EventClassId | String | Yes | The field name used to determine the event name
-    or sub-type. Default is 'type'. |
+    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
+    (Default: type). |
 
     | Max Days Backwards | String | No | The number of days to look back for alerts
-    during the first run or if no timestamp is found. Default is 1 day. |
+    on the first run (Default: 1). |
 
     | Max Incidents per Fetch | String | Yes | The maximum number of alerts to retrieve
-    in a single execution cycle. |
+    in a single execution cycle (Default: 10). |
 
-    | Open Alerts Only | Boolean | No | If enabled, the connector only fetches alerts
-    with an 'open' status. Otherwise, it fetches open, dismissed, and resolved alerts.
-    |
+    | Open Alerts Only | Boolean | No | If enabled, only fetches alerts with an "open"
+    status. If disabled, fetches open, dismissed, and resolved alerts. |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    connector's Python process. |
+    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector
+    execution process. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector uses the Client ID and Client Secret to request
-    an OAuth2 access token from the Vorlon `/rest/v1/token` endpoint.
+    1. **Authentication**: The connector authenticates with the Vorlon API using the
+    provided Client ID and Client Secret to obtain an OAuth2 bearer token via the
+    `/rest/v1/token` endpoint.
 
-    2. **Timestamp Calculation**: It identifies the starting point for the fetch by
-    checking the last saved timestamp. If unavailable, it uses the 'Max Days Backwards'
-    parameter.
+    2. **Timestamp Management**: It retrieves the last successful execution timestamp
+    from the SOAR database. If no timestamp exists (e.g., first run), it calculates
+    a starting point based on the "Max Days Backwards" parameter.
 
-    3. **Alert Fetching**: The connector queries the Vorlon `/rest/v1/alerts` endpoint,
-    applying filters for the start time, alert status (based on 'Open Alerts Only'),
-    and the fetch limit.
+    3. **Alert Retrieval**: The connector queries the Vorlon `/rest/v1/alerts` endpoint,
+    applying filters for the last saved timestamp, alert status (based on the "Open
+    Alerts Only" setting), and the "Max Incidents per Fetch" limit.
 
-    4. **Pagination**: If more alerts are available than the 'Max Incidents per Fetch'
-    limit, the connector iterates through pages to collect the requested number of
-    alerts.
+    4. **Data Mapping**: Each retrieved alert is transformed into a SOAR event. The
+    connector extracts critical metadata including requesting/responding service IDs,
+    service names, secret types, and severity levels.
 
-    5. **Event Mapping**: Each fetched alert is parsed to extract metadata, including
-    requesting/responding service details, secret types, and severity levels.
+    5. **Case Creation**: The processed events are encapsulated into `CaseInfo` objects,
+    mapping Vorlon alert titles and IDs to case names and rule generators.
 
-    6. **Case Ingestion**: The parsed alerts are transformed into Google SecOps `CaseInfo`
-    objects and sent to the system for processing.
-
-    7. **Checkpointing**: The connector saves the timestamp of the most recent alert
-    to ensure that the next execution only retrieves new data.
+    6. **Ingestion and Checkpointing**: The cases are ingested into Google SecOps,
+    and the timestamp of the most recent alert is saved to ensure the next iteration
+    only fetches new data.

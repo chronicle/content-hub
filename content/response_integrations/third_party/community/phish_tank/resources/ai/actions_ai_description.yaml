@@ -1,58 +1,4 @@
 Check Url:
-  ai_description: "### General Description\nThe **Check Url** action queries the PhishTank\
-    \ community database to determine if specific URL entities are associated with\
-    \ phishing activities. It retrieves metadata such as verification status, validity,\
-    \ and direct links to PhishTank detail pages. This action is primarily used for\
-    \ automated URL enrichment and threat validation within a security orchestration\
-    \ workflow.\n\n### Parameters Description\nThere are no action-specific parameters\
-    \ for this action. It relies on the global integration configuration for the PhishTank\
-    \ Service URL.\n\n### Additional Notes\n* This action requires the **Service Url**\
-    \ to be correctly configured in the PhishTank integration settings.\n* The action\
-    \ uses the `OriginalIdentifier` of an entity if available; otherwise, it defaults\
-    \ to the standard identifier.\n* Results are returned in both a human-readable\
-    \ summary and a structured JSON format for downstream playbook logic.\n\n### Flow\
-    \ Description\n1. **Configuration Retrieval**: The action fetches the PhishTank\
-    \ Service URL from the integration's provider configuration.\n2. **Entity Filtering**:\
-    \ It identifies all entities of type `URL` (DestinationURL) within the current\
-    \ alert scope.\n3. **External Query**: For each URL, it sends a POST request to\
-    \ the PhishTank API to check its status.\n4. **Data Parsing**: The action parses\
-    \ the XML response from PhishTank to extract phishing details.\n5. **Internal\
-    \ Updates**: \n    * If a URL is found in the database, it generates an **Entity\
-    \ Insight** containing the PhishTank link and verification status.\n    * If the\
-    \ URL is explicitly marked as **verified** in PhishTank, the action sets the entity's\
-    \ `is_suspicious` attribute to `True`.\n6. **Finalization**: The action updates\
-    \ the modified entities in Google SecOps and provides a summary message of the\
-    \ findings."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the 'is_suspicious' attribute of URL entities and creates entity insights
-      based on PhishTank reputation data.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-      - DestinationURL
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -66,82 +12,91 @@ Check Url:
     enrich_asset: false
     enrich_ioc: true
     execute_command_on_the_host: false
+    get_alert_information: false
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
     update_email: false
     update_identity: false
     update_ticket: false
-Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity between Google
-    SecOps and the PhishTank service. Its primary purpose is to ensure that the integration
-    is correctly configured and that the PhishTank API is reachable from the environment.
+    Enriches URL entities by checking their reputation against the PhishTank community
+    database. This action identifies if a URL is known for phishing activities, retrieves
+    verification status, and provides direct links to PhishTank detail pages.
 
 
     ### Parameters Description
-
-    There are no action-specific parameters for this action. It utilizes the global
-    integration configuration to perform the connectivity test.
-
 
     | Parameter Name | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | N/A | N/A | N/A | This action does not take any input parameters. |
-
-
-    ### Additional Notes
-
-    * This action uses a hardcoded test URL (`google.com`) to perform a POST request
-    to the PhishTank API to validate the connection.
-
-    * It relies on the 'Service Url' defined in the PhishTank integration settings.
+    | Service Url | String | Yes | The PhishTank API endpoint URL, configured at the
+    integration level. |
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the 'Service Url' from the
-    PhishTank integration configuration.
+    1. **Configuration Retrieval:** Fetches the PhishTank service URL from the integration
+    settings.
 
-    2. **Request Construction**: It prepares a POST request with a payload containing
-    a test URL (`google.com`) and specifies the format as JSON.
+    2. **Entity Filtering:** Identifies all `URL` entities within the current action
+    scope.
 
-    3. **Connectivity Test**: The action sends the request to the PhishTank service
-    using the configured headers.
+    3. **Reputation Lookup:** For each URL, sends a POST request to the PhishTank
+    API to query its status.
 
-    4. **Validation**: It checks the response status. If the request is successful
-    (HTTP 200 OK), it confirms the connection.
+    4. **Data Parsing:** Processes the XML response to extract database presence,
+    verification status, and validity.
 
-    5. **Completion**: The action ends with a success message: 'PhishTank is connected'.
+    5. **Insight Generation:** Adds an entity insight to the SOAR case for each URL,
+    detailing whether it was found and its verification status.
+
+    6. **Entity Update:** If a URL is verified as a phish, the action marks the entity
+    as suspicious and updates its status in Google SecOps.
+
+    7. **Result Reporting:** Returns a summary of found, suspicious, and failed entities,
+    along with the raw JSON data for further analysis.
+
+
+    ### Additional Notes
+
+    - This action uses the `OriginalIdentifier` of the entity if available, falling
+    back to the standard identifier for the lookup.
+
+    - A score modifier of 50 is applied internally to entities found in the database.
   capabilities:
     can_create_case_comments: false
-    can_create_insight: false
+    can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
+    can_mutate_internal_data: true
+    can_update_entities: true
     external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'is_suspicious' attribute of URL entities if they are verified as
+      phishing in PhishTank and adds entity insights to the case.
   categories:
-    enrichment: false
+    enrichment: true
   entity_usage:
-    entity_types: [ ]
+    entity_types:
+    - DestinationURL
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
-    filters_by_entity_type: false
+    filters_by_entity_type: true
     filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
@@ -150,6 +105,7 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+Ping:
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -163,15 +119,79 @@ Ping:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
+    get_alert_information: false
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
     update_email: false
     update_identity: false
     update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    the Google SecOps environment and the PhishTank service. It ensures that the integration
+    is correctly configured and that the PhishTank API is reachable and responding
+    to requests.
+
+
+    ### Parameters Description
+
+    There are no user-configurable parameters for this action. It relies solely on
+    the integration's global configuration.
+
+
+    ### Additional Notes
+
+    This action performs a test request using a hardcoded URL (`google.com`) to validate
+    the API's response format and availability.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the `Service Url` from the
+    PhishTank integration settings.
+
+    2. **Connectivity Request**: It executes a POST request to the service URL with
+    a sample payload containing a test URL and a request for a JSON response.
+
+    3. **Status Verification**: The action checks the HTTP response status code. If
+    the request fails (e.g., 4xx or 5xx error), an exception is raised.
+
+    4. **Result Reporting**: Upon a successful response, the action concludes by reporting
+    that the service is connected.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

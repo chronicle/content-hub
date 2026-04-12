@@ -3,10 +3,10 @@ Cybersixgill Actionable Alerts:
     ### General Description
 
     The Cybersixgill Actionable Alerts connector integrates Google SecOps with the
-    Cybersixgill platform to ingest high-fidelity threat intelligence alerts. This
-    connector monitors the deep and dark web for threats specifically targeting an
-    organization, providing detailed context such as threat assessments, recommendations,
-    and CVE-related data to enable proactive security responses.
+    Cybersixgill portal to ingest high-fidelity actionable alerts. It enables security
+    teams to monitor deep and dark web threats, including data leaks, credential theft,
+    and vulnerability exploits (CVEs), by automatically creating cases in Google SecOps
+    for rapid response.
 
 
     ### Parameters Description
@@ -15,59 +15,59 @@ Cybersixgill Actionable Alerts:
 
     | :--- | :--- | :--- | :--- |
 
-    | Client Id | Password | Yes | The Client ID used for authenticating with the
-    Cybersixgill API. |
+    | Client Id | Password | Yes | The Client ID provided by Cybersixgill for API
+    authentication. |
 
-    | Client Secret | Password | Yes | The Client Secret used for authenticating with
-    the Cybersixgill API. |
+    | Client Secret | Password | Yes | The Client Secret provided by Cybersixgill
+    for API authentication. |
 
-    | Alerts Limit | Integer | Yes | The maximum number of alerts to retrieve in a
-    single execution cycle. |
+    | Alerts Limit | Integer | Yes | The maximum number of alerts to fetch in a single
+    execution cycle (default is 50). |
 
-    | Organization id | String | No | Optional filter to fetch alerts for a specific
-    Cybersixgill Organization ID. |
+    | Organization id | String | No | Optional filter to fetch alerts specific to
+    a particular Cybersixgill Organization ID. |
 
-    | Threat Level | String | No | Optional filter to retrieve alerts matching a specific
-    threat level (e.g., 'imminent'). |
+    | Threat Level | String | No | Filter alerts by threat level (e.g., 'imminent').
+    |
 
-    | Threat Type | String | No | Optional comma-separated list of threat types to
-    filter the results. |
+    | Threat Type | String | No | Filter alerts by threat type. Supports a comma-separated
+    list of types. |
 
-    | DeviceProductField | String | Yes | The field name used to identify the device
-    product in Google SecOps. |
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product in the SOAR (default: Cybersixgill Actionable Alerts). |
 
-    | EventClassId | String | Yes | The field name used to identify the event name
-    or sub-type in Google SecOps. |
+    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
+    (default: Cybersixgill Actionable Alerts). |
 
-    | PythonProcessTimeout | String | Yes | The maximum time (in seconds) allowed
-    for the connector script to run. |
+    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector
+    execution process. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector establishes a connection to the Cybersixgill
-    API using the provided Client ID and Client Secret.
+    1. **Authentication**: The connector authenticates with the Cybersixgill API using
+    the provided Client ID and Client Secret to establish a session.
 
-    2. **Time Range Determination**: It calculates the time window for fetching alerts
-    by checking the last saved timestamp. On the first run, it defaults to a 30-day
-    lookback period.
+    2. **Time Range Calculation**: It determines the fetch window. On the first run,
+    it defaults to a look-back period (typically 30 days); on subsequent runs, it
+    fetches alerts starting from the timestamp of the last ingested alert.
 
-    3. **Alert Retrieval**: The connector queries the Cybersixgill Actionable Alerts
-    bulk API, applying configured filters for limit, threat level, threat type, and
-    organization ID.
+    3. **Alert Retrieval**: Queries the Cybersixgill Actionable Alerts API for new
+    alerts, applying filters for Threat Level, Threat Type, and Organization ID if
+    configured.
 
-    4. **Detailed Enrichment**: For each retrieved alert, the connector performs a
-    secondary call to fetch full alert details, including descriptions, asset attributes,
-    and recommendations.
+    4. **Data Enrichment**: For each retrieved alert, the connector fetches full details,
+    including:
+        *   **Metadata**: Title, description, and threat assessment.
+        *   **Contextual Links**: Direct URLs to the Cybersixgill Portal for the specific
+    alert.
+        *   **CVE Data**: If the alert is vulnerability-related, it extracts CVE IDs,
+    CVSS scores (v2/v3), and DVE (Dynamic Vulnerability Exploit) scores.
+        *   **Sub-Alerts**: Aggregates related sub-events into an HTML-formatted table
+    for better visibility within the SOAR case wall.
+    5. **Case Creation**: Maps the enriched data into the Google SecOps AlertInfo
+    model, assigning priorities based on the threat level (e.g., 'imminent' alerts
+    are mapped to Critical priority).
 
-    5. **CVE & Sub-Alert Processing**: If the alert contains vulnerability data, it
-    extracts CVE IDs, CVSS scores, and DVE scores. It also parses any associated sub-alerts
-    into a formatted HTML table for better visibility.
-
-    6. **Case Creation**: The processed data is mapped to the Google SecOps AlertInfo
-    model. Alerts marked as 'imminent' are assigned Critical priority, while others
-    are assigned High priority.
-
-    7. **Ingestion & Checkpointing**: The alerts are ingested into Google SecOps,
-    and the timestamp of the most recent alert is saved to ensure subsequent runs
-    only fetch new data.
+    6. **State Management**: Saves the timestamp of the most recent alert to ensure
+    subsequent runs only process new data.

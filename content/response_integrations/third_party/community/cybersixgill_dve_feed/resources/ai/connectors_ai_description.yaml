@@ -2,12 +2,12 @@ Cybersixgill - DVE Connector:
   ai_description: >-
     ### General Description
 
-    The Cybersixgill DVE Connector integrates with the Cybersixgill Dynamic Vulnerability
-    Exploit (DVE) feed to ingest vulnerability-related threat intelligence into Google
-    SecOps. It focuses on CVEs, providing real-time context on threat actor intent
-    and the probability of exploitation. This allows security teams to prioritize
-    vulnerabilities based on dynamic risk scores and dark web intelligence rather
-    than static severity metrics.
+    The Cybersixgill DVE Connector integrates Google SecOps with the Cybersixgill
+    Dynamic Vulnerability Exploit (DVE) Feed. This connector allows security teams
+    to ingest real-time intelligence regarding vulnerabilities (CVEs) and their likelihood
+    of exploitation. By leveraging Cybersixgill's unique DVE score, which is based
+    on threat actor intent and dark web activity, users can prioritize remediation
+    efforts for the most critical risks directly within the Google SecOps platform.
 
 
     ### Parameters Description
@@ -16,46 +16,46 @@ Cybersixgill - DVE Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | Client Id | String | Yes | The Client ID for authenticating with the Cybersixgill
-    API. |
-
-    | Client Secret | Password | Yes | The Secret Key for authenticating with the
-    Cybersixgill API. |
-
-    | Alerts Limit | Integer | Yes | The maximum number of vulnerability alerts to
-    ingest in a single execution cycle. |
-
-    | EventClassId | String | Yes | The field name used to determine the event name/sub-type.
-    Default is 'Cybersixgill DVE Feed'. |
-
-    | DeviceProductField | String | Yes | The field name used to determine the device
-    product. Default is 'Cybersixgill DVE Feed'. |
-
     | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
     python process running the current script. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type) for the ingested data. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product for the ingested data. |
+
+    | Client Secret | Password | Yes | The Secret Key used for authenticating with
+    the Cybersixgill API. |
+
+    | Client Id | String | Yes | The Client ID used for authenticating with the Cybersixgill
+    API. |
+
+    | Alerts Limit | Integer | Yes | The maximum number of vulnerability alerts to
+    be ingested into the platform per execution cycle. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector authenticates with the Cybersixgill API using
-    the provided Client ID and Client Secret.
+    1. **Authentication**: The connector establishes a connection with the Cybersixgill
+    API using the provided Client ID and Client Secret.
 
-    2. **Data Retrieval**: It establishes a connection to the Cybersixgill DVE Feed
-    stream using a dedicated channel ID.
+    2. **Data Fetching**: It requests a bundle of vulnerability intelligence from
+    the Cybersixgill DVE Feed stream, limited by the 'Alerts Limit' parameter.
 
-    3. **Fetching Indicators**: The connector fetches a bundle of vulnerability indicators
-    (CVEs) from the feed, limited by the 'Alerts Limit' parameter.
+    3. **Filtering**: The script filters the raw response to identify valid indicator
+    objects (CVEs) for processing.
 
-    4. **Filtering**: The script filters the retrieved objects to ensure only valid
-    indicators are processed for alert creation.
+    4. **Alert Mapping**: For each identified vulnerability, the connector creates
+    a Google SecOps alert. It maps the CVE ID as the alert name and sets a default
+    priority of Medium (60).
 
-    5. **Mapping**: Each vulnerability record is mapped to a Google SecOps Alert.
-    This includes enriching the alert with specific DVE metadata such as current scores,
-    highest historical scores, exploitation status, and NVD (National Vulnerability
-    Database) details like CVSS v2/v3 scores and vectors.
+    5. **Event Enrichment**: Detailed metadata is extracted for each vulnerability,
+    including current and highest DVE scores, NVD CVSS scores (v2.0 and v3.1), severity
+    levels, and publication dates.
 
-    6. **Ingestion**: The mapped alerts and their associated events are ingested into
-    the platform to create cases.
+    6. **Ingestion**: The mapped alerts and enriched events are returned to Google
+    SecOps for case creation.
 
-    7. **Checkpointing**: The connector commits the processed indicators back to the
-    Cybersixgill API to ensure that the same data is not re-ingested in future runs.
+    7. **Commitment**: The connector commits the processed indicators to the Cybersixgill
+    client to ensure that the same data is not ingested multiple times in future runs.

@@ -2,14 +2,15 @@ PagerDutyConnector:
   ai_description: >-
     ### General Description
 
-    The PagerDuty connector facilitates the ingestion of incidents from the PagerDuty
-    platform into Google SecOps. It allows security teams to centralize incident management
-    by pulling active PagerDuty incidents and converting them into actionable alerts
-    within the SOAR environment. Additionally, the connector supports an automated
-    acknowledgment feature to synchronize incident states between both platforms.
+
+    The PagerDuty connector integrates Google SecOps with the PagerDuty API to automate
+    the ingestion of incidents. It monitors PagerDuty for new incidents, transforms
+    them into SOAR alerts, and provides an optional mechanism to automatically acknowledge
+    incidents within PagerDuty once they are successfully ingested into the platform.
 
 
     ### Parameters Description
+
 
     | Parameter | Type | Mandatory | Description |
 
@@ -18,21 +19,22 @@ PagerDutyConnector:
     | apiKey | String | Yes | The API Key used to authenticate with the PagerDuty
     API. |
 
-    | acknowledge | Boolean | No | If enabled, the connector will automatically acknowledge
-    the incident in PagerDuty upon successful ingestion. Requires an API key with
-    write permissions. |
+    | acknowledge | Boolean | No | If set to true, the connector will acknowledge
+    the incident in PagerDuty immediately after ingestion. Note: The API key must
+    have write permissions for incidents. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product for the ingested alert (default: device_product). |
+    product in the ingested event data. |
 
     | EventClassId | String | Yes | The field name used to determine the event name
-    or sub-type (default: event_name). |
+    or sub-type. |
 
-    | PythonProcessTimeout | String | Yes | The maximum time in seconds allowed for
-    the connector script to execute. |
+    | PythonProcessTimeout | String | Yes | The maximum time (in seconds) allowed
+    for the connector script to execute. |
 
 
     ### Flow Description
+
 
     1. **Authentication**: The connector establishes a session with the PagerDuty
     API using the provided API Key.
@@ -40,16 +42,18 @@ PagerDutyConnector:
     2. **Incident Retrieval**: It queries the PagerDuty `/incidents` endpoint to fetch
     a list of current incidents.
 
-    3. **Severity Mapping**: The connector maps PagerDuty urgency levels to Google
-    SecOps severity values (e.g., 'high' maps to 100, 'low' maps to -1).
+    3. **Severity Mapping**: For each incident, the connector maps PagerDuty's urgency
+    levels ('high' or 'low') to the internal SOAR severity scale (e.g., 'high' maps
+    to 100).
 
-    4. **Alert Construction**: For each incident, the connector creates an `AlertInfo`
-    object, populating it with the incident title, creation time, and flattened event
-    data.
+    4. **Alert Construction**: The connector builds an `AlertInfo` object for each
+    incident, populating it with metadata such as the incident title, creation time,
+    and unique PagerDuty ID. The raw incident data is flattened and attached as an
+    event.
 
-    5. **State Synchronization**: If the `acknowledge` parameter is set to true, the
-    connector sends a request to PagerDuty to update the incident status to 'acknowledged'
-    for each processed alert.
+    5. **Auto-Acknowledgment**: If the `acknowledge` parameter is enabled, the connector
+    sends a request back to PagerDuty to update the incident status to 'acknowledged'
+    for every incident successfully processed.
 
-    6. **Ingestion**: The finalized list of alerts is returned to the system for case
+    6. **Ingestion**: The final list of alerts is returned to Google SecOps for case
     creation and further orchestration.

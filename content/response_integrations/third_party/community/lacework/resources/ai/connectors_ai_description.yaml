@@ -2,11 +2,11 @@ Lacework Connector:
   ai_description: >-
     ### General Description
 
-    The Lacework Connector integrates with the Lacework Events API to ingest security
-    events into Google SecOps. It allows security teams to monitor cloud security
-    posture, container activity, and compliance violations by automatically fetching
-    and converting Lacework events into actionable cases. The connector supports severity-based
-    filtering to ensure only relevant security incidents are processed.
+    The Lacework Connector enables Google SecOps to ingest security events from the
+    Lacework platform. It monitors for cloud security threats, compliance violations,
+    and anomalous behavior by pulling data from the Lacework Events API, allowing
+    security teams to centralize Lacework alerts within their SOAR environment for
+    automated response and investigation.
 
 
     ### Parameters Description
@@ -15,44 +15,45 @@ Lacework Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | accountName | String | Yes | The Lacework account URL (e.g., [youraccount].lacework.net).
+    | accountName | String | Yes | The Lacework account URL (e.g., youraccount.lacework.net).
     |
 
-    | keyId | String | Yes | The Lacework API Access Key ID. |
+    | keyId | String | Yes | The Lacework API Access Key ID used for authentication.
+    |
 
-    | secret | Password | Yes | The Lacework API Secret Key. |
+    | secret | Password | Yes | The Lacework API Secret Key used for authentication.
+    |
 
-    | severity_threshold | String | Yes | The maximum severity level to ingest (1-Critical,
-    2-High, 3-Medium, 4-Low, 5-Info). Events with a numerical value higher than this
-    threshold are ignored. |
+    | severity_threshold | String | Yes | The minimum severity level to fetch (1-Critical,
+    2-High, 3-Medium, 4-Low, 5-Info). The connector fetches the selected level and
+    all levels above it (e.g., 3 fetches Medium, High, and Critical). |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product (Default: device_product). |
+    product in the ingested data. |
 
-    | EventClassId | String | Yes | The field name used to determine the event name/sub-type
-    (Default: event_name). |
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the connector
-    execution (Default: 30). |
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process running the connector script. |
 
 
     ### Flow Description
 
     1. **Authentication**: The connector uses the provided `keyId` and `secret` to
-    request a temporary bearer token from the Lacework Access Token API.
+    request a temporary access token from the Lacework API.
 
-    2. **Event Discovery**: It queries the `GetEventsForDateRange` endpoint to retrieve
-    a list of events generated within the last hour.
+    2. **Event Retrieval**: It queries the Lacework Events API for a list of events
+    that occurred within the last hour.
 
-    3. **Severity Filtering**: For each event found, the connector compares its severity
-    against the `severity_threshold`. Only events meeting the threshold (e.g., severity
-    1, 2, or 3 if the threshold is 3) are processed further.
+    3. **Severity Filtering**: The connector iterates through the retrieved events
+    and filters out any that do not meet the configured `severity_threshold` (where
+    lower numerical values represent higher severity).
 
-    4. **Detail Enrichment**: For every event passing the filter, the connector makes
-    a secondary call to `GetEventDetails` to fetch the full metadata and context of
-    the alert.
+    4. **Detail Enrichment**: For each event that passes the filter, the connector
+    makes a secondary API call to fetch the full event details using the unique Event
+    ID.
 
-    5. **Mapping and Ingestion**: The connector maps Lacework event fields (such as
-    `EVENT_TYPE`, `EVENT_MODEL`, and `START_TIME`) to the Google SecOps AlertInfo
-    model, converts the severity to the platform's priority scale, and ingests the
-    data as a new alert.
+    5. **Mapping and Ingestion**: The connector maps Lacework severity levels to Google
+    SecOps priority levels, flattens the event data, and creates `AlertInfo` objects
+    which are then ingested into the system as cases.

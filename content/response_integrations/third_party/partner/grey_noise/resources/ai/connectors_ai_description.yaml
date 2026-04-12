@@ -1,35 +1,62 @@
 Generate Alert from GreyNoise GNQL:
-  ai_description: "### General Description\nThe GreyNoise GNQL connector enables automated\
-    \ ingestion of threat intelligence data into Google SecOps by executing GreyNoise\
-    \ Query Language (GNQL) queries. It identifies IP addresses with specific characteristics\u2014\
-    such as malicious intent, specific tags, or recent activity\u2014and generates\
-    \ corresponding alerts and cases. This integration allows security teams to proactively\
-    \ monitor for known scanners, business services, or malicious actors observed\
-    \ by the GreyNoise sensor network.\n\n### Parameters Description\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| GN API\
-    \ Key | Password | Yes | The API key used to authenticate with GreyNoise services.\
-    \ |\n| Query | String | Yes | The GNQL query string used to filter GreyNoise data\
-    \ (e.g., `last_seen:1d` or `classification:malicious`). |\n| Max Results | Integer\
-    \ | No | The maximum number of indicators to fetch and process in a single execution\
-    \ cycle (Default: 100). |\n| DeviceProductField | String | Yes | The field name\
-    \ used to populate the device product attribute in the alert (Default: GreyNoise).\
-    \ |\n| EventClassId | String | Yes | The field name used to determine the event\
-    \ type or sub-type (Default: event_type). |\n| PythonProcessTimeout | Integer\
-    \ | Yes | The maximum time in seconds allowed for the connector script to run\
-    \ before terminating (Default: 1200). |\n\n### Flow Description\n1. **Authentication**:\
-    \ The connector authenticates with the GreyNoise API using the provided API Key.\n\
-    2. **State Management**: It retrieves the list of previously processed event IDs\
-    \ from the local store to ensure deduplication and prevent redundant alert creation.\n\
-    3. **Query Execution**: It executes the configured GNQL query to fetch matching\
-    \ IP indicators from the GreyNoise database.\n4. **Pagination**: If the result\
-    \ set is large, the connector utilizes scroll tokens to paginate through the results\
-    \ until the `Max Results` limit or the end of the data is reached.\n5. **Data\
-    \ Transformation**: Each retrieved IP record is mapped to a standard SOAR `AlertInfo`\
-    \ object. Severity is dynamically assigned based on the GreyNoise classification\
-    \ (e.g., Malicious IPs are mapped to High severity, while Suspicious IPs are mapped\
-    \ to Medium).\n6. **Deduplication & Overflow Check**: The connector filters out\
-    \ already processed IDs and performs an overflow check to ensure the system is\
-    \ not overwhelmed by high-volume alerts.\n7. **Ingestion**: Validated alerts are\
-    \ packaged and ingested into Google SecOps as new cases for investigation.\n8.\
-    \ **Update State**: The connector saves the IDs of the newly processed events\
-    \ to the local store for reference in the next execution cycle."
+  ai_description: >-
+    ### General Description
+
+    This connector retrieves threat intelligence data from GreyNoise using GreyNoise
+    Query Language (GNQL) and generates security alerts in Google SecOps. It allows
+    security teams to monitor for specific IP behaviors, classifications (malicious,
+    suspicious, benign), or actors seen across the internet. Each unique IP matching
+    the query criteria is ingested as an alert, providing enriched context such as
+    actor names, associated CVEs, and VPN/TOR status.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | GN API Key | Password | Yes | The API key used to authenticate with GreyNoise
+    services. |
+
+    | Query | String | Yes | The GNQL query to execute (e.g., `last_seen:1d`). If
+    left empty, it defaults to `last_seen:1d`. |
+
+    | Max Results | Integer | No | The maximum number of results to fetch in a single
+    execution. Default is 100. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product in the SOAR. Default is 'GreyNoise'. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
+
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    python process running the script. Default is 1200. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The connector initializes the GreyNoise API client using
+    the provided API Key and retrieves previously processed event IDs from the local
+    state to prevent duplicate alerts.
+
+    2. **Query Execution**: It executes the configured GNQL query against the GreyNoise
+    API to find matching IP indicators.
+
+    3. **Pagination & Fetching**: The connector iterates through the results, supporting
+    pagination via scroll tokens until the `Max Results` limit is reached or all available
+    data is fetched.
+
+    4. **Deduplication**: Each result is checked against the list of already processed
+    event IDs (a unique combination of IP and timestamp).
+
+    5. **Alert Mapping**: Matching IP records are transformed into SOAR Alert objects.
+    Severity is dynamically assigned based on GreyNoise classification: 'Malicious'
+    maps to High, 'Suspicious' to Medium, and 'Benign' or 'Unknown' to Low.
+
+    6. **Ingestion**: The connector performs an overflow check and then ingests the
+    unique alerts into the system.
+
+    7. **State Persistence**: Processed IDs are saved back to the system to ensure
+    they are skipped in subsequent runs.

@@ -2,14 +2,12 @@ Pull Connector:
   ai_description: >-
     ### General Description
 
-    The **Pull Connector** job is a maintenance and synchronization utility within
-    the **GitSync** integration. Its primary purpose is to retrieve a specific connector's
-    configuration from a Git repository and install or update it within the Google
-    SecOps (Chronicle) SOAR platform. This ensures that connector settings, including
-    environment-specific configurations and integration versions, are kept in sync
-    with a version-controlled source of truth. Additionally, the job can optionally
-    pull and install associated dependencies such as Visual Families and Ontology
-    Mappings to ensure the connector is fully operational upon import.
+    The **Pull Connector** job is part of the **GitSync** integration. Its primary
+    purpose is to synchronize a specific connector's configuration and logic from
+    a remote Git repository to the Google SecOps (Chronicle) SOAR platform. This job
+    facilitates version control and automated deployment of connectors, ensuring that
+    the SOAR environment stays updated with the latest connector definitions, including
+    optional related components like Visual Families and Ontology Mappings.
 
 
     ### Parameters Description
@@ -18,122 +16,114 @@ Pull Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | Repo URL | String | No | Optional parameter to override the Git repository URL
-    configured in the integration instance. |
+    | Repo URL | String | No | Optional parameter to override the repository URL found
+    in the integration instance settings. |
 
-    | Branch | String | No | Optional parameter to override the Git branch configured
-    in the integration instance. |
+    | Branch | String | No | Optional parameter to override the Git branch found in
+    the integration instance settings. |
 
     | Git Server Fingerprint | String | No | Optional parameter to override the SSH
-    server fingerprint (SHA256 or MD5) for secure Git connections. |
+    fingerprint for Git server verification. |
 
-    | Connector Name | String | Yes | The exact name of the connector to be pulled
-    from the repository. |
+    | Connector Name | String | Yes | The exact name of the connector to pull from
+    the Git repository. |
 
-    | Include Visual Families | Boolean | No | If set to `true`, the job will identify
-    and install custom visual families associated with the connector's mappings. |
+    | Include Visual Families | Boolean | No | Whether to pull and install the visual
+    families associated with the connector's alert types. |
 
-    | Include Mappings | Boolean | No | If set to `true`, the job will install the
-    ontology mapping rules (event-to-visual-family associations) for the connector's
-    integration. |
+    | Include Mappings | Boolean | No | Whether to pull and install the ontology mappings
+    (rules and records) associated with the connector. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The job initializes the `GitSyncManager` using the provided
-    repository URL, branch, and credentials. It extracts the target connector name
-    and dependency flags.
+    1. **Initialization**: The job extracts the target connector name and configuration
+    overrides (URL, Branch, Fingerprint) from the job parameters.
 
-    2. **Repository Retrieval**: It connects to the Git repository and searches for
-    the connector's JSON configuration file within the `Connectors/` directory.
+    2. **Git Connection**: It initializes the `GitSyncManager` to connect to the specified
+    Git repository and the SOAR API.
 
-    3. **Connector Installation**: If the connector is found, the job installs or
-    updates the connector instance in the SOAR platform. It also checks if the installed
-    integration version matches the connector's requirements, flagging updates if
-    necessary.
+    3. **Fetch Connector**: The job searches the repository for the specified connector
+    definition.
 
-    4. **Dependency Analysis**: If either `Include Visual Families` or `Include Mappings`
-    is enabled, the job retrieves the mapping definitions associated with the connector's
-    parent integration from the repository.
+    4. **Installation**: If found, the job installs or updates the connector in the
+    SOAR platform using the `install_connector` logic, which also handles integration
+    dependency checks.
 
-    5. **Visual Family Sync**: If `Include Visual Families` is active, the job identifies
-    visual families referenced in the mappings that are not yet present in the SOAR
-    platform and installs them.
+    5. **Dependency Resolution**: If the user opted to include Visual Families or
+    Mappings, the job retrieves the mapping data for the connector's integration.
 
-    6. **Mapping Sync**: If `Include Mappings` is active, the job installs the ontology
-    records and rules, ensuring events are correctly mapped to the appropriate visual
-    families.
+    6. **Visual Family Sync**: If enabled, it identifies visual families referenced
+    in the mappings that are not yet installed in the SOAR platform and pulls/installs
+    them from Git.
 
-    7. **Completion**: The job logs the success of the installation and terminates
-    the script.
+    7. **Mapping Sync**: If enabled, it installs the ontology mapping rules and records
+    to ensure incoming alerts are correctly visualized and parsed.
 Pull Content:
   ai_description: "### General Description\nThis job is a core component of the GitSync\
-    \ integration, designed to synchronize security operations content from a Git\
-    \ repository into the Google SecOps (Chronicle) SOAR platform. It facilitates\
-    \ 'Configuration as Code' by allowing administrators to deploy, update, and manage\
-    \ various SOAR resources\u2014including playbooks, integrations, connectors, and\
-    \ environment settings\u2014directly from a version-controlled repository. The\
-    \ job ensures that the local SOAR environment matches the state defined in Git,\
-    \ supporting automated deployment pipelines and environment consistency.\n\n###\
-    \ Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---\
-    \ | :--- | :--- | :--- |\n| Repo URL | String | No | Optional parameter to override\
-    \ the repository URL configured in the integration instance. |\n| Branch | String\
-    \ | No | Optional parameter to override the target Git branch. |\n| Git Server\
-    \ Fingerprint | String | No | Optional parameter to override the SSH fingerprint\
-    \ for server verification. |\n| Integrations | Boolean | Yes | If true, pulls\
-    \ and installs custom integrations and custom code from the repository. |\n| Playbooks\
-    \ | Boolean | Yes | If true, pulls and updates playbooks and blocks based on their\
-    \ names. |\n| Jobs | Boolean | Yes | If true, pulls and installs job definitions.\
-    \ |\n| Connectors | Boolean | Yes | If true, pulls and installs connector instances.\
-    \ |\n| Integration Instances | Boolean | Yes | If true, synchronizes integration\
-    \ instances across environments. Note: Passwords may be overwritten. |\n| Visual\
-    \ Families | Boolean | Yes | If true, synchronizes custom visual families for\
-    \ the ontology. |\n| Mappings | Boolean | Yes | If true, synchronizes event-to-ontology\
-    \ mapping rules. |\n| Environments | Boolean | Yes | If true, creates or updates\
-    \ environment records. |\n| Dynamic Parameters | Boolean | Yes | If true, synchronizes\
-    \ environment-specific dynamic parameters. |\n| Logo | Boolean | Yes | If true,\
-    \ pulls and updates the custom company logo. |\n| Case Tags | Boolean | Yes |\
-    \ If true, synchronizes case tag definitions. |\n| Case Stages | Boolean | Yes\
-    \ | If true, synchronizes case stage definitions. |\n| Case Title Settings | Boolean\
-    \ | Yes | If true, synchronizes settings for automatic case titling. |\n| Case\
-    \ Close Reasons | Boolean | Yes | If true, synchronizes custom root causes and\
-    \ close reasons. |\n| Networks | Boolean | Yes | If true, synchronizes network\
-    \ CIDR and metadata definitions. |\n| Domains | Boolean | Yes | If true, synchronizes\
-    \ domain alias records. |\n| Custom Lists | Boolean | Yes | If true, synchronizes\
-    \ tracking/custom lists. |\n| Email Templates | Boolean | Yes | If true, synchronizes\
-    \ email templates used in playbooks. |\n| Blacklists | Boolean | Yes | If true,\
-    \ synchronizes blocklist/denylist records. |\n| SLA Records | Boolean | Yes |\
-    \ If true, synchronizes SLA definition records. |\n| Simulated Cases | Boolean\
-    \ | Yes | If true, pulls and imports simulated cases for testing. |\n\n### Flow\
-    \ Description\n1. **Initialization**: The job initializes the `GitSyncManager`,\
-    \ which clones or pulls the specified Git repository and branch to a temporary\
-    \ local directory.\n2. **Parameter Extraction**: It extracts all feature flags\
-    \ (boolean parameters) to determine which specific content types should be synchronized\
-    \ during the run.\n3. **Environment Setup**: The job first processes foundational\
-    \ settings, including Environment Dynamic Parameters and Environment records,\
-    \ ensuring the target infrastructure is ready.\n4. **Core Content Installation**:\
-    \ It iterates through logic-heavy components, installing or updating Integrations,\
-    \ Connectors, Jobs, and Playbooks. For playbooks, it handles dependency ordering\
-    \ (installing blocks before playbooks).\n5. **Ontology and Mapping**: The job\
-    \ synchronizes Visual Families and Mappings to ensure data is correctly visualized\
-    \ and parsed within the platform.\n6. **Platform Configuration**: It updates administrative\
-    \ settings such as Case Tags, Stages, Close Reasons, Title Settings, and SLA Records.\n\
-    7. **Data and Assets**: The job synchronizes operational data including Networks,\
-    \ Domains, Custom Lists, Email Templates, Blacklists, and the company Logo.\n\
-    8. **Validation and Cleanup**: Throughout the process, the job uses an ID validator\
-    \ to match Git resources with existing SOAR resources by name, ensuring updates\
-    \ occur rather than duplicate creations. Finally, it cleans up temporary files\
-    \ and closes the Git connection."
+    \ integration, designed to synchronize and deploy content from a Git repository\
+    \ into a Google SecOps (Chronicle) environment. It enables a CI/CD-like workflow\
+    \ for SOAR resources, allowing users to pull playbooks, integrations, connectors,\
+    \ jobs, and various system settings (like environments, tags, and SLA records)\
+    \ from a version-controlled source. This job is essential for promoting content\
+    \ between environments (e.g., from Development to Production) or restoring a system\
+    \ configuration from a backup.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Repo URL | String\
+    \ | No | Optional override for the Git repository URL defined in the integration\
+    \ instance. |\n| Branch | String | No | Optional override for the Git branch to\
+    \ pull content from. |\n| Git Server Fingerprint | String | No | Optional override\
+    \ for the SSH fingerprint used to verify the Git server. |\n| Integrations | Boolean\
+    \ | Yes | If enabled, pulls and installs custom integrations and custom code.\
+    \ |\n| Playbooks | Boolean | Yes | If enabled, pulls and installs playbooks and\
+    \ blocks, updating them based on name. |\n| Jobs | Boolean | Yes | If enabled,\
+    \ pulls and installs job definitions. |\n| Connectors | Boolean | Yes | If enabled,\
+    \ pulls and installs connector definitions. |\n| Integration Instances | Boolean\
+    \ | Yes | If enabled, pulls and configures integration instances; note that passwords\
+    \ may be overwritten. |\n| Visual Families | Boolean | Yes | If enabled, pulls\
+    \ and updates ontology visual family definitions. |\n| Mappings | Boolean | Yes\
+    \ | If enabled, pulls and updates ontology mapping rules. |\n| Environments |\
+    \ Boolean | Yes | If enabled, creates or updates environment records. |\n| Dynamic\
+    \ Parameters | Boolean | Yes | If enabled, creates or updates environment-specific\
+    \ dynamic parameters. |\n| Logo | Boolean | Yes | If enabled, pulls and applies\
+    \ the custom company logo. |\n| Case Tags | Boolean | Yes | If enabled, pulls\
+    \ and updates case tag definitions. |\n| Case Stages | Boolean | Yes | If enabled,\
+    \ pulls and updates case stage definitions. |\n| Case Title Settings | Boolean\
+    \ | Yes | If enabled, pulls and applies case title formatting settings. |\n| Case\
+    \ Close Reasons | Boolean | Yes | If enabled, pulls and updates custom case closure\
+    \ reasons. |\n| Networks | Boolean | Yes | If enabled, pulls and updates network\
+    \ definitions. |\n| Domains | Boolean | Yes | If enabled, pulls and updates domain\
+    \ alias definitions. |\n| Custom Lists | Boolean | Yes | If enabled, pulls and\
+    \ updates custom tracking lists. |\n| Email Templates | Boolean | Yes | If enabled,\
+    \ pulls and updates email template definitions. |\n| Blacklists | Boolean | Yes\
+    \ | If enabled, pulls and updates blocklist/denylist records. |\n| SLA Records\
+    \ | Boolean | Yes | If enabled, pulls and updates SLA definition records. |\n\
+    | Simulated Cases | Boolean | Yes | If enabled, pulls and installs simulated cases\
+    \ for testing purposes. |\n\n### Flow Description\n1. **Initialization**: The\
+    \ job initializes the Git connection using the provided repository URL, branch,\
+    \ and credentials (SSH key or Token).\n2. **Repository Sync**: It clones the repository\
+    \ to a temporary directory or pulls the latest changes if the repository was previously\
+    \ cloned.\n3. **Feature Selection**: The job checks the boolean parameters to\
+    \ determine which types of content (e.g., Playbooks, Integrations, Settings) should\
+    \ be processed.\n4. **Resource Processing**: For each enabled category, the job\
+    \ reads the corresponding JSON or definition files from the Git repository.\n\
+    5. **State Comparison**: It queries the Google SecOps API to identify existing\
+    \ resources. It uses an internal validator to match resources by name or unique\
+    \ identifiers.\n6. **Deployment (Upsert)**: \n    * **Integrations/Connectors/Jobs**:\
+    \ Installs or updates the code and definitions.\n    * **Playbooks**: Uses a specialized\
+    \ installer to handle complex logic, including mapping nested blocks and re-assigning\
+    \ integration instances based on the target environment's availability.\n    *\
+    \ **System Settings**: Updates global configurations like Environments, SLA records,\
+    \ and Case Tags.\n7. **Completion**: Logs the results of the synchronization and\
+    \ cleans up temporary files."
 Pull Custom Family:
   ai_description: >-
     ### General Description
 
     The **Pull Custom Family** job is part of the **GitSync** integration. Its primary
-    purpose is to import or update a specific Visual Family configuration from a Git
-    repository into the Google SecOps (Chronicle) SOAR platform. This job enables
-    teams to maintain their ontology and visualization settings as code, ensuring
-    consistency across different environments by pulling version-controlled family
-    definitions (including rules and icons) directly from a repository.
+    purpose is to synchronize a specific Visual Family definition from a remote Git
+    repository into the Google SecOps SOAR platform. This job enables teams to maintain
+    their ontology configurations (Visual Families) in a version-controlled environment
+    and deploy them programmatically to SOAR instances.
 
 
     ### Parameters Description
@@ -149,41 +139,42 @@ Pull Custom Family:
     in the integration instance settings. |
 
     | Git Server Fingerprint | String | No | Optional parameter to override the SSH
-    server fingerprint for host verification. |
+    fingerprint used for Git server verification. |
 
-    | Family Name | String | Yes | The exact name of the visual family to be retrieved
-    from the repository and imported into the platform. |
+    | Family Name | String | Yes | The exact name of the Visual Family to be retrieved
+    from the repository. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The job retrieves the mandatory `Family Name` and
-    optional Git configuration overrides from the job settings.
+    1. **Parameter Extraction**: The job retrieves the target `Family Name` and any
+    optional Git configuration overrides (URL, Branch, Fingerprint) from the job settings.
 
-    2. **Git Initialization**: It initializes the `GitSyncManager`, which clones or
-    pulls the latest changes from the specified Git repository to a temporary working
-    directory.
+    2. **Git Connection**: It initializes the `GitSyncManager`, which establishes
+    a connection to the Git repository, cloning or pulling the latest changes to a
+    temporary directory.
 
-    3. **Content Retrieval**: The job searches the repository's internal structure
-    (specifically under the `Ontology/VisualFamilies/` path) for a JSON definition
-    matching the provided `Family Name`.
+    3. **Content Retrieval**: The job searches the repository's directory structure
+    (specifically under `Ontology/VisualFamilies/`) for a JSON definition matching
+    the provided `Family Name`.
 
-    4. **Platform Update**: If the family definition is found, the job sends the raw
-    configuration data to the Google SecOps API using the `AddOrUpdateVisualFamily`
-    endpoint.
+    4. **Ontology Update**: If the Visual Family is found in the repository, the job
+    extracts its raw data and sends a request to the Google SecOps API to create or
+    update the Visual Family in the platform's ontology.
 
-    5. **Completion**: The job logs whether the family was successfully updated or
-    if it could not be found in the repository, then cleans up temporary resources.
+    5. **Completion**: The job logs the success or failure of the synchronization
+    and terminates the script.
 Pull Integration:
   ai_description: >-
     ### General Description
 
-    This job automates the synchronization of integrations from a Git repository to
-    the Google SecOps (Chronicle) SOAR platform. It allows administrators to pull
-    specific integrations defined in a whitelist, ensuring that custom code, actions,
-    connectors, and jobs are updated or installed directly from version control. The
-    job supports both custom integrations (imported as full packages) and commercial
-    integrations (where specific custom components are updated).
+    The **Pull Integration** job is a core component of the **GitSync** integration,
+    designed to automate the deployment and synchronization of Google SecOps integrations
+    from a Git repository. It allows administrators to maintain 'Integration as Code'
+    by pulling specific integration definitions and scripts from a version-controlled
+    repository and installing or updating them within the SOAR platform. The job supports
+    both custom integrations and commercial integrations that have been extended with
+    custom logic.
 
 
     ### Parameters Description
@@ -193,56 +184,86 @@ Pull Integration:
     | :--- | :--- | :--- | :--- |
 
     | Install Whitelist | String | Yes | A comma-separated list of integration identifiers
-    (e.g., "VirusTotal, ServiceNow") to be pulled and installed from the Git repository.
+    (e.g., 'VirusTotal, ServiceNow') to be pulled from the Git repository and installed
+    or updated. |
+
+    | Repo URL | String | No | The URL of the Git repository (HTTPS or SSH). If provided,
+    this overrides the default repository URL defined in the integration's configuration.
     |
 
-    | Repo URL | String | No | Optional parameter to override the repository URL configured
-    in the GitSync integration instance. |
+    | Branch | String | No | The specific Git branch to pull content from. If provided,
+    this overrides the default branch defined in the integration's configuration.
+    |
 
-    | Branch | String | No | Optional parameter to override the Git branch configured
-    in the GitSync integration instance. |
-
-    | Git Server Fingerprint | String | No | Optional parameter to override the SSH
-    server fingerprint (SHA256 or MD5) for host verification. |
+    | Git Server Fingerprint | String | No | The SSH fingerprint (SHA256 or MD5) used
+    to verify the Git server's identity. If provided, this overrides the fingerprint
+    defined in the integration's configuration. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The job parses the `Install Whitelist` to identify which
-    integrations need to be processed.
+    1. **Initialization**: The job extracts the list of integrations to process from
+    the 'Install Whitelist' and retrieves any provided Git configuration overrides
+    (URL, Branch, Fingerprint).
 
-    2. **Git Connection**: It establishes a connection to the Git repository using
-    the provided overrides or the default integration instance settings (URL, Branch,
-    Credentials).
+    2. **Git Synchronization**: It initializes a connection to the Git repository,
+    cloning or pulling the latest changes into a temporary working directory on the
+    SOAR runner.
 
-    3. **Repository Sync**: The job clones or pulls the latest state of the repository
-    into a temporary working directory.
+    3. **Content Discovery**: The job iterates through the whitelist, searching the
+    repository's `Integrations/` directory for the specified integration folders and
+    their corresponding `.def` (definition) files.
 
-    4. **Integration Retrieval**: For each integration in the whitelist, the job searches
-    the repository's `Integrations/` directory for the corresponding definition and
-    source files.
-
-    5. **Installation Logic**:
+    4. **Installation Logic**:
         * **Custom Integrations**: If the integration is marked as custom, the job
-    packages the files into a ZIP and imports them into the SOAR platform using the
-    `ImportPackage` API.
+    packages the repository files into a ZIP blob and performs a full package import
+    via the SOAR API.
         * **Commercial Integrations**: If the integration is commercial, the job ensures
-    it is installed (attempting to install from the Marketplace if missing) and then
-    iterates through custom Actions, Jobs, Connectors, and Managers to update their
-    logic in the IDE.
-    6. **Completion**: The job logs the installation status for each item and cleans
-    up the temporary working directory.
+    the base integration is installed (attempting a marketplace installation if missing)
+    and then iterates through individual components (Actions, Connectors, Jobs, and
+    Managers) to update their scripts and metadata in the IDE.
+    5. **Completion**: The job logs the success or failure of each integration pull
+    and performs a cleanup of the temporary local repository files.
 Pull Jobs:
+  ai_description: "### General Description\nThe **Pull Jobs** job is part of the **GitSync**\
+    \ integration and is designed to synchronize SOAR Job definitions from a remote\
+    \ Git repository to the Google SecOps platform. This enables a 'Configuration\
+    \ as Code' workflow, allowing administrators to manage job settings\u2014such\
+    \ as execution intervals and input parameters\u2014within a version-controlled\
+    \ environment and deploy them automatically to the SOAR instance.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Job Whitelist | String | Yes | A comma-separated list of the\
+    \ specific job names to be retrieved and installed from the Git repository. |\n\
+    | Repo URL | String | No | Optional override for the Git repository URL. If not\
+    \ provided, the URL from the integration instance configuration is used. |\n|\
+    \ Branch | String | No | Optional override for the Git branch to pull from. If\
+    \ not provided, the branch from the integration instance configuration is used.\
+    \ |\n| Git Server Fingerprint | String | No | Optional override for the SSH fingerprint\
+    \ (SHA256 or MD5) used to verify the Git server's identity. |\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The job parses the `Job Whitelist` to identify which\
+    \ jobs need to be synchronized.\n2. **Git Initialization**: It initializes the\
+    \ `GitSyncManager`, which establishes a connection to the Git repository using\
+    \ the provided credentials (SSH key or Token) and overrides.\n3. **Repository\
+    \ Sync**: The job clones or pulls the latest state of the repository to a temporary\
+    \ working directory.\n4. **Job Retrieval**: For each job specified in the whitelist,\
+    \ the job searches the `Jobs/` directory in the repository for a matching JSON\
+    \ definition file.\n5. **Dependency Validation**: It verifies that the integration\
+    \ associated with the job is already installed in the SOAR environment.\n6. **ID\
+    \ Resolution**: The job queries the SOAR API to resolve the internal `jobDefinitionId`\
+    \ (from the IDE) and checks if the job already exists to determine whether to\
+    \ perform an update or a new installation.\n7. **Installation**: The job pushes\
+    \ the configuration to the SOAR platform, updating the job's settings, parameters,\
+    \ and run intervals.\n8. **Completion**: The script logs the success or failure\
+    \ of each job pull and terminates."
+Pull Mappings:
   ai_description: >-
     ### General Description
 
-    The **Pull Jobs** job is a maintenance utility within the **GitSync** integration
-    designed to synchronize job definitions from a Git repository to the Google SecOps
-    (Chronicle) environment. It allows administrators to manage SOAR jobs as code,
-    ensuring that automation scripts and their configurations are version-controlled
-    and consistently deployed across different environments. The job fetches job metadata
-    from the repository and performs an "upsert" (update or insert) operation in the
-    local SOAR instance.
+    This job is part of the GitSync integration and is designed to synchronize ontology
+    mappings from a Git repository to Google SecOps. It allows administrators to manage
+    alert mapping rules and visual family associations in a version-controlled environment
+    and deploy them automatically to the SOAR platform. The job specifically targets
+    mappings associated with a provided 'Source' (integration identifier or vendor).
 
 
     ### Parameters Description
@@ -251,81 +272,47 @@ Pull Jobs:
 
     | :--- | :--- | :--- | :--- |
 
-    | Job Whitelist | String | Yes | A comma-separated list of job names to pull from
-    the Git repository. Only jobs specified in this list will be processed. |
-
     | Repo URL | String | No | Optional parameter to override the repository URL configured
     in the integration instance. |
 
-    | Branch | String | No | Optional parameter to override the Git branch configured
-    in the integration instance. |
+    | Branch | String | No | Optional parameter to override the Git branch used for
+    synchronization. |
 
     | Git Server Fingerprint | String | No | Optional parameter to override the SSH
-    server fingerprint (SHA256 or MD5) for host verification. |
+    fingerprint for Git server verification. |
+
+    | Source | String | Yes | The integration identifier or vendor name. The job pulls
+    all mappings related to this source from the repository (e.g., 'VirusTotal').
+    |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The job parses the `Job Whitelist` to identify which
-    specific jobs need to be imported.
+    1. **Parameter Extraction**: The job retrieves the 'Source' parameter and any
+    optional Git configuration overrides.
 
-    2. **Git Initialization**: It initializes the `GitSyncManager`, which clones or
-    pulls the latest changes from the configured Git repository into a temporary working
-    directory.
+    2. **Git Initialization**: Initializes the GitSync manager to establish a connection
+    with the remote repository and pull the latest changes to a local temporary directory.
 
-    3. **Content Retrieval**: For each job name in the whitelist, the job searches
-    the repository's `Jobs/` directory for the corresponding JSON definition file.
+    3. **Content Retrieval**: Locates the mapping files within the repository under
+    the path `Ontology/Mappings/{Source}/`, specifically looking for record and rule
+    JSON files.
 
-    4. **Dependency Validation**: It verifies that the integration associated with
-    the job is already installed in the SOAR environment.
+    4. **Ontology Update**: Parses the retrieved mapping rules and updates the Google
+    SecOps ontology by adding or updating mapping rules for family and system fields.
 
-    5. **ID Resolution**: The job attempts to resolve the `jobDefinitionId` by querying
-    the IDE cards and checks if the job already exists locally to determine if an
-    update or a new creation is required.
-
-    6. **Installation**: It calls the SOAR API to save or update the job configuration
-    based on the data retrieved from Git.
-
-    7. **Completion**: The job logs the success or failure of each individual job
-    import and cleans up temporary resources.
-Pull Mappings:
-  ai_description: "### General Description\nThe **Pull Mappings** job is a maintenance\
-    \ and synchronization component of the **GitSync** integration. Its primary purpose\
-    \ is to import and apply ontology mappings\u2014specifically event-to-visual-family\
-    \ associations and mapping rules\u2014from a remote Git repository into the Google\
-    \ SecOps (Chronicle) platform. This enables security teams to manage their event\
-    \ categorization and visualization logic using version control, ensuring consistency\
-    \ across different environments.\n\n### Parameters Description\n| Parameter |\
-    \ Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Repo URL\
-    \ | String | No | Optional parameter to override the Git repository URL configured\
-    \ in the integration instance. |\n| Branch | String | No | Optional parameter\
-    \ to override the Git branch used for pulling content. |\n| Git Server Fingerprint\
-    \ | String | No | Optional parameter to override the SSH fingerprint for Git server\
-    \ verification. |\n| Source | String | Yes | The integration identifier or vendor\
-    \ name (e.g., 'MicrosoftSentinel'). The job pulls all mappings associated with\
-    \ this specific source from the repository. |\n\n### Flow Description\n1. **Parameter\
-    \ Extraction**: The job retrieves the `Source` parameter and optional Git configuration\
-    \ overrides.\n2. **Git Synchronization**: It initializes the `GitSyncManager`,\
-    \ which clones or pulls the latest changes from the specified Git repository to\
-    \ a temporary local directory.\n3. **Content Retrieval**: The job utilizes the\
-    \ `GitContentManager` to locate mapping files within the repository's structure,\
-    \ specifically looking for `{Source}_Records.json` and `{Source}_Rules.json` under\
-    \ the `Ontology/Mappings` path.\n4. **Rule Installation**: It parses the retrieved\
-    \ mapping rules (family and system fields) and updates the Google SecOps ontology\
-    \ via the API.\n5. **Visual Family Association**: The job iterates through the\
-    \ mapping records and updates the platform's configuration to link specific products\
-    \ and event names to their designated Visual Families.\n6. **Cleanup**: The temporary\
-    \ working directory is cleaned up, and the script execution ends."
+    5. **Visual Family Association**: Updates the platform's visualization settings
+    by linking the specified products and event names to their respective visual families
+    as defined in the repository.
 Pull Playbook:
   ai_description: >-
     ### General Description
 
-    The **Pull Playbook** job is designed to synchronize specific playbooks and blocks
-    from a Git repository into the Google SecOps (Chronicle) environment. As part
-    of the **GitSync** integration, it enables teams to maintain playbooks in version
-    control and deploy them programmatically. The job allows for targeted synchronization
-    via a whitelist and can automatically resolve dependencies by pulling any blocks
-    referenced within the selected playbooks.
+    This job automates the retrieval and installation of specific playbooks and playbook
+    blocks from a Git repository into the Google SecOps (Chronicle) SOAR platform.
+    It allows teams to maintain version-controlled workflows in Git and selectively
+    synchronize them to the SOAR environment, ensuring that automation logic is consistent
+    and up to date.
 
 
     ### Parameters Description
@@ -334,61 +321,51 @@ Pull Playbook:
 
     | :--- | :--- | :--- | :--- |
 
-    | Repo URL | String | No | Overrides the repository URL defined in the integration
-    instance settings. |
+    | Repo URL | String | No | Optional parameter to override the repository URL defined
+    in the integration instance settings. |
 
-    | Branch | String | No | Overrides the Git branch defined in the integration instance
-    settings. |
+    | Branch | String | No | Optional parameter to override the Git branch defined
+    in the integration instance settings. |
 
-    | Git Server Fingerprint | String | No | Overrides the SSH server fingerprint
-    used for host verification. |
+    | Git Server Fingerprint | String | No | Optional parameter to override the SSH
+    fingerprint used for Git server verification. |
 
     | Playbook Whitelist | String | Yes | A comma-separated list of playbook names
     to pull from the repository. |
 
-    | Include Playbook Blocks | Boolean | Yes | If True, the job identifies and pulls
-    all blocks used by the playbooks in the whitelist to ensure full functionality.
+    | Include Playbook Blocks | Boolean | Yes | If set to True, the job automatically
+    identifies and pulls any playbook blocks referenced by the playbooks in the whitelist.
     |
 
 
     ### Flow Description
 
-    1. **Environment Setup**: The job initializes the `GitSyncManager`, which handles
-    the connection to the Git provider and manages a temporary local clone of the
-    repository.
+    1. **Initialization**: The job extracts configuration parameters and initializes
+    the GitSync manager to establish a connection with the Git repository.
 
-    2. **Target Identification**: It parses the `Playbook Whitelist` to create a list
-    of specific playbooks to be imported.
+    2. **Playbook Discovery**: It iterates through the provided whitelist and attempts
+    to locate the corresponding playbook files within the repository's directory structure.
 
-    3. **Content Fetching**: The job retrieves the JSON definitions for each specified
-    playbook from the repository's `Playbooks` directory.
-
-    4. **Dependency Analysis**: If `Include Playbook Blocks` is enabled, the job scans
-    the retrieved playbooks for any 'Block' type steps and fetches those block definitions
+    3. **Dependency Mapping**: If the "Include Playbook Blocks" flag is enabled, the
+    job parses the retrieved playbooks to identify any nested blocks and fetches them
     from the repository as well.
 
-    5. **Workflow Installation**: The collected playbooks and blocks are passed to
-    the `WorkflowInstaller`, which performs the following sub-tasks:
-        * **Environment Validation**: Ensures the target environments assigned to
-    the playbooks exist in the local SOAR instance.
-        * **Instance Mapping**: Automatically maps integration instances within playbook
-    steps to available instances in the local environment (supporting both static
-    and dynamic/AutomaticEnvironment modes).
-        * **Conflict Resolution**: Compares modification timestamps against a local
-    cache to determine if an update is required and warns if local changes are about
-    to be overwritten.
-        * **ID Synchronization**: Matches identifiers for existing playbooks to maintain
-    consistency or generates new UUIDs for new content.
-    6. **Persistence**: The finalized playbook and block definitions are saved to
-    the Google SecOps platform, and the local modification cache is updated.
+    4. **Workflow Installation**: The job passes the collected playbooks and blocks
+    to the installation logic, which handles the creation of new workflows or the
+    updating of existing ones.
+
+    5. **ID and Environment Alignment**: During installation, the job automatically
+    maps environment names, reconciles internal identifiers with existing local versions,
+    and updates the local modification cache to track synchronization state.
 Pull Simulated Cases:
   ai_description: >-
     ### General Description
 
-    This job imports specific simulated cases from a Git repository into the Google
-    SecOps platform. It enables security teams to maintain attack simulation content
-    in version control and synchronize it with their SOAR environment for consistent
-    testing and validation of detection and response capabilities.
+    This job is part of the **GitSync** integration and is designed to automate the
+    import of simulated cases from a Git repository into Google SecOps. It allows
+    security teams to maintain simulation content (used for testing playbooks or training)
+    in a version-controlled environment and synchronize specific cases to the SOAR
+    platform on demand or on a schedule.
 
 
     ### Parameters Description
@@ -398,44 +375,45 @@ Pull Simulated Cases:
     | :--- | :--- | :--- | :--- |
 
     | Simulated Cases | String | Yes | A comma-separated list of simulated case names
-    to pull from the repository. |
+    to pull from the repository (e.g., "Phishing_Simulation, Malware_Test"). |
 
-    | Repo URL | String | No | Optional parameter to override the repository URL found
-    in the GitSync integration instance. |
+    | Repo URL | String | No | Optional parameter to override the Git repository URL
+    configured in the integration instance. |
 
-    | Branch | String | No | Optional parameter to override the branch name found
-    in the GitSync integration instance. |
+    | Branch | String | No | Optional parameter to override the Git branch configured
+    in the integration instance. |
 
     | Git Server Fingerprint | String | No | Optional parameter to override the SSH
-    server fingerprint found in the GitSync integration instance. |
+    fingerprint (SHA256 or MD5) for the Git server. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The job parses the comma-separated list of simulated
-    case names provided in the job configuration.
+    1. **Parameter Extraction**: The job parses the `Simulated Cases` string into
+    a list of individual case names.
 
-    2. **GitSync Initialization**: It initializes the GitSync manager, which clones
-    or pulls the latest changes from the specified Git repository and branch.
+    2. **Manager Initialization**: It initializes the `GitSyncManager`, which handles
+    the connection to the Git repository and the Google SecOps API.
 
-    3. **Content Retrieval**: For each specified case name, the job searches the repository's
-    `SimulatedCases/` directory for the corresponding `.case` file.
+    3. **Content Retrieval**: For each specified case name, the job queries the Git
+    repository's `SimulatedCases/` directory to retrieve the corresponding `.case`
+    file content.
 
-    4. **Import Execution**: The job reads the JSON content of the case file and uses
-    the Google SecOps API to import the simulated case into the platform.
+    4. **Platform Import**: The job sends the retrieved case data to the Google SecOps
+    API to import or update the simulated case in the platform.
 
-    5. **Logging**: Success or failure for each individual case import is logged to
-    the job output.
+    5. **Logging and Completion**: It logs the success or failure of each individual
+    case import and terminates the script once the list is processed.
 Push Connectors:
   ai_description: >-
     ### General Description
 
-    This job exports specific connectors and their associated metadata from Google
-    SecOps to a Git repository. It enables version control for connector configurations
-    and scripts, allowing teams to maintain a history of changes and synchronize connector
-    settings across different environments. Beyond the connector itself, the job can
-    optionally include related ontology mappings and visual families to ensure a complete
-    export of the integration's logic.
+    The **Push Connectors** job exports specific connector configurations from Google
+    SecOps to a Git repository. This job facilitates version control and portability
+    of connector settings, allowing users to back up or migrate connector definitions.
+    Beyond the connector itself, the job can optionally package associated ontology
+    components, such as mapping rules and visual families, ensuring that the entire
+    ingestion logic for a specific integration is preserved in the repository.
 
 
     ### Parameters Description
@@ -444,181 +422,124 @@ Push Connectors:
 
     | :--- | :--- | :--- | :--- |
 
-    | Commit | String | Yes | The commit message to describe the changes in the Git
-    repository. |
+    | Commit | String | Yes | The commit message to be used for the Git transaction.
+    |
 
     | Connectors | String | Yes | A comma-separated list of connector display names
     to be pushed to the repository. |
 
-    | Branch | String | No | Optional parameter to override the Git branch specified
+    | Branch | String | No | Optional parameter to override the Git branch defined
     in the integration instance. |
 
     | Git Server Fingerprint | String | No | Optional parameter to override the SSH
     fingerprint for the Git server. |
 
-    | Repo URL | String | No | Optional parameter to override the repository URL found
+    | Repo URL | String | No | Optional parameter to override the repository URL defined
     in the integration instance. |
 
     | Commit Author | String | No | Optional parameter to override the commit author
-    (format: `Name <email>`). |
+    (Format: `Name <email@example.com>`). |
 
-    | Include Visual Families | Boolean | No | If set to `true`, the job will also
-    export related visual families used by the connector's alerts. |
+    | Include Visual Families | Boolean | No | If set to `true`, the job will identify
+    and export visual families associated with the connector's mappings. |
 
-    | Include Mappings | Boolean | No | If set to `true`, the job will also export
-    related ontology mappings used by the connector's alerts. |
-
-    | Readme Addon | String | No | Optional markdown text to append to the end of
-    the README file for all connectors pushed during this run. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The job extracts the provided parameters and initializes
-    the `GitSyncManager`, which handles the connection to the Git repository and local
-    workspace management.
-
-    2. **Connector Retrieval**: Fetches all installed connectors from the Google SecOps
-    platform and filters them based on the names provided in the `Connectors` parameter.
-
-    3. **Metadata Preparation**: For each matching connector, the job prepares the
-    connector's JSON definition and script. If a `Readme Addon` is provided, it updates
-    the GitSync metadata to include this text in the connector's documentation.
-
-    4. **Dependency Analysis**: If `Include Mappings` or `Include Visual Families`
-    is enabled, the job identifies the integration associated with the connector and
-    retrieves the corresponding ontology records and mapping rules.
-
-    5. **Asset Staging**: The job stages the connector files, and optionally the mapping
-    and visual family files, into the local repository structure.
-
-    6. **Commit and Push**: Finally, the job creates a Git commit with the specified
-    message and author, then pushes the changes to the remote repository branch.
-Push Content:
-  ai_description: >-
-    ### General Description
-
-    This job automates the process of exporting and synchronizing Google SecOps (Chronicle)
-    content and configurations to a remote Git repository. It serves as a version
-    control and backup mechanism, allowing administrators to push playbooks, integrations,
-    connectors, jobs, and various system settings (such as mappings, environments,
-    and case tags) to a centralized repository. The job supports granular control
-    over which content types are included and provides options for handling sensitive
-    data like passwords during the export process.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Commit | String | Yes | The commit message to be used for the Git push operation.
+    | Include Mappings | Boolean | No | If set to `true`, the job will export the
+    ontology mapping rules and records associated with the connector's integration.
     |
 
-    | Repo URL | String | No | Optional override for the Git repository URL defined
-    in the integration instance. |
-
-    | Branch | String | No | Optional override for the target Git branch. |
-
-    | Git Server Fingerprint | String | No | Optional override for the SSH fingerprint
-    used to verify the Git server. |
-
-    | Commit Author | String | No | Optional override for the commit author (Format:
-    Name <email@example.com>). |
-
-    | Commit Passwords | Boolean | Yes | If true, includes passwords/secrets in the
-    exported integration instance settings. **Warning: Use with caution.** |
-
-    | Integrations | Boolean | Yes | Whether to push all custom and commercial integrations.
-    |
-
-    | Playbooks | Boolean | Yes | Whether to push all playbooks and blocks. |
-
-    | Jobs | Boolean | Yes | Whether to push all defined maintenance and enrichment
-    jobs. |
-
-    | Connectors | Boolean | Yes | Whether to push all configured connector instances.
-    |
-
-    | Integration Instances | Boolean | Yes | Whether to push integration instance
-    configurations and settings. |
-
-    | Visual Families | Boolean | Yes | Whether to push ontology visual family definitions.
-    |
-
-    | Mappings | Boolean | Yes | Whether to push ontology mapping records and rules.
-    |
-
-    | Environments | Boolean | Yes | Whether to push environment definitions. |
-
-    | Dynamic Parameters | Boolean | Yes | Whether to push environment-specific dynamic
-    parameters. |
-
-    | Logo | Boolean | Yes | Whether to push the platform's custom logo settings.
-    |
-
-    | Case Tags | Boolean | Yes | Whether to push case tag definitions. |
-
-    | Case Stages | Boolean | Yes | Whether to push case stage definitions. |
-
-    | Case Title Settings | Boolean | Yes | Whether to push case title formatting
-    settings. |
-
-    | Case Close Reasons | Boolean | Yes | Whether to push case closure reasons and
-    root causes. |
-
-    | Networks | Boolean | Yes | Whether to push network range definitions. |
-
-    | Domains | Boolean | Yes | Whether to push domain alias records. |
-
-    | Custom Lists | Boolean | Yes | Whether to push custom tracking lists. |
-
-    | Email Templates | Boolean | Yes | Whether to push email communication templates.
-    |
-
-    | Blacklists | Boolean | Yes | Whether to push blocklist/denylist records. |
-
-    | SLA Records | Boolean | Yes | Whether to push Service Level Agreement definitions.
-    |
-
-    | Simulated Cases | Boolean | Yes | Whether to push simulated case data for testing.
-    |
+    | Readme Addon | String | No | Markdown text to append to the end of the README
+    file for all connectors pushed during this run. |
 
 
     ### Flow Description
 
     1. **Initialization**: The job initializes the `GitSyncManager`, which clones
-    or pulls the latest changes from the specified Git repository and branch.
+    or pulls the latest state of the target Git repository and validates the connection.
 
-    2. **Parameter Extraction**: It extracts the commit message and all boolean flags
-    to determine which content categories should be processed.
+    2. **Connector Filtering**: It retrieves all installed connectors from the SOAR
+    environment and filters them to match the names provided in the `Connectors` parameter.
 
-    3. **Content Collection**: For each enabled category, the job queries the Google
-    SecOps API to retrieve the relevant data:
-        * **Integrations/Playbooks**: Exports packages and definitions, updating internal
-    references (like instance names) to ensure portability.
-        * **Settings**: Collects system-wide configurations like Networks, Domains,
-    SLA records, and Case Tags.
-        * **Secrets Handling**: If `Commit Passwords` is enabled, it attempts to retrieve
-    and include sensitive configuration values for integration instances.
-    4. **Git Staging**: The collected content is transformed into structured JSON
-    or YAML files and staged within the local Git tree managed by the job.
+    3. **Metadata Update**: If a `Readme Addon` is provided, the job updates the `GitSync.json`
+    metadata file to include the additional documentation for the selected connectors.
 
-    5. **Documentation Generation**: Automatically generates or updates `README.md`
-    files for integrations, playbooks, and the repository root to provide human-readable
-    summaries of the exported content.
+    4. **Connector Export**: For each matching connector, the job generates the JSON
+    definition and a README file, then stages them for the Git commit.
 
-    6. **Commit and Push**: Finalizes the process by committing the staged changes
-    with the provided message and pushing them to the remote Git server.
+    5. **Ontology Enrichment (Optional)**:
+        * If **Include Mappings** is enabled, the job fetches all ontology records
+    and mapping rules associated with the connector's parent integration and stages
+    them.
+        * If **Include Visual Families** is enabled, the job identifies the specific
+    visual families used by those mappings and exports their definitions and icons
+    (PNG).
+    6. **Finalization**: The job performs a Git commit with the provided message and
+    author details, then pushes the changes to the remote repository.
+Push Content:
+  ai_description: "### General Description\nThis job automates the backup and version\
+    \ control of Google SecOps (Chronicle) platform content by pushing it to a Git\
+    \ repository. It allows administrators to synchronize a wide range of platform\
+    \ components\u2014including playbooks, integrations, connectors, and system settings\u2014\
+    to a remote repository for configuration management, auditing, and disaster recovery\
+    \ purposes. The job supports granular control over which content types are synchronized\
+    \ and provides options to override repository configurations and handle sensitive\
+    \ data like passwords.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Commit | String | Yes | The\
+    \ commit message to be used for the Git operation. |\n| Repo URL | String | No\
+    \ | Optional parameter to override the repository URL defined in the integration\
+    \ instance. |\n| Branch | String | No | Optional parameter to override the target\
+    \ Git branch. |\n| Git Server Fingerprint | String | No | Optional parameter to\
+    \ override the SSH fingerprint for server verification. |\n| Commit Author | String\
+    \ | No | Optional parameter to override the commit author (Format: `Name <email@example.com>`).\
+    \ |\n| Commit Passwords | Boolean | Yes | If set to true, includes passwords in\
+    \ the synchronization. **Warning:** Use only for testing; never commit passwords\
+    \ to production repositories. |\n| Integrations | Boolean | Yes | Whether to push\
+    \ all custom and commercial integrations. |\n| Playbooks | Boolean | Yes | Whether\
+    \ to push all playbooks and blocks. |\n| Jobs | Boolean | Yes | Whether to push\
+    \ all defined jobs. |\n| Connectors | Boolean | Yes | Whether to push all defined\
+    \ connectors. |\n| Integration Instances | Boolean | Yes | Whether to push integration\
+    \ instance configurations across all environments. |\n| Visual Families | Boolean\
+    \ | Yes | Whether to push custom visual families from the ontology. |\n| Mappings\
+    \ | Boolean | Yes | Whether to push ontology mapping rules and records. |\n| Environments\
+    \ | Boolean | Yes | Whether to push environment definitions. |\n| Dynamic Parameters\
+    \ | Boolean | Yes | Whether to push environment-specific dynamic parameters. |\n\
+    | Logo | Boolean | Yes | Whether to push the platform logo settings. |\n| Case\
+    \ Tags | Boolean | Yes | Whether to push case tag definitions. |\n| Case Stages\
+    \ | Boolean | Yes | Whether to push case stage definitions. |\n| Case Title Settings\
+    \ | Boolean | Yes | Whether to push case title formatting settings. |\n| Case\
+    \ Close Reasons | Boolean | Yes | Whether to push case close reasons and root\
+    \ causes. |\n| Networks | Boolean | Yes | Whether to push network definitions.\
+    \ |\n| Domains | Boolean | Yes | Whether to push domain records. |\n| Custom Lists\
+    \ | Boolean | Yes | Whether to push custom tracking lists. |\n| Email Templates\
+    \ | Boolean | Yes | Whether to push email templates. |\n| Blacklists | Boolean\
+    \ | Yes | Whether to push denylist/blocklist records. |\n| SLA Records | Boolean\
+    \ | Yes | Whether to push SLA definition records. |\n| Simulated Cases | Boolean\
+    \ | Yes | Whether to push simulated cases used for testing. |\n\n### Flow Description\n\
+    1. **Initialization**: The job initializes the `GitSyncManager`, which sets up\
+    \ a temporary working directory and establishes a connection to the Git repository\
+    \ using the provided credentials and configuration overrides.\n2. **Feature Selection**:\
+    \ It evaluates the boolean parameters to determine which platform components (features)\
+    \ are selected for synchronization.\n3. **Content Extraction**: For each enabled\
+    \ feature, the job calls the SecOps API to fetch the relevant data:\n    * **Integrations/Playbooks/Connectors**:\
+    \ Exports the packages or definitions and prepares them for Git storage.\n   \
+    \ * **Settings**: Retrieves system-wide configurations like Networks, SLA records,\
+    \ and Case Tags.\n    * **Integration Instances**: Iterates through environments\
+    \ to fetch instance settings, optionally including passwords if the `Commit Passwords`\
+    \ flag is enabled.\n4. **Staging**: The extracted content is formatted into JSON\
+    \ or appropriate file types and staged in the local Git tree managed by the `GitSyncManager`.\n\
+    5. **Commit and Push**: Once all selected content is staged, the job generates\
+    \ a root `README.md` summarizing the repository content, performs a Git commit\
+    \ with the specified message, and pushes the changes to the remote repository."
 Push Custom Family:
   ai_description: >-
     ### General Description
 
-    This job exports specific Visual Families (ontology definitions) from Google SecOps
-    to a Git repository. It enables version control, backup, and portability of custom
-    visualization rules, entity relations, and icons by staging the family's data
-    model, image, and documentation in a structured repository format.
+    The **Push Custom Family** job is part of the **GitSync** integration. Its primary
+    purpose is to export custom Visual Families (ontology visualization configurations)
+    from the Google SecOps platform to a Git repository. This enables version control,
+    backup, and the ability to synchronize visualization rules across different environments.
+    The job retrieves the full configuration of specified families, including their
+    rules and associated icons, and pushes them to the repository along with generated
+    documentation.
 
 
     ### Parameters Description
@@ -627,58 +548,63 @@ Push Custom Family:
 
     | :--- | :--- | :--- | :--- |
 
-    | Commit | String | Yes | The commit message to describe the changes in the Git
-    repository. |
+    | Commit | String | Yes | The commit message to use when pushing changes to the
+    Git repository. |
 
-    | Repo URL | String | No | Optional parameter to override the repository URL defined
+    | Repo URL | String | No | Optional override for the Git repository URL configured
     in the integration instance. |
 
-    | Branch | String | No | Optional parameter to override the target Git branch
-    defined in the integration instance. |
+    | Branch | String | No | Optional override for the Git branch configured in the
+    integration instance. |
 
-    | Git Server Fingerprint | String | No | Optional parameter to override the SSH
-    server fingerprint (SHA256 or MD5) for host verification. |
+    | Git Server Fingerprint | String | No | Optional override for the SSH fingerprint
+    of the Git server for verification. |
 
-    | Commit Author | String | No | Optional parameter to override the commit author.
-    Must follow the format: `Name <email@example.com>`. |
+    | Commit Author | String | No | Optional override for the commit author (e.g.,
+    "John Doe <john@example.com>"). |
 
-    | Family Name | String | Yes | A comma-separated list of Visual Family names to
-    be pushed to the repository. |
+    | Family Name | String | Yes | A comma-separated list of the names of custom visual
+    families to export. |
 
-    | Readme Addon | String | No | Markdown text to append to the end of the README.md
-    file for all custom families pushed during this run. |
+    | Readme Addon | String | No | Optional Markdown text to append to the README.md
+    file of the exported visual families. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The job initializes the GitSync manager, which clones or
-    pulls the target repository to a temporary working directory.
+    1. **Initialization**: The job extracts the commit message, the list of visual
+    family names to export, and any optional configuration overrides.
 
-    2. **Parameter Parsing**: It extracts the list of Visual Family names to export
-    and any optional overrides for Git configuration.
+    2. **Git Setup**: It initializes the GitSync manager, which clones the remote
+    repository or pulls the latest changes into a temporary working directory.
 
-    3. **Data Retrieval**: The job fetches all custom Visual Families from the Google
-    SecOps environment and filters them based on the provided names.
+    3. **Data Retrieval**: The job queries the Google SecOps API to fetch all custom
+    visual families defined in the system.
 
-    4. **Metadata Update**: If a `Readme Addon` is provided, the job updates the `GitSync.json`
-    metadata file to include the additional documentation for the selected families.
+    4. **Filtering**: It iterates through the retrieved families and identifies those
+    that match the names provided in the `Family Name` parameter.
 
-    5. **Staging**: For each matching family, the job retrieves the full data model
-    (including rules and the base64-encoded icon) and stages the corresponding JSON,
-    PNG, and README files in the local repository tree.
+    5. **Metadata Update**: If a `Readme Addon` is provided, the job updates the GitSync
+    metadata file (`GitSync.json`) to include the additional documentation for the
+    selected families.
 
-    6. **Synchronization**: Finally, the job performs a Git commit with the specified
-    message and pushes the changes to the remote repository branch.
+    6. **Staging**: For each matching family, the job retrieves the full data (including
+    rules and the base64-encoded image) and stages the corresponding JSON, PNG, and
+    README files in the local repository structure.
+
+    7. **Commit and Push**: Finally, the job commits the staged changes with the provided
+    commit message and pushes the new commit to the remote Git repository.
 Push Integration:
   ai_description: >-
     ### General Description
 
-    This job automates the process of exporting and pushing specific integrations
-    from Google SecOps to a Git repository. It enables version control and backup
-    of SOAR content by synchronizing local integration definitions, scripts, and resources
-    with a remote Git server. The job allows for selective synchronization via a whitelist
-    and supports the addition of custom markdown content to the README files of the
-    pushed integrations.
+    The **Push Integration** job automates the synchronization of Google SecOps (Chronicle)
+    integrations from the SOAR environment to a remote Git repository. It enables
+    version control for both custom and commercial integrations by exporting their
+    definitions, scripts, and resources, and then committing them to a specified Git
+    branch. This job is essential for maintaining a 'Configuration as Code' workflow,
+    allowing teams to track changes, collaborate on integration development, and maintain
+    a backup of their SOAR logic in a centralized repository.
 
 
     ### Parameters Description
@@ -691,58 +617,59 @@ Push Integration:
     |
 
     | Push Whitelist | String | Yes | A comma-separated list of integration identifiers
-    (e.g., 'VirusTotal, ServiceNow') to be pushed to the repository. |
+    (e.g., 'VirusTotal, ServiceNow') that should be exported and pushed to the repository.
+    |
 
-    | Repo URL | String | No | Optional parameter to override the repository URL configured
-    in the GitSync integration instance. |
+    | Repo URL | String | No | Optional override for the Git repository URL defined
+    in the integration instance settings. |
 
-    | Branch | String | No | Optional parameter to override the target branch name
-    configured in the GitSync integration instance. |
+    | Branch | String | No | Optional override for the target Git branch defined in
+    the integration instance settings. |
 
-    | Git Server Fingerprint | String | No | Optional SSH fingerprint (SHA256 or MD5)
-    used to verify the identity of the Git server. |
+    | Git Server Fingerprint | String | No | Optional override for the SSH fingerprint
+    (SHA256 or MD5) used to verify the Git server's identity. |
 
-    | Commit Author | String | No | Optional parameter to override the commit author
-    (format: 'Name <email@domain.com>'). |
+    | Commit Author | String | No | Optional override for the commit author. Must
+    follow the format: `Name <email@domain.com>`. |
 
-    | Readme Addon | String | No | Markdown text that will be appended to the end
-    of the README file for every integration pushed during this execution. |
+    | Readme Addon | String | No | Optional markdown text to append to the end of
+    the generated README.md file for every integration pushed during this execution.
+    |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The job retrieves the commit message, the list of
-    integrations to push (whitelist), and any optional overrides or README additions.
+    1. **Initialization**: The job initializes the GitSync manager, which handles
+    the local cloning or pulling of the target Git repository and establishes a connection
+    to the Google SecOps API.
 
-    2. **Manager Initialization**: Initializes the `GitSyncManager`, which handles
-    the connection to the Git repository and the Google SecOps API.
+    2. **Integration Filtering**: It retrieves all available IDE items (integrations)
+    from the SOAR environment and filters them against the provided **Push Whitelist**.
 
-    3. **Integration Filtering**: Fetches all available integration 'IDE cards' from
-    the platform and filters them to include only those specified in the `Push Whitelist`.
+    3. **Package Export**: For each integration in the whitelist, the job exports
+    the full integration package (including scripts, definitions, and dependencies)
+    from the SOAR platform.
 
-    4. **Package Export**: For each identified integration, the job exports the full
-    integration package (including definitions, Python scripts, and resources) as
-    a byte stream.
+    4. **Metadata & Documentation**: If a **Readme Addon** is provided, the job updates
+    the `GitSync.json` metadata file. It then generates or updates the `README.md`
+    for the integration, incorporating the addon text.
 
-    5. **Metadata Enhancement**: If a `Readme Addon` is provided, the job updates
-    the `GitSync.json` metadata file to include the custom markdown for the specific
-    integration.
+    5. **Staging**: The job prepares the file structure within the local repository
+    clone, overwriting the existing integration folders with the newly exported data.
 
-    6. **Staging**: The job prepares the file structure for the repository, overwriting
-    the existing integration folders with the newly exported content.
-
-    7. **Commit and Push**: Finally, the job creates a Git commit with the provided
-    message and pushes the changes to the configured remote branch.
+    6. **Commit and Push**: Finally, the job creates a Git commit with the specified
+    **Commit** message and author, and pushes the changes to the remote repository
+    branch.
 Push Job:
   ai_description: >-
     ### General Description
 
-    This job exports specific Google SecOps (Chronicle) jobs to a Git repository for
-    version control and backup. It allows users to select a subset of jobs via a whitelist,
-    optionally append custom documentation to their README files, and synchronize
-    the job configurations (including parameters and run intervals) to a remote Git
-    server. The job also maintains a central README file in the repository to provide
-    an overview of all exported jobs.
+    The **Push Job** is a maintenance utility designed to export specific SOAR job
+    configurations and metadata from Google SecOps to a remote Git repository. This
+    job facilitates version control and backup of automation logic by synchronizing
+    job definitions, including their parameters and run intervals, into a structured
+    repository format. It allows users to specify a whitelist of jobs to export and
+    provides the ability to append custom documentation to the generated README files.
 
 
     ### Parameters Description
@@ -751,7 +678,69 @@ Push Job:
 
     | :--- | :--- | :--- | :--- |
 
-    | Commit | String | Yes | The commit message to be used for the Git push operation.
+    | Commit | String | Yes | The commit message to be used for the Git operation.
+    |
+
+    | Repo URL | String | No | Optional override for the Git repository URL defined
+    in the integration instance. |
+
+    | Branch | String | No | Optional override for the target Git branch defined in
+    the integration instance. |
+
+    | Git Server Fingerprint | String | No | Optional override for the Git server
+    SSH fingerprint (SHA256 or MD5). |
+
+    | Commit Author | String | No | Optional override for the commit author. Must
+    follow the format: `Name <email@example.com>`. |
+
+    | Job Whitelist | String | Yes | A comma-separated list of job names to be exported
+    to the repository. |
+
+    | Readme Addon | String | No | Markdown text to append to the end of the README
+    file for every job pushed during this run. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The job initializes the `GitSyncManager`, which establishes
+    a connection to the remote Git repository and the SOAR API, applying any provided
+    parameter overrides (URL, Branch, Author).
+
+    2. **Job Retrieval**: Fetches all installed jobs from the Google SecOps environment
+    via the API.
+
+    3. **Filtering**: Filters the retrieved jobs based on the `Job Whitelist`. It
+    automatically excludes internal system jobs (e.g., Monitors) and jobs belonging
+    to the `GitSync` integration itself to prevent recursion.
+
+    4. **Content Preparation**: For each whitelisted job, it generates the job definition
+    JSON. If a `Readme Addon` is provided, it updates the GitSync metadata to include
+    this documentation for the specific job.
+
+    5. **Documentation Generation**: Updates the individual job README files and regenerates
+    the repository's root README to reflect the current state of exported jobs.
+
+    6. **Synchronization**: Commits the changes to the local repository clone using
+    the provided commit message and pushes the updates to the remote Git server.
+Push Mappings:
+  ai_description: >-
+    ### General Description
+
+    This job exports ontology mappings from Google SecOps to a Git repository. It
+    identifies mapping records and rules associated with a specific source, cleanses
+    the data (such as removing example event fields), and synchronizes them to the
+    repository for version control and configuration management. This ensures that
+    mapping logic for specific integrations or products is backed up and can be shared
+    across environments.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Commit | String | Yes | The commit message to be used for the Git operation.
     |
 
     | Repo URL | String | No | Optional parameter to override the repository URL configured
@@ -764,86 +753,49 @@ Push Job:
     fingerprint used for Git server verification. |
 
     | Commit Author | String | No | Optional parameter to override the commit author
-    (Format: Name <email@example.com>). |
+    (Format: "Name <email>"). |
 
-    | Job Whitelist | String | Yes | A comma-separated list of job names to be pushed
-    to the repository. |
+    | Source | String | Yes | The specific source (e.g., integration or product name)
+    whose mappings will be exported. |
 
-    | Readme Addon | String | No | Markdown text to append to the end of the README
-    file for all jobs pushed during this run. |
+    | Readme Addon | String | No | Optional markdown text to append to the end of
+    the README.md file for the mappings pushed in this run. |
 
 
     ### Flow Description
 
-    1. **Initialization**: The job initializes the `GitSyncManager`, which sets up
-    a temporary local workspace and establishes a connection to the Git repository
-    using the provided credentials and configuration.
+    1. **Initialization**: The job initializes the GitSync manager using provided
+    parameters or integration instance defaults to establish a connection with the
+    Git repository.
 
-    2. **Job Retrieval**: It fetches all installed jobs from the Google SecOps platform
-    via the internal API.
+    2. **Data Retrieval**: It fetches all ontology records from the SOAR platform
+    and filters them to find records matching the specified `Source` parameter.
 
-    3. **Filtering**: The job filters the retrieved list based on the `Job Whitelist`
-    parameter, while automatically excluding internal system monitor jobs and the
-    GitSync integration itself.
+    3. **Rule Processing**: For each matching record, the job retrieves the corresponding
+    mapping rules (family and system fields) and filters them to ensure they belong
+    to the target source.
 
-    4. **Metadata Update**: If a `Readme Addon` is provided, it updates the `GitSync.json`
-    metadata file to include the custom documentation for the selected jobs.
+    4. **Data Cleansing**: It removes `exampleEventFields` from the records to ensure
+    sensitive or unnecessary event data is not exported to the repository.
 
-    5. **Staging**: For each whitelisted job, the configuration is converted to a
-    JSON format and staged in the local Git repository structure under the `Jobs/`
-    directory.
+    5. **Metadata Update**: If a `Readme Addon` is provided, the job updates the GitSync
+    metadata file (`GitSync.json`) with the additional markdown content.
 
-    6. **Documentation Generation**: The job generates or updates individual README
-    files for the exported jobs and updates the root README file for the Jobs section
-    to reflect the current state of the repository.
+    6. **Staging**: The job generates the mapping files (Records JSON, Rules JSON,
+    and a README) and stages them in the local repository clone.
 
-    7. **Commit and Push**: Finally, the job commits the changes with the specified
-    commit message and pushes the updates to the remote Git repository.
-Push Mappings:
-  ai_description: "### General Description\nThis job exports ontology mapping configurations\u2014\
-    including records and rules\u2014from Google SecOps to a Git repository. It is\
-    \ designed to facilitate version control and synchronization of how events are\
-    \ mapped to entities and visual families for a specific source integration. By\
-    \ automating the export of these mappings, teams can maintain a 'configuration\
-    \ as code' approach for their SOAR environment.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Commit | String | Yes | The message to be used for the Git commit. |\n| Source\
-    \ | String | Yes | The name of the source integration (e.g., 'Active Directory',\
-    \ 'CrowdStrike') whose mappings should be exported. |\n| Repo URL | String | No\
-    \ | Optional override for the Git repository URL defined in the integration instance.\
-    \ |\n| Branch | String | No | Optional override for the target Git branch. |\n\
-    | Git Server Fingerprint | String | No | Optional override for the SSH server\
-    \ fingerprint used for host verification. |\n| Commit Author | String | No | Optional\
-    \ override for the commit author. Must follow the format: `Name <email@example.com>`.\
-    \ |\n| Readme Addon | String | No | Markdown text to append to the end of the\
-    \ generated README file for the exported mappings. |\n\n### Flow Description\n\
-    1. **Initialization**: The job extracts configuration parameters and initializes\
-    \ the `GitSyncManager` to handle repository operations and API communication.\n\
-    2. **Data Retrieval**: It fetches all ontology status records from the Google\
-    \ SecOps platform.\n3. **Filtering**: The job filters the retrieved records to\
-    \ include only those associated with the specified `Source` integration.\n4. **Rule\
-    \ Collection**: For each matching record, it retrieves the corresponding mapping\
-    \ rules (both family and system fields) from the platform.\n5. **Data Sanitization**:\
-    \ It cleans the records by removing `exampleEventFields` to ensure the exported\
-    \ files remain focused on configuration rather than specific event data.\n6. **Metadata\
-    \ Update**: If a `Readme Addon` is provided, the job updates the `GitSync.json`\
-    \ metadata file to include the additional markdown content.\n7. **Staging**: The\
-    \ job prepares the mapping data (JSON files for records and rules) and generates\
-    \ a README file, staging them within the local repository structure.\n8. **Push**:\
-    \ Finally, it commits the changes using the provided commit message and author\
-    \ details, then pushes the update to the remote Git repository."
+    7. **Commit and Push**: Finally, it commits the changes with the specified `Commit`
+    message and pushes the updates to the remote Git repository.
 Push Playbook:
   ai_description: >-
     ### General Description
 
-    This job exports playbooks and playbook blocks from Google SecOps to a Git repository.
-    It allows for granular control over which content is synchronized by using whitelists
-    for specific playbooks or entire folders (categories). A key feature of this job
-    is its ability to maintain portability; it automatically converts internal integration
-    instance identifiers within playbook steps into their corresponding display names,
-    ensuring that exported playbooks can be successfully imported into different environments.
-    It also handles dependencies by optionally including all blocks referenced by
-    the selected playbooks.
+    This job automates the export of playbooks and blocks from Google SecOps to a
+    Git repository. It facilitates version control and synchronization of automation
+    logic by allowing users to selectively push content based on specific names or
+    folders. The job ensures that exported playbooks remain portable by updating integration
+    instance references and can optionally include all dependent blocks and custom
+    documentation addons.
 
 
     ### Parameters Description
@@ -852,70 +804,70 @@ Push Playbook:
 
     | :--- | :--- | :--- | :--- |
 
-    | Branch | String | No | The Git branch to push the content to. If not provided,
-    the branch defined in the integration instance is used. |
+    | Branch | String | No | Optional branch name to override the default branch configured
+    in the integration instance. |
 
     | Commit | String | Yes | The commit message to be used for the Git push operation.
     |
 
-    | Repo URL | String | No | The URL of the target Git repository. If not provided,
-    the URL defined in the integration instance is used. |
+    | Repo URL | String | No | Optional repository URL to override the default URL
+    configured in the integration instance. |
 
-    | Git Server Fingerprint | String | No | The SSH fingerprint of the Git server
-    for verification. Overrides the integration instance setting if provided. |
+    | Git Server Fingerprint | String | No | Optional SSH fingerprint for Git server
+    verification (SHA256 or MD5). |
 
-    | Commit Author | String | No | The author of the commit, formatted as `Name <email@example.com>`.
-    Overrides the integration instance setting if provided. |
+    | Commit Author | String | No | Optional author details in the format: `Name <email@domain.com>`.
+    |
 
-    | Folders Whitelist | String | No | A comma-separated list of playbook categories
-    (folders) to export. |
+    | Folders Whitelist | String | No | Comma-separated list of playbook categories
+    (folders) to include in the export. |
 
-    | Playbook Whitelist | String | No | A comma-separated list of specific playbook
-    names to export. |
+    | Playbook Whitelist | String | No | Comma-separated list of specific playbook
+    names to include in the export. |
 
-    | Readme Addon | String | No | Markdown text to be appended to the end of the
-    `README.md` file for every playbook exported during this run. |
+    | Readme Addon | String | No | Markdown text to append to the end of the README
+    file for every playbook pushed during this run. |
 
-    | Include Playbook Blocks | Boolean | Yes | If set to `true`, the job will automatically
-    identify and export all playbook blocks referenced by the selected playbooks.
+    | Include Playbook Blocks | Boolean | Yes | If set to `True`, the job will also
+    identify and export all blocks (nested workflows) used within the selected playbooks.
     |
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts job parameters and validates that at least one
-    whitelist (Folders or Playbooks) has been provided.
+    1. **Initialization**: Extracts job parameters and initializes the `GitSyncManager`
+    to establish a connection with the remote repository.
 
-    2. **Git Setup**: Initializes the Git manager, clones or pulls the target repository,
-    and checks out the specified branch.
+    2. **Content Discovery**: Fetches all playbooks currently installed in the Google
+    SecOps environment.
 
-    3. **Content Filtering**: Retrieves all playbooks from the SOAR environment and
-    filters them based on the `Playbook Whitelist` and `Folders Whitelist` parameters.
+    3. **Filtering**: Iterates through the playbooks and identifies those that match
+    the names in the `Playbook Whitelist` or belong to categories in the `Folders
+    Whitelist`.
 
-    4. **Playbook Processing**: For each matching playbook, the job:
-        * Appends the `Readme Addon` to the playbook metadata if specified.
-        * Fetches the full playbook definition.
-        * Updates step parameters (like `IntegrationInstance`) from internal UUIDs
-    to display names to ensure the playbook remains portable across different SOAR
-    instances.
-        * Stages the playbook JSON and generated README files in the local Git repository
-    structure.
-    5. **Block Processing**: If `Include Playbook Blocks` is enabled, the job identifies
-    all blocks used within the processed playbooks, retrieves their definitions, updates
-    their instance names, and stages them for export.
+    4. **Processing**: For each matching playbook, it retrieves the full workflow
+    definition and updates integration instance display names to ensure the exported
+    JSON is descriptive and portable.
 
-    6. **Finalization**: Generates an updated root README for the Playbooks directory,
-    commits all staged changes with the provided commit message, and pushes the updates
-    to the remote Git repository.
+    5. **Documentation Enrichment**: If a `Readme Addon` is provided, it updates the
+    metadata to ensure the custom markdown is appended to the playbook's documentation.
+
+    6. **Dependency Handling**: If `Include Playbook Blocks` is enabled, the job recursively
+    finds and processes all blocks referenced by the selected playbooks.
+
+    7. **Repository Update**: Generates an updated root README for the playbooks directory
+    and stages all changes in the local Git tree.
+
+    8. **Commit and Push**: Finalizes the process by committing the changes with the
+    provided message and pushing them to the remote Git repository.
 Push Simulated Cases:
   ai_description: >-
     ### General Description
 
     This job exports specific simulated cases from the Google SecOps platform to a
     Git repository. It enables version control and sharing of simulated attack scenarios
-    by allowing users to select cases by name and push them to a configured Git branch.
-    This is particularly useful for maintaining a library of attack simulations across
-    different environments.
+    by programmatically pushing selected cases to a centralized repository managed
+    via the GitSync integration.
 
 
     ### Parameters Description
@@ -924,20 +876,20 @@ Push Simulated Cases:
 
     | :--- | :--- | :--- | :--- |
 
-    | Commit | String | Yes | The commit message to be used for the Git push operation.
-    |
+    | Commit | String | Yes | The message to be associated with the Git commit. |
 
-    | Repo URL | String | No | Optional parameter to override the repository URL configured
-    in the integration instance. |
+    | Repo URL | String | No | Optional URL of the Git repository. If provided, it
+    overrides the URL configured in the integration instance. |
 
-    | Branch | String | No | Optional parameter to override the target branch configured
-    in the integration instance. |
+    | Branch | String | No | Optional Git branch name. If provided, it overrides the
+    branch configured in the integration instance. |
 
-    | Git Server Fingerprint | String | No | Optional parameter to override the SSH
-    fingerprint for the Git server. |
+    | Git Server Fingerprint | String | No | Optional SSH fingerprint for Git server
+    verification. If provided, it overrides the fingerprint configured in the integration
+    instance. |
 
-    | Commit Author | String | No | Optional parameter to override the commit author
-    (e.g., "Name <email@example.com>"). |
+    | Commit Author | String | No | Optional author details (e.g., "Name <email@example.com>").
+    If provided, it overrides the author configured in the integration instance. |
 
     | Simulated Cases | String | Yes | A comma-separated list of simulated case names
     to be exported to the repository. |
@@ -946,17 +898,20 @@ Push Simulated Cases:
     ### Flow Description
 
     1. **Parameter Extraction**: The job retrieves the commit message and the list
-    of simulated case names provided by the user.
+    of simulated case names from the configuration.
 
-    2. **Initialization**: It initializes the `GitSyncManager`, which sets up the
-    connection to the Git repository and the Google SecOps API.
+    2. **Manager Initialization**: It initializes the `GitSyncManager`, which handles
+    the connection to the Git repository and the Google SecOps API.
 
-    3. **Case Retrieval**: The job fetches all available custom simulated cases from
-    the Google SecOps platform.
+    3. **Case Retrieval**: The job fetches the list of all custom simulated cases
+    currently available in the platform.
 
-    4. **Filtering and Staging**: It iterates through the platform's cases, matching
-    them against the user-provided list. For each match, it exports the case data
-    and stages it as a `.case` file in the repository's `SimulatedCases/` directory.
+    4. **Filtering and Export**: It iterates through the platform's cases, identifying
+    those that match the names provided in the parameters. For each match, it exports
+    the case data.
 
-    5. **Commit and Push**: Finally, it performs a Git commit with the specified message
-    and pushes the staged files to the remote repository.
+    5. **Staging**: The exported case data is staged as a `.case` file within the
+    local repository structure.
+
+    6. **Commit and Push**: Finally, the job commits the changes using the provided
+    commit message and pushes the new or updated case files to the remote Git repository.

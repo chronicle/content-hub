@@ -2,11 +2,10 @@ Sheet Connector:
   ai_description: >-
     ### General Description
 
-    The Sheet Connector allows Google SecOps to ingest data directly from Google Sheets.
-    It treats each row in a specified worksheet as a potential security event, converting
-    them into alerts and cases. This is particularly useful for ingesting manually
-    maintained watchlists, tracking logs, or simple automation triggers stored in
-    a spreadsheet format.
+    This connector integrates with Google Sheets to ingest data rows as alerts into
+    Google SecOps. It allows security teams to automate the ingestion of manual logs,
+    tracking spreadsheets, or any tabular data stored in Google Drive, converting
+    each row into a structured alert for further investigation.
 
 
     ### Parameters Description
@@ -15,56 +14,56 @@ Sheet Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | Alert Name Column Index | Integer | Yes | The zero-based index of the column
-    to be used as the Alert Name. |
+    | Credentials Json | String | Yes | Service account credentials in JSON format
+    used for Google API authentication. |
 
-    | Credentials Json | String | Yes | The JSON content of a Google Service Account
-    key with access to the sheet. |
+    | Sheet Id | String | Yes | The unique identifier of the Google Spreadsheet (found
+    in the URL). |
+
+    | Worksheet Name | String | Yes | The name of the specific tab/worksheet to pull
+    data from (e.g., 'Sheet1'). |
+
+    | Alert Name Column Index | Integer | Yes | The 0-based index of the column to
+    use for the Alert Name. Set to -1 to use the Product name instead. |
+
+    | Product | String | Yes | The product name to assign to the ingested alerts and
+    events. |
+
+    | Filter Alert Column Index | Integer | No | The 0-based index of the column used
+    to filter rows for ingestion. |
+
+    | Filter Alert Column Value | String | No | The specific value to match in the
+    filter column; only matching rows will be ingested. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product in the SOAR. |
+    product in the SOAR mapping. |
 
     | EventClassId | String | Yes | The field name used to determine the event name
     or sub-type. |
 
-    | Filter Alert Column Index | Integer | No | The index of a column used to filter
-    which rows should be ingested. |
-
-    | Filter Alert Column Value | String | No | The specific value required in the
-    filter column for a row to be processed. |
-
-    | Product | String | Yes | The product name assigned to the ingested alerts. |
-
     | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
     connector execution. |
-
-    | Sheet Id | String | Yes | The unique ID of the Google Sheet (found in the URL).
-    |
-
-    | Worksheet Name | String | Yes | The name of the specific tab/worksheet to pull
-    data from (e.g., Sheet1). |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector authenticates with the Google Sheets API
-    using the provided Service Account JSON credentials.
+    1. **Authentication**: Connects to the Google Sheets API using the provided Service
+    Account JSON credentials.
 
-    2. **Sheet Access**: It opens the spreadsheet identified by the Sheet Id and selects
-    the specified Worksheet Name.
+    2. **Resource Access**: Opens the spreadsheet using the 'Sheet Id' and selects
+    the specified 'Worksheet Name'.
 
-    3. **Data Retrieval**: The connector fetches all values from the worksheet, identifying
-    the first row as the header for field mapping.
+    3. **Data Retrieval**: Reads the first row to establish headers and then fetches
+    all subsequent data rows.
 
-    4. **Filtering**: For each row (starting from the second row), it checks if a
-    filter is configured. If the value in the Filter Alert Column Index does not match
-    the Filter Alert Column Value, the row is skipped.
+    4. **Filtering**: If filtering parameters are provided, the connector checks the
+    value at the specified column index for each row, skipping rows that do not match.
 
-    5. **Alert Creation**: For valid rows, it generates a unique Alert ID and sets
-    the Alert Name based on the configured column index.
+    5. **Alert Creation**: For each valid row, a unique Alert object is created. The
+    alert name is derived from the configured column index.
 
-    6. **Event Mapping**: Each cell in the row is mapped to an event field using the
-    header names retrieved in step 3.
+    6. **Event Mapping**: Maps every cell in the row to an event dictionary, using
+    the worksheet headers as keys.
 
-    7. **Ingestion**: The constructed alerts, containing the row data as events, are
-    returned to Google SecOps for case creation.
+    7. **Ingestion**: Packages the alerts and events, then sends them to Google SecOps
+    for case creation.
