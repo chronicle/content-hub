@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from mp.core.llm.sdk import LlmConfig, LlmSdk
 
-GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
+GEMINI_MODEL_NAME: str = "gemini-3.1-flash-lite-preview"
 GEMINI_TEMPERATURE: float = 0.1
 DESCRIBE_BULK_SIZE: int = 4
 
