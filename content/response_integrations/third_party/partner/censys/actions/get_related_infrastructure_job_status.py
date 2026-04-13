@@ -92,6 +92,7 @@ def main():
 
         elif job_state == JOB_STATE_FAILED:
             status = EXECUTION_STATE_FAILED
+            result_value = RESULT_VALUE_FALSE
             output_message = f"CensEye job {job_id} failed."
             siemplify.LOGGER.error(
                 f"Setting status to EXECUTION_STATE_FAILED ({EXECUTION_STATE_FAILED})"

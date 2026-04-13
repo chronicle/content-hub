@@ -102,6 +102,11 @@ INVALID_IP_FORMAT_ERROR = "Invalid IP address format: {}"
 INVALID_PORT_FORMAT_ERROR = "Invalid port value: {}"
 DEFAULT_PORTS = "80,443"
 
+# CensEye Target Types
+TARGET_TYPE_HOST = "Host"
+TARGET_TYPE_WEB_PROPERTY = "Web Property"
+TARGET_TYPE_CERTIFICATE = "Certificate"
+
 # CensEye Related Infrastructure Error Messages
 INVALID_TARGET_TYPE_ERROR = (
     "Invalid target type: {}. Expected: Host, Web Property, or Certificate"
