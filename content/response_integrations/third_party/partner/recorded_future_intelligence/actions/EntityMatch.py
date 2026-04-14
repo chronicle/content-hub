@@ -9,8 +9,8 @@
 
 from __future__ import annotations
 
-from psengine.classic_alerts import AlertUpdateError, ClassicAlertMgr
 from psengine.config import Config
+from psengine.entity_match import EntityMatchMgr, MatchApiError
 from pydantic import ValidationError
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -21,17 +21,10 @@ from ..core.constants import PROVIDER_NAME
 from ..core.version import __version__ as version
 
 
-def clean_input(input_str: str | None) -> str | None:
-    """
-    Cleans the classic alert input values from ddl config options.
-    """
-    result = None if input_str == "None" else input_str
-    return result
-
-
 @output_handler
 def main():
     siemplify = SiemplifyAction()
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     api_key = extract_configuration_param(
         siemplify,
@@ -45,37 +38,27 @@ def main():
         default_value=False,
         input_type=bool,
     )
-
-    alert_id = extract_action_param(
+    entity_name = extract_action_param(
         siemplify,
-        param_name="Alert ID",
-        is_mandatory=True,
+        param_name="Entity Name",
+        input_type=str,
         print_value=True,
     )
-    assign_to = extract_action_param(
+    entity_type = extract_action_param(
         siemplify,
-        param_name="Assign To",
-        is_mandatory=False,
+        param_name="Entity Type",
+        input_type=str,
         print_value=True,
     )
-    note = extract_action_param(
+    limit = extract_action_param(
         siemplify,
-        param_name="Note",
-        is_mandatory=False,
-        print_value=True,
+        param_name="Limit",
+        input_type=int,
     )
-    alert_status = extract_action_param(
-        siemplify,
-        param_name="Status",
-        is_mandatory=False,
-        print_value=True,
-    )
-
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     is_success = True
-    output_message = ""
     status = EXECUTION_STATE_COMPLETED
+    output_message = ""
 
     try:
         siemplify.LOGGER.info("Initializing psengine configuration")
@@ -84,48 +67,42 @@ def main():
             rf_token=api_key,
             app_id=f"ps-google-soar/{version}",
         )
-        siemplify.LOGGER.info("Initializing psengine ClassicAlertMgr")
-        alert_mgr = ClassicAlertMgr()
-        siemplify.LOGGER.info("Building alert update object")
-        updates = {
-            "id": alert_id,
-            "assignee": assign_to or None,
-            "note": note or None,
-            "statusInPortal": clean_input(alert_status) or None,
-        }
-        siemplify.LOGGER.info(f"Updating Classic Alert: {alert_id}")
-        update_alert_resp = alert_mgr.update(
-            updates=[{k: v for k, v in updates.items() if v is not None}]
+        siemplify.LOGGER.info("Initializing psengine EntityMatchMgr")
+        entity_match_mgr = EntityMatchMgr()
+        siemplify.LOGGER.info("Fetching entity from Recorded Future")
+        entity_match_resp = entity_match_mgr.match(
+            entity_name=entity_name, entity_type=entity_type, limit=limit
         )
-        siemplify.LOGGER.info(f"Classic Alert Update response: {update_alert_resp}")
+        data = [entity.json() for entity in entity_match_resp]
+        siemplify.result.add_result_json(data)
+        output_message = "Successfully ran Entity Match action."
 
-        siemplify.result.add_result_json({"success": {"id": alert_id}})
-        output_message += f"Successfully updated classic alert {alert_id} in Recorded Future."
-
-    except ValueError as err:
-        output_message = f"Classic Alert Manager ValueError: {err}"
-        siemplify.LOGGER.error(output_message)
-        is_success = False
-        status = EXECUTION_STATE_FAILED
     except ValidationError as err:
-        output_message = f"Error with Classic Alert Manager update parameters: {err}"
+        output_message = f"Invalid parameters for Entity Match action {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
-    except AlertUpdateError as err:
-        output_message = f"Error updating classic alert: {err}"
+    except ValueError as err:
+        output_message = f"Error creating Entity Match Manager {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
-    except Exception as err:
-        output_message = f"Error executing Update Playbook Alert action: {err}"
+    except MatchApiError as err:
+        output_message = f"Error calling Entity Match API {err}"
+        siemplify.LOGGER.error(output_message)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+    except Exception as e:
+        output_message = "General error performing Entity Match action"
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
         is_success = False
         status = EXECUTION_STATE_FAILED
 
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(
-        f"\n  status: {status}\n  is_success: {is_success}\n  output_message: {output_message}",
-    )
+    siemplify.LOGGER.info("\n----------------- Main - Finished -----------------")
+    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info(f"Result: {is_success}")
+    siemplify.LOGGER.info(f"Status: {status}")
     siemplify.end(output_message, is_success, status)
 
 

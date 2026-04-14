@@ -9,21 +9,22 @@
 
 from __future__ import annotations
 
-from psengine.analyst_notes import AnalystNoteMgr, AnalystNotePublishError
 from psengine.config import Config
+from psengine.entity_match import EntityMatchMgr, MatchApiError
 from pydantic import ValidationError
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.constants import PROVIDER_NAME, TOPIC_MAP
+from ..core.constants import PROVIDER_NAME
 from ..core.version import __version__ as version
 
 
 @output_handler
-def main() -> None:
+def main():
     siemplify = SiemplifyAction()
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     api_key = extract_configuration_param(
         siemplify,
@@ -37,31 +38,16 @@ def main() -> None:
         default_value=False,
         input_type=bool,
     )
-
-    note_title = extract_action_param(
+    entity_id = extract_action_param(
         siemplify,
-        param_name="Note Title",
-        is_mandatory=True,
+        param_name="Entity ID",
+        input_type=str,
+        print_value=True,
     )
-    note_text = extract_action_param(
-        siemplify,
-        param_name="Note Text",
-        is_mandatory=True,
-    )
-    topic = extract_action_param(
-        siemplify,
-        param_name="Topic",
-        default_value=TOPIC_MAP["None"],
-    )
-
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     is_success = True
-    output_message = ""
     status = EXECUTION_STATE_COMPLETED
-
-    entities = "\n".join([entity.identifier for entity in siemplify.target_entities])
-    note_text = note_text + f"\n\nEntities collected from case: {entities}"
+    output_message = ""
 
     try:
         siemplify.LOGGER.info("Initializing psengine configuration")
@@ -70,40 +56,45 @@ def main() -> None:
             rf_token=api_key,
             app_id=f"ps-google-soar/{version}",
         )
-        siemplify.LOGGER.info("Initializing psengine AnalystNoteMgr")
-        note_mgr = AnalystNoteMgr()
-        siemplify.LOGGER.info("Publishing Analyst Note")
-        analyst_note_resp = note_mgr.publish(title=note_title, text=note_text, topic=topic)
-        data = analyst_note_resp.json()
+        siemplify.LOGGER.info("Initializing psengine EntityMatchMgr")
+        entity_match_mgr = EntityMatchMgr()
+        siemplify.LOGGER.info("Fetching entity from Recorded Future")
+        entity_lookup_resp = entity_match_mgr.lookup(id_=entity_id)
+
+        if entity_lookup_resp is not None:
+            data = entity_lookup_resp.json()
+            output_message = "Successfully ran Entity Lookup action. Matched Entity ID."
+        else:
+            data = {}
+            output_message = "Successfully ran Entity Lookup action. Did not match Entity ID."
         siemplify.result.add_result_json(data)
-        output_message += (
-            f"Successfully published Analyst Note {analyst_note_resp.note_id} in Recorded Future."
-        )
 
-    except ValueError as err:
-        output_message = f"Analyst Note Manager ValueError: {err}"
-        siemplify.LOGGER.error(output_message)
-        is_success = False
-        status = EXECUTION_STATE_FAILED
     except ValidationError as err:
-        output_message = f"Error with Analyst Note Manager publish parameters: {err}"
+        output_message = f"Invalid parameters for Entity Lookup action {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
-    except AnalystNotePublishError as err:
-        output_message = f"Error publishing Analyst Note: {err}"
+    except ValueError as err:
+        output_message = f"Error creating Entity Match Manager {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
-    except Exception as err:
-        output_message = f"Error executing Add Analyst Note action: {err}"
+    except MatchApiError as err:
+        output_message = f"Error calling Entity Match API {err}"
+        siemplify.LOGGER.error(output_message)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+    except Exception as e:
+        output_message = "General error performing Entity Lookup action"
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
         is_success = False
         status = EXECUTION_STATE_FAILED
 
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(
-        f"\n  status: {status}\n  is_success: {is_success}\n  output_message: {output_message}",
-    )
+    siemplify.LOGGER.info("\n----------------- Main - Finished -----------------")
+    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info(f"Result: {is_success}")
+    siemplify.LOGGER.info(f"Status: {status}")
     siemplify.end(output_message, is_success, status)
 
 

@@ -10,10 +10,7 @@
 from __future__ import annotations
 
 from psengine.config import Config
-from psengine.playbook_alerts import (
-    PlaybookAlertMgr,
-    PlaybookAlertUpdateError,
-)
+from psengine.entity_lists import EntityListMgr, ListApiError
 from pydantic import ValidationError
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -21,16 +18,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.constants import PROVIDER_NAME
+from ..core.UtilsManager import map_secops_entities_to_rf
 from ..core.version import __version__ as version
-
-
-def clean_input(input_str):
-    """
-    Cleans the playbook alert input values from ddl config options.
-    """
-    result = None if input_str == "None" else input_str
-    result = result.replace(" ", "") if isinstance(result, str) else result
-    return result
 
 
 @output_handler
@@ -50,45 +39,27 @@ def main():
         input_type=bool,
     )
 
-    alert_id = extract_action_param(
+    list_id = extract_action_param(
         siemplify,
-        param_name="Playbook Alert ID",
+        param_name="List ID",
         is_mandatory=True,
         print_value=True,
     )
-    category = extract_action_param(
+    entity_id = extract_action_param(
         siemplify,
-        param_name="Playbook Alert Category",
+        param_name="Entity ID",
         is_mandatory=False,
         print_value=True,
     )
-    assign_to = extract_action_param(
+    entity_name = extract_action_param(
         siemplify,
-        param_name="Assign To",
+        param_name="Entity Name",
         is_mandatory=False,
         print_value=True,
     )
-    log_entry = extract_action_param(
+    entity_type = extract_action_param(
         siemplify,
-        param_name="Log Entry",
-        is_mandatory=False,
-        print_value=True,
-    )
-    pba_status = extract_action_param(
-        siemplify,
-        param_name="Status",
-        is_mandatory=False,
-        print_value=True,
-    )
-    priority = extract_action_param(
-        siemplify,
-        param_name="Priority",
-        is_mandatory=False,
-        print_value=True,
-    )
-    reopen_strategy = extract_action_param(
-        siemplify,
-        param_name="Reopen Strategy",
+        param_name="Entity Type",
         is_mandatory=False,
         print_value=True,
     )
@@ -99,6 +70,20 @@ def main():
     output_message = ""
     status = EXECUTION_STATE_COMPLETED
 
+    if entity_id:
+        entities = [entity_id]
+        siemplify.LOGGER.info(f"Entity ID parameter supplied, target entity: {entities}")
+    elif bool(entity_name) and bool(entity_type):
+        entities = [(entity_name, entity_type)]
+        siemplify.LOGGER.info(
+            f"Entity Name and Type parameters supplied, target entity: {entities}"
+        )
+    else:
+        entities = map_secops_entities_to_rf(siemplify.target_entities)
+        siemplify.LOGGER.info(
+            f"No Entity parameters supplied, defaulting to Case Target Entities: {entities}"
+        )
+
     try:
         siemplify.LOGGER.info("Initializing psengine configuration")
         Config.init(
@@ -106,38 +91,41 @@ def main():
             rf_token=api_key,
             app_id=f"ps-google-soar/{version}",
         )
-        siemplify.LOGGER.info("Initializing psengine PlaybookAlertMgr")
-        pba_mgr = PlaybookAlertMgr()
-        siemplify.LOGGER.info(f"Updating {category if category else ' '}Playbook Alert: {alert_id}")
-        update_pba_resp = pba_mgr.update(
-            alert=alert_id,
-            priority=clean_input(priority),
-            status=clean_input(pba_status),
-            assignee=assign_to,
-            log_entry=log_entry,
-            reopen_strategy=clean_input(reopen_strategy),
-        )
-        siemplify.LOGGER.info(f"Playbook Alert Update response: {update_pba_resp.json()}")
-        siemplify.result.add_result_json({"success": {"id": alert_id}})
-        output_message += f"Successfully updated playbook alert {alert_id} in Recorded Future."
+        siemplify.LOGGER.info("Initializing psengine EntityListMgr")
+        list_mgr = EntityListMgr()
+        siemplify.LOGGER.info(f"Fetching List from Recorded Future: {list_id}")
+        fetch_resp = list_mgr.fetch(list_=list_id)
 
-    except ValueError as err:
-        output_message = f"Playbook Alert Manager ValueError: {err}"
-        siemplify.LOGGER.error(output_message)
-        is_success = False
-        status = EXECUTION_STATE_FAILED
+        siemplify.LOGGER.info(f"Adding {len(entities)} entities from SecOps case to list")
+        add_resp = fetch_resp.bulk_add(entities=entities)
+
+        siemplify.result.add_result_json(add_resp)
+
+        if added := add_resp.get("added", []):
+            output_message += f"Successfully added {len(added)} entities to list."
+        if error := add_resp.get("error", []):
+            output_message += f"\nError adding {len(error)} entities to list."
+        if unchanged := add_resp.get("unchanged", []):
+            output_message += f"\n{len(unchanged)} entities unchanged."
+
     except ValidationError as err:
-        output_message = f"Error with Playbook Alert Manager update parameters: {err}"
+        output_message = f"Error with List Manager parameters: {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
-    except PlaybookAlertUpdateError as err:
-        output_message = f"Error updating playbook alert: {err}"
+    except ValueError as err:
+        output_message = f"Error creating List Manager: {err}"
         siemplify.LOGGER.error(output_message)
         is_success = False
         status = EXECUTION_STATE_FAILED
+    except ListApiError as err:
+        output_message = f"Error calling Recorded Future List API: {err}"
+        siemplify.LOGGER.error(output_message)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+
     except Exception as err:
-        output_message = f"Error executing Update Playbook Alert action: {err}"
+        output_message = f"Error executing Fetch List action: {err}"
         is_success = False
         status = EXECUTION_STATE_FAILED
 
