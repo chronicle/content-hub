@@ -640,6 +640,7 @@ class WorkflowInstaller:
         """Update an existing workflow in the platform."""
         self.logger.info(f"Updating existing workflow '{workflow.name}'")
         self._adjust_workflow_ids(workflow)
+        self._remap_workflow_roles(workflow)
         self.api.save_playbook(workflow.raw_data)
         self._save_workflow_mod_time_to_context(workflow)
         self.logger.info(f"Workflow '{workflow.name}' was updated successfully")
@@ -658,9 +659,42 @@ class WorkflowInstaller:
         self.logger.info(f"Installing new workflow '{workflow.name}'")
         self._define_workflow_as_new(workflow)
         self._process_steps(workflow)
+        self._remap_workflow_roles(workflow)
         self.api.save_playbook(workflow.raw_data)
         self._save_workflow_mod_time_to_context(workflow)
         self.logger.info(f"New workflow '{workflow.name}' was installed successfully")
+
+    def _remap_workflow_roles(self, workflow: Workflow) -> None:
+        """Remap the role IDs of a workflow overviewTemplate based on the roles available in the system.
+
+        Args:
+            workflow: The workflow object to remap roles for.
+        """
+        if not workflow.raw_data.get("overviewTemplates"):
+            return
+
+        roles_map = {
+            role["name"]: role["id"]
+            for role in self._soc_roles
+            if "name" in role and "id" in role
+        }
+
+        for template in workflow.raw_data["overviewTemplates"]:
+            role_names = template.pop("roleNames", None)
+            if not role_names:
+                continue
+
+            valid_role_ids = []
+            for role_name in role_names:
+                if role_name in roles_map:
+                    valid_role_ids.append(roles_map[role_name])
+                else:
+                    self.logger.warn(
+                        f"Role '{role_name}' for view '{template.get('name')}' in workflow "
+                        f"'{workflow.name}' does not exist in the destination system. It will be removed."
+                    )
+
+            template["roles"] = valid_role_ids
 
     def _process_steps(
         self,
@@ -792,6 +826,13 @@ class WorkflowInstaller:
                 x.get("name"): x for x in self.api.get_playbooks()
             }
         return self._cache.get("playbooks")
+
+    @property
+    def _soc_roles(self) -> list[dict[str, Any]]:
+        """Currently configured SOC roles"""
+        if "soc_roles" not in self._cache:
+            self._cache["soc_roles"] = self.api.get_soc_roles()
+        return self._cache.get("soc_roles")
 
     @property
     def _playbook_categories(self) -> dict:

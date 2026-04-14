@@ -501,6 +501,14 @@ class SiemplifyApiClient:
         self.validate_response(res)
         return res.json()
 
+    def get_soc_roles(self) -> list[dict]:
+        """Get the SOC roles from the platform.
+
+        Returns:
+            A list of SOC roles.
+        """
+        return self.get_page_results("socroles/getSocRoles")
+
     def get_simulated_cases(self):
         res = self.session.get("attackssimulator/GetCustomCases")
         self.validate_response(res)
