@@ -55,8 +55,22 @@ def build_issue_comment_object(issue_json: SingleJson) -> datamodels.IssueCommen
         issue_json (SingleJson): The JSON data containing commented issue details.
 
     Returns:
-        datamodels.Issue: An Issue object containing the details of the commented issue.
+        datamodels.IssueComment: The commented issue details.
     """
     return datamodels.IssueComment.from_json(
         issue_json.get("data", {}).get("createIssueNote", {}).get("issueNote", {})
     )
+
+
+def build_vulnerability_finding_object(
+    finding_json: SingleJson,
+) -> datamodels.VulnerabilityFinding:
+    """Build a VulnerabilityFinding object from the provided JSON data.
+
+    Args:
+        finding_json (SingleJson): The JSON data containing finding details.
+
+    Returns:
+        datamodels.VulnerabilityFinding: A VulnerabilityFinding object.
+    """
+    return datamodels.VulnerabilityFinding.from_json(finding_json)
