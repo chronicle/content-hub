@@ -14,17 +14,12 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple, TYPE_CHECKING
-import requests
+from typing import TYPE_CHECKING, NamedTuple
 
+import requests
 from TIPCommon.base.interfaces import Apiable
 
-from . import api_utils
-from . import auth_manager
-from . import constants
-from . import datamodels
-from . import data_parser
-from . import query_builder
+from . import api_utils, auth_manager, constants, data_parser, datamodels, query_builder
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -235,3 +230,50 @@ class WizApiClient(Apiable):
         api_utils.validate_response(response=response)
 
         return self.parser.build_update_issue_object(response.json())
+
+    def get_resource_vulnerability_findings(
+        self,
+        resource_name: str,
+        severity: list[str] | None = None,
+        has_fix: bool | None = None,
+        has_exploit: bool | None = None,
+        cve_ids: list[str] | None = None,
+        related_issue_severity: list[str] | None = None,
+        first: int = 100,
+    ) -> list[datamodels.VulnerabilityFinding]:
+        """Get vulnerability findings for a specific resource.
+
+        Args:
+            resource_name (str): The name of the resource.
+            severity (list[str] | None): Filter by severity levels.
+            has_fix (bool | None): Filter by fix availability.
+            has_exploit (bool | None): Filter by exploit availability.
+            cve_ids (list[str] | None): Filter by CVE IDs.
+            related_issue_severity (list[str] | None): Filter by related issue severity.
+            first (int): Max findings to return.
+
+        Returns:
+            list[datamodels.VulnerabilityFinding]: A list of VulnerabilityFinding objects.
+        """
+        query_builder_instance = query_builder.VulnerabilityFindingsQueryBuilder(
+            resource_name=resource_name,
+            severity=severity,
+            has_fix=has_fix,
+            has_exploit=has_exploit,
+            cve_ids=cve_ids,
+            related_issue_severity=related_issue_severity,
+            first=first,
+        )
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=query_builder_instance.build_query(),
+        )
+        api_utils.validate_response(response=response)
+
+        nodes = response.json().get("data", {}).get("vulnerabilityFindings", {}).get("nodes", [])
+        return [self.parser.build_vulnerability_finding_object(node) for node in nodes]

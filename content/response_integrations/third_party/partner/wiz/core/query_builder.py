@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import dataclasses
+from typing import TYPE_CHECKING
 
 from graphql_query import Argument, Field, Operation, Query, Variable
 
@@ -189,4 +188,77 @@ class UpdateIssueMutationBuilder:
                 queries=[mutation],
             ).render(),
             "variables": variable_data,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class VulnerabilityFindingsQueryBuilder:
+    resource_name: str
+    severity: list[str] | None = None
+    has_fix: bool | None = None
+    has_exploit: bool | None = None
+    cve_ids: list[str] | None = None
+    related_issue_severity: list[str] | None = None
+    first: int = 100
+
+    def build_fields(self) -> list[str | Field]:
+        """Build the fields required in the vulnerability findings query."""
+        return [
+            "id",
+            "portalUrl",
+            "name",
+            "CVEDescription",
+            "CVSSSeverity",
+            "score",
+            "severity",
+            "status",
+            "hasExploit",
+            "remediation",
+            Field(
+                name="vulnerableAsset",
+                fields=["... on VulnerableAssetBase { id type name }"],
+            ),
+        ]
+
+    def build_query(self) -> SingleJson:
+        """Builds the GraphQL query payload for listing vulnerability findings."""
+        filter_var = Variable(name="filterBy", type="VulnerabilityFindingFilters")
+        first_var = Variable(name="first", type="Int")
+
+        query = Query(
+            name="vulnerabilityFindings",
+            arguments=[
+                Argument(name="filterBy", value=filter_var),
+                Argument(name="first", value=first_var),
+            ],
+            fields=self.build_fields(),
+        )
+
+        operation = Operation(
+            type="query",
+            name="VulnerabilityFindingsPage",
+            variables=[filter_var, first_var],
+            queries=[query],
+        )
+
+        filter_by = {
+            "vulnerableAsset": {"name": {"equals": self.resource_name}}
+        }
+        if self.severity:
+            filter_by["severity"] = self.severity
+        if self.has_fix is not None:
+            filter_by["hasFix"] = self.has_fix
+        if self.has_exploit is not None:
+            filter_by["hasExploit"] = self.has_exploit
+        if self.cve_ids:
+            filter_by["vulnerabilityExternalIdV2"] = self.cve_ids
+        if self.related_issue_severity:
+            filter_by["relatedIssueSeverity"] = self.related_issue_severity
+
+        return {
+            "query": operation.render(),
+            "variables": {
+                "first": self.first,
+                "filterBy": filter_by,
+            },
         }

@@ -14,19 +14,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 import copy
+from typing import TYPE_CHECKING
 
 import pytest
+
 from wiz.core import constants
 from wiz.core.exceptions import InvalidCredsError, IssueNotFoundError
+
 from . import common
 
 if TYPE_CHECKING:
-    from wiz.core.api_client import WizApiClient
-    from wiz.core.datamodels import Issue
     from tests.core.product import Wiz
     from tests.core.session import WizSession
+
+    from wiz.core.api_client import WizApiClient
+    from wiz.core.datamodels import Issue
 
 
 ISSUE: Issue = common.ISSUE
@@ -42,6 +45,8 @@ class TestApiManager:
         script_session: WizSession,
     ) -> None:
         """Test ping success.
+
+
 
         Verify that the test_connectivity method successfully pings the Wiz API and
         returns a 200 status code.
