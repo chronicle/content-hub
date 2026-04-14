@@ -220,8 +220,9 @@ def list_custom_fields(
         params["$filter"] = filter_
 
     custom_fields = []
+    has_more_pages = True
 
-    while True:
+    while has_more_pages:
         response = chronicle_soar.session.get(url=url, params=params)
 
         try:
@@ -238,10 +239,12 @@ def list_custom_fields(
         next_page_token = res_json.get("nextPageToken")
         total_size = res_json.get("totalSize")
 
-        if not next_page_token or (total_size is not None and len(custom_fields) >= total_size):
-            break
+        has_more_pages = bool(next_page_token) and (
+            total_size is None or len(custom_fields) < total_size
+        )
 
-        params["pageToken"] = next_page_token
+        if has_more_pages:
+            params["pageToken"] = next_page_token
 
     return custom_fields
 
