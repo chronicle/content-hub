@@ -201,23 +201,28 @@ class VulnerabilityFindingsQueryBuilder:
     related_issue_severity: list[str] | None = None
     first: int = 100
 
-    def build_fields(self) -> list[str | Field]:
+    def build_fields(self) -> list[Field]:
         """Build the fields required in the vulnerability findings query."""
         return [
-            "id",
-            "portalUrl",
-            "name",
-            "CVEDescription",
-            "CVSSSeverity",
-            "score",
-            "severity",
-            "status",
-            "hasExploit",
-            "remediation",
             Field(
-                name="vulnerableAsset",
-                fields=["... on VulnerableAssetBase { id type name }"],
-            ),
+                name="nodes",
+                fields=[
+                    "id",
+                    "portalUrl",
+                    "name",
+                    "CVEDescription",
+                    "CVSSSeverity",
+                    "score",
+                    "severity",
+                    "status",
+                    "hasExploit",
+                    "remediation",
+                    Field(
+                        name="vulnerableAsset",
+                        fields=["... on VulnerableAssetBase { id type name }"],
+                    ),
+                ],
+            )
         ]
 
     def build_query(self) -> SingleJson:
