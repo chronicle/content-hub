@@ -31,6 +31,8 @@ LIST_RESOURCE_VULNERABILITY_FINDINGS_SCRIPT_NAME: str = (
     f"{INTEGRATION_NAME} - List Resource Vulnerability Findings"
 )
 
+DEFAULT_MAX_FINDINGS: int = 500
+
 
 ENDPOINTS: Mapping[str, str] = {
     "graphql": "/graphql",
