@@ -247,7 +247,7 @@ class VulnerabilityFindingsQueryBuilder:
         )
 
         filter_by = {
-            "vulnerableAsset": {"name": {"equals": self.resource_name}}
+            "assetName": {"equals": self.resource_name}
         }
         if self.severity:
             filter_by["severity"] = self.severity

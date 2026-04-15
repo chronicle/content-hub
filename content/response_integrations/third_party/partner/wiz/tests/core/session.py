@@ -68,9 +68,8 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
         """Handle get vulnerability findings request's response."""
         variables = request.kwargs["json"].get("variables", {})
         filter_by = variables.get("filterBy", {})
-        vulnerable_asset = filter_by.get("vulnerableAsset", {})
-        name_filter = vulnerable_asset.get("name", {})
-        resource_name = name_filter.get("equals")
+        asset_name_filter = filter_by.get("assetName", {})
+        resource_name = asset_name_filter.get("equals")
 
         vulns = self._product.get_vulnerabilities(resource_name)
 
