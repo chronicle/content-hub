@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -8,6 +9,14 @@ from TIPCommon.base.job.job_case import JobCase, JobStatusResult, SyncMetadata
 from TIPCommon.data_models import AlertCard
 from TIPCommon.types import SingleJson, SyncItem
 
+from ..core.constants import (
+    CLASSIFICATION_FALSE_POSITIVE,
+    CLASSIFICATION_OTHER,
+    CLASSIFICATION_TRUE_POSITIVE,
+    REASON_MALICIOUS,
+    REASON_NOT_MALICIOUS,
+    REASON_RESOLVED_IN_PAGERDUTY,
+)
 from ..core.PagerDutyManager import PagerDutyManager
 
 
@@ -20,6 +29,9 @@ def is_uuid(value: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+ENTITY_TYPE_ALERT = 2
 
 
 class SyncIncidents(BaseSyncJob[PagerDutyManager]):
@@ -37,8 +49,13 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         Returns:
             PagerDutyManager: The initialized API client.
         """
-        api_key: str = self.params.api_key
-        return PagerDutyManager(api_key=api_key)
+        verify_ssl: bool = getattr(self.params, "verify_ssl", True)
+        from_email: str | None = getattr(self.params, "from_email", None)
+        return PagerDutyManager(
+            api_key=self.params.api_key,
+            verify_ssl=verify_ssl,
+            from_email=from_email,
+        )
 
     def _extract_product_id_from_alert(self, alert: AlertCard) -> str | None:
         """Extracts PagerDuty Incident ID from a single alert.
@@ -54,19 +71,18 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
 
         if hasattr(alert, "alert_group_identifier") and alert.alert_group_identifier:
             val: str | None = self.soar_job.get_context_property(
-                2,  # ENTITY_TYPE
+                ENTITY_TYPE_ALERT,
                 alert.alert_group_identifier,
-                "Alert_ID",  # CONTEXT_ALERT_ID_FIELD
+                "Alert_ID",
             )
             if val:
                 return val
-                
-        # Fallback: Extract from alert identifier if it ends with _<ID>
+
         if hasattr(alert, "identifier") and alert.identifier:
             parts: list[str] = alert.identifier.split("_")
             if len(parts) > 1:
                 potential_id: str = parts[-1]
-                if not is_uuid(potential_id) and potential_id.isalnum():
+                if re.match(r"^[A-Z0-9]{14}$", potential_id):
                     self.logger.info(
                         f"Extracted incident ID {potential_id} from alert identifier "
                         f"{alert.identifier}"
@@ -89,7 +105,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             incident_id: str | None = self._extract_product_id_from_alert(alert)
             if incident_id:
                 incident_ids.append(incident_id)
-                
+
         return incident_ids
 
     def map_product_data_to_case(self, job_case: JobCase) -> None:
@@ -103,7 +119,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             if incident_id:
                 try:
                     incident: SingleJson = self.api_client.get_incident(incident_id)
-                    
+
                     job_case.alert_metadata[alert.identifier] = SyncMetadata(
                         status=incident.get("status"),
                         incident_number=incident_id,
@@ -121,53 +137,70 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             job_case (JobCase): The case to sync status for.
         """
         res: JobStatusResult = job_case.get_status_to_sync("resolved")
-        
+
         synced_to_remove: list[tuple[str, str]] = []
-        
-        # 1. Synchronise PagerDuty with Google SecOps Alerts statuses (SOAR to PagerDuty)
+
         for req in res.incidents_to_close_in_product:
             incident_id: str = req["meta"].incident_number
             alert: AlertCard = req["alert"]
-            
-            reason: str = "Other"
+
+            reason: str = CLASSIFICATION_OTHER
             if hasattr(alert, "closure_details") and alert.closure_details:
-                reason = alert.closure_details.get("reason", "Other")
-                
-            classification: str = "Other"
-            if reason == "Malicious":
-                classification = "True Positive"
-            elif reason == "Not Malicious":
-                classification = "False Positive"
-                
+                reason = alert.closure_details.get("reason", CLASSIFICATION_OTHER)
+
+            classification: str = CLASSIFICATION_OTHER
+            if reason == REASON_MALICIOUS:
+                classification = CLASSIFICATION_TRUE_POSITIVE
+            elif reason == REASON_NOT_MALICIOUS:
+                classification = CLASSIFICATION_FALSE_POSITIVE
+
             try:
-                self.api_client.add_incident_note(incident_id, f"Classification: {classification}")
+                note_content = (
+                    f"Classification: {classification}\n"
+                    f"Incident closed from Google SecOps"
+                )
+                self.api_client.add_incident_note(incident_id, note_content)
                 self.api_client.resolve_incident(incident_id)
-                self.logger.info(f"Resolved PagerDuty incident {incident_id} with classification {classification}")
-                
+                self.logger.info(
+                    f"Resolved PagerDuty incident {incident_id} "
+                    f"with classification {classification}"
+                )
+
                 if alert.status.lower() == "close":
-                    synced_to_remove.append((str(job_case.case_detail.id_), incident_id))
-                    
+                    synced_to_remove.append(
+                        (str(job_case.case_detail.id_), incident_id)
+                    )
+
             except Exception as e:
                 self.logger.error(
                     f"Failed to resolve PagerDuty incident {incident_id}: {e}"
                 )
-                
-        # 2. Synchronise Google SecOps Alerts with Pagerduty Incidents (PagerDuty to SOAR)
+
         for alert, meta in res.alerts_to_close_in_soar:
-            reason_soar = "Resolved in PagerDuty"
-            
+            reason_soar = REASON_RESOLVED_IN_PAGERDUTY
+
             try:
-                open_alerts = [a for a in job_case.case_detail.alerts if a.status.lower() == "open"]
-                if len(open_alerts) == 1 and open_alerts[0].identifier == alert.identifier:
-                    # It's the last open alert! Close the case.
+                open_alerts = [
+                    a for a in job_case.case_detail.alerts if a.status.lower() == "open"
+                ]
+                if (
+                    len(open_alerts) == 1
+                    and open_alerts[0].identifier == alert.identifier
+                ):
                     self.soar_job.close_case(
-                        root_cause="Other",
+                        root_cause=CLASSIFICATION_OTHER,
                         case_id=job_case.case_detail.id_,
                         reason=reason_soar,
-                        comment=f"Closed case because last alert {alert.identifier} was resolved in PagerDuty.",
+                        comment=(
+                            f"Closed case because last alert {alert.identifier} was "
+                            "resolved in PagerDuty."
+                        ),
                         alert_identifier=None,
                     )
-                    self.logger.info(f"Closed case {job_case.case_detail.id_} as it was the last open alert.")
+                    self.logger.info(
+                        f"Closed case {job_case.case_detail.id_} as it was the last "
+                        "open alert."
+                    )
                 else:
                     self.sync_product_status_to_case(
                         case_id=job_case.case_detail.id_,
@@ -176,16 +209,18 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         root_cause="Other",
                         comment=f"PagerDuty incident {meta.incident_number} was resolved.",
                     )
-                
+
                 if meta.status == "resolved":
-                    synced_to_remove.append((str(job_case.case_detail.id_), meta.incident_number))
+                    synced_to_remove.append(
+                        (str(job_case.case_detail.id_), meta.incident_number)
+                    )
             except Exception as e:
                 self.logger.error(
                     f"Failed to close alert {alert.identifier} or case in SecOps: {e}"
                 )
 
-        # Remove synced entries if closed on either side
         self._remove_synced_entries(synced_to_remove)
+        self.logger.info(f"Case {job_case.case_detail.id_} successfully synced.")
 
     def sync_comments(self, job_case: JobCase) -> None:
         """Syncs comments.
@@ -229,7 +264,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         Returns:
             bool: True if closed, False otherwise.
         """
-        # Assume product is SyncMetadata or similar
+
         if isinstance(product, SyncMetadata):
             return product.status == "resolved"
         return False
@@ -243,7 +278,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             job_case (JobCase): The case.
             product_details (Any): The product details.
         """
-        # Handled in sync_status directly or via _remove_synced_entries
+
         pass
 
 
@@ -253,4 +288,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

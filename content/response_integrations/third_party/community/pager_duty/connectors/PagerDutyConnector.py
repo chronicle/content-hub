@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 import sys
-import uuid
 from typing import Any
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
@@ -14,6 +13,7 @@ from soar_sdk.SiemplifyUtils import (
 )
 from TIPCommon.types import SingleJson
 
+from ..core.constants import SEVERITY_HIGH, SEVERITY_LOW
 from ..core.PagerDutyManager import PagerDutyManager
 
 CONNECTOR_NAME = "PagerDuty"
@@ -23,8 +23,8 @@ PRODUCT = "PagerDuty"
 
 @output_handler
 def main(is_test_run: bool) -> None:
-    processed_alerts: list[AlertInfo] = []  # The main output of each connector run
-    siemplify = SiemplifyConnectorExecution()  # Siemplify main SDK wrapper
+    processed_alerts: list[AlertInfo] = []
+    siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
 
     if is_test_run:
@@ -34,16 +34,21 @@ def main(is_test_run: bool) -> None:
 
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
-    api_key = siemplify.extract_connector_param(param_name="apiKey")
-    acknowledge_enabled = siemplify.extract_connector_param(param_name="acknowledge")
-    max_hours_backwards = siemplify.extract_connector_param(
-        param_name="max_hours_backwards",
-        input_type=int, default_value=24,
+    api_key: str = siemplify.extract_connector_param(param_name="apiKey")
+    acknowledge_enabled: str = siemplify.extract_connector_param(
+        param_name="acknowledge"
     )
-    services = siemplify.extract_connector_param(param_name="Services")
-    proxy_address = siemplify.extract_connector_param(param_name="Proxy Server Address")
-    proxy_username = siemplify.extract_connector_param(param_name="Proxy Username")
-    proxy_password = siemplify.extract_connector_param(param_name="Proxy Password")
+    max_hours_backwards: int = siemplify.extract_connector_param(
+        param_name="max_hours_backwards",
+        input_type=int,
+        default_value=24,
+    )
+    services: str = siemplify.extract_connector_param(param_name="Services")
+    proxy_address: str = siemplify.extract_connector_param(
+        param_name="Proxy Server Address"
+    )
+    proxy_username: str = siemplify.extract_connector_param(param_name="Proxy Username")
+    proxy_password: str = siemplify.extract_connector_param(param_name="Proxy Password")
 
     siemplify.LOGGER.info("------------------- Main - Started -------------------")
     manager = PagerDutyManager(
@@ -55,13 +60,17 @@ def main(is_test_run: bool) -> None:
 
     try:
         time_diff: datetime.timedelta = datetime.timedelta(hours=max_hours_backwards)
-        since: str = (datetime.datetime.utcnow() - time_diff).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        since: str = (
+            datetime.datetime.now(datetime.timezone.utc) - time_diff
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
         params: dict[str, Any] = {"since": since}
         if services:
-            params["service_ids[]"] = [s.strip() for s in services.split(",") if s.strip()]
-        incidents_list: list[SingleJson] = manager.list_filtered_incidents(params=params)
+            params["service_ids[]"] = [
+                s.strip() for s in services.split(",") if s.strip()
+            ]
+        incidents_list: list[SingleJson] = manager.list_filtered_incidents(
+            params=params
+        )
         if incidents_list is None:
             siemplify.LOGGER.info(
                 "No events were retrieved for the specified timeframe from PagerDuty",
@@ -69,16 +78,16 @@ def main(is_test_run: bool) -> None:
             return
         siemplify.LOGGER.info(f"Retrieved {len(incidents_list)} events from PagerDuty")
         for incident in incidents_list:
-            alert_id = incident["incident_key"]
-            # Map the severity in PagerDuty to the severity levels in Siemplify
-            severity = get_siemplify_mapped_severity(incident["urgency"])
+            alert_id: str = incident["incident_key"]
 
-            siemplify_alert = build_alert_info(siemplify, incident, severity)
+            severity: str | None = get_siemplify_mapped_severity(incident["urgency"])
+
+            siemplify_alert: AlertInfo = build_alert_info(siemplify, incident, severity)
 
             if siemplify_alert:
                 processed_alerts.append(siemplify_alert)
                 siemplify.LOGGER.info(f"Added incident {alert_id} to package results")
-                # `acknowledge_enabled` is a str, hence the str comparison below
+
                 if acknowledge_enabled:
                     incident_got = manager.acknowledge_incident(incident["id"])
                     siemplify.LOGGER.info(
@@ -94,17 +103,19 @@ def main(is_test_run: bool) -> None:
     siemplify.return_package(processed_alerts)
 
 
-def get_siemplify_mapped_severity(severity):
-    severity_map = {"high": "100", "low": "-1"}
-    return severity_map.get(severity)
+def get_siemplify_mapped_severity(severity: str) -> str | None:
+    severity_map: dict[str, str] = {"high": SEVERITY_HIGH, "low": SEVERITY_LOW}
+    return severity_map.get(severity.lower()) if severity else None
 
 
-def build_alert_info(siemplify, incident, severity):
+def build_alert_info(
+    siemplify: SiemplifyConnectorExecution, incident: SingleJson, severity: str | None
+) -> AlertInfo:
     """Returns an alert, which is an aggregation of basic events."""
-    alert_info = AlertInfo()
+    alert_info: AlertInfo = AlertInfo()
     alert_info.display_id = incident["id"]
-    alert_info.ticket_id = str(uuid.uuid4())
-    alert_info.name = "PagerDuty Incident: " + incident["title"]
+    alert_info.ticket_id = incident["id"]
+    alert_info.name = f"PagerDuty Incident: {incident['title']}"
     alert_info.rule_generator = incident["first_trigger_log_entry"]["summary"]
     alert_info.start_time = convert_string_to_unix_time(incident["created_at"])
     alert_info.end_time = alert_info.start_time
