@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import datetime
 import sys
 import uuid
+from typing import Any
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
@@ -10,6 +12,7 @@ from soar_sdk.SiemplifyUtils import (
     dict_to_flat,
     output_handler,
 )
+from TIPCommon.types import SingleJson
 
 from ..core.PagerDutyManager import PagerDutyManager
 
@@ -19,8 +22,8 @@ PRODUCT = "PagerDuty"
 
 
 @output_handler
-def main(is_test_run):
-    processed_alerts = []  # The main output of each connector run
+def main(is_test_run: bool) -> None:
+    processed_alerts: list[AlertInfo] = []  # The main output of each connector run
     siemplify = SiemplifyConnectorExecution()  # Siemplify main SDK wrapper
     siemplify.script_name = CONNECTOR_NAME
 
@@ -33,12 +36,32 @@ def main(is_test_run):
 
     api_key = siemplify.extract_connector_param(param_name="apiKey")
     acknowledge_enabled = siemplify.extract_connector_param(param_name="acknowledge")
+    max_hours_backwards = siemplify.extract_connector_param(
+        param_name="max_hours_backwards",
+        input_type=int, default_value=24,
+    )
+    services = siemplify.extract_connector_param(param_name="Services")
+    proxy_address = siemplify.extract_connector_param(param_name="Proxy Server Address")
+    proxy_username = siemplify.extract_connector_param(param_name="Proxy Username")
+    proxy_password = siemplify.extract_connector_param(param_name="Proxy Password")
 
     siemplify.LOGGER.info("------------------- Main - Started -------------------")
-    manager = PagerDutyManager(api_key)
+    manager = PagerDutyManager(
+        api_key=api_key,
+        proxy_address=proxy_address,
+        proxy_username=proxy_username,
+        proxy_password=proxy_password,
+    )
 
     try:
-        incidents_list = manager.list_incidents()
+        time_diff: datetime.timedelta = datetime.timedelta(hours=max_hours_backwards)
+        since: str = (datetime.datetime.utcnow() - time_diff).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        params: dict[str, Any] = {"since": since}
+        if services:
+            params["service_ids[]"] = [s.strip() for s in services.split(",") if s.strip()]
+        incidents_list: list[SingleJson] = manager.list_filtered_incidents(params=params)
         if incidents_list is None:
             siemplify.LOGGER.info(
                 "No events were retrieved for the specified timeframe from PagerDuty",
@@ -57,7 +80,7 @@ def main(is_test_run):
                 siemplify.LOGGER.info(f"Added incident {alert_id} to package results")
                 # `acknowledge_enabled` is a str, hence the str comparison below
                 if acknowledge_enabled:
-                    incident_got = manager.acknowledge_incident(alert_id)
+                    incident_got = manager.acknowledge_incident(incident["id"])
                     siemplify.LOGGER.info(
                         f"Incident {incident_got} acknowledged in PagerDuty",
                     )
