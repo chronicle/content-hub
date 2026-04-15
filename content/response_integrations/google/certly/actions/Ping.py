@@ -16,19 +16,31 @@ from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from ..core.CertlyManager import CertlyManager
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    conf = siemplify.get_configuration("Certly")
-    api_token = conf["Api Token"]
-    api_url = conf["Api Root"]
-    certly = CertlyManager(api_token, api_url)
 
-    connectivity = certly.test_connectivity()
-    output_message = "Connected Successfully"
-    siemplify.end(output_message, connectivity)
+    try:
+        conf = siemplify.get_configuration("Certly")
+        api_token = conf["Api Token"]
+        api_url = conf["Api Root"]
+        verify_ssl = conf.get("Verify SSL", "true").lower() == "true"
+        certly = CertlyManager(api_token, api_url, verify_ssl=verify_ssl)
+
+        certly.test_connectivity()
+
+        output_message = "Successfully connected to the Certly server with the provided connection parameters!"
+        result_value = True
+        status = EXECUTION_STATE_COMPLETED
+    except Exception as err:
+        output_message = f"Failed to connect to the Certly server! Error is {err}"
+        result_value = False
+        status = EXECUTION_STATE_FAILED
+
+    siemplify.end(output_message, result_value, status)
 
 
 if __name__ == "__main__":

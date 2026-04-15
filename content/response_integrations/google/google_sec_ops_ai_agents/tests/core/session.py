@@ -2,8 +2,8 @@ from __future__ import annotations
 import re
 import json
 import pathlib
-from typing import Iterable, TYPE_CHECKING
-from integration_testing import router
+from typing import Iterable, TYPE_CHECKING, Any
+from integration_testing.router import get, post
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
@@ -26,7 +26,8 @@ class GoogleSecOpsAiAgentsSession(
 ):
   """GoogleSecOpsAiAgents mock session"""
 
-  def get_routed_functions(self) -> Iterable[RouteFunction]:
+  def get_routed_functions(self) -> list[RouteFunction]:
+    """Get routed functions for the mock session"""
     return [
         self.list_investigations,
         self.trigger_investigation,
@@ -34,7 +35,7 @@ class GoogleSecOpsAiAgentsSession(
         self.get_full_details,
     ]
 
-  @router.get(r".*/investigations$")
+  @get(r".*/investigations$")
   def list_investigations(self, request: MockRequest) -> MockResponse:
     """Route list_investigations requests"""
     if self._product._fail_requests_active:
@@ -52,7 +53,7 @@ class GoogleSecOpsAiAgentsSession(
 
     return MockResponse(content={"investigations": []})
 
-  @router.post(r".*/investigations:trigger$")
+  @post(r".*/investigations:trigger$")
   def trigger_investigation(self, request: MockRequest) -> MockResponse:
     """Route trigger_investigation requests"""
     if self._product._fail_requests_active:
@@ -64,7 +65,7 @@ class GoogleSecOpsAiAgentsSession(
       return MockResponse(content=investigation)
     return MockResponse(content={}, status_code=400)
 
-  @router.get(INVESTIGATION_REGEX)
+  @get(INVESTIGATION_REGEX)
   def get_investigation_status(self, request: MockRequest) -> MockResponse:
     """Route get_investigation_status requests"""
     if self._product._fail_requests_active:
@@ -78,7 +79,7 @@ class GoogleSecOpsAiAgentsSession(
         return MockResponse(content=status)
     return MockResponse(content={}, status_code=404)
 
-  @router.post(r".*/AlertFullDetails$")
+  @post(r".*/AlertFullDetails$")
   def get_full_details(self, _: MockRequest) -> MockResponse:
     FULL_ALERT_DATA["additional_properties"]["SiemAlertId"] = "alert-123"
     return MockResponse(content=FULL_ALERT_DATA)

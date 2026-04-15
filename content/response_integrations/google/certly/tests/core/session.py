@@ -46,12 +46,8 @@ class CertlySession(MockSession[MockRequest, MockResponse, Certly]):
 
     def _do_request(self, method, request):
         """Override to return a default response for unmatched routes.
-
-        Returns a default response for any HTTP call not matched by a
-        specific @router route. The response shape (dict vs list) is
-        determined at generation time based on how the integration's
-        test_connectivity method consumes the response.
         """
+        print(f"DEBUG: MockSession handling {method} {request.url}")
         if self._product._fail_requests_active:
             return MockResponse(
                 content={"error": "Simulated API failure"},

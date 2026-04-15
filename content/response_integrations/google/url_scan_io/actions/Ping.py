@@ -44,7 +44,7 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    output_message = "Connection Established"
+    output_message = "Successfully connected to the UrlScanIo server with the provided connection parameters!"
     result_value = True
     status = EXECUTION_STATE_COMPLETED
 
@@ -56,7 +56,7 @@ def main():
             force_check_connectivity=True,
         )
     except Exception as err:
-        output_message = f"Connection Failed. Reason: {err}"
+        output_message = f"Failed to connect to the UrlScanIo server! Error is {err}"
         result_value = False
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

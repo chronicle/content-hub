@@ -16,23 +16,30 @@ from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from ..core.ShodanManager import ShodanManager
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
 
-    conf = siemplify.get_configuration("Shodan")
-    verify_ssl = conf.get("Verify SSL", "False").lower() == "true"
-    api_key = conf.get("API key", "")
-    shodan = ShodanManager(api_key, verify_ssl=verify_ssl)
+    try:
+        conf = siemplify.get_configuration("Shodan")
+        verify_ssl = conf.get("Verify SSL", "False").lower() == "true"
+        api_key = conf.get("API key", "")
+        shodan = ShodanManager(api_key, verify_ssl=verify_ssl)
 
-    shodan.test_connectivity()
+        shodan.test_connectivity()
 
-    output_message = "Connection Established"
-    result_value = "true"
+        output_message = "Successfully connected to the Shodan server with the provided connection parameters!"
+        result_value = True
+        status = EXECUTION_STATE_COMPLETED
+    except Exception as err:
+        output_message = f"Failed to connect to the Shodan server! Error is {err}"
+        result_value = False
+        status = EXECUTION_STATE_FAILED
 
-    siemplify.end(output_message, result_value)
+    siemplify.end(output_message, result_value, status)
 
 
 if __name__ == "__main__":
