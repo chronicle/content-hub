@@ -92,19 +92,25 @@ def _build_output_message(
     message_parts = []
 
     if successful:
-        message_parts.append(f"Successfully enriched {len(successful)} certificate(s) from Censys.")
+        message_parts.append(
+            f"Successfully enriched {len(successful)} certificate(s) from Censys."
+        )
 
     if not_found:
         entities_str = ", ".join(not_found[:5])
         if len(not_found) > 5:
             entities_str += f" and {len(not_found) - 5} more"
-        message_parts.append(f"{len(not_found)} certificate(s) not found in Censys: {entities_str}")
+        message_parts.append(
+            f"{len(not_found)} certificate(s) not found in Censys: {entities_str}"
+        )
 
     if failed:
         entities_str = ", ".join(failed[:5])
         if len(failed) > 5:
             entities_str += f" and {len(failed) - 5} more"
-        message_parts.append(f"{len(failed)} certificate(s) failed to process: {entities_str}")
+        message_parts.append(
+            f"{len(failed)} certificate(s) failed to process: {entities_str}"
+        )
 
     if invalid:
         entities_str = ", ".join(invalid[:5])
@@ -178,7 +184,9 @@ def main():
             siemplify.end(output_message, RESULT_VALUE_TRUE, EXECUTION_STATE_COMPLETED)
             return
 
-        siemplify.LOGGER.info(f"Found {len(cert_entities)} certificate entities to process")
+        siemplify.LOGGER.info(
+            f"Found {len(cert_entities)} certificate entities to process"
+        )
 
         # Extract and validate certificate IDs
         certificate_ids = [entity.identifier for entity in cert_entities]
@@ -242,23 +250,29 @@ def main():
                 enrichment_data = cert_model.get_enrichment_data()
 
                 if not enrichment_data:
-                    siemplify.LOGGER.info(f"No enrichment data available for {entity_identifier}")
+                    siemplify.LOGGER.info(
+                        f"No enrichment data available for {entity_identifier}"
+                    )
                     not_found_entities.append(entity_identifier)
                     continue
 
                 # Remove old certificate enrichment data
                 remove_certificate_enrichment(entity)
-                siemplify.LOGGER.info(f"Removed old certificate enrichment for {entity_identifier}")
+                siemplify.LOGGER.info(
+                    f"Removed old certificate enrichment for {entity_identifier}"
+                )
 
                 entity.additional_properties.update(enrichment_data)
                 entity.is_enriched = True
 
                 # Store results
                 successful_entities.append(entity_identifier)
-                json_results.append({
-                    "Entity": entity_identifier,
-                    "EntityResult": cert_model.to_json(),
-                })
+                json_results.append(
+                    {
+                        "Entity": entity_identifier,
+                        "EntityResult": cert_model.to_json(),
+                    }
+                )
 
                 siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
 
@@ -270,7 +284,8 @@ def main():
 
     except ValueError as e:
         output_message = (
-            f"Invalid parameter value: {str(e)}\nPlease verify your input parameters and try again."
+            f"Invalid parameter value: {str(e)}"
+            "\nPlease verify your input parameters and try again."
         )
         siemplify.LOGGER.error(output_message)
         status = EXECUTION_STATE_FAILED
@@ -279,7 +294,11 @@ def main():
     except ValidationException as e:
         error_detail = str(e)
         cert_list = ", ".join(certificate_ids[:10])
-        more_text = f" and {len(certificate_ids) - 10} more" if len(certificate_ids) > 10 else ""
+        more_text = (
+            f" and {len(certificate_ids) - 10} more"
+            if len(certificate_ids) > 10
+            else ""
+        )
 
         output_message = (
             f"Validation error occurred while processing "
@@ -294,7 +313,9 @@ def main():
         result_value = RESULT_VALUE_FALSE
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_CERTIFICATES_SCRIPT_NAME, e)
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
+            ENRICH_CERTIFICATES_SCRIPT_NAME, e
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
