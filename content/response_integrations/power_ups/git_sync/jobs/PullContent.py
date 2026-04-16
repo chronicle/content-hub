@@ -244,6 +244,8 @@ def main():
                     else CaseCloseReasons.from_legacy_or_1p(current_cause).to_legacy()
                 )
 
+                if "forCloseReason" in cause: # QA fixes
+                    current_cause["forCloseReason"] = cause["forCloseReason"]
                 gitsync.api.add_close_reason(siemplify, current_cause)
 
 
@@ -363,11 +365,11 @@ def main():
         if features["SLA Records"]:
             siemplify.LOGGER.info("Installing SLA definition")
             for definition in gitsync.content.get_sla_definitions():
-                definition = (
-                    SlaDefinition.from_legacy_or_1p(definition).to_1p()
-                    if platform_supports_1p_api()
-                    else SlaDefinition.from_legacy_or_1p(definition).to_legacy()
-                )
+                # definition = (
+                #     SlaDefinition.from_legacy_or_1p(definition).to_1p()
+                #     if platform_supports_1p_api()
+                #     else SlaDefinition.from_legacy_or_1p(definition).to_legacy()
+                # ) #QA fixes need to remove the commented line
                 gitsync.api.update_sla_record(siemplify, definition)
 
         if features["Logo"]:

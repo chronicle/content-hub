@@ -252,7 +252,7 @@ class GitSyncManager:
                     (
                         x
                         for x in integration_cards
-                        if x["name"] == script["name"] and x["type"] == script["type"]
+                        if x.get("name") == script["name"] and x.get("type") == script["type"]
                     ),
                     None,
                 )
@@ -431,7 +431,7 @@ class GitSyncManager:
                 (
                     x
                     for x in integration_cards
-                    if x["type"] == 2 and x["name"] == job.name
+                    if x.get("type") == 2 and x.get("name") == job.name
                 ),
                 None,
             )

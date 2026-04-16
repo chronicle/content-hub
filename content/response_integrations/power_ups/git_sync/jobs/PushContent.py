@@ -118,7 +118,9 @@ def main():
                                 f"Block '{block_step.get('name')}' not found in installed playbooks. Assuming it's a "
                                 f"custom block."
                             )
-                            block_definition = block_step
+                            #QA Fixes
+                            # block_definition = block_step
+                            continue
                         else:
                             block_definition = gitsync.api.get_playbook(
                                 chronicle_soar=siemplify,
