@@ -14,8 +14,9 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
+
+import yaml
 
 from TIPCommon.base.job import Job
 from TIPCommon.extraction import extract_configuration_param
@@ -114,18 +115,18 @@ class SyncIntegrationCredentialJob(Job):
         self.logger.info("Credential sync completed.")
 
     def _parse_credential_mapping(self) -> None:
-        """Parse the Credential Mapping JSON string.
+        """Parse the Credential Mapping JSON/YAML string.
 
         Raises:
-            ValueError: If the JSON string is invalid.
+            InvalidConfigurationError: If the YAML/JSON string is invalid.
         """
         try:
-            self.credential_mapping: SingleJson = json.loads(
+            self.credential_mapping: SingleJson = yaml.safe_load(
                 self.params.credential_mapping
-            )
-        except json.JSONDecodeError as e:
+            ) or {}
+        except yaml.YAMLError as e:
             raise InvalidConfigurationError(
-                f"Invalid Credential Mapping JSON: {e}"
+                f"Invalid Credential Mapping syntax: {e}"
             ) from e
 
     def _resolve_secret_and_version(self, mapped_value: str) -> tuple[str, str]:
@@ -283,6 +284,7 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
         """
         for param_name, mapped_value in param_mapping.items():
+            secret_id = str(mapped_value)
             try:
                 secret_id, version_id = self._resolve_secret_and_version(mapped_value)
                 secret_value: str = self.secret_manager_client.get_secret_value(
@@ -409,6 +411,7 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
         """
         for param_name, mapped_value in param_mapping.items():
+            secret_id = str(mapped_value)
             try:
                 secret_id, version_id = self._resolve_secret_and_version(mapped_value)
                 secret_value: str = self.secret_manager_client.get_secret_value(
@@ -694,6 +697,7 @@ class SyncIntegrationCredentialJob(Job):
                 )
                 continue
 
+            secret_id = str(mapped_value)
             try:
                 secret_id, version_id = self._resolve_secret_and_version(mapped_value)
                 secret_value: str = self.secret_manager_client.get_secret_value(
