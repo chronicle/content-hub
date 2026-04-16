@@ -23,6 +23,7 @@ from .GoogleSecretManagerClient import GoogleSecretManagerClient
 from .GoogleSecretManagerConstants import (
     PROJECT_ID_PARAM,
     SERVICE_ACCOUNT_JSON_PARAM,
+    VERIFY_SSL_PARAM,
     WORKLOAD_IDENTITY_EMAIL_PARAM,
 )
 
@@ -54,11 +55,20 @@ class GoogleSecretManagerAction(Action, ABC):
             is_mandatory=False,
             print_value=True,
         )
+        verify_ssl = extract_configuration_param(
+            self.soar_action,
+            param_name=VERIFY_SSL_PARAM,
+            default_value=True,
+            input_type=bool,
+            is_mandatory=False,
+            print_value=True,
+        )
 
         self.secret_manager_client = GoogleSecretManagerClient(
             service_account_json=service_account_json,
             project_id=project_id,
             workload_identity_email=workload_identity_email,
+            verify_ssl=verify_ssl,
         )
 
         return self.secret_manager_client

@@ -49,6 +49,7 @@ class GoogleSecretManagerClient:
         service_account_json: str | None = None,
         project_id: str | None = None,
         workload_identity_email: str | None = None,
+        verify_ssl: bool = True,
     ) -> None:
         """Initialize the Google Secret Manager Client.
 
@@ -63,7 +64,9 @@ class GoogleSecretManagerClient:
             project_id (str | None): The Google Cloud Project ID.
             workload_identity_email (str | None): The service account email to
                 impersonate when using Workload Identity / ADC authentication.
+            verify_ssl (bool): Whether to verify the SSL certificate of the API.
         """
+        self.verify_ssl = verify_ssl
         if workload_identity_email:
             self.credentials = self._build_impersonated_credentials(workload_identity_email)
             self.project_id = project_id
@@ -157,8 +160,7 @@ class GoogleSecretManagerClient:
             bool: True if connectivity is successful.
         """
         parent = f"projects/{self.project_id}"
-        # We just want to check if we can list secrets.
-        # page_size=1 is sufficient to verify permissions and connectivity.
+
         try:
             results = self._service_client.list_secrets(
                 request={"parent": parent, "page_size": 1}
