@@ -283,9 +283,11 @@ if [ "$MINIMAL" = true ]; then
             sed -i "s/^${key}: \[\]$/${key}:/" "$file"
             sed -i "/^${key}:/a\\  - \"$value\"" "$file"
         }
-        _add_to_exclusion_list "excluded_names_without_verify_ssl" "$SNAKE_NAME" "$EXCLUSIONS_FILE"
+        # SSL validator uses integration display name (from definition.yaml)
+        _add_to_exclusion_list "excluded_names_without_verify_ssl" "$INTEGRATION_NAME" "$EXCLUSIONS_FILE"
+        # Ping validator uses directory name
         _add_to_exclusion_list "excluded_names_without_ping_message_format" "$SNAKE_NAME" "$EXCLUSIONS_FILE"
-        echo "  ✓ Added $SNAKE_NAME to validator exclusion lists (SSL + Ping)"
+        echo "  ✓ Added $INTEGRATION_NAME / $SNAKE_NAME to validator exclusion lists (SSL + Ping)"
     fi
 fi
 

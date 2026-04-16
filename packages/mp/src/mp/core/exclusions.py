@@ -126,7 +126,7 @@ def get_excluded_names_without_ping_message_format() -> set[str]:
 
     """
     data = _load_exclusions_data()
-    return set(data.get("excluded_names_without_ping_message_format", []))
+    return set(data.get("excluded_names_without_ping_message_format") or [])
 
 
 def get_excluded_connector_names_without_documentation_link() -> set[str]:

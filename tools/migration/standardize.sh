@@ -137,8 +137,17 @@ echo ""
 echo "── Step 3: Remove from validator exclusion lists ──────────────"
 EXCLUSIONS_FILE="$REPO_ROOT/packages/mp/src/mp/core/data/exclusions.yaml"
 if [ -f "$EXCLUSIONS_FILE" ]; then
+    # SSL exclusion uses display name, Ping uses directory name
+    DISPLAY_NAME=$($PYTHON -c "import yaml; print(yaml.safe_load(open('$INTEGRATION_PATH/definition.yaml'))['name'])" 2>/dev/null || echo "$SNAKE_NAME")
     sed -i "/^  - \"$SNAKE_NAME\"$/d" "$EXCLUSIONS_FILE"
-    echo "  ✓ Removed $SNAKE_NAME from exclusion lists"
+    sed -i "/^  - \"$DISPLAY_NAME\"$/d" "$EXCLUSIONS_FILE"
+    # If removing the last entry left a bare "key:" with no value, add [] for valid YAML
+    for key in excluded_names_without_verify_ssl excluded_names_without_ping_message_format; do
+        if grep -q "^${key}:$" "$EXCLUSIONS_FILE"; then
+            sed -i "s/^${key}:$/${key}: []/" "$EXCLUSIONS_FILE"
+        fi
+    done
+    echo "  ✓ Removed $DISPLAY_NAME / $SNAKE_NAME from exclusion lists"
 fi
 
 # ── Step 4: Lint, validate, test ───────────────────────────────────────
