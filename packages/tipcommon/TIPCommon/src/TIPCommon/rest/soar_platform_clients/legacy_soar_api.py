@@ -766,7 +766,7 @@ class LegacySoarApi(BaseSoarApi):
         """Add dynamic environment parameter"""
         endpoint: str = "/settings/AddOrUpdateDynamicParameters"
         payload = {
-            "id": self.params.id,
+            "id": 0, #QA fixes
             "name": self.params.name,
             "type": self.params.type,
             "defaultValue": self.params.default_value,

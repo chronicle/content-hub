@@ -1761,6 +1761,7 @@ def get_env_dynamic_parameters(chronicle_soar: ChronicleSOAR) -> list[SingleJson
     return response_data
 
 
+#QA fixes new
 def add_dynamic_env_param(
     chronicle_soar: ChronicleSOAR,
     param: SingleJson,
@@ -1771,8 +1772,9 @@ def add_dynamic_env_param(
     api_client.params.name = param.get("name")
     api_client.params.display_name = param.get("displayName")
     api_client.params.parameter_type = param.get("parameterType", 0)
+    api_client.params.type = param.get("type", 0)
     api_client.params.default_value = param.get("defaultValue")
-    api_client.params.optional_json = param.get("optionalValuesJson", [])
+    api_client.params.optional_json = param.get("optionalValuesJson", []) or param.get("optionalValues", [])
 
     response = api_client.add_dynamic_env_param()
     return response.json()
@@ -2754,10 +2756,21 @@ def update_connector(
     return response
 
 
+# def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
+#     """Add job."""
+#     api_client = get_soar_client(chronicle_soar)
+#     api_client.params.job = job
+#     response = api_client.add_job()
+#     validate_response(response, validate_json=False)
+#     return response.content
+
+#QA fixes
 def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
     """Add job."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.job = job
+    api_client.params.integration_name = job.get("integration")
+    api_client.params.job_name = job.get("name")
     response = api_client.add_job()
     validate_response(response, validate_json=False)
     return response.content
