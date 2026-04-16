@@ -273,14 +273,18 @@ fi
 if [ "$MINIMAL" = true ]; then
     EXCLUSIONS_FILE="$REPO_ROOT/packages/mp/src/mp/core/data/exclusions.yaml"
     if [ -f "$EXCLUSIONS_FILE" ]; then
-        # Add to SSL exclusion list
-        if ! grep -q "\"$SNAKE_NAME\"" <(grep -A 100 "excluded_names_without_verify_ssl:" "$EXCLUSIONS_FILE" | head -50); then
-            sed -i "/^excluded_names_without_verify_ssl:/a\\  - \"$SNAKE_NAME\"" "$EXCLUSIONS_FILE"
-        fi
-        # Add to Ping message exclusion list
-        if ! grep -q "\"$SNAKE_NAME\"" <(grep -A 100 "excluded_names_without_ping_message_format:" "$EXCLUSIONS_FILE" | head -50); then
-            sed -i "/^excluded_names_without_ping_message_format:/a\\  - \"$SNAKE_NAME\"" "$EXCLUSIONS_FILE"
-        fi
+        # Helper: add entry to a YAML list key, handling both "key: []" and "key:\n  - ..." formats
+        _add_to_exclusion_list() {
+            local key="$1" value="$2" file="$3"
+            if grep -q "\"$value\"" <(grep -A 100 "$key:" "$file" | head -50) 2>/dev/null; then
+                return  # already present
+            fi
+            # Replace "key: []" with "key:" (remove inline empty array) then append entry
+            sed -i "s/^${key}: \[\]$/${key}:/" "$file"
+            sed -i "/^${key}:/a\\  - \"$value\"" "$file"
+        }
+        _add_to_exclusion_list "excluded_names_without_verify_ssl" "$SNAKE_NAME" "$EXCLUSIONS_FILE"
+        _add_to_exclusion_list "excluded_names_without_ping_message_format" "$SNAKE_NAME" "$EXCLUSIONS_FILE"
         echo "  ✓ Added $SNAKE_NAME to validator exclusion lists (SSL + Ping)"
     fi
 fi
