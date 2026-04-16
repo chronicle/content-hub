@@ -47,7 +47,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Initializes the PagerDuty API client.
 
         Returns:
-            PagerDutyManager: The initialized API client.
+            The initialized API client.
         """
         verify_ssl: bool = getattr(self.params, "verify_ssl", True)
         from_email: str | None = getattr(self.params, "from_email", None)
@@ -61,10 +61,10 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Extracts PagerDuty Incident ID from a single alert.
 
         Args:
-            alert (AlertCard): The alert to extract the ID from.
+            alert: The alert to extract the ID from.
 
         Returns:
-            str | None: The extracted PagerDuty Incident ID, or None.
+            The extracted PagerDuty Incident ID, or None.
         """
         if alert.ticket_id is not None and not is_uuid(alert.ticket_id):
             return alert.ticket_id
@@ -95,10 +95,10 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Extracts PagerDuty Incident IDs from the case alerts.
 
         Args:
-            job_case (JobCase): The case containing alerts.
+            job_case: The case containing alerts.
 
         Returns:
-            SyncItem: A list of extracted incident IDs.
+            A list of extracted incident IDs.
         """
         incident_ids: list[str] = []
         for alert in job_case.case_detail.alerts:
@@ -112,7 +112,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Maps product data to the case.
 
         Args:
-            job_case (JobCase): The case to map data to.
+            job_case: The case to map data to.
         """
         for alert in job_case.case_detail.alerts:
             incident_id: str | None = self._extract_product_id_from_alert(alert)
@@ -134,7 +134,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Syncs status between PagerDuty and SecOps.
 
         Args:
-            job_case (JobCase): The case to sync status for.
+            job_case: The case to sync status for.
         """
         res: JobStatusResult = job_case.get_status_to_sync("resolved")
 
@@ -176,12 +176,16 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                     f"Failed to resolve PagerDuty incident {incident_id}: {e}"
                 )
 
+        closed_alert_ids: set[str] = set()
         for alert, meta in res.alerts_to_close_in_soar:
             reason_soar = REASON_RESOLVED_IN_PAGERDUTY
 
             try:
                 open_alerts = [
-                    a for a in job_case.case_detail.alerts if a.status.lower() == "open"
+                    a
+                    for a in job_case.case_detail.alerts
+                    if a.status.lower() == "open"
+                    and a.identifier not in closed_alert_ids
                 ]
                 if (
                     len(open_alerts) == 1
@@ -209,6 +213,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         root_cause="Other",
                         comment=f"PagerDuty incident {meta.incident_number} was resolved.",
                     )
+                    closed_alert_ids.add(alert.identifier)
 
                 if meta.status == "resolved":
                     synced_to_remove.append(
