@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
+
 import google.auth
 import google.auth.impersonated_credentials
-from google.oauth2 import service_account
 from google.cloud import secretmanager
+from google.oauth2 import service_account
+import yaml
 
 from .GoogleSecretManagerExceptions import (
     ConnectivityError,
@@ -107,10 +108,10 @@ class GoogleSecretManagerClient:
             InvalidConfigurationError: If the JSON is malformed.
         """
         try:
-            info = json.loads(service_account_json)
-        except json.JSONDecodeError as e:
+            info = yaml.safe_load(service_account_json)
+        except yaml.YAMLError as e:
             raise InvalidConfigurationError(
-                f"Invalid Service Account JSON provided: {e}"
+                f"Invalid Service Account YAML/JSON provided: {e}"
             ) from e
 
         credentials = service_account.Credentials.from_service_account_info(info)
