@@ -19,7 +19,7 @@ import os
 from typing import TYPE_CHECKING
 
 import mp.core.unix
-from mp.core import constants
+from mp.core import constants, exclusions
 from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:
@@ -60,6 +60,9 @@ class PingMessageFormatValidation:
         """
         actions_dir = validation_path / constants.ACTIONS_DIR
         if not actions_dir.is_dir():
+            return
+
+        if validation_path.name in exclusions.get_excluded_names_without_ping_message_format():
             return
 
         # Find Ping action file (case-insensitive)
