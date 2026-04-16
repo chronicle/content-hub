@@ -52,13 +52,14 @@ class CertlyManager:
     Responsible for all Certly system operations functionality
     """
 
-    def __init__(self, token, api_root):
+    def __init__(self, token, api_root, verify_ssl=True):
         self._headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
         self.api_token = token
         self.api_root = api_root
+        self.verify_ssl = verify_ssl
 
     def test_connectivity(self):
         """
@@ -74,7 +75,7 @@ class CertlyManager:
         :return: {dict}
         """
         request_url = API_URL.format(self.api_root, urllib.parse.quote(url), self.api_token)
-        r = requests.get(request_url, headers=self._headers)
+        r = requests.get(request_url, headers=self._headers, verify=self.verify_ssl)
         try:
             r.raise_for_status()
         except Exception as error:
