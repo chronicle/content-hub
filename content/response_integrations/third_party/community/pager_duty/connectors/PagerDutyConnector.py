@@ -39,7 +39,7 @@ def main(is_test_run: bool) -> None:
         param_name="acknowledge"
     )
     max_hours_backwards: int = siemplify.extract_connector_param(
-        param_name="max_hours_backwards",
+        param_name="Max Hours Backwards",
         input_type=int,
         default_value=24,
     )
