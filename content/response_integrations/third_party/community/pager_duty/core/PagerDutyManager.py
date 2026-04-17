@@ -15,9 +15,6 @@ class PagerDutyManager:
         self,
         api_key: str,
         verify_ssl: bool = True,
-        proxy_address: str | None = None,
-        proxy_username: str | None = None,
-        proxy_password: str | None = None,
         from_email: str | None = None,
     ) -> None:
         """Initializes PagerDutyManager with params as set in connector config.
@@ -25,36 +22,14 @@ class PagerDutyManager:
         Args:
             api_key: PagerDuty API key.
             verify_ssl: Whether to verify SSL certificates.
-            proxy_address: Address of the proxy server.
-            proxy_username: Username for proxy authentication.
-            proxy_password: Password for proxy authentication.
             from_email: The email address of the user performing the action.
         """
         self.api_key: str = api_key
         self.verify_ssl: bool = verify_ssl
-        self.proxy_address: str | None = proxy_address
-        self.proxy_username: str | None = proxy_username
-        self.proxy_password: str | None = proxy_password
         self.from_email: str | None = from_email
 
         self.requests_session: requests.Session = requests.Session()
         self.requests_session.verify: bool = self.verify_ssl
-
-        if self.proxy_address:
-            if "://" not in self.proxy_address:
-                self.proxy_address = "http://" + self.proxy_address
-            from urllib.parse import urlparse
-            server_url = urlparse(self.proxy_address)
-            scheme = server_url.scheme
-            hostname = server_url.hostname
-            port = server_url.port
-            credentials = ""
-            if self.proxy_username and self.proxy_password:
-                credentials = f"{self.proxy_username}:{self.proxy_password}@"
-            proxy_str = f"{scheme}://{credentials}{hostname}"
-            if port:
-                proxy_str += f":{port}"
-            self.requests_session.proxies = {"http": proxy_str, "https": proxy_str}
 
     def test_connectivity(self) -> None:
         """Tests connectivity and authentication to the PagerDuty API."""
@@ -106,6 +81,9 @@ class PagerDutyManager:
         Returns:
             SingleJson: The API response.
         """
+        if not self.from_email:
+            raise ValueError("from_email is required for resolve_incident operation.")
+            
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}"
         payload: SingleJson = {
             "incident": {
@@ -134,6 +112,9 @@ class PagerDutyManager:
         Returns:
             SingleJson: The API response.
         """
+        if not self.from_email:
+            raise ValueError("from_email is required for add_incident_note operation.")
+            
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}/notes"
         payload: SingleJson = {
             "note": {
@@ -150,6 +131,24 @@ class PagerDutyManager:
         )
         response.raise_for_status()
         return response.json()
+
+    def get_incident_notes(self, incident_id: str) -> list[SingleJson]:
+        """Gets notes for an incident from PagerDuty.
+
+        Args:
+            incident_id: The ID of the incident.
+
+        Returns:
+            list[SingleJson]: List of notes.
+        """
+        url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}/notes"
+        response = self.requests_session.get(
+            url,
+            headers=self._get_auth_headers(),
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json().get("notes", [])
 
     def get_incident(self, incident_id: str) -> SingleJson:
         """Gets an incident from PagerDuty by ID.

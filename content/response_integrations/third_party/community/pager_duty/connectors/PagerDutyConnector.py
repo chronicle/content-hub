@@ -53,10 +53,23 @@ def main(is_test_run: bool) -> None:
     siemplify.LOGGER.info("------------------- Main - Started -------------------")
     manager = PagerDutyManager(
         api_key=api_key,
-        proxy_address=proxy_address,
-        proxy_username=proxy_username,
-        proxy_password=proxy_password,
     )
+
+    if proxy_address:
+        if "://" not in proxy_address:
+            proxy_address = "http://" + proxy_address
+        from urllib.parse import urlparse
+        server_url = urlparse(proxy_address)
+        scheme: str = server_url.scheme
+        hostname: str | None = server_url.hostname
+        port: int | None = server_url.port
+        credentials: str = ""
+        if proxy_username and proxy_password:
+            credentials = f"{proxy_username}:{proxy_password}@"
+        proxy_str: str = f"{scheme}://{credentials}{hostname}"
+        if port:
+            proxy_str += f":{port}"
+        manager.requests_session.proxies = {"http": proxy_str, "https": proxy_str}
 
     try:
         time_diff: datetime.timedelta = datetime.timedelta(hours=max_hours_backwards)
@@ -78,9 +91,11 @@ def main(is_test_run: bool) -> None:
             return
         siemplify.LOGGER.info(f"Retrieved {len(incidents_list)} events from PagerDuty")
         for incident in incidents_list:
-            alert_id: str = incident["incident_key"]
+            alert_id: str = incident.get("incident_key", "")
 
-            severity: str | None = get_siemplify_mapped_severity(incident["urgency"])
+            severity: str | None = get_siemplify_mapped_severity(
+                incident.get("urgency", "low")
+            )
 
             siemplify_alert: AlertInfo = build_alert_info(siemplify, incident, severity)
 
@@ -116,7 +131,9 @@ def build_alert_info(
     alert_info.display_id = incident["id"]
     alert_info.ticket_id = incident["id"]
     alert_info.name = f"PagerDuty Incident: {incident['title']}"
-    alert_info.rule_generator = incident["first_trigger_log_entry"]["summary"]
+    alert_info.rule_generator = (
+        incident.get("first_trigger_log_entry", {}).get("summary", "No Summary")
+    )
     alert_info.start_time = convert_string_to_unix_time(incident["created_at"])
     alert_info.end_time = alert_info.start_time
     alert_info.severity = severity

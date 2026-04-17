@@ -103,23 +103,21 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def sync_comments(self, job_case: JobCase) -> None:
         """Sync comments between source and target items.
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
         """
-        raise NotImplementedError
+        pass
 
-    @abstractmethod
     def sync_tags(self, job_case: JobCase) -> None:
         """Sync tags between source and target items.
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
         """
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     def is_alert_and_product_closed(self, job_case: JobCase, product: Any) -> bool:
@@ -134,7 +132,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def remove_synced_data_from_db(self, job_case: JobCase, product_details: Any) -> None:
         """Removes synced data from db.
 
@@ -142,25 +139,23 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             job_case (JobCase): The JobCase object containing the details of the case to sync.
             product_details (Any): The details of the product to sync.
         """
-        raise NotImplementedError
+        pass
 
-    @abstractmethod
     def sync_severity(self, job_case: JobCase) -> None:
         """Sync severity between source and target items.
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
         """
-        raise NotImplementedError
+        pass
 
-    @abstractmethod
     def sync_assignee(self, job_case: JobCase) -> None:
         """Sync assignee between source and target items.
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
         """
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     def map_product_data_to_case(self, job_case: JobCase) -> None:
