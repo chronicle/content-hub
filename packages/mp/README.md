@@ -7,6 +7,30 @@
 **`mp`**, short for **`marketplace`
 **, is the official command-line interface (CLI) for developing, maintaining, and deploying Google SecOps marketplace integrations. It streamlines the entire lifecycle from coding to deployment.
 
+## Quick Start
+
+### 1. Install as a persistent tool (Recommended)
+
+Install `mp` once and use it everywhere:
+
+```bash
+# Install from the main branch
+uv tool install mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
+
+# Use the tool directly:
+mp --help
+```
+
+### 2. One-time usage
+
+Run directly without installing:
+
+```bash
+uvx --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp mp --help
+```
+
+For more detailed instructions, see the [Installation Guide](docs/installation.md).
+
 ## Workflow
 
 The `mp` tool sits at the center of your integration development workflow:

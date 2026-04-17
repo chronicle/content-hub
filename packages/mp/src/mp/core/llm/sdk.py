@@ -33,14 +33,14 @@ class LlmConfig(BaseModel, abc.ABC):
         """
 
 
-T_LlmConfig = TypeVar("T_LlmConfig", bound=LlmConfig)
+T_LlmConfig_co = TypeVar("T_LlmConfig_co", bound=LlmConfig, covariant=True)
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
-class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig]):
-    def __init__(self, config: T_LlmConfig) -> None:
+class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig_co]):
+    def __init__(self, config: T_LlmConfig_co) -> None:
         self.system_prompt: str = ""
-        self.config: T_LlmConfig = config
+        self.config: T_LlmConfig_co = config
 
     @overload
     async def send_message(

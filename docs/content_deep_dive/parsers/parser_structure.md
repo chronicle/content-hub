@@ -39,8 +39,7 @@ Each subdirectory under folder `cbn/` will contain the following files:
   "supported_format": "SYSLOG,CSV", // (Optional)
   "category": "Identity and Access Management", // (Optional)
   "description": "Parses audit logs from Azure Product.", // (Optional)
-  "references": "", // (Optional)
-  "verified": true // (Optional)
+  "references": "" // (Optional)
 }
 ```
 * **log_type**: The specific Google Security Operations LogType identifier (e.g., APACHE, GCP_CLOUDAUDIT).
@@ -50,7 +49,6 @@ Each subdirectory under folder `cbn/` will contain the following files:
 * **category**: The formats of the log that are supported by the parser.
 * **description**: A brief explanation of what the parser does.
 * **references**: A public documentation link regarding the log source.
-* **verified**: If true, it means that the parser is validated on the SecOps instance.
 
 **`testdata/` (Directory)**: This subdirectory houses files for testing the parser's correctness:
 * **`*.json` or `*.txt` files**: Sample raw log files (e.g., `sample_input.json`). These files contain representative log entries that the parser is expected to process.

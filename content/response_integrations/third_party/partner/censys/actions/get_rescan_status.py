@@ -92,7 +92,9 @@ def main():
             if result.get("completed"):
                 # Scan is complete
                 status = EXECUTION_STATE_COMPLETED
-                output_message = f"Scan completed successfully. Scan ID: {tracked_scan_id}"
+                output_message = (
+                    f"Scan completed successfully. Scan ID: {tracked_scan_id}"
+                )
                 siemplify.LOGGER.info(output_message)
 
             else:
@@ -109,7 +111,9 @@ def main():
         siemplify.LOGGER.exception(e)
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(GET_RESCAN_STATUS_SCRIPT_NAME, str(e))
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
+            GET_RESCAN_STATUS_SCRIPT_NAME, str(e)
+        )
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

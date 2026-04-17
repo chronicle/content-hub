@@ -48,7 +48,11 @@ ST_VALID_NON_BUILT_RELEASE_NOTE_DICT = st.fixed_dictionaries(
     },
     optional={
         "deprecated": st.booleans(),
-        "publish_time": st.none() | st.datetimes().map(lambda d: d.strftime("%Y-%m-%d")),
+        "publish_time": st.none()
+        | st.dates(
+            min_value=__import__("datetime").date(2000, 1, 1),
+            max_value=__import__("datetime").date(2099, 12, 31),
+        ).map(lambda d: d.strftime("%Y-%m-%d")),
         "regressive": st.booleans(),
         "removed": st.booleans(),
         "ticket_number": st.text(),

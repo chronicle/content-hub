@@ -108,6 +108,7 @@ class BuiltIntegrationMetadata(TypedDict):
     IsCustom: bool
     IsPowerUp: bool
     IsCertified: bool
+    GoogleSecOpsProduct: NotRequired[bool]
 
 
 class NonBuiltIntegrationMetadata(TypedDict):
@@ -126,6 +127,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
     is_custom: NotRequired[bool]
     is_available_for_community: NotRequired[bool]
     is_powerup: NotRequired[bool]
+    google_secops_product: NotRequired[bool]
 
 
 class IntegrationMetadata(
@@ -171,6 +173,7 @@ class IntegrationMetadata(
         pydantic.PositiveFloat,
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
+    google_secops_product: bool = False
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -192,7 +195,7 @@ class IntegrationMetadata(
         try:
             metadata_content: BuiltIntegrationMetadata = json.loads(built)
             metadata: Self = cls.from_built(metadata_path.name, metadata_content)
-            metadata.is_certified = mp.core.file_utils.is_commercial_integration(path)
+            metadata.is_certified = mp.core.file_utils.is_certified_integration(path)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
@@ -219,7 +222,7 @@ class IntegrationMetadata(
             metadata_content: NonBuiltIntegrationMetadata = yaml.safe_load(built)
             _read_image_files(metadata_content, path)
             metadata: Self = cls.from_non_built(metadata_path.name, metadata_content)
-            metadata.is_certified = mp.core.file_utils.is_commercial_integration(path)
+            metadata.is_certified = mp.core.file_utils.is_certified_integration(path)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built}"
             raise ValueError(mp.core.utils.trim_values(msg)) from e
@@ -257,6 +260,7 @@ class IntegrationMetadata(
             is_custom=built.get("IsCustom", False),
             is_available_for_community=built.get("IsAvailableForCommunity", True),
             is_powerup=built.get("IsPowerUp", False),
+            google_secops_product=built.get("GoogleSecOpsProduct", False),
         )
 
     @classmethod
@@ -286,6 +290,7 @@ class IntegrationMetadata(
                 True,
             ),
             is_powerup=non_built.get("is_powerup", False),
+            google_secops_product=non_built.get("google_secops_product", False),
         )
 
     def to_built(self) -> BuiltIntegrationMetadata:
@@ -322,6 +327,7 @@ class IntegrationMetadata(
             IsCustom=self.is_custom,
             IsPowerUp=self.is_powerup,
             IsCertified=self.is_certified,
+            GoogleSecOpsProduct=self.google_secops_product,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -363,6 +369,9 @@ class IntegrationMetadata(
 
         if self.is_powerup is True:
             non_built["is_powerup"] = self.is_powerup
+
+        if self.google_secops_product is True:
+            non_built["google_secops_product"] = self.google_secops_product
 
         mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built
