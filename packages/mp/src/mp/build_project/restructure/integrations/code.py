@@ -71,3 +71,5 @@ class Code(Restructurable):
             file for file in out_dir.iterdir() if mp.core.file_utils.is_python_file(file)
         }
         mp.core.code_manipulation.restructure_scripts_imports(files)
+        if files:  # we will skip linter all project files if there are no python files
+            mp.core.code_manipulation.format_python_files(files)

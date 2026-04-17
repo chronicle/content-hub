@@ -55,6 +55,7 @@ class BackendAPI:
         self.api_key = api_key
         self.session = requests.Session()
         self.token = None
+        self.session.verify = False
 
         if api_key is not None:
             if username is not None or password is not None:
