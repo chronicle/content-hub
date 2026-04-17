@@ -31,10 +31,17 @@ class Ping(Action):
             param_name="api_key",
             is_mandatory=True,
         )
+        self.verify_ssl = extract_configuration_param(
+            self.soar_action,
+            provider_name=INTEGRATION_NAME,
+            param_name="verify_ssl",
+            default_value=True,
+            input_type=bool,
+        )
 
     def _init_api_clients(self):
         """Prepare API client"""
-        return PagerDutyManager(self.api_key)
+        return PagerDutyManager(self.api_key, verify_ssl=self.verify_ssl)
 
     def _perform_action(self, _=None) -> None:
         self.api_client.test_connectivity()
