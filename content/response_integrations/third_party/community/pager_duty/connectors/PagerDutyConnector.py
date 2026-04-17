@@ -130,7 +130,7 @@ def build_alert_info(
     alert_info: AlertInfo = AlertInfo()
     alert_info.display_id = incident["id"]
     alert_info.ticket_id = incident["id"]
-    alert_info.name = f"PagerDuty Incident: {incident['title']}"
+    alert_info.name = incident['id']
     alert_info.rule_generator = (
         incident.get("first_trigger_log_entry", {}).get("summary", "No Summary")
     )

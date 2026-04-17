@@ -7,13 +7,10 @@ from unittest.mock import MagicMock
 import pytest
 from integration_testing.common import use_live_api
 
-
-pytest_plugins = ("integration_testing.conftest",)
-
 from .core.product import PagerDuty
 from .core.session import PagerDutySession
 
-
+pytest_plugins = ("integration_testing.conftest",)
 
 
 @pytest.fixture

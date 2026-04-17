@@ -10,16 +10,16 @@ from TIPCommon.data_models import AlertCard
 from TIPCommon.transformation import convert_comma_separated_to_list
 from TIPCommon.types import SingleJson, SyncItem
 
-PAGERDUTY_COMMENT_PREFIX = "PagerDuty:"
-SIEM_COMMENT_PREFIX = "SecOps:"
-
 from ..core.constants import (
     CLASSIFICATION_FALSE_POSITIVE,
     CLASSIFICATION_OTHER,
     CLASSIFICATION_TRUE_POSITIVE,
+    CONTEXT_KEY,
+    PAGERDUTY_COMMENT_PREFIX,
     REASON_MALICIOUS,
     REASON_NOT_MALICIOUS,
     REASON_RESOLVED_IN_PAGERDUTY,
+    SIEM_COMMENT_PREFIX,
 )
 from ..core.PagerDutyManager import PagerDutyManager
 
@@ -53,7 +53,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         Returns:
             The initialized API client.
         """
-        verify_ssl: bool = getattr(self.params, "verify_ssl", True)
+        verify_ssl: bool = getattr(self.params, "Verify SSL", True)
         from_email: str | None = getattr(self.params, "from_email", None)
         return PagerDutyManager(
             api_key=self.params.api_key,
@@ -77,7 +77,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             val: str | None = self.soar_job.get_context_property(
                 ENTITY_TYPE_TICKET,
                 ticket.alert_group_identifier,
-                "Alert_ID",
+                CONTEXT_KEY,
             )
             if val:
                 return val
@@ -105,7 +105,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             A list of extracted incident IDs.
         """
         incident_ids: list[str] = []
-        
+
         val: str | None = self.soar_job.get_context_property(
             1,
             str(job_case.case_detail.id_),
@@ -113,7 +113,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         )
         if val:
             incident_ids.extend(convert_comma_separated_to_list(val))
-            
+
         for ticket in job_case.case_detail.alerts:
             incident_id: str | None = self._extract_product_id_from_ticket(ticket)
             if incident_id:
@@ -287,15 +287,15 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
     def _sync_untracked_incidents_status(self, job_case: JobCase) -> None:
         """Fallback sync for cases not tracked by standard metadata."""
         incident_ids = self._extract_product_ids_from_case(job_case)
-        is_case_closed = job_case.case_detail.status.lower() == "closed"
+        is_case_closed = job_case.case_detail.status == "Closed"
 
         for incident_id in incident_ids:
             try:
                 incident = self.api_client.get_incident(incident_id)
                 product_status = incident.get("status")
-                
+
                 if product_status == "resolved" and not is_case_closed:
-                    self.soar_job.close_case(
+                    self.soar_job.close_alert(
                         root_cause=CLASSIFICATION_OTHER,
                         case_id=job_case.case_detail.id_,
                         reason=REASON_RESOLVED_IN_PAGERDUTY,
@@ -311,7 +311,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                     )
                 elif product_status != "resolved" and is_case_closed:
                     self._resolve_pagerduty_incident(incident_id, CLASSIFICATION_OTHER)
-                    
+
             except Exception as e:
                 self.logger.error(
                     f"Failed to sync status for PagerDuty incident "
@@ -363,13 +363,13 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 content = note.get("content", "")
                 if content.startswith(SIEM_COMMENT_PREFIX):
                     continue
-                    
+
                 already_exists = False
                 for c in case_comments:
                     if c.get("comment", "").endswith(content):
                         already_exists = True
                         break
-                        
+
                 if not already_exists:
                     self.soar_job.add_comment(
                         comment=f"{PAGERDUTY_COMMENT_PREFIX} {content}",
@@ -381,13 +381,13 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 content = comment.get("comment", "")
                 if content.startswith(PAGERDUTY_COMMENT_PREFIX):
                     continue
-                    
+
                 already_exists = False
                 for note in notes:
                     if note.get("content", "").endswith(content):
                         already_exists = True
                         break
-                        
+
                 if not already_exists:
                     try:
                         self.api_client.add_incident_note(
