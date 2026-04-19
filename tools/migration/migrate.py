@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -27,7 +21,6 @@ import os
 import shutil
 import subprocess
 import tomllib
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Union, cast
@@ -37,9 +30,8 @@ import mp.core.file_utils
 import toml
 import yaml
 from mp.build_project.integrations_repo import IntegrationsRepo
-from mp.core.config import get_local_packages_path, get_marketplace_path
+from mp.core.config import get_marketplace_path
 from mp.core.constants import SDK_MODULES
-from mp.core.unix import add_dependencies_to_toml
 from mp.core.utils.common import str_to_snake_case
 from rich.console import Console
 from rich.logging import RichHandler
@@ -193,8 +185,12 @@ def _remap_sdk_path(path: str) -> str:
 class ImportTransformer(cst.CSTTransformer):
     """Handles remapping of imports during integration refactoring."""
 
-    def __init__(self, integration_name: str, deconstructed_name: str,
-                 core_module_names: set[str] | None = None):
+    def __init__(
+        self,
+        integration_name: str,
+        deconstructed_name: str,
+        core_module_names: set[str] | None = None,
+    ):
         super().__init__()
         self.integration_name = integration_name
         self.deconstructed_name = deconstructed_name
@@ -292,7 +288,9 @@ class ImportTransformer(cst.CSTTransformer):
 
         return updated_node
 
-    def _handle_tip_common_imports(self, node: cst.ImportFrom) -> Union[cst.ImportFrom, cst.FlattenSentinel]:
+    def _handle_tip_common_imports(
+        self, node: cst.ImportFrom
+    ) -> Union[cst.ImportFrom, cst.FlattenSentinel]:
         if isinstance(node.names, cst.ImportStar):
             return node
 
@@ -401,8 +399,7 @@ class ImportTransformer(cst.CSTTransformer):
 
         if raw_val.endswith((".actiondef", ".connectordef", ".jobdef")):
             new_val = (
-                raw_val
-                .replace(".actiondef", ".yaml")
+                raw_val.replace(".actiondef", ".yaml")
                 .replace(".connectordef", ".yaml")
                 .replace(".jobdef", ".yaml")
             )
@@ -520,20 +517,26 @@ class UpsertIntegrationPathTransformer(cst.CSTTransformer):
 class IntegrationRefactorer:
     """The core engine for refactoring integrations."""
 
-    def __init__(self, integrations_root: Path, dst_path: Path, tests_dir: Path, integrations_list: Optional[str] = None, skip_verify_ssl: bool = False):
+    def __init__(
+        self,
+        integrations_root: Path,
+        dst_path: Path,
+        tests_dir: Path,
+        integrations_list: Optional[str] = None,
+        skip_verify_ssl: bool = False,
+    ):
         self.integrations_root = integrations_root.resolve()
         self.dst_path = dst_path.resolve()
         self.tests_dir = tests_dir.resolve()
         self.integrations_list = integrations_list
-        self.skip_verify_ssl = skip_verify_ssl
         self.repo = IntegrationsRepo(self.integrations_root, self.dst_path, default_source=False)
+        self.skip_verify_ssl = skip_verify_ssl
 
     def process_all(self):
         """Processes integrations found in the root directory or from the provided list string."""
         if self.integrations_list:
             target_names = [
-                word for word in self.integrations_list.split() 
-                if not word.startswith("(")
+                word for word in self.integrations_list.split() if not word.startswith("(")
             ]
             integrations = []
             for name in target_names:
@@ -594,15 +597,18 @@ class IntegrationRefactorer:
         logger.info("Fixing imports in integration source files...")
         # Collect core/ module names for bare import detection
         core_dir = deconstructed_path / "core"
-        core_module_names = {
-            f.stem for f in core_dir.glob("*.py")
-            if f.stem != "__init__"
-        } if core_dir.is_dir() else set()
+        core_module_names = (
+            {f.stem for f in core_dir.glob("*.py") if f.stem != "__init__"}
+            if core_dir.is_dir()
+            else set()
+        )
 
         excluded = {".venv", "tests", "__pycache__"}
         for file_path in deconstructed_path.rglob("*.py"):
             if not any(p in excluded for p in file_path.parts):
-                self._transform_python_file(file_path, integration_name, deconstructed_path.name, core_module_names)
+                self._transform_python_file(
+                    file_path, integration_name, deconstructed_path.name, core_module_names
+                )
 
         # 2c. Replace SiemplifySession with requests.Session
         # SiemplifySession was a TIPCommon 1.x class (requests.Session subclass
@@ -656,16 +662,16 @@ class IntegrationRefactorer:
         data = yaml.safe_load(def_path.read_text(encoding="utf-8"))
         if not data:
             return
-        
+
         params = data.setdefault("parameters", [])
         ssl_param = next((p for p in params if p.get("name") == "Verify SSL"), None)
-        
+
         if not ssl_param:
             ssl_param = {
                 "name": "Verify SSL",
                 "type": "boolean",
-                "is_mandatory": False,
-                "integration_identifier": data.get("identifier", deconstructed_path.name)
+                "is_mandatory": false,
+                "integration_identifier": data.get("identifier", deconstructed_path.name),
             }
             params.append(ssl_param)
             changed = True
@@ -675,7 +681,7 @@ class IntegrationRefactorer:
         if not ssl_param.get("default_value") or ssl_param["default_value"] == "":
             ssl_param["default_value"] = "true"
             changed = True
-            
+
         expected_desc = (
             "If selected, the integration validates the SSL certificate "
             f"when connecting to {data.get('name', 'the server')}. Selected by default."
@@ -698,19 +704,20 @@ class IntegrationRefactorer:
         content = pyproject_path.read_text(encoding="utf-8")
         if 'requires-python = ">=3.11"' in content:
             content = content.replace(
-                'requires-python = ">=3.11"',
-                'requires-python = ">=3.11,<3.12"'
+                'requires-python = ">=3.11"', 'requires-python = ">=3.11,<3.12"'
             )
             pyproject_path.write_text(content, encoding="utf-8")
 
     def copy_ai_descriptions(self, integration_path: Path, deconstructed_path: Path):
         src = integration_path / "resources" / "ai" / "actions_ai_description.yaml"
         if src.is_file():
-            dst_dir = deconstructed_path / "resources"
+            dst_dir = deconstructed_path / "resources" / "ai"
             dst_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst_dir / src.name)
         else:
-            logger.info(f"No actions_ai_description.yaml found for {integration_path.name}, skipping.")
+            logger.info(
+                f"No actions_ai_description.yaml found for {integration_path.name}, skipping."
+            )
 
     def convert_widgets(self, integration_path: Path):
         widgets_dir = integration_path / WIDGETS_DIR
@@ -814,9 +821,17 @@ class IntegrationRefactorer:
             return
 
         whls = {
-            "environmentcommon": local_path / "envcommon" / "whls" / "EnvironmentCommon-1.0.3-py3-none-any.whl",
-            "integration-testing": local_path / "integration_testing_whls" / "integration_testing-2.2.22-py3-none-any.whl",
-            "tipcommon": local_path / "tipcommon" / "whls" / "TIPCommon-2.2.22-py2.py3-none-any.whl",
+            "environmentcommon": local_path
+            / "envcommon"
+            / "whls"
+            / "EnvironmentCommon-1.0.3-py3-none-any.whl",
+            "integration-testing": local_path
+            / "integration_testing_whls"
+            / "integration_testing-2.2.22-py3-none-any.whl",
+            "tipcommon": local_path
+            / "tipcommon"
+            / "whls"
+            / "TIPCommon-2.2.22-py2.py3-none-any.whl",
         }
         existing = {name: p for name, p in whls.items() if p.exists()}
         if not existing:
@@ -870,8 +885,13 @@ class IntegrationRefactorer:
             return
 
         whls = {
-            "environmentcommon": local_path / "envcommon" / "whls" / "EnvironmentCommon-1.0.3-py3-none-any.whl",
-            "integration-testing": local_path / "integration_testing_whls" / "integration_testing-2.2.22-py3-none-any.whl",
+            "environmentcommon": local_path
+            / "envcommon"
+            / "whls"
+            / "EnvironmentCommon-1.0.3-py3-none-any.whl",
+            "integration-testing": local_path
+            / "integration_testing_whls"
+            / "integration_testing-2.2.22-py3-none-any.whl",
         }
         existing = {name: p for name, p in whls.items() if p.exists()}
         if not existing:
@@ -913,8 +933,11 @@ class IntegrationRefactorer:
         (test_defaults / "test_imports.py").write_text(NEW_IMPORT_TEST_CONTENT)
 
     def _transform_python_file(
-        self, file_path: Path, integration_name: str, deconstructed_name: str,
-        core_module_names: set[str] | None = None
+        self,
+        file_path: Path,
+        integration_name: str,
+        deconstructed_name: str,
+        core_module_names: set[str] | None = None,
     ):
         try:
             content = file_path.read_text(encoding="utf-8")
@@ -1105,7 +1128,13 @@ class IntegrationRefactorer:
         ruff_path = self.dst_path / "ruff.toml"
         if not ruff_path.is_file():
             # Fallback if dst_path doesn't have it
-            ruff_path = get_marketplace_path() / "content" / "response_integrations" / "google" / "ruff.toml"
+            ruff_path = (
+                get_marketplace_path()
+                / "content"
+                / "response_integrations"
+                / "google"
+                / "ruff.toml"
+            )
             if not ruff_path.is_file():
                 return
 
@@ -1124,7 +1153,7 @@ class IntegrationRefactorer:
                 in_specific_block = True
                 new_lines.append(line)
                 continue
-            
+
             if in_specific_block and not inserted:
                 if not stripped or stripped.startswith("["):
                     new_lines.append(entry)
@@ -1146,9 +1175,17 @@ def main():
     parser.add_argument("integrations_path", type=str, help="Source integrations directory.")
     parser.add_argument("dst_path", type=str, help="Destination directory.")
     parser.add_argument("--tests-dir", type=str, required=True, help="Path to 'Tests' directory.")
-    parser.add_argument("--integrations-list", type=str, help="Optional space-separated list of integrations to process.")
+    parser.add_argument(
+        "--integrations-list",
+        type=str,
+        help="Optional space-separated list of integrations to process.",
+    )
+    parser.add_argument(
+        "--skip-verify-ssl",
+        action="store_true",
+        help="Skip adding/fixing the Verify SSL parameter in definition.yaml.",
+    )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
-    parser.add_argument("--skip-verify-ssl", action="store_true", help="Skip adding/fixing the Verify SSL parameter in definition.yaml.")
 
     args = parser.parse_args()
 
@@ -1156,7 +1193,9 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     refactorer = IntegrationRefactorer(
-        Path(args.integrations_path), Path(args.dst_path), Path(args.tests_dir),
+        Path(args.integrations_path),
+        Path(args.dst_path),
+        Path(args.tests_dir),
         integrations_list=args.integrations_list,
         skip_verify_ssl=args.skip_verify_ssl,
     )

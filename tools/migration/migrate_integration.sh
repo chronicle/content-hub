@@ -352,26 +352,10 @@ else
     echo "  ✓ Using existing test infrastructure (skipped generation)"
 fi
 
-# ── Step 3: Lint & Fix ─────────────────────────────────────────────────
+
+# ── Step 3: Validate (CI-equivalent) ───────────────────────────────────
 echo ""
-echo "── Step 3/6: Lint & auto-fix ─────────────────────────────────"
-echo ""
-
-cd "$INTEGRATION_PATH"
-
-# Auto-fix lint issues (ruff), including unsafe fixes for bare except -> Exception
-echo "  Running: mp check --fix --unsafe-fixes"
-mp check "$INTEGRATION_PATH" --fix --unsafe-fixes 2>&1 | tail -3 || true
-
-# Format
-echo "  Running: mp format"
-mp format "$INTEGRATION_PATH" 2>&1 | tail -3 || true
-
-echo "  ✓ Lint & format complete"
-
-# ── Step 4: Validate (CI-equivalent) ───────────────────────────────────
-echo ""
-echo "── Step 4/6: Validating (CI-equivalent) ──────────────────────"
+echo "── Step 3/5: Validating (CI-equivalent) ──────────────────────"
 echo ""
 
 cd "$INTEGRATION_PATH"
@@ -407,9 +391,9 @@ else
     echo "  ✓ Build passed"
 fi
 
-# ── Step 5/6: Run tests ───────────────────────────────────────────────
+# ── Step 4/5: Run tests ───────────────────────────────────────────────
 echo ""
-echo "── Step 5/6: Running tests ───────────────────────────────────"
+echo "── Step 4/5: Running tests ───────────────────────────────────"
 echo ""
 
 export PYTHONPATH="${PYTHONPATH:-}:$(pwd)/.venv/lib/python3.11/site-packages/soar_sdk"
@@ -423,9 +407,9 @@ else
     echo "  ✗ Some tests failed (see output above)"
 fi
 
-# ── Step 6/6: Verify no real HTTP calls ───────────────────────────────
+# ── Step 5/5: Verify no real HTTP calls ───────────────────────────────
 echo ""
-echo "── Step 6/6: Verify no real HTTP calls ───────────────────────"
+echo "── Step 5/5: Verify no real HTTP calls ───────────────────────"
 HTTP_CALLS=$(rg "requests\.(get|post|put|delete|request)\(" tests/ --glob="*.py" 2>/dev/null | rg -v "monkeypatch|Mock|mock|setattr|import|lambda|MockSession|router" || true)
 if [ -n "$HTTP_CALLS" ]; then
     echo "  ⚠ Possible real HTTP calls in tests:"
