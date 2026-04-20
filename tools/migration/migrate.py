@@ -670,7 +670,7 @@ class IntegrationRefactorer:
             ssl_param = {
                 "name": "Verify SSL",
                 "type": "boolean",
-                "is_mandatory": false,
+                "is_mandatory": False,
                 "integration_identifier": data.get("identifier", deconstructed_path.name),
             }
             params.append(ssl_param)
@@ -795,9 +795,8 @@ class IntegrationRefactorer:
 
         dev_deps = pyproject_data.get("dependency-groups", {}).get("dev", [])
         reg_deps = pyproject_data.get("project", {}).get("dependencies", [])
-        all_deps = dev_deps + reg_deps
 
-        if not any(d.startswith("integration-testing") for d in dev_deps):
+        if not any(d.startswith("integration-testing") for d in dev_deps + reg_deps):
             self._add_local_deps(deconstructed_path)
             self._check_mock_imports(tests_dest_path)
 
