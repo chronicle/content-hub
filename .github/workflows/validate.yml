@@ -23,11 +23,10 @@ jobs:
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
-      mp: ${{ steps.filter.outputs.mp }}
-      response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
-      response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
-      playbooks: ${{ steps.filter.outputs.playbooks }}
+      validate_args: ${{ steps.compute.outputs.args }}
+      should_validate: ${{ steps.compute.outputs.should_validate }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -51,148 +50,42 @@ jobs:
           playbooks:
             - 'content/playbooks/**'
 
-  # 1) mp Packages OR (Google + Third Party + Playbooks)
-  validate_all:
-    name: Validate All Content
-    needs: changes
-    if: ${{ needs.changes.outputs.mp == 'true' || (needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks == 'true') }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-    - name: Install mp package
+    - name: Compute validation targets
+      id: compute
       run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository all_content --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
+        MP="${{ steps.filter.outputs.mp }}"
+        GOOGLE="${{ steps.filter.outputs.response_integrations_google }}"
+        THIRD_PARTY="${{ steps.filter.outputs.response_integrations_third_party }}"
+        PLAYBOOKS="${{ steps.filter.outputs.playbooks }}"
 
-  # 2) Google + Third Party
-  validate_google_third_party:
-    name: Validate Google & Third Party
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository google third_party --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
+        # If mp/workflows changed, validate everything
+        if [[ "$MP" == "true" ]]; then
+          echo "args=all_content" >> $GITHUB_OUTPUT
+          echo "should_validate=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
 
-  # 3) Google + Playbooks
-  validate_google_playbooks:
-    name: Validate Google & Playbooks
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party != 'true' && needs.changes.outputs.playbooks == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository google playbooks --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
+        # Build args from changed content areas
+        ARGS=""
+        [[ "$GOOGLE" == "true" ]] && ARGS="$ARGS google"
+        [[ "$THIRD_PARTY" == "true" ]] && ARGS="$ARGS third_party"
+        [[ "$PLAYBOOKS" == "true" ]] && ARGS="$ARGS playbooks"
+        ARGS=$(echo "$ARGS" | xargs)  # trim whitespace
 
-  # 4) Third Party + Playbooks
-  validate_third_party_playbooks:
-    name: Validate Third Party & Playbooks
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google != 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository third_party playbooks --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
+        if [[ -n "$ARGS" ]]; then
+          echo "args=$ARGS" >> $GITHUB_OUTPUT
+          echo "should_validate=true" >> $GITHUB_OUTPUT
+        else
+          echo "args=" >> $GITHUB_OUTPUT
+          echo "should_validate=false" >> $GITHUB_OUTPUT
+        fi
 
-  # 5) Only Google
-  validate_google:
-    name: Validate Google Integrations
+  validate:
+    name: Validate Content
     needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party != 'true' && needs.changes.outputs.playbooks != 'true' }}
+    if: ${{ needs.changes.outputs.should_validate == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -212,75 +105,7 @@ jobs:
         GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       run: |
         mp config --root-path . --processes 10 --display-config
-        mp validate repository google --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
-
-  # 6) Only Third Party
-  validate_third_party:
-    name: Validate Third-Party Integrations
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google != 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository third_party --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
-
-  # 7) Only Playbooks
-  validate_playbooks:
-    name: Validate Playbooks
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google != 'true' && needs.changes.outputs.response_integrations_third_party != 'true' && needs.changes.outputs.playbooks == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository playbooks --only-pre-build
+        mp validate repository ${{ needs.changes.outputs.validate_args }} --only-pre-build
     - name: Upload Report
       if: always()
       uses: actions/upload-artifact@v4
