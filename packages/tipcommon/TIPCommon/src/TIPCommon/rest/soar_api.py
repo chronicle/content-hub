@@ -227,10 +227,9 @@ def list_custom_fields(
 
         try:
             validate_response(response, validate_json=True)
-        except InternalJSONDecoderError:
-            if not custom_fields:
-                return []
-            raise
+        except InternalJSONDecoderError as e:
+            chronicle_soar.LOGGER.error(f"Failed to parse response as JSON: {e}")
+            return []
 
         res_json = response.json()
         fields_data = res_json.get("customFields") or []
