@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 from integration_testing.common import get_def_file_content
+from integration_testing.common import get_def_file_content
+from integration_testing.common import get_def_file_content
 import json
 from integration_testing.common import get_def_file_content
 import pathlib
