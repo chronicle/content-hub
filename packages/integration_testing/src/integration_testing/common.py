@@ -23,8 +23,8 @@ import time
 from typing import TYPE_CHECKING
 
 import yaml
-from OverflowManager import OverflowManager, OverflowManagerSettings
 from SiemplifyDataModel import DomainEntityInfo
+from soar_sdk.OverflowManager import OverflowManager, OverflowManagerSettings
 from TIPCommon.base.action import CaseComment, EntityTypesEnum
 from TIPCommon.base.job import JobParameter
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC

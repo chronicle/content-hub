@@ -12,9 +12,7 @@ if TYPE_CHECKING:
     from typing import NoReturn
 
 
-SUCCESS_MESSAGE: str = (
-    "Successfully connected to the PagerDuty API."
-)
+SUCCESS_MESSAGE: str = "Successfully connected to the PagerDuty API."
 ERROR_MESSAGE: str = "Failed to connect to the PagerDuty API."
 
 
@@ -34,7 +32,7 @@ class Ping(Action):
         self.verify_ssl = extract_configuration_param(
             self.soar_action,
             provider_name=INTEGRATION_NAME,
-            param_name="verify_ssl",
+            param_name="Verify SSL",
             default_value=True,
             input_type=bool,
         )
