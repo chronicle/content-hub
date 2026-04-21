@@ -19,7 +19,7 @@ from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
 from ..core.constants import PLAYBOOKS_ROOT_README
-from ..core.definitions import Workflow
+from ..core.definitions import Workflow, WorkflowTypes
 from ..core.GitSyncManager import GitSyncManager
 
 SCRIPT_NAME = "Push Playbook"
@@ -59,7 +59,7 @@ def main():
 
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
-        installed_playbooks = gitsync.api.get_playbooks()
+        installed_playbooks = gitsync.api.get_playbooks(chronicle_soar=siemplify)
 
         for playbook in installed_playbooks:
             if (
@@ -78,31 +78,45 @@ def main():
                         readme_addon,
                     )
 
-                playbook = gitsync.api.get_playbook(playbook.get("identifier"))
+                playbook = gitsync.api.get_playbook(
+                    chronicle_soar=siemplify,
+                    identifier=playbook.get("identifier"),
+                )
                 workflow = Workflow(playbook)
                 workflow.update_instance_name_in_steps(gitsync.api, siemplify)
-                gitsync.content.push_playbook(workflow)
+                if workflow.type == WorkflowTypes.BLOCK:
+                    gitsync.content.push_block(workflow)
+                else:
+                    gitsync.content.push_playbook(workflow)
 
                 if include_blocks:
-                    for block in workflow.get_involved_blocks():
+                    for block_step in workflow.get_involved_blocks():
                         installed_block = next(
                             (
                                 x
                                 for x in installed_playbooks
-                                if x.get("name") == block.get("name")
+                                if x.get("name") == block_step.get("name")
                             ),
                             None,
                         )
+
+                        block_definition = None
                         if not installed_block:
-                            siemplify.LOGGER.warn(
-                                f"Block {block.get('name')} wasn't found in the repo, ignoring",
+                            siemplify.LOGGER.info(
+                                f"Block '{block_step.get('name')}' not found in installed playbooks. Assuming it's a "
+                                f"custom block."
                             )
-                            continue
-                        block = Workflow(
-                            gitsync.api.get_playbook(installed_block.get("identifier")),
-                        )
-                        block.update_instance_name_in_steps(gitsync.api, siemplify)
-                        gitsync.content.push_playbook(block)
+                            block_definition = block_step
+                        else:
+                            block_definition = gitsync.api.get_playbook(
+                                chronicle_soar=siemplify,
+                                identifier=installed_block.get("identifier"),
+                            )
+
+                        if block_definition:
+                            block = Workflow(block_definition)
+                            block.update_instance_name_in_steps(gitsync.api, siemplify)
+                            gitsync.content.push_block(block)
             else:
                 siemplify.LOGGER.warn(
                     f"Playbook {playbook.get('name')} not found, Skipping",
