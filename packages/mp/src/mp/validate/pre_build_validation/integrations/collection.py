@@ -22,15 +22,22 @@ from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .dependency_provider_validation import DependencyProviderValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
 from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
+from .empty_init_files_validation import EmptyInitFilesValidation
 from .fields_validation import FieldsValidation
 from .integration_ssl_validation import SslParameterExistsInIntegrationValidation
+from .json_result_example_validation import JsonResultExampleValidation
 from .mapping_rules_validation import IntegrationHasMappingRulesIfHasConnectorValidation
+from .ping_message_validation import PingMessageFormatValidation
 from .ping_validation import IntegrationHasPingActionValidation
 from .python_version_validation import PythonVersionValidation
+from .release_notes_date_validation import ReleaseNotesDateValidation
 from .required_dependencies_validation import RequiredDevDependenciesValidation
 from .structure_validation import IntegrationFileStructureValidation
+from .support_email_validation import SupportEmailValidation
+from .test_config_validation import TestConfigValidation
 from .uv_lock_validation import UvLockValidation
 from .version_bump_validation import VersionBumpValidation
+from .version_consistency_validation import VersionConsistencyValidation
 
 if TYPE_CHECKING:
     from mp.validate.data_models import Validator
@@ -50,10 +57,12 @@ def _get_non_priority_validations() -> list[Validator]:
     return [
         UvLockValidation(),
         VersionBumpValidation(),
+        VersionConsistencyValidation(),
         RequiredDevDependenciesValidation(),
         NoCustomComponentsInIntegrationValidation(),
         NoDisabledComponentsInIntegrationValidation(),
         IntegrationHasPingActionValidation(),
+        PingMessageFormatValidation(),
         IntegrationHasMappingRulesIfHasConnectorValidation(),
         SslParameterExistsInIntegrationValidation(),
         SslParameterExistsInConnectorsValidation(),
@@ -61,6 +70,11 @@ def _get_non_priority_validations() -> list[Validator]:
         ConnectorsHasDocumentationLinkValidation(),
         PythonVersionValidation(),
         FieldsValidation(),
+        JsonResultExampleValidation(),
+        EmptyInitFilesValidation(),
+        SupportEmailValidation(),
+        ReleaseNotesDateValidation(),
+        TestConfigValidation(),
     ]
 
 

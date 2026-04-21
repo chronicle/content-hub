@@ -68,7 +68,10 @@ def _find_entity_resource(
     """
     for resource in resources:
         resource_data = resource.get("resource", {})
-        if resource_data.get("hostname") == entity_identifier and resource_data.get("port") == port:
+        if (
+            resource_data.get("hostname") == entity_identifier
+            and resource_data.get("port") == port
+        ):
             return resource
 
     return None
@@ -119,7 +122,9 @@ def _build_output_message(
         entities_str = ", ".join(failed[:5])
         if len(failed) > 5:
             entities_str += f" and {len(failed) - 5} more"
-        message_parts.append(f"{len(failed)} web property(ies) failed to process: {entities_str}")
+        message_parts.append(
+            f"{len(failed)} web property(ies) failed to process: {entities_str}"
+        )
 
     if not message_parts:
         return "No web properties were enriched. No matching data found in Censys."
@@ -143,7 +148,9 @@ def main():
     ports_param = siemplify.extract_action_param(
         "Port", default_value=DEFAULT_PORTS, input_type=str
     )
-    at_time = siemplify.extract_action_param("At Time", input_type=str, is_mandatory=False)
+    at_time = siemplify.extract_action_param(
+        "At Time", input_type=str, is_mandatory=False
+    )
 
     successful_entities = []
     failed_entities = []
@@ -176,7 +183,9 @@ def main():
         entities, invalid_entities = validate_web_property_entities(entities, siemplify)
 
         if invalid_entities:
-            siemplify.LOGGER.info(f"Skipping {len(invalid_entities)} invalid entity(ies)")
+            siemplify.LOGGER.info(
+                f"Skipping {len(invalid_entities)} invalid entity(ies)"
+            )
 
         if not entities:
             output_message = (
@@ -191,7 +200,9 @@ def main():
         siemplify.LOGGER.info(f"Validated {len(entities)} entity(ies) for processing")
 
         ports = validate_and_parse_ports(ports_param)
-        siemplify.LOGGER.info(f"Validated {len(ports)} port(s): {', '.join(map(str, ports))}")
+        siemplify.LOGGER.info(
+            f"Validated {len(ports)} port(s): {', '.join(map(str, ports))}"
+        )
 
         if at_time:
             at_time = validate_rfc3339_timestamp(at_time)
@@ -216,7 +227,9 @@ def main():
                 siemplify.LOGGER.info(f"Processing: {web_property_id}")
 
                 try:
-                    entity_result = _find_entity_resource(resources, entity.identifier, port)
+                    entity_result = _find_entity_resource(
+                        resources, entity.identifier, port
+                    )
 
                     if not entity_result:
                         siemplify.LOGGER.info(f"No data found for {web_property_id}")
@@ -229,20 +242,28 @@ def main():
                     if enrichment_data:
                         # Remove old web property enrichment for this port
                         remove_web_property_enrichment(entity, port)
-                        siemplify.LOGGER.info(f"Removed old enrichment for {web_property_id}")
+                        siemplify.LOGGER.info(
+                            f"Removed old enrichment for {web_property_id}"
+                        )
 
                         entity.additional_properties.update(enrichment_data)
                         entity.is_enriched = True
 
                         successful_entities.append(web_property_id)
-                        json_results.append({
-                            "Entity": web_property_id,
-                            "EntityResult": web_model.to_json(),
-                        })
+                        json_results.append(
+                            {
+                                "Entity": web_property_id,
+                                "EntityResult": web_model.to_json(),
+                            }
+                        )
 
-                        siemplify.LOGGER.info(f"Successfully enriched: {web_property_id}")
+                        siemplify.LOGGER.info(
+                            f"Successfully enriched: {web_property_id}"
+                        )
                     else:
-                        siemplify.LOGGER.info(f"No enrichment data for {web_property_id}")
+                        siemplify.LOGGER.info(
+                            f"No enrichment data for {web_property_id}"
+                        )
                         not_found_entities.append(web_property_id)
 
                 except Exception as e:
@@ -252,9 +273,8 @@ def main():
                     failed_entities.append(web_property_id)
 
     except ValueError as e:
-        output_message = (
-            f"Invalid parameter value: {str(e)}\nPlease verify your input parameters and try again."
-        )
+        output_message = f"Invalid parameter value: {str(e)}\nPlease" \
+            " verify your input parameters and try again."
         siemplify.LOGGER.error(output_message)
         status = EXECUTION_STATE_FAILED
         result_value = RESULT_VALUE_FALSE
@@ -262,7 +282,11 @@ def main():
     except ValidationException as e:
         error_detail = str(e)
         wp_list = ", ".join(web_property_ids[:10])
-        more_text = f" and {len(web_property_ids) - 10} more" if len(web_property_ids) > 10 else ""
+        more_text = (
+            f" and {len(web_property_ids) - 10} more"
+            if len(web_property_ids) > 10
+            else ""
+        )
 
         output_message = (
             f"Validation error occurred while processing "
@@ -277,7 +301,9 @@ def main():
         result_value = RESULT_VALUE_FALSE
 
     except (CensysException, Exception) as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_WEB_PROPERTIES_SCRIPT_NAME, e)
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
+            ENRICH_WEB_PROPERTIES_SCRIPT_NAME, e
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED

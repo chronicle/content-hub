@@ -1,0 +1,60 @@
+name: Mock-Only Test Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'content/response_integrations/**/tests/**'
+
+permissions:
+  contents: read
+
+jobs:
+  mock-check:
+    name: Check for real HTTP calls in tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan test files for real HTTP calls
+        run: |
+          # Find test files that may make real HTTP calls instead of using mocks.
+          # Excludes: imports, mock references, comments, conftest patches.
+          violations=$(grep -rn \
+            -e 'requests\.get(' \
+            -e 'requests\.post(' \
+            -e 'requests\.put(' \
+            -e 'requests\.delete(' \
+            -e 'requests\.request(' \
+            -e 'httpx\.' \
+            -e 'urllib\.request' \
+            -e 'aiohttp\.ClientSession' \
+            content/response_integrations/*/tests/ \
+            content/response_integrations/*/*/tests/ \
+            content/response_integrations/*/*/*/tests/ \
+            --include="*.py" \
+            --exclude-dir=".venv" \
+            --exclude-dir="__pycache__" \
+            2>/dev/null \
+            | grep -v \
+              -e 'import ' \
+              -e 'from ' \
+              -e 'Mock' \
+              -e 'mock' \
+              -e 'monkeypatch' \
+              -e 'setattr' \
+              -e '# noqa' \
+              -e 'conftest' \
+              -e 'session\.' \
+            || true)
+
+          if [ -n "$violations" ]; then
+            echo "::warning::Tests may contain real HTTP calls instead of using mocks:"
+            echo "$violations" | head -20
+            echo ""
+            echo "Tests should use the MockSession pattern from the integration_testing package."
+            echo "See: content/response_integrations/third_party/community/telegram/tests/"
+          else
+            echo "No real HTTP calls detected in test files ✓"
+          fi
