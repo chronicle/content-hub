@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 from TIPCommon.rest.custom_types import HttpMethod
@@ -501,7 +502,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_email_template(self) -> list[SingleJson]:
+    def get_email_template(self) -> requests.Response:
         """Get email template"""
         endpoint = (
             f"/system/settings/emailTemplates?pageSize={_EMAIL_TEMPLATES_PAGE_SIZE}"
@@ -752,6 +753,721 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
         return self._paginate_results(initial_endpoint=initial_endpoint, root_response_key="cases")
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_system_version(self) -> requests.Response:
+        """Get system version"""
+        endpoint = "/legacySystem:legacyGetSystemVersion"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_environment_group_names(self) -> requests.Response:
+        """Get environment group names"""
+        endpoint = "/environmentGroups"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_env_dynamic_parameters(self) -> requests.Response:
+        """Get env dynamic parameters"""
+        endpoint = "/settings/dynamicParameters"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_dynamic_env_param(self) -> requests.Response:
+        """Add dynamic env param"""
+        endpoint = "/settings/dynamicParameters"
+        payload = {
+            "name": self.params.name,
+            "displayName": self.params.display_name,
+            "parameterType": self.params.parameter_type,
+            "defaultValue": self.params.default_value,
+            "optionalValuesJson": str(self.params.optional_json),
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_tags_to_case_in_bulks(self) -> requests.Response:
+        """Add tags to case in bulk"""
+        endpoint = "/cases:executeBulkAddTag"
+        payload = {
+            "propertiesStatus": {
+                "additionalProp1": 0,
+                "additionalProp2": 0,
+                "additionalProp3": 0,
+            },
+            "displayName": self.params.name,
+            "parameterType": self.params.type,
+            "defaultValue": self.params.default_value,
+            "optionalValuesJson": str(self.params.optional_json),
+        }
+        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def install_integration(self) -> requests.Response:
+        """Install integration"""
+        endpoint = f"/marketplaceIntegrations/{self.params.integration_identifier}:install"
+        payload = {
+            "overrideMapping": self.params.override_mapping,
+            "staging": self.params.stage,
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def export_package(self) -> requests.Response:
+        """Export package"""
+        endpoint = (
+            f"/download/integrations/{self.params.integration_identifier}:"
+            "export?alt=media"
+        )
+        return self._make_request(HttpMethod.GET, endpoint).content
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_integration_instance_settings(self) -> requests.Response:
+        """Get integration instance settings"""
+        endpoint = (
+            f"/integrations/{self.params.integration_identifier}/integrationInstances/"
+            f"{self.params.instance_id}"
+        )
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def create_integrations_instance(self) -> requests.Response:
+        """Create integrations instance"""
+        endpoint = (
+            f"/integrations/{self.params.integration_identifier}/integrationInstances"
+        )
+        payload = {"environment": self.params.environment}
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_domains(self) -> requests.Response:
+        """Create integrations instance"""
+        endpoint = "/system/settings/domains"
+        response = self._make_request(HttpMethod.GET, endpoint)
+        raw = response.text.strip()
+        if not raw:
+            return []
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            return []
+        return data.get("domains", [])
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_domain(self) -> requests.Response:
+        """Update domain"""
+        endpoint = "/system/settings/domains"
+        payload = self.params.domain_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_environment_names(self) -> requests.Response:
+        """Get environment names"""
+        endpoint = "/system/settings/environments"
+        response = self._make_request(HttpMethod.GET, endpoint)
+        return [
+            evn_name.get("displayName")
+            for evn_name in response.json().get("environments", [])
+        ]
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_environments(self) -> requests.Response:
+        """Get environments"""
+        endpoint = (
+            "/system/settings/environments"
+        )
+        return self._make_request(HttpMethod.GET, endpoint).json()["environments"]
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def import_environment(self) -> requests.Response:
+        """Import environment"""
+        endpoint = (
+            "/system/settings/environments"
+        )
+        payload = self.params.environment_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def save_integration_instance_settings(self) -> requests.Response:
+        """Save integration instance settings"""
+        endpoint = f"/integrations/{self.params.identifier}/integrationInstances"
+        payload = {"environment": self.params.environment}
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def import_simulated_case(self) -> requests.Response:
+        """Update domain"""
+        endpoint = "/legacyCases:importCustomCase"
+        payload = self.params.case_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_case_tag(self) -> requests.Response:
+        """Add case tag"""
+        endpoint = "/system/settings/caseTagDefinitions"
+        payload = self.params.case_tag
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_case_stage(self) -> requests.Response:
+        """Add case stage"""
+        endpoint = "/system/settings/caseStageDefinitions"
+        payload = self.params.case_stage
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_case_alert(self) -> requests.Response:
+        """Get case alert"""
+        endpoint = "/system/settings/caseCloseDefinitions"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_close_reason(self) -> requests.Response:
+        """Add close reason"""
+        endpoint = "/system/settings/caseCloseDefinitions"
+        payload = self.params.close_reason
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_networks(self) -> requests.Response:
+        """Get networks"""
+        endpoint = "/system/settings/networks"
+        response = self._make_request(HttpMethod.GET, endpoint)
+        raw = response.text.strip()
+        if not raw:
+            return []
+        try:
+            data = response.json()
+        except Exception:
+            return []
+        return response.json()
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_network(self) -> requests.Response:
+        """Update network"""
+        endpoint = "/system/settings/networks"
+        payload = self.params.network_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_custom_lists(self) -> requests.Response:
+        """Get custom lists"""
+        endpoint = "/system/settings/customLists"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_custom_list(self) -> requests.Response:
+        """Update custom list"""
+        endpoint = f"/system/settings/customLists"
+        payload = self.params.tracking_list
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_blocklist(self) -> requests.Response:
+        """Update blocklist"""
+        endpoint = "/system/settings/soar-block-entities"
+        payload = self.params.blocklist_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_sla_record(self) -> requests.Response:
+        """Update sla record"""
+        endpoint = "/system/settings/slaDefinitions"
+        payload = self.params.sla_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def save_playbook(self) -> requests.Response:
+        """Save playbook"""
+        endpoint = "/legacyPlaybooks:legacySaveWorkflowDefinitions"
+        payload = self.params.playbook_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_playbooks_workflow_menu_cards(self) -> requests.Response:
+        """Get playbooks workflow menu cards."""
+        endpoint: str = "/legacyPlaybooks:legacyGetWorkflowMenuCards"
+        payload: list[int] = self.params.api_payload
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_playbooks_workflow_menu_cards_with_env(self) -> requests.Response:
+        """Get playbooks workflow menu cards with environment filter."""
+        endpoint: str = "/legacyPlaybooks:legacyGetWorkflowMenuCardsWithEnvFilter"
+        payload: list[int] = self.params.api_payload
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_playbook_workflow_menu_cards_by_identifier(self) -> requests.Response:
+        """Get playbook workflow menu cards by identifier."""
+        endpoint: str = (
+            "/legacyPlaybooks:legacyGetWorkflowFullInfoByIdentifier"
+            f"?WorkflowIdentifier={self.params.playbook_identifier}"
+        )
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_playbook_workflow_menu_cards_by_identifier_with_env(
+            self,
+    ) -> requests.Response:
+        """Get playbook workflow menu cards by identifier with environment filter."""
+        endpoint: str = (
+            "/legacyPlaybooks:legacyGetWorkflowFullInfoWithEnvFilterByIdentifier?"
+            f"WorkflowIdentifier={self.params.playbook_identifier}"
+        )
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_installed_jobs(self) -> requests.Response:
+        """Get installed jobs."""
+        endpoint: str = "/integrations/-/jobs/-/jobInstances"
+        if self.params.job_instance_id:
+            endpoint += f"/{self.params.job_instance_id}"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    def _enrich_connector_instances_with_params(
+        self,
+        response_json: SingleJson
+    ) -> list[SingleJson]:
+        """Helper to add parameters to a list of connector instances."""
+        instances = (
+                response_json.get("connector_instances")
+                or response_json.get("connectorInstances", [])
+        )
+        connector_names = [item['name'] for item in instances]
+
+        detailed_data_list = []
+        for name in connector_names:
+            prefix = "projects/project/locations/location/instances/instance/"
+            clean_path = name.replace(prefix, "")
+            detail_response = self._make_request(HttpMethod.GET, f"/{clean_path}")
+            if detail_response.status_code == 200:
+                data = detail_response.json()
+                data["params"] = data["parameters"]
+                detailed_data_list.append(data)
+            else:
+                print(f"Failed to fetch details for {name}")
+
+        return detailed_data_list
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_installed_connectors(self) -> requests.Response:
+        """Get installed connectors."""
+        instance_id: str = self.params.connector_instance_id
+        endpoint: str = "/integrations/-/connectors/-/connectorInstances"
+        if instance_id:
+            endpoint += f"/{instance_id}"
+            return self._make_request(HttpMethod.GET, endpoint)
+
+        response = self._make_request(HttpMethod.GET, endpoint).json()
+        return self._enrich_connector_instances_with_params(response)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_connector_params(self) -> requests.Response:
+        """Get connector cards using legacy API"""
+        endpoint = (
+            f"/integrations/{self.params.integration_name}"
+            "/connectors/-/connectorInstances"
+        )
+        response = self._make_request(HttpMethod.GET, endpoint)
+        response.raise_for_status()
+        response_json = response.json()
+
+        instances = (
+                response_json.get("connector_instances")
+                or response_json.get("items")
+                or response_json.get("connectorInstances", [])
+        )
+
+        for instance in instances:
+            instance_name = instance.get("name")
+            if instance_name:
+                try:
+                    details_response = self._make_request(
+                        HttpMethod.GET, f"/{instance_name}"
+                    )
+                    if details_response.status_code == 200:
+                        details = details_response.json()
+                        instance["parameters"] = details.get("parameters", [])
+                    else:
+                        instance["parameters"] = []
+                except Exception:
+                    instance["parameters"] = []
+
+        new_response = requests.Response()
+        new_response.status_code = 200
+        new_response.headers["Content-Type"] = "application/json"
+        new_response._content = json.dumps(response_json).encode("utf-8")
+        return new_response
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_visual_families(self) -> requests.Response:
+        """Get custom visual families."""
+        endpoint = "/ontologyRecords/-/visualFamilies"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_visual_family_by_id(self) -> requests.Response:
+        """Get custom visual family by ID."""
+        endpoint = f"/ontologyRecords/-/visualFamilies/{self.params.family_id}"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_case_tags(self) -> requests.Response:
+        """Get case tags"""
+        endpoint = "/system/settings/caseTagDefinitions"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_case_stages(self) -> requests.Response:
+        """Get case stages"""
+        endpoint = "/system/settings/caseStageDefinitions"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_case_close_reasons(self) -> requests.Response:
+        """Get case close reasons"""
+        return self.get_case_alert()
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_block_lists_details(self) -> requests.Response:
+        """Get block lists details"""
+        endpoint = "/system/settings/soar-block-entities"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_sla_records(self) -> requests.Response:
+        """Get sla records"""
+        endpoint = "/system/settings/slaDefinitions"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_all_model_block_records(self) -> requests.Response:
+        """Get all model block records."""
+        endpoint: str = "/entitiesBlocklists"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_company_logo(self) -> requests.Response:
+        """Get company logo."""
+        endpoint: str = "/moduleSettings/CompanySetting/properties"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_case_title_settings(self) -> requests.Response:
+        """Get case title settings."""
+        endpoint: str = "/moduleSettings/CaseTitleSettings/properties/"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def save_case_title_settings(self) -> requests.Response:
+        """Save case title settings."""
+        endpoint: str = (
+            f"/moduleSettings/CaseTitleSettings/properties/{self.params.display_name}"
+        )
+        payload = {
+            "name": self.params.name,
+            "displayName": self.params.display_name,
+            "type": self.params.type,
+            "value": self.params.value,
+        }
+        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_or_update_company_logo(self) -> requests.Response:
+        """Add or update company logo."""
+        endpoint: str = "/moduleSettings/CompanySetting/properties/CompanyLogo"
+        payload = self.params.logo_data
+        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def attache_workflow_to_case(self) -> requests.Response:
+        """Attache workflow to case."""
+        endpoint: str = "/legacyPlaybooks:legacyAttachWorkflowToCase"
+        payload = {
+            "cyberCaseId": self.params.case_id,
+            "alertGroupIdentifier": self.params.alert_group_identifier,
+            "alertIdentifier": self.params.alert_identifier,
+            "wfName": self.params.wf_name,
+            "shouldRunAutomatic": True,
+            "originalWorkflowDefinitionIdentifier": self.params.original_wf_identifier,
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def import_custom_case(self) -> requests.Response:
+        """Import custom case."""
+        endpoint: str = "/legacyCases:importCustomCase"
+        payload = self.params.case_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def case_search_everything(self) -> requests.Response:
+        """Case search everything."""
+        endpoint: str = "/legacySearches:legacyCaseSearchEverything"
+        payload = self.params.search_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_environment_action_definition(self) -> requests.Response:
+        """Get environment action definition."""
+        endpoint: str = "/legacySoarSettings:legacyGetEnvironmentActionDefinitions"
+        payload = self.params.environment_action_data
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def export_simulated_case(self) -> requests.Response:
+        """Export simulated cases"""
+        name = self.params.name
+        endpoint = f"/legacySoarCases:exportCustomCase/{name}"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_bearer_token(self) -> requests.Response:
+        """Get bearer token."""
+        endpoint = "/auth/login"
+        payload = {
+            "password": self.params.smp_password,
+            "username": self.params.smp_username,
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_api_record(self) -> requests.Response:
+        """Update api record."""
+        endpoint = "/settings/addOrUpdateAPIKeyRecord"
+        return self._make_request(
+            HttpMethod.POST, endpoint, json_payload=self.params.api_record
+        )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_store_data(self) -> SingleJson:
+        """Get all store data and return it in the expected dictionary format."""
+        endpoint = "/marketplaceIntegrations"
+        all_integrations = []
+        next_page_token = None
+
+        while True:
+            params = {}
+            if next_page_token:
+                params["pageToken"] = next_page_token
+            response_json = self._make_request(
+                HttpMethod.GET, endpoint, params=params
+            ).json()
+            page_items = response_json.get("marketplaceIntegrations", [])
+            all_integrations.extend(page_items)
+            next_page_token = response_json.get("nextPageToken")
+            if not next_page_token:
+                break
+        return {
+            "marketplaceIntegrations": all_integrations,
+            "nextPageToken": None
+        }
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def import_package(self) -> requests.Response:
+        """Import package."""
+        endpoint = "/ide/ImportPackage"
+        data = {
+            "data": self.params.b64_blob,
+            "integrationIdentifier": self.params.integration_name,
+            "isCustom": True,
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=data)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_ide_item(self) -> requests.Response:
+        """Update ide item."""
+        endpoint = "/ide/AddOrUpdateItem"
+        return self._make_request(
+            HttpMethod.POST, endpoint, json_payload=self.params.input_json
+        )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_ide_cards(self) -> requests.Response:
+        """Get ide cards (1P compatible)."""
+
+        class _DictResponse:
+            def __init__(self, payload: dict):
+                self._payload = payload
+                self.status_code = 200
+
+            def json(self):
+                """
+                Must ALWAYS return: list[dict]
+                so this keeps working safely:
+                    for x in response.json():
+                        x.get(...)
+                """
+                if not self._payload:
+                    return []
+
+                cards = self._payload.get("cards", [])
+                if isinstance(cards, list):
+                    return cards
+
+                return []
+
+            def raise_for_status(self):
+                return None
+
+        connectors_endpoint = "/integrations/{identifier}/connectors"
+        actions_endpoint = "/integrations/{identifier}/actions"
+        jobs_endpoint = "/integrations/{identifier}/jobs"
+        managers_endpoint = "/integrations/{identifier}/managers"
+
+        cards: list[dict] = []
+
+        connectors_response = self._make_request(
+            HttpMethod.GET,
+            connectors_endpoint.format(identifier=self.params.integration_name),
+        )
+        connectors_data = safe_json_for_204(connectors_response, default_for_204={})
+        cards.extend(connectors_data.get("connectors", []))
+
+        actions_response = self._make_request(
+            HttpMethod.GET,
+            actions_endpoint.format(identifier=self.params.integration_name),
+        )
+        actions_data = safe_json_for_204(actions_response, default_for_204={})
+        cards.extend(actions_data.get("actions", []))
+
+        jobs_response = self._make_request(
+            HttpMethod.GET,
+            jobs_endpoint.format(identifier=self.params.integration_name),
+        )
+        jobs_data = safe_json_for_204(jobs_response, default_for_204={})
+        cards.extend(jobs_data.get("jobs", []))
+
+        managers_response = self._make_request(
+            HttpMethod.GET,
+            managers_endpoint.format(identifier=self.params.integration_name),
+        )
+        managers_data = safe_json_for_204(managers_response, default_for_204={})
+        cards.extend(managers_data.get("managers", []))
+
+        payload = {
+            "cards": [
+                {
+                    "identifier": self.params.integration_name,
+                    "cards": cards,
+                }
+            ]
+        }
+
+        return _DictResponse(payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_ide_item(self) -> requests.Response:
+        """Get ide item."""
+        endpoint = "/ide/GetIdeItem"
+        query = {
+            "itemId": self.params.item_id,
+            "ideItemType": self.params.item_type,
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=query)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def set_mappings_visual_family(self) -> requests.Response:
+        """Set mappings visual family."""
+        endpoint = "/ontologyRecords/*/mappingRules:family"
+        payload = {
+            "source": self.params.source,
+            "product": self.params.product or "",
+            "eventName": self.params.event_name,
+            "visualFamily": self.params.visual_family,
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def export_playbooks(self) -> requests.Response:
+        """Export playbooks."""
+        endpoint = "/legacyPlaybooks:legacyExportDefinitions"
+        payload = {"identifiers": self.params.definitions}
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def import_playbooks(self) -> requests.Response:
+        """Import playbooks."""
+        endpoint = "/legacyPlaybooks:legacyImportDefinitions"
+        return self._make_request(
+            HttpMethod.POST, endpoint, json_payload=self.params.playbooks
+        )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def create_playbook_category(self) -> requests.Response:
+        """Create playbook category."""
+        endpoint = "/legacyPlaybooks:legacyAddOrUpdatePlaybookCategory"
+        req = {
+            "categoryState": 0,
+            "id": 0,
+            "isDefaultCategory": False,
+            "name": self.params.name,
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=req)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_playbook_categories(self) -> requests.Response:
+        """Get playbook categories."""
+        endpoint = "/legacyPlaybooks:legacyGetWorkflowCategories"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_connector(self) -> requests.Response:
+        """Update connector."""
+        name = self.params.integration_name
+        connector = self.params.connector_id
+        endpoint = f"/integrations/{name}/connectors/{connector}/connectorInstances/"
+        return self._make_request(
+            HttpMethod.POST, endpoint, json_payload=self.params.connector_data
+        )
+    # QA fixes
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_job(self) -> requests.Response:
+        """Add job."""
+        integration = self.params.integration_name
+        job_full_name = self.params.job_name
+        try:
+            job_id = job_full_name.split("jobs/")[1].split("/")[0]
+        except (IndexError, AttributeError):
+            job_id = job_full_name
+            
+        endpoint = f"/integrations/{integration}/jobs/{job_id}/jobInstances/"
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
+
+    # def add_job(self) -> requests.Response:
+    #     """Add job."""
+    #     endpoint = "/jobs/SaveOrUpdateJobData"
+    #     #integrations/{integration}/jobs/{job}/jonInstances/{jobInstance}
+    #     return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_email_template(self) -> requests.Response:
+        """Add email template."""
+        endpoint = "/system/settings/emailTemplates"
+        return self._make_request(
+            HttpMethod.POST, endpoint, json_payload=self.params.template
+        )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_denylists(self) -> requests.Response:
+        """Get denylists."""
+        endpoint = "/system/settings/soarBlockEntities"
+        params = {"expand": "*"} if self.params.is_expand else None
+        return self._make_request(HttpMethod.GET, endpoint, params=params)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_simulated_cases(self) -> requests.Response:
+        """Get simulated cases."""
+        endpoint = "/legacyCases:getCustomCases"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_installed_integrations(self) -> requests.Response:
+        """Get installed integrations."""
+        endpoint: str = "/integrations"
+        return self._make_request(HttpMethod.GET, endpoint).json()["integrations"]
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_case_close_comment(self, case_id: str | int) -> requests.Response:
         """Get case closure comment
 
@@ -768,3 +1484,70 @@ class OnePlatformSoarApi(BaseSoarApi):
             "$pageSize": 1,
         }
         return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_mapping_rules(self) -> requests.Response:
+        """Add mapping rules."""
+        endpoint = f"/ontologyRecords/{self.params.mr_id}/mappingRules:save"
+
+        rules = self.params.mapping_rule
+        if not isinstance(rules, list):
+            rules = [rules]
+
+        last_response = None
+        for rule_item in rules:
+            rule_data = rule_item.get("mappingRule", {}) if isinstance(rule_item, dict) else {}
+
+            if rule_data:
+                payload = {
+                    "securityEventFieldName": rule_data.get("securityEventFieldName"),
+                    "transformationFunction": rule_data.get("transformationFunction"),
+                    "transformationFunctionParam": rule_data.get("transformationFunctionParam"),
+                    "rawDataPrimaryFieldMatchTerm": rule_data.get("rawDataPrimaryFieldMatchTerm") or rule_data.get("securityEventFieldName"),
+                    "rawDataPrimaryFieldComparisonType": rule_data.get("rawDataPrimaryFieldComparisonType"),
+                    "rawDataSecondaryFieldMatchTerm": rule_data.get("rawDataSecondaryFieldMatchTerm"),
+                    "rawDataSecondaryFieldComparisonType": rule_data.get("rawDataSecondaryFieldComparisonType"),
+                    "rawDataThirdFieldMatchTerm": rule_data.get("rawDataThirdFieldMatchTerm"),
+                    "rawDataThirdFieldComparisonType": rule_data.get("rawDataThirdFieldComparisonType"),
+                    "enrichmentFields": rule_data.get("enrichmentFields"),
+                    "isArtifact": rule_data.get("isArtifact"),
+                    "extractionFunctionParam": rule_data.get("extractionFunctionParam"),
+                    "extractionFunction": rule_data.get("extractionFunction"),
+                    "ontologyConfigurationLevel": rule_item.get("ontologyConfigurationLevel", 0),
+                    "targetFieldType": rule_item.get("targetFieldType", 0),
+                    "eventName": rule_data.get("eventName"),
+                }
+            else:
+                payload = rule_item
+
+            last_response = self._make_request(
+                HttpMethod.POST, endpoint, json_payload=payload
+            )
+            last_response.raise_for_status()
+
+        return last_response
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_ontology_records(self) -> requests.Response:
+        """Get ontology records."""
+        endpoint = "/ontologyRecords"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_mapping_rules(self) -> requests.Response:
+        """Get mapping rules."""
+        endpoint = f"/ontologyRecords/{self.params.mr_id}/mappingRules"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def add_custom_family(self) -> requests.Response:
+        """Add custom visual family."""
+        endpoint = f"/ontologyRecords/{self.params.mr_id}/visualFamilies"
+
+        family_data = self.params.visual_family
+        if isinstance(family_data, dict) and "visualFamilyDataModel" in family_data:
+            family_data = family_data["visualFamilyDataModel"]
+
+        return self._make_request(
+            HttpMethod.POST, endpoint, json_payload=family_data
+        )
