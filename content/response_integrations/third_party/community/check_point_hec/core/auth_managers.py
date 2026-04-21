@@ -9,7 +9,7 @@ import requests
 from cached_property import cached_property
 from jose import jwt
 
-from constants import SMART_API_VERSION
+from .constants import SMART_API_VERSION
 
 
 class AuthManager(ABC):

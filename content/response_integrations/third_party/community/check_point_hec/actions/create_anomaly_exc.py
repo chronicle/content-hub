@@ -1,4 +1,5 @@
-import json
+from __future__ import annotations
+import yaml
 
 from TIPCommon.validation import ParameterValidator
 
@@ -17,8 +18,7 @@ class CreateAnomalyException(BaseAction):
         self.error_output_message: str = ERROR_MESSAGE
 
     def _extract_action_parameters(self) -> None:
-        self.params.request_json = self.soar_action.parameters.get(
-            siemplify=self.soar_action,
+        self.params.request_json = self.soar_action.extract_action_param(
             param_name="Request JSON",
             print_value=True,
             is_mandatory=True
@@ -34,7 +34,7 @@ class CreateAnomalyException(BaseAction):
         validator.validate_json(param_name="Request JSON", json_string=self.params.request_json)
 
     def _perform_action(self, _=None) -> None:
-        request_json = json.loads(self.params.request_json)
+        request_json = yaml.safe_load(self.params.request_json)
         added_by = self.params.added_by
         self.json_results = self.api_client.create_anomaly_exception(request_json=request_json, added_by=added_by)
 

@@ -1,6 +1,4 @@
-import json
-
-import dateparser
+import yaml
 
 from ..core.base_action import BaseAction
 from ..core.constants import SEARCH_EMAILS_SCRIPT_NAME, DATE_FORMAT, SAAS_APPS_TO_SAAS_NAMES, \
@@ -143,34 +141,6 @@ class SearchEmails(BaseAction):
             is_mandatory=False,
         )
 
-    # def _validate_params(self) -> None:
-    #     if start_date := self.params.start_date:
-    #         self.params.start_date = start_date
-    #         if end_date := self.params.end_date:
-    #             self.params.end_date = end_date
-    #     else:
-    #         ...
-    #         # error
-    #
-    #     if (subject_contains := self.params.subject_contains) and \
-    #             (subject_match := self.params.subject_match):
-    #         ...
-    #         # error
-    #
-    #     if (sender_contains := self.params.sender_contains) and \
-    #             (sender_match := self.params.sender_match):
-    #         ...
-    #         # error
-    #
-    #     if (recipients_contains := self.params.recipients_contains) and \
-    #             (recipient_match := self.params.recipients_match):
-    #         ...
-    #         # error
-    #
-    #     if (name_contains := self.params.name_contains) and (name_match := self.params.name_match):
-    #         ...
-    #         # error
-
     def _perform_action(self, _=None) -> None:
         start_date = self.params.start_date
         end_date = self.params.end_date
@@ -182,11 +152,11 @@ class SearchEmails(BaseAction):
         sender_match = self.params.sender_match
         domain = self.params.domain
         cp_detection = [CP_DETECTION_VALUES[detection] for detection in \
-                        json.loads(self.params.cp_detection) if detection != ''] if (self.params.cp_detection != '') else None
+                        yaml.safe_load(self.params.cp_detection) if detection != ''] if (self.params.cp_detection != '') else None
         if cp_detection == ['']:
             cp_detection = None
         ms_detection = [MS_DETECTION_VALUES[detection] for detection in \
-                        json.loads(self.params.ms_detection) if detection != ''] if (self.params.ms_detection != '') else None
+                        yaml.safe_load(self.params.ms_detection) if detection != ''] if (self.params.ms_detection != '') else None
         if ms_detection == ['']:
             ms_detection = None
         detection_op = self.params.detection_op

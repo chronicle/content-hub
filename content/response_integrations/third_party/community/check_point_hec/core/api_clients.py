@@ -61,7 +61,6 @@ class APIBaseClient(ABC):
             res.raise_for_status()
 
         except requests.exceptions.HTTPError as e:
-            print(f'request exception: status_code[{e.response.status_code}] response[{e.response.content}]')
             raise e
 
         self.json_results = res.json()

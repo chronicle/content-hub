@@ -2,11 +2,8 @@ from ..core.base_action import BaseAction
 from ..core.constants import PING_SCRIPT_NAME
 from ..core.exceptions import CheckPointHECPermissionsError
 
-SUCCESS_MESSAGE: str = (
-    "Successfully connected to the Smart API Service with the provided connection parameters!"
-)
+SUCCESS_MESSAGE: str = "Successfully connected to the Smart API Service with the provided connection parameters!"
 ERROR_MESSAGE: str = "Failed to connect to the Smart API Service!"
-
 
 
 class Ping(BaseAction):

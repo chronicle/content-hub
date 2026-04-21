@@ -1,4 +1,4 @@
-import json
+import yaml
 
 from ..core.base_action import BaseAction
 from ..core.constants import GET_EVENTS_SCRIPT_NAME, SAAS_APPS_TO_SAAS_NAMES, SEVERITY_VALUES
@@ -57,10 +57,10 @@ class GetEvents(BaseAction):
     def _perform_action(self, _=None) -> dict:
         start_date = self.params.start_date
         end_date = self.params.end_date
-        saas_apps = [SAAS_APPS_TO_SAAS_NAMES[saas] for saas in json.loads(self.params.saas_apps)]
-        states = [state.lower() for state in json.loads(self.params.states)]
-        severities = [SEVERITY_VALUES[severity.lower()] for severity in json.loads(self.params.severities)]
-        threat_types = [threat_type.lower().replace(" ", "_") for threat_type in json.loads(self.params.threat_types)]
+        saas_apps = [SAAS_APPS_TO_SAAS_NAMES[saas] for saas in yaml.safe_load(self.params.saas_apps)]
+        states = [state.lower() for state in yaml.safe_load(self.params.states)]
+        severities = [SEVERITY_VALUES[severity.lower()] for severity in yaml.safe_load(self.params.severities)]
+        threat_types = [threat_type.lower().replace(" ", "_") for threat_type in yaml.safe_load(self.params.threat_types)]
         limit = self.params.limit
 
         self.json_results = self.api_client.query_events(
