@@ -967,13 +967,12 @@ def resume_case_alerts_sla(
     """Resume alert SLA for multiple alerts in a case.
 
     Args:
-        chronicle_soar (ChronicleSoar): A chronicle soar SDK object
-        case_id (int): Chronicle SOAR case ID
-        alert_identifiers (list[str]): List of Chronicle SOAR Alert Identifiers
-        message (str): Chronicle SOAR message
-
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
+        message: Chronicle SOAR message.
     Returns:
-        tuple[list[str], list[str]]: Success and failed alert identifiers.
+        Success and failed alert identifiers.
     """
     success_alerts = []
     failed_alerts = []
