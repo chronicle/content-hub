@@ -981,9 +981,7 @@ def resume_case_alerts_sla(
             resume_alert_sla(chronicle_soar, case_id, alert_identifier, message)
             success_alerts.append(alert_identifier)
         except Exception as e:
-            chronicle_soar.LOGGER.error(
-                f"Failed to resume SLA for alert {alert_identifier}: {e}"
-            )
+            chronicle_soar.LOGGER.error(f"Failed to resume SLA for alert {alert_identifier}: {e}")
             failed_alerts.append(alert_identifier)
 
     return success_alerts, failed_alerts
@@ -1012,9 +1010,7 @@ def pause_case_alerts_sla(
             pause_alert_sla(chronicle_soar, case_id, alert_identifier, message)
             success_alerts.append(alert_identifier)
         except Exception as e:
-            chronicle_soar.LOGGER.error(
-                f"Failed to pause SLA for alert {alert_identifier}: {e}"
-            )
+            chronicle_soar.LOGGER.error(f"Failed to pause SLA for alert {alert_identifier}: {e}")
             failed_alerts.append(alert_identifier)
 
     return success_alerts, failed_alerts
