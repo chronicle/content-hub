@@ -272,10 +272,15 @@ def main():
                         )
                         def get_fields(rule):
                             """Extract iterable fields from either response format."""
-                            if "familyFields" in rule or "systemFields" in rule:
-                                return rule.get("familyFields", []) + rule.get("systemFields", [])
-                            elif "mapping_rules" in rule:
-                                return rule.get("mapping_rules", [])
+                            if isinstance(rule, list):
+                                return rule
+                            if isinstance(rule, dict):
+                                if "familyFields" in rule or "systemFields" in rule:
+                                    return rule.get("familyFields", []) + rule.get("systemFields", [])
+                                elif "mapping_rules" in rule:
+                                    return rule.get("mapping_rules", [])
+                                elif "mappingRules" in rule:
+                                    return rule.get("mappingRules", [])
                             return []
 
                         def get_mapping_rule(r, rule):
@@ -287,9 +292,12 @@ def main():
                         for r in get_fields(rule):
                             mapping_rule = get_mapping_rule(r, rule)
                             source = mapping_rule.get("source")
-                            if source and source.lower() == integration.lower():
-                                rules.append(rule)
-                                break
+                            if not source or source.lower() == integration.lower():
+                                if isinstance(rule, list):
+                                    rules.append(r)
+                                else:
+                                    rules.append(rule)
+                                    break
 
                     gitsync.content.push_mapping(Mapping(integration, records, rules))
 
@@ -319,7 +327,7 @@ def main():
         if features["Logo"]:
             siemplify.LOGGER.info("Pushing logo")
             logo = gitsync.api.get_logo()
-            if logo["imageBase64"]:
+            if isinstance(logo, dict) and logo.get("imageBase64"):
                 # A custom logo is configured.
                 logo["imageBase64"] = "data:image/png;base64," + logo["imageBase64"]
             gitsync.content.push_logo(logo)

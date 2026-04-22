@@ -177,9 +177,20 @@ def main():
 
         if features["Connectors"]:
             siemplify.LOGGER.info("========== Connectors ==========")
-            for connector in gitsync.content.get_connectors():
-                siemplify.LOGGER.info(f"Installing {connector.name}")
-                gitsync.install_connector(connector)
+            existing_connectors = gitsync.api.get_connectors(chronicle_soar=siemplify) 
+            for connector in gitsync.content.get_connectors():# Assuming this API exists
+                
+                    is_duplicate = any(
+                        c.get("name") or c.get("displayName")  == connector.name and c.get("environment") == connector.environment
+                        for c in existing_connectors
+                    )
+
+                    if is_duplicate:
+                        siemplify.LOGGER.info(f"Connector {connector.name} already exists in {connector.environment}. Updating.")
+                        continue
+                    siemplify.LOGGER.info(f"Installing {connector.name}")
+                    gitsync.install_connector(connector)
+
 
         if features["Jobs"]:
             siemplify.LOGGER.info("========== Jobs ==========")
@@ -253,7 +264,29 @@ def main():
             case_title_settings = gitsync.content.get_case_titles()
             if case_title_settings:
                 siemplify.LOGGER.info("Installing case title settings")
-                gitsync.api.save_case_title_settings(case_title_settings)
+                siemplify.LOGGER.info(f"===================={case_title_settings}====================")
+
+                if isinstance(case_title_settings, dict) and "items" in case_title_settings:
+                    for item in case_title_settings.get("items", []):
+                        val = item.get("value")
+                        normalized_value = val if val and val.strip() else "Null"
+                        
+                        gitsync.api.save_case_title_settings(
+                            name=item.get("name"),
+                            display_name=item.get("displayName"),
+                            value=normalized_value,
+                            type_=item.get("type", 2),
+                            settings=None
+                        )
+
+                elif isinstance(case_title_settings, list):
+                    gitsync.api.save_case_title_settings(
+                        name=None,
+                        display_name=None,
+                        value=None,
+                        type_=None,
+                        settings=case_title_settings
+                )
 
         if features["Visual Families"]:
             siemplify.LOGGER.info("Installing visual families")
@@ -318,9 +351,13 @@ def main():
             siemplify.LOGGER.info("Installing email templates")
             current_templates = gitsync.api.get_email_templates(chronicle_soar=siemplify)
             for template in gitsync.content.get_email_templates():
-                gitsync.api.add_email_template(
-                    id_validator(template, "name", "id", current_templates),
-                )
+                validated_template = id_validator(template, "name", "id", current_templates)
+                name_to_check = template.get("displayName") or template.get("name")
+                if any((t.get("displayName") == name_to_check or t.get("name") == name_to_check) for t in current_templates):
+                    siemplify.LOGGER.info(f"Email template \"{name_to_check}\" already exists. Skipping.")
+                    continue
+                
+                gitsync.api.add_email_template(validated_template)
 
         if features["Blacklists"]:
             siemplify.LOGGER.info("Installing denylists")
@@ -361,25 +398,64 @@ def main():
                 if envs_json_val:
                     definition["environmentsJson"] = envs_json_val
                 gitsync.api.update_denylist(siemplify, definition)
-
+        
         if features["SLA Records"]:
             siemplify.LOGGER.info("Installing SLA definition")
+            current_sla_records = gitsync.api.get_sla_records(chronicle_soar=siemplify)
             for definition in gitsync.content.get_sla_definitions():
-                # definition = (
-                #     SlaDefinition.from_legacy_or_1p(definition).to_1p()
-                #     if platform_supports_1p_api()
-                #     else SlaDefinition.from_legacy_or_1p(definition).to_legacy()
-                # ) #QA fixes need to remove the commented line
-                gitsync.api.update_sla_record(siemplify, definition)
+                if not isinstance(definition, dict):
+                    continue
+
+                def_type = definition.get("slaType") or definition.get("Type")
+                def_val = definition.get("slaTypeValue") or definition.get("TypeValue")
+                def_envs = definition.get("environments") or ([definition.get("environment")] if definition.get("environment") else []) or ([definition.get("Environment")] if definition.get("Environment") else [])
+                def_envs = [e for e in def_envs if e]
+                
+                is_duplicate = False
+                for c in current_sla_records:
+                    if not isinstance(c, dict):
+                        continue
+                    c_type = c.get("slaType") or c.get("Type")
+                    c_val = c.get("slaTypeValue") or c.get("TypeValue")
+                    c_envs = c.get("environments") or ([c.get("environment")] if c.get("environment") else []) or ([c.get("Environment")] if c.get("Environment") else [])
+                    c_envs = [e for e in c_envs if e]
+                    
+                    if c_type == def_type and c_val == def_val:
+                        if any(e in def_envs for e in c_envs):
+                            is_duplicate = True
+                            break
+                
+                if is_duplicate:
+                    siemplify.LOGGER.info(f"SLA Record of type \"{def_type}\" (\"{def_val}\") already exists for overlapping environments. Skipping.")
+                    continue
+
+                try:
+                    gitsync.api.update_sla_record(siemplify, definition)
+                except Exception as e:
+                    siemplify.LOGGER.error(f"Failed to update SLA definition: {e}")
 
         if features["Logo"]:
-            if not gitsync.content.get_logo():
+            logo_data = gitsync.content.get_logo()
+            if not logo_data:
                 siemplify.LOGGER.info("Logo not found. Skipping")
             else:
                 siemplify.LOGGER.info("Installing Logo")
-                gitsync.api.update_logo(gitsync.content.get_logo())
 
-        siemplify.LOGGER.info("Finished Successfully")
+                if "items" in logo_data:
+
+                    for item in logo_data.get("items", []):
+                        
+                        if "value" not in item:
+                            item["value"] = "True"
+                    
+                        payload = item
+                        gitsync.api.update_logo(payload)
+
+                    siemplify.LOGGER.info("Finished Successfully")
+                else:
+                    gitsync.api.update_logo(gitsync.content.get_logo())
+                siemplify.LOGGER.info("Finished Successfully")
+        
 
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing Job {SCRIPT_NAME}")

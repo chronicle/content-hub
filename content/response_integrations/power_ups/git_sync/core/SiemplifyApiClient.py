@@ -68,6 +68,7 @@ from TIPCommon.rest.soar_api import (
     get_visual_families,
     get_visual_family_by_id,
     get_case_title_settings,
+    get_company_logo,
     import_environment,
     install_integration,
     import_package,
@@ -83,6 +84,7 @@ from TIPCommon.rest.soar_api import (
     update_custom_list,
     update_domain,
     update_ide_item,
+    add_or_update_company_logo,
     update_network,
     update_sla_record,
 )
@@ -474,29 +476,25 @@ class SiemplifyApiClient:
         return update_custom_list(siemplify, tracking_list, tracking_id)
 
     def get_logo(self):
-        res = self.session.get("settings/GetCompanyLogo")
-        self.validate_response(res)
-        return res.json()
+        return get_company_logo(self.siemplify_soar)
+        
 
     def update_logo(self, logo):
-        res = self.session.post("settings/AddOrUpdateCompanyLogo", json=logo)
-        self.validate_response(res)
-        return True
+        return add_or_update_company_logo(self.siemplify_soar, logo)
 
     def get_case_title_settings(self):
         return get_case_title_settings(self.siemplify_soar)
 
-
-    def save_case_title_settings(self, settings):
-        items = settings.get("items") if isinstance(settings, dict) else settings
-        for item in items:
-            save_case_title_settings(
-                self.siemplify_soar,
-                name=item.get("name"),
-                display_name=item.get("displayName"),
-                value=item.get("value") or "Null",
-                type_=item.get("type"),
-            )
+    def save_case_title_settings(self, name=None, display_name=None, value=None, type_=None, settings=None):
+        return save_case_title_settings(
+            self.siemplify_soar,
+            name=name,
+            display_name=display_name,
+            value=value,
+            type_=type_,
+            settings=settings
+        )
+            
 
 
     def get_case_stages(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
@@ -562,7 +560,10 @@ class SiemplifyApiClient:
         Returns:
             list[SingleJson]: List of sla records.
         """
-        return get_sla_records(chronicle_soar=chronicle_soar)
+        try:
+            return get_sla_records(chronicle_soar=chronicle_soar)
+        except Exception:
+            return []
 
     def update_sla_record(self, siemplify, definition):
         res = update_sla_record(siemplify, definition)

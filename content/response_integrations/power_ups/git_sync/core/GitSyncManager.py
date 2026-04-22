@@ -338,8 +338,11 @@ class GitSyncManager:
         record_id = records[0].get("id") if records else (all_records[0].get("id") if all_records else None)
 
         for rule in mappings.rules:
-            self.api.add_mapping_rules(rule["familyFields"], record_id)
-            self.api.add_mapping_rules(rule["systemFields"], record_id)
+            if isinstance(rule, dict) and ("familyFields" in rule or "systemFields" in rule):
+                self.api.add_mapping_rules(rule.get("familyFields", []), record_id)
+                self.api.add_mapping_rules(rule.get("systemFields", []), record_id)
+            else:
+                self.api.add_mapping_rules(rule, record_id)
 
         # for record in mappings.records:
         #     matching_live_records = [r for r in all_records if r.get("source") == record.get("source") and r.get("product") == record.get("product") and r.get("eventName") == record.get("eventName")]

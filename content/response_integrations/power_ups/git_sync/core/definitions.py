@@ -192,12 +192,21 @@ class Mapping(Content):
             rec["id"] = 0
             rec["familyId"] = 0
         for rule in self.rules:
-            for fam_fields in rule["familyFields"] + rule["systemFields"]:
-                fam_fields["mappingRule"]["id"] = 0
-                fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
-                fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
-                fam_fields["creationTimeUnixTimeInMs"] = 0
-                fam_fields["modificationTimeUnixTimeInMs"] = 0
+            if isinstance(rule, dict) and ("familyFields" in rule or "systemFields" in rule):
+                for fam_fields in rule.get("familyFields", []) + rule.get("systemFields", []):
+                    if isinstance(fam_fields, dict) and "mappingRule" in fam_fields:
+                        fam_fields["mappingRule"]["id"] = 0
+                        fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
+                        fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
+                    if isinstance(fam_fields, dict):
+                        fam_fields["creationTimeUnixTimeInMs"] = 0
+                        fam_fields["modificationTimeUnixTimeInMs"] = 0
+            elif isinstance(rule, dict):
+                rule["id"] = 0
+                if "creationTimeUnixTimeInMs" in rule:
+                    rule["creationTimeUnixTimeInMs"] = 0
+                if "modificationTimeUnixTimeInMs" in rule:
+                    rule["modificationTimeUnixTimeInMs"] = 0
 
     def iter_files(self) -> Iterator[File]:
         yield File("README.md", self.readme)
