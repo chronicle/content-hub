@@ -355,7 +355,14 @@ class OnePlatformSoarApi(BaseSoarApi):
         filter_parts = []
 
         if environment:
-            filter_parts.append(f"environments eq '[\"{environment}\"]'")
+            escaped_env = escape_odata_literal(environment)
+            # Environments are stored as a JSON array string (e.g., '["Env X", "Env Y"]').
+            # We use 'eq' for the wildcard '["*"]' and 'contains' for the specific environment.
+            env_filter = (
+                f"(environments eq '[\"*\"]' or "
+                f"contains(environments, '\"{escaped_env}\"'))"
+            )
+            filter_parts.append(env_filter)
 
         if category_names:
             if isinstance(category_names, str):
