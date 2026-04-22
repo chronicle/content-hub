@@ -1701,7 +1701,7 @@ def get_cases_by_timestamp_filter(
     response = api_client.get_cases_by_timestamp_filter()
     return response
 
-
+# QA fixes
 def get_email_templates(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """Get email templates
 
@@ -1713,6 +1713,9 @@ def get_email_templates(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_email_template()
+    
+    if isinstance(response, list):
+        return response
 
     try:
         validate_response(response, validate_json=True)
@@ -2420,10 +2423,13 @@ def get_block_lists_details(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     return raw_data
 
 
-def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
+def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:#QA fixes
     """Get sla records."""
     api_client = get_soar_client(chronicle_soar)
-    response = api_client.get_sla_records().json()
+    result = api_client.get_sla_records()
+    if not result.text or not result.text.strip():
+        response = []
+    response = result.json()
 
     try:
         if response is None:
@@ -2457,7 +2463,7 @@ def get_all_model_block_records(chronicle_soar: ChronicleSOAR) -> list[SingleJso
     except InternalJSONDecoderError:
         return []
 
-def get_company_logo(chronicle_soar: ChronicleSOAR) -> SingleJson:
+def get_company_logo(chronicle_soar: ChronicleSOAR) -> SingleJson:#QA fixes
     """Get company logo."""
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_company_logo()
@@ -2476,26 +2482,33 @@ def get_case_title_settings(chronicle_soar: ChronicleSOAR) -> SingleJson:
         return response.json()
     except InternalJSONDecoderError:
         return {}
-
+#QA fixes
 def save_case_title_settings(
     chronicle_soar: ChronicleSOAR,
     name: str,
     display_name: str,
     value: str,
     type_: int,
+    settings: any,
 ) -> SingleJson:
     """Save case title settings."""
     api_client = get_soar_client(chronicle_soar)
+
     api_client.params.name = name
     api_client.params.display_name = display_name
     api_client.params.value = value
     api_client.params.type = type_
+    api_client.params.settings = settings
 
     response = api_client.save_case_title_settings()
+    
     validate_response(response, validate_json=False)
+    if not response.text or not response.text.strip():
+        return {}
+        
     return response.json()
 
-def add_or_update_company_logo(
+def add_or_update_company_logo( #QA fixes
     chronicle_soar: ChronicleSOAR,
     company_logo: SingleJson,
 ) -> SingleJson:

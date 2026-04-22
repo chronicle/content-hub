@@ -961,10 +961,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = self.params.tracking_list
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)#QA fixes
     def update_blocklist(self) -> requests.Response:
         """Update blocklist"""
-        endpoint = "/system/settings/soar-block-entities"
+        endpoint = "/entitiesBlocklists"
         payload = self.params.blocklist_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
@@ -1049,17 +1049,26 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         return detailed_data_list
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    @temporarily_remove_header(DATAPLANE_1P_HEADER) #QA fixes
     def get_installed_connectors(self) -> requests.Response:
         """Get installed connectors."""
         instance_id: str = self.params.connector_instance_id
         endpoint: str = "/integrations/-/connectors/-/connectorInstances"
+        
         if instance_id:
             endpoint += f"/{instance_id}"
             return self._make_request(HttpMethod.GET, endpoint)
 
-        response = self._make_request(HttpMethod.GET, endpoint).json()
-        return self._enrich_connector_instances_with_params(response)
+        response = self._make_request(HttpMethod.GET, endpoint)
+
+        if not response.text or not response.text.strip():
+            return []
+
+        try:
+            json_data = response.json()
+            return self._enrich_connector_instances_with_params(json_data)
+        except (ValueError, requests.exceptions.JSONDecodeError):
+            return []
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_connector_params(self) -> requests.Response:
@@ -1176,7 +1185,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def add_or_update_company_logo(self) -> requests.Response:
         """Add or update company logo."""
         endpoint: str = "/moduleSettings/CompanySetting/properties/CompanyLogo"
-        payload = self.params.logo_data
+        payload = self.params.company_logo # QA fixes
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
@@ -1486,12 +1495,21 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def add_mapping_rules(self) -> requests.Response:
+    def add_mapping_rules(self) -> requests.Response:#QA fixes
         """Add mapping rules."""
         endpoint = f"/ontologyRecords/{self.params.mr_id}/mappingRules:save"
 
         rules = self.params.mapping_rule
-        if not isinstance(rules, list):
+        if isinstance(rules, dict):
+            if "mappingRules" in rules and isinstance(rules["mappingRules"], list):
+                rules = rules["mappingRules"]
+            elif "mapping_rules" in rules and isinstance(rules["mapping_rules"], list):
+                rules = rules["mapping_rules"]
+            elif "items" in rules and isinstance(rules["items"], list):
+                rules = rules["items"]
+            else:
+                rules = [rules]
+        elif not isinstance(rules, list):
             rules = [rules]
 
         last_response = None
@@ -1513,12 +1531,19 @@ class OnePlatformSoarApi(BaseSoarApi):
                     "isArtifact": rule_data.get("isArtifact"),
                     "extractionFunctionParam": rule_data.get("extractionFunctionParam"),
                     "extractionFunction": rule_data.get("extractionFunction"),
-                    "ontologyConfigurationLevel": rule_item.get("ontologyConfigurationLevel", 0),
-                    "targetFieldType": rule_item.get("targetFieldType", 0),
+                    "ontologyConfigurationLevel": rule_item.get("ontologyConfigurationLevel") or rule_data.get("ontologyConfigurationLevel") or "Source",
+                    "targetFieldType": rule_item.get("targetFieldType") or rule_data.get("targetFieldType") or "GeneralField",
                     "eventName": rule_data.get("eventName"),
                 }
             else:
-                payload = rule_item
+                payload = rule_item.copy() if isinstance(rule_item, dict) else rule_item
+                if isinstance(payload, dict):
+                    if "id" in payload and payload["id"] == 0:
+                        payload.pop("id")
+                    if "name" in payload and (not payload["name"] or payload["name"].endswith("/0") or "mappingRules/0" in payload["name"]):
+                        payload.pop("name")
+                    if not payload.get("rawDataPrimaryFieldMatchTerm") and payload.get("securityEventFieldName"):
+                        payload["rawDataPrimaryFieldMatchTerm"] = payload["securityEventFieldName"]
 
             last_response = self._make_request(
                 HttpMethod.POST, endpoint, json_payload=payload
