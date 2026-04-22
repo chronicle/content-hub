@@ -989,6 +989,37 @@ def resume_case_alerts_sla(
     return success_alerts, failed_alerts
 
 
+def pause_case_alerts_sla(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_identifiers: list[str],
+    message: str,
+) -> tuple[list[str], list[str]]:
+    """Pause alert SLA for multiple alerts in a case.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
+        message: Chronicle SOAR message.
+    Returns:
+        Success and failed alert identifiers.
+    """
+    success_alerts = []
+    failed_alerts = []
+    for alert_identifier in alert_identifiers:
+        try:
+            pause_alert_sla(chronicle_soar, case_id, alert_identifier, message)
+            success_alerts.append(alert_identifier)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(
+                f"Failed to pause SLA for alert {alert_identifier}: {e}"
+            )
+            failed_alerts.append(alert_identifier)
+
+    return success_alerts, failed_alerts
+
+
 def change_case_description(
     chronicle_soar: ChronicleSOAR,
     case_id: int,
