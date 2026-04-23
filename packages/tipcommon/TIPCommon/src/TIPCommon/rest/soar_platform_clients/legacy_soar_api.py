@@ -686,19 +686,16 @@ class LegacySoarApi(BaseSoarApi):
         endpoint = f"/cases/insights/{self.params.case_id}"
         return self._make_request(HttpMethod.GET, endpoint)
 
-    def save_case_title_settings(self) -> requests.Response:
+    def save_case_title_settings(self) -> requests.Response:#QA fixes
         """Save case title settings."""
         endpoint: str = "/settings/SaveCaseTitleSettings"
-        payload = [{
-            "value": self.params.value,
-            "order": 0,
-        }]
+        payload = self.params.settings
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def add_or_update_company_logo(self) -> requests.Response:
         """Add or update company logo."""
         endpoint: str = "/settings/AddOrUpdateCompanyLogo"
-        payload = self.params.logo_data
+        payload = self.params.company_logo #QA fixes
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def attache_workflow_to_case(self) -> requests.Response:
@@ -739,8 +736,8 @@ class LegacySoarApi(BaseSoarApi):
 
     def get_company_logo(self) -> requests.Response:
         """Get company logo."""
-        endpoint: str = "settings/GetCompanyLogo"
-        return self.get_page_results(endpoint)
+        endpoint: str = "/settings/GetCompanyLogo" # QA fixes
+        return self._make_request(HttpMethod.GET, endpoint) # QA Fixes
 
     def get_case_title_settings(self) -> requests.Response:
         """Get case title settings."""
@@ -1010,6 +1007,7 @@ class LegacySoarApi(BaseSoarApi):
         """Get installed jobs."""
         endpoint: str = "/ide/GetIdeItemCards"
         return self._make_request(HttpMethod.GET, endpoint).json()
+
     def get_case_close_comment(self, case_id: str | int) -> requests.Response:
         """Get case closure comment
 
