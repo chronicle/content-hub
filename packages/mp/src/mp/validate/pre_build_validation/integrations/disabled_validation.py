@@ -48,9 +48,7 @@ class NoDisabledComponentsInIntegrationValidation:
             constants.JOBS_DIR,
             constants.CONNECTORS_DIR,
         ]
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
-            validation_path, *components
-        )
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(validation_path, *components)
 
         disabled_actions: list[ActionName] = filter_and_map_yaml_files(
             component_defs.get(constants.ACTIONS_DIR, []), _is_disabled, extract_name

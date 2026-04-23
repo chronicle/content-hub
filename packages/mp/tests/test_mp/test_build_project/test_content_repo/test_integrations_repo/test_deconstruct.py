@@ -42,9 +42,7 @@ def _normalize_dev_deps(toml_data: dict[str, Any]) -> None:
     """
     dev_deps = toml_data.get("dependency-groups", {}).get("dev", [])
     if dev_deps:
-        toml_data["dependency-groups"]["dev"] = [
-            re.split(r"[<>=!~]", dep)[0].strip() for dep in dev_deps
-        ]
+        toml_data["dependency-groups"]["dev"] = [re.split(r"[<>=!~]", dep)[0].strip() for dep in dev_deps]
 
 
 def test_deconstruct_half_built_integration(
@@ -104,9 +102,7 @@ def assert_deconstruct_integration(
             requirements.write_text("requests==2.32.4\n", encoding="utf-8")
             py_version.write_text("3.11", encoding="utf-8")
 
-        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(
-            commercial
-        )
+        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(commercial)
         marketplace.deconstruct_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name

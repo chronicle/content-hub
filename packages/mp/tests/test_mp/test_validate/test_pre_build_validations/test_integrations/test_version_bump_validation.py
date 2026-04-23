@@ -85,9 +85,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = lambda path: (
-                old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
-            )
+            mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert existing_files["toml"]["old"].project.version == 1.0
@@ -105,17 +103,13 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = lambda path: (
-                old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
-            )
+            mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert existing_files["toml"]["old"].project.version == 1.0
             assert existing_files["toml"]["new"].project.version == 3.0
 
-            with pytest.raises(
-                NonFatalValidationError, match=r"must be incremented by exactly 1\.0"
-            ):
+            with pytest.raises(NonFatalValidationError, match=r"must be incremented by exactly 1\.0"):
                 _version_bump_validation_run_checks(existing_files, new_files)
 
     def test_invalid_existing_integration_version_bump_float_fail(
@@ -129,9 +123,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = lambda path: (
-                old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
-            )
+            mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert existing_files["toml"]["old"].project.version == 1.0
@@ -139,9 +131,7 @@ class TestVersionBumpValidationFlow:
             assert existing_files["rn"]["old"].version == 1.0
             assert existing_files["rn"]["new"][0].version == 1.5
 
-            with pytest.raises(
-                NonFatalValidationError, match=r"must be incremented by exactly 1\.0"
-            ):
+            with pytest.raises(NonFatalValidationError, match=r"must be incremented by exactly 1\.0"):
                 _version_bump_validation_run_checks(existing_files, new_files)
 
     def test_mismatched_release_note_and_toml_version_fail(self, temp_integration: Path) -> None:
@@ -152,9 +142,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = lambda path: (
-                old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
-            )
+            mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert existing_files["toml"]["old"].project.version == 1.0
@@ -171,9 +159,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = mp.core.unix.NonFatalCommandError(
-                "File not found on main branch"
-            )
+            mock_git.side_effect = mp.core.unix.NonFatalCommandError("File not found on main branch")
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert not existing_files["toml"].get("old")
@@ -189,9 +175,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = mp.core.unix.NonFatalCommandError(
-                "File not found on main branch"
-            )
+            mock_git.side_effect = mp.core.unix.NonFatalCommandError("File not found on main branch")
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert new_files["toml"].project.version == 2.0
@@ -209,9 +193,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = mp.core.unix.NonFatalCommandError(
-                "File not found on main branch"
-            )
+            mock_git.side_effect = mp.core.unix.NonFatalCommandError("File not found on main branch")
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert new_files["toml"].project.version == 1.0
@@ -232,9 +214,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = lambda path: (
-                old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
-            )
+            mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert existing_files["toml"]["old"].project.version == 1.0
@@ -258,9 +238,7 @@ class TestVersionBumpValidationFlow:
         rn_path, toml_path = _setup_test_files(temp_integration, new_toml_content, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = lambda path: (
-                old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
-            )
+            mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert existing_files["toml"]["old"].project.version == 1.0

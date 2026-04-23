@@ -98,9 +98,7 @@ def _pull_playbook_zip_from_soar(playbook: str, dst: Path) -> Path:
 def _deconstruct_playbook(zip_path: Path, dst: Path, playbook: str) -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
         temp_path = Path(tmp_dir)
-        playbook_file: list[Path] = utils.unzip_playbooks(
-            zip_path, temp_path, include_playbook=playbook
-        )
+        playbook_file: list[Path] = utils.unzip_playbooks(zip_path, temp_path, include_playbook=playbook)
         utils.deconstruct_playbook(playbook_file[0], dst)
 
 
