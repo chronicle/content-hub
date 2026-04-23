@@ -216,7 +216,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
-            documentation_link=built.get("DocumentationLink"),  # type: ignore[assignment]
+            documentation_link=built.get("DocumentationLink"),  # ty: ignore[invalid-argument-type]
             dynamic_results_metadata=[
                 DynamicResultsMetadata.from_built(drm)
                 for drm in built.get("DynamicResultsMetadata", []) or []
@@ -252,7 +252,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             file_name=file_name,
             creator=non_built.get("creator", "admin"),
             description=non_built["description"],
-            documentation_link=non_built.get("documentation_link"),  # type: ignore[assignment]
+            documentation_link=non_built.get("documentation_link"),  # ty: ignore[invalid-argument-type]
             dynamic_results_metadata=[
                 DynamicResultsMetadata.from_non_built(drm)
                 for drm in non_built.get("dynamic_results_metadata", [])
@@ -285,9 +285,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         built: BuiltActionMetadata = BuiltActionMetadata(
             Creator=self.creator,
             Description=self.description,
-            DocumentationLink=(
-                str(self.documentation_link) if self.documentation_link else None
-            ),
+            DocumentationLink=(str(self.documentation_link) if self.documentation_link else None),
             DynamicResultsMetadata=[m.to_built() for m in self.dynamic_results_metadata],
             IntegrationIdentifier=self.integration_identifier,
             IsAsync=self.is_async,
@@ -317,9 +315,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         non_built: NonBuiltActionMetadata = NonBuiltActionMetadata(
             name=self.name,
             description=self.description,
-            documentation_link=(
-                str(self.documentation_link) if self.documentation_link else None
-            ),
+            documentation_link=(str(self.documentation_link) if self.documentation_link else None),
             integration_identifier=self.integration_identifier,
             parameters=[p.to_non_built() for p in self.parameters],
             dynamic_results_metadata=[m.to_non_built() for m in self.dynamic_results_metadata],

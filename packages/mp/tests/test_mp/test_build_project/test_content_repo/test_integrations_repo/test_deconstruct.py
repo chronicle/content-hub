@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import unittest.mock
 from typing import TYPE_CHECKING, Any
@@ -29,6 +30,21 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.build_project.integrations_repo import IntegrationsRepo
+
+
+def _normalize_dev_deps(toml_data: dict[str, Any]) -> None:
+    """Strip version specifiers from dev dependencies for comparison.
+
+    The deconstruct process resolves dev dependency versions based on the
+    current environment, which can differ between CI and local runs (e.g.
+    pytest>=9.0.2 vs pytest>=9.0.3). This normalizes them to just the
+    package name so the comparison is stable.
+    """
+    dev_deps = toml_data.get("dependency-groups", {}).get("dev", [])
+    if dev_deps:
+        toml_data["dependency-groups"]["dev"] = [
+            re.split(r"[<>=!~]", dep)[0].strip() for dep in dev_deps
+        ]
 
 
 def test_deconstruct_half_built_integration(
@@ -104,6 +120,11 @@ def assert_deconstruct_integration(
             expected=non_built_integration / mp.core.constants.PROJECT_FILE,
             actual=out_integration / mp.core.constants.PROJECT_FILE,
         )
+        # Normalize dev dependency version specifiers before comparison,
+        # since exact versions are environment-dependent (e.g. pytest>=9.0.2
+        # may resolve to pytest>=9.0.3 depending on the CI environment).
+        _normalize_dev_deps(actual)
+        _normalize_dev_deps(expected)
         assert actual == expected
 
         actual, expected = test_mp.common.get_yaml_content(

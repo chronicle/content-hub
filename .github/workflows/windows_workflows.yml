@@ -6,9 +6,17 @@ on:
   push:
     branches:
     - '**'
+    paths:
+    - 'content/**'
+    - 'packages/**'
+    - '.github/workflows/**'
   pull_request:
     branches:
     - '**'
+    paths:
+    - 'content/**'
+    - 'packages/**'
+    - '.github/workflows/**'
 
 jobs:
   changes:
@@ -16,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mp: ${{ steps.filter.outputs.mp }}
+      ci: ${{ steps.filter.outputs.ci }}
       integration_packages: ${{ steps.filter.outputs.integration_packages }}
       response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
       response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
@@ -34,23 +43,25 @@ jobs:
         filters: |
           mp:
             - 'packages/mp/**'
+          ci:
             - '.github/workflows/**'
           integration_packages:
             - 'packages/envcommon/**'
             - 'packages/tipcommon/**'
             - 'packages/integration_testing/**'
+            - 'packages/integration_testing_whls/**'
           response_integrations_google:
             - 'content/response_integrations/google/**'
           response_integrations_third_party:
             - 'content/response_integrations/third_party/**'
-            - 'content/response_integrations/power_up/**'
+            - 'content/response_integrations/power_ups/**'
           playbooks:
             - 'content/playbooks/**'
 
   test-mp-windows:
     name: 1. Test mp Package
     needs: changes
-    if: ${{ needs.changes.outputs.mp == 'true' }}
+    if: ${{ needs.changes.outputs.mp == 'true' || needs.changes.outputs.ci == 'true' }}
     runs-on: windows-latest
     steps:
     - name: Checkout repository
@@ -73,11 +84,20 @@ jobs:
   validate-integrations-windows:
     name: 2a. Validate Integrations
     needs: changes
-    if: ${{ needs.changes.outputs.mp == 'true' || needs.changes.outputs.integration_packages == 'true' || needs.changes.outputs.response_integrations_google == 'true' || needs.changes.outputs.response_integrations_third_party == 'true' }}
+    if: >-
+      (needs.changes.outputs.mp == 'true' ||
+       needs.changes.outputs.integration_packages == 'true' ||
+       needs.changes.outputs.response_integrations_google == 'true' ||
+       needs.changes.outputs.response_integrations_third_party == 'true') &&
+      (github.event_name != 'pull_request' ||
+       (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
+        !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
     runs-on: windows-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -88,6 +108,9 @@ jobs:
         uv pip install --system -e ./packages/mp
     - name: Run Validations
       shell: pwsh
+      env:
+        PYTHONIOENCODING: utf-8
+        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       run: |
         wmp config --root-path . --processes 7 --display-config
         wmp validate repository google third_party --only-pre-build
@@ -139,7 +162,12 @@ jobs:
   validate-playbooks-windows:
     name: 3a. Validate Playbooks
     needs: changes
-    if: ${{ needs.changes.outputs.mp == 'true' || needs.changes.outputs.playbooks == 'true' }}
+    if: >-
+      (needs.changes.outputs.mp == 'true' ||
+       needs.changes.outputs.playbooks == 'true') &&
+      (github.event_name != 'pull_request' ||
+       (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
+        !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
     runs-on: windows-latest
     steps:
     - name: Checkout repository

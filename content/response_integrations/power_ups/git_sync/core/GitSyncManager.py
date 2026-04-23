@@ -875,17 +875,26 @@ class WorkflowInstaller:
                 existing_step,
                 "IntegrationInstance",
             ).get("value")
-            self._set_step_parameter_by_name(step, "IntegrationInstance", instance)
             fallback = self._get_step_parameter_by_name(
                 existing_step,
                 "FallbackIntegrationInstance",
             ).get("value")
-            self._set_step_parameter_by_name(
-                step,
-                "FallbackIntegrationInstance",
-                fallback,
-            )
-            return
+            # Validate the existing instance before copying it.
+            # If it's invalid (e.g. from a prior failed import), fall through
+            # to the instance-discovery logic below.
+            instance_to_validate = fallback if instance == "AutomaticEnvironment" else instance
+            if instance_to_validate and self._is_valid_existing_instance(
+                step.get("integration"),
+                instance_to_validate,
+                environments,
+            ):
+                self._set_step_parameter_by_name(
+                    step, "IntegrationInstance", instance,
+                )
+                self._set_step_parameter_by_name(
+                    step, "FallbackIntegrationInstance", fallback,
+                )
+                return
 
         instance_display_name = self._get_instance_display_name(
             step,
@@ -914,6 +923,13 @@ class WorkflowInstaller:
                 step.get("integration"),
                 environments[0],
             )
+            # Fallback: also check the shared environment if no instances
+            # found in the playbook's specific environment
+            if not integration_instances:
+                integration_instances = self._find_integration_instances_for_step(
+                    step.get("integration"),
+                    ALL_ENVIRONMENTS_IDENTIFIER,
+                )
             if integration_instances:
                 instance_id = self.api.get_integration_instance_id_by_name(
                     self.chronicle_soar,
@@ -937,6 +953,17 @@ class WorkflowInstaller:
                 step.get("integration"),
                 ALL_ENVIRONMENTS_IDENTIFIER,
             )
+            # Fallback: check individual environments if no shared instances
+            if not integration_instances:
+                for env in environments:
+                    if env == ALL_ENVIRONMENTS_IDENTIFIER:
+                        continue
+                    integration_instances = self._find_integration_instances_for_step(
+                        step.get("integration"),
+                        env,
+                    )
+                    if integration_instances:
+                        break
             self._set_step_parameter_by_name(
                 step,
                 "IntegrationInstance",
@@ -974,29 +1001,67 @@ class WorkflowInstaller:
         integration_name: str,
         environment: str,
     ) -> list[dict]:
-        """Find integration instances available for integration per environment
+        """Find integration instances available for integration per environment.
+
+        Returns configured instances if any exist; otherwise falls back to
+        unconfigured instances to preserve backward compatibility while still
+        enabling a fallback when no configured instances are available.
 
         Args:
             integration_name: The integration name to look for
             environment: The environment to fetch the integration instances
 
         Returns:
-            A list of configured integration instances
+            A list of integration instances, preferring configured ones.
 
         """
         cache_key = f"integration_instances_{environment}"
         if cache_key not in self._cache:
-            self._cache[cache_key] = self.api.get_integrations_instances(environment)
+            self._cache[cache_key] = self.api.get_integrations_instances(environment) or []
 
-        instances = self._cache.get(cache_key)
-        instances.sort(key=lambda x: x.get("instanceName"))
+        instances = self._cache.get(cache_key, [])
 
-        return [
+        filtered_instances = [
             x
             for x in instances
             if x.get("integrationIdentifier") == integration_name
-            and x.get("isConfigured")
         ]
+
+        configured_instances = [x for x in filtered_instances if x.get("isConfigured")]
+        if configured_instances:
+            return sorted(configured_instances, key=lambda x: x.get("instanceName") or "")
+
+        # Fallback: return unconfigured instances sorted by name when no configured
+        # instances are available, so callers can still find something to assign.
+        return sorted(filtered_instances, key=lambda x: x.get("instanceName") or "")
+
+    def _is_valid_existing_instance(
+        self,
+        integration_name: str,
+        instance_id: str,
+        environments: list[str],
+    ) -> bool:
+        """Check if an instance ID exists among the available integration instances.
+
+        Args:
+            integration_name: The integration identifier to check.
+            instance_id: The instance UUID to validate.
+            environments: Playbook assigned environments to search.
+
+        Returns:
+            True if the instance exists in any of the playbook's environments
+            or in the shared environment.
+        """
+        envs_to_check = {*environments, ALL_ENVIRONMENTS_IDENTIFIER}
+        for env in envs_to_check:
+            instances = self._find_integration_instances_for_step(
+                integration_name,
+                env,
+            )
+            if any(x.get("identifier") == instance_id for x in instances):
+                return True
+
+        return False
 
     @staticmethod
     def _flatten_playbook_steps(steps: list) -> list[dict]:

@@ -6,7 +6,6 @@ on:
     paths:
     - 'content/**'
     - 'packages/**'
-    - '.github/workflows/**'
 
 permissions:
   contents: read
@@ -15,12 +14,13 @@ jobs:
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       mp: ${{ steps.filter.outputs.mp }}
       integration_packages: ${{ steps.filter.outputs.integration_packages }}
-      response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
       response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
-      playbooks: ${{ steps.filter.outputs.playbooks }}
+      changed_integrations: ${{ steps.find_integrations.outputs.integrations }}
+      test_all: ${{ steps.find_integrations.outputs.test_all }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -32,28 +32,57 @@ jobs:
       id: filter
       with:
         base: ${{ github.event.pull_request.base.sha }}
+        list-files: csv
         filters: |
           mp:
             - 'packages/mp/**'
-            - '.github/workflows/**'
           integration_packages:
             - 'packages/envcommon/**'
             - 'packages/tipcommon/**'
             - 'packages/integration_testing/**'
-          response_integrations_google:
-            - 'content/response_integrations/google/**'
+            - 'packages/integration_testing_whls/**'
           response_integrations_third_party:
             - 'content/response_integrations/third_party/**'
-            - 'content/response_integrations/power_up/**'
-          playbooks:
-            - 'content/playbooks/**'
+            - 'content/response_integrations/power_ups/**'
 
+    - name: Find changed integrations
+      id: find_integrations
+      run: |
+        # If shared packages or mp changed, test everything
+        if [[ "${{ steps.filter.outputs.mp }}" == "true" ]] || \
+           [[ "${{ steps.filter.outputs.integration_packages }}" == "true" ]]; then
+          echo "test_all=true" >> $GITHUB_OUTPUT
+          echo "integrations=" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "test_all=false" >> $GITHUB_OUTPUT
+
+        # Extract unique integration names from changed file paths
+        if [[ "${{ steps.filter.outputs.response_integrations_third_party }}" == "true" ]]; then
+          CHANGED_FILES="${{ steps.filter.outputs.response_integrations_third_party_files }}"
+          INTEGRATIONS=$(echo "$CHANGED_FILES" | tr ',' '\n' | \
+            grep "^content/response_integrations/" | \
+            sed 's|content/response_integrations/third_party/[^/]*/||' | \
+            sed 's|content/response_integrations/power_up[s]*/||' | \
+            cut -d'/' -f1 | \
+            sort -u | \
+            tr '\n' ' ' | xargs)
+          echo "integrations=$INTEGRATIONS" >> $GITHUB_OUTPUT
+        else
+          echo "integrations=" >> $GITHUB_OUTPUT
+        fi
 
   test_third_party:
     name: Test Third-Party Integrations
     needs: changes
-    if: ${{ needs.changes.outputs.response_integrations_third_party == 'true' || needs.changes.outputs.mp == 'true' || needs.changes.outputs.integration_packages == 'true' }}
+    if: >-
+      (needs.changes.outputs.test_all == 'true' ||
+       needs.changes.outputs.changed_integrations != '') &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-tests') &&
+      !contains(github.event.pull_request.labels.*.name, 'ci-minimal')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
     - name: Checkout PR code
       uses: actions/checkout@v4
@@ -65,6 +94,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        cache: 'pip'
 
     - name: Install mp package
       run: |
@@ -76,7 +106,19 @@ jobs:
         GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
       run: |
         mp config --root-path . --processes 10 --display-config
-        mp test --repository third_party --raise-error-on-violations
+
+        if [[ "${{ needs.changes.outputs.test_all }}" == "true" ]]; then
+          echo "Shared packages changed — testing all integrations"
+          mp test --repository third_party --raise-error-on-violations
+        else
+          echo "Testing only changed integrations: ${{ needs.changes.outputs.changed_integrations }}"
+          FAILED=0
+          for integration in ${{ needs.changes.outputs.changed_integrations }}; do
+            echo "--- Testing: $integration ---"
+            mp test --integration "$integration" --raise-error-on-violations || FAILED=1
+          done
+          exit $FAILED
+        fi
 
     - name: Upload Test Report
       if: always()
