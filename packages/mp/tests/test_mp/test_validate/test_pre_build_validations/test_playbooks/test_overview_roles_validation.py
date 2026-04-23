@@ -31,9 +31,7 @@ if TYPE_CHECKING:
 
 
 class TestRolesValidation:
-    validator_runner: OverviewContainsOnlyAllowedRolesValidation = (
-        OverviewContainsOnlyAllowedRolesValidation()
-    )
+    validator_runner: OverviewContainsOnlyAllowedRolesValidation = OverviewContainsOnlyAllowedRolesValidation()
 
     def test_all_roles_valid(self, non_built_playbook_path: Path) -> None:
         self.validator_runner.run(non_built_playbook_path)

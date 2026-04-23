@@ -23,8 +23,7 @@ from .sub_commands.repository.build import app as build_repository
 
 build_app: typer.Typer = typer.Typer(
     name="build",
-    help="Command that builds content from the content-hub and transforms "
-    "it into a format suitable for SOAR platform.",
+    help="Command that builds content from the content-hub and transforms it into a format suitable for SOAR platform.",
 )
 
 build_app.callback(invoke_without_command=True)(build_deprecated)

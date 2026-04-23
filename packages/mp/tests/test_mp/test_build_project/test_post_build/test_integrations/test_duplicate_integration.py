@@ -127,9 +127,7 @@ def _create_integration_def(integration_path: Path, identifier: str) -> None:
         identifier: The integration identifier to use
 
     """
-    def_file_path = integration_path / mp.core.constants.INTEGRATION_DEF_FILE.format(
-        integration_path.name
-    )
+    def_file_path = integration_path / mp.core.constants.INTEGRATION_DEF_FILE.format(integration_path.name)
     def_file_content = {
         "Identifier": identifier,
         "DisplayName": f"{integration_path.name} Integration",

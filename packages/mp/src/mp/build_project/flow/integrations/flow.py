@@ -21,9 +21,7 @@ import rich
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.integrations_repo import IntegrationsRepo
-from mp.build_project.post_build.integrations.duplicate_integrations import (
-    raise_errors_for_duplicate_integrations,
-)
+from mp.build_project.post_build.integrations.duplicate_integrations import raise_errors_for_duplicate_integrations
 from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
@@ -60,8 +58,7 @@ def build_integrations(  # noqa: PLR0913
             )
             if custom_not_found := not_founds[0]:
                 rich.print(
-                    "The following integrations could not be found in the custom repo: "
-                    f"{', '.join(custom_not_found)}"
+                    f"The following integrations could not be found in the custom repo: {', '.join(custom_not_found)}"
                 )
 
         else:
@@ -94,9 +91,7 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
     if modified_src is not None:
         custom = IntegrationsRepo(modified_src, modified_dst, default_source=False)
     else:
-        custom = IntegrationsRepo(
-            mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM)
-        )
+        custom = IntegrationsRepo(mp.core.file_utils.get_integrations_repo_base_path(RepositoryType.CUSTOM))
 
     return Repos(commercial, community, custom)
 
@@ -157,9 +152,7 @@ def _build_integrations_from_repos(
     end_msg: str,
 ) -> list[set[str]]:
     rich.print(start_msg)
-    results = [
-        _build_integrations(set(integrations), repo, deconstruct=deconstruct) for repo in repos
-    ]
+    results = [_build_integrations(set(integrations), repo, deconstruct=deconstruct) for repo in repos]
     rich.print(end_msg)
     return results
 

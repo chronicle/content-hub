@@ -148,9 +148,7 @@ class BackendAPI:
             Response object containing the integration package.
 
         """
-        url: str = (
-            f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
-        )
+        url: str = f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
         resp = self.session.get(url)
         resp.raise_for_status()
         return resp
@@ -165,9 +163,7 @@ class BackendAPI:
             dict: The backend response after uploading the playbook.
 
         """
-        upload_url: str = (
-            f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
-        )
+        upload_url: str = f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
         data = base64.b64encode(zip_path.read_bytes()).decode()
         upload_payload = {"blob": data, "fileName": zip_path.name}
         resp = self.session.post(upload_url, json=upload_payload)
@@ -181,10 +177,7 @@ class BackendAPI:
             list: Contains all playbooks meta-data.
 
         """
-        url: str = (
-            f"{self.api_root}"
-            "/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
-        )
+        url: str = f"{self.api_root}/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
         resp = self.session.post(url, json=[1, 0])
         resp.raise_for_status()
         return resp.json()

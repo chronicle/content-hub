@@ -56,9 +56,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         FatalCommandError: if a project is already initialized
 
     """
-    python_version: str = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
+    python_version: str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     command: list[str] = [
         sys.executable,
         "-m",
@@ -84,12 +82,8 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
 
 def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
     full_msg: str = f"{e.stdout or ''}\n{e.stderr or ''}"
-    ignored_packages: list[str] = [
-        pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg
-    ]
-    ignored_messages: list[bool] = [
-        msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES
-    ]
+    ignored_packages: list[str] = [pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg]
+    ignored_messages: list[bool] = [msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES]
     if ignored_messages and ignored_packages:
         return ignored_packages
     return []
@@ -225,9 +219,7 @@ def add_dependencies_to_toml(
     _add_dev_dependencies_to_toml(dev_deps_to_add, base_command, project_path)
 
 
-def _add_regular_dependencies_to_toml(
-    deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
+def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
     """Add regular dependencies to the pyproject.toml file using pypi index.
 
     Raises:
@@ -249,9 +241,7 @@ def _add_regular_dependencies_to_toml(
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def _add_dev_dependencies_to_toml(
-    dev_deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
+def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
     """Add development dependencies to the pyproject.toml file.
 
     Raises:
@@ -394,9 +384,7 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
     return result.returncode
 
 
-def execute_command_and_get_output(
-    command: list[str], paths: Iterable[Path], **flags: bool | str
-) -> int:
+def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **flags: bool | str) -> int:
     """Execute a command and capture its output and status code.
 
     Args:
@@ -592,11 +580,7 @@ def get_files_unmerged_to_main_branch(
         results: sp.CompletedProcess[str] = sp.run(  # noqa: S603
             command, check=True, text=True, capture_output=True
         )
-        return [
-            p
-            for path in results.stdout.strip().splitlines()
-            if path and (p := pathlib.Path(path)).exists()
-        ]
+        return [p for path in results.stdout.strip().splitlines() if path and (p := pathlib.Path(path)).exists()]
 
     except sp.CalledProcessError as error:
         error_output: str = f"{COMMAND_ERR_MSG.format('git diff')}: {error.stderr.strip()}"
@@ -625,9 +609,7 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
         )
 
     except sp.CalledProcessError as error:
-        error_output: str = (
-            f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
-        )
+        error_output: str = f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
         raise NonFatalCommandError(error_output) from error
 
     else:

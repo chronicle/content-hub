@@ -112,6 +112,4 @@ def build_repository(
         )
 
     if is_playbook_repo(repositories):
-        build_playbooks(
-            playbooks=[], repositories=repositories, src=None, dst=None, deconstruct=False
-        )
+        build_playbooks(playbooks=[], repositories=repositories, src=None, dst=None, deconstruct=False)

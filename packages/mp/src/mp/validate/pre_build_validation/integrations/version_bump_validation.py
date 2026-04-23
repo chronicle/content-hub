@@ -79,9 +79,7 @@ class VersionBumpValidation:
         if not head_sha:
             return
 
-        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch(
-            "main", head_sha, integration_path
-        )
+        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, integration_path)
 
         if not changed_files:
             return
@@ -124,15 +122,11 @@ def _create_data_for_version_bump_validation(
     try:
         old_toml_content = mp.core.unix.get_file_content_from_main_branch(toml_path)
         existing_files["toml"]["old"] = PyProjectToml.from_toml_str(old_toml_content)
-        existing_files["toml"]["new"] = PyProjectToml.from_toml_str(
-            toml_path.read_text(encoding="utf-8")
-        )
+        existing_files["toml"]["new"] = PyProjectToml.from_toml_str(toml_path.read_text(encoding="utf-8"))
 
         old_rn_content = mp.core.unix.get_file_content_from_main_branch(rn_path)
         existing_files["rn"]["old"] = utils.get_last_release_note(old_rn_content)
-        existing_files["rn"]["new"] = utils.get_new_release_notes(
-            rn_path.read_text(encoding="utf-8"), old_rn_content
-        )
+        existing_files["rn"]["new"] = utils.get_new_release_notes(rn_path.read_text(encoding="utf-8"), old_rn_content)
 
     except mp.core.unix.NonFatalCommandError:
         new_files["toml"] = PyProjectToml.from_toml_str(toml_path.read_text(encoding="utf-8"))
@@ -146,9 +140,7 @@ def _version_bump_validation_run_checks(
     new_files: NewIntegrationFiles,
 ) -> None:
     msg: str
-    if (new_toml := existing_files["toml"].get("new")) and (
-        old_toml := existing_files["toml"].get("old")
-    ):
+    if (new_toml := existing_files["toml"].get("new")) and (old_toml := existing_files["toml"].get("old")):
         toml_new_version: float = new_toml.project.version
         toml_old_version: float = old_toml.project.version
 
@@ -167,10 +159,7 @@ def _version_bump_validation_run_checks(
     elif (new_toml := new_files.get("toml")) and (new_notes := new_files.get("rn")):
         toml_version: float = new_toml.project.version
         if toml_version != 1.0 or not utils.are_new_release_notes_valid(new_notes):
-            msg = (
-                "New integration project.toml and release_note.yaml version must be initialize to"
-                " 1.0"
-            )
+            msg = "New integration project.toml and release_note.yaml version must be initialize to 1.0"
             raise NonFatalValidationError(msg)
 
     else:

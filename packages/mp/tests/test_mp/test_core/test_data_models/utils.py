@@ -84,9 +84,7 @@ st_valid_param_name = (
         )
     )
 )
-st_excluded_param_name = st.sampled_from(
-    sorted(exclusions.get_excluded_param_names_with_too_many_words())
-)
+st_excluded_param_name = st.sampled_from(sorted(exclusions.get_excluded_param_names_with_too_many_words()))
 
 st_valid_identifier_name = st.from_regex(SAFE_SCRIPT_IDENTIFIER_NAME_REGEX, fullmatch=True).filter(
     lambda s: len(s) <= mp.core.constants.DISPLAY_NAME_MAX_LENGTH
@@ -110,7 +108,7 @@ def st_valid_non_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict
     return st.sampled_from(param_type).map(lambda e: e.to_string())
 
 
-def st_valid_built_param_type(param_type: type[Enum]) -> SearchStrategy[dict[str, Any]]:
+def st_valid_built_param_type(param_type: type[Enum]) -> SearchStrategy[str]:
     return st.sampled_from(param_type).flatmap(lambda e: st.sampled_from([e.value, str(e.value)]))
 
 

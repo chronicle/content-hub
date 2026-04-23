@@ -21,10 +21,7 @@ import anyio
 import typer
 
 from mp.core.custom_types import RepositoryType
-from mp.core.file_utils import (
-    create_or_get_out_integrations_dir,
-    get_integration_base_folders_paths,
-)
+from mp.core.file_utils import create_or_get_out_integrations_dir, get_integration_base_folders_paths
 
 if TYPE_CHECKING:
     import pathlib
