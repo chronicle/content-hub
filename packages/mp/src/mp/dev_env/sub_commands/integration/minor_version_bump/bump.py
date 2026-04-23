@@ -64,9 +64,7 @@ def minor_version_bump(
 
         version: float = float(pyproject_data["project"]["version"])
         cache_dir: Path = get_marketplace_path() / INTEGRATIONS_CACHE_DIR_NAME
-        cache: VersionCache | None = load_and_validate_cache(
-            cache_dir, integration_id, math.floor(version)
-        )
+        cache: VersionCache | None = load_and_validate_cache(cache_dir, integration_id, math.floor(version))
         updated_hash: str = calculate_dependencies_hash(pyproject_data)
         updated_version_cache: VersionCache = update_version_cache(cache, updated_hash, version)
 

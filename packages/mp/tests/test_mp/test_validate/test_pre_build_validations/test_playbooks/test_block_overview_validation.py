@@ -30,16 +30,12 @@ if TYPE_CHECKING:
 
 
 class TestBlockOverviewValidation:
-    validator_runner: BlockDoesNotContainAnOverviewValidation = (
-        BlockDoesNotContainAnOverviewValidation()
-    )
+    validator_runner: BlockDoesNotContainAnOverviewValidation = BlockDoesNotContainAnOverviewValidation()
 
     def test_valid_block_success(self, temp_non_built_block: Path) -> None:
         self.validator_runner.run(temp_non_built_block)
 
-    def test_invalid_block_fail(
-        self, temp_non_built_block: Path, temp_non_built_playbook: Path
-    ) -> None:
+    def test_invalid_block_fail(self, temp_non_built_block: Path, temp_non_built_playbook: Path) -> None:
         shutil.copy(temp_non_built_playbook / OVERVIEWS_FILE_NAME, temp_non_built_block)
         with pytest.raises(NonFatalValidationError, match="Block cannot have overviews"):
             self.validator_runner.run(temp_non_built_block)

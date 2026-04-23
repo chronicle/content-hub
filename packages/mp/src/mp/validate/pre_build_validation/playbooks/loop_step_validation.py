@@ -52,9 +52,7 @@ class LoopStepValidation:
         for step in steps:
             if step.type_ is StepType.FOR_EACH_START_LOOP:
                 if step.start_loop_step_id not in end_loop_start_ids:
-                    error_msgs.append(
-                        f"Step <{step.instance_name}> is missing a matching end loop step"
-                    )
+                    error_msgs.append(f"Step <{step.instance_name}> is missing a matching end loop step")
                 balance += 1
             elif step.type_ is StepType.FOR_EACH_END_LOOP:
                 balance -= 1

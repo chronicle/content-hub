@@ -69,9 +69,7 @@ def _validate_action_metadata(all_actions_metadata: list[ActionMetadata]) -> lis
     result: list[str] = []
     for metadata in all_actions_metadata:
         if not re.match(METADATA_NAME_REGEX, metadata.name):
-            result.append(
-                f"Action name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}"
-            )
+            result.append(f"Action name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}")
         result.extend(_validate_action_parameters(metadata.parameters))
 
     return result
@@ -90,9 +88,7 @@ def _validate_connector_metadata(all_connectors_metadata: list[ConnectorMetadata
     result: list[str] = []
     for metadata in all_connectors_metadata:
         if not re.match(METADATA_NAME_REGEX, metadata.name):
-            result.append(
-                f"Connector name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}"
-            )
+            result.append(f"Connector name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}")
         result.extend(_validate_connector_parameters(metadata.parameters))
     return result
 
@@ -110,9 +106,7 @@ def _validate_job_metadata(all_jobs_metadata: list[JobMetadata]) -> list[str]:
     result: list[str] = []
     for metadata in all_jobs_metadata:
         if not re.match(METADATA_NAME_REGEX, metadata.name):
-            result.append(
-                f"Job name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}"
-            )
+            result.append(f"Job name: {metadata.name} does not match the regex: {METADATA_NAME_REGEX}")
         result.extend(_validate_job_parameters(metadata.parameters))
     return result
 
@@ -130,8 +124,7 @@ def _integration_metadata(integration_metadata: IntegrationMetadata) -> list[str
     result: list[str] = []
     if not re.match(METADATA_NAME_REGEX, integration_metadata.name):
         result.append(
-            f"Integration name: {integration_metadata.name} "
-            f"does not match the regex: {METADATA_NAME_REGEX}\n"
+            f"Integration name: {integration_metadata.name} does not match the regex: {METADATA_NAME_REGEX}\n"
         )
     result.extend(_integration_parameters(integration_metadata.parameters))
 
