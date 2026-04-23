@@ -60,10 +60,7 @@ class CliDisplay:
             self.console.print("\n")
 
     def _is_all_empty(self) -> bool:
-        for full_report in self.validation_results.values():
-            if any(full_report.values()):
-                return False
-        return True
+        return all(not any(full_report.values()) for full_report in self.validation_results.values())
 
 
 def _build_table(integration_result: ValidationResults) -> Table:

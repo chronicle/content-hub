@@ -37,12 +37,8 @@ class DevEnvParams(NamedTuple):
 def login(
     api_root: Annotated[str | None, typer.Option(help="API root URL.")] = None,
     username: Annotated[str | None, typer.Option(help="Authentication username.")] = None,
-    password: Annotated[
-        str | None, typer.Option(help="Authentication password.", hide_input=True)
-    ] = None,
-    api_key: Annotated[
-        str | None, typer.Option(help="Authentication API key.", hide_input=True)
-    ] = None,
+    password: Annotated[str | None, typer.Option(help="Authentication password.", hide_input=True)] = None,
+    api_key: Annotated[str | None, typer.Option(help="Authentication API key.", hide_input=True)] = None,
     *,
     no_verify: Annotated[bool, typer.Option(help="Skip verification after saving.")] = False,
 ) -> None:

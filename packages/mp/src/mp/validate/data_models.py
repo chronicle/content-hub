@@ -77,9 +77,7 @@ class ValidationReport:
             info: Detailed information regarding the non-fatal issue.
 
         """
-        self.failed_non_fatal_validations.append(
-            ValidationIssue(validation_name=validation_name, info=info)
-        )
+        self.failed_non_fatal_validations.append(ValidationIssue(validation_name=validation_name, info=info))
 
     def add_fatal_validation(self, validation_name: str, info: str) -> None:
         """Add a fatal validation issue to the report.
@@ -89,9 +87,7 @@ class ValidationReport:
             info: Detailed information regarding the fatal issue.
 
         """
-        self.failed_fatal_validations.append(
-            ValidationIssue(validation_name=validation_name, info=info)
-        )
+        self.failed_fatal_validations.append(ValidationIssue(validation_name=validation_name, info=info))
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the ValidationReport object into a dictionary.
