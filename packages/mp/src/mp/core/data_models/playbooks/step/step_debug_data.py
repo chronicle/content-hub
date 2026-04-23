@@ -79,10 +79,7 @@ class StepDebugData(Buildable[BuiltStepDebugData, NonBuiltStepDebugData]):
             result_value=built["ResultValue"],
             result_json=built["ResultJson"],
             scope_entities_enrichment_data=(
-                [
-                    DebugStepEnrichmentData.from_built(d)
-                    for d in built["ScopeEntitiesEnrichmentData"]
-                ]
+                [DebugStepEnrichmentData.from_built(d) for d in built["ScopeEntitiesEnrichmentData"]]
                 if built.get("ScopeEntitiesEnrichmentData")
                 else []
             ),
@@ -108,8 +105,7 @@ class StepDebugData(Buildable[BuiltStepDebugData, NonBuiltStepDebugData]):
             result_value=non_built["result_value"],
             result_json=non_built["result_json"],
             scope_entities_enrichment_data=([
-                DebugStepEnrichmentData.from_non_built(en)
-                for en in non_built["scope_entities_enrichment_data"]
+                DebugStepEnrichmentData.from_non_built(en) for en in non_built["scope_entities_enrichment_data"]
             ]),
             tenant_id=non_built.get("tenant_id"),
         )
@@ -152,9 +148,7 @@ class StepDebugData(Buildable[BuiltStepDebugData, NonBuiltStepDebugData]):
             modification_time=self.modification_time,
             result_value=self.result_value,
             result_json=self.result_json,
-            scope_entities_enrichment_data=[
-                e.to_non_built() for e in self.scope_entities_enrichment_data
-            ],
+            scope_entities_enrichment_data=[e.to_non_built() for e in self.scope_entities_enrichment_data],
         )
         if self.tenant_id is not None:
             non_built["tenant_id"] = self.tenant_id

@@ -123,9 +123,7 @@ class TestVersionBumpValidationFlow:
         rn_path = _setup_test_files(temp_non_built_playbook, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = mp.core.unix.NonFatalCommandError(
-                "File not found on main branch"
-            )
+            mock_git.side_effect = mp.core.unix.NonFatalCommandError("File not found on main branch")
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path)
 
             assert not existing_files["rn"].get("old")
@@ -139,9 +137,7 @@ class TestVersionBumpValidationFlow:
         rn_path = _setup_test_files(temp_non_built_playbook, new_rn_content)
 
         with unittest.mock.patch("mp.core.unix.get_file_content_from_main_branch") as mock_git:
-            mock_git.side_effect = mp.core.unix.NonFatalCommandError(
-                "File not found on main branch"
-            )
+            mock_git.side_effect = mp.core.unix.NonFatalCommandError("File not found on main branch")
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path)
 
             assert new_files["rn"][0].version == 2.0

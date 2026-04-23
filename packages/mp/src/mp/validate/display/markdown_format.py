@@ -75,9 +75,7 @@ def _should_display_stage(results_list: list[ValidationResults] | None) -> bool:
     return False
 
 
-def _generate_stage_content(
-    stage_name: str, results_list: list[ValidationResults] | None
-) -> list[str]:
+def _generate_stage_content(stage_name: str, results_list: list[ValidationResults] | None) -> list[str]:
     content: list[str] = []
     if not _should_display_stage(results_list):
         return content
@@ -89,9 +87,7 @@ def _generate_stage_content(
             table_data = _get_integration_validation_data(validation_result)
 
             if table_data:
-                content.extend(
-                    _format_table(table_data, validation_result.validation_report.content_name)
-                )
+                content.extend(_format_table(table_data, validation_result.validation_report.content_name))
 
     content.append("</details>\n\n")
     return content

@@ -60,14 +60,10 @@ def create_step(
     )
 
 
-START_LOOP_1 = create_step(
-    "Start Loop 1", "start_loop_1", StepType.FOR_EACH_START_LOOP, "start_loop_1"
-)
+START_LOOP_1 = create_step("Start Loop 1", "start_loop_1", StepType.FOR_EACH_START_LOOP, "start_loop_1")
 END_LOOP_1 = create_step("End Loop 1", "end_loop_1", StepType.FOR_EACH_END_LOOP, "start_loop_1")
 
-START_LOOP_2 = create_step(
-    "Start Loop 2", "start_loop_2", StepType.FOR_EACH_START_LOOP, "start_loop_2"
-)
+START_LOOP_2 = create_step("Start Loop 2", "start_loop_2", StepType.FOR_EACH_START_LOOP, "start_loop_2")
 END_LOOP_2 = create_step("End Loop 2", "end_loop_2", StepType.FOR_EACH_END_LOOP, "start_loop_2")
 
 END_LOOP_1_INVALID_START_ID = create_step(
@@ -87,9 +83,7 @@ class TestLoopStepValidation:
         self.validator_runner.run(temp_non_built_playbook)
 
     def test_playbook_with_multiple_valid_loops(self, temp_non_built_playbook: Path) -> None:
-        ingest_new_steps(
-            temp_non_built_playbook, [START_LOOP_1, END_LOOP_1, START_LOOP_2, END_LOOP_2]
-        )
+        ingest_new_steps(temp_non_built_playbook, [START_LOOP_1, END_LOOP_1, START_LOOP_2, END_LOOP_2])
         self.validator_runner.run(temp_non_built_playbook)
 
     def test_playbook_with_multiple_loops_one_invalid(self, temp_non_built_playbook: Path) -> None:

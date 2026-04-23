@@ -100,9 +100,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             author=non_built["author"],
             contact_email=non_built["contact_email"],
             tags=non_built["tags"],
-            contribution_type=PlaybookContributionType.from_string(
-                non_built["contribution_type"].upper()
-            ),
+            contribution_type=PlaybookContributionType.from_string(non_built["contribution_type"].upper()),
             is_google_verified=non_built.get("is_google_verified", False),
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
             allowed_debug_data=non_built["acknowledge_debug_data_included"],
