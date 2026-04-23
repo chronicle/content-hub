@@ -224,15 +224,33 @@ def list_custom_fields(
     if filter_ is not None:
         params["$filter"] = filter_
 
-    response = chronicle_soar.session.get(url=url, params=params)
+        custom_fields = []
+    has_more_pages = True
 
-    try:
-        validate_response(response, validate_json=True)
+    while has_more_pages:
+        response = chronicle_soar.session.get(url=url, params=params)
 
-    except InternalJSONDecoderError:
-        return []
+        try:
+            validate_response(response, validate_json=True)
+        except InternalJSONDecoderError as e:
+            chronicle_soar.LOGGER.error(f"Failed to parse response as JSON: {e}")
+            return []
 
-    return [CustomField.from_json(item) for item in response.json()["customFields"]]
+        res_json = response.json()
+        fields_data = res_json.get("customFields") or []
+        custom_fields.extend(CustomField.from_json(item) for item in fields_data)
+
+        next_page_token = res_json.get("nextPageToken")
+        total_size = res_json.get("totalSize")
+
+        has_more_pages = bool(next_page_token) and (
+            total_size is None or len(custom_fields) < total_size
+        )
+
+        if has_more_pages:
+            params["pageToken"] = next_page_token
+
+    return custom_fields
 
 
 def list_custom_field_values(
