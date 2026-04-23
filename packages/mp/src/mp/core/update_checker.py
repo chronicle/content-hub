@@ -27,9 +27,7 @@ import typer
 from packaging.version import InvalidVersion
 from packaging.version import parse as parse_version
 
-PYPROJECT_URL: str = (
-    "https://raw.githubusercontent.com/chronicle/content-hub/main/packages/mp/pyproject.toml"
-)
+PYPROJECT_URL: str = "https://raw.githubusercontent.com/chronicle/content-hub/main/packages/mp/pyproject.toml"
 TIMEOUT_SECONDS: float = 2.0
 
 

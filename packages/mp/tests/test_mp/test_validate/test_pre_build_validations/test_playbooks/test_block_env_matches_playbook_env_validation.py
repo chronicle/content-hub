@@ -43,9 +43,7 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
             temp_playbooks_repo / "mock_non_built_playbook",
             {"environments": envs},
         )
-        update_playbook_definition(
-            temp_playbooks_repo / "mock_non_built_block", {"environments": envs}
-        )
+        update_playbook_definition(temp_playbooks_repo / "mock_non_built_block", {"environments": envs})
         self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 
     def test_block_missing_all_env_fail(self, temp_playbooks_repo: Path) -> None:
@@ -53,9 +51,7 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
             temp_playbooks_repo / "mock_non_built_playbook",
             {"environments": VALID_ENVIRONMENTS},
         )
-        update_playbook_definition(
-            temp_playbooks_repo / "mock_non_built_block", {"environments": []}
-        )
+        update_playbook_definition(temp_playbooks_repo / "mock_non_built_block", {"environments": []})
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 
@@ -68,9 +64,7 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
             temp_playbooks_repo / "mock_non_built_playbook",
             {"environments": [ENV1, ENV2, ENV3]},
         )
-        update_playbook_definition(
-            temp_playbooks_repo / "mock_non_built_block", {"environments": ["*"]}
-        )
+        update_playbook_definition(temp_playbooks_repo / "mock_non_built_block", {"environments": ["*"]})
         self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 
     def test_block_missing_env_fail(self, temp_playbooks_repo: Path) -> None:
@@ -78,9 +72,7 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
             temp_playbooks_repo / "mock_non_built_playbook",
             {"environments": [ENV1, ENV2, ENV3]},
         )
-        update_playbook_definition(
-            temp_playbooks_repo / "mock_non_built_block", {"environments": [ENV1]}
-        )
+        update_playbook_definition(temp_playbooks_repo / "mock_non_built_block", {"environments": [ENV1]})
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
 
@@ -93,9 +85,7 @@ class TestBlockEnvMatchesPlaybookEnvValidation:
             temp_playbooks_repo / "mock_non_built_playbook",
             {"environments": ["*"]},
         )
-        update_playbook_definition(
-            temp_playbooks_repo / "mock_non_built_block", {"environments": [ENV1]}
-        )
+        update_playbook_definition(temp_playbooks_repo / "mock_non_built_block", {"environments": [ENV1]})
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_playbooks_repo / "mock_non_built_playbook")
         assert "has missing environments from its playbook env {'*'}" in str(excinfo.value)

@@ -55,9 +55,7 @@ class RequiredDevDependenciesValidation:
             error_msg = "Could not find [dev-dependencies]\ndev = [...] section in pyproject.toml."
             raise NonFatalCommandError(error_msg) from KeyError(error_msg)
 
-        actual_dependencies: set = {
-            get_project_dependency_name(dep) for dep in dev_dependencies_section
-        }
+        actual_dependencies: set = {get_project_dependency_name(dep) for dep in dev_dependencies_section}
 
         missing_dependencies: set[str] = required_dependencies.difference(actual_dependencies)
 
@@ -65,7 +63,5 @@ class RequiredDevDependenciesValidation:
             return
 
         missing_deps: str = ", ".join(sorted(missing_dependencies))
-        error_msg: str = (
-            f"Missing required development dependencies in pyproject.toml: {missing_deps}"
-        )
+        error_msg: str = f"Missing required development dependencies in pyproject.toml: {missing_deps}"
         raise NonFatalCommandError(error_msg) from KeyError(error_msg)

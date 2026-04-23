@@ -33,9 +33,7 @@ if TYPE_CHECKING:
 
 
 class PlaybooksRepo:
-    def __init__(
-        self, playbook_repository_path: Path, dst: Path | None = None, *, default_src: bool = True
-    ) -> None:
+    def __init__(self, playbook_repository_path: Path, dst: Path | None = None, *, default_src: bool = True) -> None:
         self.name: str = playbook_repository_path.name
         if default_src:
             self.base_folders: list[Path] = mp.core.file_utils.get_playbook_base_folders_paths(
@@ -83,10 +81,7 @@ class PlaybooksRepo:
 
     def _build_playbook(self, playbook_path: Path) -> None:
         if mp.core.file_utils.is_built_playbook(playbook_path):
-            rich.print(
-                f"[green]---------- Playbook {playbook_path.name} "
-                f"is already built ----------[/green]"
-            )
+            rich.print(f"[green]---------- Playbook {playbook_path.name} is already built ----------[/green]")
             self.out_dir.mkdir(exist_ok=True)
             shutil.copy(playbook_path, self.out_dir / playbook_path.name)
             return
@@ -130,10 +125,7 @@ class PlaybooksRepo:
 
 def _deconstruct_playbook(playbook_path: Path, playbook_out_path: Path) -> None:
     if mp.core.file_utils.is_non_built_playbook(playbook_path):
-        rich.print(
-            f"[green]---------- Playbook {playbook_path.name} "
-            f"is already deconstructed ----------[/green]"
-        )
+        rich.print(f"[green]---------- Playbook {playbook_path.name} is already deconstructed ----------[/green]")
         mp.core.file_utils.recreate_dir(playbook_out_path)
         shutil.copytree(playbook_path, playbook_out_path, dirs_exist_ok=True)
         return

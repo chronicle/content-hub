@@ -110,10 +110,7 @@ def check(  # noqa: PLR0913
     changed_files: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Check all changed files based on a diff with the head"
-                " commit instead of --file-paths"
-            ),
+            help=("Check all changed files based on a diff with the head commit instead of --file-paths"),
         ),
     ] = False,
     static_type_check: Annotated[

@@ -66,9 +66,7 @@ class NonBuiltActionWidgetMetadata(TypedDict):
     default_size: str
 
 
-class ActionWidgetMetadata(
-    ComponentMetadata[BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata]
-):
+class ActionWidgetMetadata(ComponentMetadata[BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata]):
     file_name: str
     title: Annotated[
         str,
@@ -109,9 +107,7 @@ class ActionWidgetMetadata(
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JSON_SUFFIX}")
-        ]
+        return [cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JSON_SUFFIX}")]
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -128,10 +124,7 @@ class ActionWidgetMetadata(
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")
-        ]
+        return [cls._from_non_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltActionWidgetMetadata) -> Self:

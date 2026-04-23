@@ -36,20 +36,14 @@ import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
 import mp.core.utils
-from mp.build_project.restructure.integrations.deconstruct_dependencies import (
-    Dependencies,
-    DependencyDeconstructor,
-)
+from mp.build_project.restructure.integrations.deconstruct_dependencies import Dependencies, DependencyDeconstructor
 from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
-from mp.core.data_models.integrations.integration_meta.metadata import (
-    IntegrationMetadata,
-    PythonVersion,
-)
+from mp.core.data_models.integrations.integration_meta.metadata import IntegrationMetadata, PythonVersion
 from mp.core.data_models.integrations.job.metadata import JobMetadata
 
 if TYPE_CHECKING:
@@ -58,9 +52,7 @@ if TYPE_CHECKING:
 
     import libcst as cst
 
-    from mp.core.data_models.integrations.action.dynamic_results_metadata import (
-        DynamicResultsMetadata,
-    )
+    from mp.core.data_models.integrations.action.dynamic_results_metadata import DynamicResultsMetadata
     from mp.core.data_models.integrations.custom_families.metadata import NonBuiltCustomFamily
     from mp.core.data_models.integrations.integration import Integration
     from mp.core.data_models.integrations.mapping_rules.metadata import NonBuiltMappingRule
@@ -133,8 +125,7 @@ class DeconstructIntegration:
         if placeholders and (placeholders.dependencies or placeholders.dev_dependencies):
             for dep in placeholders.dependencies:
                 buffer.write(
-                    f"\n# TODO: Failed to automatically add the following dependency. "
-                    f"Please add it manually: {dep}\n",
+                    f"\n# TODO: Failed to automatically add the following dependency. Please add it manually: {dep}\n",
                 )
             for dep in placeholders.dev_dependencies:
                 buffer.write(
@@ -172,15 +163,11 @@ class DeconstructIntegration:
 
     def _create_png_image(self, resources_dir: Path) -> None:
         if self.integration.metadata.image_base64:
-            mp.core.file_utils.base64_to_png_file(
-                self.integration.metadata.image_base64, resources_dir / IMAGE_FILE
-            )
+            mp.core.file_utils.base64_to_png_file(self.integration.metadata.image_base64, resources_dir / IMAGE_FILE)
 
     def _create_svg_logo(self, resources_dir: Path) -> None:
         if self.integration.metadata.svg_logo:
-            mp.core.file_utils.text_to_svg_file(
-                self.integration.metadata.svg_logo, resources_dir / LOGO_FILE
-            )
+            mp.core.file_utils.text_to_svg_file(self.integration.metadata.svg_logo, resources_dir / LOGO_FILE)
 
     def _create_actions_json_example_files(self) -> None:
         resources_dir: Path = self.out_path / RESOURCES_DIR
@@ -190,9 +177,7 @@ class DeconstructIntegration:
                 if not drm.result_example:
                     continue
 
-                json_file_name: str = (
-                    f"{mp.core.utils.str_to_snake_case(action_name)}_{drm.result_name}_example.json"
-                )
+                json_file_name: str = f"{mp.core.utils.str_to_snake_case(action_name)}_{drm.result_name}_example.json"
                 json_file_path: Path = resources_dir / json_file_name
                 mp.core.file_utils.write_str_to_json_file(json_file_path, drm.result_example)
 
@@ -239,17 +224,13 @@ class DeconstructIntegration:
 
     def _create_custom_families(self) -> None:
         cf: Path = self.out_path / mp.core.constants.CUSTOM_FAMILIES_FILE
-        families: list[NonBuiltCustomFamily] = [
-            c.to_non_built() for c in self.integration.custom_families
-        ]
+        families: list[NonBuiltCustomFamily] = [c.to_non_built() for c in self.integration.custom_families]
         if families:
             mp.core.file_utils.write_yaml_to_file(families, cf)
 
     def _create_mapping_rules(self) -> None:
         mr: Path = self.out_path / mp.core.constants.MAPPING_RULES_FILE
-        mapping: list[NonBuiltMappingRule] = [
-            m.to_non_built() for m in self.integration.mapping_rules
-        ]
+        mapping: list[NonBuiltMappingRule] = [m.to_non_built() for m in self.integration.mapping_rules]
         if mapping:
             mp.core.file_utils.write_yaml_to_file(mapping, mr)
 
@@ -319,20 +300,14 @@ class DeconstructIntegration:
         ]
 
         if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
-            transformers.append(
-                code_manipulation.CorePackageImportTransformer(self.core_module_names)
-            )
+            transformers.append(code_manipulation.CorePackageImportTransformer(self.core_module_names))
         else:
             transformers.append(
-                code_manipulation.CorePackageInternalImportTransformer(
-                    self.core_module_names, file_path.stem
-                )
+                code_manipulation.CorePackageInternalImportTransformer(self.core_module_names, file_path.stem)
             )
 
         original_content: str = file_path.read_text(encoding="utf-8")
-        transformed_content: str = code_manipulation.apply_transformers(
-            original_content, transformers
-        )
+        transformed_content: str = code_manipulation.apply_transformers(original_content, transformers)
         file_path.write_text(transformed_content, encoding="utf-8")
 
     def _create_package_file(self) -> None:
