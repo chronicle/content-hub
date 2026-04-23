@@ -21,10 +21,7 @@ import mp.core.constants
 from mp.core import exclusions
 from mp.core.exceptions import NonFatalValidationError
 from mp.core.utils import filter_and_map_yaml_files
-from mp.validate.utils import (
-    extract_name,
-    load_components_defs,
-)
+from mp.validate.utils import extract_name, load_components_defs
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -74,6 +71,5 @@ def _missing_documentation_link(yaml_content: YamlFileContent) -> bool:
     """
     return (
         not yaml_content.get("documentation_link")
-        and yaml_content.get("name")
-        not in exclusions.get_excluded_connector_names_without_documentation_link()
+        and yaml_content.get("name") not in exclusions.get_excluded_connector_names_without_documentation_link()
     )

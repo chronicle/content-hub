@@ -66,10 +66,7 @@ def pull_integration(
     try:
         zip_path = _pull_integration_zip_from_soar(integration, dst)
         deconstruct_integration: Path = _deconstruct_integration(zip_path, dst)
-        rich.print(
-            f"[green]✅ Integration {integration} pulled successfully to "
-            f"{deconstruct_integration}.[/green]"
-        )
+        rich.print(f"[green]✅ Integration {integration} pulled successfully to {deconstruct_integration}.[/green]")
 
     except Exception as e:
         error_message = f"Pull failed for {integration}: {escape(str(e))}"

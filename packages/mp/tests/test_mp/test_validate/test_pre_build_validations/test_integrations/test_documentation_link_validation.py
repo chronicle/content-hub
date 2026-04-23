@@ -90,16 +90,12 @@ class TestIntegrationHasDocumentationLinkValidation:
         ):
             self.integration_validator_runner.run(temp_integration)
 
-    def test_failure_on_missing_documentation_link_connectors(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_failure_on_missing_documentation_link_connectors(self, temp_integration: pathlib.Path) -> None:
         """Test failure when an integration's connector is missing a documentation link."""
         connector_def_file = temp_integration / constants.CONNECTORS_DIR / "connector.yaml"
         _remove_key_from_yaml(connector_def_file, "documentation_link")
 
-        with pytest.raises(
-            NonFatalValidationError, match="contains connectors with missing documentation link"
-        ):
+        with pytest.raises(NonFatalValidationError, match="contains connectors with missing documentation link"):
             self.connectors_validator_runner.run(temp_integration)
 
     def test_excluded_integrations_feature_connectors(self, temp_integration: pathlib.Path) -> None:

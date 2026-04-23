@@ -241,20 +241,14 @@ class BaseCoreImportTransformer(cst.CSTTransformer, ABC):
         new_statements = []
         if non_core_aliases:
             # Preserve non-core imports
-            non_core_aliases[-1] = non_core_aliases[-1].with_changes(
-                comma=cst.MaybeSentinel.DEFAULT
-            )
+            non_core_aliases[-1] = non_core_aliases[-1].with_changes(comma=cst.MaybeSentinel.DEFAULT)
             new_statements.append(
-                cst.SimpleStatementLine(
-                    body=[import_statement.with_changes(names=tuple(non_core_aliases))]
-                )
+                cst.SimpleStatementLine(body=[import_statement.with_changes(names=tuple(non_core_aliases))])
             )
 
         # Transform core imports using the subclass-specific node creator
         core_aliases[-1] = core_aliases[-1].with_changes(comma=cst.MaybeSentinel.DEFAULT)
-        new_statements.append(
-            cst.SimpleStatementLine(body=[self._create_core_import_from(tuple(core_aliases))])
-        )
+        new_statements.append(cst.SimpleStatementLine(body=[self._create_core_import_from(tuple(core_aliases))]))
 
         return FlattenSentinel(new_statements)
 
@@ -273,9 +267,7 @@ class BaseCoreImportTransformer(cst.CSTTransformer, ABC):
         core_aliases = []
         non_core_aliases = []
         for alias in aliases:
-            if (full_module_name := get_full_name_for_node(alias.name)) and self._is_core_alias(
-                full_module_name
-            ):
+            if (full_module_name := get_full_name_for_node(alias.name)) and self._is_core_alias(full_module_name):
                 core_aliases.append(alias)
             else:
                 non_core_aliases.append(alias)
@@ -312,9 +304,7 @@ class CorePackageImportTransformer(BaseCoreImportTransformer):
 
         if full_module_name.split(".", maxsplit=1)[0] in self.core_module_names:
             prefixed_module = _create_prefixed_module(full_module_name, CORE_PREFIX)
-            return updated_node.with_changes(
-                module=prefixed_module, relative=(cst.Dot(), cst.Dot())
-            )
+            return updated_node.with_changes(module=prefixed_module, relative=(cst.Dot(), cst.Dot()))
 
         return updated_node
 
@@ -325,10 +315,7 @@ class CorePackageInternalImportTransformer(BaseCoreImportTransformer):
         self.current_module_name = current_module_name
 
     def _is_core_alias(self, full_module_name: str) -> bool:
-        return (
-            full_module_name in self.core_module_names
-            and full_module_name != self.current_module_name
-        )
+        return full_module_name in self.core_module_names and full_module_name != self.current_module_name
 
     @staticmethod
     def _create_core_import_from(aliases: tuple[cst.ImportAlias, ...]) -> cst.ImportFrom:
@@ -354,10 +341,7 @@ class CorePackageInternalImportTransformer(BaseCoreImportTransformer):
         if not (full_module_name := get_full_name_for_node(original_node.module)):
             return updated_node
 
-        if (
-            full_module_name in self.core_module_names
-            and full_module_name != self.current_module_name
-        ):
+        if full_module_name in self.core_module_names and full_module_name != self.current_module_name:
             return updated_node.with_changes(relative=(cst.Dot(),))
 
         return updated_node
@@ -407,9 +391,7 @@ class ImportTransformer(cst.CSTTransformer):
         changed = False
 
         for alias in updated_node.names:
-            if (
-                full_module_name := get_full_name_for_node(alias.name)
-            ) and full_module_name.startswith(SDK_PREFIX):
+            if (full_module_name := get_full_name_for_node(alias.name)) and full_module_name.startswith(SDK_PREFIX):
                 new_module_name = full_module_name.removeprefix(SDK_PREFIX)
                 expression = cst.parse_expression(new_module_name)
                 if not isinstance(expression, cst.Name | cst.Attribute):
@@ -441,11 +423,7 @@ class ImportTransformer(cst.CSTTransformer):
                 module=(
                     None
                     | cst.Name(
-                        value=(
-                            constants.CORE_SCRIPTS_DIR
-                            | constants.COMMON_SCRIPTS_DIR
-                            | constants.SDK_PACKAGE_NAME
-                        ),
+                        value=(constants.CORE_SCRIPTS_DIR | constants.COMMON_SCRIPTS_DIR | constants.SDK_PACKAGE_NAME),
                     )
                 ),
                 names=names,

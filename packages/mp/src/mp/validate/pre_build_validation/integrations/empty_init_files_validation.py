@@ -50,9 +50,7 @@ class EmptyInitFilesValidation:
         """
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch(
-                "main", head_sha, validation_path
-            )
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
             if not changed:
                 return
 
@@ -68,9 +66,7 @@ class EmptyInitFilesValidation:
             code_lines = [
                 line
                 for line in content.splitlines()
-                if line.strip()
-                and not line.strip().startswith("#")
-                and not line.strip().startswith("from __future__")
+                if line.strip() and not line.strip().startswith("#") and not line.strip().startswith("from __future__")
             ]
 
             if code_lines:
