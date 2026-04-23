@@ -67,7 +67,11 @@ def normalize_timestamp(ts: str | None) -> str | None:
             dt = datetime.strptime(ts.rstrip("Z"), "%Y-%m-%dT%H:%M:%S.%f")
         else:
             dt = datetime.strptime(ts.rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
-        return dt.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+        
+        res = dt.strftime("%Y-%m-%dT%H:%M:%S")
+        if dt.microsecond:
+            res += f".{dt.microsecond:06d}".rstrip("0")
+        return res + "Z"
     except ValueError:
         return ts
 
@@ -78,10 +82,10 @@ def filter_timestamps(obj: Any) -> Any:
         return {
             k: filter_timestamps(v)
             for k, v in obj.items()
-            if k not in ["timestamp", "event_timestamp"]
+            if k not in ["timestamp", "event_timestamp", "eventTimestamp"]
         }
-    elif isinstance(obj, list):
-        return [filter_timestamps(i) for i in obj]
+    if isinstance(obj, list):
+        return [filter_timestamps(item) for item in obj]
     return obj
 
 
@@ -207,6 +211,15 @@ def main(argv: list[str]) -> None:
         config = config_file.read_text()
         logging.info(f"  Configuration file: {get_pretty_relpath(config_file)}")
 
+        actual_log_type = _DEFAULT_LOG_TYPE
+        metadata_file = cbn_path / "metadata.json"
+        if metadata_file.exists():
+            try:
+                metadata_data = json.loads(metadata_file.read_text())
+                actual_log_type = metadata_data.get("logType", _DEFAULT_LOG_TYPE)
+            except json.JSONDecodeError:
+                logging.warning(f"  Warning: Could not parse {metadata_file}.")
+
         raw_logs_path = cbn_path / "testdata" / "raw_logs"
         expected_events_path = cbn_path / "testdata" / "expected_events"
 
@@ -237,7 +250,7 @@ def main(argv: list[str]) -> None:
             logging.info(f"  Validating Use Case: {usecase}...")
             try:
                 validation_results = chronicle_client.run_parser(
-                    log_type=_DEFAULT_LOG_TYPE,
+                    log_type=actual_log_type,
                     parser_code=config,
                     parser_extension_code="",
                     logs=logs,
@@ -265,21 +278,22 @@ def main(argv: list[str]) -> None:
 
                     timestamp = normalize_timestamp(old_metadata.get("eventTimestamp"))
 
+                    if "metadata" in old_event:
+                        if "eventTimestamp" in old_event["metadata"]:
+                            old_event["metadata"]["eventTimestamp"] = timestamp
+                        if "description" in old_event["metadata"]:
+                            old_event["metadata"]["description"] = clean_val(old_event["metadata"]["description"])
+
+                    if "additional" in old_event:
+                        old_event["additional"] = {
+                            k: clean_val(v) for k, v in old_event["additional"].items()
+                        }
+
                     new_event = {
                         "event": {
                             "timestamp": timestamp,
                             "idm": {
-                                "read_only_udm": {
-                                    "metadata": {
-                                        "event_timestamp": timestamp,
-                                        "event_type": old_metadata.get("eventType"),
-                                        "description": clean_val(old_metadata.get("description")),
-                                    },
-                                    "additional": {
-                                        k: clean_val(v)
-                                        for k, v in old_event.get("additional", {}).items()
-                                    },
-                                }
+                                "readOnlyUdm": old_event,
                             },
                         }
                     }
