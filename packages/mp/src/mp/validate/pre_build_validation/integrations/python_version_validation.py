@@ -56,9 +56,7 @@ class PythonVersionValidation:
 
         integration_def: YamlFileContent = load_integration_def(integration_path)
 
-        metadata_version: str | None = integration_def.get(
-            "python_version", PythonVersion.PY_3_11.to_string()
-        )
+        metadata_version: str | None = integration_def.get("python_version", PythonVersion.PY_3_11.to_string())
 
         if python_version != metadata_version:
             msg = (

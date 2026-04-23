@@ -31,9 +31,7 @@ if TYPE_CHECKING:
 class TestAllBlocksExistValidation:
     validator_runner: AllBlocksExistValidation = AllBlocksExistValidation()
 
-    def test_all_blocks_exist_success(
-        self, temp_non_built_playbook: Path, temp_non_built_block: Path
-    ) -> None:
+    def test_all_blocks_exist_success(self, temp_non_built_playbook: Path, temp_non_built_block: Path) -> None:
         destination_dir = temp_non_built_playbook.parent / temp_non_built_block.name
         shutil.copytree(temp_non_built_block, destination_dir)
 

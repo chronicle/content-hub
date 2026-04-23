@@ -35,9 +35,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-def get_integration_path(
-    integration: str, src: Path | None = None, *, custom: bool = False
-) -> Path:
+def get_integration_path(integration: str, src: Path | None = None, *, custom: bool = False) -> Path:
     """Find the source path for a given integration.
 
     Args:
@@ -76,9 +74,7 @@ def get_integration_path(
             if candidate.exists():
                 return candidate
 
-    rich.print(
-        f"[red]Could not find source integration at {integrations_root}/.../{integration}[/red]"
-    )
+    rich.print(f"[red]Could not find source integration at {integrations_root}/.../{integration}[/red]")
     raise typer.Exit(1)
 
 
@@ -125,9 +121,7 @@ def build_integration(integration: str, src: Path | None = None, *, custom: bool
         raise typer.Exit(1) from e
 
 
-def find_built_integration_dir(
-    identifier: str, src: Path | None = None, *, custom: bool = False
-) -> Path:
+def find_built_integration_dir(identifier: str, src: Path | None = None, *, custom: bool = False) -> Path:
     """Find the built integration directory.
 
     Args:
@@ -216,9 +210,7 @@ def zip_integration_custom_repository() -> list[Path]:
 def _change_integration_to_custom(built_path: Path) -> None:
     for file in built_path.iterdir():
         if file.name == mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name):
-            _modify_def_file_to_custom(
-                built_path / mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name)
-            )
+            _modify_def_file_to_custom(built_path / mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name))
     if (built_path / mp.core.constants.OUT_ACTIONS_META_DIR).exists():
         _modify_def_files_to_custom(
             built_path / mp.core.constants.OUT_ACTIONS_META_DIR,

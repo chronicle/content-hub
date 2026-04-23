@@ -80,9 +80,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         property_name = built["PropertyName"]
         property_display_name = built.get("PropertyDisplayName")
         display_name = (
-            property_display_name
-            if property_display_name and property_display_name != property_name
-            else None
+            property_display_name if property_display_name and property_display_name != property_name else None
         )
         return cls(
             name=property_name,

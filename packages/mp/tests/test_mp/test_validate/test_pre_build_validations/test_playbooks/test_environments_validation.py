@@ -35,9 +35,7 @@ class TestEnvironmentsValidation:
         )
         self.validator_runner.run(playbook_path)
 
-    def test_all_environments_invalid_fail(
-        self, tmp_path: Path, non_built_playbook_path: Path
-    ) -> None:
+    def test_all_environments_invalid_fail(self, tmp_path: Path, non_built_playbook_path: Path) -> None:
         playbook_path = self._set_playbook_environments(
             tmp_path, non_built_playbook_path, environments=["personal env 1", "personal env 2"]
         )
@@ -45,9 +43,7 @@ class TestEnvironmentsValidation:
         with pytest.raises(NonFatalValidationError, match=validation_msg):
             self.validator_runner.run(playbook_path)
 
-    def test_one_invalid_one_valid_fail(
-        self, tmp_path: Path, non_built_playbook_path: Path
-    ) -> None:
+    def test_one_invalid_one_valid_fail(self, tmp_path: Path, non_built_playbook_path: Path) -> None:
         validation_msg: str = r"^Invalid environment\(s\) found: personal env 2\."
         for env in VALID_ENVIRONMENTS:
             playbook_path = self._set_playbook_environments(
