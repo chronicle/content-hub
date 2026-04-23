@@ -4,11 +4,6 @@ from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 
-from TIPCommon.base.action.data_models import (
-    CloseCaseOrAlertInconclusiveRootCauses,
-    CloseCaseOrAlertMaliciousRootCauses,
-    CloseCaseOrAlertNotMaliciousRootCauses,
-)
 from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import (
     JobCase,
@@ -19,7 +14,6 @@ from TIPCommon.data_models import AlertCard
 from TIPCommon.transformation import convert_comma_separated_to_list
 
 from ..core.constants import (
-    ALERT_ID_CONTEXT_KEY,
     CONTEXT_KEY,
     ENTITY_TYPE_ALERT,
     ENTITY_TYPE_TICKET,
@@ -136,8 +130,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         latest_timestamp = max(latest_timestamp, created_at_ms)
                     except Exception as e:
                         self.logger.debug(
-                            f"Failed to parse created_at for note in incident "
-                            f"{incident_id}: {e}"
+                            f"Failed to parse created_at for note in "
+                            f"incident {incident_id}: {e}"
                         )
                         continue
         except Exception as e:
@@ -145,11 +139,11 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         return latest_timestamp
 
     def _is_incident_modified(
-        self,
-        incident_id: str,
-        from_timestamp: int,
+        self, incident_id: str, from_timestamp: int
     ) -> tuple[bool, int]:
-        """Checks if incident or notes were modified since from_timestamp."""
+        """Checks if an incident or its notes have been modified since
+        from_timestamp.
+        """
         incident_ts = self._get_incident_latest_timestamp(incident_id)
         notes_ts = self._get_notes_latest_timestamp(incident_id)
 
@@ -175,13 +169,6 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             str(job_case.case_detail.id_),
             CONTEXT_KEY,
         )
-
-        if not context_value:
-            context_value = self.soar_job.get_context_property(
-                ENTITY_TYPE_TICKET,
-                str(job_case.case_detail.id_),
-                ALERT_ID_CONTEXT_KEY,
-            )
         if context_value:
             ids = convert_comma_separated_to_list(context_value)
             incident_ids.extend(ids)
@@ -208,12 +195,6 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         if ticket.ticket_id:
             return ticket.ticket_id
 
-        context_value: str | None = self.soar_job.get_context_property(
-            ENTITY_TYPE_ALERT, ticket.alert_group_identifier, ALERT_ID_CONTEXT_KEY
-        )
-        if context_value:
-            return context_value
-
         return self.soar_job.get_context_property(
             ENTITY_TYPE_ALERT, ticket.alert_group_identifier, CONTEXT_KEY
         )
@@ -231,10 +212,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         self._populate_alert_metadata(job_case, product_details)
         self.remove_synced_data_from_db(job_case, product_details)
 
-    def _fetch_product_details(
-        self,
-        product_ids: list[str],
-    ) -> list[dict[str, Any]]:
+    def _fetch_product_details(self, product_ids: list[str]) -> list[dict[str, Any]]:
         """Fetches PagerDuty incident details for given IDs."""
         results = []
         for product_id in product_ids:
@@ -247,8 +225,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         return results
 
     def _attach_comments_to_product_details(
-        self,
-        product_details: list[dict[str, Any]],
+        self, product_details: list[dict[str, Any]]
     ) -> None:
         """Attaches PagerDuty notes as comments to product details."""
         for detail in product_details:
@@ -264,9 +241,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 )
 
     def _attach_product_details_to_case(
-        self,
-        job_case: JobCase,
-        product_details: list[dict[str, Any]]
+        self, job_case: JobCase, product_details: list[dict[str, Any]]
     ) -> None:
         """Adds product incident details to the SecOps case."""
         for product_detail in product_details:
@@ -295,43 +270,34 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             if matching_product:
                 comments = matching_product.get("comments", [])
                 closure_reason = None
-                for comment in comments:
-                    content = getattr(comment, "message", "")
-                    if content.startswith("Resolved: "):
-                        closure_reason = content.replace("Resolved: ", "")
-                        break
+                if comments:
+                    closure_reason = getattr(comments[-1], "message", "")
+                
                 job_case.alert_metadata[alert.identifier] = SyncMetadata(
                     status=matching_product.get("status"),
                     incident_number=matching_product.get("id"),
                     closure_reason=closure_reason,
                 )
 
-    def sync_status(
-        self,
-        job_case: JobCase,
-    ) -> None:
+    def sync_status(self, job_case: JobCase) -> None:
         """Syncs closure status between SecOps case alerts and PagerDuty incidents."""
         res = job_case.get_status_to_sync(product_closed_status="resolved")
         self.sync_product_status_to_case(res, job_case)
         self._sync_case_status_to_product(res, job_case)
 
     def sync_product_status_to_case(
-        self,
-        res: JobStatusResult,
-        job_case: JobCase,
+        self, res: JobStatusResult, job_case: JobCase
     ) -> None:
         """Syncs closures from PagerDuty to SecOps case alerts."""
         for alert, meta in res.alerts_to_close_in_soar:
-            reason, root_cause = self._get_secops_closure_details(meta.closure_reason)
+            reason = "Maintenance"
+            root_cause = "Other"
             open_alerts = [
                 a
                 for a in job_case.case_detail.alerts
                 if a.status.lower() not in ["close", "closed"]
             ]
-            comment = (
-                f"{PAGERDUTY_COMMENT_PREFIX} Incident {meta.incident_number} "
-                f"was resolved."
-            )
+            comment = meta.closure_reason or "Ticket was closed"
             if len(open_alerts) <= 1:
                 try:
                     self.soar_job.close_case(
@@ -371,28 +337,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
             )
 
-    def _get_secops_closure_details(
-        self,
-        classification: str | None,
-    ) -> tuple[str, str]:
-        """Maps a PagerDuty classification to SecOps case closure status and root
-
-        cause.
-        """
-        if classification == "True Positive":
-            return "Malicious", CloseCaseOrAlertMaliciousRootCauses.OTHER.value
-        elif classification == "False Positive":
-            return "Not Malicious", CloseCaseOrAlertNotMaliciousRootCauses.OTHER.value
-
-        return (
-            "Inconclusive",
-            CloseCaseOrAlertInconclusiveRootCauses.NO_CLEAR_CONCLUSION.value,
-        )
-
     def _sync_case_status_to_product(
-        self,
-        res: JobStatusResult,
-        job_case: JobCase,
+        self, res: JobStatusResult, job_case: JobCase
     ) -> None:
         """Syncs case closure status from SecOps to PagerDuty."""
         if not res.incidents_to_close_in_product:
@@ -404,35 +350,26 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 continue
 
             try:
-                details = self.soar_job.get_case_closure_details(
-                    [job_case.case_detail.id_]
-                )
-                reason = details[0].get("reason", "") if details else ""
-                classification = self._get_pagerduty_classification(reason)
-                self.api_client.add_incident_note(
-                    meta.incident_number, f"Resolved: {classification}"
-                )
+                closing_comment = self.get_secops_closure_comment(job_case, req)
+
+                if closing_comment:
+                    self.api_client.add_incident_note(
+                        meta.incident_number, closing_comment
+                    )
                 self.api_client.resolve_incident(meta.incident_number)
                 self.logger.info(
-                    f"Successfully resolved PagerDuty incident "
-                    f"{meta.incident_number} with classification "
-                    f"{classification}."
+                    f"Successfully resolved PagerDuty incident {meta.incident_number}."
                 )
                 self._remove_synced_entries(
-                    synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
+                    synced_list=[
+                        (job_case.case_detail.id_, f"{meta.incident_number}")
+                    ],
                 )
             except Exception as e:
                 self.logger.error(
-                    f"Failed to resolve PagerDuty incident {meta.incident_number}: {e}"
+                    f"Failed to resolve PagerDuty incident "
+                    f"{meta.incident_number}: {e}"
                 )
-
-    def _get_pagerduty_classification(self, reason: str) -> str:
-        """Maps SecOps reason to PagerDuty classification."""
-        if reason == "Malicious":
-            return "True Positive"
-        elif reason == "Not Malicious":
-            return "False Positive"
-        return "Other"
 
     def sync_comments(self, job_case: JobCase) -> None:
         """Syncs comments between SecOps and PagerDuty."""
@@ -452,9 +389,9 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             comments=comments_to_sync.product_comments_sync_to_case,
         )
         if comments_to_sync.product_comments_sync_to_case:
+            count = len(comments_to_sync.product_comments_sync_to_case)
             self.logger.info(
-                f"Successfully synced "
-                f"{len(comments_to_sync.product_comments_sync_to_case)} "
+                f"Successfully synced {count} "
                 f"comments from PagerDuty to SecOps case {job_case.case_detail.id_}."
             )
 
@@ -464,9 +401,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         )
 
     def sync_case_comments_to_product(
-        self,
-        job_case: JobCase,
-        comments: list[str],
+        self, job_case: JobCase, comments: list[str]
     ) -> None:
         """Syncs comments from SecOps case to PagerDuty incidents."""
         incident_ids = self._extract_product_ids_from_case(job_case)
@@ -519,9 +454,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         return alert_closed and product_closed
 
     def remove_synced_data_from_db(
-        self,
-        job_case: JobCase,
-        product_details: list[dict[str, Any]],
+        self, job_case: JobCase, product_details: list[dict[str, Any]]
     ) -> None:
         """Removes entries from synchronization tracking when both alert and
         product are closed.
