@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -25,8 +26,6 @@ from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from mp.core.config import RuntimeParams
 
 app: typer.Typer = typer.Typer()
