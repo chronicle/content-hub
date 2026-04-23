@@ -20,14 +20,7 @@ import logging
 from asyncio import Task
 from typing import TYPE_CHECKING, NamedTuple
 
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskID,
-    TextColumn,
-    TimeRemainingColumn,
-)
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeRemainingColumn
 
 import mp.core.config
 from mp.core.custom_types import RepositoryType
@@ -49,9 +42,7 @@ class IntegrationTask(NamedTuple):
     initial_action_count: int
 
 
-async def describe_all_actions(
-    src: Path | None = None, dst: Path | None = None, *, override: bool = False
-) -> None:
+async def describe_all_actions(src: Path | None = None, dst: Path | None = None, *, override: bool = False) -> None:
     """Describe all actions in all integrations in the marketplace."""
     integrations_paths: list[Path] = _get_all_integrations_paths(src=src)
     orchestrator = _MarketplaceOrchestrator(src, integrations_paths, dst=dst, override=override)
@@ -93,10 +84,7 @@ class _MarketplaceOrchestrator:
         # But we also want to limit the number of integrations to keep the UI clean.
         return bool(
             self.pending_paths
-            and (
-                self.actions_in_flight < self.concurrency
-                or len(self.active_tasks) < MAX_ACTIVE_TASKS
-            )
+            and (self.actions_in_flight < self.concurrency or len(self.active_tasks) < MAX_ACTIVE_TASKS)
             and len(self.active_tasks) < self.max_active_integrations
         )
 
@@ -116,9 +104,7 @@ class _MarketplaceOrchestrator:
         self.actions_in_flight += count
 
         task: Task[None] = asyncio.create_task(
-            da.describe_actions(
-                sem=self.action_sem, on_action_done=self._on_action_done, progress=progress
-            )
+            da.describe_actions(sem=self.action_sem, on_action_done=self._on_action_done, progress=progress)
         )
         self.active_tasks.add(
             IntegrationTask(
@@ -142,12 +128,8 @@ class _MarketplaceOrchestrator:
             {it.task for it in self.active_tasks}, return_when=asyncio.FIRST_COMPLETED
         )
 
-        done_integration_tasks: set[IntegrationTask] = {
-            it for it in self.active_tasks if it.task in done_tasks
-        }
-        self.active_tasks: set[IntegrationTask] = {
-            it for it in self.active_tasks if it.task in pending_tasks
-        }
+        done_integration_tasks: set[IntegrationTask] = {it for it in self.active_tasks if it.task in done_tasks}
+        self.active_tasks: set[IntegrationTask] = {it for it in self.active_tasks if it.task in pending_tasks}
 
         return done_integration_tasks
 
@@ -195,11 +177,7 @@ async def _process_completed_tasks(
 
 def _get_all_integrations_paths(src: Path | None = None) -> list[Path]:
     if src:
-        return (
-            [p for p in src.iterdir() if p.is_dir() and not p.name.startswith(".")]
-            if src.exists()
-            else []
-        )
+        return [p for p in src.iterdir() if p.is_dir() and not p.name.startswith(".")] if src.exists() else []
 
     paths: list[Path] = []
     base_paths: list[Path] = []

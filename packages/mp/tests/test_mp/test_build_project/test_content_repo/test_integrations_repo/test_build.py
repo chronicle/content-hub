@@ -88,9 +88,7 @@ def assert_build_integration(
         if integration.exists():
             py_version.write_text("3.11", encoding="utf-8")
 
-        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(
-            community
-        )
+        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(community)
         marketplace.build_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
@@ -118,14 +116,8 @@ def assert_build_integration(
         assert actual == expected
 
         actual, expected = test_mp.common.get_json_content(
-            expected=(
-                built_integration
-                / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)
-            ),
-            actual=(
-                out_integration
-                / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)
-            ),
+            expected=(built_integration / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)),
+            actual=(out_integration / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)),
         )
         assert actual == expected
 
@@ -147,14 +139,10 @@ def assert_build_integration(
 
         actual, expected = test_mp.common.get_json_content(
             expected=(
-                built_integration
-                / mp.core.constants.OUT_MAPPING_RULES_DIR
-                / mp.core.constants.OUT_MAPPING_RULES_FILE
+                built_integration / mp.core.constants.OUT_MAPPING_RULES_DIR / mp.core.constants.OUT_MAPPING_RULES_FILE
             ),
             actual=(
-                out_integration
-                / mp.core.constants.OUT_MAPPING_RULES_DIR
-                / mp.core.constants.OUT_MAPPING_RULES_FILE
+                out_integration / mp.core.constants.OUT_MAPPING_RULES_DIR / mp.core.constants.OUT_MAPPING_RULES_FILE
             ),
         )
         assert actual == expected
@@ -166,9 +154,7 @@ def assert_build_integration(
                 / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
             ),
             actual=(
-                out_integration
-                / mp.core.constants.OUT_CUSTOM_FAMILIES_DIR
-                / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
+                out_integration / mp.core.constants.OUT_CUSTOM_FAMILIES_DIR / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
             ),
         )
         assert actual == expected

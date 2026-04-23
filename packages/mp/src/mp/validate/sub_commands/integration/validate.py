@@ -20,9 +20,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.core.utils import (
-    ensure_valid_list,
-)
+from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 from mp.validate.data_models import ContentType, FullReport
 from mp.validate.display import display_validation_reports
@@ -71,10 +69,7 @@ def validate_integration(
     only_pre_build: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the integrations, skipping the full build process."
-            ),
+            help=("Execute only pre-build validations checks on the integrations, skipping the full build process."),
         ),
     ] = False,
     quiet: Annotated[

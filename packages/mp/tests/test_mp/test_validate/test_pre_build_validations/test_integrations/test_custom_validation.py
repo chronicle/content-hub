@@ -55,11 +55,7 @@ class TestCustomValidation:
 
     def test_failure_on_custom_action_flag(self, temp_integration: pathlib.Path) -> None:
         """Test failure when an action's 'is_custom' flag is true."""
-        ping_def_file = (
-            temp_integration
-            / mp.core.constants.ACTIONS_DIR
-            / f"ping{mp.core.constants.YAML_SUFFIX}"
-        )
+        ping_def_file = temp_integration / mp.core.constants.ACTIONS_DIR / f"ping{mp.core.constants.YAML_SUFFIX}"
         _update_yaml_file(ping_def_file, {"is_custom": True})
 
         with pytest.raises(NonFatalValidationError, match="Custom actions: Ping"):
@@ -68,22 +64,16 @@ class TestCustomValidation:
     def test_failure_on_custom_connector_flag(self, temp_integration: pathlib.Path) -> None:
         """Test failure when a connector's 'is_custom' flag is true."""
         connector_def_file = (
-            temp_integration
-            / mp.core.constants.CONNECTORS_DIR
-            / f"connector{mp.core.constants.YAML_SUFFIX}"
+            temp_integration / mp.core.constants.CONNECTORS_DIR / f"connector{mp.core.constants.YAML_SUFFIX}"
         )
         _update_yaml_file(connector_def_file, {"is_custom": True})
 
-        with pytest.raises(
-            NonFatalValidationError, match="Custom connectors: Mock Integration Connector"
-        ):
+        with pytest.raises(NonFatalValidationError, match="Custom connectors: Mock Integration Connector"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_custom_job_flag(self, temp_integration: pathlib.Path) -> None:
         """Test failure when a job's 'is_custom' flag is true."""
-        job_def_file = (
-            temp_integration / mp.core.constants.JOBS_DIR / f"job{mp.core.constants.YAML_SUFFIX}"
-        )
+        job_def_file = temp_integration / mp.core.constants.JOBS_DIR / f"job{mp.core.constants.YAML_SUFFIX}"
         _update_yaml_file(job_def_file, {"is_custom": True})
 
         with pytest.raises(NonFatalValidationError, match="Custom jobs: Mock Integration Job"):

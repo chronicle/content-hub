@@ -27,9 +27,7 @@ from mp.core.validators import validate_png_content, validate_svg_content
 class TestValidateSvgContent:
     def test_valid_svg(self, non_built_integration: Path) -> None:
         """Test that a valid SVG file is parsed correctly."""
-        svg_path: Path = (
-            non_built_integration / mp.core.constants.RESOURCES_DIR / mp.core.constants.LOGO_FILE
-        )
+        svg_path: Path = non_built_integration / mp.core.constants.RESOURCES_DIR / mp.core.constants.LOGO_FILE
         assert validate_svg_content(svg_path)
 
     @mock.patch("pathlib.Path.read_text")
@@ -57,9 +55,7 @@ class TestValidateSvgContent:
 class TestValidatePngContent:
     def test_valid_png(self, non_built_integration: Path) -> None:
         """Test that a valid PNG file is parsed correctly."""
-        png_path: Path = (
-            non_built_integration / mp.core.constants.RESOURCES_DIR / mp.core.constants.IMAGE_FILE
-        )
+        png_path: Path = non_built_integration / mp.core.constants.RESOURCES_DIR / mp.core.constants.IMAGE_FILE
         assert validate_png_content(png_path)
 
     @mock.patch("mp.core.validators.Image.open")

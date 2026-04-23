@@ -34,11 +34,7 @@ import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
-from mp.core.data_models.integrations.integration import (
-    BuiltFullDetails,
-    BuiltIntegration,
-    Integration,
-)
+from mp.core.data_models.integrations.integration import BuiltFullDetails, BuiltIntegration, Integration
 
 from .post_build.integrations.full_details_json import write_full_details
 from .post_build.integrations.marketplace_json import write_marketplace_json
@@ -51,9 +47,7 @@ if TYPE_CHECKING:
 
 
 class IntegrationsRepo:
-    def __init__(
-        self, integrations_dir: Path, dst: Path | None = None, *, default_source: bool = True
-    ) -> None:
+    def __init__(self, integrations_dir: Path, dst: Path | None = None, *, default_source: bool = True) -> None:
         """Class constructor.
 
         Args:
@@ -65,9 +59,7 @@ class IntegrationsRepo:
         """
         self.name: str = integrations_dir.name
         if default_source:
-            self.paths: list[Path] = mp.core.file_utils.get_integration_base_folders_paths(
-                self.name
-            )
+            self.paths: list[Path] = mp.core.file_utils.get_integration_base_folders_paths(self.name)
         else:
             self.paths: list[Path] = [integrations_dir]
 
@@ -97,9 +89,7 @@ class IntegrationsRepo:
             integration_paths: The paths of integrations to build
 
         """
-        paths: Iterator[Path] = (
-            p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)
-        )
+        paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
         processes: int = mp.core.config.get_processes_number()
         with multiprocessing.Pool(processes=processes) as pool:
             pool.map(self.build_integration, paths)
@@ -163,13 +153,9 @@ class IntegrationsRepo:
             integration / mp.core.constants.PROJECT_FILE,
             integration / mp.core.constants.LOCK_FILE,
             integration / mp.core.constants.OUT_ACTION_SCRIPTS_DIR / mp.core.constants.PACKAGE_FILE,
-            integration
-            / mp.core.constants.OUT_CONNECTOR_SCRIPTS_DIR
-            / mp.core.constants.PACKAGE_FILE,
+            integration / mp.core.constants.OUT_CONNECTOR_SCRIPTS_DIR / mp.core.constants.PACKAGE_FILE,
             integration / mp.core.constants.OUT_JOB_SCRIPTS_DIR / mp.core.constants.PACKAGE_FILE,
-            integration
-            / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
-            / mp.core.constants.PACKAGE_FILE,
+            integration / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR / mp.core.constants.PACKAGE_FILE,
         )
         mp.core.file_utils.remove_rglobs_if_exists(
             *mp.core.constants.EXCLUDED_GLOBS,
@@ -183,9 +169,7 @@ class IntegrationsRepo:
             integration_paths: The paths of integrations to deconstruct
 
         """
-        paths: Iterator[Path] = (
-            p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)
-        )
+        paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
         processes: int = mp.core.config.get_processes_number()
         with multiprocessing.Pool(processes=processes) as pool:
             pool.map(self.deconstruct_integration, paths)
