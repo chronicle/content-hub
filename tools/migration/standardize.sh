@@ -147,8 +147,8 @@ echo "── Step 4: Lint & validate ──────────────�
 
 cd "$INTEGRATION_PATH"
 
-echo "  Running: mp check --fix"
-mp check "$INTEGRATION_PATH" --fix 2>&1 | tail -3 || true
+echo "  Running: mp check --fix --unsafe-fixes"
+mp check "$INTEGRATION_PATH" --fix --unsafe-fixes 2>&1 | tail -3 || true
 
 echo "  Running: mp format"
 mp format "$INTEGRATION_PATH" 2>&1 | tail -3 || true
