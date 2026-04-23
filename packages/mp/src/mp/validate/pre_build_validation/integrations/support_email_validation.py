@@ -52,9 +52,7 @@ class SupportEmailValidation:
 
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch(
-                "main", head_sha, validation_path
-            )
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
             if not changed:
                 return
 

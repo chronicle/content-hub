@@ -56,9 +56,7 @@ class JsonResultExampleValidation:
         # Only validate integrations with changes in the current PR
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch(
-                "main", head_sha, validation_path
-            )
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
             if not changed:
                 return
 
@@ -76,9 +74,7 @@ class JsonResultExampleValidation:
 
             # Check only non-comment lines for JSON result patterns
             source_lines = py_file.read_text(encoding="utf-8").splitlines()
-            code_content = "\n".join(
-                line for line in source_lines if not line.strip().startswith("#")
-            )
+            code_content = "\n".join(line for line in source_lines if not line.strip().startswith("#"))
             has_json_result = any(pattern in code_content for pattern in _JSON_RESULT_PATTERNS)
 
             if has_json_result:

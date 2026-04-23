@@ -68,14 +68,10 @@ class TestIntegrationFileStructureValidation:
         # Create an extra script file without a .yaml
         _create_file(temp_integration / constants.ACTIONS_DIR / "extra_action.py")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_action\.py' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_action\.py' without a  matching"):
             self.validator_runner.run(temp_integration)
 
-    def test_failure_on_action_definition_parity_error(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_failure_on_action_definition_parity_error(self, temp_integration: pathlib.Path) -> None:
         """Test failure when a .yaml file exists without a matching script.
 
         This should also cause `is_integration` to raise a RuntimeError.
@@ -83,9 +79,7 @@ class TestIntegrationFileStructureValidation:
         # Create an extra .yaml file without a script
         _create_file(temp_integration / constants.ACTIONS_DIR / "extra_action.yaml")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_action\.yaml' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_action\.yaml' without a  matching"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_job_script_parity_error(self, temp_integration: pathlib.Path) -> None:
@@ -96,9 +90,7 @@ class TestIntegrationFileStructureValidation:
         # Create an extra script file without a .yaml
         _create_file(temp_integration / constants.JOBS_DIR / "extra_job.py")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_job\.py' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_job\.py' without a  matching"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_job_definition_parity_error(self, temp_integration: pathlib.Path) -> None:
@@ -109,9 +101,7 @@ class TestIntegrationFileStructureValidation:
         # Create an extra .yaml file without a script
         _create_file(temp_integration / constants.JOBS_DIR / "extra_job.yaml")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_job\.yaml' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_job\.yaml' without a  matching"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_connector_script_parity_error(self, temp_integration: pathlib.Path) -> None:
@@ -122,14 +112,10 @@ class TestIntegrationFileStructureValidation:
         # Create an extra script file without a .yaml
         _create_file(temp_integration / constants.CONNECTORS_DIR / "extra_connector.py")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_connector\.py' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_connector\.py' without a  matching"):
             self.validator_runner.run(temp_integration)
 
-    def test_failure_on_connector_definition_parity_error(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_failure_on_connector_definition_parity_error(self, temp_integration: pathlib.Path) -> None:
         """Test failure when a .yaml file exists without a matching script.
 
         This should also cause `is_integration` to raise a RuntimeError.
@@ -137,9 +123,7 @@ class TestIntegrationFileStructureValidation:
         # Create an extra .yaml file without a script
         _create_file(temp_integration / constants.CONNECTORS_DIR / "extra_connector.yaml")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_connector\.yaml' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_connector\.yaml' without a  matching"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_widget_script_parity_error(self, temp_integration: pathlib.Path) -> None:
@@ -150,14 +134,10 @@ class TestIntegrationFileStructureValidation:
         # Create an extra script file without a .yaml
         _create_file(temp_integration / constants.WIDGETS_DIR / "extra_widget.html")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_widget\.html' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_widget\.html' without a  matching"):
             self.validator_runner.run(temp_integration)
 
-    def test_failure_on_widget_definition_parity_error(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_failure_on_widget_definition_parity_error(self, temp_integration: pathlib.Path) -> None:
         """Test failure when a .yaml file exists without a matching script.
 
         This should also cause `is_integration` to raise a RuntimeError.
@@ -165,7 +145,5 @@ class TestIntegrationFileStructureValidation:
         # Create an extra .yaml file without a script
         _create_file(temp_integration / constants.WIDGETS_DIR / "extra_widget.yaml")
 
-        with pytest.raises(
-            FatalValidationError, match=r"has a file 'extra_widget\.yaml' without a  matching"
-        ):
+        with pytest.raises(FatalValidationError, match=r"has a file 'extra_widget\.yaml' without a  matching"):
             self.validator_runner.run(temp_integration)

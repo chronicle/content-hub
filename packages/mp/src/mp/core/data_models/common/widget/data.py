@@ -75,9 +75,7 @@ class NonBuiltWidgetDataDefinition(TypedDict):
     widget_definition_scope: str
 
 
-class HtmlWidgetDataDefinition(
-    ComponentMetadata[BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition]
-):
+class HtmlWidgetDataDefinition(ComponentMetadata[BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition]):
     html_height: int
     safe_rendering: bool
     type: WidgetType

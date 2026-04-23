@@ -108,15 +108,12 @@ class DependencyDeconstructor:
                             imported_modules.add(module.split(".")[0])
 
             except SyntaxError:
-                rich.print(
-                    f"[yellow]Warning:[/] Could not parse {path}, skipping for dependency analysis."
-                )
+                rich.print(f"[yellow]Warning:[/] Could not parse {path}, skipping for dependency analysis.")
 
         return {
             m
             for m in imported_modules
-            if m
-            not in manager_modules.union(mp.core.constants.SDK_MODULES, sys.stdlib_module_names)
+            if m not in manager_modules.union(mp.core.constants.SDK_MODULES, sys.stdlib_module_names)
         }
 
     def _resolve_dependencies(self, required_modules: set[str]) -> DependencyResolutionResult:
@@ -132,9 +129,7 @@ class DependencyDeconstructor:
         found_packages: set[str] = set()
 
         if dependencies_dir.is_dir():
-            package_files = itertools.chain.from_iterable(
-                dependencies_dir.glob(ext) for ext in PACAKGE_SUFFIXES
-            )
+            package_files = itertools.chain.from_iterable(dependencies_dir.glob(ext) for ext in PACAKGE_SUFFIXES)
             for package in package_files:
                 result = self._process_package_file(package, required_modules)
                 if not result:
@@ -198,18 +193,13 @@ class DependencyDeconstructor:
                 env_common_to_remove = True
 
             try:
-                repo_packages: Dependencies = self._get_repo_package_dependencies(
-                    package_install_name, version
-                )
+                repo_packages: Dependencies = self._get_repo_package_dependencies(package_install_name, version)
                 deps_to_add.extend(repo_packages.dependencies)
                 dev_deps_to_add.extend(repo_packages.dev_dependencies)
             except FileNotFoundError as e:
                 # This dependency will be added as a placeholder comment
                 placeholder_deps.append(f"{package_install_name}=={version}")
-                rich.print(
-                    f"[yellow]Warning:[/] Could not resolve local dependency "
-                    f"{package_install_name}: {e}"
-                )
+                rich.print(f"[yellow]Warning:[/] Could not resolve local dependency {package_install_name}: {e}")
         else:
             deps_to_add.append(f"{package_install_name}=={version}")
         return ProcessedPackage(
@@ -244,13 +234,11 @@ class DependencyDeconstructor:
 
         if _should_add_integration_testing(name, version):
             integration_testing_version_dir: Path = (
-                self.local_packages_base_path
-                / mp.core.constants.REPO_PACKAGES_CONFIG[INTEGRATION_TESTING]
+                self.local_packages_base_path / mp.core.constants.REPO_PACKAGES_CONFIG[INTEGRATION_TESTING]
             )
             if not integration_testing_version_dir.is_dir():
                 rich.print(
-                    f"[yellow]Warning:[/] integration_testing directory not found at "
-                    f"{integration_testing_version_dir}"
+                    f"[yellow]Warning:[/] integration_testing directory not found at {integration_testing_version_dir}"
                 )
             else:
                 it_package_file: Path = _find_package_file(
@@ -285,10 +273,7 @@ def _get_package_wheels_dir(name: str) -> Path:
 
 
 def _should_add_integration_testing(name: str, version: str) -> bool:
-    return (
-        name == TIP_COMMON
-        and Version(version) >= MIN_RELEVANT_TIP_COMMON_VERSION_FOR_INTEGRATION_TESTING
-    )
+    return name == TIP_COMMON and Version(version) >= MIN_RELEVANT_TIP_COMMON_VERSION_FOR_INTEGRATION_TESTING
 
 
 def _get_provided_imports(wheel_path: Path) -> set[str]:

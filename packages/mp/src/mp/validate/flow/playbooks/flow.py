@@ -21,14 +21,7 @@ import mp.core.config
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
-from mp.validate.data_models import (
-    PRE_BUILD,
-    Configurations,
-    ContentType,
-    FullReport,
-    ValidationFn,
-    ValidationResults,
-)
+from mp.validate.data_models import PRE_BUILD, Configurations, ContentType, FullReport, ValidationFn, ValidationResults
 from mp.validate.pre_build_validation import PreBuildValidations
 from mp.validate.utils import combine_results, should_fail_program
 
@@ -57,14 +50,10 @@ def validate_playbooks(
 
     """
     commercial_playbooks_repo: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_or_create_playbook_repo_base_path(
-            mp.core.constants.COMMERCIAL_REPO_NAME
-        )
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(mp.core.constants.COMMERCIAL_REPO_NAME)
     )
     community_playbooks_repo: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_or_create_playbook_repo_base_path(
-            mp.core.constants.THIRD_PARTY_REPO_NAME
-        )
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(mp.core.constants.THIRD_PARTY_REPO_NAME)
     )
 
     run_configurations: Configurations = Configurations(only_pre_build=only_pre_build)
@@ -73,12 +62,8 @@ def validate_playbooks(
     community_output: FullReport = {}
 
     if playbooks:
-        commercial_output = _validate_playbooks(
-            playbooks, commercial_playbooks_repo, run_configurations
-        )
-        community_output = _validate_playbooks(
-            playbooks, community_playbooks_repo, run_configurations
-        )
+        commercial_output = _validate_playbooks(playbooks, commercial_playbooks_repo, run_configurations)
+        community_output = _validate_playbooks(playbooks, community_playbooks_repo, run_configurations)
 
     elif repositories:
         commercial_output = _validate_repo(commercial_playbooks_repo, run_configurations)
@@ -104,16 +89,12 @@ def _validate_playbooks(
     configurations: Configurations,
 ) -> FullReport:
     validation_outputs: FullReport = {}
-    playbooks_paths: Iterable[Path] = _get_playbooks_paths_from_repository(
-        playbooks_names, content_repo.base_folders
-    )
+    playbooks_paths: Iterable[Path] = _get_playbooks_paths_from_repository(playbooks_names, content_repo.base_folders)
 
     if not playbooks_paths:
         return validation_outputs
 
-    pre_build_output: list[ValidationResults] = _run_validations(
-        playbooks_paths, _run_pre_build_validations
-    )
+    pre_build_output: list[ValidationResults] = _run_validations(playbooks_paths, _run_pre_build_validations)
     validation_outputs[PRE_BUILD] = pre_build_output
 
     if not configurations.only_pre_build:
@@ -122,9 +103,7 @@ def _validate_playbooks(
     return validation_outputs
 
 
-def _run_validations(
-    playbooks: Iterable[Path], validation_function: ValidationFn
-) -> list[ValidationResults]:
+def _run_validations(playbooks: Iterable[Path], validation_function: ValidationFn) -> list[ValidationResults]:
     """Execute pre-build validation checks on a list of playbook paths.
 
     Returns:
@@ -140,16 +119,12 @@ def _run_validations(
 
 
 def _run_pre_build_validations(playbook_path: Path) -> ValidationResults:
-    validation_object: PreBuildValidations = PreBuildValidations(
-        playbook_path, ContentType.PLAYBOOK
-    )
+    validation_object: PreBuildValidations = PreBuildValidations(playbook_path, ContentType.PLAYBOOK)
     validation_object.run_pre_build_validation()
     return validation_object.results
 
 
-def _get_playbooks_paths_from_repository(
-    playbooks_names: Iterable[str], repository_folders: list[Path]
-) -> set[Path]:
+def _get_playbooks_paths_from_repository(playbooks_names: Iterable[str], repository_folders: list[Path]) -> set[Path]:
     return {
         p
         for path in repository_folders

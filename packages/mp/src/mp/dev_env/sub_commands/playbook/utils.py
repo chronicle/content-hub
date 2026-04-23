@@ -232,9 +232,7 @@ def find_playbook_identifier(playbook_name: str, installed_playbook: list[dict[s
         if playbook_meta["name"] == playbook_name:
             return playbook_meta["identifier"]
 
-    rich.print(
-        f"[red]Playbook '{playbook_name}' not found in installed playbooks in SOAR platform."
-    )
+    rich.print(f"[red]Playbook '{playbook_name}' not found in installed playbooks in SOAR platform.")
     raise typer.Exit(1)
 
 
@@ -253,9 +251,7 @@ def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
 
     """
     try:
-        build_playbook_(
-            [built_playbook.stem], src=built_playbook.parent, dst=dst, deconstruct=True, quiet=True
-        )
+        build_playbook_([built_playbook.stem], src=built_playbook.parent, dst=dst, deconstruct=True, quiet=True)
         return dst / to_snake_case(built_playbook.stem)
 
     except typer.Exit as e:
@@ -263,9 +259,7 @@ def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
         raise typer.Exit(1) from e
 
 
-def unzip_playbooks(
-    zip_path: Path, dest: Path, include_playbook: str = "", exclude_playbook: str = ""
-) -> list[Path]:
+def unzip_playbooks(zip_path: Path, dest: Path, include_playbook: str = "", exclude_playbook: str = "") -> list[Path]:
     """Unzips JSON playbooks to a destination.
 
     Args:
@@ -287,9 +281,7 @@ def unzip_playbooks(
                 continue
 
             if include_playbook in {"", original_filename}:
-                new_filename: str = (
-                    f"{to_snake_case(original_filename)}{mp.core.constants.JSON_SUFFIX}"
-                )
+                new_filename: str = f"{to_snake_case(original_filename)}{mp.core.constants.JSON_SUFFIX}"
                 target_path = dest / new_filename
 
                 with zip_ref.open(file_info) as source:

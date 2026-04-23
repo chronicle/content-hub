@@ -64,8 +64,7 @@ class DebugDataValidation:
 
         if playbook_metadata.is_debug_mode:
             error_messages.append(
-                "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be "
-                "enabled. Please disable it."
+                "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be enabled. Please disable it."
             )
 
         for step in steps_with_debug_data:
