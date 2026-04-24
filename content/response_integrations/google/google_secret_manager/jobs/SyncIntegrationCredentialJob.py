@@ -57,6 +57,7 @@ if TYPE_CHECKING:
 
 NameIdentifierMap = dict[str, str]
 
+
 class SyncIntegrationCredentialJob(Job):
     """Syncs credentials from GCP Secret Manager to SOAR.
 
@@ -74,7 +75,12 @@ class SyncIntegrationCredentialJob(Job):
         self.connector_name_to_identifier: NameIdentifierMap = {}
 
     def _init_api_clients(self) -> GoogleSecretManagerClient:
-        """Initialize the Google Secret Manager client."""
+        """Initialize the Google Secret Manager client.
+
+        Returns:
+            GoogleSecretManagerClient: The initialized client.
+
+        """
         service_account_json = extract_configuration_param(
             self.soar_job,
             param_name=SERVICE_ACCOUNT_JSON_PARAM,
@@ -129,9 +135,10 @@ class SyncIntegrationCredentialJob(Job):
 
         Raises:
             InvalidConfigurationError: If the YAML/JSON string is invalid.
+
         """
         try:
-            self.credential_mapping: SingleJson = yaml.safe_load(
+            self.credential_mapping = yaml.safe_load(
                 self.params.credential_mapping
             ) or {}
         except yaml.YAMLError as e:
@@ -147,6 +154,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             tuple[str, str]: The (secret_id, resolved_version).
+
         """
         if ":" in mapped_value:
             secret_id, explicit_version = mapped_value.split(":", 1)
@@ -215,10 +223,11 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             List of InstalledIntegrationInstance objects.
+
         """
         environment: str = self.params.environment_name
         self.logger.info(
-            f"Fetching integration instances for environment: {environment}"
+            "Fetching integration instances for environment: %s", environment
         )
 
         return get_installed_integrations_of_environment(
@@ -244,8 +253,9 @@ class SyncIntegrationCredentialJob(Job):
         Args:
             name (str): Display name of the instance.
             param_mapping (SingleJson): Param names to secret IDs.
+
         """
-        self.logger.info(f"Processing integration instance: {name}")
+        self.logger.info("Processing integration instance: %s", name)
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
@@ -267,6 +277,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             The identifier string, or None if not found.
+
         """
         identifier: str | None = self.instance_name_to_identifier.get(instance_name)
 
@@ -292,24 +303,26 @@ class SyncIntegrationCredentialJob(Job):
             name (str): Display name of the instance.
             identifier (str): Resolved instance identifier.
             param_mapping (SingleJson): Param names to secret IDs.
+
         """
         for param_name, mapped_value in param_mapping.items():
             secret_id = str(mapped_value)
             try:
                 secret_id, version_id = self._resolve_secret_and_version(mapped_value)
-                secret_value: str = self.secret_manager_client.get_secret_value(
-                    secret_id=secret_id,
-                    version_id=version_id,
-                )
-                self.soar_job.set_configuration_property(
-                    integration_instance_identifier=identifier,
-                    property_name=param_name,
-                    property_value=secret_value,
-                )
-                self.logger.info(
-                    f"Updated '{param_name}' on instance '{name}' (id: {identifier}) "
-                    f"from secret '{secret_id}' version '{version_id}'."
-                )
+                if self.secret_manager_client is not None:
+                    secret_value: str = self.secret_manager_client.get_secret_value(
+                        secret_id=secret_id,
+                        version_id=version_id,
+                    )
+                    self.soar_job.set_configuration_property(
+                        integration_instance_identifier=identifier,
+                        property_name=param_name,
+                        property_value=secret_value,
+                    )
+                    self.logger.info(
+                        f"Updated '{param_name}' on instance '{name}' (id: {identifier}) "
+                        f"from secret '{secret_id}' version '{version_id}'."
+                    )
             except (SecretAccessError, ParameterUpdateError):
                 raise
             except Exception as e:
@@ -333,7 +346,7 @@ class SyncIntegrationCredentialJob(Job):
             self.logger.info("No connectors configured. Skipping.")
             return None
 
-        self.connector_name_to_identifier: NameIdentifierMap = (
+        self.connector_name_to_identifier = (
             self._build_connector_name_lookup(cards)
         )
 
@@ -347,6 +360,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             List of ConnectorCard objects.
+
         """
         self.logger.info("Fetching connector cards...")
 
@@ -360,7 +374,6 @@ class SyncIntegrationCredentialJob(Job):
         connector_cards: list[ConnectorCard],
     ) -> NameIdentifierMap:
         """Build a display_name → identifier mapping for connectors."""
-
         return {card.display_name: card.identifier for card in connector_cards}
 
     def _update_single_connector(
@@ -373,6 +386,7 @@ class SyncIntegrationCredentialJob(Job):
         Args:
             name (str): Display name of the connector.
             param_mapping (SingleJson): Param names to secret IDs.
+
         """
         self.logger.info(f"Processing connector: {name}")
 
@@ -396,6 +410,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             The identifier string, or None if not found.
+
         """
         identifier: str | None = self.connector_name_to_identifier.get(connector_name)
         if identifier is None:
@@ -419,6 +434,7 @@ class SyncIntegrationCredentialJob(Job):
             name (str): Display name of the connector.
             identifier (str): Resolved connector identifier.
             param_mapping (SingleJson): Param names to secret IDs.
+
         """
         for param_name, mapped_value in param_mapping.items():
             secret_id = str(mapped_value)
@@ -466,7 +482,7 @@ class SyncIntegrationCredentialJob(Job):
         name_to_job: SingleJson = self._build_job_name_lookup(job_instances)
 
         for job_name, param_mapping in jobs.items():
-            self.logger.info(f"Processing job: {job_name}")
+            self.logger.info("Processing job: %s", job_name)
             self._update_single_job(job_name, param_mapping, name_to_job)
 
     def _fetch_job_instances(self) -> list[SingleJson] | None:
@@ -475,6 +491,7 @@ class SyncIntegrationCredentialJob(Job):
         Returns:
             A flat list of job instance dicts, or ``None`` if the fetch fails or the
             response format is unexpected.
+
         """
         installed_jobs_response: SingleJson | list[SingleJson] = get_installed_jobs(
             self.soar_job,
@@ -487,7 +504,7 @@ class SyncIntegrationCredentialJob(Job):
         ):
             job_instances: list[SingleJson] = installed_jobs_response["job_instances"]
         elif isinstance(installed_jobs_response, list):
-            job_instances: list[SingleJson] = installed_jobs_response
+            job_instances = installed_jobs_response
         else:
             self.logger.error(
                 "Unexpected response format from get_installed_jobs: "
@@ -515,6 +532,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             Mapping of display name to job dict.
+
         """
         return {
             inst.get("displayName") or inst.get("name", ""): inst
@@ -533,6 +551,7 @@ class SyncIntegrationCredentialJob(Job):
             job_name (str): The display name of the job.
             param_mapping (SingleJson): Map of param name → secret ID.
             name_to_job (SingleJson): Lookup of display name → job dict.
+
         """
         resolved: tuple[SingleJson, list[SingleJson]] | None = self._resolve_job_data(
             job_name,
@@ -576,6 +595,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             A ``(job_data, parameters)`` tuple, or ``None`` if the job cannot be resolved.
+
         """
         job_data: SingleJson | None = name_to_job.get(job_name)
         if job_data is None:
@@ -586,7 +606,7 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         # Shallow copy to avoid mutating the original dict in the lookup.
-        job_data: SingleJson = dict(job_data)
+        job_data = dict(job_data)
 
         parameters: list[SingleJson] | None = job_data.get("parameters")
         if parameters is None:
@@ -627,6 +647,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             A (job_data, parameters) tuple, or None on failure.
+
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
@@ -672,6 +693,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             Mapping of param display name to its index in the list.
+
         """
         param_index: dict[str, int] = {}
         for idx, p in enumerate(parameters):
@@ -697,6 +719,7 @@ class SyncIntegrationCredentialJob(Job):
 
         Returns:
             The number of parameters successfully updated.
+
         """
         updated_count = 0
         for param_name, mapped_value in param_mapping.items():
@@ -742,6 +765,7 @@ class SyncIntegrationCredentialJob(Job):
             job_name (str): Display name (for logging).
             job_data (SingleJson): The full job dict with updated parameters.
             updated_count (int): Number of params changed (for logging).
+
         """
         try:
             save_or_update_job(
