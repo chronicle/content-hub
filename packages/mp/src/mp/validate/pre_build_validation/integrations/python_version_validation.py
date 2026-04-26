@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import tomllib
 from typing import TYPE_CHECKING
 
 import mp.core.constants
@@ -36,12 +37,17 @@ class PythonVersionValidation:
     def run(integration_path: Path) -> None:
         """Check python version file existence, content, and consistency.
 
+        This validation checks:
+        1. Existence and content of the `.python-version` file.
+        2. Consistency between `.python-version` and the integration definition.
+        3. Correctness of the `requires-python` field in `pyproject.toml` against
+           supported versions and expected range format.
+
         Args:
             integration_path: Path to the integration directory.
 
         Raises:
-            FatalValidationError: If the python version file is missing, empty, or
-                inconsistent with pyproject.toml.
+            FatalValidationError: If any of the checks fail.
 
         """
         python_version_path: Path = integration_path / mp.core.constants.PYTHON_VERSION_FILE
@@ -65,3 +71,20 @@ class PythonVersionValidation:
                 f"('{metadata_version}')."
             )
             raise FatalValidationError(msg)
+
+        pyproject_path: Path = integration_path / mp.core.constants.PROJECT_FILE
+        if pyproject_path.exists():
+            pyproject: dict = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+            requires_python: str = pyproject.get("project", {}).get("requires-python", "")
+
+            expected_ranges = [
+                PythonVersion.from_string(v).to_range_string()
+                for v in mp.core.constants.SUPPORTED_PYTHON_VERSIONS
+            ]
+
+            if requires_python not in expected_ranges:
+                msg = (
+                    f"The `requires-python` field in `{mp.core.constants.PROJECT_FILE}` ('{requires_python}') "
+                    f"is not a valid range. Expected one of: {', '.join(expected_ranges)}."
+                )
+                raise FatalValidationError(msg)
