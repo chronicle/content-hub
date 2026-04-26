@@ -222,7 +222,7 @@ def parseHops(received):
 
                     denylist["blacklisted"] = ip_check.blacklisted
                     denylist["detected_by"] = ip_check.detected_by.copy()
-                    denylist["categories"] = ip_check.ai_categories.copy()
+                    denylist["categories"] = ip_check.categories.copy()
                     hop_info["blacklist_info"].append(denylist)
                 except ValueError:
                     try:
@@ -245,7 +245,7 @@ def parseHops(received):
 
                         denylist["blacklisted"] = domain_check.blacklisted
                         denylist["detected_by"] = domain_check.detected_by.copy()
-                        denylist["categories"] = domain_check.ai_categories.copy()
+                        denylist["categories"] = domain_check.categories.copy()
                         hop_info["blacklist_info"].append(denylist)
                     except Exception as e:
                         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -419,9 +419,7 @@ def main(siemplify):
         print_value=False,
     )
 
-    status = (
-        EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    )
+    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
     output_message = "output message :"  # human readable message, showed in UI as the action result
     result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
     h = json.loads(headers_json)
