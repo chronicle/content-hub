@@ -43,7 +43,6 @@ from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNot
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
-from mp.core.data_models.integrations.integration_meta.metadata import IntegrationMetadata, PythonVersion
 from mp.core.data_models.integrations.job.metadata import JobMetadata
 
 if TYPE_CHECKING:
@@ -55,6 +54,9 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.action.dynamic_results_metadata import DynamicResultsMetadata
     from mp.core.data_models.integrations.custom_families.metadata import NonBuiltCustomFamily
     from mp.core.data_models.integrations.integration import Integration
+    from mp.core.data_models.integrations.integration_meta.metadata import (
+        IntegrationMetadata,
+    )
     from mp.core.data_models.integrations.mapping_rules.metadata import NonBuiltMappingRule
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata

@@ -90,7 +90,7 @@ class PythonVersion(RepresentableEnum):
         """PythonVersion's range representation.
 
         Returns:
-            A range representation of the object
+            A range representation of the object.
 
         """
         version_str: str = self.to_string()
