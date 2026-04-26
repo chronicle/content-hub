@@ -61,9 +61,7 @@ ST_VALID_BUILT_JOB_METADATA_DICT = st.fixed_dictionaries(
         "Description": st_valid_long_description,
         "Integration": st_valid_identifier_name,
         "Name": st_valid_display_name,
-        "Parameters": st.lists(
-            ST_VALID_BUILT_JOB_PARAMETER_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
-        ),
+        "Parameters": st.lists(ST_VALID_BUILT_JOB_PARAMETER_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH),
         "RunIntervalInSeconds": st.integers(),
     },
     optional={
@@ -79,9 +77,7 @@ ST_VALID_NON_BUILT_JOB_METADATA_DICT = st.fixed_dictionaries(
         "description": st_valid_long_description,
         "integration": st_valid_identifier_name,
         "name": st_valid_display_name,
-        "parameters": st.lists(
-            ST_VALID_NON_BUILT_JOB_PARAMETER_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
-        ),
+        "parameters": st.lists(ST_VALID_NON_BUILT_JOB_PARAMETER_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH),
     },
     optional={
         "is_custom": st.booleans(),
