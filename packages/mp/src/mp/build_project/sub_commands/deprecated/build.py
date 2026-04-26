@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
+from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
 import rich
@@ -25,16 +25,11 @@ import mp.core.config
 from mp.build_project.flow.integrations.flow import build_integrations
 from mp.build_project.flow.playbooks.flow import build_playbooks
 from mp.core.custom_types import RepositoryType
-from mp.core.utils import (
-    ensure_valid_list,
-    should_preform_integration_logic,
-    should_preform_playbook_logic,
-)
+from mp.core.utils import ensure_valid_list, should_preform_integration_logic, should_preform_playbook_logic
 from mp.telemetry import track_command
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
 
     from mp.core.config import RuntimeParams
 
@@ -83,9 +78,7 @@ class BuildParams:
             msg = "--deconstruct works only with --integration or --playbook."
             raise typer.BadParameter(msg)
 
-        if self.custom_integration and (
-            self.repository or RepositoryType.PLAYBOOKS in self.repository
-        ):
+        if self.custom_integration and (self.repository or RepositoryType.PLAYBOOKS in self.repository):
             msg = "--custom_integration works only with --integration."
             raise typer.BadParameter(msg)
 

@@ -36,8 +36,7 @@ def create_or_get_playbooks_root_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / mp.core.constants.PLAYBOOKS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_content_dir() / mp.core.constants.PLAYBOOKS_DIR_NAME
     )
 
 
@@ -56,9 +55,7 @@ def get_or_create_playbook_repo_base_path(playbooks_classification: str) -> Path
     )
 
 
-def get_playbook_base_folders_paths(
-    repository_classification: str, repo_base_path: Path
-) -> list[Path]:
+def get_playbook_base_folders_paths(repository_classification: str, repo_base_path: Path) -> list[Path]:
     """Get the root folder for the playbooks' repositories.
 
     Returns:
@@ -103,8 +100,7 @@ def get_playbook_out_base_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
-        / mp.core.constants.PLAYBOOK_BASE_OUT_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_out_contents_dir() / mp.core.constants.PLAYBOOK_BASE_OUT_DIR_NAME
     )
 
 
@@ -175,6 +171,4 @@ def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
 
     """
     display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
-    return PlaybookDisplayInfo.from_non_built(
-        yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-    )
+    return PlaybookDisplayInfo.from_non_built(yaml.safe_load(display_info_path.read_text(encoding="utf-8")))

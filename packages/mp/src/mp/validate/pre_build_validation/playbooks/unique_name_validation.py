@@ -43,9 +43,7 @@ class UniqueNameValidation:
                 already exists.
 
         """
-        display_name: str = mp.core.file_utils.get_display_info(
-            playbook_path
-        ).content_hub_display_name
+        display_name: str = mp.core.file_utils.get_display_info(playbook_path).content_hub_display_name
 
         duplicate_paths: set[Path] = set()
         for repo in mp.core.constants.PLAYBOOK_REPOSITORY_TYPE:
@@ -65,9 +63,7 @@ class UniqueNameValidation:
 
 def _search_duplicate_names(display_name: str, playbook_repo: Path) -> set[Path]:
     res: set[Path] = set()
-    for playbook_dir in mp.core.file_utils.get_playbook_base_folders_paths(
-        playbook_repo.name, playbook_repo
-    ):
+    for playbook_dir in mp.core.file_utils.get_playbook_base_folders_paths(playbook_repo.name, playbook_repo):
         for playbook in playbook_dir.iterdir():
             if not playbook.is_dir():
                 continue

@@ -67,9 +67,7 @@ class TestPydanticValidations:
 
     def test_job_parameter_list_too_long(self) -> None:
         """Test that a parameter list that's too long fails validation."""
-        mock_params: list[JobParameter] = [
-            mock.MagicMock() for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH + 1)
-        ]
+        mock_params: list[JobParameter] = [mock.MagicMock() for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH + 1)]
         with pytest.raises(pydantic.ValidationError):
             JobMetadata(
                 file_name="test_job",

@@ -66,9 +66,7 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
     base_path: Path = create_or_get_integrations_path()
     match integrations_classification:
         case constants.COMMERCIAL_REPO_NAME:
-            return mp.core.file_utils.common.create_dirs_if_not_exists(
-                base_path / constants.COMMERCIAL_REPO_NAME
-            )
+            return mp.core.file_utils.common.create_dirs_if_not_exists(base_path / constants.COMMERCIAL_REPO_NAME)
 
         case constants.THIRD_PARTY_REPO_NAME:
             third_party = base_path / constants.THIRD_PARTY_REPO_NAME
@@ -80,9 +78,7 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
             )
 
         case constants.CUSTOM_REPO_NAME:
-            return mp.core.file_utils.common.create_dirs_if_not_exists(
-                base_path / constants.CUSTOM_REPO_NAME
-            )
+            return mp.core.file_utils.common.create_dirs_if_not_exists(base_path / constants.CUSTOM_REPO_NAME)
 
         case _:
             msg: str = f"Received unknown integration classification: {integrations_classification}"
@@ -97,8 +93,7 @@ def create_or_get_integrations_path() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / constants.INTEGRATIONS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME
     )
 
 
@@ -112,8 +107,7 @@ def create_or_get_integrations_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / constants.INTEGRATIONS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME
     )
 
 
@@ -127,8 +121,7 @@ def create_or_get_out_integrations_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
-        / constants.OUT_INTEGRATIONS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_out_contents_dir() / constants.OUT_INTEGRATIONS_DIR_NAME
     )
 
 
@@ -345,8 +338,7 @@ def _validate_matching_files(directory: Path, primary_suffix: str, secondary_suf
         expected_file: Path = file.with_suffix(secondary_suffix)
         if not expected_file.exists():
             msg: str = (
-                f"The {directory.name} directory has a file '{file.name}' without a"
-                f"  matching '{secondary_suffix}' file"
+                f"The {directory.name} directory has a file '{file.name}' without a  matching '{secondary_suffix}' file"
             )
             raise RuntimeError(msg)
 

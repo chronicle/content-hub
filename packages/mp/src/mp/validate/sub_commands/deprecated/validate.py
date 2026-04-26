@@ -22,11 +22,7 @@ import typer
 
 import mp.core.config
 from mp.core.custom_types import RepositoryType
-from mp.core.utils import (
-    ensure_valid_list,
-    should_preform_integration_logic,
-    should_preform_playbook_logic,
-)
+from mp.core.utils import ensure_valid_list, should_preform_integration_logic, should_preform_playbook_logic
 from mp.telemetry import track_command
 from mp.validate.data_models import ContentType, FullReport
 from mp.validate.display import display_validation_reports
@@ -112,10 +108,7 @@ def validate(  # noqa: PLR0913
     only_pre_build: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the integrations, skipping the full build process."
-            ),
+            help=("Execute only pre-build validations checks on the integrations, skipping the full build process."),
         ),
     ] = False,
     quiet: Annotated[
@@ -180,16 +173,12 @@ def validate(  # noqa: PLR0913
 
     full_report: dict[ContentType, FullReport] = {}
     f1, f2 = False, False
-    if RepositoryType.ALL_CONTENT in repositories or should_preform_integration_logic(
-        integrations, repositories
-    ):
+    if RepositoryType.ALL_CONTENT in repositories or should_preform_integration_logic(integrations, repositories):
         full_report[ContentType.INTEGRATION], f1 = validate_integrations(
             integrations, repositories, only_pre_build=only_pre_build
         )
 
-    if RepositoryType.ALL_CONTENT in repositories or should_preform_playbook_logic(
-        playbooks, repositories
-    ):
+    if RepositoryType.ALL_CONTENT in repositories or should_preform_playbook_logic(playbooks, repositories):
         full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(
             playbooks, repositories, only_pre_build=only_pre_build
         )

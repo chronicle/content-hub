@@ -45,7 +45,5 @@ class EnvironmentsValidation:
         if invalid_environments:
             invalid_str = ", ".join(sorted(invalid_environments))
             valid_str = ", ".join(sorted(VALID_ENVIRONMENTS))
-            msg = (
-                f"Invalid environment(s) found: {invalid_str}. Valid environments are: {valid_str}."
-            )
+            msg = f"Invalid environment(s) found: {invalid_str}. Valid environments are: {valid_str}."
             raise NonFatalValidationError(msg)
