@@ -1,0 +1,448 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Check Hash:
+  ai_description: "### General Description\nThis action checks if File Hash entities\
+    \ (specifically MD5 hashes) are present on the McAfee Advanced Threat Defense\
+    \ (ATD) blacklist. It is used to quickly identify known malicious files based\
+    \ on their hash signature by querying the McAfee ATD server.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Api Root | String | Yes | The base URL of the McAfee ATD server\
+    \ API. |\n| Username | String | Yes | The username used for authenticating with\
+    \ the McAfee ATD server. |\n| Password | String | Yes | The password used for\
+    \ authenticating with the McAfee ATD server. |\n| Verify SSL | Boolean | Yes |\
+    \ If set to true, the action will verify the SSL certificate of the McAfee ATD\
+    \ server. |\n\n### Additional Notes\n- The action specifically validates that\
+    \ the file hash is of MD5 type (32 characters). If a hash of a different length\
+    \ is provided, the action will log an error for that specific entity.\n- The action\
+    \ performs a session-based authentication, logging in at the start and logging\
+    \ out upon completion.\n\n### Flow Description\n1. **Initialization**: The action\
+    \ retrieves the necessary configuration parameters (API Root, Credentials, and\
+    \ SSL settings) from the integration settings.\n2. **Entity Filtering**: It identifies\
+    \ all `FILEHASH` entities within the current scope to be processed.\n3. **Authentication**:\
+    \ The action establishes a session with the McAfee ATD server using the provided\
+    \ credentials and retrieves an API token.\n4. **Blacklist Lookup**: For each identified\
+    \ MD5 hash, the action sends a request to the McAfee ATD server to determine if\
+    \ the hash is blacklisted.\n5. **Internal Enrichment**: The action updates the\
+    \ `additional_properties` of each entity with the key `ATD_is_blacklist` and the\
+    \ corresponding boolean result.\n6. **Reporting**: \n    - A JSON result is created\
+    \ mapping each hash to its blacklist status.\n    - A data table named \"Check\
+    \ Results\" is added to the case wall, listing the hashes and their status.\n\
+    7. **Cleanup**: The action terminates the session by logging out of the McAfee\
+    \ ATD server."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates the 'additional_properties' attribute of File Hash entities
+      to include the 'ATD_is_blacklist' status.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Analyzer Profiles:
+  ai_description: >-
+    ### General Description
+
+    The **Get Analyzer Profiles** action retrieves a comprehensive list of analyzer
+    profiles (VM profiles) configured on the McAfee Advanced Threat Defense (ATD)
+    server. This action is primarily used to discover available analysis environments
+    and their corresponding IDs, which are necessary for submitting files or URLs
+    for analysis in subsequent workflow steps.
+
+
+    ### Parameters Description
+
+    This action does not require any action-specific input parameters. It utilizes
+    the global integration configuration parameters:
+
+    * **Api Root**: The endpoint URL for the McAfee ATD server.
+
+    * **Username**: The account used for authentication.
+
+    * **Password**: The password for the account.
+
+    * **Verify SSL**: Boolean flag to determine if SSL certificates should be validated.
+
+
+    ### Additional Notes
+
+    * The action automatically maps the internal `vmProfileid` to a more user-friendly
+    `Profile ID` field in the output.
+
+    * Results are presented both as a raw JSON object and a formatted data table for
+    easy viewing within the case wall.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a session with the McAfee ATD server
+    using the provided credentials to obtain an API token.
+
+    2. **Profile Retrieval**: It executes a GET request to the `vmprofiles.php` endpoint
+    to fetch the list of all configured analyzer profiles.
+
+    3. **Data Transformation**: The script processes the returned list, ensuring each
+    profile entry includes a standardized `Profile ID` key.
+
+    4. **Reporting**: The processed data is attached to the action results as a JSON
+    blob and rendered as a data table named "Analyzer Profiles" on the case wall.
+
+    5. **Session Termination**: The action explicitly logs out of the McAfee ATD server
+    to close the active session.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table named "Analyzer Profiles" to the case wall to display
+      the retrieved profile information.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Report:
+  ai_description: >-
+    ### General Description
+
+    The **Get Report** action retrieves detailed analysis reports from McAfee Advanced
+    Threat Defense (ATD) for a specific set of Task IDs. It is an asynchronous action
+    that monitors the status of the tasks and fetches the results once the analysis
+    is complete. It provides the report in multiple formats, including JSON for automated
+    processing, PDF as a case attachment, and a text summary as a case insight.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Task IDs** | String | Yes | A comma-separated list of McAfee ATD Task IDs
+    for which reports should be retrieved. |
+
+    | **Create Insight** | Boolean | No | If enabled (default), the action will create
+    a Case Insight containing a text summary of the report. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action connects to the McAfee ATD server using the
+    provided credentials and API root.
+
+    2. **Status Check**: It iterates through the provided Task IDs and checks their
+    current status via the ATD API.
+
+    3. **Async Wait**: If any of the tasks are not yet in a 'Completed' state, the
+    action sets its execution state to 'In Progress' and will be re-triggered by the
+    SOAR platform until the tasks are ready.
+
+    4. **Data Retrieval**: Once all tasks are ready, the action fetches the JSON report
+    and the PDF report for each Task ID.
+
+    5. **Insight Creation**: If the 'Create Insight' parameter is enabled, it fetches
+    a text-based summary and adds it as a Case Insight for the current case.
+
+    6. **Attachment**: The PDF report is downloaded, base64-encoded, and added as
+    an attachment to the case wall.
+
+    7. **Output**: The action returns the JSON report data as the result and provides
+    a summary message of the successful retrievals.
+
+
+    ### Additional Notes
+
+    - This action does not process entities directly; it relies on Task IDs typically
+    generated by previous submission actions (e.g., Submit File or Submit URL).
+
+    - The action will only complete once all provided Task IDs have reached a 'Completed'
+    status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates case insights with report summaries and adds PDF reports as attachments
+      to the case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    between Google SecOps and the McAfee ATD (Advanced Threat Defense) server. It
+    ensures that the provided credentials and API endpoint are valid and reachable
+    by attempting a full authentication cycle (login followed by logout).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Root | String | Yes | The base URL of the McAfee ATD server API. |
+
+    | Username | String | Yes | The username used to authenticate with the McAfee
+    ATD server. |
+
+    | Password | String | Yes | The password used to authenticate with the McAfee
+    ATD server. |
+
+    | Verify SSL | Boolean | Yes | Specifies whether to verify the SSL certificate
+    of the McAfee ATD server. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities and is strictly used for configuration
+    validation.
+
+    - The action utilizes the `McAfeeATDManager` to handle the underlying HTTP requests
+    and session management.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the connection parameters
+    (`Api Root`, `Username`, `Password`, and `Verify SSL`) from the integration settings.
+
+    2. **Manager Initialization**: It instantiates the `McAfeeATDManager`. During
+    initialization, the manager automatically performs a login request to the McAfee
+    ATD server to obtain a session token.
+
+    3. **Connectivity Test**: Once the manager is initialized (confirming a successful
+    login), the action calls the `logout` method to gracefully terminate the session.
+
+    4. **Execution Outcome**: If the login and logout sequence completes without errors,
+    the action reports a successful connection. If an exception occurs (e.g., network
+    timeout, invalid credentials), it logs the error and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit File:
+  ai_description: >-
+    ### General Description
+
+    Submits one or more files to McAfee Advanced Threat Defense (ATD) for sandbox
+    analysis. This action allows users to provide local file paths which are then
+    uploaded to the ATD server to initiate a malware analysis process using a specific
+    analyzer profile.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Paths | String | Yes | A comma-separated list of local file paths to be
+    submitted for analysis. Note that certain file types (e.g., CSV) may not be supported
+    by ATD. |
+
+    | Analyzer Profile ID | String | Yes | The unique identifier of the analyzer profile
+    (VM Profile) to be used for the analysis. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action establishes a session with the McAfee ATD server
+    using the provided API credentials.
+
+    2. **Path Parsing**: The comma-separated string of file paths is split into an
+    iterable list.
+
+    3. **File Submission**: For each file path provided, the action reads the file
+    and performs a POST request to the ATD `fileupload.php` endpoint, passing the
+    file content and the specified Analyzer Profile ID.
+
+    4. **Task ID Retrieval**: The action captures the `taskId` returned by ATD for
+    each successful submission. If a submission fails or returns a -1 ID, it is logged
+    as an error.
+
+    5. **Output Generation**: The action populates a data table named 'Result Task
+    IDs' with the file paths and their corresponding Task IDs. It also returns a comma-separated
+    string of all successful Task IDs as the action's result value.
+
+    6. **Session Termination**: The action explicitly logs out of the McAfee ATD session
+    before finishing.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits files to the McAfee ATD server, which creates new analysis tasks and
+      consumes resources on the external sandbox platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit URL:
+  ai_description: "Submits URL entities to McAfee Advanced Threat Defense (ATD) for\
+    \ sandbox analysis and retrieves detailed threat reports. This is an asynchronous\
+    \ action that operates in two stages: submission and polling. \n\n### General\
+    \ Description\nThis action allows security analysts to automate the submission\
+    \ of suspicious URLs to a McAfee ATD appliance. It utilizes specific analyzer\
+    \ profiles to execute the URL in a sandbox environment, subsequently retrieving\
+    \ JSON, PDF, and TXT reports. The action enriches the URL entities within Google\
+    \ SecOps with the analysis results and can automatically flag entities as suspicious\
+    \ based on a severity threshold.\n\n### Parameters Description\n| Parameter |\
+    \ Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Analyzer\
+    \ Profile ID | String | Yes | The ID of the analyzer profile (VM Profile) to be\
+    \ used for the analysis. |\n| Create Insight | Boolean | No | If enabled (default:\
+    \ true), the action will create a case insight containing the text-based analysis\
+    \ report. |\n| Threshold | Integer | No | A severity threshold (default: 3) used\
+    \ to determine if an entity should be marked as suspicious based on the ATD verdict.\
+    \ |\n\n### Flow Description\n1. **Submission Stage**: The action identifies all\
+    \ URL entities in the current context and submits them to McAfee ATD using the\
+    \ provided Analyzer Profile ID. It stores the resulting Task IDs.\n2. **Polling\
+    \ Stage**: The action periodically checks the status of the submitted tasks until\
+    \ they reach a 'Completed' state.\n3. **Data Retrieval**: Once analysis is finished,\
+    \ the action fetches JSON reports (for enrichment), PDF reports (as attachments),\
+    \ and TXT reports (for insights).\n4. **Enrichment & Internal Mutation**: \n \
+    \   *   Updates entity `additional_properties` with summary data.\n    *   Marks\
+    \ entities as suspicious if the ATD severity score exceeds the defined threshold.\n\
+    \    *   Attaches the PDF report to the case.\n    *   Creates a case insight\
+    \ if the 'Create Insight' parameter is enabled."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity suspicious status and additional properties based on analysis
+      results. It also adds PDF report attachments and creates case insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
