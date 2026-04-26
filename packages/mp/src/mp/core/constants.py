@@ -148,6 +148,7 @@ SDK_DEPENDENCIES_MIN_VERSIONS: dict[str, str] = {"requests": "2.32.4"}
 README_FILE: str = "README.md"
 LOCK_FILE: str = "uv.lock"
 PYTHON_VERSION_FILE: str = ".python-version"
+SUPPORTED_PYTHON_VERSIONS: list[str] = ["3.11"]
 
 MS_IN_SEC: int = 1_000
 

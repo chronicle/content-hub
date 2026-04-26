@@ -63,6 +63,9 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.action.dynamic_results_metadata import DynamicResultsMetadata
     from mp.core.data_models.integrations.custom_families.metadata import NonBuiltCustomFamily
     from mp.core.data_models.integrations.integration import Integration
+    from mp.core.data_models.integrations.integration_meta.metadata import (
+        IntegrationMetadata,
+    )
     from mp.core.data_models.integrations.mapping_rules.metadata import NonBuiltMappingRule
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
@@ -72,13 +75,13 @@ def _update_pyproject_from_integration_meta(
     pyproject_toml: MutableMapping[str, Any],
     integration_meta: IntegrationMetadata,
 ) -> None:
-    py_version: str = PythonVersion(integration_meta.python_version).to_string()
+    py_version: str = integration_meta.python_version.to_range_string()
     pyproject_toml["project"].update(
         {
             "name": integration_meta.identifier.replace(" ", "-"),
             "description": integration_meta.description,
             "version": str(float(integration_meta.version)),
-            "requires-python": f">={py_version}",
+            "requires-python": py_version,
         },
     )
 

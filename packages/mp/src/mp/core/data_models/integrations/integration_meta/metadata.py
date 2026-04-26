@@ -94,6 +94,17 @@ class PythonVersion(RepresentableEnum):
             )
             raise ValueError(msg) from None
 
+    def to_range_string(self) -> str:
+        """PythonVersion's range representation.
+
+        Returns:
+            A range representation of the object.
+
+        """
+        version_str: str = self.to_string()
+        major, minor = map(int, version_str.split("."))
+        return f">={major}.{minor},<{major}.{minor + 1}"
+
 
 class BuiltIntegrationMetadata(TypedDict):
     Categories: list[str]

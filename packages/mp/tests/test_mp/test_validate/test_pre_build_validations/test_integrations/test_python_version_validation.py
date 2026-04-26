@@ -68,3 +68,25 @@ class TestPythonVersionValidation:
 
         with pytest.raises(FatalValidationError, match="file is empty"):
             self.validator_runner.run(temp_integration)
+
+    def test_failure_on_invalid_pyproject_python_range(self, temp_integration: pathlib.Path) -> None:
+        """Test failure when pyproject.toml has an invalid python range."""
+        pyproject_file = temp_integration / constants.PROJECT_FILE
+        pyproject_file.write_text("[project]\nrequires-python = '>=3.11'")
+
+        with pytest.raises(FatalValidationError, match="is not a valid range"):
+            self.validator_runner.run(temp_integration)
+
+    def test_failure_on_invalid_pyproject_python_version(self, temp_integration: pathlib.Path) -> None:
+        """Test failure when pyproject.toml has an invalid python version."""
+        pyproject_file = temp_integration / constants.PROJECT_FILE
+        pyproject_file.write_text("[project]\nrequires-python = '>=3.10,<3.11'")
+
+        with pytest.raises(FatalValidationError, match="is not a valid range"):
+            self.validator_runner.run(temp_integration)
+
+    def test_success_on_valid_pyproject_python_range(self, temp_integration: pathlib.Path) -> None:
+        """Test success when pyproject.toml has a valid python range."""
+        pyproject_file = temp_integration / constants.PROJECT_FILE
+        pyproject_file.write_text("[project]\nrequires-python = '>=3.11,<3.12'")
+        self.validator_runner.run(temp_integration)
