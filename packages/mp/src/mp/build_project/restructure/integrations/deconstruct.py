@@ -64,13 +64,13 @@ def _update_pyproject_from_integration_meta(
     pyproject_toml: MutableMapping[str, Any],
     integration_meta: IntegrationMetadata,
 ) -> None:
-    py_version: str = PythonVersion(integration_meta.python_version).to_string()
+    py_version: str = PythonVersion(integration_meta.python_version).to_range_string()
     pyproject_toml["project"].update(
         {
             "name": integration_meta.identifier.replace(" ", "-"),
             "description": integration_meta.description,
             "version": str(float(integration_meta.version)),
-            "requires-python": f">={py_version}",
+            "requires-python": py_version,
         },
     )
 
