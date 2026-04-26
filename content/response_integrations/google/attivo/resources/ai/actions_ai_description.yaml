@@ -1,0 +1,488 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities using information from Attivo. This
+    action retrieves comprehensive host details, including operating system, MAC addresses,
+    and active users. It can also be configured to fetch security-specific context
+    such as ThreatPaths, known vulnerabilities, and credential information (both deceptive
+    and real) associated with the entity.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Include ThreatPaths | Boolean | No | If enabled, the action retrieves information
+    about ThreatPaths related to the entity. Default is True. |
+
+    | Include Vulnerabilities | Boolean | No | If enabled, the action retrieves information
+    about vulnerabilities related to the entity. Default is True. |
+
+    | Include Credential Info | Boolean | No | If enabled, the action retrieves credential
+    information (deceptive and real) related to the entity. Default is True. |
+
+    | Create Insights | Boolean | No | If enabled, the action creates a SOAR insight
+    containing a summary of the retrieved information. Default is True. |
+
+    | Max ThreatPaths To Return | Integer | No | Specifies the maximum number of ThreatPaths
+    to return per entity. Default is 50. Must be greater than 0. |
+
+    | Max Vulnerabilities To Return | Integer | No | Specifies the maximum number
+    of vulnerabilities to return per entity. Default is 50. Must be greater than 0.
+    |
+
+    | Max Credentials To Return | Integer | No | Specifies the maximum number of credentials
+    to return per entity. Default is 50. Must be greater than 0. |
+
+
+    ### Additional Notes
+
+    - The action supports both Hostname and IP Address entity types.
+
+    - The enrichment data is added to the entity's additional properties with the
+    'Attivo' prefix.
+
+    - Data tables are created for each category (General Info, ThreatPaths, Vulnerabilities,
+    Credentials) for better visibility in the case wall.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: Validates that the limit parameters (ThreatPaths,
+    Vulnerabilities, Credentials) are greater than 0.
+
+    2. **Authentication**: Connects to the Attivo instance using the provided credentials
+    and generates a session key.
+
+    3. **Entity Filtering**: Identifies supported entities (Hostname and Address)
+    from the target list.
+
+    4. **Data Retrieval**: For each entity, it queries Attivo for basic host information.
+    If found, it optionally fetches ThreatPaths, Vulnerabilities, and Credentials
+    based on the user-defined parameters.
+
+    5. **Internal Mutation**: Updates the entity's additional properties, sets the
+    'is_enriched' flag to true, and optionally creates a detailed insight.
+
+    6. **Result Reporting**: Adds data tables to the SOAR result and returns a JSON
+    summary of all enriched data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with host details, sets the 'is_enriched'
+      flag, and creates entity insights containing security context.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Critical ThreatPath:
+  ai_description: >-
+    ### General Description
+
+    The **List Critical ThreatPath** action retrieves a list of all critical ThreatPaths
+    identified within the Attivo environment. This action is primarily used for visibility
+    into high-risk lateral movement paths and potential attack vectors. It allows
+    users to filter the results based on specific criteria such as the rule name,
+    service, or severity.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Filter Key** | String (Dropdown) | No | The specific field used to filter
+    the results. Options include: `Rule Name`, `Service`, `Severity`, `Description`,
+    and `Category`. |
+
+    | **Filter Logic** | String (Dropdown) | No | The logic applied to the filter.
+    Options are `Equal` or `Contains`. |
+
+    | **Filter Value** | String | No | The string value to search for using the selected
+    logic. If left empty, no filtering is applied. |
+
+    | **Max Records To Return** | Integer | No | The maximum number of records to
+    include in the output. Defaults to 50. |
+
+
+    ### Additional Notes
+
+    - If **Filter Logic** is set to `Equal` or `Contains`, a **Filter Key** must be
+    selected; otherwise, the action will raise an exception.
+
+    - If **Filter Value** is not provided while a logic is selected, the filtering
+    step is skipped, and a note is added to the output message.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration configuration (API credentials)
+    and action parameters.
+
+    2. **Validation**: It verifies that a filter key is selected if logic is provided
+    and ensures the record limit is a positive integer.
+
+    3. **Data Retrieval**: It connects to the Attivo API and fetches all available
+    critical ThreatPaths via the `get_critical_threatpaths` method.
+
+    4. **Filtering**: If a filter value and logic are provided, the action iterates
+    through the retrieved paths and filters them based on the selected key mapping.
+
+    5. **Limiting**: The list is truncated to the size specified in the `Max Records
+    To Return` parameter.
+
+    6. **Output**: The final list is formatted into a Siemplify data table named "Available
+    ThreatPaths" and a raw JSON result for use in downstream playbook tasks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Service ThreatPaths:
+  ai_description: >-
+    ### General Description
+
+    Retrieves ThreatPaths associated with specific services from the Attivo platform.
+    This action helps security analysts identify potential lateral movement paths
+    and security risks linked to specific network services or applications by querying
+    the Attivo threat intelligence database.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Services** | String | Yes | A comma-separated list of service names (e.g.,
+    'RDP', 'SMB', 'Web') for which the action will retrieve ThreatPaths. |
+
+    | **Max ThreatPaths To Return** | Integer | No | The maximum number of ThreatPaths
+    to return for each specified service. If not provided, the action defaults to
+    50. |
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action initializes the Attivo manager using the provided
+    configuration parameters (API Root, Username, Password, and SSL verification settings).
+
+    2. **Parameter Processing:** It extracts the 'Services' list and the 'Max ThreatPaths
+    To Return' limit, validating that the limit is a positive integer.
+
+    3. **Data Retrieval:** The action iterates through each service provided in the
+    input. For each service, it sends a request to the Attivo API to fetch associated
+    ThreatPaths.
+
+    4. **Data Formatting:** Retrieved threat paths are parsed into structured objects.
+    For each service with results, a data table is created and added to the action
+    output.
+
+    5. **Final Output:** The action aggregates all retrieved data into a JSON result
+    and provides a summary message indicating which services were successfully queried
+    and which returned no results.
+
+
+    ### Additional Notes
+
+    * This action does not operate on specific entities (such as IP addresses or Hostnames)
+    within the Google SecOps environment; instead, it performs a global query based
+    on service names.
+
+    * If no ThreatPaths are found for any of the provided services, the action will
+    return a failure status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Vulnerability Hosts:
+  ai_description: "### General Description\nThis action retrieves a list of hostnames\
+    \ associated with specific vulnerabilities from the Attivo platform. It allows\
+    \ security analysts to identify which assets in their environment are potentially\
+    \ exposed to known vulnerabilities by querying the Attivo ThreatPath module.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| Vulnerabilities | String | Yes | A comma-separated\
+    \ list of vulnerability names (e.g., CVE IDs or specific vulnerability titles)\
+    \ to search for in the Attivo system. |\n| Max Hosts To Return | Integer | No\
+    \ | The maximum number of hostnames to return for each vulnerability. Defaults\
+    \ to 50 if not specified. Must be a positive integer. |\n\n### Additional Notes\n\
+    - This action does not process entities from the Google SecOps case; it relies\
+    \ entirely on the provided 'Vulnerabilities' parameter.\n- If a vulnerability\
+    \ is not found or has no associated hosts, the action will report this in the\
+    \ output message.\n- Results are presented as individual data tables for each\
+    \ vulnerability and a combined JSON result.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the Attivo Manager using the provided integration configuration\
+    \ (API Root, Credentials, SSL settings).\n2. **Parameter Parsing**: It converts\
+    \ the comma-separated 'Vulnerabilities' string into a list and validates that\
+    \ the 'Max Hosts To Return' is a positive integer.\n3. **Data Retrieval**: For\
+    \ each vulnerability in the list, the action calls the Attivo API (`/api/threatpath/gethostnamesforvul`)\
+    \ to fetch the list of hostnames.\n4. **Result Processing**: \n    - If hosts\
+    \ are found, it creates a data table for that specific vulnerability listing the\
+    \ hostnames.\n    - It aggregates the results into a JSON structure mapping vulnerabilities\
+    \ to their respective host lists.\n5. **Completion**: The action outputs a summary\
+    \ message indicating which vulnerabilities were successfully processed, which\
+    \ had no hosts, and which were not found in the system."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates data tables within the Google SecOps case for each vulnerability
+      found and populates the action's JSON result with the retrieved data.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity between Google SecOps and the Attivo server using the provided
+    integration configuration parameters. This action ensures that the API Root, Username,
+    Password, and SSL settings are correct and that the Attivo service is reachable.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It utilizes the following
+    integration configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The API root URL of the Attivo instance. |
+
+    | Username | String | Yes | The username used for Attivo API authentication. |
+
+    | Password | String | Yes | The password used for Attivo API authentication. |
+
+    | Verify SSL | Boolean | Yes | Specifies whether to verify the SSL certificate
+    of the Attivo server. |
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup or troubleshooting of the
+    Attivo integration to verify that the communication channel is functional.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the API Root, Username, Password, and Verify
+    SSL settings from the integration configuration.
+
+    2. **Manager Initialization**: Initializes the `AttivoManager` with the extracted
+    credentials and connection details. This includes generating an access token via
+    a POST request to the authentication endpoint.
+
+    3. **Connectivity Test**: Executes a POST request to the Attivo alerts endpoint
+    to verify the session key validity and API responsiveness.
+
+    4. **Result Reporting**: Returns a success message if the connection is established
+    or a failure message with error details if the connection fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Event:
+  ai_description: >-
+    Updates an event in the Attivo system by changing its status or adding a comment.
+    This action allows security analysts to manage the lifecycle of Attivo events
+    directly from Google SecOps.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The unique identifier of the event in Attivo that
+    needs to be updated. |
+
+    | Status | Dropdown | No | The new status for the event. Options include 'Acknowledge'
+    or 'Unacknowledge'. |
+
+    | Comment | String | No | A text comment to be appended to the event in Attivo.
+    |
+
+
+    ### Additional Notes
+
+    - At least one of the optional parameters, **Status** or **Comment**, must be
+    provided for the action to execute successfully. If both are 'Select One' or empty,
+    the action will fail.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Attivo manager using the provided
+    API credentials and configuration.
+
+    2. **Validation**: It checks if either a status update or a comment has been provided.
+
+    3. **Comment Update**: If a comment is provided, the action sends a request to
+    the Attivo API to add the comment to the specified Event ID.
+
+    4. **Status Update**: If a status (Acknowledge/Unacknowledge) is selected, the
+    action sends a request to the Attivo API to update the event's status.
+
+    5. **Completion**: The action returns a success message if the updates were applied
+    correctly.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the acknowledgment status and/or appends comments to events within the
+      Attivo platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
