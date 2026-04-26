@@ -43,44 +43,16 @@ def describe(  # noqa: PLR0913
     integrations: Annotated[list[str] | None, typer.Argument(help="Integration names")] = None,
     *,
     all_marketplace: Annotated[
-        bool,
-        typer.Option(
-            "-a",
-            "--all",
-            help="Describe all integrations in the marketplace",
-        ),
+        bool, typer.Option("-a", "--all", help="Describe all integrations in the marketplace")
     ] = False,
-    src: Annotated[
-        pathlib.Path | None,
-        typer.Option(help="Customize source folder to describe from."),
-    ] = None,
+    src: Annotated[pathlib.Path | None, typer.Option(help="Customize source folder to describe from.")] = None,
     dst: Annotated[
-        pathlib.Path | None,
-        typer.Option(help="Customize destination folder to save the AI descriptions."),
+        pathlib.Path | None, typer.Option(help="Customize destination folder to save the AI descriptions.")
     ] = None,
-    quiet: Annotated[
-        bool,
-        typer.Option(
-            "--quiet",
-            "-q",
-            help="Log less on runtime.",
-        ),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option(
-            "--verbose",
-            "-v",
-            help="Log more on runtime.",
-        ),
-    ] = False,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
     override: Annotated[
-        bool,
-        typer.Option(
-            "--override",
-            "-o",
-            help="Rewrite integrations that already have their description.",
-        ),
+        bool, typer.Option("--override", "-o", help="Rewrite integrations that already have their description.")
     ] = False,
 ) -> None:
     """Describe integrations.
@@ -102,11 +74,7 @@ def describe(  # noqa: PLR0913
     run_params.set_in_config()
 
     if integrations and not all_marketplace:
-        asyncio.run(
-            describe_all_integrations(
-                src=src, dst=dst, override=override, integrations=integrations
-            )
-        )
+        asyncio.run(describe_all_integrations(src=src, dst=dst, override=override, integrations=integrations))
     elif all_marketplace:
         asyncio.run(describe_all_integrations(src=src, dst=dst, override=override))
     else:

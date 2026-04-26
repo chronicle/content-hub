@@ -227,9 +227,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=built.get("AIDescription"),
             ai_categories=[ActionAiCategory(c) for c in (built.get("AICategories") or [])],
             entity_types=[EntityType(e) for e in (built.get("EntityTypes") or [])],
-            action_product_categories=[
-                ActionProductCategory(c) for c in (built.get("ActionProductCategories") or [])
-            ],
+            action_product_categories=[ActionProductCategory(c) for c in (built.get("ActionProductCategories") or [])],
         )
 
     @classmethod
@@ -422,9 +420,7 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     )
 
 
-def _update_non_built_with_ai_fields(
-    non_built: NonBuiltActionMetadata, ai_fields: AiFields
-) -> None:
+def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_fields: AiFields) -> None:
     non_built["ai_description"] = ai_fields.description
     non_built["ai_categories"] = [c.value for c in ai_fields.ai_categories]
     non_built["entity_types"] = [t.value for t in ai_fields.entity_types]

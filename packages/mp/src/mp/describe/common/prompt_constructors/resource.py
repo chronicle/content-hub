@@ -26,10 +26,7 @@ if TYPE_CHECKING:
 
 
 class ResourcePromptConstructor(BasePromptConstructor, abc.ABC):
-    __slots__: tuple[str, ...] = (
-        "resource_file_name",
-        "resource_name",
-    )
+    __slots__: tuple[str, ...] = ("resource_file_name", "resource_name")
 
     def __init__(
         self,

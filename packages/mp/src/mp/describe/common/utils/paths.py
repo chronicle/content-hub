@@ -45,9 +45,7 @@ def get_integration_path(name: str, *, src: pathlib.Path | None = None) -> anyio
         anyio.Path: The path to the integration.
 
     """
-    return (
-        _get_source_integration_path(name, src) if src else _get_marketplace_integration_path(name)
-    )
+    return _get_source_integration_path(name, src) if src else _get_marketplace_integration_path(name)
 
 
 def _get_source_integration_path(name: str, src: pathlib.Path) -> anyio.Path:

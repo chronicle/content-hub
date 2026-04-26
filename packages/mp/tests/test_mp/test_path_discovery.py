@@ -40,9 +40,7 @@ def test_get_integration_path_by_direct_path(mock_integration: pathlib.Path) -> 
     assert pathlib.Path(str(path)) == mock_integration
 
 
-def test_get_integration_path_by_relative_path(
-    mock_integration: pathlib.Path, monkeypatch: MonkeyPatch
-) -> None:
+def test_get_integration_path_by_relative_path(mock_integration: pathlib.Path, monkeypatch: MonkeyPatch) -> None:
     # Test that we can find an integration by its relative path from CWD
     monkeypatch.chdir(mock_integration.parent)
     path = paths.get_integration_path("mock_integration")
@@ -67,9 +65,7 @@ def test_get_integration_path_custom_repo(tmp_path: pathlib.Path, monkeypatch: M
     assert pathlib.Path(str(path)).resolve() == integration.resolve()
 
 
-def test_get_all_integrations_paths_custom_repo(
-    tmp_path: pathlib.Path, monkeypatch: MonkeyPatch
-) -> None:
+def test_get_all_integrations_paths_custom_repo(tmp_path: pathlib.Path, monkeypatch: MonkeyPatch) -> None:
     # Test bulk discovery in custom repo
     marketplace = tmp_path / "marketplace"
     content = marketplace / "content" / "response_integrations"

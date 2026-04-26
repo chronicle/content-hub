@@ -36,17 +36,14 @@ runner = CliRunner()
 
 def test_describe_integration_command(tmp_path: Path, non_built_integration: Path) -> None:
     integration: Path = (
-        shutil.copytree(non_built_integration, tmp_path, dirs_exist_ok=True)
-        / non_built_integration.name
+        shutil.copytree(non_built_integration, tmp_path, dirs_exist_ok=True) / non_built_integration.name
     )
     integration_name = "mock_integration"
 
     # Create AI_DIR if it doesn't exist to avoid issues,
     # though the code should handle it.
 
-    with patch(
-        "mp.describe.common.utils.llm.call_gemini_bulk", new_callable=AsyncMock
-    ) as mock_bulk:
+    with patch("mp.describe.common.utils.llm.call_gemini_bulk", new_callable=AsyncMock) as mock_bulk:
         mock_bulk.return_value = [
             IntegrationAiMetadata(
                 product_categories=IntegrationProductCategories(
@@ -83,9 +80,6 @@ def test_describe_integration_command(tmp_path: Path, non_built_integration: Pat
 
             # Check if the file was created
             ai_file = (
-                integration
-                / constants.RESOURCES_DIR
-                / constants.AI_DIR
-                / constants.INTEGRATIONS_AI_DESCRIPTION_FILE
+                integration / constants.RESOURCES_DIR / constants.AI_DIR / constants.INTEGRATIONS_AI_DESCRIPTION_FILE
             )
             assert ai_file.exists()

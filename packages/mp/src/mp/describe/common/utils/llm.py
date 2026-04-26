@@ -34,9 +34,7 @@ DESCRIBE_BULK_SIZE: int = 4
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
-async def call_gemini_bulk(
-    prompts: list[str], response_json_schema: type[T_Schema]
-) -> list[T_Schema | str]:
+async def call_gemini_bulk(prompts: list[str], response_json_schema: type[T_Schema]) -> list[T_Schema | str]:
     """Call Gemini to describe multiple prompts in bulk.
 
     Args:

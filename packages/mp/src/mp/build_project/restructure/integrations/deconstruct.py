@@ -187,9 +187,7 @@ class DeconstructIntegration:
         }
         categories_dict["reasoning"] = ""
 
-        ai_meta = IntegrationAiMetadata(
-            product_categories=IntegrationProductCategories.model_validate(categories_dict)
-        )
+        ai_meta = IntegrationAiMetadata(product_categories=IntegrationProductCategories.model_validate(categories_dict))
 
         ai_file: Path = ai_dir / mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE
         mp.core.file_utils.write_yaml_to_file(ai_meta.model_dump(), ai_file)

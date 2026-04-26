@@ -105,9 +105,7 @@ class DescribeConnector(DescribeBase[ConnectorAiMetadata]):
                 except (yaml.YAMLError, KeyError):
                     logger.warning("Failed to parse non-built connector metadata %s", file.name)
 
-    async def _construct_prompts(
-        self, resources: list[str], status: IntegrationStatus
-    ) -> list[str]:
+    async def _construct_prompts(self, resources: list[str], status: IntegrationStatus) -> list[str]:
         prompts: list[str] = []
         for connector_name in resources:
             params = DescriptionParams(
@@ -117,9 +115,7 @@ class DescribeConnector(DescribeBase[ConnectorAiMetadata]):
                 self._connector_name_to_file_stem.get(connector_name, connector_name),
                 status,
             )
-            constructor: BuiltPromptConstructor | SourcePromptConstructor = (
-                _create_prompt_constructor(params)
-            )
+            constructor: BuiltPromptConstructor | SourcePromptConstructor = _create_prompt_constructor(params)
             prompts.append(await constructor.construct())
         return prompts
 

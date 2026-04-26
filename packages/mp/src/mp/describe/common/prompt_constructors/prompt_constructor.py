@@ -24,11 +24,7 @@ if TYPE_CHECKING:
 
 
 class PromptConstructor(abc.ABC):
-    __slots__: tuple[str, ...] = (
-        "integration",
-        "integration_name",
-        "out_path",
-    )
+    __slots__: tuple[str, ...] = ("integration", "integration_name", "out_path")
 
     def __init__(
         self,

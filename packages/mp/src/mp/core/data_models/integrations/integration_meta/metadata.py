@@ -268,8 +268,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             is_available_for_community=built.get("IsAvailableForCommunity", True),
             is_powerup=built.get("IsPowerUp", False),
             product_categories=[
-                IntegrationProductCategory(category)
-                for category in (built.get("ProductCategories") or [])
+                IntegrationProductCategory(category) for category in (built.get("ProductCategories") or [])
             ],
             google_secops_product=built.get("GoogleSecOpsProduct", False),
         )
@@ -301,9 +300,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
                 True,
             ),
             is_powerup=non_built.get("is_powerup", False),
-            product_categories=[
-                IntegrationProductCategory(c) for c in (non_built.get("product_categories") or [])
-            ],
+            product_categories=[IntegrationProductCategory(c) for c in (non_built.get("product_categories") or [])],
             google_secops_product=non_built.get("google_secops_product", False),
         )
 
@@ -426,7 +423,5 @@ def _get_ai_fields(integration_path: Path) -> AiFields:
     )
 
 
-def _update_non_built_with_ai_fields(
-    non_built: NonBuiltIntegrationMetadata, ai_fields: AiFields
-) -> None:
+def _update_non_built_with_ai_fields(non_built: NonBuiltIntegrationMetadata, ai_fields: AiFields) -> None:
     non_built["product_categories"] = [c.value for c in ai_fields.product_categories]

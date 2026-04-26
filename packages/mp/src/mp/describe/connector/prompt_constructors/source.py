@@ -65,9 +65,7 @@ class SourcePromptConstructor(ConnectorPromptConstructor):
 
     async def _get_non_built_connector_def_content(self) -> str:
         connector_yaml: anyio.Path = (
-            self.integration
-            / constants.CONNECTORS_DIR
-            / f"{self.resource_file_name}{constants.YAML_SUFFIX}"
+            self.integration / constants.CONNECTORS_DIR / f"{self.resource_file_name}{constants.YAML_SUFFIX}"
         )
         if await connector_yaml.exists():
             return await connector_yaml.read_text(encoding="utf-8")
@@ -75,9 +73,7 @@ class SourcePromptConstructor(ConnectorPromptConstructor):
         return DEFAULT_FILE_CONTENT
 
     async def _get_non_built_connector_content(self) -> str:
-        connector_script: anyio.Path = (
-            self.integration / constants.CONNECTORS_DIR / f"{self.resource_file_name}.py"
-        )
+        connector_script: anyio.Path = self.integration / constants.CONNECTORS_DIR / f"{self.resource_file_name}.py"
         if await connector_script.exists():
             return await connector_script.read_text(encoding="utf-8")
 

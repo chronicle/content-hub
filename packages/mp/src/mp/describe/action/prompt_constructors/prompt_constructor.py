@@ -25,10 +25,7 @@ from mp.describe.common.prompt_constructors.prompt_constructor import (
 
 
 class PromptConstructor(BasePromptConstructor, abc.ABC):
-    __slots__: tuple[str, ...] = (
-        "action_file_name",
-        "action_name",
-    )
+    __slots__: tuple[str, ...] = ("action_file_name", "action_name")
 
     def __init__(
         self,

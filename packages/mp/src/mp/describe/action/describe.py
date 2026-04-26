@@ -122,9 +122,7 @@ class DescribeAction(DescribeBase[ActionAiMetadata]):
                 except (yaml.YAMLError, KeyError):
                     logger.warning("Failed to parse non-built action metadata %s", file.name)
 
-    async def _construct_prompts(
-        self, resources: list[str], status: IntegrationStatus
-    ) -> list[str]:
+    async def _construct_prompts(self, resources: list[str], status: IntegrationStatus) -> list[str]:
         prompts: list[str] = []
         for action_name in resources:
             params = DescriptionParams(
@@ -134,9 +132,7 @@ class DescribeAction(DescribeBase[ActionAiMetadata]):
                 self._action_name_to_file_stem.get(action_name, action_name),
                 status,
             )
-            constructor: BuiltPromptConstructor | SourcePromptConstructor = (
-                _create_prompt_constructor(params)
-            )
+            constructor: BuiltPromptConstructor | SourcePromptConstructor = _create_prompt_constructor(params)
             prompts.append(await constructor.construct())
         return prompts
 

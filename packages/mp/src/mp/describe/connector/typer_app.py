@@ -36,60 +36,31 @@ app = typer.Typer(help="Describe connectors in the marketplace.")
 )
 def describe(  # noqa: PLR0913
     connectors: Annotated[list[str] | None, typer.Argument(help="Connector names")] = None,
-    integration: Annotated[
-        str | None, typer.Option("-i", "--integration", help="Integration name")
-    ] = None,
+    integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
     *,
     all_marketplace: Annotated[
         bool,
         typer.Option(
             "-a",
             "--all",
-            help=(
-                "Describe all integrations in the marketplace, or all connectors if an"
-                " integration is specified"
-            ),
+            help="Describe all integrations in the marketplace, or all connectors if an integration is specified",
         ),
     ] = False,
     src: Annotated[
         pathlib.Path | None,
-        typer.Option(
-            help="The path to the marketplace. If not provided, the configured path will be used."
-        ),
+        typer.Option(help="The path to the marketplace. If not provided, the configured path will be used."),
     ] = None,
     dst: Annotated[
         pathlib.Path | None,
         typer.Option(
-            help=(
-                "The path to save the descriptions to. If not provided, they will be"
-                " saved in the marketplace."
-            )
+            help="The path to save the descriptions to. If not provided, they will be saved in the marketplace."
         ),
     ] = None,
     override: Annotated[
-        bool,
-        typer.Option(
-            "--override",
-            "-o",
-            help="Whether to override existing descriptions.",
-        ),
+        bool, typer.Option("--override", "-o", help="Whether to override existing descriptions.")
     ] = False,
-    quiet: Annotated[
-        bool,
-        typer.Option(
-            "--quiet",
-            "-q",
-            help="Log less on runtime.",
-        ),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option(
-            "--verbose",
-            "-v",
-            help="Log more on runtime.",
-        ),
-    ] = False,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
     """Describe connectors in a given integration.
 

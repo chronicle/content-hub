@@ -65,9 +65,7 @@ class BuiltPromptConstructor(JobPromptConstructor):
 
     async def _get_built_job_def_content(self) -> str:
         job_def: anyio.Path = (
-            self.out_path
-            / constants.OUT_JOBS_META_DIR
-            / f"{self.resource_file_name}{constants.JOBS_META_SUFFIX}"
+            self.out_path / constants.OUT_JOBS_META_DIR / f"{self.resource_file_name}{constants.JOBS_META_SUFFIX}"
         )
         if await job_def.exists():
             return await job_def.read_text(encoding="utf-8")
@@ -75,9 +73,7 @@ class BuiltPromptConstructor(JobPromptConstructor):
         return DEFAULT_FILE_CONTENT
 
     async def _get_built_job_content(self) -> str:
-        job_script: anyio.Path = (
-            self.out_path / constants.OUT_JOB_SCRIPTS_DIR / f"{self.resource_file_name}.py"
-        )
+        job_script: anyio.Path = self.out_path / constants.OUT_JOB_SCRIPTS_DIR / f"{self.resource_file_name}.py"
         if await job_script.exists():
             return await job_script.read_text(encoding="utf-8")
 

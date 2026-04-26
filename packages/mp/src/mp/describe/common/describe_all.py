@@ -70,12 +70,7 @@ class IntegrationTask(NamedTuple):
 
 class MarketplaceOrchestratorBase(abc.ABC):
     def __init__(
-        self,
-        src: Path | None,
-        integrations_paths: list[Path],
-        *,
-        dst: Path | None = None,
-        override: bool = False,
+        self, src: Path | None, integrations_paths: list[Path], *, dst: Path | None = None, override: bool = False
     ) -> None:
         self.src: Path | None = src
         self.dst: Path | None = dst
@@ -101,10 +96,7 @@ class MarketplaceOrchestratorBase(abc.ABC):
         """
         return bool(
             self.pending_paths
-            and (
-                self.resources_in_flight < self.concurrency
-                or len(self.active_tasks) < MAX_ACTIVE_TASKS
-            )
+            and (self.resources_in_flight < self.concurrency or len(self.active_tasks) < MAX_ACTIVE_TASKS)
             and len(self.active_tasks) < self.max_active_integrations
         )
 
@@ -147,12 +139,8 @@ class MarketplaceOrchestratorBase(abc.ABC):
             {it.task for it in self.active_tasks}, return_when=asyncio.FIRST_COMPLETED
         )
 
-        done_integration_tasks: set[IntegrationTask] = {
-            it for it in self.active_tasks if it.task in done_tasks
-        }
-        self.active_tasks: set[IntegrationTask] = {
-            it for it in self.active_tasks if it.task in pending_tasks
-        }
+        done_integration_tasks: set[IntegrationTask] = {it for it in self.active_tasks if it.task in done_tasks}
+        self.active_tasks: set[IntegrationTask] = {it for it in self.active_tasks if it.task in pending_tasks}
 
         return done_integration_tasks
 

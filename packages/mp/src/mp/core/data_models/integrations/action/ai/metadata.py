@@ -65,8 +65,7 @@ class ActionAiMetadata(BaseModel):
         AiCategories,
         Field(
             description=(
-                "Categories that describe the action's capabilities."
-                " These tags are inferred based on the fields."
+                "Categories that describe the action's capabilities. These tags are inferred based on the fields."
             ),
         ),
     ]

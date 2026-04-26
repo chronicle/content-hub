@@ -152,9 +152,7 @@ class Integration:
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_built_path(path)},
                 connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_built_path(path)},
-                widgets_metadata={
-                    w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)
-                },
+                widgets_metadata={w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)},
                 ai_metadata=_get_ai_metadata(path),
             )
         except ValueError as e:
@@ -177,9 +175,7 @@ class Integration:
         """
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
-        pyproject_toml: PyProjectTomlFile = cast(
-            "PyProjectTomlFile", cast("object", tomllib.loads(file_content))
-        )
+        pyproject_toml: PyProjectTomlFile = cast("PyProjectTomlFile", cast("object", tomllib.loads(file_content)))
         try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
@@ -202,9 +198,7 @@ class Integration:
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_non_built_path(path)},
                 connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_non_built_path(path)},
-                widgets_metadata={
-                    w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)
-                },
+                widgets_metadata={w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)},
                 ai_metadata=_get_ai_metadata(path),
             )
 
@@ -248,9 +242,7 @@ class Integration:
             actions={name: metadata.to_non_built() for name, metadata in self.actions_metadata.items()},
             connectors={name: metadata.to_non_built() for name, metadata in self.connectors_metadata.items()},
             jobs={name: metadata.to_non_built() for name, metadata in self.jobs_metadata.items()},
-            widgets={
-                name: metadata.to_non_built() for name, metadata in self.widgets_metadata.items()
-            },
+            widgets={name: metadata.to_non_built() for name, metadata in self.widgets_metadata.items()},
             ai_metadata=self.ai_metadata,
         )
 

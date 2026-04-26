@@ -142,9 +142,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def _construct_prompts(
-        self, resources: list[str], status: IntegrationStatus
-    ) -> list[str]:
+    async def _construct_prompts(self, resources: list[str], status: IntegrationStatus) -> list[str]:
         """Construct prompts for the given resources."""
         raise NotImplementedError
 
@@ -162,9 +160,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
             progress: An optional Progress object to use for progress reporting.
 
         """
-        metadata, status = await asyncio.gather(
-            self._load_metadata(), self._get_integration_status()
-        )
+        metadata, status = await asyncio.gather(self._load_metadata(), self._get_integration_status())
 
         resources_to_process: set[str] = await self._prepare_resources(status, metadata)
         if not resources_to_process:
@@ -207,15 +203,11 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
             int: The number of resources.
 
         """
-        status, metadata = await asyncio.gather(
-            self._get_integration_status(), self._load_metadata()
-        )
+        status, metadata = await asyncio.gather(self._get_integration_status(), self._load_metadata())
         resources: set[str] = await self._prepare_resources(status, metadata)
         return len(resources)
 
-    async def _prepare_resources(
-        self, status: IntegrationStatus, metadata: dict[str, Any]
-    ) -> set[str]:
+    async def _prepare_resources(self, status: IntegrationStatus, metadata: dict[str, Any]) -> set[str]:
         if not self.resource_names:
             self.resource_names = await self._get_all_resources(status)
 
@@ -227,9 +219,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
                     del metadata[key]
 
         if not self.override:
-            resources_to_process: set[str] = {
-                res for res in self.resource_names if res not in metadata
-            }
+            resources_to_process: set[str] = {res for res in self.resource_names if res not in metadata}
             skipped_count: int = len(self.resource_names) - len(resources_to_process)
             if skipped_count > 0:
                 if skipped_count == 1:
@@ -257,19 +247,17 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         on_done: Callable[[], None] | None = None,
         progress: Progress | None = None,
     ) -> list[DescriptionResult]:
-        resource_list = list(resources)
-        bulks = [
-            resource_list[i : i + llm.DESCRIBE_BULK_SIZE]
-            for i in range(0, len(resource_list), llm.DESCRIBE_BULK_SIZE)
+        resource_list: list[str] = list(resources)
+        bulks: list[list[str]] = [
+            resource_list[i : i + llm.DESCRIBE_BULK_SIZE] for i in range(0, len(resource_list), llm.DESCRIBE_BULK_SIZE)
         ]
 
         if len(resources) == 1:
-            description = (
-                f"Describing {self.resource_type_name} {next(iter(resources))} for"
-                f" {self.integration_name}..."
+            description: str = (
+                f"Describing {self.resource_type_name} {next(iter(resources))} for {self.integration_name}..."
             )
         else:
-            description = f"Describing {self.resource_type_name}s for {self.integration_name}..."
+            description: str = f"Describing {self.resource_type_name}s for {self.integration_name}..."
 
         results: list[DescriptionResult] = []
 
@@ -277,8 +265,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
             task_id: TaskID = progress.add_task(description, total=len(resources))
             rich_params = RichParams(on_done, progress, task_id)
             tasks: list[asyncio.Task] = [
-                asyncio.create_task(self._process_bulk_resources(bulk, status, sem, rich_params))
-                for bulk in bulks
+                asyncio.create_task(self._process_bulk_resources(bulk, status, sem, rich_params)) for bulk in bulks
             ]
             for coro in asyncio.as_completed(tasks):
                 results.extend(await coro)
@@ -288,8 +275,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         else:
             rich_params = RichParams(on_done)
             tasks: list[asyncio.Task] = [
-                asyncio.create_task(self._process_bulk_resources(bulk, status, sem, rich_params))
-                for bulk in bulks
+                asyncio.create_task(self._process_bulk_resources(bulk, status, sem, rich_params)) for bulk in bulks
             ]
             results.extend([
                 res
@@ -316,24 +302,17 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         notify_done: Callable[[], None] = _create_notifier(rich_params)
         try:
             async with _maybe_use_semaphore(sem):
-                return await self._describe_resources_bulk_with_error_handling(
-                    resources, status, notify_done
-                )
+                return await self._describe_resources_bulk_with_error_handling(resources, status, notify_done)
 
         except Exception:
-            logger.exception(
-                "Failed to process bulk of %ss: %s", self.resource_type_name, resources
-            )
+            logger.exception("Failed to process bulk of %ss: %s", self.resource_type_name, resources)
             for _ in resources:
                 notify_done()
 
             return [DescriptionResult(a, None) for a in resources]
 
     async def _describe_resources_bulk_with_error_handling(
-        self,
-        resources: list[str],
-        status: IntegrationStatus,
-        notify_done: Callable[[], None],
+        self, resources: list[str], status: IntegrationStatus, notify_done: Callable[[], None]
     ) -> list[DescriptionResult]:
         try:
             results: list[DescriptionResult] = await self.describe_bulk(resources, status)
@@ -368,17 +347,12 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         if not valid_prompts:
             return [DescriptionResult(a, None) for a in resources]
 
-        llm_results: list[T_Metadata | str] = await llm.call_gemini_bulk(
-            valid_prompts, self.response_schema
-        )
+        llm_results: list[T_Metadata | str] = await llm.call_gemini_bulk(valid_prompts, self.response_schema)
 
         return self._map_bulk_results_to_resources(resources, valid_indices, llm_results)
 
     def _map_bulk_results_to_resources(
-        self,
-        resources: list[str],
-        valid_indices: list[int],
-        results: list[T_Metadata | str],
+        self, resources: list[str], valid_indices: list[int], results: list[T_Metadata | str]
     ) -> list[DescriptionResult]:
         """Map Gemini results back to resource names.
 
@@ -396,9 +370,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         for i, result in zip(valid_indices, results, strict=True):
             resource_name: str = resources[i]
             if isinstance(result, str):
-                logger.error(
-                    "Failed to describe %s %s: %s", self.resource_type_name, resource_name, result
-                )
+                logger.error("Failed to describe %s %s: %s", self.resource_type_name, resource_name, result)
                 continue
 
             # Special case for Ping action as in DescribeAction

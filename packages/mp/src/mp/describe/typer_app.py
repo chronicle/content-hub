@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import asyncio
@@ -38,53 +39,23 @@ app.add_typer(job_app)
 
 @app.command(
     name="all-content",
-    help=(
-        "Describe all content (actions, connectors, jobs, and the integration) for integrations."
-    ),
+    help=("Describe all content (actions, connectors, jobs, and the integration) for integrations."),
     no_args_is_help=True,
 )
 def all_content(  # noqa: PLR0913
     integrations: Annotated[list[str] | None, typer.Argument(help="Integration names")] = None,
     *,
     all_marketplace: Annotated[
-        bool,
-        typer.Option(
-            "-a",
-            "--all",
-            help="Describe all content for all integrations in the marketplace",
-        ),
+        bool, typer.Option("-a", "--all", help="Describe all content for all integrations in the marketplace")
     ] = False,
-    src: Annotated[
-        pathlib.Path | None,
-        typer.Option(help="Customize source folder to describe from."),
-    ] = None,
+    src: Annotated[pathlib.Path | None, typer.Option(help="Customize source folder to describe from.")] = None,
     dst: Annotated[
-        pathlib.Path | None,
-        typer.Option(help="Customize destination folder to save the AI descriptions."),
+        pathlib.Path | None, typer.Option(help="Customize destination folder to save the AI descriptions.")
     ] = None,
-    quiet: Annotated[
-        bool,
-        typer.Option(
-            "--quiet",
-            "-q",
-            help="Log less on runtime.",
-        ),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option(
-            "--verbose",
-            "-v",
-            help="Log more on runtime.",
-        ),
-    ] = False,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
     override: Annotated[
-        bool,
-        typer.Option(
-            "--override",
-            "-o",
-            help="Rewrite content that already have their description.",
-        ),
+        bool, typer.Option("--override", "-o", help="Rewrite content that already have their description.")
     ] = False,
 ) -> None:
     """Describe all content in integrations.
@@ -97,9 +68,7 @@ def all_content(  # noqa: PLR0913
     run_params.set_in_config()
 
     if integrations and not all_marketplace:
-        asyncio.run(
-            describe_all_content(src=src, dst=dst, override=override, integrations=integrations)
-        )
+        asyncio.run(describe_all_content(src=src, dst=dst, override=override, integrations=integrations))
     elif all_marketplace:
         asyncio.run(describe_all_content(src=src, dst=dst, override=override))
     else:

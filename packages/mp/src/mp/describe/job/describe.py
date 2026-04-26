@@ -105,9 +105,7 @@ class DescribeJob(DescribeBase[JobAiMetadata]):
                 except (yaml.YAMLError, KeyError):
                     logger.warning("Failed to parse non-built job metadata %s", file.name)
 
-    async def _construct_prompts(
-        self, resources: list[str], status: IntegrationStatus
-    ) -> list[str]:
+    async def _construct_prompts(self, resources: list[str], status: IntegrationStatus) -> list[str]:
         prompts: list[str] = []
         for job_name in resources:
             params = DescriptionParams(
@@ -117,9 +115,7 @@ class DescribeJob(DescribeBase[JobAiMetadata]):
                 self._job_name_to_file_stem.get(job_name, job_name),
                 status,
             )
-            constructor: BuiltPromptConstructor | SourcePromptConstructor = (
-                _create_prompt_constructor(params)
-            )
+            constructor: BuiltPromptConstructor | SourcePromptConstructor = _create_prompt_constructor(params)
             prompts.append(await constructor.construct())
         return prompts
 

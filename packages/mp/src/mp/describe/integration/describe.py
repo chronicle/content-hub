@@ -75,15 +75,11 @@ class DescribeIntegration(DescribeBase[IntegrationAiMetadata]):
         # There's only one integration to describe per integration folder.
         return {self.integration_name}
 
-    async def _construct_prompts(
-        self, resources: list[str], status: IntegrationStatus
-    ) -> list[str]:
+    async def _construct_prompts(self, resources: list[str], status: IntegrationStatus) -> list[str]:
         # resources will be [self.integration_name]
         prompts: list[str] = []
         for integration_name in resources:
-            constructor = IntegrationPromptConstructor(
-                self.integration, integration_name, status.out_path
-            )
+            constructor = IntegrationPromptConstructor(self.integration, integration_name, status.out_path)
             prompts.append(await constructor.construct())
 
         return prompts

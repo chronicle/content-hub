@@ -35,6 +35,52 @@ if TYPE_CHECKING:
     from rich.progress import Progress
 
 
+async def describe_all_content(
+    integration: str | None = None,
+    *,
+    integrations: list[str] | None = None,
+    src: Path | None = None,
+    dst: Path | None = None,
+    override: bool = False,
+) -> None:
+    """Describe all content in one or more integrations.
+
+    Args:
+        integration: Single integration name (backward compatibility).
+        integrations: List of integration names.
+        src: Optional custom source path.
+        dst: Optional custom destination path.
+        override: Whether to rewrite existing descriptions.
+
+    """
+    all_integrations: list[str] = []
+    if integration:
+        all_integrations.append(integration)
+    if integrations:
+        all_integrations.extend(integrations)
+
+    integrations_paths: list[Path]
+    if all_integrations:
+        integrations_paths = [Path(str(get_integration_path(name, src=src))) for name in all_integrations]
+    else:
+        integrations_paths = get_all_integrations_paths(src=src)
+
+    orchestrator = AllContentMarketplaceOrchestrator(src, integrations_paths, dst=dst, override=override)
+    await orchestrator.run()
+
+
+class AllContentMarketplaceOrchestrator(MarketplaceOrchestratorBase):
+    """Orchestrate all-content description across the entire marketplace."""
+
+    def _create_describer(self, integration_name: str) -> AllContentDescriber:
+        return AllContentDescriber(
+            integration=integration_name,
+            src=self.src,
+            dst=self.dst,
+            override=self.override,
+        )
+
+
 class AllContentDescriber:
     """Describer for all content types in an integration."""
 
@@ -75,74 +121,24 @@ class AllContentDescriber:
             sem = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
 
         # 1. Describe actions
-        await DescribeAction(
-            self.integration, set(), src=self.src, dst=self.dst, override=self.override
-        ).describe(sem=sem, progress=progress)
+        await DescribeAction(self.integration, set(), src=self.src, dst=self.dst, override=self.override).describe(
+            sem=sem, progress=progress
+        )
 
         # 2. Describe connectors
-        await DescribeConnector(
-            self.integration, set(), src=self.src, dst=self.dst, override=self.override
-        ).describe(sem=sem, progress=progress)
+        await DescribeConnector(self.integration, set(), src=self.src, dst=self.dst, override=self.override).describe(
+            sem=sem, progress=progress
+        )
 
         # 3. Describe jobs
-        await DescribeJob(
-            self.integration, set(), src=self.src, dst=self.dst, override=self.override
-        ).describe(sem=sem, progress=progress)
+        await DescribeJob(self.integration, set(), src=self.src, dst=self.dst, override=self.override).describe(
+            sem=sem, progress=progress
+        )
 
         # 4. Describe integration (last because it depends on previous results)
-        await DescribeIntegration(
-            self.integration, src=self.src, dst=self.dst, override=self.override
-        ).describe(sem=sem, progress=progress)
+        await DescribeIntegration(self.integration, src=self.src, dst=self.dst, override=self.override).describe(
+            sem=sem, progress=progress
+        )
 
         if on_done:
             on_done()
-
-
-class AllContentMarketplaceOrchestrator(MarketplaceOrchestratorBase):
-    """Orchestrate all-content description across the entire marketplace."""
-
-    def _create_describer(self, integration_name: str) -> AllContentDescriber:
-        return AllContentDescriber(
-            integration=integration_name,
-            src=self.src,
-            dst=self.dst,
-            override=self.override,
-        )
-
-
-async def describe_all_content(
-    integration: str | None = None,
-    *,
-    integrations: list[str] | None = None,
-    src: Path | None = None,
-    dst: Path | None = None,
-    override: bool = False,
-) -> None:
-    """Describe all content in one or more integrations.
-
-    Args:
-        integration: Single integration name (backward compatibility).
-        integrations: List of integration names.
-        src: Optional custom source path.
-        dst: Optional custom destination path.
-        override: Whether to rewrite existing descriptions.
-
-    """
-    all_integrations: list[str] = []
-    if integration:
-        all_integrations.append(integration)
-    if integrations:
-        all_integrations.extend(integrations)
-
-    integrations_paths: list[Path]
-    if all_integrations:
-        integrations_paths = [
-            Path(str(get_integration_path(name, src=src))) for name in all_integrations
-        ]
-    else:
-        integrations_paths = get_all_integrations_paths(src=src)
-
-    orchestrator = AllContentMarketplaceOrchestrator(
-        src, integrations_paths, dst=dst, override=override
-    )
-    await orchestrator.run()

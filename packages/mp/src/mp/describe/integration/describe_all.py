@@ -43,9 +43,7 @@ async def describe_all_integrations(
     """
     integrations_paths: list[Path]
     if integrations:
-        integrations_paths = [
-            Path(str(get_integration_path(name, src=src))) for name in integrations
-        ]
+        integrations_paths = [Path(str(get_integration_path(name, src=src))) for name in integrations]
     else:
         integrations_paths = get_all_integrations_paths(src=src)
 

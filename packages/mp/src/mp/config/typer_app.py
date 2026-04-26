@@ -108,12 +108,7 @@ def config(
         elif env_k:
             display_k = f"{env_k[:4]}{'*' * (len(env_k) - 4)} (from GEMINI_API_KEY env var)"
 
-        rich.print(
-            f"Marketplace path: {p}\n"
-            f"Number of processes: {n}\n"
-            f"Gemini concurrency: {c}\n"
-            f"API Key: {display_k}"
-        )
+        rich.print(f"Marketplace path: {p}\nNumber of processes: {n}\nGemini concurrency: {c}\nAPI Key: {display_k}")
 
 
 def _set_marketplace_path(marketplace_path: str) -> None:

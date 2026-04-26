@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import logging
 import tomllib
 from string import Template
@@ -84,8 +85,8 @@ class IntegrationPromptConstructor(PromptConstructor):
         # Search for any .def file in the root
         async for def_file in self.integration.glob("Integration-*.def"):
             content: str = await def_file.read_text(encoding="utf-8")
-            with contextlib.suppress(yaml.YAMLError):
-                data: NonBuiltIntegrationMetadata = yaml.safe_load(content)
+            with contextlib.suppress(json.JSONDecodeError):
+                data: NonBuiltIntegrationMetadata = json.loads(content)
                 if data and "description" in data:
                     return data["description"]
 
@@ -97,12 +98,12 @@ class IntegrationPromptConstructor(PromptConstructor):
             return None
 
         content: str = await definition_file.read_text(encoding="utf-8")
-        with contextlib.suppress(yaml.YAMLError):
+        try:
             data: NonBuiltIntegrationMetadata = yaml.safe_load(content)
             return data.get("description")
-
-        logger.warning("Failed to parse definition file %s", definition_file)
-        return None
+        except yaml.YAMLError:
+            logger.warning("Failed to parse definition file %s", definition_file)
+            return None
 
     async def _get_description_from_pyproject(self) -> str | None:
         pyproject_file: anyio.Path = self.integration / constants.PROJECT_FILE

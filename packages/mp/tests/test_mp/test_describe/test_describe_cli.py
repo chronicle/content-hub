@@ -113,9 +113,7 @@ def test_all_content_cli() -> None:
     with mock.patch("mp.describe.typer_app.describe_all_content") as mock_all:
         result = runner.invoke(app, ["all-content", "my_int"])
         assert result.exit_code == 0
-        mock_all.assert_called_once_with(
-            src=None, dst=None, override=False, integrations=["my_int"]
-        )
+        mock_all.assert_called_once_with(src=None, dst=None, override=False, integrations=["my_int"])
 
 
 def test_all_content_all_cli() -> None:

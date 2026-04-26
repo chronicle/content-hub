@@ -65,9 +65,7 @@ class SourcePromptConstructor(JobPromptConstructor):
 
     async def _get_non_built_job_def_content(self) -> str:
         job_yaml: anyio.Path = (
-            self.integration
-            / constants.JOBS_DIR
-            / f"{self.resource_file_name}{constants.YAML_SUFFIX}"
+            self.integration / constants.JOBS_DIR / f"{self.resource_file_name}{constants.YAML_SUFFIX}"
         )
         if await job_yaml.exists():
             return await job_yaml.read_text(encoding="utf-8")
@@ -75,9 +73,7 @@ class SourcePromptConstructor(JobPromptConstructor):
         return DEFAULT_FILE_CONTENT
 
     async def _get_non_built_job_content(self) -> str:
-        job_script: anyio.Path = (
-            self.integration / constants.JOBS_DIR / f"{self.resource_file_name}.py"
-        )
+        job_script: anyio.Path = self.integration / constants.JOBS_DIR / f"{self.resource_file_name}.py"
         if await job_script.exists():
             return await job_script.read_text(encoding="utf-8")
 

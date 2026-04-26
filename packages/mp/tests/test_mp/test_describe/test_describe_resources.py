@@ -72,9 +72,7 @@ async def test_describe_connector(tmp_path: Path, mock_integration_path: Path) -
         await describer.describe()
 
     # Verify output file
-    ai_dir: Path = (
-        tmp_path / mock_integration_path.name / constants.RESOURCES_DIR / constants.AI_DIR
-    )
+    ai_dir: Path = tmp_path / mock_integration_path.name / constants.RESOURCES_DIR / constants.AI_DIR
     output_file = ai_dir / constants.CONNECTORS_AI_DESCRIPTION_FILE
     assert output_file.exists()
 
@@ -99,9 +97,7 @@ async def test_describe_job(tmp_path: Path, mock_integration_path: Path) -> None
         await describer.describe()
 
     # Verify output file
-    ai_dir: Path = (
-        tmp_path / mock_integration_path.name / constants.RESOURCES_DIR / constants.AI_DIR
-    )
+    ai_dir: Path = tmp_path / mock_integration_path.name / constants.RESOURCES_DIR / constants.AI_DIR
     output_file = ai_dir / constants.JOBS_AI_DESCRIPTION_FILE
     assert output_file.exists()
 
