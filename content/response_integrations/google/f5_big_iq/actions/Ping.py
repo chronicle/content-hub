@@ -20,7 +20,7 @@ from TIPCommon import extract_configuration_param
 
 # consts
 F5_BIG_IQ_PROVIDER = "F5BigIQ"
-SCRIPT_NAME = "Get Event Logs By Blocking ID"
+SCRIPT_NAME = "Ping"
 
 
 @output_handler
