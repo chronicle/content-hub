@@ -208,9 +208,7 @@ class ReleaseNote(SequentialMetadata[BuiltReleaseNote, NonBuiltReleaseNote]):
             integration_version=float(self.version),
             item_name=self.item_name,
             item_type=self.item_type,
-            publish_time=convert_epoch_to_iso(self.publish_time)
-            if self.publish_time is not None
-            else None,
+            publish_time=convert_epoch_to_iso(self.publish_time) if self.publish_time is not None else None,
             ticket_number=self.ticket,
             new=self.new,
             regressive=self.regressive,

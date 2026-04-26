@@ -55,9 +55,7 @@ class RepresentableEnum(enum.Enum):
 
 T_Buildable = TypeVar("T_Buildable", bound="Buildable")
 T_BuildableComponent = TypeVar("T_BuildableComponent", bound="BuildableComponent")
-T_SingularComponentMetadata = TypeVar(
-    "T_SingularComponentMetadata", bound="SingularComponentMetadata"
-)
+T_SingularComponentMetadata = TypeVar("T_SingularComponentMetadata", bound="SingularComponentMetadata")
 T_ComponentMetadata = TypeVar("T_ComponentMetadata", bound="ComponentMetadata")
 T_SequentialMetadata = TypeVar("T_SequentialMetadata", bound="SequentialMetadata")
 

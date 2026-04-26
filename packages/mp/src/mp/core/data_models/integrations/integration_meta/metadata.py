@@ -67,8 +67,7 @@ class PythonVersion(RepresentableEnum):
             return str_to_enum[str(s)]
         except KeyError:
             msg: str = (
-                f"Invalid python version for integrations: {s}"
-                f"\nSupported versions: {', '.join(str_to_enum.keys())}"
+                f"Invalid python version for integrations: {s}\nSupported versions: {', '.join(str_to_enum.keys())}"
             )
             raise ValueError(msg) from None
 
@@ -140,9 +139,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
     google_secops_product: NotRequired[bool]
 
 
-class IntegrationMetadata(
-    SingularComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
-):
+class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]):
     categories: list[str]
     feature_tags: FeatureTags | None
     name: Annotated[
@@ -321,18 +318,10 @@ class IntegrationMetadata(
             Categories=self.categories,
             Description=self.description,
             DisplayName=self.name,
-            DocumentationLink=(
-                str(self.documentation_link) or None
-                if self.documentation_link is not None
-                else None
-            ),
+            DocumentationLink=(str(self.documentation_link) or None if self.documentation_link is not None else None),
             FeatureTags=(self.feature_tags.to_built() if self.feature_tags is not None else None),
             Identifier=self.identifier,
-            ImageBase64=(
-                base64.b64encode(self.image_base64).decode()
-                if self.image_base64 is not None
-                else None
-            ),
+            ImageBase64=(base64.b64encode(self.image_base64).decode() if self.image_base64 is not None else None),
             IntegrationProperties=[p.to_built() for p in self.parameters],
             IsAvailableForCommunity=True,
             MarketingDisplayName=self.name,
@@ -357,20 +346,14 @@ class IntegrationMetadata(
             The "non-built" TypedDict version of the integration's metadata.
 
         """
-        svg_path: Path = pathlib.Path(
-            ".", mp.core.constants.RESOURCES_DIR, mp.core.constants.LOGO_FILE
-        )
-        image: Path = pathlib.Path(
-            ".", mp.core.constants.RESOURCES_DIR, mp.core.constants.IMAGE_FILE
-        )
+        svg_path: Path = pathlib.Path(".", mp.core.constants.RESOURCES_DIR, mp.core.constants.LOGO_FILE)
+        image: Path = pathlib.Path(".", mp.core.constants.RESOURCES_DIR, mp.core.constants.IMAGE_FILE)
 
         non_built: NonBuiltIntegrationMetadata = NonBuiltIntegrationMetadata(
             identifier=self.identifier,
             name=self.name,
             parameters=[p.to_non_built() for p in self.parameters],
-            documentation_link=(
-                str(self.documentation_link) if self.documentation_link is not None else None
-            ),
+            documentation_link=(str(self.documentation_link) if self.documentation_link is not None else None),
             categories=self.categories,
             svg_logo_path=svg_path.as_posix() if self.svg_logo is not None else None,
             image_path=image.as_posix() if self.image_base64 is not None else None,

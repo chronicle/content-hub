@@ -32,10 +32,7 @@ if TYPE_CHECKING:
 
     import anyio
 
-    from mp.core.data_models.integrations.action.metadata import (
-        BuiltActionMetadata,
-        NonBuiltActionMetadata,
-    )
+    from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
 
 logger: logging.Logger = logging.getLogger(__name__)
 

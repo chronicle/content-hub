@@ -127,9 +127,7 @@ def _log_retry_attempt(retry_state: RetryCallState) -> None:
 
 
 def _should_retry_exception(e: BaseException) -> bool:
-    return isinstance(e, ClientError) and (
-        e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE
-    )
+    return isinstance(e, ClientError) and (e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE)
 
 
 class Gemini(LlmSdk[GeminiConfig]):
@@ -181,9 +179,7 @@ class Gemini(LlmSdk[GeminiConfig]):
     ) -> str: ...
 
     @retry(
-        retry=(
-            retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)
-        ),
+        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
@@ -279,8 +275,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         if len(prompts) <= self.bulk_threshold:
             return await asyncio.gather(*[
-                self._send_single_message_independent(prompt, response_json_schema)
-                for prompt in prompts
+                self._send_single_message_independent(prompt, response_json_schema) for prompt in prompts
             ])
 
         requests: list[InlinedRequest] = self._prepare_batch_requests(prompts, response_json_schema)
@@ -289,9 +284,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=(
-            retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)
-        ),
+        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
@@ -485,9 +478,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         return results
 
-    def create_generate_content_config(
-        self, response_json_schema: str | None = None
-    ) -> GenerateContentConfig:
+    def create_generate_content_config(self, response_json_schema: str | None = None) -> GenerateContentConfig:
         """Create a GenerateContentConfig object for the Gemini API.
 
         Args:
@@ -562,9 +553,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         return results
 
     def _get_thinking_config(self) -> ThinkingConfig | None:
-        return (
-            ThinkingConfig(thinking_level=ThinkingLevel.HIGH) if self.config.use_thinking else None
-        )
+        return ThinkingConfig(thinking_level=ThinkingLevel.HIGH) if self.config.use_thinking else None
 
 
 def _parse_response_line_to_text(line: str) -> str:

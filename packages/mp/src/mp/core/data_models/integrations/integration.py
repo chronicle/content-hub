@@ -39,10 +39,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, ManagerName, WidgetName
-    from mp.core.data_models.common.release_notes.metadata import (
-        BuiltReleaseNote,
-        NonBuiltReleaseNote,
-    )
+    from mp.core.data_models.common.release_notes.metadata import BuiltReleaseNote, NonBuiltReleaseNote
 
     from .action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
     from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
@@ -153,9 +150,7 @@ class Integration:
                 mapping_rules=MappingRule.from_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_built_path(path)},
-                connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_built_path(path)
-                },
+                connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_built_path(path)},
                 widgets_metadata={
                     w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)
@@ -205,9 +200,7 @@ class Integration:
                 mapping_rules=MappingRule.from_non_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_non_built_path(path)},
-                connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)
-                },
+                connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_non_built_path(path)},
                 widgets_metadata={
                     w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)
@@ -233,9 +226,7 @@ class Integration:
             mapping_rules=[mr.to_built() for mr in self.mapping_rules],
             common_modules=self.common_modules,
             actions={name: metadata.to_built() for name, metadata in self.actions_metadata.items()},
-            connectors={
-                name: metadata.to_built() for name, metadata in self.connectors_metadata.items()
-            },
+            connectors={name: metadata.to_built() for name, metadata in self.connectors_metadata.items()},
             jobs={name: metadata.to_built() for name, metadata in self.jobs_metadata.items()},
             widgets={name: metadata.to_built() for name, metadata in self.widgets_metadata.items()},
             ai_metadata=self.ai_metadata,
@@ -254,12 +245,8 @@ class Integration:
             custom_families=[cf.to_non_built() for cf in self.custom_families],
             mapping_rules=[mr.to_non_built() for mr in self.mapping_rules],
             common_modules=self.common_modules,
-            actions={
-                name: metadata.to_non_built() for name, metadata in self.actions_metadata.items()
-            },
-            connectors={
-                name: metadata.to_non_built() for name, metadata in self.connectors_metadata.items()
-            },
+            actions={name: metadata.to_non_built() for name, metadata in self.actions_metadata.items()},
+            connectors={name: metadata.to_non_built() for name, metadata in self.connectors_metadata.items()},
             jobs={name: metadata.to_non_built() for name, metadata in self.jobs_metadata.items()},
             widgets={
                 name: metadata.to_non_built() for name, metadata in self.widgets_metadata.items()
@@ -280,9 +267,7 @@ class Integration:
             DisplayName=self.metadata.name,
             Description=self.metadata.description,
             DocumentationLink=(
-                str(self.metadata.documentation_link)
-                if self.metadata.documentation_link is not None
-                else None
+                str(self.metadata.documentation_link) if self.metadata.documentation_link is not None else None
             ),
             MinimumSystemVersion=float(self.metadata.minimum_system_version),
             IntegrationProperties=[p.to_built() for p in self.metadata.parameters],
@@ -308,9 +293,7 @@ class Integration:
         for version, items in version_to_rns:
             # casting done to prevent generator exhaustion after the first iteration
             rns: list[ReleaseNote] = list(items)
-            max_publish_time: int = max(
-                rn.publish_time if rn.publish_time is not None else 0 for rn in rns
-            )
+            max_publish_time: int = max(rn.publish_time if rn.publish_time is not None else 0 for rn in rns)
             rn_object: FullDetailsReleaseNoteJson = {
                 "Version": version,
                 "Items": [rn.description for rn in rns],

@@ -43,9 +43,7 @@ class BlockEnvMatchesPlaybookEnvValidation:
                 required by the playbook.
 
         """
-        dependent_blocks_ids: set[str] = mp.core.utils.get_playbook_dependent_blocks_ids(
-            playbook_path
-        )
+        dependent_blocks_ids: set[str] = mp.core.utils.get_playbook_dependent_blocks_ids(playbook_path)
         if not dependent_blocks_ids:
             return
 
@@ -58,20 +56,14 @@ class BlockEnvMatchesPlaybookEnvValidation:
 
             block: PlaybookMetadata = PlaybookMetadata.from_non_built_path(block_file)
 
-            if (
-                block.type_ is not PlaybookType.BLOCK
-                or block.identifier not in dependent_blocks_ids
-            ):
+            if block.type_ is not PlaybookType.BLOCK or block.identifier not in dependent_blocks_ids:
                 continue
 
             if ALL_ENV in block.environments:
                 continue
 
             if missing := playbook_env.difference(set(block.environments)):
-                error_msg.append(
-                    f"Block <{block_file.name}> has missing environments from its playbook env"
-                    f" {missing}"
-                )
+                error_msg.append(f"Block <{block_file.name}> has missing environments from its playbook env {missing}")
 
         if error_msg:
             raise NonFatalValidationError("\n,".join(error_msg))

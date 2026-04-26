@@ -1,0 +1,69 @@
+name: Test Coverage Gate
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    paths:
+      - 'content/response_integrations/**'
+
+permissions:
+  contents: read
+
+jobs:
+  coverage-gate:
+    name: Check minimum test coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for required test files in changed integrations
+        env:
+          GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        # language=bash
+        run: |
+          # Find integrations that changed in this PR
+          changed_dirs=$(git diff --name-only origin/main...$GITHUB_PR_SHA -- content/response_integrations/ \
+            | grep -oP 'content/response_integrations/[^/]+/[^/]+/[^/]+' \
+            | sort -u)
+
+          if [ -z "$changed_dirs" ]; then
+            echo "No integration changes detected."
+            exit 0
+          fi
+
+          missing_imports=()
+          missing_ping=()
+          for dir in $changed_dirs; do
+            # Skip if not an integration (no pyproject.toml)
+            [ -f "$dir/pyproject.toml" ] || continue
+
+            # Check for test_imports.py (required for all integrations)
+            if [ ! -f "$dir/tests/test_defaults/test_imports.py" ]; then
+              missing_imports+=("$dir")
+            fi
+
+            # Check for test_ping.py (recommended)
+            if [ ! -f "$dir/tests/test_actions/test_ping.py" ] && \
+               [ ! -f "$dir/tests/test_actions/test_Ping.py" ]; then
+              missing_ping+=("$dir")
+            fi
+          done
+
+          if [ ${#missing_imports[@]} -gt 0 ]; then
+            echo "::warning::The following integrations are missing test_imports.py (required):"
+            for m in "${missing_imports[@]}"; do
+              echo "::warning file=$m::Missing tests/test_defaults/test_imports.py — import sanity test required"
+            done
+          fi
+
+          if [ ${#missing_ping[@]} -gt 0 ]; then
+            echo "::warning::The following integrations are missing test_ping.py:"
+            for m in "${missing_ping[@]}"; do
+              echo "::warning file=$m::Missing tests/test_actions/test_ping.py — run generate_test_mocks.py to auto-generate"
+            done
+          fi
+
+          if [ ${#missing_imports[@]} -eq 0 ] && [ ${#missing_ping[@]} -eq 0 ]; then
+            echo "All changed integrations have required test files ✓"
+          fi

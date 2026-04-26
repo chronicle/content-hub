@@ -52,12 +52,8 @@ def build_playbooks(
             _build_playbooks(set(playbooks), repos.custom, deconstruct=deconstruct)
 
         else:
-            commercial_not_found: set[str] = _build_playbooks(
-                set(playbooks), repos.commercial, deconstruct=deconstruct
-            )
-            community_not_found: set[str] = _build_playbooks(
-                set(playbooks), repos.community, deconstruct=deconstruct
-            )
+            commercial_not_found: set[str] = _build_playbooks(set(playbooks), repos.commercial, deconstruct=deconstruct)
+            community_not_found: set[str] = _build_playbooks(set(playbooks), repos.community, deconstruct=deconstruct)
 
             if commercial_not_found.intersection(community_not_found):
                 rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
@@ -113,9 +109,7 @@ def _build_playbooks(
         playbooks, repository.base_folders, deconstruct=deconstruct
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
-    normalized_playbooks: set[str] = {
-        _normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks
-    }
+    normalized_playbooks: set[str] = {_normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks}
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
         rich.print(
@@ -124,9 +118,7 @@ def _build_playbooks(
         )
 
     if valid_playbooks_paths:
-        rich.print(
-            f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]"
-        )
+        rich.print(f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]")
 
         if deconstruct:
             repository.deconstruct_playbooks(valid_playbooks_paths)
@@ -140,9 +132,7 @@ def _get_playbooks_paths_from_repository(
     playbooks_names: Iterable[str], repositories_paths: list[Path], *, deconstruct: bool = False
 ) -> set[Path]:
     result: set[Path] = set()
-    normalized_names = [
-        _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
-    ]
+    normalized_names = [_normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names]
     for path in repositories_paths:
         result.update(p for n in normalized_names if (p := path / n).exists())
     return result
