@@ -19,9 +19,7 @@ from string import Template
 
 import anyio
 
-from mp.describe.common.prompt_constructors.prompt_constructor import (
-    PromptConstructor as BasePromptConstructor,
-)
+from mp.describe.common.prompt_constructors.prompt_constructor import PromptConstructor as BasePromptConstructor
 
 
 class PromptConstructor(BasePromptConstructor, abc.ABC):

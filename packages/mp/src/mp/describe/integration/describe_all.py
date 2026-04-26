@@ -16,10 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mp.describe.common.describe_all import (
-    MarketplaceOrchestratorBase,
-    get_all_integrations_paths,
-)
+from mp.describe.common.describe_all import MarketplaceOrchestratorBase, get_all_integrations_paths
 from mp.describe.common.utils.paths import get_integration_path
 
 from .describe import DescribeIntegration

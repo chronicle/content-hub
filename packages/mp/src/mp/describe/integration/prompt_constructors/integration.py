@@ -28,9 +28,7 @@ from mp.core import constants
 from mp.describe.common.prompt_constructors.prompt_constructor import PromptConstructor
 
 if TYPE_CHECKING:
-    from mp.core.data_models.integrations.integration_meta.metadata import (
-        NonBuiltIntegrationMetadata,
-    )
+    from mp.core.data_models.integrations.integration_meta.metadata import NonBuiltIntegrationMetadata
 
 logger: logging.Logger = logging.getLogger(__name__)
 

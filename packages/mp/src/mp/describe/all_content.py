@@ -19,15 +19,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import mp.core.config
-from mp.describe.action.describe import DescribeAction
-from mp.describe.common.describe_all import (
-    MarketplaceOrchestratorBase,
-    get_all_integrations_paths,
-)
-from mp.describe.common.utils.paths import get_integration_path
-from mp.describe.connector.describe import DescribeConnector
-from mp.describe.integration.describe import DescribeIntegration
-from mp.describe.job.describe import DescribeJob
+
+from .action.describe import DescribeAction
+from .common.describe_all import MarketplaceOrchestratorBase, get_all_integrations_paths
+from .common.utils.paths import get_integration_path
+from .connector.describe import DescribeConnector
+from .integration.describe import DescribeIntegration
+from .job.describe import DescribeJob
 
 if TYPE_CHECKING:
     from collections.abc import Callable

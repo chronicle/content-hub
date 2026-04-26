@@ -406,14 +406,14 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
 
         metadata: dict[str, Any] = {}
         if await metadata_file.exists():
-            content: str = await metadata_file.read_text()
+            content: str = await metadata_file.read_text(encoding="utf-8")
             with contextlib.suppress(yaml.YAMLError):
                 metadata = yaml.safe_load(content) or {}
 
         if self.dst:
             dst_file: anyio.Path = anyio.Path(self.dst) / self.metadata_file_name
             if await dst_file.exists():
-                content: str = await dst_file.read_text()
+                content: str = await dst_file.read_text(encoding="utf-8")
                 with contextlib.suppress(yaml.YAMLError):
                     dst_metadata = yaml.safe_load(content) or {}
 
@@ -436,4 +436,4 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
 
         await save_dir.mkdir(parents=True, exist_ok=True)
         yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
-        await metadata_file.write_text(yaml.safe_dump(metadata))
+        await metadata_file.write_text(yaml.safe_dump(metadata), encoding="utf-8")

@@ -20,20 +20,10 @@ import collections
 import logging
 from typing import TYPE_CHECKING, NamedTuple, Protocol
 
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskID,
-    TextColumn,
-    TimeRemainingColumn,
-)
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeRemainingColumn
 
 import mp.core.config
-from mp.core.file_utils import (
-    get_all_marketplace_integrations_paths,
-    get_integrations_from_paths,
-)
+from mp.core.file_utils import get_all_marketplace_integrations_paths, get_integrations_from_paths
 
 if TYPE_CHECKING:
     from collections.abc import Callable

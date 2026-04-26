@@ -25,11 +25,7 @@ import typer
 import yaml
 
 from mp.core import constants
-from mp.core.file_utils import (
-    create_or_get_out_integrations_dir,
-    get_marketplace_integration_path,
-    is_built,
-)
+from mp.core.file_utils import create_or_get_out_integrations_dir, get_marketplace_integration_path, is_built
 
 logger: logging.Logger = logging.getLogger(__name__)
 
