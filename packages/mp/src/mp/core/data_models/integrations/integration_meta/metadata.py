@@ -330,7 +330,6 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             IsCustom=self.is_custom,
             IsPowerUp=self.is_powerup,
             IsCertified=self.is_certified,
-            ProductCategories=[c.value for c in self.product_categories],
             GoogleSecOpsProduct=self.google_secops_product,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)

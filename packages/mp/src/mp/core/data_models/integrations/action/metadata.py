@@ -296,7 +296,6 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,
-            ActionProductCategories=[c.value for c in self.action_product_categories] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
