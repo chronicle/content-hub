@@ -201,7 +201,9 @@ def parseHops(received):
             raise
         if "date" not in parsed_route:
             continue
-        hop_info["time"] = parsed_route["date"].astimezone(datetime.UTC).replace(tzinfo=None)
+        hop_info["time"] = (
+            parsed_route["date"].astimezone(datetime.UTC).replace(tzinfo=None)
+        )
         hop_info["blacklisted"] = False
         if "from" in parsed_route:
             for f in parsed_route["from"]:
@@ -217,7 +219,9 @@ def parseHops(received):
                         response = DbIpCity.get(f, api_key="free")
                         hop_info["from_geo"] = json.loads(response.to_json())
                     except Exception as expe:
-                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        template = (
+                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        )
                         message = template.format(type(expe).__name__, expe.args)
 
                     denylist["blacklisted"] = ip_check.blacklisted
@@ -240,7 +244,9 @@ def parseHops(received):
                             hop_info["from_geo"] = json.loads(response.to_json())
                             hop_info["from_ip_whois"] = ip_whois
                         except Exception as exp:
-                            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                            template = (
+                                "An exception of type {0} occurred. Arguments:\n{1!r}"
+                            )
                             message = template.format(type(exp).__name__, exp.args)
 
                         denylist["blacklisted"] = domain_check.blacklisted
@@ -248,7 +254,9 @@ def parseHops(received):
                         denylist["categories"] = domain_check.categories.copy()
                         hop_info["blacklist_info"].append(denylist)
                     except Exception as e:
-                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        template = (
+                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        )
                         message = template.format(type(e).__name__, e.args)
                         logger(message)
                 except Exception as ex:
@@ -282,7 +290,9 @@ def parseHops(received):
                         response = DbIpCity.get(resolved_ip, api_key="free")
                         hop_info["by_geo"] = json.loads(response.to_json())
                     except Exception as expl:
-                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        template = (
+                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        )
                         message = template.format(type(expl).__name__, expl.args)
                 except Exception as exp:
                     template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -293,7 +303,9 @@ def parseHops(received):
         else:
             hop_info["with"] = ""
         if previous_hop:
-            hop_info["delay"] = (parsed_route["date"] - previous_hop["date"]).total_seconds()
+            hop_info["delay"] = (
+                parsed_route["date"] - previous_hop["date"]
+            ).total_seconds()
         else:
             hop_info["delay"] = "*"
         previous_hop = hop_info
@@ -388,9 +400,11 @@ def buildResult(header, siemplify):
                     if "by" in fromserver:
                         result["SourceServer"] = fromserver["by"][0]
                         try:
-                            result["SourceServerIP"] = EmailUtilitiesManager.Resolver().query(
-                                result["SourceServer"],
-                            )[0][2]
+                            result["SourceServerIP"] = (
+                                EmailUtilitiesManager.Resolver().query(
+                                    result["SourceServer"],
+                                )[0][2]
+                            )
                         except:
                             pass
                 continue
