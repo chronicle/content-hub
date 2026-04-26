@@ -48,10 +48,6 @@ from mp.core.data_models.integrations.integration_meta.ai.product_categories imp
     PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY,
     IntegrationProductCategories,
 )
-from mp.core.data_models.integrations.integration_meta.metadata import (
-    IntegrationMetadata,
-    PythonVersion,
-)
 from mp.core.data_models.integrations.job.metadata import JobMetadata
 
 if TYPE_CHECKING:
@@ -63,9 +59,7 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.action.dynamic_results_metadata import DynamicResultsMetadata
     from mp.core.data_models.integrations.custom_families.metadata import NonBuiltCustomFamily
     from mp.core.data_models.integrations.integration import Integration
-    from mp.core.data_models.integrations.integration_meta.metadata import (
-        IntegrationMetadata,
-    )
+    from mp.core.data_models.integrations.integration_meta.metadata import IntegrationMetadata
     from mp.core.data_models.integrations.mapping_rules.metadata import NonBuiltMappingRule
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
