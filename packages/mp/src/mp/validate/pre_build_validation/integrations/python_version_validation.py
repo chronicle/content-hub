@@ -77,17 +77,12 @@ class PythonVersionValidation:
             pyproject: dict = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
             requires_python: str = pyproject.get("project", {}).get("requires-python", "")
 
-            found_valid_range = False
-            expected_ranges = []
-            for supported_v in mp.core.constants.SUPPORTED_PYTHON_VERSIONS:
-                major, minor = map(int, supported_v.split("."))
-                expected_range = f">={major}.{minor},<{major}.{minor + 1}"
-                expected_ranges.append(expected_range)
-                if requires_python == expected_range:
-                    found_valid_range = True
-                    break
+            expected_ranges = [
+                PythonVersion.from_string(v).to_range_string()
+                for v in mp.core.constants.SUPPORTED_PYTHON_VERSIONS
+            ]
 
-            if not found_valid_range:
+            if requires_python not in expected_ranges:
                 msg = (
                     f"The `requires-python` field in `{mp.core.constants.PROJECT_FILE}` ('{requires_python}') "
                     f"is not a valid range. Expected one of: {', '.join(expected_ranges)}."
