@@ -1,11 +1,27 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 SymantecICDX query Connector:
   ai_description: >-
     ### General Description
 
-    This connector integrates with the Symantec ICDX server to fetch security events
-    based on a user-defined query. It enables security teams to ingest relevant logs
-    or alerts into Google SecOps for centralized monitoring, investigation, and case
-    management.
+    The Symantec ICDX Query Connector enables the ingestion of security events from
+    a Symantec Integrated Cyber Defense Exchange (ICDX) server into Google SecOps.
+    It allows users to define custom search queries to filter specific events, ensuring
+    that only relevant security data is ingested. The connector maintains state to
+    prevent duplicate event ingestion and supports proxy configurations for secure
+    network communication.
 
 
     ### Parameters Description
@@ -20,24 +36,24 @@ SymantecICDX query Connector:
     | EventClassId | String | No | The field name used to determine the event name
     (sub-type). |
 
-    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
-    python process. |
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    python process running the script. |
 
     | Api Root | String | Yes | The base URL of the Symantec ICDX API. |
 
     | Api Token | String | Yes | The API token for authentication. |
 
-    | Verify SSL | Boolean | Yes | Whether to use SSL verification for the connection.
+    | Verify SSL | Boolean | Yes | Whether to verify SSL certificates on connection.
     |
 
-    | Search Query | String | Yes | The query string used to filter events from Symantec
+    | Search Query | String | Yes | The query string used to search for events in
     ICDX. |
 
     | Events Limit | Integer | Yes | The maximum number of events to pull in one cycle.
     |
 
-    | Max Days Backwards | Integer | Yes | The maximum number of days to look back
-    when fetching events. |
+    | Max Days Backwards | Integer | Yes | The maximum number of days to fetch events
+    since. |
 
     | Proxy Server Address | String | No | The address of the proxy server to use.
     |
@@ -49,21 +65,22 @@ SymantecICDX query Connector:
 
     ### Flow Description
 
-    1. The connector initializes a connection to the Symantec ICDX API using the provided
-    credentials and API root.
+    1. The connector initializes by connecting to the Symantec ICDX API using the
+    provided credentials and proxy settings.
 
-    2. It determines the start time for the query based on the last successful run
-    timestamp or the configured 'Max Days Backwards' parameter.
+    2. It determines the start time for the query based on the last execution timestamp
+    or the configured `Max Days Backwards` limit.
 
-    3. It executes the 'Search Query' against the Symantec ICDX API to retrieve events.
+    3. It executes the configured `Search Query` against the Symantec ICDX API to
+    retrieve events.
 
-    4. It filters out events that have already been processed by checking against
-    a local 'ids.json' file.
+    4. The connector filters out previously processed events using a local `ids.json`
+    file to ensure deduplication.
 
-    5. For each new event, it maps the data to a Google SecOps 'CaseInfo' object,
-    including relevant fields like device vendor, product, and event time.
+    5. For each new event, it maps the data to a Google SecOps `CaseInfo` object,
+    including relevant fields like device product and event time.
 
-    6. It checks for overflow conditions to prevent ingestion issues.
+    6. It checks for overflow conditions to prevent system overload.
 
-    7. Finally, it saves the new timestamp and updates the 'ids.json' file to track
-    processed events for the next cycle.
+    7. Finally, it saves the updated timestamp and processed event IDs to maintain
+    state for the next execution cycle.

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 Delete Sample:
   action_product_categories:
     add_alert_comment: false
@@ -14,9 +28,9 @@ Delete Sample:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action deletes samples from the A1000 appliance. This is a destructive mutation
-      of external data. It does not match any of the predefined categories like Enrichment,
-      Ticket management, Alert management, or Host containment.
+      The action deletes a file sample from an external appliance. None of the provided
+      categories (Enrich IOC, Contain Host, etc.) match this specific destructive
+      action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -32,20 +46,47 @@ Delete Sample:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description\nThe **Delete Sample** action removes specific file samples
-    and their associated metadata from the ReversingLabs A1000 appliance. This action
-    is primarily used for data management, privacy compliance, or clearing out unwanted
-    analysis data from the appliance.\n\n### Parameters Description\nThere are no
-    user-configurable parameters for this action. It automatically processes all `FILEHASH`
-    entities identified in the current context.\n\n### Flow Description\n1. **Authentication**:
-    The action establishes a connection to the ReversingLabs A1000 appliance using
-    the API Root, Username, and Password provided in the integration configuration.\n2.
-    **Entity Identification**: The script iterates through the target entities in
-    the SOAR case, specifically filtering for those of type `FILEHASH`.\n3. **Deletion
-    Execution**: For each identified file hash, the action sends a `DELETE` request
-    to the A1000 API endpoint (`/api/samples/{hash}/`).\n4. **Status Reporting**:
-    The action tracks successful deletions (based on HTTP 200 responses) and returns
-    a summary message listing the hashes that were successfully removed from the appliance.
+    ### General Description
+
+    The **Delete Sample** action allows security analysts to remove specific file
+    samples from a Reversinglabs A1000 appliance. This operation is destructive, as
+    it deletes the sample file itself along with all related metadata and extracted
+    data associated with that file hash on the appliance.
+
+
+    ### Parameters Description
+
+    There are no user-configurable parameters for this action. It operates directly
+    on the entities provided in the context.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the Reversinglabs
+    A1000 appliance using the API Root, Username, and Password provided in the integration
+    configuration.
+
+    2. **Entity Filtering**: The script iterates through the target entities in the
+    current scope and identifies those of type `FILEHASH`.
+
+    3. **Deletion Request**: For each identified file hash, the action sends a `DELETE`
+    request to the A1000 API endpoint (`/api/samples/{hash}/`).
+
+    4. **Result Tracking**: The action monitors the API response. If the status code
+    is 200, the hash is added to a list of successfully deleted items.
+
+    5. **Final Output**: The action concludes by providing a summary message of the
+    deleted hashes and sets the action's result value to `True` if at least one deletion
+    was successful, or `False` otherwise.
+
+
+    ### Additional Notes
+
+    * This action is irreversible. Once a sample is deleted from the A1000 appliance,
+    its analysis data cannot be recovered unless the file is re-uploaded.
+
+    * The action converts all hash identifiers to lowercase before sending the request
+    to ensure compatibility with the A1000 API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -54,111 +95,19 @@ Delete Sample:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes file samples and associated metadata from the ReversingLabs A1000 appliance.
+      Deletes the specified file sample and its associated metadata from the Reversinglabs
+      A1000 appliance.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a `DELETE` request to an external system (A1000 appliance)
-      to remove data. It does not fetch data, nor does it modify internal SOAR case
-      data (entities, insights, or comments).
+      The action performs a `DELETE` request to an external API (Reversinglabs A1000)
+      to remove a sample. It does not fetch data, nor does it modify internal SOAR
+      data (entities, insights, etc.).
   categories:
     enrichment: false
     reasoning: >-
-      The action does not fetch data (it performs a deletion), so it is not an enrichment
-      action.
-  entity_usage:
-    entity_types:
-    - FILEHASH
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters specifically
-      for `FILEHASH` entities using `if entity.entity_type == FILEHASH`.
-Get Report:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves threat intelligence (reputation, threat level, status)
-      for file hashes, which directly matches the 'Enrich IOC' category. It does not
-      perform any other actions like blocking, ticketing, or alert management.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: "### General Description\nThe **Get Report** action retrieves summary\
-    \ classification reports and detailed analysis metadata for file hashes from the\
-    \ ReversingLabs A1000 Malware Analysis Appliance. This action is used to enrich\
-    \ file-related indicators by providing threat levels, status (e.g., malicious,\
-    \ suspicious, known), and specific threat names identified by ReversingLabs.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| None | N/A | N/A | This action does not require\
-    \ any input parameters; it automatically processes all `FILEHASH` entities in\
-    \ the scope. |\n\n### Additional Notes\n* This action performs a bulk lookup for\
-    \ all identified hashes in a single API call.\n* It does not submit new files\
-    \ for analysis; it only retrieves existing reports.\n* Results are presented as\
-    \ data tables attached to the case for each hash.\n\n### Flow Description\n1.\
-    \ **Entity Identification**: The action scans the current context for entities\
-    \ of type `FILEHASH`.\n2. **Data Retrieval**: It sends a list of these hashes\
-    \ to the ReversingLabs A1000 `api/samples/list/` endpoint.\n3. **Context Enrichment**:\
-    \ For every hash found, the action extracts key fields including `threat_status`,\
-    \ `threat_level`, `threat_name`, and `trust_factor`.\n4. **Output Generation**:\
-    \ \n    * A data table is created for each hash and attached to the case.\n  \
-    \  * The full response is provided as a JSON result for further playbook processing."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data from the ReversingLabs A1000 API using a POST request
-      to retrieve reports for file hashes. It does not mutate external systems (no
-      block/delete/update actions). It does not mutate internal SOAR data (no entity
-      updates, insights, or comments). It simply outputs the retrieved data as tables
-      and JSON results.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action is an enrichment action because it fetches data from an external
-      source (ReversingLabs A1000) to provide context for file hashes. It does not
-      modify any external or internal state.
+      The action is a destructive operation (deletion) on an external system. It does
+      not fetch data, so it is not an enrichment action.
   entity_usage:
     entity_types:
     - FILEHASH
@@ -177,8 +126,8 @@ Get Report:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters for `FILEHASH`
-      types. It does not filter by any other properties.
-Get Scan Status:
+      using `if entity.entity_type == FILEHASH:`.
+Get Report:
   action_product_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -194,10 +143,9 @@ Get Scan Status:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves the processing status of file hashes from an external malware
-      analysis platform. This provides intelligence about the file's analysis state,
-      which aligns with the 'Enrich IOC' category. It does not perform any other actions
-      like updating alerts, creating tickets, or modifying security controls.
+      The action retrieves threat intelligence (threat status, threat level, malware
+      name) for file hashes. This matches the 'Enrich IOC' category. It does not perform
+      any other actions like blocking, ticketing, or alerting.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -215,45 +163,139 @@ Get Scan Status:
   ai_description: >-
     ### General Description
 
-    Retrieves the processing status of file hash entities from the ReversingLabs A1000
-    Malware Analysis platform. This action allows analysts to check if submitted samples
-    have finished analysis or are still being processed, providing visibility into
-    the malware analysis lifecycle.
+    The **Get Report** action retrieves a comprehensive classification summary and
+    detailed analysis for file samples from a ReversingLabs A1000 Malware Analysis
+    appliance using their hash values. This action is designed to enrich file hash
+    entities with threat intelligence, providing critical data points such as threat
+    status, malware names, threat levels, and trust factors.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not require any input parameters beyond
-    the entities in the context. |
-
-
-    ### Additional Notes
-
-    * This action performs a bulk lookup of hash statuses using a POST request to
-    the `/api/samples/status/` endpoint of the A1000 API.
-
-    * The action is designed to process `FILEHASH` entities. If no status information
-    is returned for the provided hashes, the action will complete with a failure status.
+    There are no parameters for this action.
 
 
     ### Flow Description
 
-    1. **Entity Collection**: The action iterates through the `target_entities` in
-    the current SOAR case and identifies all entities of type `FILEHASH`.
+    1. **Entity Filtering**: The action iterates through all entities in the current
+    context and filters for those of type `FILEHASH`.
 
-    2. **Status Query**: It sends a bulk request to the ReversingLabs A1000 API using
-    the collected hash values to retrieve their current processing status.
+    2. **API Authentication**: It initializes the ReversingLabs A1000 client using
+    the integration's configured API Root, Username, and Password to obtain an authorization
+    token.
 
-    3. **Data Processing**: The API response is parsed to map each hash to its specific
-    status (e.g., 'processed', 'uploading', 'analyzing').
+    3. **Data Retrieval**: The action sends a batch request to the A1000 `/api/samples/list/`
+    endpoint, passing the collected hash values and requesting specific fields including
+    `threat_status`, `threat_level`, `threat_name`, and `trust_factor`.
 
-    4. **Output Generation**: The action generates a data table named 'Scan Status:'
-    for the action result and provides a JSON result containing the status mapping
-    for downstream playbook logic.
+    4. **Result Processing**: For each hash that returns a report, the action flattens
+    the dictionary and generates a dedicated data table on the case wall for that
+    specific hash.
+
+    5. **Output**: The action concludes by attaching the complete raw JSON response
+    to the execution results, allowing for further automated analysis or logic in
+    the playbook.
+
+
+    ### Additional Notes
+
+    This action is strictly read-only regarding the external ReversingLabs system.
+    It queries existing reports and does not trigger new file uploads or analysis
+    tasks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches threat intelligence data from the ReversingLabs A1000 appliance
+      for file hash entities. It does not mutate external systems (the API call is
+      a retrieval). It does not mutate internal SOAR data (no entity updates, insights,
+      or comments). It only populates the action result with data tables and JSON.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action is an enrichment action. It fetches data (threat intelligence) and
+      does not mutate external or internal state. It meets all criteria for an enrichment
+      action.
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and checks `if entity.entity_type
+      == FILEHASH`. It filters by entity type.
+Get Scan Status:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the processing status of file hashes, which provides intelligence
+      about the indicator's state in the analysis appliance. This aligns with the
+      'Enrich IOC' category. It does not perform any other actions like blocking,
+      ticketing, or alert modification.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: "### General Description\nThe **Get Scan Status** action retrieves\
+    \ the current processing status for a list of file hash entities from the ReversingLabs\
+    \ A1000 Malware Analysis Appliance. This action is primarily used to check if\
+    \ a previously submitted sample has finished analysis or to verify if the system\
+    \ already has a record of the hash.\n\n### Parameters Description\nThere are no\
+    \ parameters for this action.\n\n### Additional Notes\n* This action specifically\
+    \ targets **FILEHASH** entities.\n* Although the underlying API call uses a POST\
+    \ method, it is a read-only operation intended for batch status retrieval and\
+    \ does not modify the state of the A1000 system.\n\n### Flow Description\n1. **Entity\
+    \ Filtering:** The action identifies all `FILEHASH` entities within the current\
+    \ alert context.\n2. **Data Collection:** It extracts the identifiers (hashes)\
+    \ of these entities and converts them to lowercase for consistency.\n3. **API\
+    \ Query:** The action sends a batch request to the ReversingLabs A1000 `api/samples/status/`\
+    \ endpoint to fetch the processing status for all collected hashes.\n4. **Result\
+    \ Processing:** \n    * If statuses are found, it generates a mapping of hashes\
+    \ to their respective statuses (e.g., 'processed').\n    * It creates a data table\
+    \ named \"Scan Status:\" to display these results in the case wall.\n    * It\
+    \ attaches the raw status data as a JSON result for use in downstream playbook\
+    \ logic.\n5. **Completion:** The action concludes with a success message if data\
+    \ was retrieved, or a failure message if the status could not be obtained."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -266,17 +308,17 @@ Get Scan Status:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action fetches data from an external system (ReversingLabs A1000) to retrieve
-      the status of file hashes. It does not mutate external data (it is a read-only
-      query operation). It does not mutate internal SOAR data (it does not update
-      entities, create insights, or modify alerts; it only adds a data table and JSON
-      result to the action output).
+      the status of file hashes. It does not perform any state-changing operations
+      on the external system (read-only POST). It does not modify internal case data,
+      update entities, or create insights; it only outputs results via data tables
+      and JSON results.
   categories:
     enrichment: true
     reasoning: >-
-      The action is an enrichment action because it proactively fetches supplemental
-      context (processing status) for entities (file hashes) from an external source.
-      It does not mutate external systems, and it does not modify existing internal
-      SOAR data (it only adds reporting data to the action result).
+      The action is designed to fetch contextual information (scan status) about file
+      hashes from an external system. It does not mutate external data, nor does it
+      modify internal case data (like insights or comments). It meets the criteria
+      for an enrichment action.
   entity_usage:
     entity_types:
     - FILEHASH
@@ -295,7 +337,8 @@ Get Scan Status:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and explicitly filters for
-      entities where `entity.entity_type == FILEHASH`.
+      entities where `entity.entity_type == FILEHASH`. Therefore, it only processes
+      FILEHASH entities.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -312,9 +355,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a diagnostic tool used to verify connectivity to the ReversingLabs
-      A1000 API. It does not perform any of the defined operational tasks such as
-      enrichment, containment, or ticket management.
+      The action is a diagnostic connectivity test ('Ping'). It does not perform any
+      of the defined operations such as enriching IOCs, managing tickets, or modifying
+      alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -333,35 +376,38 @@ Ping:
     ### General Description
 
     The **Ping** action is a diagnostic tool used to verify the connectivity between
-    the Google SecOps platform and the **ReversingLabs A1000 Malware Analysis Appliance**.
-    It ensures that the integration is correctly configured and that the provided
-    credentials have the necessary permissions to interact with the A1000 API.
+    Google SecOps and the Reversinglabs A1000 Malware Analysis Appliance. Its primary
+    purpose is to ensure that the integration configuration (API Root, Username, and
+    Password) is valid and that the external service is reachable and responding to
+    requests.
 
 
     ### Parameters Description
 
-    There are no parameters for this action.
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action retrieves the API Root, Username, and
-    Password from the integration configuration.
-
-    2. **Client Initialization**: It initializes the `A1000MalwareAnalysisClient`
-    with the provided credentials.
-
-    3. **Connectivity Test**: The action executes a connectivity test by querying
-    the status of a predefined test hash.
-
-    4. **Completion**: If the API responds successfully, the action returns a 'Connected
-    Successfully' message.
+    There are no input parameters for this action.
 
 
     ### Additional Notes
 
-    This action does not process any entities or modify any data within the SecOps
-    platform or the external A1000 system.
+    This action performs a functional test by attempting to retrieve the processing
+    status of a hardcoded test hash. It does not interact with any entities present
+    in the current case or alert.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action extracts the API Root, Username, and
+    Password from the integration's shared configuration.
+
+    2. **Authentication**: It initializes the A1000 client, which performs a POST
+    request to the `/api-token-auth/` endpoint to obtain an authorization token.
+
+    3. **Connectivity Validation**: The action calls the `test_connectivity` method,
+    which sends a POST request to the `/api/samples/status/` endpoint using a predefined
+    test hash.
+
+    4. **Completion**: If the API responds successfully, the action concludes with
+    a success message and a boolean result indicating connectivity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -373,15 +419,14 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity test by making a POST request to the A1000
-      API to check the status of a test hash. It does not mutate external or internal
-      data, nor does it update entities or create insights.
+      The action performs a connectivity test by sending a POST request to the external
+      API to check the status of a sample. It does not retrieve contextual data for
+      entities, nor does it modify any external or internal state.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
-      action per the instructions. Additionally, it does not perform any data enrichment
-      or state modification.
+      The action is a 'Ping' diagnostic tool. According to the instructions, actions
+      named 'Ping' must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -398,8 +443,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities. It performs a global connectivity
-      test against the ReversingLabs A1000 API.
+      The action does not interact with any entities. The `SimulationDataJson` explicitly
+      defines an empty list of entities.
 Upload File:
   action_product_categories:
     add_alert_comment: false
@@ -416,10 +461,10 @@ Upload File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to the ReversingLabs A1000 appliance for analysis
-      and retrieves the report. This directly aligns with the 'Submit File' category,
-      which involves uploading a sample to an analysis engine and returning a behavior
-      report.
+      The action uploads a file to a sandbox/analysis engine (ReversingLabs A1000)
+      and retrieves a report. This matches the 'Submit File' category. It does not
+      match 'Enrich IOC' because it is not querying an existing indicator, but rather
+      submitting a new file for analysis.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -437,46 +482,45 @@ Upload File:
   ai_description: >-
     ### General Description
 
-    Uploads a file to the ReversingLabs A1000 appliance for automated malware analysis.
-    This action submits a local file to the A1000 system, monitors its processing
-    status until completion, and retrieves a comprehensive analysis report containing
-    critical security metadata such as threat levels, status, and classification details.
+    Uploads a file from a specified local path to the ReversingLabs A1000 appliance
+    for automated malware analysis. This action is used to submit samples that are
+    not yet present in the A1000 environment to retrieve detailed threat intelligence,
+    including classification, threat level, and trust factors.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
     | :--- | :--- | :--- | :--- |
 
-    | File Path | string | True | The absolute path to the file on the local system
-    that needs to be uploaded for analysis. |
+    | File Path | String | Yes | The full local path to the file on the system where
+    the agent is running that should be uploaded for analysis. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The action authenticates with the ReversingLabs A1000 appliance
-    using the configured API credentials.
+    1. **Authentication**: Connects to the ReversingLabs A1000 appliance using the
+    configured API credentials.
 
     2. **File Upload**: Submits the file located at the provided 'File Path' to the
     A1000 `/api/uploads/` endpoint.
 
-    3. **Status Polling**: Enters a polling loop, checking the processing status of
-    the file's SHA1 hash until the appliance marks it as 'processed'.
+    3. **Processing Wait**: Enters a polling loop, checking the processing status
+    of the uploaded file's SHA1 hash until the status is marked as 'processed'.
 
-    4. **Report Retrieval**: Once processing is finished, the action fetches the summary
-    classification report for the file.
+    4. **Report Retrieval**: Fetches the summary classification report for the file
+    once processing is complete.
 
-    5. **Data Output**: The retrieved report is flattened and presented as a data
-    table named 'File Details:' and also attached as a raw JSON result for further
-    playbook processing.
+    5. **Data Output**: Formats the analysis results into a data table ('File Details:')
+    and attaches the full JSON response to the action results.
 
 
     ### Additional Notes
 
-    This action is synchronous and will wait (block) until the A1000 appliance has
-    finished analyzing the file. Ensure that the environment where the action runs
-    has read access to the specified file path.
+    This action does not run on SecOps entities; it requires a direct file path as
+    input. It is a synchronous action that will wait (block) until the A1000 appliance
+    finishes analyzing the file.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -485,21 +529,21 @@ Upload File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file to the ReversingLabs A1000 appliance for malware analysis.
+      Uploads a file to the ReversingLabs A1000 appliance, creating a new sample record
+      for analysis.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a POST request to upload a file to the A1000 appliance,
-      which constitutes an external mutation. It subsequently polls for status and
-      performs a GET request to retrieve the analysis report, meaning it fetches data.
-      It does not modify internal SOAR data (entities, insights, or case comments).
+      which constitutes an external data mutation. It then polls for status and performs
+      a GET request to retrieve the analysis report, meaning it fetches data. It does
+      not modify internal SecOps data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs an external mutation by uploading a file to the A1000 appliance.
-      According to the enrichment definition, an action is only classified as 'Enrichment'
-      if it does not create, update, or delete data in any external platform. Therefore,
-      this action is not an enrichment action.
+      The action is not an enrichment action because it mutates external data by uploading
+      a file to the A1000 appliance. Enrichment actions must be read-only regarding
+      external systems.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -516,6 +560,5 @@ Upload File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It takes a file path as a parameter
-      and performs an analysis on that file, independent of any specific SecOps entity
-      objects.
+      The action does not process any SecOps entities. It operates on a local file
+      path provided as a parameter.
