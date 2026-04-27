@@ -3,18 +3,16 @@ name: Validate Content-Hub
 on:
   push:
     branches:
-    - '**'
+      - '**'
     paths:
-    - 'content/**'
-    - 'packages/**'
-    - '.github/workflows/**'
+      - 'content/**'
+      - 'packages/**'
   pull_request:
     branches:
-    - '**'
+      - '**'
     paths:
-    - 'content/**'
-    - 'packages/**'
-    - '.github/workflows/**'
+      - 'content/**'
+      - 'packages/**'
 
 permissions:
   contents: read
@@ -28,57 +26,58 @@ jobs:
       validate_args: ${{ steps.compute.outputs.args }}
       should_validate: ${{ steps.compute.outputs.should_validate }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Check for changes
-      uses: dorny/paths-filter@v3
-      id: filter
-      with:
-        base: ${{ github.event.pull_request.base.sha || github.event.before }}
-        filters: |
-          mp:
-            - 'packages/mp/**'
-            - '.github/workflows/**'
-          response_integrations_google:
-            - 'content/response_integrations/google/**'
-          response_integrations_third_party:
-            - 'content/response_integrations/third_party/**'
-            - 'content/response_integrations/power_up/**'
-          playbooks:
-            - 'content/playbooks/**'
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # language=yaml
+          filters: |
+            mp:
+              - 'packages/mp/**'
+            response_integrations_google:
+              - 'content/response_integrations/google/**'
+            response_integrations_third_party:
+              - 'content/response_integrations/third_party/**'
+              - 'content/response_integrations/power_ups/**'
+            playbooks:
+              - 'content/playbooks/**'
 
-    - name: Compute validation targets
-      id: compute
-      run: |
-        MP="${{ steps.filter.outputs.mp }}"
-        GOOGLE="${{ steps.filter.outputs.response_integrations_google }}"
-        THIRD_PARTY="${{ steps.filter.outputs.response_integrations_third_party }}"
-        PLAYBOOKS="${{ steps.filter.outputs.playbooks }}"
-
-        # If mp/workflows changed, validate everything
-        if [[ "$MP" == "true" ]]; then
-          echo "args=all_content" >> $GITHUB_OUTPUT
-          echo "should_validate=true" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-
-        # Build args from changed content areas
-        ARGS=""
-        [[ "$GOOGLE" == "true" ]] && ARGS="$ARGS google"
-        [[ "$THIRD_PARTY" == "true" ]] && ARGS="$ARGS third_party"
-        [[ "$PLAYBOOKS" == "true" ]] && ARGS="$ARGS playbooks"
-        ARGS=$(echo "$ARGS" | xargs)  # trim whitespace
-
-        if [[ -n "$ARGS" ]]; then
-          echo "args=$ARGS" >> $GITHUB_OUTPUT
-          echo "should_validate=true" >> $GITHUB_OUTPUT
-        else
-          echo "args=" >> $GITHUB_OUTPUT
-          echo "should_validate=false" >> $GITHUB_OUTPUT
-        fi
+      - name: Compute validation targets
+        id: compute
+        # language=bash
+        run: |
+          MP="${{ steps.filter.outputs.mp }}"
+          GOOGLE="${{ steps.filter.outputs.response_integrations_google }}"
+          THIRD_PARTY="${{ steps.filter.outputs.response_integrations_third_party }}"
+          PLAYBOOKS="${{ steps.filter.outputs.playbooks }}"
+          
+          # If mp package changed, validate everything
+          if [[ "$MP" == "true" ]]; then
+            echo "args=all_content" >> $GITHUB_OUTPUT
+            echo "should_validate=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Build args from changed content areas
+          ARGS=""
+          [[ "$GOOGLE" == "true" ]] && ARGS="$ARGS google"
+          [[ "$THIRD_PARTY" == "true" ]] && ARGS="$ARGS third_party"
+          [[ "$PLAYBOOKS" == "true" ]] && ARGS="$ARGS playbooks"
+          ARGS=$(echo "$ARGS" | xargs)  # trim whitespace
+          
+          if [[ -n "$ARGS" ]]; then
+            echo "args=$ARGS" >> $GITHUB_OUTPUT
+            echo "should_validate=true" >> $GITHUB_OUTPUT
+          else
+            echo "args=" >> $GITHUB_OUTPUT
+            echo "should_validate=false" >> $GITHUB_OUTPUT
+          fi
 
   validate:
     name: Validate Content
@@ -87,29 +86,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository ${{ needs.changes.outputs.validate_args }} --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install mp package
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+      - name: Run Validation
+        env:
+          GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        # language=bash
+        run: |
+          mp config --root-path . --processes 10 --display-config
+          mp validate repository ${{ needs.changes.outputs.validate_args }} --only-pre-build
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: artifacts/validation_report.md
+          retention-days: 2

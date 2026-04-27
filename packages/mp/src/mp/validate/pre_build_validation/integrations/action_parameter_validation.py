@@ -51,9 +51,7 @@ class ActionParametersValuesValidation:
             NonFatalValidationError: If the integration has actions with invalid parameters.
 
         """
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
-            validation_path, constants.ACTIONS_DIR
-        )
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(validation_path, constants.ACTIONS_DIR)
 
         actions_data: list[tuple[ActionName, list[ActionParameter]]] = filter_and_map_yaml_files(
             component_defs.get(constants.ACTIONS_DIR, []),
@@ -126,9 +124,7 @@ def _is_valid_default_value(
     optional_values: list[str] | None,
     default_value: str | bool | float | None,  # noqa: FBT001
 ) -> bool:
-    return (
-        default_value in {None, ""} or optional_values is None or default_value in optional_values
-    )
+    return default_value in {None, ""} or optional_values is None or default_value in optional_values
 
 
 def _format_error_dict(error_dict: dict[ActionName, list[str]]) -> str:
@@ -136,6 +132,5 @@ def _format_error_dict(error_dict: dict[ActionName, list[str]]) -> str:
         return "None"
 
     return ", ".join(
-        f"{', '.join(sorted(params))} from {action_name}"
-        for action_name, params in sorted(error_dict.items())
+        f"{', '.join(sorted(params))} from {action_name}" for action_name, params in sorted(error_dict.items())
     )

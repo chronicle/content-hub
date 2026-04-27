@@ -51,9 +51,7 @@ class DependencyProviderValidation:
             msg: str = f"uv.lock file not found at {uv_lock_path}"
             raise FatalValidationError(msg)
 
-        uv_lock_data: dict[str, dict[str, str]] = tomllib.loads(
-            uv_lock_path.read_text(encoding="utf-8")
-        )
+        uv_lock_data: dict[str, dict[str, str]] = tomllib.loads(uv_lock_path.read_text(encoding="utf-8"))
 
         packages: list[dict[str, Any]] = uv_lock_data.get("package", [])
         for pkg in packages:

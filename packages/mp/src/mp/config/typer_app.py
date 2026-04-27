@@ -95,12 +95,7 @@ def config(
         k: str | None = mp.core.config.get_gemini_api_key()
         if k:
             k = f"{k[:4]}{'*' * (len(k) - 4)}"
-        rich.print(
-            f"Marketplace path: {p}\n"
-            f"Number of processes: {n}\n"
-            f"Gemini concurrency: {c}\n"
-            f"API Key: {k}"
-        )
+        rich.print(f"Marketplace path: {p}\nNumber of processes: {n}\nGemini concurrency: {c}\nAPI Key: {k}")
 
 
 def _set_marketplace_path(marketplace_path: str) -> None:

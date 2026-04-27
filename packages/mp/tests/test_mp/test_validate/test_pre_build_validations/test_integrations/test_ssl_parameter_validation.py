@@ -108,9 +108,7 @@ class TestSSLParameterValidation:
         with pytest.raises(NonFatalValidationError, match="must be a boolean true"):
             self.integration_runner.run(temp_integration)
 
-    def test_ssl_parameter_excluded_from_default_value_check(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_ssl_parameter_excluded_from_default_value_check(self, temp_integration: pathlib.Path) -> None:
         """Test that an excluded integration can have SSL default as False."""
         integration_file = temp_integration / constants.DEFINITION_FILE
         params = [
@@ -128,9 +126,7 @@ class TestSSLParameterValidation:
             self.integration_runner.run(temp_integration)  # Should not raise
 
     @pytest.mark.parametrize("ssl_param_name", sorted(constants.VALID_SSL_PARAM_NAMES))
-    def test_valid_ssl_parameter_names(
-        self, temp_integration: pathlib.Path, ssl_param_name: str
-    ) -> None:
+    def test_valid_ssl_parameter_names(self, temp_integration: pathlib.Path, ssl_param_name: str) -> None:
         """Test that various valid SSL parameter names are accepted."""
         integration_file = temp_integration / constants.DEFINITION_FILE
         params = [

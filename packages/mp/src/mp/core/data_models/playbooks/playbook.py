@@ -37,13 +37,8 @@ from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.playbooks.meta.access_permissions import (
-        BuiltAccessPermission,
-    )
-    from mp.core.data_models.playbooks.trigger.metadata import (
-        BuiltTrigger,
-        NonBuiltTrigger,
-    )
+    from mp.core.data_models.playbooks.meta.access_permissions import BuiltAccessPermission
+    from mp.core.data_models.playbooks.trigger.metadata import BuiltTrigger, NonBuiltTrigger
     from mp.core.data_models.playbooks.widget.metadata import (
         BuiltPlaybookWidgetMetadata,
         NonBuiltPlaybookWidgetMetadata,
@@ -177,9 +172,7 @@ class Playbook:
             A BuiltPlaybook dictionary.
 
         """
-        built_widgets: list[BuiltPlaybookWidgetMetadata] = [
-            widget.to_built() for widget in self.widgets
-        ]
+        built_widgets: list[BuiltPlaybookWidgetMetadata] = [widget.to_built() for widget in self.widgets]
 
         built_overviews: list[BuiltOverview] = [overview.to_built() for overview in self.overviews]
         built_overviews_for_definition: list[BuiltOverviewDetails] = [

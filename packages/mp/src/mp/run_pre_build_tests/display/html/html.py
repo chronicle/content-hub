@@ -41,9 +41,7 @@ class HtmlFormat:
         try:
             html_content: str = self._generate_validation_report_html()
 
-            with tempfile.NamedTemporaryFile(
-                mode="w", delete=False, suffix=".html", encoding="utf-8"
-            ) as temp_file:
+            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:
                 temp_file.write(html_content)
                 report_path: Path = pathlib.Path(temp_file.name)
 

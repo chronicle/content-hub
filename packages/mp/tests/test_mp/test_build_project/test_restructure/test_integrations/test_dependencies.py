@@ -44,11 +44,9 @@ def test_restructure(tmp_path: Path) -> None:
     integration_path.mkdir()
     integration_out_path = tmp_path / "integration_out"
     integration_out_path.mkdir()
-    dependencies: Dependencies = (
-        mp.build_project.restructure.integrations.dependencies.Dependencies(
-            path=integration_path,
-            out_path=integration_out_path,
-        )
+    dependencies: Dependencies = mp.build_project.restructure.integrations.dependencies.Dependencies(
+        path=integration_path,
+        out_path=integration_out_path,
     )
 
     pyproject_path: Path = dependencies.path / mp.core.constants.PROJECT_FILE

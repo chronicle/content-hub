@@ -77,9 +77,7 @@ class NonBuiltPlaybookWidgetMetadata(TypedDict):
     integration_name: str | None
 
 
-class PlaybookWidgetMetadata(
-    ComponentMetadata[BuiltPlaybookWidgetMetadata, NonBuiltPlaybookWidgetMetadata]
-):
+class PlaybookWidgetMetadata(ComponentMetadata[BuiltPlaybookWidgetMetadata, NonBuiltPlaybookWidgetMetadata]):
     title: str
     description: str
     identifier: str
@@ -140,16 +138,11 @@ class PlaybookWidgetMetadata(
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")
-        ]
+        return [cls._from_non_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltPlaybookWidgetMetadata) -> Self:
-        data_json: pydantic.Json | BuiltWidgetDataDefinition = json.loads(
-            built["DataDefinitionJson"]
-        )
+        data_json: pydantic.Json | BuiltWidgetDataDefinition = json.loads(built["DataDefinitionJson"])
         return cls(
             title=built["Title"],
             description=built["Description"],
@@ -213,9 +206,7 @@ class PlaybookWidgetMetadata(
             TemplateIdentifier=self.template_identifier,
             Type=self.type.value,
             DataDefinitionJson=json.dumps(
-                self.data_definition.to_built()
-                if self.type == WidgetType.HTML
-                else self.data_definition
+                self.data_definition.to_built() if self.type == WidgetType.HTML else self.data_definition
             ),
             GridColumns=self.widget_size.value,
             ActionWidgetTemplateIdentifier=self.action_widget_template_id,
@@ -244,9 +235,7 @@ class PlaybookWidgetMetadata(
             type=self.type.to_string(),
             block_step_instance_name=self.block_step_instance_name,
             data_definition=(
-                self.data_definition.to_non_built()
-                if self.type == WidgetType.HTML
-                else self.data_definition
+                self.data_definition.to_non_built() if self.type == WidgetType.HTML else self.data_definition
             ),
             widget_size=self.widget_size.to_string(),
             step_integration=self.step_integration,
