@@ -1,6 +1,9 @@
 from __future__ import annotations
+import logging
 import urllib.parse
 import uuid
+
+import validators
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
@@ -9,6 +12,8 @@ from .adapter import create_drp_poller
 
 # Import Managers
 from .config import Config
+
+logger = logging.getLogger(__name__)
 
 
 def extract_host(value, fallback=""):
@@ -51,8 +56,8 @@ def extract_host(value, fallback=""):
 
         if host:
             return host
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("extract_host failed for value=%r: %s", value, e)
 
     if fallback:
         return fallback
@@ -65,8 +70,6 @@ class EntityValidator(object):
         pass
 
     def get_entity_type(self, entity):
-        import validators
-
         entity = entity.lower()
 
         if validators.domain(entity):
@@ -107,18 +110,35 @@ class GIBConnector:
         self.siemplify.LOGGER.info("Provider Name = " + Config.PROVIDER_NAME)
         self.siemplify.LOGGER.info('──── GET USER PARAMS')
 
+        verify_ssl = True
         if creds:
-            username, api_key, api_url = creds
+            if len(creds) >= 4:
+                username, api_key, api_url, verify_ssl = creds[0], creds[1], creds[2], creds[3]
+            else:
+                username, api_key, api_url = creds
         else:
             username = extract_configuration_param(self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API login", print_value=True)
             api_key = extract_configuration_param(self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API key", print_value=False)
             api_url = extract_configuration_param(self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API URL", print_value=True)
+            verify_ssl = extract_configuration_param(
+                self.siemplify,
+                provider_name=Config.PROVIDER_NAME,
+                param_name="Verify SSL",
+                input_type=bool,
+                default_value=True,
+                print_value=True,
+            )
 
         if api_url and not api_url.endswith("/"):
             api_url += "/"
 
         self.siemplify.LOGGER.info('──── API INITIALIZATION')
-        poller = create_drp_poller(username=username, api_key=api_key, api_url=api_url)
+        poller = create_drp_poller(
+            username=username,
+            api_key=api_key,
+            api_url=api_url,
+            verify_ssl=verify_ssl,
+        )
         return poller
 
 
