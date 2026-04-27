@@ -87,6 +87,7 @@ from mp.core.data_models.playbooks.widget.metadata import (
     PlaybookWidgetMetadata,
 )
 
+
 BUILT_STEP_DEBUG_ENRICHMENT_DATA: BuiltStepDebugEnrichmentData = {
     "Field": "field",
     "Value": "value",
@@ -117,7 +118,7 @@ BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
     "ResultJson": '{"key": "value"}',
     "ScopeEntitiesEnrichmentData": [BUILT_STEP_DEBUG_ENRICHMENT_DATA],
     "ScopeEntitiesEnrichmentDataJson": '[{"Field": "field", "Value": "value", '
-    '"UseInPlaybook": true, "IsCustom": false}]',
+                                       '"UseInPlaybook": true, "IsCustom": false}]',
     "TenantId": "tenant_id",
 }
 
@@ -513,7 +514,7 @@ BUILT_PLAYBOOK_METADATA: BuiltPlaybookMetadata = {
     "IsEnable": True,
     "Version": 1.0,
     "Description": "description",
-    "CreationSource": 0,
+    "CreationSource": 1,
     "DefaultAccessLevel": 1,
     "SimulationClone": False,
     "DebugAlertIdentifier": "debug_alert_id",
@@ -668,7 +669,6 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     permissions=[],
     environments=["*"],
 )
-
 
 BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
     "htmlHeight": 400,
@@ -835,7 +835,6 @@ DISPLAY_INFO = PlaybookDisplayInfo(
     should_display_in_content_hub=False,
     allowed_debug_data=False,
 )
-
 
 BUILT_OVERVIEW: BuiltOverview = {
     "OverviewTemplate": {
