@@ -11,7 +11,19 @@ from ..core.UtilsManager import GIBConnector
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Fetch DRP violation details for each ``DestinationURL`` target entity.
+
+    For every target entity of type ``DestinationURL`` the action looks up the
+    violation UID associated with the URL (built from the alert's security
+    events into a URL→UID map), calls ``DRPPoller.search_feed_by_id`` and
+    flattens the response into a stable result dict (id, brand, status,
+    scores, dates, …). One ``case_insight`` is created per successfully
+    fetched entity and the full collection is attached as a JSON list result.
+    The action ends with ``EXECUTION_STATE_FAILED`` only when at least one
+    fetch raised an exception; missing UID matches and the empty-result case
+    are reported via ``result_value=False`` without a failed status.
+    """
     siemplify = SiemplifyAction()
     siemplify.script_name = "Get Violation Details"
 
@@ -115,10 +127,9 @@ def main():
 
     if not results and status != EXECUTION_STATE_FAILED:
         output_messages.append("No DestinationURL entities with a violation ID were found.")
-        status = EXECUTION_STATE_FAILED
+        result_value = False
 
-    if results:
-        siemplify.result.add_result_json(json.dumps(results if len(results) > 1 else results[0]))
+    siemplify.result.add_result_json(json.dumps(results))
 
     siemplify.end("\n".join(output_messages), result_value, status)
 
