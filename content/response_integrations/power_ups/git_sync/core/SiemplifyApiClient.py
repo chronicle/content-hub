@@ -20,10 +20,12 @@ from urllib.parse import urljoin
 import requests
 from packaging import version
 from requests.exceptions import HTTPError
+
 from TIPCommon.rest.soar_api import (
     get_integration_instance_details_by_id,
     get_integration_instance_details_by_name,
 )
+
 
 VERSION_6117 = version.parse("6.1.17")
 VERSION_6138 = version.parse("6.1.38.77")
@@ -578,7 +580,7 @@ class SiemplifyApiClient:
                 chronicle_soar=chronicle_soar,
                 integration_identifier=integration_name,
                 instance_display_name=display_name,
-                environments=environments,
+                environments=environments
             )
         except HTTPError as e:
             if e.response and e.response.status_code == 404 and consider_404_to_none:

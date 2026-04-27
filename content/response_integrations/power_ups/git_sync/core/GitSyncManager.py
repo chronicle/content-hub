@@ -17,11 +17,11 @@ from __future__ import annotations
 import re
 import tempfile
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any, TYPE_CHECKING
 
 from jinja2 import Template
-from TIPCommon.types import SingleJson
 
+from TIPCommon.types import SingleJson
 from .cache import Cache, Context, get_context_factory
 from .constants import (
     ALL_ENVIRONMENTS_IDENTIFIER,
@@ -38,6 +38,7 @@ from .definitions import Connector, File, Integration, Job, Mapping, Workflow
 from .GitContentManager import GitContentManager
 from .GitManager import Git
 from .SiemplifyApiClient import SiemplifyApiClient
+
 
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -75,14 +76,12 @@ class GitSyncManager:
         smp_credentials: dict = None,
         smp_verify: bool = True,
         git_verify: bool = True,
-        git_server_fingerprint: str = "",
+        git_server_fingerprint: str = '',
     ):
         self.logger = siemplify.LOGGER
         self._siemplify = siemplify
         self._cache = {}
-        self._wd = tempfile.TemporaryDirectory(
-            dir=siemplify.RUN_FOLDER, ignore_cleanup_errors=True
-        )
+        self._wd = tempfile.TemporaryDirectory(dir=siemplify.RUN_FOLDER, ignore_cleanup_errors=True)
         self.api = SiemplifyApiClient(
             siemplify.API_ROOT,
             siemplify.api_key,
@@ -153,13 +152,9 @@ class GitSyncManager:
         if not branch:
             branch = get_conf_param("Branch", print_value=True)
 
-        git_server_fingerprint = siemplify.extract_job_param(
-            "Git Server Fingerprint", print_value=True
-        )
+        git_server_fingerprint = siemplify.extract_job_param("Git Server Fingerprint", print_value=True)
         if not git_server_fingerprint:
-            git_server_fingerprint = get_conf_param(
-                "Git Server Fingerprint", print_value=True
-            )
+            git_server_fingerprint = get_conf_param("Git Server Fingerprint", print_value=True)
 
         git_author = siemplify.extract_job_param("Commit Author", print_value=True)
         if not git_author:
@@ -369,7 +364,10 @@ class GitSyncManager:
         siemplify_context: Context = get_context_factory(self._siemplify)
         cache: Cache[str, int] = Cache(siemplify_context)
         playbook_installer = WorkflowInstaller(
-            self._siemplify, self.api, self.logger, cache
+            self._siemplify,
+            self.api,
+            self.logger,
+            cache
         )
         blocks, playbooks = [], []
         for workflow in workflows:
@@ -729,7 +727,11 @@ class WorkflowInstaller:
             # Take the step identifier if the same step instance name already exists.
             existing_step = (
                 next(
-                    (x for x in old_steps if self._is_matching_step(x, step)),
+                    (
+                        x
+                        for x in old_steps
+                        if self._is_matching_step(x, step)
+                    ),
                     None,
                 )
                 if old_steps
@@ -792,10 +794,7 @@ class WorkflowInstaller:
                 param_value = param.get("value")
 
                 # Handle Start/EndLoopStepIdentifier parameter
-                if (
-                    param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"}
-                    and param_value
-                ):
+                if (param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"} and param_value):
                     mapped_id = identifier_mappings.get(param_value)
                     if mapped_id:
                         param["value"] = mapped_id
@@ -883,23 +882,17 @@ class WorkflowInstaller:
             # Validate the existing instance before copying it.
             # If it's invalid (e.g. from a prior failed import), fall through
             # to the instance-discovery logic below.
-            instance_to_validate = (
-                fallback if instance == "AutomaticEnvironment" else instance
-            )
+            instance_to_validate = fallback if instance == "AutomaticEnvironment" else instance
             if instance_to_validate and self._is_valid_existing_instance(
                 step.get("integration"),
                 instance_to_validate,
                 environments,
             ):
                 self._set_step_parameter_by_name(
-                    step,
-                    "IntegrationInstance",
-                    instance,
+                    step, "IntegrationInstance", instance,
                 )
                 self._set_step_parameter_by_name(
-                    step,
-                    "FallbackIntegrationInstance",
-                    fallback,
+                    step, "FallbackIntegrationInstance", fallback,
                 )
                 return
 
@@ -1024,21 +1017,19 @@ class WorkflowInstaller:
         """
         cache_key = f"integration_instances_{environment}"
         if cache_key not in self._cache:
-            self._cache[cache_key] = (
-                self.api.get_integrations_instances(environment) or []
-            )
+            self._cache[cache_key] = self.api.get_integrations_instances(environment) or []
 
         instances = self._cache.get(cache_key, [])
 
         filtered_instances = [
-            x for x in instances if x.get("integrationIdentifier") == integration_name
+            x
+            for x in instances
+            if x.get("integrationIdentifier") == integration_name
         ]
 
         configured_instances = [x for x in filtered_instances if x.get("isConfigured")]
         if configured_instances:
-            return sorted(
-                configured_instances, key=lambda x: x.get("instanceName") or ""
-            )
+            return sorted(configured_instances, key=lambda x: x.get("instanceName") or "")
 
         # Fallback: return unconfigured instances sorted by name when no configured
         # instances are available, so callers can still find something to assign.
@@ -1111,9 +1102,10 @@ class WorkflowInstaller:
     @staticmethod
     def _is_matching_step(step_1: SingleJson, step_2: SingleJson) -> bool:
         """Checks if step 'step_1' matches the key attributes of 'step_2'."""
-        return step_1.get("instanceName") == step_2.get("instanceName") and step_1.get(
-            "actionProvider"
-        ) == step_2.get("actionProvider")
+        return (
+            step_1.get("instanceName") == step_2.get("instanceName")
+            and step_1.get("actionProvider") == step_2.get("actionProvider")
+        )
 
     @staticmethod
     def _get_step_parameter_by_name(step: dict, parameter_name: str) -> dict | None:
