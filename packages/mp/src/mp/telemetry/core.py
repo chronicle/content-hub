@@ -31,13 +31,7 @@ import typer
 
 from mp.core.custom_types import P, RepositoryType
 from mp.core.utils import get_current_platform, is_ci_cd
-from mp.telemetry.constants import (
-    ALLOWED_COMMAND_ARGUMENTS,
-    ENDPOINT,
-    NAME_MAPPER,
-    REQUEST_TIMEOUT,
-    ConfigYaml,
-)
+from mp.telemetry.constants import ALLOWED_COMMAND_ARGUMENTS, ENDPOINT, NAME_MAPPER, REQUEST_TIMEOUT, ConfigYaml
 from mp.telemetry.data_models import TelemetryPayload
 from mp.telemetry.utils import (
     fix_missing_keys_and_save_if_fixed,
@@ -183,9 +177,7 @@ def _determine_command_name(command: str, **kwargs: list[RepositoryType | str] |
     if command not in {"build", "validate"}:
         return command
 
-    repo_values: set[str] = {
-        r.value for r in cast("list[RepositoryType]", kwargs.get("repositories", []))
-    }
+    repo_values: set[str] = {r.value for r in cast("list[RepositoryType]", kwargs.get("repositories", []))}
     has_integrations = bool(kwargs.get("integrations"))
     has_playbooks = bool(kwargs.get("playbooks"))
 

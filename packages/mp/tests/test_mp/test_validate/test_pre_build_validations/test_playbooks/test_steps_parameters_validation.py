@@ -69,9 +69,7 @@ class TestStepParamsValidation:
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_non_built_playbook)
 
-        assert "AsyncActionTimeout must positive number less than 14 days (in seconds)." in str(
-            excinfo.value
-        )
+        assert "AsyncActionTimeout must positive number less than 14 days (in seconds)." in str(excinfo.value)
 
     def test_async_action_timeout_not_positive_fail(self, temp_non_built_playbook: Path) -> None:
         update_single_step(
@@ -82,9 +80,7 @@ class TestStepParamsValidation:
         with pytest.raises(NonFatalValidationError) as excinfo:
             self.validator_runner.run(temp_non_built_playbook)
 
-        assert "AsyncActionTimeout must positive number less than 14 days (in seconds)." in str(
-            excinfo.value
-        )
+        assert "AsyncActionTimeout must positive number less than 14 days (in seconds)." in str(excinfo.value)
 
     def test_async_polling_interval_too_low_fail(self, temp_non_built_playbook: Path) -> None:
         update_single_step(

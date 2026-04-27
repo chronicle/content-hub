@@ -19,9 +19,7 @@ from typing import TYPE_CHECKING
 
 from mp.core import exclusions
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.utils import (
-    load_integration_def,
-)
+from mp.validate.utils import load_integration_def
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -44,10 +42,7 @@ class IntegrationHasDocumentationLinkValidation:
             NonFatalValidationError: If the integration doesn't have a documentation link.
 
         """
-        if (
-            validation_path.name
-            in exclusions.get_excluded_integrations_without_documentation_link()
-        ):
+        if validation_path.name in exclusions.get_excluded_integrations_without_documentation_link():
             return
         integration_def: YamlFileContent = load_integration_def(validation_path)
         if not integration_def.get("documentation_link"):

@@ -91,9 +91,7 @@ class PlaybookDeconstructor:
         overviews_path: Path = self.out_path / mp.core.constants.OVERVIEWS_FILE_NAME
         mp.core.file_utils.save_yaml(non_built_overviews, overviews_path)
 
-    def _create_display_info_file(
-        self, non_built_display_info: NonBuiltPlaybookDisplayInfo
-    ) -> None:
+    def _create_display_info_file(self, non_built_display_info: NonBuiltPlaybookDisplayInfo) -> None:
         rich.print("Creating display info file")
 
         yaml = YAML()
@@ -101,29 +99,21 @@ class PlaybookDeconstructor:
 
         data = CommentedMap(non_built_display_info)
         data.yaml_add_eol_comment("The content type playbook or block", "type")
-        data.yaml_add_eol_comment(
-            "The description that will appear in the Content Hub", "description"
-        )
-        data.yaml_add_eol_comment(
-            "Author name, appearing on the playbook / block card in the Content Hub", "author"
-        )
+        data.yaml_add_eol_comment("The description that will appear in the Content Hub", "description")
+        data.yaml_add_eol_comment("Author name, appearing on the playbook / block card in the Content Hub", "author")
         data.yaml_add_eol_comment(
             "In case support is needed, this email will be used by secops customers to "
             "open support queries (required for partner contributed content)",
             "contact_email",
         )
+        data.yaml_add_eol_comment("The name that will appear in the Content Hub", "content_hub_display_name")
         data.yaml_add_eol_comment(
-            "The name that will appear in the Content Hub", "content_hub_display_name"
-        )
-        data.yaml_add_eol_comment(
-            "Defines whether this item should have its own card in the Content Hub. "
-            "- Boolean value",
+            "Defines whether this item should have its own card in the Content Hub. - Boolean value",
             "should_display_in_content_hub",
         )
         data.yaml_add_eol_comment("Options: google, partner, or third_party", "contribution_type")
         data.yaml_add_eol_comment(
-            "I acknowledge that this playbook contains debug data and authorize its"
-            " publication. - Boolean value",
+            "I acknowledge that this playbook contains debug data and authorize its publication. - Boolean value",
             "allowed_debug_data",
         )
 
@@ -137,25 +127,18 @@ class PlaybookDeconstructor:
         definition_path: Path = self.out_path / mp.core.constants.DEFINITION_FILE
         mp.core.file_utils.save_yaml(non_built_meta_data, definition_path)
 
-    def _create_release_notes_file(
-        self, non_built_release_notes: list[NonBuiltReleaseNote]
-    ) -> None:
+    def _create_release_notes_file(self, non_built_release_notes: list[NonBuiltReleaseNote]) -> None:
         rich.print("Creating release notes file")
         release_notes_path: Path = self.out_path / mp.core.constants.RELEASE_NOTES_FILE
         mp.core.file_utils.save_yaml(non_built_release_notes, release_notes_path)
 
-    def _create_widgets_files(
-        self, non_built_widgets: list[NonBuiltPlaybookWidgetMetadata]
-    ) -> None:
+    def _create_widgets_files(self, non_built_widgets: list[NonBuiltPlaybookWidgetMetadata]) -> None:
         rich.print("Creating widgets files")
         widgets_path: Path = self.out_path / mp.core.constants.WIDGETS_DIR
         widgets_path.mkdir(exist_ok=True)
 
         for w in non_built_widgets:
-            widget_path: Path = (
-                widgets_path
-                / f"{_sanitize_widget_filename(w['title'])}{mp.core.constants.YAML_SUFFIX}"
-            )
+            widget_path: Path = widgets_path / f"{_sanitize_widget_filename(w['title'])}{mp.core.constants.YAML_SUFFIX}"
             try:
                 mp.core.file_utils.save_yaml(w, widget_path)
             except OSError:
@@ -168,9 +151,7 @@ class PlaybookDeconstructor:
                 raise
 
         for w in self.playbook.widgets:
-            widget_path: Path = widgets_path / (
-                f"{_sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}"
-            )
+            widget_path: Path = widgets_path / (f"{_sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}")
             html_content: str = w.data_definition.html_content if w.type is WidgetType.HTML else ""
             if html_content:
                 widget_path.write_text(html_content)

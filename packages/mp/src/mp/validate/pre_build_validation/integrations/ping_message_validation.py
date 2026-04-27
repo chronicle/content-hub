@@ -19,7 +19,7 @@ import os
 from typing import TYPE_CHECKING
 
 import mp.core.unix
-from mp.core import constants
+from mp.core import constants, exclusions
 from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:
@@ -28,6 +28,40 @@ if TYPE_CHECKING:
 # Required substrings in Ping action output messages per the content design guide
 _SUCCESS_PATTERN = "Successfully connected to the"
 _FAILURE_PATTERN = "Failed to connect to the"
+
+
+def _find_ping_file(actions_dir: Path) -> Path | None:
+    """Find the Ping action file in the actions directory.
+
+    Args:
+        actions_dir: Path to the integration's actions directory.
+
+    Returns:
+        Path to the Ping file, or None if not found.
+
+    """
+    for name in ("Ping.py", "ping.py"):
+        candidate = actions_dir / name
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _is_ping_changed_in_pr(validation_path: Path) -> bool:
+    """Check if the Ping file was modified in the current PR.
+
+    Args:
+        validation_path: The path of the integration to validate.
+
+    Returns:
+        True if Ping was changed or if not running in CI.
+
+    """
+    head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
+    if not head_sha:
+        return True
+    changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+    return any(p.name in {"Ping.py", "ping.py"} for p in changed)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -45,12 +79,6 @@ class PingMessageFormatValidation:
     def run(validation_path: Path) -> None:
         """Check that Ping action messages match the required format.
 
-        The content design guide requires:
-        - Success: "Successfully connected to the {integration name}..."
-        - Failure: "Failed to connect to the {product name}..."
-
-        Only runs when the Ping file is new or modified in the current PR.
-
         Args:
             validation_path: The path of the integration to validate.
 
@@ -62,25 +90,12 @@ class PingMessageFormatValidation:
         if not actions_dir.is_dir():
             return
 
-        # Find Ping action file (case-insensitive)
-        ping_file = None
-        for name in ("Ping.py", "ping.py"):
-            candidate = actions_dir / name
-            if candidate.exists():
-                ping_file = candidate
-                break
-
-        if ping_file is None:
+        if validation_path.name in exclusions.get_excluded_names_without_ping_message_format():
             return
 
-        # Only enforce on files changed in the current PR
-        head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
-        if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch(
-                "main", head_sha, validation_path
-            )
-            if not any(p.name in {"Ping.py", "ping.py"} for p in changed):
-                return
+        ping_file = _find_ping_file(actions_dir)
+        if ping_file is None or not _is_ping_changed_in_pr(validation_path):
+            return
 
         content = ping_file.read_text(encoding="utf-8")
         issues: list[str] = []

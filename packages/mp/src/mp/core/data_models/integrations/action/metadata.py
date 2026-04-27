@@ -35,11 +35,7 @@ from .dynamic_results_metadata import (
     DynamicResultsMetadata,
     NonBuiltDynamicResultsMetadata,
 )
-from .parameter import (
-    ActionParameter,
-    BuiltActionParameter,
-    NonBuiltActionParameter,
-)
+from .parameter import ActionParameter, BuiltActionParameter, NonBuiltActionParameter
 
 if TYPE_CHECKING:
     from mp.core.custom_types import JsonString
@@ -129,9 +125,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ]
     default_result_value: str | None
     creator: str
-    script_result_name: Annotated[
-        str, pydantic.Field(max_length=mp.core.constants.MAX_SCRIPT_RESULT_NAME_LENGTH)
-    ]
+    script_result_name: Annotated[str, pydantic.Field(max_length=mp.core.constants.MAX_SCRIPT_RESULT_NAME_LENGTH)]
     simulation_data_json: str
     version: Annotated[
         pydantic.PositiveFloat,
@@ -156,10 +150,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.ACTIONS_META_SUFFIX}")
-        ]
+        return [cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.ACTIONS_META_SUFFIX}")]
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -218,8 +209,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             description=built["Description"],
             documentation_link=built.get("DocumentationLink"),  # ty: ignore[invalid-argument-type]
             dynamic_results_metadata=[
-                DynamicResultsMetadata.from_built(drm)
-                for drm in built.get("DynamicResultsMetadata", []) or []
+                DynamicResultsMetadata.from_built(drm) for drm in built.get("DynamicResultsMetadata", []) or []
             ],
             integration_identifier=built["IntegrationIdentifier"],
             is_async=v if (v := built.get("IsAsync")) is not None else False,
@@ -254,8 +244,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             description=non_built["description"],
             documentation_link=non_built.get("documentation_link"),  # ty: ignore[invalid-argument-type]
             dynamic_results_metadata=[
-                DynamicResultsMetadata.from_non_built(drm)
-                for drm in non_built.get("dynamic_results_metadata", [])
+                DynamicResultsMetadata.from_non_built(drm) for drm in non_built.get("dynamic_results_metadata", [])
             ],
             integration_identifier=non_built["integration_identifier"],
             is_async=non_built.get("is_async", False),
@@ -340,9 +329,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
                 drm.result_example = None
                 continue
 
-            json_file_name: str = (
-                f"{mp.core.utils.str_to_snake_case(self.file_name)}_{drm.result_name}_example.json"
-            )
+            json_file_name: str = f"{mp.core.utils.str_to_snake_case(self.file_name)}_{drm.result_name}_example.json"
             json_file_path: str = str(Path(mp.core.constants.RESOURCES_DIR) / json_file_name)
 
             drm.result_example = json_file_path
