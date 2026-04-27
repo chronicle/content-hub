@@ -47,9 +47,7 @@ class HtmlFormat:
             html_content: str = self._generate_validation_report_html()
 
             temp_report_path: Path
-            with tempfile.NamedTemporaryFile(
-                mode="w", delete=False, suffix=".html", encoding="utf-8"
-            ) as temp_file:
+            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:
                 temp_file.write(html_content)
                 temp_report_path: Path = pathlib.Path(temp_file.name)
 
@@ -60,9 +58,7 @@ class HtmlFormat:
         except Exception as e:  # noqa: BLE001
             self.console.print(f"❌  Error generating report: {e.args}")
 
-    def _generate_validation_report_html(
-        self, template_name: str = "html_report/report.html"
-    ) -> str:
+    def _generate_validation_report_html(self, template_name: str = "html_report/report.html") -> str:
         template_dir = pathlib.Path(__file__).parent.resolve() / "templates"
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dir),
@@ -76,10 +72,7 @@ class HtmlFormat:
             total_integrations=report_statistics.total_items,
             total_fatal_issues=report_statistics.total_fatal,
             total_non_fatal_issues=report_statistics.total_warn,
-            current_time=datetime.datetime
-            .now(datetime.UTC)
-            .astimezone()
-            .strftime("%B %d, %Y at %I:%M %p %Z"),
+            current_time=datetime.datetime.now(datetime.UTC).astimezone().strftime("%B %d, %Y at %I:%M %p %Z"),
             css_content=(template_dir / "static" / "style.css").read_text(encoding="utf-8-sig"),
             js_content=(template_dir / "static" / "script.js").read_text(encoding="utf-8-sig"),
         )
@@ -89,9 +82,7 @@ class HtmlFormat:
         total_items = total_fatal = total_warn = 0
 
         for content_type, full_report in self.validation_results.items():
-            all_reports = [
-                report for reports in full_report.values() if reports for report in reports
-            ]
+            all_reports = [report for reports in full_report.values() if reports for report in reports]
 
             fatal = sum(len(r.validation_report.failed_fatal_validations) for r in all_reports)
             warn = sum(len(r.validation_report.failed_non_fatal_validations) for r in all_reports)

@@ -22,9 +22,7 @@ import typer
 
 import mp.core.config
 from mp.build_project.flow.integrations.flow import build_integrations
-from mp.core.utils import (
-    ensure_valid_list,
-)
+from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
 if TYPE_CHECKING:

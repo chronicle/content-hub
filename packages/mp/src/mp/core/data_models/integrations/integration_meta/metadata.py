@@ -59,8 +59,7 @@ class PythonVersion(RepresentableEnum):
             return str_to_enum[str(s)]
         except KeyError:
             msg: str = (
-                f"Invalid python version for integrations: {s}"
-                f"\nSupported versions: {', '.join(str_to_enum.keys())}"
+                f"Invalid python version for integrations: {s}\nSupported versions: {', '.join(str_to_enum.keys())}"
             )
             raise ValueError(msg) from None
 
@@ -87,6 +86,17 @@ class PythonVersion(RepresentableEnum):
             )
             raise ValueError(msg) from None
 
+    def to_range_string(self) -> str:
+        """PythonVersion's range representation.
+
+        Returns:
+            A range representation of the object.
+
+        """
+        version_str: str = self.to_string()
+        major, minor = map(int, version_str.split("."))
+        return f">={major}.{minor},<{major}.{minor + 1}"
+
 
 class BuiltIntegrationMetadata(TypedDict):
     Categories: list[str]
@@ -108,6 +118,7 @@ class BuiltIntegrationMetadata(TypedDict):
     IsCustom: bool
     IsPowerUp: bool
     IsCertified: bool
+    GoogleSecOpsProduct: NotRequired[bool]
 
 
 class NonBuiltIntegrationMetadata(TypedDict):
@@ -126,11 +137,10 @@ class NonBuiltIntegrationMetadata(TypedDict):
     is_custom: NotRequired[bool]
     is_available_for_community: NotRequired[bool]
     is_powerup: NotRequired[bool]
+    google_secops_product: NotRequired[bool]
 
 
-class IntegrationMetadata(
-    SingularComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]
-):
+class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, NonBuiltIntegrationMetadata]):
     categories: list[str]
     feature_tags: FeatureTags | None
     name: Annotated[
@@ -171,6 +181,7 @@ class IntegrationMetadata(
         pydantic.PositiveFloat,
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
+    google_secops_product: bool = False
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -257,6 +268,7 @@ class IntegrationMetadata(
             is_custom=built.get("IsCustom", False),
             is_available_for_community=built.get("IsAvailableForCommunity", True),
             is_powerup=built.get("IsPowerUp", False),
+            google_secops_product=built.get("GoogleSecOpsProduct", False),
         )
 
     @classmethod
@@ -286,6 +298,7 @@ class IntegrationMetadata(
                 True,
             ),
             is_powerup=non_built.get("is_powerup", False),
+            google_secops_product=non_built.get("google_secops_product", False),
         )
 
     def to_built(self) -> BuiltIntegrationMetadata:
@@ -299,18 +312,10 @@ class IntegrationMetadata(
             Categories=self.categories,
             Description=self.description,
             DisplayName=self.name,
-            DocumentationLink=(
-                str(self.documentation_link) or None
-                if self.documentation_link is not None
-                else None
-            ),
+            DocumentationLink=(str(self.documentation_link) or None if self.documentation_link is not None else None),
             FeatureTags=(self.feature_tags.to_built() if self.feature_tags is not None else None),
             Identifier=self.identifier,
-            ImageBase64=(
-                base64.b64encode(self.image_base64).decode()
-                if self.image_base64 is not None
-                else None
-            ),
+            ImageBase64=(base64.b64encode(self.image_base64).decode() if self.image_base64 is not None else None),
             IntegrationProperties=[p.to_built() for p in self.parameters],
             IsAvailableForCommunity=True,
             MarketingDisplayName=self.name,
@@ -322,6 +327,7 @@ class IntegrationMetadata(
             IsCustom=self.is_custom,
             IsPowerUp=self.is_powerup,
             IsCertified=self.is_certified,
+            GoogleSecOpsProduct=self.google_secops_product,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -333,20 +339,14 @@ class IntegrationMetadata(
             The "non-built" TypedDict version of the integration's metadata.
 
         """
-        svg_path: Path = pathlib.Path(
-            ".", mp.core.constants.RESOURCES_DIR, mp.core.constants.LOGO_FILE
-        )
-        image: Path = pathlib.Path(
-            ".", mp.core.constants.RESOURCES_DIR, mp.core.constants.IMAGE_FILE
-        )
+        svg_path: Path = pathlib.Path(".", mp.core.constants.RESOURCES_DIR, mp.core.constants.LOGO_FILE)
+        image: Path = pathlib.Path(".", mp.core.constants.RESOURCES_DIR, mp.core.constants.IMAGE_FILE)
 
         non_built: NonBuiltIntegrationMetadata = NonBuiltIntegrationMetadata(
             identifier=self.identifier,
             name=self.name,
             parameters=[p.to_non_built() for p in self.parameters],
-            documentation_link=(
-                str(self.documentation_link) if self.documentation_link is not None else None
-            ),
+            documentation_link=(str(self.documentation_link) if self.documentation_link is not None else None),
             categories=self.categories,
             svg_logo_path=svg_path.as_posix() if self.svg_logo is not None else None,
             image_path=image.as_posix() if self.image_base64 is not None else None,
@@ -363,6 +363,9 @@ class IntegrationMetadata(
 
         if self.is_powerup is True:
             non_built["is_powerup"] = self.is_powerup
+
+        if self.google_secops_product is True:
+            non_built["google_secops_product"] = self.google_secops_product
 
         mp.core.utils.remove_none_entries_from_mapping(non_built)
         return non_built

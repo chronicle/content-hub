@@ -18,12 +18,15 @@ from .censys_exceptions import (
 )
 from .constants import (
     API_ROOT,
+    CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER,
     DEFAULT_REQUEST_TIMEOUT,
     ENDPOINTS,
     ENRICH_CERTIFICATES_ACTION_IDENTIFIER,
     ENRICH_IPS_ACTION_IDENTIFIER,
     ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER,
     GET_HOST_HISTORY_ACTION_IDENTIFIER,
+    GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER,
+    GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER,
     GET_RESCAN_STATUS_ACTION_IDENTIFIER,
     INITIATE_RESCAN_ACTION_IDENTIFIER,
     INTEGRATION_VERSION,
@@ -36,6 +39,9 @@ from .constants import (
     PING_ACTION_IDENTIFIER,
     RATE_LIMIT_EXCEEDED_STATUS_CODE,
     RETRY_COUNT,
+    TARGET_TYPE_CERTIFICATE,
+    TARGET_TYPE_HOST,
+    TARGET_TYPE_WEB_PROPERTY,
     UNAUTHORIZED_STATUS_CODE,
     VALIDATION_ERROR_STATUS_CODES,
     WAIT_TIME_FOR_RETRY,
@@ -66,7 +72,9 @@ class APIManager:
         self.verify_ssl = verify_ssl
 
         # Build User-Agent header
-        google_secops_version = siemplify.get_system_version() if siemplify else "Unknown"
+        google_secops_version = (
+            siemplify.get_system_version() if siemplify else "Unknown"
+        )
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
         epoch_time = int(time.time())
         user_agent = (
@@ -77,11 +85,13 @@ class APIManager:
         )
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-            "User-Agent": user_agent,
-        })
+        self.session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+                "User-Agent": user_agent,
+            }
+        )
 
     def _get_full_url(self, url_id: str, **kwargs: Any) -> str:
         """Get full URL from URL identifier.
@@ -135,7 +145,9 @@ class APIManager:
         elif body:
             request_kwargs["json"] = body
 
-        response = self.session.request(method, url, verify=self.verify_ssl, **request_kwargs)
+        response = self.session.request(
+            method, url, verify=self.verify_ssl, **request_kwargs
+        )
 
         try:
             self.validate_response(api_identifier, response)
@@ -195,7 +207,9 @@ class APIManager:
                 error_detail = self._parse_validation_error(response)
                 raise ValidationException(error_detail)
             if response.status_code in INTERNAL_SERVER_ERROR_STATUS_CODES:
-                raise InternalServerError(f"Internal server error: {response.status_code}")
+                raise InternalServerError(
+                    f"Internal server error: {response.status_code}"
+                )
             HandleExceptions(api_identifier, error, response, error_msg).do_process()
         except (
             ValidationException,
@@ -231,7 +245,9 @@ class APIManager:
                     msg = err.get("message", "")
                     location = err.get("location", "")
                     if msg:
-                        error_messages.append(f"{msg} (location: {location})" if location else msg)
+                        error_messages.append(
+                            f"{msg} (location: {location})" if location else msg
+                        )
 
                 detail = error_data.get("detail", "Validation failed")
                 if error_messages:
@@ -249,7 +265,9 @@ class APIManager:
 
             # Fallback to detail or title
             if "detail" in error_data or "title" in error_data:
-                return error_data.get("detail", error_data.get("title", "Validation error"))
+                return error_data.get(
+                    "detail", error_data.get("title", "Validation error")
+                )
 
             # Unknown format - return raw response for debugging
             self.siemplify.LOGGER.info(
@@ -273,7 +291,9 @@ class APIManager:
         Raises:
             CensysException: If there's an error in the API response.
         """
-        url = self._get_full_url(PING_ACTION_IDENTIFIER, organization_id=self.organization_id)
+        url = self._get_full_url(
+            PING_ACTION_IDENTIFIER, organization_id=self.organization_id
+        )
 
         self._make_rest_call(PING_ACTION_IDENTIFIER, "GET", url)
 
@@ -550,11 +570,16 @@ class APIManager:
                 "partial_data": False,
                 "truncated": truncation_reason is not None,
                 "truncation_reason": truncation_reason,
-                "pagination_info": {"pages_fetched": page_count, "pages_attempted": page_count},
+                "pagination_info": {
+                    "pages_fetched": page_count,
+                    "pages_attempted": page_count,
+                },
             }
         }
 
-    def enrich_hosts(self, host_ids: List[str], at_time: Optional[str] = None) -> Dict[str, Any]:
+    def enrich_hosts(
+        self, host_ids: List[str], at_time: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Enrich multiple hosts with detailed information.
 
@@ -574,7 +599,9 @@ class APIManager:
         if at_time:
             body["at_time"] = at_time
 
-        response = self._make_rest_call(ENRICH_IPS_ACTION_IDENTIFIER, "POST", url, body=body)
+        response = self._make_rest_call(
+            ENRICH_IPS_ACTION_IDENTIFIER, "POST", url, body=body
+        )
 
         return response
 
@@ -625,6 +652,104 @@ class APIManager:
 
         response = self._make_rest_call(
             ENRICH_CERTIFICATES_ACTION_IDENTIFIER, "POST", url, body=body
+        )
+
+        return response
+
+    def create_censeye_job(
+        self,
+        target_type: str,
+        target_value: str,
+    ) -> Dict[str, Any]:
+        """
+        Create a CensEye (Related Infrastructure) job.
+
+        Args:
+            target_type: Type of target (Host, Web Property, Certificate)
+            target_value: Target value:
+                - Host: IP address (e.g., "14.84.5.68")
+                - Web Property: domain:port (e.g., "example.com:443")
+                - Certificate: SHA-256 fingerprint
+
+        Returns:
+            Dict containing job_id, state, and create_time
+
+        Raises:
+            CensysException: If there's an error in the API response
+            ValueError: If target_type is invalid
+        """
+        url = self._get_full_url(CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER)
+
+        if target_type == TARGET_TYPE_HOST:
+            body = {"target": {"host_id": target_value}}
+        elif target_type == TARGET_TYPE_WEB_PROPERTY:
+            body = {"target": {"webproperty_id": target_value}}
+        elif target_type == TARGET_TYPE_CERTIFICATE:
+            body = {"target": {"certificate_id": target_value}}
+        else:
+            raise ValueError(f"Invalid target type: {target_type}")
+
+        response = self._make_rest_call(
+            CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER,
+            "POST",
+            url,
+            body=body,
+        )
+
+        return response
+
+    def get_censeye_job_status(self, job_id: str) -> Dict[str, Any]:
+        """
+        Get the current status of a CensEye job.
+
+        Args:
+            job_id: The unique identifier of the CensEye job
+
+        Returns:
+            Dict containing job status, state, result_count, and timestamps
+
+        Raises:
+            CensysException: If there's an error in the API response
+        """
+        url = self._get_full_url(
+            GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER, job_id=job_id
+        )
+
+        response = self._make_rest_call(
+            GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER,
+            "GET",
+            url,
+        )
+
+        return response
+
+    def get_censeye_job_results(
+        self,
+        job_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Get the results from a completed CensEye job.
+
+        Note: Maximum 50 results per job (confirmed by customer).
+        No pagination needed.
+
+        Args:
+            job_id: The unique identifier of the completed CensEye job
+
+        Returns:
+            Dict containing pivot results with field_value_pairs and counts (max 50)
+
+        Raises:
+            CensysException: If there's an error in the API response
+        """
+        url = self._get_full_url(
+            GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER, job_id=job_id
+        )
+
+        response = self._make_rest_call(
+            GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER,
+            "GET",
+            url,
         )
 
         return response

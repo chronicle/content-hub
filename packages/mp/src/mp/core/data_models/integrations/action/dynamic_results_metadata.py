@@ -34,9 +34,7 @@ class NonBuiltDynamicResultsMetadata(TypedDict):
     show_result: bool
 
 
-class DynamicResultsMetadata(
-    Buildable[BuiltDynamicResultsMetadata, NonBuiltDynamicResultsMetadata]
-):
+class DynamicResultsMetadata(Buildable[BuiltDynamicResultsMetadata, NonBuiltDynamicResultsMetadata]):
     result_example: pydantic.Json[Any] | None
     result_name: str
     show_result: bool

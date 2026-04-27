@@ -65,6 +65,19 @@ for this purpose.
 * **Version Bump**: If you are modifying an existing content, remember to increase the version of
   that content. This is required for the changes to be released.
 
+### CI Skip Labels
+
+You can add these labels to a PR to skip expensive CI jobs during development:
+
+| Label | What it skips | When to use |
+|-------|-------------|-------------|
+| `ci-minimal` | All builds, integration tests, and Windows pipeline | Draft PRs, quick iterations |
+| `skip-windows` | Windows integration validate/test/build (keeps `test-mp-windows`) | When Linux CI is sufficient |
+| `skip-tests` | Integration test suite | Iterating on `mp` or package internals |
+| `skip-build` | All build jobs | When validate + lint is enough |
+
+**Important:** Remove skip labels before requesting review. All CI checks should pass before merge.
+
 ### Pre-Submission Checklist
 
 Before submitting your Pull Request, please review

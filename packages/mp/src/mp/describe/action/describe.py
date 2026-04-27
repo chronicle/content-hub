@@ -38,10 +38,7 @@ if TYPE_CHECKING:
 
     from rich.progress import Progress
 
-    from mp.core.data_models.integrations.action.metadata import (
-        BuiltActionMetadata,
-        NonBuiltActionMetadata,
-    )
+    from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
 
 logger: logging.Logger = logging.getLogger(__name__)
 _PromptConstructor: TypeAlias = BuiltPromptConstructor | SourcePromptConstructor
@@ -162,18 +159,14 @@ class DescribeAction:
             progress: An optional Progress object to use for progress reporting.
 
         """
-        metadata, status = await asyncio.gather(
-            self._load_metadata(), self._get_integration_status()
-        )
+        metadata, status = await asyncio.gather(self._load_metadata(), self._get_integration_status())
 
         actions_to_process: set[str] = await self._prepare_actions(status, metadata)
         if not actions_to_process:
             if not self.actions:
                 await self._save_metadata(metadata)
             else:
-                logger.info(
-                    "All actions in %s already have descriptions. Skipping.", self.integration_name
-                )
+                logger.info("All actions in %s already have descriptions. Skipping.", self.integration_name)
             return
 
         if len(actions_to_process) == 1:
@@ -203,15 +196,11 @@ class DescribeAction:
             int: The number of actions.
 
         """
-        status, metadata = await asyncio.gather(
-            self._get_integration_status(), self._load_metadata()
-        )
+        status, metadata = await asyncio.gather(self._get_integration_status(), self._load_metadata())
         actions: set[str] = await self._prepare_actions(status, metadata)
         return len(actions)
 
-    async def _prepare_actions(
-        self, status: IntegrationStatus, metadata: dict[str, Any]
-    ) -> set[str]:
+    async def _prepare_actions(self, status: IntegrationStatus, metadata: dict[str, Any]) -> set[str]:
         if not self.actions:
             self.actions = await self._get_all_actions(status)
 
@@ -244,8 +233,7 @@ class DescribeAction:
     ) -> list[ActionDescriptionResult]:
         action_list = list(actions)
         bulks = [
-            action_list[i : i + llm.DESCRIBE_BULK_SIZE]
-            for i in range(0, len(action_list), llm.DESCRIBE_BULK_SIZE)
+            action_list[i : i + llm.DESCRIBE_BULK_SIZE] for i in range(0, len(action_list), llm.DESCRIBE_BULK_SIZE)
         ]
 
         if len(actions) == 1:
@@ -259,8 +247,7 @@ class DescribeAction:
             task_id = progress.add_task(description, total=len(actions))
             rich_params = RichParams(on_action_done, progress, task_id)
             tasks: list[asyncio.Task] = [
-                asyncio.create_task(self._process_bulk_actions(bulk, status, sem, rich_params))
-                for bulk in bulks
+                asyncio.create_task(self._process_bulk_actions(bulk, status, sem, rich_params)) for bulk in bulks
             ]
             for coro in asyncio.as_completed(tasks):
                 results.extend(await coro)
@@ -270,8 +257,7 @@ class DescribeAction:
         else:
             rich_params = RichParams(on_action_done)
             tasks: list[asyncio.Task] = [
-                asyncio.create_task(self._process_bulk_actions(bulk, status, sem, rich_params))
-                for bulk in bulks
+                asyncio.create_task(self._process_bulk_actions(bulk, status, sem, rich_params)) for bulk in bulks
             ]
             results.extend([
                 res
@@ -298,9 +284,7 @@ class DescribeAction:
         notify_done: Callable[[], None] = _create_notifier(rich_params)
         try:
             async with _maybe_use_semaphore(sem):
-                return await self._describe_actions_bulk_with_error_handling(
-                    actions, status, notify_done
-                )
+                return await self._describe_actions_bulk_with_error_handling(actions, status, notify_done)
 
         except Exception:
             logger.exception("Failed to process bulk of actions: %s", actions)
@@ -316,14 +300,10 @@ class DescribeAction:
         notify_done: Callable[[], None],
     ) -> list[ActionDescriptionResult]:
         try:
-            results: list[ActionDescriptionResult] = await self.describe_actions_bulk(
-                actions, status
-            )
+            results: list[ActionDescriptionResult] = await self.describe_actions_bulk(actions, status)
         except Exception:
             logger.exception("Failed to describe actions bulk %s", actions)
-            results: list[ActionDescriptionResult] = [
-                ActionDescriptionResult(a, None) for a in actions
-            ]
+            results: list[ActionDescriptionResult] = [ActionDescriptionResult(a, None) for a in actions]
 
         for _ in actions:
             notify_done()
@@ -395,9 +375,7 @@ class DescribeAction:
 
         # If it's not built in the out directory, check if the integration itself is built
         if not is_built:
-            def_file: anyio.Path = self.integration / constants.INTEGRATION_DEF_FILE.format(
-                self.integration_name
-            )
+            def_file: anyio.Path = self.integration / constants.INTEGRATION_DEF_FILE.format(self.integration_name)
             if await def_file.exists():
                 is_built = True
                 out_path = self.integration
