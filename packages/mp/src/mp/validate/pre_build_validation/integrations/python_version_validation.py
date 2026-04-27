@@ -23,7 +23,6 @@ from mp.core.data_models.integrations.integration_meta.metadata import PythonVer
 from mp.core.exceptions import FatalValidationError
 from mp.validate.utils import load_integration_def
 
-
 if TYPE_CHECKING:
     from pathlib import Path
 

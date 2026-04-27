@@ -87,7 +87,6 @@ from mp.core.data_models.playbooks.widget.metadata import (
     PlaybookWidgetMetadata,
 )
 
-
 BUILT_STEP_DEBUG_ENRICHMENT_DATA: BuiltStepDebugEnrichmentData = {
     "Field": "field",
     "Value": "value",
@@ -118,7 +117,7 @@ BUILT_STEP_DEBUG_DATA: BuiltStepDebugData = {
     "ResultJson": '{"key": "value"}',
     "ScopeEntitiesEnrichmentData": [BUILT_STEP_DEBUG_ENRICHMENT_DATA],
     "ScopeEntitiesEnrichmentDataJson": '[{"Field": "field", "Value": "value", '
-                                       '"UseInPlaybook": true, "IsCustom": false}]',
+    '"UseInPlaybook": true, "IsCustom": false}]',
     "TenantId": "tenant_id",
 }
 
