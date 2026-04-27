@@ -37,14 +37,40 @@ _SDK_CONFIG_FALLBACK_TOKENS = (
     "/instances/instance/",
 )
 
-# Case status integer returned by _get_case_by_id for OPEN cases.
+# Case status integer returned by `_get_case_by_id` for OPEN cases.
+#
+# Note on `_get_case_by_id`: at the time of writing the soar_sdk
+# (`Siemplify.py`) does not expose a public method that returns a case's
+# full details (status, creation_time, cyber_alerts, …). The closest
+# public helpers (`get_cases_by_filter`, `get_sync_cases`) return only
+# summary rows that lack `cyber_alerts`, which the dedup job needs to
+# match `rule_generator` and `ticket_id` per alert. Until a public
+# equivalent ships we deliberately call the leading-underscore method
+# below; the call is isolated and wrapped in a try/except so any future
+# breakage stays scoped.
 STATUS_OPEN = 1
 
 MS_PER_DAY = 24 * 60 * 60 * 1000
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Deduplicate DRP cases that share the same violation UID.
+
+    Job pipeline:
+
+    1. Read job parameters (case type, lookback window, max cases, dry-run
+       flag, optional global merge URL).
+    2. Use ``get_cases_ids_by_filter`` to enumerate OPEN case IDs within the
+       lookback window (capped to ``Max Cases To Process``).
+    3. Fetch each case's full payload (``_get_case_by_id``) and group cases
+       by violation UID, taking the earliest case as the "primary" survivor.
+    4. For every duplicate, copy entities/comments/tags onto the primary,
+       then close the duplicate via the SOAR REST API. In dry-run mode the
+       same plan is logged but no mutating call is made.
+    5. Emit a structured run summary (counts of merged cases, copied
+       entities, errors) before exiting.
+    """
     siemplify = SiemplifyJob()
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("=== DRP Deduplication Job started ===")
@@ -712,7 +738,7 @@ def _carry_over_to_primary(siemplify, primary, duplicate, dry_run):
 
         ent_type = ent.get("entity_type") or ent.get("type") or "DestinationURL"
         properties = ent.get("additional_properties") or ent.get("properties") or {}
-        is_suspicious = bool(ent.get("is_suspicious", ent.get("is_suspicous", False)))
+        is_suspicious = bool(ent.get("is_suspicious", False))
 
         if dry_run:
             siemplify.LOGGER.info(
