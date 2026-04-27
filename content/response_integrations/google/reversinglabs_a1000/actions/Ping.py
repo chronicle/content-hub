@@ -38,7 +38,11 @@ def main():
     )
 
     connectivity = a1000_manager.test_connectivity()
-    output_message = "Connected Successfully"
+    output_message = (
+        "Successfully connected to the Reversinglabs A1000 server."
+        if connectivity
+        else "Failed to connect to the Reversinglabs A1000 server."
+    )
     siemplify.end(output_message, connectivity)
 
 

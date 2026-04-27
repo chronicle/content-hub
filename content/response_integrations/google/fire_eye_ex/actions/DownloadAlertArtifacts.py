@@ -111,7 +111,7 @@ def main():
                 result_value = "false"
 
         except FireEyeEXDownloadFileError as e:
-            siemplify.LOGGER.exception(
+            siemplify.LOGGER.error(
                 f"Unable to attach downloaded artifacts. Reason: {e}"
             )
             output_message = f"Unable to attach downloaded artifacts. Reason: {e}"
@@ -119,7 +119,7 @@ def main():
 
         except OSError:
             # File size is too big
-            siemplify.LOGGER.exception(
+            siemplify.LOGGER.error(
                 "Unable to attach downloaded artifacts. Reason: artifacts are too large in size."
             )
             output_message = "Unable to attach downloaded artifacts. Reason: artifacts are too large in size."
@@ -128,7 +128,7 @@ def main():
         ex_manager.logout()
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f'Error executing action "Download Alert Artifacts". Reason: {e}'
         )
         siemplify.LOGGER.exception(e)

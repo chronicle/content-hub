@@ -211,7 +211,7 @@ def main(is_test_run):
 
         filtered_alerts = sorted(filtered_alerts, key=lambda inc: inc.rising_value)
     except Exception as e:
-        siemplify.LOGGER.exception(str(e))
+        siemplify.LOGGER.error(str(e))
         siemplify.LOGGER.exception(e)
         sys.exit(1)
 
@@ -267,7 +267,7 @@ def main(is_test_run):
                 )
 
             except Exception as e:
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"Error validation connector overflow, ERROR: {e}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -284,7 +284,7 @@ def main(is_test_run):
             siemplify.LOGGER.info(f"Alert {alert.id} was created.")
 
         except Exception as e:
-            siemplify.LOGGER.exception(
+            siemplify.LOGGER.error(
                 f"Failed to process incident {alert.id}", alert_id=alert.id
             )
             siemplify.LOGGER.exception(e)

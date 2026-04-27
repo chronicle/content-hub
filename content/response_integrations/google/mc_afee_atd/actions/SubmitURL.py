@@ -119,7 +119,7 @@ def main():
                 error_message = (
                     f'Error submitting URL "{entity.identifier}", Error: {err}'
                 )
-                siemplify.LOGGER.exception(error_message)
+                siemplify.LOGGER.error(error_message)
                 siemplify.LOGGER.exception(err)
 
         # Provide logout from McAfee ATD.
@@ -128,7 +128,7 @@ def main():
         result_value = json.dumps(task_ids)
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"General error performing action {SUBMIT_URL_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)
@@ -211,7 +211,7 @@ def fetch_scan_report_async():
                 error_message = (
                     f'Cannot get status for task ID "{task_id}", Error: {err}'
                 )
-                siemplify.LOGGER.exception(error_message)
+                siemplify.LOGGER.error(error_message)
                 siemplify.LOGGER.exception(err)
 
         if is_ready:
@@ -268,7 +268,7 @@ def fetch_scan_report_async():
                     error_message = (
                         f'Error fetching report for task ID "{task_id}", Error: {err}'
                     )
-                    siemplify.LOGGER.exception(error_message)
+                    siemplify.LOGGER.error(error_message)
                     siemplify.LOGGER.exception(err)
 
             if entities_to_enrich:
@@ -296,7 +296,7 @@ def fetch_scan_report_async():
             status = EXECUTION_STATE_INPROGRESS
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"General error performing action {SUBMIT_URL_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

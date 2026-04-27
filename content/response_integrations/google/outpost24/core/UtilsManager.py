@@ -210,7 +210,7 @@ def read_ids(siemplify, ids_file_name="ids.json"):
         with open(ids_file_path, encoding="utf-8") as f:
             return json.loads(f.read())
     except Exception as e:
-        siemplify.LOGGER.exception(f"Unable to read ids file: {e}")
+        siemplify.LOGGER.error(f"Unable to read ids file: {e}")
         siemplify.LOGGER.exception(e)
         return []
 
@@ -248,7 +248,7 @@ def write_ids(siemplify, ids, ids_file_name="ids.json"):
         return True
 
     except Exception as e:
-        siemplify.LOGGER.exception(f"Failed writing IDs to IDs file, ERROR: {e}")
+        siemplify.LOGGER.error(f"Failed writing IDs to IDs file, ERROR: {e}")
         siemplify.LOGGER.exception(e)
         return False
 
@@ -270,7 +270,7 @@ def is_overflowed(siemplify, alert_info, is_test_run):
         )
 
     except Exception as e:
-        siemplify.LOGGER.exception(f"Error validation connector overflow, ERROR: {e}")
+        siemplify.LOGGER.error(f"Error validation connector overflow, ERROR: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:

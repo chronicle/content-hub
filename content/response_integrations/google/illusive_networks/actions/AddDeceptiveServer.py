@@ -99,7 +99,7 @@ def main():
         output_message = (
             f"Error executing action '{ADD_DECEPTIVE_SERVER_SCRIPT_NAME}'. Reason: {e}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False

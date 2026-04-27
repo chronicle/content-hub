@@ -118,7 +118,7 @@ def fetch_scan_report_async():
                 error_message = (
                     f'Cannot get status for task ID "{task_id}", Error: {err}'
                 )
-                siemplify.LOGGER.exception(error_message)
+                siemplify.LOGGER.error(error_message)
                 siemplify.LOGGER.exception(err)
 
         if is_ready:
@@ -167,14 +167,14 @@ def fetch_scan_report_async():
 
                 except McAfeeATDManagerError as e:
                     failed_task_ids.append(task_id)
-                    siemplify.LOGGER.exception(e)
+                    siemplify.LOGGER.error(e)
                     siemplify.LOGGER.exception(e)
 
                 except Exception as err:
                     error_message = (
                         f'Error fetching report for task ID "{task_id}", Error: {err}'
                     )
-                    siemplify.LOGGER.exception(error_message)
+                    siemplify.LOGGER.error(error_message)
                     siemplify.LOGGER.exception(err)
                     failed_task_ids.append(task_id)
 
@@ -216,7 +216,7 @@ def fetch_scan_report_async():
         )
         result_value = False
         status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(err)
 
     siemplify.LOGGER.info("----------------- Get Report - Finished -----------------")

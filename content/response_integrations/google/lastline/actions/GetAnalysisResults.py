@@ -227,7 +227,7 @@ def main():
                 )
 
             except LastlineInvalidParamException as error:
-                siemplify.LOGGER.exception(error)
+                siemplify.LOGGER.error(error)
                 output_message += (
                     f"Failed to fetch the analysis results for the {submission_type} "
                     f"{entity.identifier}\n"
@@ -252,7 +252,7 @@ def main():
             f"Failed to connect to the {INTEGRATION_NAME} service with the provided account. Please "
             f"check your configuration. Error is: {error}\n"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     except Exception as error:
@@ -261,7 +261,7 @@ def main():
         output_message = (
             f"Error executing action: {GET_ANALYSIS_RESULTS}. Reason: {error}."
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

@@ -75,7 +75,7 @@ def main():
         result = False
         status = EXECUTION_STATE_FAILED
         output_message = f"Failed to connect to the Cisco Orbital server! Error is {e}"
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

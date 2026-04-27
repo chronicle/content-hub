@@ -77,7 +77,7 @@ def main():
         )
 
     except Exception as e:
-        siemplify.LOGGER.exception(f"General error performing action {PING_SCRIPT_NAME}")
+        siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         result = False
         status = EXECUTION_STATE_FAILED

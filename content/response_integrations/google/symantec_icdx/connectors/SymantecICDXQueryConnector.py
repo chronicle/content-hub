@@ -117,7 +117,7 @@ class SymantecICDXConnector:
             try:
                 alert_time = convert_string_to_unix_time(alert.get("log_time", 1))
             except Exception as e:
-                self.logger.exception(f"Unable to get alert time: {e!s}")
+                self.logger.error(f"Unable to get alert time: {e!s}")
                 self.logger.exception(e)
                 alert_time = 1
 
@@ -131,7 +131,7 @@ class SymantecICDXConnector:
                 )
 
             except Exception as e:
-                self.logger.exception(f"Unable to get alert end time: {e!s}")
+                self.logger.error(f"Unable to get alert end time: {e!s}")
                 self.logger.exception(e)
                 case_info.end_time = alert_time
 
@@ -159,7 +159,7 @@ class SymantecICDXConnector:
                         > arrow.utcnow().shift(hours=-IDS_HOURS_LIMIT).timestamp}
 
         except Exception as e:
-            self.connector_scope.LOGGER.exception(f"Unable to read ids file: {e!s}")
+            self.connector_scope.LOGGER.error(f"Unable to read ids file: {e!s}")
             self.connector_scope.LOGGER.exception(e)
             return {}
 
@@ -274,7 +274,7 @@ def main(test_handler=False):
                     )
 
                 except Exception as e:
-                    connector_scope.LOGGER.exception(
+                    connector_scope.LOGGER.error(
                         f"Failed to detect overflow for Alert {str(alert.get(ALERT_NAME_KEY)).encode('utf-8')}, UUID: {str(alert.get(ALERT_ID_KEY)).encode('utf-8')}. Error:"
                     )
                     connector_scope.LOGGER.exception(e)
@@ -284,17 +284,17 @@ def main(test_handler=False):
                     existing_ids.update({alert["uuid"]: case.start_time})
 
                 else:
-                    connector_scope.LOGGER.warning(
+                    connector_scope.LOGGER.warn(
                         f"Overflowed on Alert {str(alert.get(ALERT_NAME_KEY)).encode('utf-8')}, UUID: {str(alert.get(ALERT_ID_KEY)).encode('utf-8')}"
                     )
 
             except Exception as e:
                 # Failed to build CaseInfo for alert
-                connector_scope.LOGGER.exception(
+                connector_scope.LOGGER.error(
                     f"Failed to create CaseInfo for Alert {str(alert.get(ALERT_NAME_KEY)).encode('utf-8')}, UUID: {str(alert.get(ALERT_ID_KEY)).encode('utf-8')}"
                 )
 
-                connector_scope.LOGGER.exception(f"Error Message: {e!s}")
+                connector_scope.LOGGER.error(f"Error Message: {e!s}")
                 connector_scope.LOGGER.exception(e)
 
                 if test_handler:
@@ -320,14 +320,14 @@ def main(test_handler=False):
                 )
 
             except Exception as e:
-                connector_scope.LOGGER.exception("Unable to save timestamp.")
+                connector_scope.LOGGER.error("Unable to save timestamp.")
                 connector_scope.LOGGER.exception(e)
 
         # Return data
         connector_scope.return_package(cases, output_variables, log_items)
 
     except Exception as e:
-        connector_scope.LOGGER.exception(str(e))
+        connector_scope.LOGGER.error(str(e))
         connector_scope.LOGGER.exception(e)
         if test_handler:
             raise

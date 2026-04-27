@@ -68,7 +68,7 @@ def main():
                 siemplify.result.add_data_table("Results", construct_csv(item_results))
 
         except Exception as e:
-            siemplify.LOGGER.exception("Failed to attach results JSON and/or table")
+            siemplify.LOGGER.error("Failed to attach results JSON and/or table")
             siemplify.LOGGER.exception(e)
 
         result_value = True

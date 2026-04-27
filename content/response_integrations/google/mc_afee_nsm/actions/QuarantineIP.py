@@ -87,7 +87,7 @@ def main():
                         # 'quarantined_identifiers' list.
                         quarantined_identifiers.append(entity.identifier)
                 except Exception as err:
-                    siemplify.LOGGER.exception(
+                    siemplify.LOGGER.error(
                         f"Error quarantine IP {entity.identifier}"
                         f" for sensor {sensor_name}, ERROR: {err}"
                     )

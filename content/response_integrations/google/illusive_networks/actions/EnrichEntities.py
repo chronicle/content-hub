@@ -109,7 +109,7 @@ def main():
                 raise
             except Exception as e:
                 failed_entities.append(entity)
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"An error occurred on entity: {entity.identifier}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -140,7 +140,7 @@ def main():
     except Exception as e:
         output_message += (f"Error executing action {ENRICH_ENTITIES_ACTION}. "
                            f"Reason: {e}.")
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False

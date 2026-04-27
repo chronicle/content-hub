@@ -66,7 +66,7 @@ def main():
             mobile_iron_manager.unlock_device_by_uuid(device_uuid=device_uuid)
         except Exception as err:
             error_message = f"Failed fetching system information for '{entity.identifier}', ERROR: {err}"
-            siemplify.LOGGER.exception(error_message)
+            siemplify.LOGGER.error(error_message)
             siemplify.LOGGER.exception(err)
             errors.append(error_message)
 

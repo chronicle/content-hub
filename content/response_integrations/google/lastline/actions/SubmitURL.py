@@ -227,7 +227,7 @@ def main(is_first_run):
         result_value = False
         status = EXECUTION_STATE_COMPLETED
         output_message = f"Failed to create analysis task because the provided url {url} is incorrect."
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     except (LastlinePermissionException, LastlineManyRequestsException) as error:
@@ -236,7 +236,7 @@ def main(is_first_run):
         output_message = (
             f"Failed to create analysis task for the url {url}. Error is: {error}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     except LastlineAuthenticationException as error:
@@ -246,7 +246,7 @@ def main(is_first_run):
             f"Failed to connect to the {INTEGRATION_NAME} service with the provided account. Please "
             f"check your configuration. Error is: {error}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     except Exception as error:
@@ -255,7 +255,7 @@ def main(is_first_run):
         output_message = (
             f"Failed to create analysis task for the url {url}. Error is: {error}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

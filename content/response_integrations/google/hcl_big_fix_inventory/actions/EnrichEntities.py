@@ -132,7 +132,7 @@ def main():
                 siemplify.LOGGER.info(f"Finish processing entity: {entity_identifier}")
             except Exception as e:
                 failed_entities.append(entity)
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"An error occurred on entity: {entity_identifier}."
                 )
                 siemplify.LOGGER.exception(e)
@@ -164,7 +164,7 @@ def main():
         output_message = (
             f"Error executing action {ENRICH_ENTITIES_SCRIPT_NAME}. Reason: {e}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

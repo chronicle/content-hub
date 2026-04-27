@@ -135,7 +135,7 @@ def main():
         ex_manager.logout()
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f'Error executing action "List Quarantined Emails". Reason: {e}'
         )
         siemplify.LOGGER.exception(e)

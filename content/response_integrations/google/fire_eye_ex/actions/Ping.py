@@ -75,7 +75,7 @@ def main():
         result_value = "true"
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"Failed to connect to the FireEye EX server! Error is {e}"
         )
         siemplify.LOGGER.exception(e)

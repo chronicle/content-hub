@@ -45,7 +45,11 @@ def main():
     )
     result_value = mobile_iron_manager.ping()
 
-    output_message = "Connection Established." if result_value else "Failed to establish connection."
+    output_message = (
+        "Successfully connected to the MobileIron server."
+        if result_value
+        else "Failed to connect to the MobileIron server."
+    )
 
     siemplify.end(output_message, result_value)
 

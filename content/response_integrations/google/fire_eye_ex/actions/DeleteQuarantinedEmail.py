@@ -87,14 +87,14 @@ def main():
         ex_manager.logout()
 
     except FireEyeEXUnsuccessfulOperationError as e:
-        siemplify.LOGGER.exception(f"Email with queue id {queue_id} was not deleted.")
+        siemplify.LOGGER.error(f"Email with queue id {queue_id} was not deleted.")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         output_message = f"Email with queue id {queue_id} was not deleted. Reason: {e}"
         result_value = "false"
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f'Error executing action "Delete Quarantined Email". Reason: {e}'
         )
         siemplify.LOGGER.exception(e)

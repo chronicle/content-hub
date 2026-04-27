@@ -232,7 +232,7 @@ def main(is_test_run):
                 )
 
             except Exception as e:
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"Failed to process incident with id {incident.incident_id}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -246,7 +246,7 @@ def main(is_test_run):
                     raise
             siemplify.LOGGER.info("\n")
     except Exception as e:
-        siemplify.LOGGER.exception(f"General error: {e}")
+        siemplify.LOGGER.error(f"General error: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:

@@ -189,7 +189,7 @@ def main(is_test_run):
 
     if max_hours_backwards > 48:
         warn_msg = '"Fetch Max Hours Backwards" Should be 48 or less due to API limitations. 48 will be used.'
-        siemplify.LOGGER.warning(warn_msg)
+        siemplify.LOGGER.warn(warn_msg)
         max_hours_backwards = 48
 
     siemplify.LOGGER.info("------------------- Main - Started -------------------")
@@ -293,7 +293,7 @@ def main(is_test_run):
 
                 except Exception as e:
                     error_msg = f"Failed to detect overflow for Alert Group {alert_group[0].email_id}"
-                    siemplify.LOGGER.exception(error_msg)
+                    siemplify.LOGGER.error(error_msg)
                     siemplify.LOGGER.exception(e)
 
                     if is_test_run:
@@ -316,7 +316,7 @@ def main(is_test_run):
                     break
 
             except Exception as e:
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"Failed to process alert group {alert_group[0].email_id}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -368,7 +368,7 @@ def main(is_test_run):
         siemplify.return_package(alerts)
 
     except Exception as e:
-        siemplify.LOGGER.exception(e)
+        siemplify.LOGGER.error(e)
         siemplify.LOGGER.exception(e)
 
         if is_test_run:

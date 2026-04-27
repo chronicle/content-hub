@@ -57,7 +57,7 @@ def main():
                 unblocked_entities.append(entity)
                 result_value = True
         except Exception as err:
-            siemplify.LOGGER.exception(
+            siemplify.LOGGER.error(
                 f"Error unblocking IP {entity.identifier}, ERROR: {err}"
             )
             siemplify.LOGGER._log.exception(err)

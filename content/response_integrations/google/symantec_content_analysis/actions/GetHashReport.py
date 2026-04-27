@@ -65,7 +65,7 @@ def main():
                 'Error fetching report for '
                 f'"{entity.identifier}", ERROR: {err!s}'
             )
-            siemplify.LOGGER.exception(error_message)
+            siemplify.LOGGER.error(error_message)
             siemplify.LOGGER.exception(err)
             errors.append(error_message)
 

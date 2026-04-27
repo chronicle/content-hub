@@ -86,7 +86,7 @@ def main():
         output_message = f"Failed to connect to the ObserveIT server! Error is {e}"
         result = "false"
         status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info("=" * 20 + " Main - Finished " + "=" * 20)

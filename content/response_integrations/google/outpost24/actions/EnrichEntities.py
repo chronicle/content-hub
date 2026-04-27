@@ -262,7 +262,7 @@ def main():
             output_message = "None of the provided entities were enriched."
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"General error performing action {ENRICH_ENTITIES_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

@@ -54,7 +54,7 @@ def main():
 
         except Exception as e:
             # An error occurred - skip entity and continue
-            siemplify.LOGGER.exception(
+            siemplify.LOGGER.error(
                 f"Unable to revalidate device for entity: {entity.identifier}.\n{e!s}."
             )
 
@@ -65,7 +65,7 @@ def main():
 
         except Exception as e:
             # An error occurred - skip entity and continue
-            siemplify.LOGGER.exception(
+            siemplify.LOGGER.error(
                 f"Unable to verify revalidation device for entity: {entity.identifier}.\n{e!s}."
             )
             siemplify.LOGGER.exception(e)

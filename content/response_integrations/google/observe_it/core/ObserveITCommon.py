@@ -62,7 +62,7 @@ class ObserveITCommon:
             with open(ids_file_path, encoding="utf-8") as f:
                 return json.loads(f.read())
         except Exception as e:
-            self.siemplify_logger.exception(f"Unable to read ids file: {e}")
+            self.siemplify_logger.error(f"Unable to read ids file: {e}")
             self.siemplify_logger.exception(e)
             return []
 
@@ -87,7 +87,7 @@ class ObserveITCommon:
                     f.write("[]")
                     raise
         except Exception as e:
-            self.siemplify_logger.exception(
+            self.siemplify_logger.error(
                 f"Failed writing IDs to IDs file, ERROR: {e!s}"
             )
             self.siemplify_logger.exception(e)

@@ -172,7 +172,7 @@ def main():
         status = EXECUTION_STATE_COMPLETED
 
     except LastlineInvalidParamException as error:
-        siemplify.LOGGER.exception(error)
+        siemplify.LOGGER.error(error)
         result_value = False
         status = EXECUTION_STATE_COMPLETED
         output_message = f"No {INTEGRATION_NAME} reports were found."
@@ -184,7 +184,7 @@ def main():
             f"Failed to find completed analysis tasks for the provided search parameters. Error is: "
             f"{error}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

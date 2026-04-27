@@ -250,7 +250,7 @@ def main(is_test_run):
                 siemplify.LOGGER.info(f"Alert {alert.id} was created.")
 
             except Exception as e:
-                siemplify.LOGGER.exception(f"Failed to process alert {alert.id}")
+                siemplify.LOGGER.error(f"Failed to process alert {alert.id}")
                 siemplify.LOGGER.exception(e)
 
                 if is_test_run:
@@ -266,7 +266,7 @@ def main(is_test_run):
             )
 
     except Exception as e:
-        siemplify.LOGGER.exception(f"Got exception on main handler. Error: {e}")
+        siemplify.LOGGER.error(f"Got exception on main handler. Error: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:

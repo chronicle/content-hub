@@ -90,7 +90,7 @@ def main():
             f"Failed to connect to the {INTEGRATION_NAME} service with the provided account. Please "
             f"check your configuration. Error is: {error}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     except Exception as error:
@@ -99,7 +99,7 @@ def main():
         output_message = (
             f"Failed to connect to the {INTEGRATION_NAME} server! Error is: {error}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

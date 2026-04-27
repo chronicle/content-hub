@@ -37,7 +37,7 @@ def main():
         )
         siemplify.end("Successfully connected to the McAfee Active Response server.", True)
     except Exception as e:
-        siemplify.logger.exception(f"Failed to connect to the McAfee Active Response server. Error: {e}")
+        siemplify.LOGGER.error(f"Failed to connect to the McAfee Active Response server. Error: {e}")
         siemplify.end("Failed to connect to the McAfee Active Response server.", False)
 
 

@@ -83,7 +83,7 @@ def main():
         atd_manager.logout()
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"General error performing action {GET_ANALYZER_PROFILES_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

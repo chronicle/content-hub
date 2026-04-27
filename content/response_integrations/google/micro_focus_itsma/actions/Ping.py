@@ -39,7 +39,11 @@ def main():
 
     result_value = itsma_manager.get_token()
 
-    output_message = "Connection Established." if result_value else "Connection Failed."
+    output_message = (
+        "Successfully connected to the Micro Focus ITSMA server."
+        if result_value
+        else "Failed to connect to the Micro Focus ITSMA server."
+    )
 
     siemplify.end(output_message, result_value)
 

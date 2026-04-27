@@ -37,9 +37,15 @@ def main():
         api_root=api_root, access_token=access_token, verify_ssl=verify_ssl
     )
 
-    cyberx_manager.get_all_devices()
+    try:
+        cyberx_manager.get_all_devices()
+        output_message = "Successfully connected to the CyberX server."
+        result_value = True
+    except Exception:
+        output_message = "Failed to connect to the CyberX server."
+        result_value = False
 
-    siemplify.end("Connection established.", True)
+    siemplify.end(output_message, result_value)
 
 
 if __name__ == "__main__":

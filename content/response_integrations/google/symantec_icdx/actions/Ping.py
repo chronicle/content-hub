@@ -35,8 +35,15 @@ def main():
         verify_ssl=verify_ssl,
     )
 
-    icdx_manager.test_connectivity()
-    siemplify.end("Connection Established", True)
+    try:
+        icdx_manager.test_connectivity()
+        output_message = "Successfully connected to the Symantec ICDX server."
+        result_value = True
+    except Exception:
+        output_message = "Failed to connect to the Symantec ICDX server."
+        result_value = False
+
+    siemplify.end(output_message, result_value)
 
 
 if __name__ == "__main__":

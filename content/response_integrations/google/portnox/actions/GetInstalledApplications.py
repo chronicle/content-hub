@@ -62,7 +62,7 @@ def main():
 
         except Exception as e:
             # An error occurred - skip entity and continue
-            siemplify.LOGGER.exception(
+            siemplify.LOGGER.error(
                 f"An error occurred on entity: {entity.identifier}.\n{e!s}."
             )
 

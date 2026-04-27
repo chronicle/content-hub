@@ -69,7 +69,7 @@ def main():
 
         except Exception as err:
             error_message = f'Error occurred fetching connections for "{entity.identifier}", ERROR: {err}'
-            siemplify.LOGGER.exception(error_message)
+            siemplify.LOGGER.error(error_message)
             siemplify.LOGGER.exception(err)
             errors.append(error_message)
 

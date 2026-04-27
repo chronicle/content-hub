@@ -83,7 +83,7 @@ def main():
         result = False
         status = EXECUTION_STATE_FAILED
         output_message = f'Error executing action "Generate Refresh Token". Reason: {e}'
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

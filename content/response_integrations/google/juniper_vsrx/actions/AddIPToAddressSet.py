@@ -57,7 +57,7 @@ def main():
             success_entities.append(entity)
         except Exception as err:
             error_message = f'Error adding address "{entity.identifier}" to address-set "{address_set_name}", ERROR: {err}'
-            siemplify.LOGGER.exception(error_message)
+            siemplify.LOGGER.error(error_message)
             siemplify.LOGGER.exception(err)
             errors.append(error_message)
 

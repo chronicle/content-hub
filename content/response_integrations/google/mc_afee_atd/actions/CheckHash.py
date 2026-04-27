@@ -106,7 +106,7 @@ def main():
                     f'Error checking hash "{entity.identifier}", Error: {err}'
                 )
                 errors.append(error_message)
-                siemplify.LOGGER.exception(error_message)
+                siemplify.LOGGER.error(error_message)
                 siemplify.LOGGER.exception(err)
             siemplify.LOGGER.info(f"Finished processing entity {entity.identifier}")
 
@@ -127,7 +127,7 @@ def main():
             )
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"General error performing action {CHECK_HASH_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

@@ -77,7 +77,7 @@ def main():
 
     except Exception as e:
         output_message += f"Failed to connect to the {PRODUCT_NAME}! Error is {e}."
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False

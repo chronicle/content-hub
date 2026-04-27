@@ -38,10 +38,16 @@ def main():
         conf["Sensors Names List Comma Separated"],
     )
 
-    # End session.
-    nsm_manager.logout()
+    try:
+        # End session.
+        nsm_manager.logout()
+        output_message = "Successfully connected to the McAfee NSM server."
+        result_value = True
+    except Exception:
+        output_message = "Failed to connect to the McAfee NSM server."
+        result_value = False
 
-    siemplify.end("Connection Established.", True)
+    siemplify.end(output_message, result_value)
 
 
 if __name__ == "__main__":

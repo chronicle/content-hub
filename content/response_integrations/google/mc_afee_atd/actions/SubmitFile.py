@@ -101,7 +101,7 @@ def main():
                 results.append({"File": file_path, "Task ID": task_id})
             except Exception as err:
                 error_message = f'Error submitting file "{file_path}", Error: {err}'
-                siemplify.LOGGER.exception(error_message)
+                siemplify.LOGGER.error(error_message)
                 siemplify.LOGGER.exception(err)
 
         # Provide logout from McAfee ATD.
@@ -117,7 +117,7 @@ def main():
             output_message = "No file was submitted."
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"General error performing action {SUBMIT_FILE_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

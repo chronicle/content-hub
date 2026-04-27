@@ -132,7 +132,7 @@ def main():
         output_message = (
             f"Error executing action '{LIST_DECEPTIVE_ITEMS_ACTION}'. Reason: {err}"
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(err)
         status = EXECUTION_STATE_FAILED
         result_value = False

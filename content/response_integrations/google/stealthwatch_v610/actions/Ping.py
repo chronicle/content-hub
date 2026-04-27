@@ -31,7 +31,11 @@ def main():
     stealthwatch_manager = StealthwatchManager(server_address, username, password)
 
     connectivity = stealthwatch_manager.test_connectivity()
-    output_message = "Connected Successfully"
+    output_message = (
+        "Successfully connected to the Stealthwatch server."
+        if connectivity
+        else "Failed to connect to the Stealthwatch server."
+    )
     siemplify.end(output_message, connectivity)
 
 

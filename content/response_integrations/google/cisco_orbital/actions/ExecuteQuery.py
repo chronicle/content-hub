@@ -267,10 +267,10 @@ def main(is_first_run):
         output_messages = (
             f"Action wasn't able to execute queries in Cisco Orbital. Reason: {e}"
         )
-        siemplify.LOGGER.exception(output_messages)
+        siemplify.LOGGER.error(output_messages)
         siemplify.LOGGER.exception(e)
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"General error performing action {EXECUTE_QUERY_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

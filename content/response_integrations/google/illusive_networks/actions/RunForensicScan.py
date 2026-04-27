@@ -63,7 +63,7 @@ def start_operation(siemplify, manager):
                 raise
 
             except Exception as e:
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"Failed to process entity: {entity.identifier}. Reason: {e}"
                 )
                 failed_entities.append(entity.identifier)
@@ -140,7 +140,7 @@ def query_operation_status(
                 raise
             except IncidentNotReadyException:
                 events_to_check_again.append(event_data)
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"Incident for event with ID {event_id} is not ready yet."
                 )
 
@@ -360,7 +360,7 @@ def query_operation_status(
                 raise
 
             except Exception as e:
-                siemplify.LOGGER.exception(
+                siemplify.LOGGER.error(
                     f"An error occurred on entity: {entity.identifier}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -551,7 +551,7 @@ def main(is_first_run):
         output_message += (
             f"Error executing action {RUN_FORENSIC_SCAN_ACTION}. Reason {e}."
         )
-        siemplify.LOGGER.exception(output_message)
+        siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False
