@@ -89,7 +89,7 @@ simply process general data.
     filters_by_creation_time: Annotated[
         bool,
         Field(
-            description=("Whether the code runs on entities and filters the entities it runs on by their creation time")
+            description="Whether the code runs on entities and filters the entities it runs on by their creation time"
         ),
     ]
     filters_by_modification_time: Annotated[

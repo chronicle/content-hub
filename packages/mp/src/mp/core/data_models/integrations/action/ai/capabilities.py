@@ -34,14 +34,12 @@ class ActionCapabilities(BaseModel):
     ]
     fetches_data: Annotated[
         bool,
-        Field(
-            description=("Whether the action fetches additional contextual data on alerts/entities etc."),
-        ),
+        Field(description="Whether the action fetches additional contextual data on alerts/entities etc."),
     ]
     can_mutate_external_data: Annotated[
         bool,
         Field(
-            description=("Whether the action mutates or changes any data in any external system outside Google SecOps.")
+            description="Whether the action mutates or changes any data in any external system outside Google SecOps."
         ),
     ]
     external_data_mutation_explanation: Annotated[
