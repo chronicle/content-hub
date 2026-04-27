@@ -18,10 +18,12 @@ content-hub/
         │   ├── community/
         │   │   ├── VENDOR1_PRODUCT1/cbn/
         │   │   └── VENDOR2_PRODUCT2/cbn/
-        │   ├── partnerA/
-        │   │   └── VENDOR1_PRODUCT1/cbn/
-        │   └── partnerB/
-        │        └── VENDOR1_PRODUCT1/cbn/
+        │   │
+        │   ├── partner/
+        │       ├── partnerA/
+        │       │     └── VENDOR1_PRODUCT1/cbn/
+        │       └── partnerB/
+        │             └── VENDOR1_PRODUCT1/cbn/
         ...
 ```
 
