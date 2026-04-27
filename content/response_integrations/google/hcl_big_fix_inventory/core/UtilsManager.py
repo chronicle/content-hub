@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import requests
+
 from .HCLBigFixInventoryExceptions import HCLBigFixInventoryException
 
 
 def validate_response(response, sensitive_data=None, error_msg="An error occurred"):
-    """
-    Validate response
+    """Validate response
     :param response: {requests.Response} The response to validate
     :param sensitive_data: {list} The list of sensitive data
     :param error_msg: {str} Default message to display on error
@@ -36,16 +37,16 @@ def validate_response(response, sensitive_data=None, error_msg="An error occurre
                 )
             ) from error
 
+        msg = f"{error_msg}: {error} {error.response.content}"
         raise HCLBigFixInventoryException(
-            f"{error_msg}: {error} {error.response.content}"
+            msg
         )
 
     return True
 
 
 def encode_sensitive_data(message, sensitive_data):
-    """
-    Encode sensitive data
+    """Encode sensitive data
     :param message: {str} The message which may contain sensitive data
     :param sensitive_data: {list} The list of sensitive data
     :return: {str} The message with encoded sensitive data
@@ -57,8 +58,7 @@ def encode_sensitive_data(message, sensitive_data):
 
 
 def encode_data(sensitive_data):
-    """
-    Encode string
+    """Encode string
     :param sensitive_data: {str} String to be encoded
     :return: {str} Encoded string
     """
@@ -69,8 +69,7 @@ def encode_data(sensitive_data):
 
 
 def convert_comma_separated_to_list(comma_separated):
-    """
-    Convert comma-separated string to list
+    """Convert comma-separated string to list
     :param comma_separated: String with comma-separated values
     :return: List of values
     """
@@ -80,8 +79,7 @@ def convert_comma_separated_to_list(comma_separated):
 
 
 def convert_list_to_comma_string(values_list):
-    """
-    Convert list to comma-separated string
+    """Convert list to comma-separated string
     :param values_list: List of values
     :return: String with comma-separated values
     """
@@ -93,8 +91,7 @@ def convert_list_to_comma_string(values_list):
 
 
 def get_entity_original_identifier(entity):
-    """
-    Helper function for getting entity original identifier
+    """Helper function for getting entity original identifier
     :param entity: entity from which function will get original identifier
     :return: {str} original identifier
     """

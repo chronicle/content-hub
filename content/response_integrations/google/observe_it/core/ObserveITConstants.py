@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 PROVIDER_NAME = "ObserveIT"
 DEVICE_VENDOR = "ObserveIT"
 DEVICE_PRODUCT = "ObserveIT"

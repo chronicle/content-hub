@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.PortnoxManager import PortnoxManager
 
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
+
+from ..core.PortnoxManager import PortnoxManager
 
 SCRIPT_NAME = "Portnox - RevalidateDeviceByIpOrMac"
 
@@ -53,8 +54,8 @@ def main():
 
         except Exception as e:
             # An error occurred - skip entity and continue
-            siemplify.LOGGER.error(
-                f"Unable to revalidate device for entity: {entity.identifier}.\n{str(e)}."
+            siemplify.LOGGER.exception(
+                f"Unable to revalidate device for entity: {entity.identifier}.\n{e!s}."
             )
 
     for entity, device_id in device_ids:
@@ -64,8 +65,8 @@ def main():
 
         except Exception as e:
             # An error occurred - skip entity and continue
-            siemplify.LOGGER.error(
-                f"Unable to verify revalidation device for entity: {entity.identifier}.\n{str(e)}."
+            siemplify.LOGGER.exception(
+                f"Unable to verify revalidation device for entity: {entity.identifier}.\n{e!s}."
             )
             siemplify.LOGGER.exception(e)
 

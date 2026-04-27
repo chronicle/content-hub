@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
 
 # ==============================================================================
 # title           :SymantecICDXQueryConnector.py
@@ -24,20 +23,21 @@ from soar_sdk.SiemplifyUtils import output_handler
 # libraries       : -
 # requirements    : -
 # Product Version: 1.0
-
 # ==============================================================================
 import json
 import os
+import sys
+
+import arrow
 from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import (
-    dict_to_flat,
     convert_datetime_to_unix_time,
     convert_string_to_unix_time,
+    dict_to_flat,
+    output_handler,
 )
-from ..core.SymantecICDXManager import SymantecICDXManager
 
-import sys
-import arrow
+from ..core.SymantecICDXManager import SymantecICDXManager
 
 # ============================== CONSTS ===================================== #
 DEVICE_VENDOR = DEVICE_PRODUCT = "SymantecICDX"
@@ -56,17 +56,11 @@ IDS_FILE = "ids.json"
 
 
 class SymantecICDXConnectorException(Exception):
-    """
-    SymantecICDX Cases Connector Exception
-    """
-
-    pass
+    """SymantecICDX Cases Connector Exception"""
 
 
 class SymantecICDXConnector:
-    """
-    SymantecICDX Connector
-    """
+    """SymantecICDX Connector"""
 
     def __init__(
         self, symantec_icdx_manager, connector_scope, environment_field_name=None
@@ -78,8 +72,7 @@ class SymantecICDXConnector:
 
     @staticmethod
     def validate_timestamp(timestamp, max_days_backwards=DEFAULT_DAYS_BACKWARDS):
-        """
-        Validate timestamp in range
+        """Validate timestamp in range
         :param timestamp: {unixtime} last run timestamp.
         :param max_days_backwards: {int} days backwards to check timestamp.
         :return: {long} if first run, return current time minus offset time, else return timestamp from file
@@ -95,8 +88,7 @@ class SymantecICDXConnector:
         return timestamp
 
     def create_case_info(self, alert):
-        """
-        Create CaseInfo object from SymantecICDX alert
+        """Create CaseInfo object from SymantecICDX alert
         :param alert: {dict} An SymantecICDX Case
         :return: {CaseInfo} The newly created case
         """
@@ -125,7 +117,7 @@ class SymantecICDXConnector:
             try:
                 alert_time = convert_string_to_unix_time(alert.get("log_time", 1))
             except Exception as e:
-                self.logger.error(f"Unable to get alert time: {str(e)}")
+                self.logger.exception(f"Unable to get alert time: {e!s}")
                 self.logger.exception(e)
                 alert_time = 1
 
@@ -139,20 +131,20 @@ class SymantecICDXConnector:
                 )
 
             except Exception as e:
-                self.logger.error(f"Unable to get alert end time: {str(e)}")
+                self.logger.exception(f"Unable to get alert end time: {e!s}")
                 self.logger.exception(e)
                 case_info.end_time = alert_time
 
         except KeyError as e:
-            raise KeyError(f"Mandatory key is missing: {str(e)}")
+            msg = f"Mandatory key is missing: {e!s}"
+            raise KeyError(msg)
 
         case_info.events = [dict_to_flat(alert)]
 
         return case_info
 
     def read_ids(self, ids_file_path):
-        """
-        Read existing alerts IDs from ids file (from last 24h only)
+        """Read existing alerts IDs from ids file (from last 24h only)
         :param ids_file_path: {str} The path of the ids file.
         :return: {list} List of the uds
         """
@@ -160,58 +152,41 @@ class SymantecICDXConnector:
             return {}
 
         try:
-            with open(ids_file_path, "r") as f:
+            with open(ids_file_path, encoding="utf-8") as f:
                 existing_ids = json.loads(f.read())
 
-                filtered_ids = {}
-                for alert_id, timestamp in list(existing_ids.items()):
-                    if (
-                        timestamp
-                        > arrow.utcnow().shift(hours=-IDS_HOURS_LIMIT).timestamp
-                    ):
-                        filtered_ids[alert_id] = timestamp
-
-                return filtered_ids
+                return {alert_id: timestamp for alert_id, timestamp in list(existing_ids.items()) if timestamp
+                        > arrow.utcnow().shift(hours=-IDS_HOURS_LIMIT).timestamp}
 
         except Exception as e:
-            self.connector_scope.LOGGER.error(f"Unable to read ids file: {str(e)}")
+            self.connector_scope.LOGGER.exception(f"Unable to read ids file: {e!s}")
             self.connector_scope.LOGGER.exception(e)
             return {}
 
     def write_ids(self, ids_file_path, ids):
-        """
-        Write ids to the ids file
+        """Write ids to the ids file
         :param ids_file_path: {str} The path of the ids file.
         :param ids: {dict} The ids to write to the file
         """
         if not os.path.exists(os.path.dirname(ids_file_path)):
             os.makedirs(os.path.dirname(ids_file_path))
 
-        with open(ids_file_path, "w") as f:
+        with open(ids_file_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(ids))
 
     @staticmethod
     def filter_old_alerts(alerts, existing_ids):
-        """
-        Filter alerts that were already processed
+        """Filter alerts that were already processed
         :param alerts: {list} The alerts to filter
         :param existing_ids: {list} The ids to filter
         :return: {list} The filtered alerts
         """
-        filtered_alerts = []
-
-        for alert in alerts:
-            if alert.get("uuid") not in list(existing_ids.keys()):
-                filtered_alerts.append(alert)
-
-        return filtered_alerts
+        return [alert for alert in alerts if alert.get("uuid") not in list(existing_ids.keys())]
 
 
 @output_handler
 def main(test_handler=False):
-    """
-    Main execution - SymantecICDX Cases Connector
-    """
+    """Main execution - SymantecICDX Cases Connector"""
     connector_scope = SiemplifyConnectorExecution()
     connector_scope.script_name = SCRIPT_NAME
     output_variables = {}
@@ -299,7 +274,7 @@ def main(test_handler=False):
                     )
 
                 except Exception as e:
-                    connector_scope.LOGGER.error(
+                    connector_scope.LOGGER.exception(
                         f"Failed to detect overflow for Alert {str(alert.get(ALERT_NAME_KEY)).encode('utf-8')}, UUID: {str(alert.get(ALERT_ID_KEY)).encode('utf-8')}. Error:"
                     )
                     connector_scope.LOGGER.exception(e)
@@ -309,21 +284,21 @@ def main(test_handler=False):
                     existing_ids.update({alert["uuid"]: case.start_time})
 
                 else:
-                    connector_scope.LOGGER.warn(
+                    connector_scope.LOGGER.warning(
                         f"Overflowed on Alert {str(alert.get(ALERT_NAME_KEY)).encode('utf-8')}, UUID: {str(alert.get(ALERT_ID_KEY)).encode('utf-8')}"
                     )
 
             except Exception as e:
                 # Failed to build CaseInfo for alert
-                connector_scope.LOGGER.error(
+                connector_scope.LOGGER.exception(
                     f"Failed to create CaseInfo for Alert {str(alert.get(ALERT_NAME_KEY)).encode('utf-8')}, UUID: {str(alert.get(ALERT_ID_KEY)).encode('utf-8')}"
                 )
 
-                connector_scope.LOGGER.error(f"Error Message: {str(e)}")
+                connector_scope.LOGGER.exception(f"Error Message: {e!s}")
                 connector_scope.LOGGER.exception(e)
 
                 if test_handler:
-                    raise e
+                    raise
 
         connector_scope.LOGGER.info(f"Completed. Found {len(cases)} cases.")
 
@@ -345,23 +320,21 @@ def main(test_handler=False):
                 )
 
             except Exception as e:
-                connector_scope.LOGGER.error("Unable to save timestamp.")
+                connector_scope.LOGGER.exception("Unable to save timestamp.")
                 connector_scope.LOGGER.exception(e)
 
         # Return data
         connector_scope.return_package(cases, output_variables, log_items)
 
     except Exception as e:
-        connector_scope.LOGGER.error(str(e))
+        connector_scope.LOGGER.exception(str(e))
         connector_scope.LOGGER.exception(e)
         if test_handler:
-            raise e
+            raise
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] == "True":
-        print("Main execution started")
         main(test_handler=False)
     else:
-        print("Test execution started")
         main(test_handler=True)

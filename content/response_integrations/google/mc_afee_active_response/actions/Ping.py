@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.McAfeeActiveResponseManager import McAfeeActiveResponseManager
 
 PROVIDER = "McAfeeActiveResponse"
@@ -27,7 +29,7 @@ def main():
 
     try:
         # The connection is established at the Init function of the class.
-        mar_manager = McAfeeActiveResponseManager(
+        McAfeeActiveResponseManager(
             conf.get("Broker URLs List").split(",") if conf.get("Broker URLs List") else [],
             conf.get("Broker CA Bundle File Path"),
             conf.get("Certificate File Path"),
@@ -35,7 +37,7 @@ def main():
         )
         siemplify.end("Successfully connected to the McAfee Active Response server.", True)
     except Exception as e:
-        siemplify.logger.error(f"Failed to connect to the McAfee Active Response server. Error: {e}")
+        siemplify.logger.exception(f"Failed to connect to the McAfee Active Response server. Error: {e}")
         siemplify.end("Failed to connect to the McAfee Active Response server.", False)
 
 

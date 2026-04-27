@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from ..core.FireEyeEXManager import FireEyeEXManager, FireEyeEXUnsuccessfulOperationError
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from TIPCommon import extract_configuration_param, extract_action_param
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
+from ..core.FireEyeEXManager import FireEyeEXManager, FireEyeEXUnsuccessfulOperationError
 
 INTEGRATION_NAME = "FireEyeEX"
 SCRIPT_NAME = "Delete Quarantined Email"
@@ -86,14 +87,14 @@ def main():
         ex_manager.logout()
 
     except FireEyeEXUnsuccessfulOperationError as e:
-        siemplify.LOGGER.error(f"Email with queue id {queue_id} was not deleted.")
+        siemplify.LOGGER.exception(f"Email with queue id {queue_id} was not deleted.")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         output_message = f"Email with queue id {queue_id} was not deleted. Reason: {e}"
         result_value = "false"
 
     except Exception as e:
-        siemplify.LOGGER.error(
+        siemplify.LOGGER.exception(
             f'Error executing action "Delete Quarantined Email". Reason: {e}'
         )
         siemplify.LOGGER.exception(e)

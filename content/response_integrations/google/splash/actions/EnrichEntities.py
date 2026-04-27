@@ -13,24 +13,26 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
-from soar_sdk.SiemplifyAction import SiemplifyAction
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.Siemplify import InsightSeverity, InsightType
-from ..core.SplashManager import SplashManager
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
 from TIPCommon import (
-    extract_configuration_param,
     extract_action_param,
+    extract_configuration_param,
     flat_dict_to_csv,
 )
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from ..core.SplashExceptions import EntityNotFoundException
+
 from ..core.constants import (
-    INTEGRATION_NAME,
     ENRICH_ENTITIES_ACTION,
     HTTP_SCHEMA,
     HTTPS_SCHEMA,
+    INTEGRATION_NAME,
 )
+from ..core.SplashExceptions import EntityNotFoundException
+from ..core.SplashManager import SplashManager
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.URL, EntityTypes.ADDRESS]
 ENRICHMENT_PREFIX = "Splash"
@@ -142,7 +144,7 @@ def main():
                     failed_entities.append(entity)
             except EntityNotFoundException as e:
                 failed_entities.append(entity)
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"An error occurred on entity: {entity.identifier}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -180,7 +182,7 @@ def main():
 
     except Exception as e:
         output_message = f'Error executing action "Enrich Entities". Reason: {e}.'
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False

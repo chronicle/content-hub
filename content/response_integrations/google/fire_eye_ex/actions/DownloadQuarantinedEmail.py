@@ -14,17 +14,20 @@
 
 # coding=utf-8
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from ..core.FireEyeEXManager import (
-    FireEyeEXManager,
-    FireEyeEXUnsuccessfulOperationError,
-    FireEyeEXDownloadFileError,
-)
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from TIPCommon import extract_configuration_param, extract_action_param
+
 import base64
 from urllib.parse import urljoin
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
+from ..core.FireEyeEXManager import (
+    FireEyeEXDownloadFileError,
+    FireEyeEXManager,
+    FireEyeEXUnsuccessfulOperationError,
+)
 
 INTEGRATION_NAME = "FireEyeEX"
 SCRIPT_NAME = "Download Quarantined Email"
@@ -113,15 +116,15 @@ def main():
                 result_value = "false"
 
         except FireEyeEXDownloadFileError as e:
-            siemplify.LOGGER.error(
+            siemplify.LOGGER.exception(
                 f"Unable to attach downloaded artifacts. Reason: {e}"
             )
             output_message = f"Unable to attach downloaded artifacts. Reason: {e}"
             result_value = "false"
 
-        except EnvironmentError:
+        except OSError:
             # File size is too big
-            siemplify.LOGGER.error(
+            siemplify.LOGGER.exception(
                 "Unable to attach quarantined email. Reason: email is too large in size."
             )
             output_message = "Unable to attach quarantined email. Reason: email is too large in size."
@@ -130,7 +133,7 @@ def main():
         ex_manager.logout()
 
     except FireEyeEXUnsuccessfulOperationError as e:
-        siemplify.LOGGER.error(f"Email with queue id {queue_id} was not downloaded.")
+        siemplify.LOGGER.exception(f"Email with queue id {queue_id} was not downloaded.")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         output_message = (
@@ -139,7 +142,7 @@ def main():
         result_value = "false"
 
     except Exception as e:
-        siemplify.LOGGER.error(
+        siemplify.LOGGER.exception(
             f'Error executing action "Download Quarantined Email". Reason: {e}'
         )
         siemplify.LOGGER.exception(e)

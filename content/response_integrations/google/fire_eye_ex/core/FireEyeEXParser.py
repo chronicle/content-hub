@@ -13,13 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from .datamodels import QuarantinedEmail, Alert
+
+from .datamodels import Alert, QuarantinedEmail
 
 
 class FireEyeEXParser:
-    """
-    FireEye EX Transformation Layer.
-    """
+    """FireEye EX Transformation Layer."""
 
     @staticmethod
     def build_siemplify_email_obj(email_data):

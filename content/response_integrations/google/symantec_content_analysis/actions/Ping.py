@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.SymantecContentAnalysisManager import SymantecContentAnalysisManager
 
 INTEGRATION_PROVIDER = "SymantecContentAnalysis"
@@ -28,17 +30,14 @@ def main():
     conf = siemplify.get_configuration(INTEGRATION_PROVIDER)
 
     # CR: verify_ssl = conf.get('Verify SSL').lower() == 'true'
-    verify_ssl = True if conf.get("Verify SSL").lower() == "true" else False
+    verify_ssl = conf.get("Verify SSL").lower() == "true"
     symantec_manager = SymantecContentAnalysisManager(
         conf.get("API Root"), conf.get("API Key"), verify_ssl
     )
 
     connected = symantec_manager.ping()
 
-    if connected:
-        output_message = "Connection Established."
-    else:
-        output_message = "Connection Failed"
+    output_message = "Connection Established." if connected else "Connection Failed"
 
     siemplify.end(output_message, True)
 

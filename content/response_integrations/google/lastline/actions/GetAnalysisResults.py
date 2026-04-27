@@ -13,24 +13,25 @@
 # limitations under the License.
 
 from __future__ import annotations
-import validators
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
 
+import validators
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from ..core.LastlineManager import LastlineManager
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
 from ..core.consts import (
-    INTEGRATION_NAME,
-    GET_ANALYSIS_RESULTS,
-    FILE,
-    URL,
     ANALYSIS_RESULTS,
-    THRESHOLD,
     DEFAULT_X_LAST_SCANS_GET_RESULTS,
+    FILE,
+    GET_ANALYSIS_RESULTS,
+    INTEGRATION_NAME,
+    THRESHOLD,
+    URL,
 )
 from ..core.exceptions import LastlineAuthenticationException, LastlineInvalidParamException
+from ..core.LastlineManager import LastlineManager
 from ..core.utils import get_file_hash
 
 
@@ -124,14 +125,15 @@ def main():
                 if entity.entity_type == EntityTypes.URL:
                     url = entity.identifier
                     if not validators.url(url):
-                        raise LastlineInvalidParamException("Invalid URL!")
+                        msg = "Invalid URL!"
+                        raise LastlineInvalidParamException(msg)
 
                 file_sha1 = None
                 file_md5 = None
                 if entity.entity_type == EntityTypes.FILEHASH:
                     file_sha1, file_md5 = get_file_hash(entity.identifier)
 
-                if entity.entity_type not in (EntityTypes.URL, EntityTypes.FILEHASH):
+                if entity.entity_type not in {EntityTypes.URL, EntityTypes.FILEHASH}:
                     output_message += (
                         f"Entity type {entity.entity_type} is not supported by the action, only URL "
                         f"or Filehash are supported, skipping this entity type\n"
@@ -225,7 +227,7 @@ def main():
                 )
 
             except LastlineInvalidParamException as error:
-                siemplify.LOGGER.error(error)
+                siemplify.LOGGER.exception(error)
                 output_message += (
                     f"Failed to fetch the analysis results for the {submission_type} "
                     f"{entity.identifier}\n"
@@ -250,7 +252,7 @@ def main():
             f"Failed to connect to the {INTEGRATION_NAME} service with the provided account. Please "
             f"check your configuration. Error is: {error}\n"
         )
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(error)
 
     except Exception as error:
@@ -259,7 +261,7 @@ def main():
         output_message = (
             f"Error executing action: {GET_ANALYSIS_RESULTS}. Reason: {error}."
         )
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(error)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

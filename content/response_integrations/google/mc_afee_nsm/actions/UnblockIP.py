@@ -13,9 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.NSMManager import NsmManager
 
 # Consts
@@ -55,7 +57,7 @@ def main():
                 unblocked_entities.append(entity)
                 result_value = True
         except Exception as err:
-            siemplify.LOGGER.error(
+            siemplify.LOGGER.exception(
                 f"Error unblocking IP {entity.identifier}, ERROR: {err}"
             )
             siemplify.LOGGER._log.exception(err)

@@ -13,23 +13,26 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from urllib.parse import urljoin
+
 import requests
+
 from .constants import (
-    ENDPOINTS,
     ACCESS_TOKEN_PAYLOAD,
-    REFRESH_TOKEN_PAYLOAD,
     API_ROOT_TO_AUTH_URL,
+    ENDPOINTS,
+    REFRESH_TOKEN_PAYLOAD,
     REQUEST_DATE_FORMAT,
 )
-from .UtilsManager import (
-    validate_response,
-    filter_old_alerts,
-    filter_alerts_by_timestamp,
-    convert_time_to_given_offset,
-)
-from .Site24x7Parser import Site24x7Parser
 from .Site24x7Exceptions import Site24x7Exception
+from .Site24x7Parser import Site24x7Parser
+from .UtilsManager import (
+    convert_time_to_given_offset,
+    filter_alerts_by_timestamp,
+    filter_old_alerts,
+    validate_response,
+)
 
 
 class Site24x7Manager:
@@ -42,8 +45,7 @@ class Site24x7Manager:
         verify_ssl=False,
         siemplify_logger=None,
     ):
-        """
-        The method is used to init an object of Manager class
+        """The method is used to init an object of Manager class
         :param api_root: {str} API root of the Site24x7 instance.
         :param client_id: {str} Client ID of the Site24x7 instance.
         :param client_secret: {str} Client Secret of the Site24x7 instance.
@@ -54,8 +56,9 @@ class Site24x7Manager:
         self.api_root = api_root[:-1] if api_root.endswith("/") else api_root
         self.auth_url = API_ROOT_TO_AUTH_URL.get(self.api_root)
         if not self.auth_url:
+            msg = "Please provide a valid API Root in integration configuration."
             raise Site24x7Exception(
-                "Please provide a valid API Root in integration configuration."
+                msg
             )
         self.client_id = client_id
         self.client_secret = client_secret
@@ -75,8 +78,7 @@ class Site24x7Manager:
         )
 
     def _generate_access_token(self, client_id, client_secret, refresh_token):
-        """
-        Request access token
+        """Request access token
         :param client_id: {str} Client ID of the Site24x7 instance.
         :param client_secret: {str} Client Secret of the Site24x7 instance.
         :param refresh_token: {str} Refresh Token of the Site24x7 instance.
@@ -93,8 +95,7 @@ class Site24x7Manager:
 
     @staticmethod
     def generate_refresh_token(api_root, client_id, client_secret, code):
-        """
-        Request refresh token
+        """Request refresh token
         :param api_root: {str} The API root of the Site24x7 instance.
         :param client_id: {str} Client ID of the Site24x7 instance.
         :param client_secret: {str} Client Secret of the Site24x7 instance.
@@ -109,8 +110,9 @@ class Site24x7Manager:
         )
 
         if not auth_url:
+            msg = "Please provide a valid API Root in integration configuration."
             raise Site24x7Exception(
-                "Please provide a valid API Root in integration configuration."
+                msg
             )
 
         request_url = urljoin(auth_url, ENDPOINTS["token"])
@@ -120,8 +122,7 @@ class Site24x7Manager:
         return response.json().get("refresh_token")
 
     def _get_full_url(self, root_url, url_id, **kwargs):
-        """
-        Get full url from url identifier.
+        """Get full url from url identifier.
         :param root_url: {str} The API root for the request
         :param url_id: {str} The id of url
         :param kwargs: {dict} Variables passed for string formatting
@@ -130,16 +131,13 @@ class Site24x7Manager:
         return urljoin(root_url, ENDPOINTS[url_id].format(**kwargs))
 
     def test_connectivity(self):
-        """
-        Test connectivity
-        """
+        """Test connectivity"""
         request_url = self._get_full_url(self.api_root, "ping")
         response = self.session.get(request_url)
         validate_response(response)
 
     def get_monitors(self):
-        """
-        Get all available monitors
+        """Get all available monitors
         :return: {list} List of Monitor objects
         """
         request_url = self._get_full_url(self.api_root, "monitors")
@@ -148,8 +146,7 @@ class Site24x7Manager:
         return self.parser.build_monitors_list(response.json())
 
     def get_alert_logs(self, existing_ids, limit, start_time, utc_offset):
-        """
-        Get alert logs
+        """Get alert logs
         :param existing_ids: {list} The list of existing ids
         :param limit: {int} The limit for results
         :param start_time: {datetime} The start datetime from where to fetch

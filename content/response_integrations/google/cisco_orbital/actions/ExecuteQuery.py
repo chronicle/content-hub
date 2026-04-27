@@ -13,21 +13,24 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import json
 import sys
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from ..core.CiscoOrbitalManager import CiscoOrbitalManager
-from soar_sdk.SiemplifyUtils import output_handler, unix_now
+
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_INPROGRESS,
 )
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
-from ..core.constants import PROVIDER_NAME, EXECUTE_QUERY_SCRIPT_NAME, MAX_EXPIRATION_IN_HOURS
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler, unix_now
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
+from ..core.CiscoOrbitalManager import CiscoOrbitalManager
+from ..core.constants import EXECUTE_QUERY_SCRIPT_NAME, MAX_EXPIRATION_IN_HOURS, PROVIDER_NAME
 from ..core.exceptions import BadRequestException
-from ..core.UtilsManager import is_action_approaching_timeout, hours_to_milliseconds
+from ..core.UtilsManager import hours_to_milliseconds, is_action_approaching_timeout
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 ITERATIONS_LIMIT = 2
@@ -44,8 +47,7 @@ def start_operation(
     hide_case_wall_table,
     expiration_unix,
 ):
-    """
-    Submit the query on endpoints.
+    """Submit the query on endpoints.
     :param siemplify: SiemplifyAction object.
     :param manager: CiscoOrbitalManager object.
     :param entities: {list} The list of entities.
@@ -67,8 +69,7 @@ def start_operation(
 def query_operation_status(
     siemplify, manager, entities, job_id, limit, hide_case_wall_table
 ):
-    """
-    Get endpoints query results.
+    """Get endpoints query results.
     :param siemplify: SiemplifyAction object.
     :param manager: CiscoOrbitalManager object.
     :param entities: {list} The list of entities.
@@ -225,7 +226,7 @@ def main(is_first_run):
                 )
                 expiration_unix = min_expiration // 1000
             else:
-                expiration_unix = expiration_unix // 1000
+                expiration_unix //= 1000
             suitable_entities = [
                 entity
                 for entity in siemplify.target_entities
@@ -266,10 +267,10 @@ def main(is_first_run):
         output_messages = (
             f"Action wasn't able to execute queries in Cisco Orbital. Reason: {e}"
         )
-        siemplify.LOGGER.error(output_messages)
+        siemplify.LOGGER.exception(output_messages)
         siemplify.LOGGER.exception(e)
     except Exception as e:
-        siemplify.LOGGER.error(
+        siemplify.LOGGER.exception(
             f"General error performing action {EXECUTE_QUERY_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)
@@ -286,8 +287,7 @@ def main(is_first_run):
 
 
 def check_entities_status(results, entities):
-    """
-    Get processed entities status
+    """Get processed entities status
     :param results: {list} List of EndpointResult objects.
     :param entities: {list} The list of entities.
     :return: {tuple} successful entities and results, pending entities, failed entities
@@ -323,8 +323,7 @@ def check_entities_status(results, entities):
 
 
 def is_address_in_result(entity, result):
-    """
-    Check if address entity exists in result
+    """Check if address entity exists in result
     :param entity: The entity
     :param result: EndpointResult object
     :return: {bool} True if exists, False otherwise

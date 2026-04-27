@@ -13,11 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from ..core.FireEyeEXManager import FireEyeEXManager
-from soar_sdk.SiemplifyAction import SiemplifyAction
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
+from ..core.FireEyeEXManager import FireEyeEXManager
 
 INTEGRATION_NAME = "FireEyeEX"
 SCRIPT_NAME = "List quarantined emails"
@@ -133,7 +135,7 @@ def main():
         ex_manager.logout()
 
     except Exception as e:
-        siemplify.LOGGER.error(
+        siemplify.LOGGER.exception(
             f'Error executing action "List Quarantined Emails". Reason: {e}'
         )
         siemplify.LOGGER.exception(e)

@@ -13,24 +13,25 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import dict_to_flat, add_prefix_to_dict
+
+import copy
+import uuid
+
+from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
+from TIPCommon import add_prefix_to_dict, dict_to_flat
+
 from .constants import (
+    DEVICE_PRODUCT,
+    DEVICE_VENDOR,
     INSIGHT_HTML_TEMPLATE,
     INSIGHT_HTML_TEMPLATE_FINDINGS,
     RISK_COLOR_MAP,
-    DEVICE_VENDOR,
-    DEVICE_PRODUCT,
     SEVERITY_MAP,
 )
-import copy
-import uuid
-from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 
 
 class BaseModel:
-    """
-    Base model for inheritance
-    """
+    """Base model for inheritance"""
 
     def __init__(self, raw_data):
         self.raw_data = raw_data
@@ -59,7 +60,7 @@ class EntityObject(BaseModel):
         criticality,
         id,
     ):
-        super(EntityObject, self).__init__(raw_data)
+        super().__init__(raw_data)
         self.id = id
         self.hostname = hostname
         self.ip = ip
@@ -100,7 +101,7 @@ class EntityObject(BaseModel):
                 count_high_findings=self.count_high_findings,
                 count_critical_findings=self.count_critical_findings,
             )
-            insight = insight + findings_insight
+            insight += findings_insight
 
         return insight
 
@@ -140,11 +141,7 @@ class EntityObject(BaseModel):
 
     def to_findings_table(self):
 
-        findings_table = []
-
-        for finding in self.findings_raw_data:
-            findings_table.append(
-                {
+        return [{
                     "CVE": finding.get("cve"),
                     "Product Name": finding.get("productName"),
                     "Service Name": finding.get("serviceName"),
@@ -153,10 +150,7 @@ class EntityObject(BaseModel):
                     "Reason": finding.get("data"),
                     "Description": finding.get("description"),
                     "Risk Level": finding.get("riskLevel"),
-                }
-            )
-
-        return findings_table
+                } for finding in self.findings_raw_data]
 
     def to_enrichment_data(self, prefix=None, return_finding_information=False):
 
@@ -198,7 +192,7 @@ class Finding(BaseModel):
         last_seen,
         product_name,
     ):
-        super(Finding, self).__init__(raw_data)
+        super().__init__(raw_data)
         self.uuid = uuid.uuid4()
         self.id = id
         self.name = name

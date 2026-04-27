@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.McAfeeATDManager import McAfeeATDManager
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
-from ..core.constants import INTEGRATION_NAME, INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
+
+from ..core.constants import INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core.McAfeeATDManager import McAfeeATDManager
 
 
 @output_handler
@@ -76,7 +78,7 @@ def main():
         )
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
+        siemplify.LOGGER.exception(f"General error performing action {PING_SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         result = False
         status = EXECUTION_STATE_FAILED

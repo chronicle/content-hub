@@ -13,17 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.IllusiveNetworksManager import IllusiveNetworksManager
-from TIPCommon import extract_configuration_param, extract_action_param
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from ..core.IllusiveNetworksExceptions import ManagerNotFoundException
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
 from ..core.constants import (
     INTEGRATION_NAME,
     PRODUCT_NAME,
     REMOVE_DECEPTIVE_SERVER_SCRIPT_NAME,
 )
+from ..core.IllusiveNetworksExceptions import ManagerNotFoundException
+from ..core.IllusiveNetworksManager import IllusiveNetworksManager
 
 
 @output_handler
@@ -89,7 +91,7 @@ def main():
     except Exception as e:
         output_message = (f"Error executing action "
                           f"'{REMOVE_DECEPTIVE_SERVER_SCRIPT_NAME}'. Reason: {e}")
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
 

@@ -13,12 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import dict_to_flat, add_prefix_to_dict_keys
-from ..core.PortnoxManager import PortnoxManager
 
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import add_prefix_to_dict_keys, dict_to_flat, output_handler
+
+from ..core.PortnoxManager import PortnoxManager
 
 SCRIPT_NAME = "Portnox - EnrichDevice"
 
@@ -55,8 +55,8 @@ def main():
 
         except Exception as e:
             # An error occurred - skip entity and continue
-            siemplify.LOGGER.error(
-                f"An error occurred on entity: {entity.identifier}.\n{str(e)}."
+            siemplify.LOGGER.exception(
+                f"An error occurred on entity: {entity.identifier}.\n{e!s}."
             )
 
     if enriched_entities:

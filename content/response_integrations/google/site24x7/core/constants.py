@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "Site24x7"
 INTEGRATION_DISPLAY_NAME = "Site24x7"
 

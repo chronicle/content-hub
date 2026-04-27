@@ -13,22 +13,24 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.IllusiveNetworksManager import IllusiveNetworksManager
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
 from ..core.constants import (
-    INTEGRATION_NAME,
-    PRODUCT_NAME,
-    LIST_DECEPTIVE_ITEMS_ACTION,
     ALL,
-    ONLY_USERS,
-    ONLY_SERVERS,
+    DECEPTIVE_SERVERS_TABLE_NAME,
     DECEPTIVE_STATE_MAPPING,
     DECEPTIVE_USERS_TABLE_NAME,
-    DECEPTIVE_SERVERS_TABLE_NAME,
+    INTEGRATION_NAME,
+    LIST_DECEPTIVE_ITEMS_ACTION,
+    ONLY_SERVERS,
+    ONLY_USERS,
+    PRODUCT_NAME,
 )
+from ..core.IllusiveNetworksManager import IllusiveNetworksManager
 
 
 @output_handler
@@ -91,12 +93,12 @@ def main():
             siemplify_logger=siemplify.LOGGER,
         )
 
-        if deceptive_type == ALL or deceptive_type == ONLY_USERS:
+        if deceptive_type in {ALL, ONLY_USERS}:
             deceptive_users = manager.get_deceptive_users(
                 deceptive_state=DECEPTIVE_STATE_MAPPING[deceptive_state],
                 limit=max_items_to_return,
             )
-        if deceptive_type == ALL or deceptive_type == ONLY_SERVERS:
+        if deceptive_type in {ALL, ONLY_SERVERS}:
             deceptive_servers = manager.get_deceptive_servers(
                 deceptive_state=DECEPTIVE_STATE_MAPPING[deceptive_state],
                 limit=max_items_to_return,
@@ -130,7 +132,7 @@ def main():
         output_message = (
             f"Error executing action '{LIST_DECEPTIVE_ITEMS_ACTION}'. Reason: {err}"
         )
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(err)
         status = EXECUTION_STATE_FAILED
         result_value = False

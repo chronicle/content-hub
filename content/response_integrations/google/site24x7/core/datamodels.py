@@ -13,27 +13,28 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import hashlib
 import json
 import uuid
-from TIPCommon import dict_to_flat, add_prefix_to_dict
+
+from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
+from TIPCommon import add_prefix_to_dict, dict_to_flat
+
 from .constants import (
     ALERT_TYPE_MAP,
-    SEVERITY_MAP,
-    DEVICE_VENDOR,
-    DEVICE_PRODUCT,
-    DOWN_STATUS,
-    UP_STATUS,
     CRITICAL_STATUS,
+    DEVICE_PRODUCT,
+    DEVICE_VENDOR,
+    DOWN_STATUS,
+    SEVERITY_MAP,
     TROUBLE_STATUS,
+    UP_STATUS,
 )
-from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 
 
 class BaseModel:
-    """
-    Base model for inheritance
-    """
+    """Base model for inheritance"""
 
     def __init__(self, raw_data):
         self.raw_data = raw_data
@@ -51,7 +52,7 @@ class BaseModel:
 
 class AlertLog(BaseModel):
     def __init__(self, raw_data, msg, sent_time, alert_type):
-        super(AlertLog, self).__init__(raw_data)
+        super().__init__(raw_data)
         self.id = hashlib.sha1(json.dumps(raw_data).encode("utf-8")).hexdigest()
         self.msg = msg
         self.sent_time = sent_time
@@ -103,5 +104,5 @@ class AlertLog(BaseModel):
 
 class Monitor(BaseModel):
     def __init__(self, raw_data, display_name):
-        super(Monitor, self).__init__(raw_data)
+        super().__init__(raw_data)
         self.display_name = display_name

@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import construct_csv, dict_to_flat, output_handler
+
 from ..core.McAfeeActiveResponseManager import McAfeeActiveResponseManager
-from soar_sdk.SiemplifyUtils import construct_csv, dict_to_flat
 
 PROVIDER = "McAfeeActiveResponse"
 
@@ -67,7 +68,7 @@ def main():
                 siemplify.result.add_data_table("Results", construct_csv(item_results))
 
         except Exception as e:
-            siemplify.LOGGER.error("Failed to attach results JSON and/or table")
+            siemplify.LOGGER.exception("Failed to attach results JSON and/or table")
             siemplify.LOGGER.exception(e)
 
         result_value = True

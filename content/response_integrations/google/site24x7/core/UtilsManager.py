@@ -13,23 +13,25 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+import datetime
 import json
 import os
+
 import requests
-import datetime
+from dateutil.tz import tzoffset
+from EnvironmentCommon import EnvironmentHandle
 from soar_sdk.SiemplifyUtils import (
-    utc_now,
     convert_datetime_to_unix_time,
-    unix_now,
-    convert_string_to_unix_time,
     convert_string_to_datetime,
+    convert_string_to_unix_time,
+    unix_now,
+    utc_now,
 )
 from TIPCommon import validate_map_file
-from EnvironmentCommon import EnvironmentHandle
-from .Site24x7Exceptions import Site24x7Exception
-from .constants import DEFAULT_TIME_FRAME, ERROR_WORD
-from dateutil.tz import tzoffset
 
+from .constants import DEFAULT_TIME_FRAME, ERROR_WORD
+from .Site24x7Exceptions import Site24x7Exception
 
 # Move to TIPCommon
 STORED_IDS_LIMIT = 1000
@@ -41,8 +43,7 @@ DATETIME_FORMAT = 2
 
 
 def convert_time_to_given_offset(time_param, utc_offset):
-    """
-    Converts time to given offset
+    """Converts time to given offset
     :param utc_offset: UTC offset
     :param time_param: Time to convert
     :return: {datetime}
@@ -59,25 +60,27 @@ def convert_time_to_given_offset(time_param, utc_offset):
 
 
 def validate_response(response, error_msg="An error occurred"):
-    """
-    Validate response
+    """Validate response
     :param response: {requests.Response} The response to validate
     :param error_msg: {unicode} Default message to display on error
     """
     try:
         response.raise_for_status()
         if ERROR_WORD in response.text.lower():
+            msg = f"{error_msg}: {response.json().get(ERROR_WORD) or response.content}"
             raise Site24x7Exception(
-                f"{error_msg}: {response.json().get(ERROR_WORD) or response.content}"
+                msg
             )
     except requests.HTTPError as error:
         try:
             response.json()
         except Exception:
-            raise Site24x7Exception(f"{error_msg}: {error} {error.response.content}")
+            msg = f"{error_msg}: {error} {error.response.content}"
+            raise Site24x7Exception(msg)
 
+        msg = f"{error_msg}: {error} {response.json().get('message') or response.content}"
         raise Site24x7Exception(
-            f"{error_msg}: {error} {response.json().get('message') or response.content}"
+            msg
         )
 
 
@@ -85,8 +88,7 @@ def validate_response(response, error_msg="An error occurred"):
 def is_approaching_timeout(
     python_process_timeout, connector_starting_time, timeout_threshold=TIMEOUT_THRESHOLD
 ):
-    """
-    Check if a timeout is approaching.
+    """Check if a timeout is approaching.
     :param python_process_timeout: {int} The python process timeout
     :param connector_starting_time: {int} The connector start unix time
     :param timeout_threshold: {int} Determines which part of the execution time is available for execution
@@ -103,8 +105,7 @@ def get_last_success_time(
     print_value=True,
     date_time_format=None,
 ):
-    """
-    Get last success time datetime
+    """Get last success time datetime
     :param siemplify: {siemplify} Siemplify object
     :param offset_with_metric: {dict} metric and value. Ex {"hours": 1}
     :param time_format: {int} The format of the output time. Ex DATETIME, UNIX
@@ -140,8 +141,7 @@ def get_last_success_time(
 def get_environment_common(
     siemplify, environment_field_name, environment_regex_pattern, map_file="map.json"
 ):
-    """
-    Get environment common
+    """Get environment common
     :param siemplify: {siemplify} Siemplify object
     :param environment_field_name: {str} The environment field name
     :param environment_regex_pattern: {str} The environment regex pattern
@@ -162,8 +162,7 @@ def get_environment_common(
 def filter_alerts_by_timestamp(
     logger, alerts, last_success_time, existing_ids, timestamp_key="sent_time"
 ):
-    """
-    Filter alerts that were already processed
+    """Filter alerts that were already processed
     :param logger: {SiemplifyLogger} Siemplify logger
     :param alerts: {list} List of Alert objects
     :param last_success_time: {datetime} List of ids to filter
@@ -194,8 +193,7 @@ def filter_alerts_by_timestamp(
 
 # Move to TIPCommon
 def filter_old_alerts(logger, alerts, existing_ids, id_key="id"):
-    """
-    Filter alerts that were already processed
+    """Filter alerts that were already processed
     :param logger: {SiemplifyLogger} Siemplify logger
     :param alerts: {list} List of Alert objects
     :param existing_ids: {list} List of ids to filter
@@ -217,8 +215,7 @@ def filter_old_alerts(logger, alerts, existing_ids, id_key="id"):
 
 # Move to TIPCommon
 def read_ids(siemplify, ids_file_name="ids.json"):
-    """
-    Read existing alerts IDs from ids file (from last 24h only)
+    """Read existing alerts IDs from ids file (from last 24h only)
     :param siemplify: {Siemplify} Siemplify object.
     :param ids_file_name: {str} The name of the ids file
     :return: {list} List of ids
@@ -229,18 +226,17 @@ def read_ids(siemplify, ids_file_name="ids.json"):
         return []
 
     try:
-        with open(ids_file_path, "r") as f:
+        with open(ids_file_path, encoding="utf-8") as f:
             return json.loads(f.read())
     except Exception as e:
-        siemplify.LOGGER.error(f"Unable to read ids file: {e}")
+        siemplify.LOGGER.exception(f"Unable to read ids file: {e}")
         siemplify.LOGGER.exception(e)
         return []
 
 
 # Move to TIPCommon
 def write_ids(siemplify, ids, ids_file_name="ids.json"):
-    """
-    Write ids to the ids file
+    """Write ids to the ids file
     :param siemplify: {Siemplify} Siemplify object.
     :param ids: {list} The ids to write to the file
     :param ids_file_name: {str} The name of the ids file.
@@ -254,7 +250,7 @@ def write_ids(siemplify, ids, ids_file_name="ids.json"):
         if not os.path.exists(os.path.dirname(ids_file_path)):
             os.makedirs(os.path.dirname(ids_file_path))
 
-        with open(ids_file_path, "w") as f:
+        with open(ids_file_path, "w", encoding="utf-8") as f:
             try:
                 for chunk in json.JSONEncoder().iterencode(ids):
                     f.write(chunk)
@@ -271,15 +267,14 @@ def write_ids(siemplify, ids, ids_file_name="ids.json"):
         return True
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Failed writing IDs to IDs file, ERROR: {e}")
+        siemplify.LOGGER.exception(f"Failed writing IDs to IDs file, ERROR: {e}")
         siemplify.LOGGER.exception(e)
         return False
 
 
 # Move to TIPCommon
 def is_overflowed(siemplify, alert_info, is_test_run):
-    """
-    Check if overflowed
+    """Check if overflowed
     :param siemplify: {Siemplify} Siemplify object.
     :param alert_info: {AlertInfo}
     :param is_test_run: {bool} Whether test run or not.
@@ -294,7 +289,7 @@ def is_overflowed(siemplify, alert_info, is_test_run):
         )
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Error validation connector overflow, ERROR: {e}")
+        siemplify.LOGGER.exception(f"Error validation connector overflow, ERROR: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:
@@ -310,8 +305,7 @@ def save_timestamp(
     incrementation_value=0,
     log_timestamp=True,
 ):
-    """
-    Save last timestamp for given alerts
+    """Save last timestamp for given alerts
     :param siemplify: {Siemplify} Siemplify object
     :param alerts: {list} The list of alerts to find the last timestamp
     :param timestamp_key: {str} key for getting timestamp from alert
@@ -341,8 +335,7 @@ def save_timestamp(
 
 
 def save_utc_offset(siemplify, utc_offset, uts_offset_file_name="utc_offset.json"):
-    """
-    Write utc_offset value to the file
+    """Write utc_offset value to the file
     :param siemplify: {Siemplify} Siemplify object.
     :param utc_offset: {float} The UTC offset to write to the file.
     :param uts_offset_file_name: {str} The name of the file.
@@ -354,7 +347,7 @@ def save_utc_offset(siemplify, utc_offset, uts_offset_file_name="utc_offset.json
         if not os.path.exists(os.path.dirname(utc_offset_file_path)):
             os.makedirs(os.path.dirname(utc_offset_file_path))
 
-        with open(utc_offset_file_path, "w") as f:
+        with open(utc_offset_file_path, "w", encoding="utf-8") as f:
             try:
                 f.write(str(utc_offset))
             except:
@@ -365,14 +358,13 @@ def save_utc_offset(siemplify, utc_offset, uts_offset_file_name="utc_offset.json
         return True
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Failed writing UTC offset to file, ERROR: {e}")
+        siemplify.LOGGER.exception(f"Failed writing UTC offset to file, ERROR: {e}")
         siemplify.LOGGER.exception(e)
         return False
 
 
 def read_utc_offset(siemplify, uts_offset_file_name="utc_offset.json"):
-    """
-    Read UTC offset from file
+    """Read UTC offset from file
     :param siemplify: {Siemplify} Siemplify object.
     :param uts_offset_file_name: {str} The name of the file.
     :return: {float} UTC offset
@@ -383,10 +375,10 @@ def read_utc_offset(siemplify, uts_offset_file_name="utc_offset.json"):
         return 0
 
     try:
-        with open(utc_offset_file_path, "r") as f:
+        with open(utc_offset_file_path, encoding="utf-8") as f:
             return float(f.read())
     except Exception as e:
-        siemplify.LOGGER.error(f"Unable to read UTC offset file: {e}")
+        siemplify.LOGGER.exception(f"Unable to read UTC offset file: {e}")
         siemplify.LOGGER.exception(e)
         return 0
 
@@ -416,8 +408,7 @@ def pass_whitelist_filter(
 
 
 def convert_comma_separated_to_list(comma_separated):
-    """
-    Convert comma-separated string to list
+    """Convert comma-separated string to list
     :param comma_separated: String with comma-separated values
     :return: List of values
     """
@@ -427,8 +418,7 @@ def convert_comma_separated_to_list(comma_separated):
 
 
 def convert_list_to_comma_string(values_list):
-    """
-    Convert list to comma-separated string
+    """Convert list to comma-separated string
     :param values_list: List of values
     :return: String with comma-separated values
     """

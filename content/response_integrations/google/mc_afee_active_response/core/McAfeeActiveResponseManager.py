@@ -23,14 +23,15 @@
 
 # ============================= IMPORTS ===================================== #
 from __future__ import annotations
-from dxlclient.client_config import DxlClientConfig
-from dxlclient.client import DxlClient
+
 from dxlclient.broker import Broker
+from dxlclient.client import DxlClient
+from dxlclient.client_config import DxlClientConfig
 from dxlmarclient import (
-    MarClient,
-    ProjectionConstants,
     ConditionConstants,
+    MarClient,
     OperatorConstants,
+    ProjectionConstants,
 )
 
 # ============================== CONSTS ===================================== #
@@ -195,8 +196,7 @@ class McAfeeActiveResponseManager:
     def __init__(
         self, broker_urls_list, broker_ca_bundle_path, cert_file_path, private_key_path
     ):
-        """
-        :param broker_urls_list: list of brokers urls {list}
+        """:param broker_urls_list: list of brokers urls {list}
         :param broker_ca_bundle_path: broker cert bundle file path {string}
         :param cert_file_path: cert file path {string}
         :param private_key_path: key file path {string}
@@ -236,8 +236,7 @@ class McAfeeActiveResponseManager:
         filter_operator=None,
         filter_value=None,
     ):
-        """
-        Active response search action.
+        """Active response search action.
         :param collector: collector name {string}
         :param outputs: which outputs to bring {string}
         :param filter_by: outputs to filter by {string}
@@ -245,7 +244,6 @@ class McAfeeActiveResponseManager:
         :param filter_value: value to filter by {string}
         :return: search result {dict}
         """
-
         if not filter_by and not filter_operator and not filter_value:
             result_context = self.mar_client.search(
                 projections=[
@@ -255,45 +253,47 @@ class McAfeeActiveResponseManager:
                     }
                 ]
             )
+        elif not filter_by or not filter_operator or not filter_value:
+            msg = "ERROR: Filter-by, filter-operator & filter-value has to be inserted or none of them."
+            raise Exception(
+                msg
+            )
         else:
-            if not filter_by or not filter_operator or not filter_value:
-                raise Exception(
-                    "ERROR: Filter-by, filter-operator & filter-value has to be inserted or none of them."
-                )
+            # Validate Operator.
+            if FILTER_OPERATORS.get(filter_operator):
+                filter_operator_value = FILTER_OPERATORS.get(filter_operator)
             else:
-                # Validate Operator.
-                if FILTER_OPERATORS.get(filter_operator):
-                    filter_operator_value = FILTER_OPERATORS.get(filter_operator)
-                else:
-                    raise McAfeeActiveResponseError(
-                        f"Error: No such operator - {filter_operator}"
-                    )
-
-                # Run query, get result.
-                result_context = self.mar_client.search(
-                    projections=[
-                        {
-                            ProjectionConstants.NAME: collector,
-                            ProjectionConstants.OUTPUTS: outputs,
-                        }
-                    ],
-                    conditions={
-                        ConditionConstants.OR: [
-                            {
-                                ConditionConstants.AND: [
-                                    {
-                                        ConditionConstants.COND_NAME: collector,
-                                        ConditionConstants.COND_OUTPUT: filter_by,
-                                        ConditionConstants.COND_OP: filter_operator_value,
-                                        ConditionConstants.COND_VALUE: filter_value,
-                                    }
-                                ]
-                            }
-                        ]
-                    },
+                msg = f"Error: No such operator - {filter_operator}"
+                raise McAfeeActiveResponseError(
+                    msg
                 )
+
+            # Run query, get result.
+            result_context = self.mar_client.search(
+                projections=[
+                    {
+                        ProjectionConstants.NAME: collector,
+                        ProjectionConstants.OUTPUTS: outputs,
+                    }
+                ],
+                conditions={
+                    ConditionConstants.OR: [
+                        {
+                            ConditionConstants.AND: [
+                                {
+                                    ConditionConstants.COND_NAME: collector,
+                                    ConditionConstants.COND_OUTPUT: filter_by,
+                                    ConditionConstants.COND_OP: filter_operator_value,
+                                    ConditionConstants.COND_VALUE: filter_value,
+                                }
+                            ]
+                        }
+                    ]
+                },
+            )
         if result_context.has_results:
             return result_context.get_results()
+        return None
 
     def search_multiple_collectors(
         self,
@@ -303,8 +303,7 @@ class McAfeeActiveResponseManager:
         filter_operator=None,
         filter_value=None,
     ):
-        """
-        Search by multiple collectors.
+        """Search by multiple collectors.
         :param collectors: list of collectors to search by {list}
         :param filter_collector: control filter  {string}
         :param filter_by: outputs to filter by {string}
@@ -312,45 +311,47 @@ class McAfeeActiveResponseManager:
         :param filter_value: value to filter by {string}
         :return:  {dict}
         """
-
         if not filter_collector:
             result_context = self.mar_client.search(
                 projections=[self.get_projection(c, None) for c in collectors]
             )
+        elif not filter_by or not filter_operator or not filter_value:
+            msg = (
+                "ERROR: Filter By, Filter Operator &"
+                " Filter Value have to be inserted when you provide"
+                " Filter Collector argument."
+            )
+            raise McAfeeActiveResponseError(
+                msg
+            )
         else:
-            if not filter_by or not filter_operator or not filter_value:
-                raise McAfeeActiveResponseError(
-                    "ERROR: Filter By, Filter Operator &"
-                    " Filter Value have to be inserted when you provide"
-                    " Filter Collector argument."
-                )
+            # Validate Operator.
+            if FILTER_OPERATORS.get(filter_operator):
+                filter_operator_value = FILTER_OPERATORS.get(filter_operator)
             else:
-                # Validate Operator.
-                if FILTER_OPERATORS.get(filter_operator):
-                    filter_operator_value = FILTER_OPERATORS.get(filter_operator)
-                else:
-                    raise McAfeeActiveResponseError(
-                        f"Error: No such operator - {filter_operator}"
-                    )
-                result_context = self.mar_client.search(
-                    projections=[self.get_projection(c, None) for c in collectors],
-                    conditions={
-                        ConditionConstants.OR: [
-                            {
-                                ConditionConstants.AND: [
-                                    {
-                                        ConditionConstants.COND_NAME: filter_collector,
-                                        ConditionConstants.COND_OUTPUT: filter_by,
-                                        ConditionConstants.COND_OP: filter_operator_value,
-                                        ConditionConstants.COND_VALUE: filter_value,
-                                    }
-                                ]
-                            }
-                        ]
-                    },
+                msg = f"Error: No such operator - {filter_operator}"
+                raise McAfeeActiveResponseError(
+                    msg
                 )
+            result_context = self.mar_client.search(
+                projections=[self.get_projection(c, None) for c in collectors],
+                conditions={
+                    ConditionConstants.OR: [
+                        {
+                            ConditionConstants.AND: [
+                                {
+                                    ConditionConstants.COND_NAME: filter_collector,
+                                    ConditionConstants.COND_OUTPUT: filter_by,
+                                    ConditionConstants.COND_OP: filter_operator_value,
+                                    ConditionConstants.COND_VALUE: filter_value,
+                                }
+                            ]
+                        }
+                    ]
+                },
+            )
         if result_context.has_results:
             return result_context.get_results()
+        return None
 
 
-#

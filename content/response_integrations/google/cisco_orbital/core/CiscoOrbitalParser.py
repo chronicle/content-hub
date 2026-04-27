@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from .datamodels import *
 
 
@@ -57,6 +58,6 @@ class CiscoOrbitalParser:
     def get_local_ips(self, result, key):
         return [
             value.get(key)
-            for name, value in result.get("hostinfo", {}).get("interfaces", {}).items()
+            for value in result.get("hostinfo", {}).get("interfaces", {}).values()
             if value.get(key)
         ]

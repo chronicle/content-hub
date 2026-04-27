@@ -13,32 +13,35 @@
 # limitations under the License.
 
 from __future__ import annotations
-import sys
+
 import os
+import sys
 import uuid
-from ..core.constants import (
-    TIMEOUT_THRESHOLD,
-    DEFAULT_DEVICE_PRODUCT,
-    DEFAULT_DEVICE_VENDOR,
-    CONNECTOR_NAME,
-    RATE_LIMIT_ERROR_IDENTIFIER,
-)
+
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon import extract_connector_param, validate_map_file
+
+from ..core.constants import (
+    CONNECTOR_NAME,
+    DEFAULT_DEVICE_PRODUCT,
+    DEFAULT_DEVICE_VENDOR,
+    RATE_LIMIT_ERROR_IDENTIFIER,
+    TIMEOUT_THRESHOLD,
+)
 from ..core.IllusiveNetworksManager import IllusiveNetworksManager
 from ..core.Utils import (
+    filter_old_alerts,
     get_environment_common,
     get_last_success_time,
-    is_overflowed,
-    save_timestamp,
-    read_ids,
-    write_ids,
     is_approaching_timeout,
-    filter_old_alerts,
-    priority_text_to_value,
+    is_overflowed,
     pass_whitelist_filter,
+    priority_text_to_value,
+    read_ids,
+    save_timestamp,
+    write_ids,
 )
 
 MAP_FILE = "map.json"
@@ -229,13 +232,13 @@ def main(is_test_run):
                 )
 
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Failed to process incident with id {incident.incident_id}"
                 )
                 siemplify.LOGGER.exception(e)
                 if RATE_LIMIT_ERROR_IDENTIFIER in e:
                     siemplify.LOGGER.info(
-                        f"Stopping connector execution because of api error"
+                        "Stopping connector execution because of api error"
                     )
                     all_incidents.pop()
                     raise
@@ -243,7 +246,7 @@ def main(is_test_run):
                     raise
             siemplify.LOGGER.info("\n")
     except Exception as e:
-        siemplify.LOGGER.error(f"General error: {e}")
+        siemplify.LOGGER.exception(f"General error: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:

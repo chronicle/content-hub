@@ -13,25 +13,27 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.IllusiveNetworksManager import IllusiveNetworksManager
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
+
+import json
+import sys
+
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_INPROGRESS,
 )
-from ..core.constants import INTEGRATION_NAME, RUN_FORENSIC_SCAN_ACTION, DEFAULT_ITEMS
-from ..core.IllusiveNetworksExceptions import IncidentNotReadyException, RateLimitException
+from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
-import json
-import sys
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
+from ..core.constants import DEFAULT_ITEMS, INTEGRATION_NAME, RUN_FORENSIC_SCAN_ACTION
+from ..core.IllusiveNetworksExceptions import IncidentNotReadyException, RateLimitException
+from ..core.IllusiveNetworksManager import IllusiveNetworksManager
 
 
 def start_operation(siemplify, manager):
-    """
-    Function that initiates the forensic scan
+    """Function that initiates the forensic scan
     :param siemplify: SiemplifyAction object.
     :param manager: IllusiveNetworks manager object.
     """
@@ -41,8 +43,7 @@ def start_operation(siemplify, manager):
     scope_entities = [
         entity
         for entity in siemplify.target_entities
-        if entity.entity_type == EntityTypes.HOSTNAME
-        or entity.entity_type == EntityTypes.ADDRESS
+        if entity.entity_type in {EntityTypes.HOSTNAME, EntityTypes.ADDRESS}
     ]
     event_ids = []
     successful_entities = []
@@ -62,7 +63,7 @@ def start_operation(siemplify, manager):
                 raise
 
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Failed to process entity: {entity.identifier}. Reason: {e}"
                 )
                 failed_entities.append(entity.identifier)
@@ -70,7 +71,7 @@ def start_operation(siemplify, manager):
         result_value = json.dumps({"event_ids": event_ids, "events_ready": []})
 
         output_message = "Started the forensic scan on the following endpoints: {}. Checking if forensic scan is ready...".format(
-            ", ".join([entity for entity in successful_entities])
+            ", ".join(list(successful_entities))
         )
 
     else:
@@ -97,8 +98,7 @@ def query_operation_status(
     include_powershell_info,
     max_items_to_return,
 ):
-    """
-    Function that checks if the forensic scan is ready and fetch the results if ready
+    """Function that checks if the forensic scan is ready and fetch the results if ready
     :param siemplify: SiemplifyAction object.
     :param manager: IllusiveNetworks manager object.
     :param include_sys_info: True if System Info should be included in results
@@ -113,7 +113,6 @@ def query_operation_status(
     in results
     :param max_items_to_return: Max number of results in the output
     """
-
     event_ids_all = json.loads(siemplify.extract_action_param("additional_data"))
     event_ids = event_ids_all.get("event_ids")
     events_ready = event_ids_all.get("events_ready")
@@ -130,7 +129,7 @@ def query_operation_status(
         # If we still have some events that are not ready we need to get the status,
         # until the last event is ready
         for event_data in event_ids:
-            event_id = list(event_data.keys())[0]
+            event_id = next(iter(event_data.keys()))
             try:
                 manager.get_incident_id(event_id=event_id)
                 events_ready_incidents.append(event_data)
@@ -141,7 +140,7 @@ def query_operation_status(
                 raise
             except IncidentNotReadyException:
                 events_to_check_again.append(event_data)
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Incident for event with ID {event_id} is not ready yet."
                 )
 
@@ -150,7 +149,7 @@ def query_operation_status(
         )
         status = EXECUTION_STATE_INPROGRESS
         output_message += "Created events {}. Waiting for forensic data to become available...".format(
-            ", ".join([list(entity.keys())[0] for entity in events_to_check_again])
+            ", ".join([next(iter(entity.keys())) for entity in events_to_check_again])
         )
 
     elif events_ready:
@@ -158,8 +157,7 @@ def query_operation_status(
         scope_entities = [
             entity
             for entity in siemplify.target_entities
-            if entity.entity_type == EntityTypes.HOSTNAME
-            or entity.entity_type == EntityTypes.ADDRESS
+            if entity.entity_type in {EntityTypes.HOSTNAME, EntityTypes.ADDRESS}
         ]
         suitable_entities = {entity.identifier: entity for entity in scope_entities}
 
@@ -167,7 +165,7 @@ def query_operation_status(
         entities_to_update = []
 
         for event_ready in events_ready:
-            event_ready_key = list(event_ready.keys())[0]
+            event_ready_key = next(iter(event_ready.keys()))
             entity = suitable_entities[event_ready.get(event_ready_key)]
 
             try:
@@ -362,7 +360,7 @@ def query_operation_status(
                 raise
 
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"An error occurred on entity: {entity.identifier}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -377,7 +375,7 @@ def query_operation_status(
                 convert_dict_to_json_result_dict(json_results)
             )
             output_message += "Successfully ran forensic scan on the following endpoints in Illusive Networks: {}.".format(
-                ", ".join([entity for entity in successfully_fetched_forensics])
+                ", ".join(list(successfully_fetched_forensics))
             )
             status = EXECUTION_STATE_COMPLETED
             result_value = True
@@ -386,7 +384,7 @@ def query_operation_status(
             status = EXECUTION_STATE_COMPLETED
             result_value = True
             output_message += "\nAction wasn't able to get any information from forensic scan on the following endpoints: {}.".format(
-                ", ".join([entity for entity in failed_fetched_forensics])
+                ", ".join(list(failed_fetched_forensics))
             )
 
         if failed_fetched_forensics and not successfully_fetched_forensics:
@@ -553,7 +551,7 @@ def main(is_first_run):
         output_message += (
             f"Error executing action {RUN_FORENSIC_SCAN_ACTION}. Reason {e}."
         )
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False

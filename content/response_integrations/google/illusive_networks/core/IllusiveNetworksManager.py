@@ -13,27 +13,30 @@
 # limitations under the License.
 
 from __future__ import annotations
-import requests
+
+import base64
 import urllib.parse
+
+import requests
+
+from .constants import (
+    CA_CERTIFICATE_FILE_PATH,
+    ENRICH_ENTITIES_QUERY,
+    FORENSIC_DATA_TYPES,
+    FORENSIC_SCAN_QUERY,
+    GET_DECEPTIVE_SERVERS_QUERY,
+    GET_DECEPTIVE_USERS_QUERY,
+    GET_FORENSIC_DATA_QUERY,
+    GET_INCIDENT_ID_QUERY,
+    PING_QUERY,
+)
 from .IllusiveNetworksExceptions import (
     IllusiveNetworksException,
     IncidentNotReadyException,
-    RateLimitException,
     ManagerNotFoundException,
+    RateLimitException,
 )
 from .IllusiveNetworksParser import IllusiveNetworksParser
-import base64
-from .constants import (
-    CA_CERTIFICATE_FILE_PATH,
-    PING_QUERY,
-    FORENSIC_SCAN_QUERY,
-    GET_INCIDENT_ID_QUERY,
-    GET_FORENSIC_DATA_QUERY,
-    ENRICH_ENTITIES_QUERY,
-    FORENSIC_DATA_TYPES,
-    GET_DECEPTIVE_USERS_QUERY,
-    GET_DECEPTIVE_SERVERS_QUERY,
-)
 
 API_ENDPOINTS = {
     "get_incidents": "/api/v1/incidents",
@@ -54,8 +57,7 @@ class IllusiveNetworksManager:
         verify_ssl=False,
         siemplify_logger=None,
     ):
-        """
-        The method is used to init an object of Manager class
+        """The method is used to init an object of Manager class
         :param api_root: API Root of the Illusive Networks
         :param api_key: API Key of the Illusive Networks instance.
         :param ca_certificate: CA Certificate as base64
@@ -63,14 +65,12 @@ class IllusiveNetworksManager:
         the Illusive Networks server is valid.
         :param siemplify_logger: Siemplify logger.
         """
-        ca_certs = False if not verify_ssl else None
-
         # ca_certificate is base64 string which needs to be decoded and a temp file
         # for the cacert is created
         if ca_certificate:
             try:
                 file_content = base64.b64decode(ca_certificate)
-                with open(CA_CERTIFICATE_FILE_PATH, "w+") as f:
+                with open(CA_CERTIFICATE_FILE_PATH, "w+", encoding="utf-8") as f:
                     f.write(file_content.decode("utf-8"))
 
             except Exception as e:
@@ -97,12 +97,16 @@ class IllusiveNetworksManager:
     def validate_response(response, error_msg="An error occurred"):
         try:
             if response.status_code == 202:
-                raise IncidentNotReadyException("Incident Not Ready")
+                msg = "Incident Not Ready"
+                raise IncidentNotReadyException(msg)
 
             if response.status_code == 429:
-                raise RateLimitException(
+                msg = (
                     "Rate limit error. Please refer to the documentation on how to "
                     "increase the rate limit"
+                )
+                raise RateLimitException(
+                    msg
                 )
             response.raise_for_status()
 
@@ -111,26 +115,26 @@ class IllusiveNetworksManager:
                 response_json = response.json()
             except:
                 # Not a JSON - return content
+                msg = f"{error_msg}: {error} - {error.response.content}"
                 raise IllusiveNetworksException(
-                    f"{error_msg}: {error} - {error.response.content}"
+                    msg
                 )
-            raise IllusiveNetworksException(
+            msg = (
                 f"{error_msg}: {response_json.get('message', '')} "
                 f"{response_json.get('errorMessage', '')}"
             )
+            raise IllusiveNetworksException(
+                msg
+            )
 
     def test_connectivity(self):
-        """
-        Test integration connectivity.
-        """
-
+        """Test integration connectivity."""
         result = self.session.get(PING_QUERY.format(self.api_root))
         # Verify result.
         self.validate_response(result)
 
     def create_forensic_scan_request(self, entity_name):
-        """
-        Function that initiates the forensic scan
+        """Function that initiates the forensic scan
         :param entity_name: {str} Entity for which the scan should be initiated
         """
         result = self.session.post(
@@ -142,11 +146,9 @@ class IllusiveNetworksManager:
         return result.json().get("eventId")
 
     def get_incident_id(self, event_id):
-        """
-        Function that checks if the incident for given event_id is ready to be fetched
+        """Function that checks if the incident for given event_id is ready to be fetched
         :param event_id: {str} Event ID that needs to be checked
         """
-
         result = self.session.get(GET_INCIDENT_ID_QUERY.format(self.api_root, event_id))
         # Verify result.
         self.validate_response(result)
@@ -162,8 +164,7 @@ class IllusiveNetworksManager:
         include_user_assist_info,
         include_powershell_info,
     ):
-        """
-        Function that fetches the forensic scan information
+        """Function that fetches the forensic scan information
         :param include_sys_info: True if System Info should be included in results
         :param include_prefetch_files_info: True if Prefetch Files Info should be
         included in results
@@ -179,7 +180,6 @@ class IllusiveNetworksManager:
         in results
         :return object_data: {dict} Dictionary of requested parameters
         """
-
         object_data = {}
         if include_sys_info:
             result = self.session.get(
@@ -296,12 +296,10 @@ class IllusiveNetworksManager:
         return object_data
 
     def enrich_entity(self, host_entity_name):
-        """
-        Function that gets details about a host
+        """Function that gets details about a host
         :param host_entity_name: {str} Name of the host to enrich
         :return: {HostObject} Siemplify HostObject
         """
-
         result = self.session.get(
             ENRICH_ENTITIES_QUERY.format(self.api_root, host_entity_name)
         )
@@ -311,8 +309,7 @@ class IllusiveNetworksManager:
         return self.parser.build_siemplify_host_object(result.json())
 
     def _get_full_url(self, url_id, **kwargs):
-        """
-        Get full url from url identifier.
+        """Get full url from url identifier.
         :param url_id: {str} The id of url
         :param general_api: {bool} whether to use general api or not
         :param kwargs: {dict} Variables passed for string formatting
@@ -323,8 +320,7 @@ class IllusiveNetworksManager:
         )
 
     def get_incidents(self, start_date):
-        """
-        Get incidents
+        """Get incidents
         :param start_date: {str} Start time to fetch incidents
         :return: {list} List of Incident
         """
@@ -349,8 +345,7 @@ class IllusiveNetworksManager:
         err_msg="Unable to get results",
         page_size=100,
     ):
-        """
-        Paginate the results of a job
+        """Paginate the results of a job
         :param method: {str} The method of the request (GET, POST, PUT, DELETE, PATCH)
         :param url: {str} The url to send request to
         :param parser_method: {str} The name of parser method to build the result
@@ -361,7 +356,6 @@ class IllusiveNetworksManager:
         :param page_size: {int} Items per page
         :return: {list} List of results
         """
-
         params = params or {}
         offset = 0
         params["limit"] = page_size
@@ -390,8 +384,7 @@ class IllusiveNetworksManager:
         return results[:limit] if limit else results
 
     def get_incident_timeline(self, incident_id):
-        """
-        Get incident timeline
+        """Get incident timeline
         :param incident_id: {str} Incident if to load timeline
         :return: {list} List of BaseModel
         """
@@ -404,8 +397,7 @@ class IllusiveNetworksManager:
         return self.parser.build_incident_events(response.json())
 
     def get_deceptive_users(self, deceptive_state, limit=None):
-        """
-        Get deceptive users list
+        """Get deceptive users list
         :param deceptive_state: {str} deceptive state
         :param limit: {int} Items to return
         :return: {list} List of DeceptiveUser
@@ -420,8 +412,7 @@ class IllusiveNetworksManager:
         )
 
     def get_deceptive_servers(self, deceptive_state, limit=None):
-        """
-        Get deceptive servers list
+        """Get deceptive servers list
         :param deceptive_state: {str} deceptive state
         :param limit: {int} Items to return
         :return: {list} List of DeceptiveServer
@@ -436,8 +427,7 @@ class IllusiveNetworksManager:
         )
 
     def get_deceptive_server(self, host_name):
-        """
-        Get deceptive server by host name
+        """Get deceptive server by host name
         :param host_name: {str}
         :return: {DeceptiveServer or None}
         """
@@ -453,8 +443,7 @@ class IllusiveNetworksManager:
         )
 
     def remove_deceptive_server(self, hosts):
-        """
-        Remove deceptive server by hosts names
+        """Remove deceptive server by hosts names
         :param hosts: {list} List of host names
         :return: {bool}
         """
@@ -466,8 +455,7 @@ class IllusiveNetworksManager:
         return True
 
     def add_deceptive_server(self, host, server_types, policy_names):
-        """
-        Add deceptive server or raise if host already exist
+        """Add deceptive server or raise if host already exist
         :param host: {str}
         :param server_types: {list}
         :param policy_names: {list}
@@ -484,8 +472,7 @@ class IllusiveNetworksManager:
         return True
 
     def get_deceptive_server_or_raise(self, host_name):
-        """
-        Get deceptive server by host name or raise
+        """Get deceptive server by host name or raise
         :param host_name: {str}
         :return: {DeceptiveServer}
         """
@@ -494,13 +481,13 @@ class IllusiveNetworksManager:
         if deceptive_server is not None:
             return deceptive_server
 
+        msg = f'Deceptive server "{host_name}" doesn\'t exist.'
         raise ManagerNotFoundException(
-            f'Deceptive server "{host_name}" doesn\'t exist.'
+            msg
         )
 
     def get_deceptive_user(self, username):
-        """
-        Get deceptive user by username
+        """Get deceptive user by username
         :param username: {str}
         :return: {DeceptiveUser or None}
         """
@@ -516,8 +503,7 @@ class IllusiveNetworksManager:
         )
 
     def add_deceptive_user(self, dns_domain, username, password, policy_names):
-        """
-        Add deceptive user or raise if user already exist
+        """Add deceptive user or raise if user already exist
         :param dns_domain: {str}
         :param username: {str}
         :param password: {str}
@@ -540,8 +526,7 @@ class IllusiveNetworksManager:
         return True
 
     def get_deceptive_user_or_raise(self, username):
-        """
-        Get deceptive user by username or raise
+        """Get deceptive user by username or raise
         :param username: {str}
         :return: {DeceptiveUser}
         """
@@ -550,11 +535,11 @@ class IllusiveNetworksManager:
         if deceptive_user is not None:
             return deceptive_user
 
-        raise ManagerNotFoundException(f'Deceptive user "{username}" doesn\'t exist.')
+        msg = f'Deceptive user "{username}" doesn\'t exist.'
+        raise ManagerNotFoundException(msg)
 
     def remove_deceptive_user(self, usernames):
-        """
-        Remove deceptive users by usernames
+        """Remove deceptive users by usernames
         :param usernames: {list} List of usernames
         :return: {bool}
         """

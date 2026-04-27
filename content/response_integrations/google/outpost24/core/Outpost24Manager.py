@@ -13,32 +13,34 @@
 # limitations under the License.
 
 from __future__ import annotations
-import requests
+
 import json
-from .constants import (
-    PING_URL,
-    GET_TOKEN_URL,
-    GET_DEVICES_URL,
-    DEFAULT_API_LIMIT,
-    FINDING_TYPES,
-    GET_FINDINGS_URL,
-    DEFAULT_LIMIT,
-)
 from urllib.parse import urlencode
-from .Outpost24Parser import Outpost24Parser
-from .Outpost24Exceptions import DeviceNotFoundError
-from .UtilsManager import (
-    validate_response,
-    filter_old_alerts,
-    filter_alerts_by_timestamp,
-)
+
+import requests
 from soar_sdk.SiemplifyUtils import convert_string_to_datetime
+
+from .constants import (
+    DEFAULT_API_LIMIT,
+    DEFAULT_LIMIT,
+    FINDING_TYPES,
+    GET_DEVICES_URL,
+    GET_FINDINGS_URL,
+    GET_TOKEN_URL,
+    PING_URL,
+)
+from .Outpost24Exceptions import DeviceNotFoundError
+from .Outpost24Parser import Outpost24Parser
+from .UtilsManager import (
+    filter_alerts_by_timestamp,
+    filter_old_alerts,
+    validate_response,
+)
 
 
 class Outpost24Manager:
     def __init__(self, api_root, username, password, verify_ssl, siemplify_logger=None):
-        """
-        The method is used to init an object of Manager class
+        """The method is used to init an object of Manager class
         :param api_root: {str} Outpost24 API root
         :param username: {str} Outpost24 username
         :param password: {str} Outpost24 password
@@ -56,16 +58,13 @@ class Outpost24Manager:
         self.parser = Outpost24Parser()
 
     def set_auth_token(self):
-        """
-        Set Authorization header to request session.
-        """
+        """Set Authorization header to request session."""
         self.session.headers.update(
             {"Authorization": f"Bearer {self.get_auth_token()}"}
         )
 
     def get_auth_token(self):
-        """
-        Send request in order to generate token.
+        """Send request in order to generate token.
         :return: {str} The authorization token
         """
         url = GET_TOKEN_URL.format(self.api_root)
@@ -77,9 +76,7 @@ class Outpost24Manager:
         return response.text
 
     def test_connectivity(self):
-        """
-        Test connectivity
-        """
+        """Test connectivity"""
         url = PING_URL.format(self.api_root)
         response = self.session.get(url)
         validate_response(response)
@@ -93,8 +90,7 @@ class Outpost24Manager:
         max_findings_to_return,
         is_hostname=False,
     ):
-        """
-        Function that gets the device(s) information from Outpost24, and request additional findings if needed
+        """Function that gets the device(s) information from Outpost24, and request additional findings if needed
         :param entity_identifier: {str} Entity identifier
         :param risk_level_filter: {list} Risk levels to use in filters
         :param return_finding_information: {bool} True if additional findings should be returned, False otherwise
@@ -120,8 +116,9 @@ class Outpost24Manager:
                     raw_data=json_result[0]
                 )
             else:
+                msg = f"Entity: {entity_identifier} not found in Outpost24."
                 raise DeviceNotFoundError(
-                    f"Entity: {entity_identifier} not found in Outpost24."
+                    msg
                 )
         else:
             # For IP Addresses we need to fetch everything and then filter the correct
@@ -135,7 +132,8 @@ class Outpost24Manager:
             total_number_of_results = num_of_results
 
             if num_of_results < 1:
-                raise DeviceNotFoundError(f"No devices found in Outpost24.")
+                msg = "No devices found in Outpost24."
+                raise DeviceNotFoundError(msg)
 
             while (
                 num_of_results == DEFAULT_API_LIMIT
@@ -147,14 +145,15 @@ class Outpost24Manager:
                 validate_response(response)
                 json_result.extend(response.json())
                 num_of_results = len(response.json())
-                total_number_of_results = total_number_of_results + num_of_results
+                total_number_of_results += num_of_results
 
             ip_address_details = self.parser.find_ip_address(
                 raw_data=json_result, entity_identifier=entity_identifier
             )
             if ip_address_details is None:
+                msg = f"Entity: {entity_identifier} not found in Outpost24."
                 raise DeviceNotFoundError(
-                    f"Entity: {entity_identifier} not found in Outpost24."
+                    msg
                 )
 
             entity_basic_details = self.parser.build_entity_object(
@@ -227,11 +226,11 @@ class Outpost24Manager:
                         :number_od_results_to_get
                     ]
 
-                filtered_results = filtered_results + filtered_results_page
+                filtered_results += filtered_results_page
                 number_of_filtered_results = len(filtered_results)
 
                 num_of_results = len(response.json())
-                total_number_of_results = total_number_of_results + num_of_results
+                total_number_of_results += num_of_results
 
             self.parser.add_findings_to_entity_object(
                 entity_object=entity_basic_details, data=filtered_results
@@ -240,8 +239,7 @@ class Outpost24Manager:
         return entity_basic_details
 
     def get_findings(self, existing_ids, limit, start_timestamp, type_filter):
-        """
-        Get findings
+        """Get findings
         :param existing_ids: {list} The list of existing ids
         :param limit: {int} The limit for results
         :param start_timestamp: {datetime} The timestamp for oldest finding to fetch

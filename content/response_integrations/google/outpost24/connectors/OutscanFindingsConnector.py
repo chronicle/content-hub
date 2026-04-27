@@ -13,34 +13,36 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler, unix_now
+
+import sys
+
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
+from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon import extract_connector_param
+
 from ..core.constants import (
     CONNECTOR_NAME,
     DEFAULT_LIMIT,
     DEFAULT_TIME_FRAME,
-    SEVERITIES,
     POSSIBLE_TYPES,
-)
-from ..core.UtilsManager import (
-    read_ids,
-    write_ids,
-    is_approaching_timeout,
-    get_environment_common,
-    pass_whitelist_filter,
-    convert_comma_separated_to_list,
-    convert_list_to_comma_string,
-    save_timestamp,
-    get_last_success_time,
-    DATETIME_FORMAT,
-    is_overflowed,
-    pass_severity_filter,
+    SEVERITIES,
 )
 from ..core.Outpost24Manager import Outpost24Manager
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
-import sys
-
+from ..core.UtilsManager import (
+    DATETIME_FORMAT,
+    convert_comma_separated_to_list,
+    convert_list_to_comma_string,
+    get_environment_common,
+    get_last_success_time,
+    is_approaching_timeout,
+    is_overflowed,
+    pass_severity_filter,
+    pass_whitelist_filter,
+    read_ids,
+    save_timestamp,
+    write_ids,
+)
 
 connector_starting_time = unix_now()
 
@@ -138,10 +140,13 @@ def main(is_test_run):
             fetch_limit = DEFAULT_LIMIT
 
         if lowest_risk_to_fetch and lowest_risk_to_fetch.lower() not in SEVERITIES:
-            raise Exception(
+            msg = (
                 "Invalid value given for Lowest Risk To Fetch parameter. Possible "
                 "values are: "
                 f"{convert_list_to_comma_string([severity.title() for severity in SEVERITIES])}."
+            )
+            raise Exception(
+                msg
             )
 
         invalid_types = [
@@ -151,9 +156,12 @@ def main(is_test_run):
         ]
 
         if invalid_types:
-            raise Exception(
+            msg = (
                 "Invalid value provided for the parameter 'Type Filter'. Possible "
                 f"values: {convert_list_to_comma_string(POSSIBLE_TYPES)}."
+            )
+            raise Exception(
+                msg
             )
 
         # Read already existing alerts ids
@@ -242,7 +250,7 @@ def main(is_test_run):
                 siemplify.LOGGER.info(f"Alert {alert.id} was created.")
 
             except Exception as e:
-                siemplify.LOGGER.error(f"Failed to process alert {alert.id}")
+                siemplify.LOGGER.exception(f"Failed to process alert {alert.id}")
                 siemplify.LOGGER.exception(e)
 
                 if is_test_run:
@@ -258,7 +266,7 @@ def main(is_test_run):
             )
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Got exception on main handler. Error: {e}")
+        siemplify.LOGGER.exception(f"Got exception on main handler. Error: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:
@@ -276,10 +284,7 @@ def pass_filters(
     if not pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, alert, model_key):
         return False
 
-    if not pass_severity_filter(siemplify, alert, lowest_risk_to_fetch):
-        return False
-
-    return True
+    return pass_severity_filter(siemplify, alert, lowest_risk_to_fetch)
 
 
 if __name__ == "__main__":

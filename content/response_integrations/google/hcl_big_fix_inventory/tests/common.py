@@ -13,12 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from integration_testing.common import get_def_file_content
-from integration_testing.common import get_def_file_content
-from integration_testing.common import get_def_file_content
-import json
-from integration_testing.common import get_def_file_content
+
 import pathlib
+
+from integration_testing.common import get_def_file_content
+
 INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
-CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / 'config.json'
+CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
 CONFIG: dict = get_def_file_content(CONFIG_PATH) if CONFIG_PATH.exists() else {}

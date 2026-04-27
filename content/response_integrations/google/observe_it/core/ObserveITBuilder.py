@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import re
 
 from .ObserveITDatamodels import Alert
@@ -21,8 +22,7 @@ from .ObserveITDatamodels import Alert
 class ObserveITBuilder:
     def build_alert(self, alert_data):
         # type: (dict) -> Alert
-        """
-        Build alert from response dict
+        """Build alert from response dict
         @param alert_data: Response dict
         @return: Alert
         """
@@ -30,8 +30,7 @@ class ObserveITBuilder:
 
     def _change_param_names(self, data):
         # type: (dict) -> dict
-        """
-        Convert all camel keys in dict to snake one
+        """Convert all camel keys in dict to snake one
         @param data: dictionary with camel case keys
         @return: dictionary with snake case keys
         """
@@ -42,10 +41,9 @@ class ObserveITBuilder:
     @staticmethod
     def _covert_camel_to_snake(camel):
         # type: (str or unicode) -> str or unicode
-        """
-        Converts camel case to snake
+        """Converts camel case to snake
         @param camel: Camel case string
         @return: Snake case string
         """
-        camel = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", camel)
-        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", camel).lower().replace("__", "_")
+        camel = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", camel)
+        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", camel).lower().replace("__", "_")

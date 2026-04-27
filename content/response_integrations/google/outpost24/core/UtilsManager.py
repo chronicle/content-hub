@@ -13,22 +13,24 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+import datetime
 import json
 import os
+
 import requests
-from .Outpost24Exceptions import Outpost24GeneralException
-import datetime
+from EnvironmentCommon import EnvironmentHandle
 from soar_sdk.SiemplifyUtils import (
-    utc_now,
     convert_datetime_to_unix_time,
-    unix_now,
-    convert_string_to_unix_time,
     convert_string_to_datetime,
+    convert_string_to_unix_time,
+    unix_now,
+    utc_now,
 )
 from TIPCommon import validate_map_file
-from EnvironmentCommon import EnvironmentHandle
-from .constants import SEVERITIES
 
+from .constants import SEVERITIES
+from .Outpost24Exceptions import Outpost24GeneralException
 
 # Move to TIPCommon
 STORED_IDS_LIMIT = 1000
@@ -40,8 +42,7 @@ DATETIME_FORMAT = 2
 
 
 def validate_response(response, error_msg="An error occurred"):
-    """
-    Validate response
+    """Validate response
     :param response: {requests.Response} The response to validate
     :param error_msg: {str} Default message to display on error
     """
@@ -49,14 +50,14 @@ def validate_response(response, error_msg="An error occurred"):
         response.raise_for_status()
 
     except requests.HTTPError as error:
+        msg = f"{error_msg}: {error} {error.response.content}"
         raise Outpost24GeneralException(
-            f"{error_msg}: {error} {error.response.content}"
+            msg
         ) from error
 
 
 def load_csv_to_list(csv: str, param_name: str):
-    """
-    Load comma separated values represented as string to a list. Remove duplicates if exist
+    """Load comma separated values represented as string to a list. Remove duplicates if exist
     :param csv: {str} of comma separated values with delimiter ','
     :param param_name: {str} the name of the parameter we are loading csv to list
     :return: {[str]} List of separated string values
@@ -65,8 +66,9 @@ def load_csv_to_list(csv: str, param_name: str):
     try:
         return list({t.strip() for t in csv.split(",")})
     except Exception as error:
+        msg = f'Failed to load comma separated string parameter "{param_name}"'
         raise Outpost24GeneralException(
-            f'Failed to load comma separated string parameter "{param_name}"'
+            msg
         ) from error
 
 
@@ -74,8 +76,7 @@ def load_csv_to_list(csv: str, param_name: str):
 def is_approaching_timeout(
     python_process_timeout, connector_starting_time, timeout_threshold=TIMEOUT_THRESHOLD
 ):
-    """
-    Check if a timeout is approaching.
+    """Check if a timeout is approaching.
     :param python_process_timeout: {int} The python process timeout
     :param connector_starting_time: {int} The connector start unix time
     :param timeout_threshold: {int} Determines which part of the execution time is available for execution
@@ -92,8 +93,7 @@ def get_last_success_time(
     print_value=True,
     date_time_format=None,
 ):
-    """
-    Get last success time datetime
+    """Get last success time datetime
     :param siemplify: {siemplify} Siemplify object
     :param offset_with_metric: {dict} metric and value. Ex {"hours": 1}
     :param time_format: {int} The format of the output time. Ex DATETIME, UNIX
@@ -129,8 +129,7 @@ def get_last_success_time(
 def get_environment_common(
     siemplify, environment_field_name, environment_regex_pattern, map_file="map.json"
 ):
-    """
-    Get environment common
+    """Get environment common
     :param siemplify: {siemplify} Siemplify object
     :param environment_field_name: {str} The environment field name
     :param environment_regex_pattern: {str} The environment regex pattern
@@ -151,8 +150,7 @@ def get_environment_common(
 def filter_alerts_by_timestamp(
     logger, alerts, last_success_time, timestamp_key="last_seen"
 ):
-    """
-    Filter alerts that were already processed
+    """Filter alerts that were already processed
     :param logger: {SiemplifyLogger} Siemplify logger
     :param alerts: {list} List of Finding objects
     :param last_success_time: {datetime} Datetime to filter by
@@ -176,8 +174,7 @@ def filter_alerts_by_timestamp(
 
 # Move to TIPCommon
 def filter_old_alerts(logger, alerts, existing_ids, id_key="id"):
-    """
-    Filter alerts that were already processed
+    """Filter alerts that were already processed
     :param logger: {SiemplifyLogger} Siemplify logger
     :param alerts: {list} List of Alert objects
     :param existing_ids: {list} List of ids to filter
@@ -199,8 +196,7 @@ def filter_old_alerts(logger, alerts, existing_ids, id_key="id"):
 
 # Move to TIPCommon
 def read_ids(siemplify, ids_file_name="ids.json"):
-    """
-    Read existing alerts IDs from ids file (from last 24h only)
+    """Read existing alerts IDs from ids file (from last 24h only)
     :param siemplify: {Siemplify} Siemplify object.
     :param ids_file_name: {str} The name of the ids file
     :return: {list} List of ids
@@ -211,18 +207,17 @@ def read_ids(siemplify, ids_file_name="ids.json"):
         return []
 
     try:
-        with open(ids_file_path, "r") as f:
+        with open(ids_file_path, encoding="utf-8") as f:
             return json.loads(f.read())
     except Exception as e:
-        siemplify.LOGGER.error(f"Unable to read ids file: {e}")
+        siemplify.LOGGER.exception(f"Unable to read ids file: {e}")
         siemplify.LOGGER.exception(e)
         return []
 
 
 # Move to TIPCommon
 def write_ids(siemplify, ids, ids_file_name="ids.json"):
-    """
-    Write ids to the ids file
+    """Write ids to the ids file
     :param siemplify: {Siemplify} Siemplify object.
     :param ids: {list} The ids to write to the file
     :param ids_file_name: {str} The name of the ids file.
@@ -236,7 +231,7 @@ def write_ids(siemplify, ids, ids_file_name="ids.json"):
         if not os.path.exists(os.path.dirname(ids_file_path)):
             os.makedirs(os.path.dirname(ids_file_path))
 
-        with open(ids_file_path, "w") as f:
+        with open(ids_file_path, "w", encoding="utf-8") as f:
             try:
                 for chunk in json.JSONEncoder().iterencode(ids):
                     f.write(chunk)
@@ -253,15 +248,14 @@ def write_ids(siemplify, ids, ids_file_name="ids.json"):
         return True
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Failed writing IDs to IDs file, ERROR: {e}")
+        siemplify.LOGGER.exception(f"Failed writing IDs to IDs file, ERROR: {e}")
         siemplify.LOGGER.exception(e)
         return False
 
 
 # Move to TIPCommon
 def is_overflowed(siemplify, alert_info, is_test_run):
-    """
-    Check if overflowed
+    """Check if overflowed
     :param siemplify: {Siemplify} Siemplify object.
     :param alert_info: {AlertInfo}
     :param is_test_run: {bool} Whether test run or not.
@@ -276,7 +270,7 @@ def is_overflowed(siemplify, alert_info, is_test_run):
         )
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Error validation connector overflow, ERROR: {e}")
+        siemplify.LOGGER.exception(f"Error validation connector overflow, ERROR: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:
@@ -292,8 +286,7 @@ def save_timestamp(
     incrementation_value=0,
     log_timestamp=True,
 ):
-    """
-    Save last timestamp for given alerts
+    """Save last timestamp for given alerts
     :param siemplify: {Siemplify} Siemplify object
     :param alerts: {list} The list of alerts to find the last timestamp
     :param timestamp_key: {str} key for getting timestamp from alert
@@ -366,8 +359,7 @@ def pass_severity_filter(siemplify, alert, lowest_severity):
 
 
 def convert_comma_separated_to_list(comma_separated):
-    """
-    Convert comma-separated string to list
+    """Convert comma-separated string to list
     :param comma_separated: String with comma-separated values
     :return: List of values
     """
@@ -377,8 +369,7 @@ def convert_comma_separated_to_list(comma_separated):
 
 
 def convert_list_to_comma_string(values_list):
-    """
-    Convert list to comma-separated string
+    """Convert list to comma-separated string
     :param values_list: List of values
     :return: String with comma-separated values
     """

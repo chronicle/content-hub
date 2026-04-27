@@ -13,33 +13,35 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+import sys
+from datetime import datetime, timedelta
+
+from dateutil.tz import tzoffset
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import (
+    convert_datetime_to_unix_time,
     output_handler,
     unix_now,
     utc_now,
-    convert_datetime_to_unix_time,
 )
-from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from TIPCommon import extract_connector_param
-from ..core.constants import CONNECTOR_NAME, DEFAULT_TIME_FRAME, DEFAULT_LIMIT
+
+from ..core.constants import CONNECTOR_NAME, DEFAULT_LIMIT, DEFAULT_TIME_FRAME
+from ..core.Site24x7Manager import Site24x7Manager
 from ..core.UtilsManager import (
-    read_ids,
-    write_ids,
+    DATETIME_FORMAT,
+    get_environment_common,
     get_last_success_time,
     is_approaching_timeout,
-    get_environment_common,
     is_overflowed,
-    save_timestamp,
     pass_whitelist_filter,
-    DATETIME_FORMAT,
+    read_ids,
     read_utc_offset,
+    save_timestamp,
+    write_ids,
 )
-from ..core.Site24x7Manager import Site24x7Manager
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
-import sys
-from datetime import timedelta, datetime
-from dateutil.tz import tzoffset
-
 
 connector_starting_time = unix_now()
 
@@ -208,7 +210,7 @@ def main(is_test_run):
                 siemplify.LOGGER.info(f"Alert {alert.msg} was created.")
 
             except Exception as e:
-                siemplify.LOGGER.error(f"Failed to process alert {alert.msg}")
+                siemplify.LOGGER.exception(f"Failed to process alert {alert.msg}")
                 siemplify.LOGGER.exception(e)
 
                 if is_test_run:
@@ -240,7 +242,7 @@ def main(is_test_run):
                 )
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Got exception on main handler. Error: {e}")
+        siemplify.LOGGER.exception(f"Got exception on main handler. Error: {e}")
         siemplify.LOGGER.exception(e)
 
         if is_test_run:
@@ -253,10 +255,7 @@ def main(is_test_run):
 
 def pass_filters(siemplify, whitelist_as_a_blacklist, alert, model_key):
     # All alert filters should be checked here
-    if not pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, alert, model_key):
-        return False
-
-    return True
+    return pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, alert, model_key)
 
 
 if __name__ == "__main__":

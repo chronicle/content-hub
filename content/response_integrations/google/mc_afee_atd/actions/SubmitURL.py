@@ -13,21 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import dict_to_flat, convert_dict_to_json_result_dict
-from ..core.McAfeeATDManager import McAfeeATDManager, READY_STATUSES, DEFAULT_THRESHOLD
-from soar_sdk.SiemplifyDataModel import EntityTypes
+
+import base64
+import json
+import sys
+
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
-    EXECUTION_STATE_INPROGRESS,
     EXECUTION_STATE_FAILED,
+    EXECUTION_STATE_INPROGRESS,
 )
-from TIPCommon import extract_configuration_param, extract_action_param
-from ..core.constants import INTEGRATION_NAME, INTEGRATION_DISPLAY_NAME, SUBMIT_URL_SCRIPT_NAME
-import sys
-import json
-import base64
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, dict_to_flat, output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
+from ..core.constants import INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME, SUBMIT_URL_SCRIPT_NAME
+from ..core.McAfeeATDManager import DEFAULT_THRESHOLD, READY_STATUSES, McAfeeATDManager
 from ..core.utils import get_entity
 
 TABLE_NAME = "Result Task IDs"
@@ -109,14 +111,15 @@ def main():
                 if task_id != UNSUPPORTED_FILE:
                     task_ids.update({entity.identifier: str(task_id)})
                 else:
+                    msg = f"Url-{entity.identifier.encode('utf-8')} is not supported"
                     raise Exception(
-                        f"Url-{entity.identifier.encode('utf-8')} is not supported"
+                        msg
                     )
             except Exception as err:
                 error_message = (
                     f'Error submitting URL "{entity.identifier}", Error: {err}'
                 )
-                siemplify.LOGGER.error(error_message)
+                siemplify.LOGGER.exception(error_message)
                 siemplify.LOGGER.exception(err)
 
         # Provide logout from McAfee ATD.
@@ -125,7 +128,7 @@ def main():
         result_value = json.dumps(task_ids)
 
     except Exception as e:
-        siemplify.LOGGER.error(
+        siemplify.LOGGER.exception(
             f"General error performing action {SUBMIT_URL_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)
@@ -208,7 +211,7 @@ def fetch_scan_report_async():
                 error_message = (
                     f'Cannot get status for task ID "{task_id}", Error: {err}'
                 )
-                siemplify.LOGGER.error(error_message)
+                siemplify.LOGGER.exception(error_message)
                 siemplify.LOGGER.exception(err)
 
         if is_ready:
@@ -265,7 +268,7 @@ def fetch_scan_report_async():
                     error_message = (
                         f'Error fetching report for task ID "{task_id}", Error: {err}'
                     )
-                    siemplify.LOGGER.error(error_message)
+                    siemplify.LOGGER.exception(error_message)
                     siemplify.LOGGER.exception(err)
 
             if entities_to_enrich:
@@ -293,7 +296,7 @@ def fetch_scan_report_async():
             status = EXECUTION_STATE_INPROGRESS
 
     except Exception as e:
-        siemplify.LOGGER.error(
+        siemplify.LOGGER.exception(
             f"General error performing action {SUBMIT_URL_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

@@ -13,14 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.McAfeeATDManager import McAfeeATDManager
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
-from ..core.constants import INTEGRATION_NAME, SUBMIT_FILE_SCRIPT_NAME
+
 import json
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
+from ..core.constants import INTEGRATION_NAME, SUBMIT_FILE_SCRIPT_NAME
+from ..core.McAfeeATDManager import McAfeeATDManager
 
 TABLE_NAME = "Result Task IDs"
 ZIP_FILE = -1
@@ -99,7 +101,7 @@ def main():
                 results.append({"File": file_path, "Task ID": task_id})
             except Exception as err:
                 error_message = f'Error submitting file "{file_path}", Error: {err}'
-                siemplify.LOGGER.error(error_message)
+                siemplify.LOGGER.exception(error_message)
                 siemplify.LOGGER.exception(err)
 
         # Provide logout from McAfee ATD.
@@ -115,7 +117,7 @@ def main():
             output_message = "No file was submitted."
 
     except Exception as e:
-        siemplify.LOGGER.error(
+        siemplify.LOGGER.exception(
             f"General error performing action {SUBMIT_FILE_SCRIPT_NAME}"
         )
         siemplify.LOGGER.exception(e)

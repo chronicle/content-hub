@@ -13,41 +13,24 @@
 # limitations under the License.
 
 from __future__ import annotations
-class LastlineAPIException(Exception):
-    """
-    Lastline API exception
-    """
 
-    pass
+
+class LastlineAPIException(Exception):
+    """Lastline API exception"""
 
 
 class LastlineAuthenticationException(Exception):
-    """
-    Lastline Authentication exception
-    """
-
-    pass
+    """Lastline Authentication exception"""
 
 
 class LastlinePermissionException(Exception):
-    """
-    Lastline Authentication exception
-    """
-
-    pass
+    """Lastline Authentication exception"""
 
 
 class LastlineInvalidParamException(Exception):
-    """
-    Lastline Invalid Parameter exception
-    """
-
-    pass
+    """Lastline Invalid Parameter exception"""
 
 
 class LastlineManyRequestsException(Exception):
-    """
-    Lastline Too Many Requests exception
-    """
+    """Lastline Too Many Requests exception"""
 
-    pass

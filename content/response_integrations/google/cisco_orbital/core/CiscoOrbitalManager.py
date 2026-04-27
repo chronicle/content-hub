@@ -13,22 +13,24 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import json
 import uuid
 from urllib.parse import urljoin
+
 import requests
-from .constants import ENDPOINTS, NAME_DEFAULT_STRUCTURE
-from .UtilsManager import validate_response, get_dict_from_string, get_ip_type
-from .CiscoOrbitalParser import CiscoOrbitalParser
 from soar_sdk.SiemplifyDataModel import EntityTypes
+
+from .CiscoOrbitalParser import CiscoOrbitalParser
+from .constants import ENDPOINTS, NAME_DEFAULT_STRUCTURE
+from .UtilsManager import get_dict_from_string, get_ip_type, validate_response
 
 
 class CiscoOrbitalManager:
     def __init__(
         self, api_root, client_id, client_secret, verify_ssl=True, siemplify_logger=None
     ):
-        """
-        The method is used to init an object of Manager class
+        """The method is used to init an object of Manager class
         :param api_root: API root of the Cisco Orbital instance.
         :param client_id: Client ID of the Cisco Orbital account.
         :param client_secret: Client Secret of the Cisco Orbital account.
@@ -46,16 +48,13 @@ class CiscoOrbitalManager:
         self.set_auth_token()
 
     def set_auth_token(self):
-        """
-        Set Authorization header to request session.
-        """
+        """Set Authorization header to request session."""
         self.session.headers.update(
             {"Authorization": f"Bearer {self.get_auth_token()}"}
         )
 
     def get_auth_token(self):
-        """
-        Send request in order to generate token.
+        """Send request in order to generate token.
         :return: {str} The authorization token
         """
         url = self._get_full_url("generate_token")
@@ -64,8 +63,7 @@ class CiscoOrbitalManager:
         return self.parser.get_auth_token(response.json())
 
     def _get_full_url(self, url_id, **kwargs):
-        """
-        Get full url from url identifier.
+        """Get full url from url identifier.
         :param url_id: {str} The id of url
         :param kwargs: {dict} Variables passed for string formatting
         :return: {str} The full url
@@ -73,8 +71,7 @@ class CiscoOrbitalManager:
         return urljoin(self.api_root, ENDPOINTS[url_id].format(**kwargs))
 
     def test_connectivity(self):
-        """
-        Test connectivity to the Cisco Orbital.
+        """Test connectivity to the Cisco Orbital.
         :return: {void}
         """
         url = self._get_full_url("test_connectivity")
@@ -82,8 +79,7 @@ class CiscoOrbitalManager:
         validate_response(response, "Unable to connect to Cisco Orbital.")
 
     def submit_query(self, entities, query, name, context, expiration_unix=None):
-        """
-        Submit the query on endpoints.
+        """Submit the query on endpoints.
         :param entities: {list} The list of entities.
         :param query: {str} The query that needs to be executed.
         :param name: {str} The name for the query job.
@@ -106,8 +102,7 @@ class CiscoOrbitalManager:
         return self.parser.get_job_id(response.json())
 
     def get_nodes_from_entities(self, entities):
-        """
-        Get nodes on which queries will be executed.
+        """Get nodes on which queries will be executed.
         :param entities: {list} The list of entities.
         :return: {list} The list of nodes.
         """
@@ -124,8 +119,7 @@ class CiscoOrbitalManager:
         return nodes
 
     def get_endpoints_results(self, job_id, limit):
-        """
-        Get endpoints query results by job id.
+        """Get endpoints query results by job id.
         :param job_id: {str} The job id to fetch data.
         :param limit: {int} Maximum number of results rows.
         :return: {list} List of EndpointResult objects.

@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv, add_prefix_to_dict
+from soar_sdk.SiemplifyUtils import add_prefix_to_dict, dict_to_flat, flat_dict_to_csv, output_handler
+
 from ..core.CyberXManager import CyberXManager
 
 ACTION_NAME = "CyberX_Enrich Endpoint"
@@ -46,8 +47,7 @@ def main():
     target_entities = [
         entity
         for entity in siemplify.target_entities
-        if entity.entity_type == EntityTypes.ADDRESS
-        or entity.entity_type == EntityTypes.HOSTNAME
+        if entity.entity_type in {EntityTypes.ADDRESS, EntityTypes.HOSTNAME}
     ]
 
     for entity in target_entities:
@@ -75,7 +75,7 @@ def main():
                 success_entities.append(entity)
         except Exception as err:
             error_message = f'Error occurred fetching endpoint data for "{entity.identifier}", ERROR: {err}'
-            siemplify.LOGGER.error(error_message)
+            siemplify.LOGGER.exception(error_message)
             siemplify.LOGGER.exception(err)
             errors.append(error_message)
 
@@ -85,7 +85,7 @@ def main():
         output_message = "No entities were enriched."
 
     if errors:
-        output_message = "{0} \n \n Errors: \n {1}".format(
+        output_message = "{} \n \n Errors: \n {}".format(
             output_message, "\n ".join(errors)
         )
 

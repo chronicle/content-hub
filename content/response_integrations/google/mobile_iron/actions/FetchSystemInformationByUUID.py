@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 # Imports
 from ..core.MobileIronManager import MobileIronManager
-from soar_sdk.SiemplifyAction import SiemplifyAction
 
 # Consts.
 PROVIDER_NAME = "MobileIron"

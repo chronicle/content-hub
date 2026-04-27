@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
 
 # Imports
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.NSMManager import NsmManager
 
 # Consts
@@ -73,7 +74,7 @@ def main():
         if entity.entity_type == ADDRESS:
             # Quarantine address in each sensor.
             for sensor_name in sensors_names_list:
-                # Extract sensor id from SENSORS_NAMES_TO_IDS dict -> Sensors are 
+                # Extract sensor id from SENSORS_NAMES_TO_IDS dict -> Sensors are
                 # inserted dynamicaly by the user and cannot be stored in a Const.
                 try:
                     sensor_id = nsm_manager.get_sensor_id_by_name(sensor_name)
@@ -82,11 +83,11 @@ def main():
                     )
                     # Verify that the address blocked at least in one sensor.s
                     if res and entity.identifier not in quarantined_identifiers:
-                        # If address was quarantined append it's identifier to 
+                        # If address was quarantined append it's identifier to
                         # 'quarantined_identifiers' list.
                         quarantined_identifiers.append(entity.identifier)
                 except Exception as err:
-                    siemplify.LOGGER.error(
+                    siemplify.LOGGER.exception(
                         f"Error quarantine IP {entity.identifier}"
                         f" for sensor {sensor_name}, ERROR: {err}"
                     )

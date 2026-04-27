@@ -13,27 +13,28 @@
 # limitations under the License.
 
 from __future__ import annotations
-import validators
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
 
+import validators
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.LastlineManager import LastlineManager
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
 from ..core.consts import (
-    INTEGRATION_NAME,
-    SEARCH_ANALYSIS_HISTORY,
     DEFAULT_MAX_HOURS_BACKWARDS,
-    DEFAULT_X_LAST_SCANS,
     DEFAULT_SKIP_X_FIRST_SCANS,
-    SUBMISSION_TYPE_MAPPER,
-    NOT_SPECIFIED,
+    DEFAULT_X_LAST_SCANS,
     FILE,
-    URL,
+    INTEGRATION_NAME,
+    NOT_SPECIFIED,
+    SEARCH_ANALYSIS_HISTORY,
     SEARCH_RESULTS,
+    SUBMISSION_TYPE_MAPPER,
+    URL,
 )
-from ..core.utils import get_max_hours_backwards_as_date, get_file_hash
 from ..core.exceptions import LastlineInvalidParamException
+from ..core.LastlineManager import LastlineManager
+from ..core.utils import get_file_hash, get_max_hours_backwards_as_date
 
 
 @output_handler
@@ -171,7 +172,7 @@ def main():
         status = EXECUTION_STATE_COMPLETED
 
     except LastlineInvalidParamException as error:
-        siemplify.LOGGER.error(error)
+        siemplify.LOGGER.exception(error)
         result_value = False
         status = EXECUTION_STATE_COMPLETED
         output_message = f"No {INTEGRATION_NAME} reports were found."
@@ -183,7 +184,7 @@ def main():
             f"Failed to find completed analysis tasks for the provided search parameters. Error is: "
             f"{error}"
         )
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(error)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

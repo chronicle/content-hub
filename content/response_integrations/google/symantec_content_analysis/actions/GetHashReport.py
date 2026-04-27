@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.SymantecContentAnalysisManager import SymantecContentAnalysisManager
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import dict_to_flat, construct_csv
+from soar_sdk.SiemplifyUtils import construct_csv, dict_to_flat, output_handler
+
+from ..core.SymantecContentAnalysisManager import SymantecContentAnalysisManager
 
 INTEGRATION_PROVIDER = "SymantecContentAnalysis"
 ACTION_NAME = "SymantecContentAnalysis_Get Hash Report"
@@ -62,9 +63,9 @@ def main():
         except Exception as err:
             error_message = (
                 'Error fetching report for '
-                f'"{entity.identifier}", ERROR: {str(err)}'
+                f'"{entity.identifier}", ERROR: {err!s}'
             )
-            siemplify.LOGGER.error(error_message)
+            siemplify.LOGGER.exception(error_message)
             siemplify.LOGGER.exception(err)
             errors.append(error_message)
 
@@ -75,7 +76,7 @@ def main():
         output_message = "No target entities were enriched."
 
     if errors:
-        output_message = "{0} \n Errors: \n \n  {1}".format(
+        output_message = "{} \n Errors: \n \n  {}".format(
             output_message, " \n ".join(errors)
         )
 

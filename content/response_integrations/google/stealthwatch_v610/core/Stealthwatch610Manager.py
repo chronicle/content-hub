@@ -26,11 +26,12 @@
 # ============================= IMPORTS ===================================== #
 
 from __future__ import annotations
-import requests
+
+import copy
 import datetime
 import time
-import copy
 
+import requests
 
 # ============================== CONSTS ===================================== #
 
@@ -62,19 +63,13 @@ ERROR_SEARCH_STATUS = "FAILED"
 
 
 class StealthwatchManagerError(Exception):
-    """
-    General Exception for Stealthwatch manager
-    """
-
-    pass
+    """General Exception for Stealthwatch manager"""
 
 
 class StealthwatchManager:
 
     def __init__(self, server_address, username, password, verify_ssl=False):
-        """
-        Connect to Stealthwatch server
-        """
+        """Connect to Stealthwatch server"""
         self.server_address = server_address
         self.session = requests.Session()
         self.session.verify = verify_ssl
@@ -92,8 +87,9 @@ class StealthwatchManager:
 
         except requests.HTTPError as error:
             # Not a JSON - return content
+            msg = f"{error_msg}: {error} - {error.response.content}"
             raise StealthwatchManagerError(
-                f"{error_msg}: {error} - {error.response.content}"
+                msg
             )
 
     def authenticate(self, username, password):
@@ -109,16 +105,14 @@ class StealthwatchManager:
         return response.cookies
 
     def test_connectivity(self):
-        """
-        Test connectivity to StealthWatch instance
+        """Test connectivity to StealthWatch instance
         :return: True if connection is successfull, exception otherwise.
         """
         self.get_domains()
         return True
 
     def get_domain_id_by_name(self, domain_name):
-        """
-        Get doamin ID by name
+        """Get doamin ID by name
         :param domain_name: {str} The domain's name
         :return: {int} The domain id
         """
@@ -127,6 +121,7 @@ class StealthwatchManager:
         for domain in domains:
             if domain.get("displayName", "").lower() == domain_name.lower():
                 return domain.get("id")
+        return None
 
     def search_flows(
         self,
@@ -137,8 +132,7 @@ class StealthwatchManager:
         destination_ips=None,
         limit=FLOW_RESULTS_LIMIT,
     ):
-        """
-        Run a flow search
+        """Run a flow search
         :param domain_id: {int} The domain id
         :param start_time: {str} The start time to search from (isoformat)
         :param end_time: {str} The end time to search from (isoformat)
@@ -174,8 +168,7 @@ class StealthwatchManager:
         return response.json().get("data", {}).get("queryId")
 
     def search_events(self, domain_id, start_time, end_time, src_ip=None, dst_ip=None):
-        """
-        Search for events by an ip
+        """Search for events by an ip
         :param domain_id: {int} The domain id
         :param start_time: {str} The start time of events to filter by (%Y-%m-%dT%H:%M:00.000%z)
         :param end_time: {str} The end time of events to filter by (%Y-%m-%dT%H:%M:00.000%z)
@@ -206,8 +199,7 @@ class StealthwatchManager:
         return response.json().get("data", {}).get("queryId")
 
     def get_events_search_results(self, domain_id, search_id, limit=None):
-        """
-        Get results of an events search
+        """Get results of an events search
         :param domain_id: {Str} The domain id
         :param search_id: {stR} THe search id
         :return: {list} The search results
@@ -216,7 +208,8 @@ class StealthwatchManager:
 
         while not self.is_search_completed(url, search_id):
             if self.is_search_error(url, search_id):
-                raise StealthwatchManagerError(f"Search {search_id} has failed.")
+                msg = f"Search {search_id} has failed."
+                raise StealthwatchManagerError(msg)
             time.sleep(1)
 
         results_url = f"{self.server_address}/sw-reporting/v1/tenants/{domain_id}/security-events/results/{search_id}"
@@ -224,8 +217,7 @@ class StealthwatchManager:
         return self.get_search_results(results_url, search_id, limit)
 
     def get_flows_search_results(self, domain_id, search_id, limit=None):
-        """
-        Get results of an events search
+        """Get results of an events search
         :param domain_id: {Str} The domain id
         :param search_id: {stR} THe search id
         :return: {list} The search results
@@ -234,7 +226,8 @@ class StealthwatchManager:
 
         while not self.is_search_completed(url, search_id):
             if self.is_search_error(url, search_id):
-                raise StealthwatchManagerError(f"Search {search_id} has failed.")
+                msg = f"Search {search_id} has failed."
+                raise StealthwatchManagerError(msg)
             time.sleep(1)
 
         results_url = f"{self.server_address}/sw-reporting/v1/tenants/{domain_id}/flow-reports/top-hosts/results/{search_id}"
@@ -242,8 +235,7 @@ class StealthwatchManager:
         return self.get_search_results(results_url, search_id, limit)
 
     def get_search_status(self, url, search_id):
-        """
-        Get the current status of a search job
+        """Get the current status of a search job
         :param url: {str} The url to query the status from
         :param search_id: {str} The id of the search
         :return:
@@ -255,8 +247,7 @@ class StealthwatchManager:
         return response.json().get("data", {})["status"]
 
     def is_search_completed(self, url, search_id):
-        """
-        Check whether a search is completed
+        """Check whether a search is completed
         :param url: {str} The url to query about the search
         :param search_id: {str} The id of the search
         :return: {bool} True if completed, False otherwise
@@ -265,8 +256,7 @@ class StealthwatchManager:
         return status == COMPLETED_SEARCH_STATUS
 
     def is_search_error(self, url, search_id):
-        """
-        Check whether a search has failed
+        """Check whether a search has failed
         :param url: {str} The url to query about the search
         :param search_id: {str} The id of the search
         :return: {bool} True if failed, False otherwise
@@ -275,8 +265,7 @@ class StealthwatchManager:
         return status == ERROR_SEARCH_STATUS
 
     def get_search_results(self, url, search_id, limit=None):
-        """
-        Get search results
+        """Get search results
         :param url: {str} The url of the endpoint to fetch results from
         :param search_id: {int} The search id
         :param limit: {int} Results limit
@@ -293,8 +282,7 @@ class StealthwatchManager:
         return response.json().get("data", {}).get("results", [])
 
     def get_domains(self):
-        """
-        Get all domains that are configured in the system.
+        """Get all domains that are configured in the system.
         :return: {JSON} All domains
         """
         url = f"{self.server_address}/sw-reporting/v1/tenants"
@@ -304,8 +292,7 @@ class StealthwatchManager:
         return response.json().get("data", [])
 
     def get_domain_id_by_ip(self, ip):
-        """
-        Get domain id by an ip
+        """Get domain id by an ip
         :param ip: {str} The ip address
         :return: {int} The id of the domain that owns the host.
         """
@@ -314,7 +301,7 @@ class StealthwatchManager:
         for domain in domains:
             url = f"{self.server_address}/smc/rest/domains/{domain['id']}/hosts"
             response = self.session.get(url)
-            self.validate_response(response, f"Unable to get domain id for ip")
+            self.validate_response(response, "Unable to get domain id for ip")
 
             # Search for the ip in the found domain hosts
             for result in response.json():
@@ -330,4 +317,5 @@ class StealthwatchManager:
             if response.ok:
                 return domain["id"]
 
-        raise StealthwatchManagerError(f"Unable to get domain id for ip")
+        msg = "Unable to get domain id for ip"
+        raise StealthwatchManagerError(msg)

@@ -13,11 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from TIPCommon import extract_configuration_param, extract_action_param
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from ..core.constants import INTEGRATION_NAME, GENERATE_REFRESH_TOKEN_SCRIPT_NAME
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
+from ..core.constants import GENERATE_REFRESH_TOKEN_SCRIPT_NAME, INTEGRATION_NAME
 from ..core.Site24x7Manager import Site24x7Manager
 
 
@@ -81,7 +83,7 @@ def main():
         result = False
         status = EXECUTION_STATE_FAILED
         output_message = f'Error executing action "Generate Refresh Token". Reason: {e}'
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

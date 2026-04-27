@@ -13,12 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 # Imports
 from ..core.MobileIronManager import MobileIronManager
-from soar_sdk.SiemplifyAction import SiemplifyAction
-
 
 # Consts.
 PROVIDER_NAME = "MobileIron"
@@ -45,10 +45,7 @@ def main():
     )
     result_value = mobile_iron_manager.ping()
 
-    if result_value:
-        output_message = "Connection Established."
-    else:
-        output_message = "Failed to establish connection."
+    output_message = "Connection Established." if result_value else "Failed to establish connection."
 
     siemplify.end(output_message, result_value)
 

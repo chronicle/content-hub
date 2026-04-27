@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.MicroFocusITSMAManager import MicroFocusITSMAManager
 
 ITSMA_PROVIDER = "MicroFocusITSMA"
@@ -37,10 +39,7 @@ def main():
 
     result_value = itsma_manager.get_token()
 
-    if result_value:
-        output_message = "Connection Established."
-    else:
-        output_message = "Connection Failed."
+    output_message = "Connection Established." if result_value else "Connection Failed."
 
     siemplify.end(output_message, result_value)
 

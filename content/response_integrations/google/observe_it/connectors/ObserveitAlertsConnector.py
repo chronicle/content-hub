@@ -13,32 +13,33 @@
 # limitations under the License.
 
 from __future__ import annotations
-import sys
+
 import os
+import sys
 from datetime import timedelta
 
+from EnvironmentCommon import EnvironmentHandleForFileSystem, validate_map_file_exists
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import (
-    output_handler,
-    utc_now,
-    convert_string_to_datetime,
     convert_datetime_to_unix_time,
+    convert_string_to_datetime,
+    output_handler,
     unix_now,
+    utc_now,
 )
-from EnvironmentCommon import EnvironmentHandleForFileSystem, validate_map_file_exists
 from TIPCommon import extract_connector_param
 
-from ..core.ObserveITManager import ObserveITManager
-from ..core.ObserveITValidator import ObserveITValidator
 from ..core.ObserveITCommon import ObserveITCommon
 from ..core.ObserveITConstants import (
+    ACCEPTABLE_TIME_INTERVAL_IN_MINUTES,
+    ALERTS_CONNECTOR_NAME,
+    BLACKLIST_FILTER,
     IDS_FILE,
     MAP_FILE,
-    ALERTS_CONNECTOR_NAME,
     WHITELIST_FILTER,
-    BLACKLIST_FILTER,
-    ACCEPTABLE_TIME_INTERVAL_IN_MINUTES,
 )
+from ..core.ObserveITManager import ObserveITManager
+from ..core.ObserveITValidator import ObserveITValidator
 
 
 @output_handler
@@ -210,7 +211,7 @@ def main(is_test_run):
 
         filtered_alerts = sorted(filtered_alerts, key=lambda inc: inc.rising_value)
     except Exception as e:
-        siemplify.LOGGER.error(str(e))
+        siemplify.LOGGER.exception(str(e))
         siemplify.LOGGER.exception(e)
         sys.exit(1)
 
@@ -266,7 +267,7 @@ def main(is_test_run):
                 )
 
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Error validation connector overflow, ERROR: {e}"
                 )
                 siemplify.LOGGER.exception(e)
@@ -279,12 +280,11 @@ def main(is_test_run):
                     f"{alert_info.rule_generator}-{alert_info.ticket_id}-{alert_info.environment}-{alert_info.device_product} found as overflow alert. Skipping..."
                 )
                 continue
-            else:
-                alerts.append(alert_info)
-                siemplify.LOGGER.info(f"Alert {alert.id} was created.")
+            alerts.append(alert_info)
+            siemplify.LOGGER.info(f"Alert {alert.id} was created.")
 
         except Exception as e:
-            siemplify.LOGGER.error(
+            siemplify.LOGGER.exception(
                 f"Failed to process incident {alert.id}", alert_id=alert.id
             )
             siemplify.LOGGER.exception(e)
