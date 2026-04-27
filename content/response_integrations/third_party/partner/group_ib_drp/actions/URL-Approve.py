@@ -1,34 +1,37 @@
 from __future__ import annotations
-import time
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import unix_now, convert_unixtime_to_datetime, output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED, EXECUTION_STATE_TIMEDOUT
+from soar_sdk.SiemplifyUtils import output_handler
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-# Import Managers
 from ..core.config import Config
 from ..core.UtilsManager import GIBConnector
 
 
 @output_handler
-def main():
-    # Google Chronicle base class initialization
-    siemplify = SiemplifyAction()
+def main() -> None:
+    """Approve DRP violation URLs that match target entities of the action.
 
-    # Google Chronicle base class set up
+    Walks the alert's security events to build a URL→violation-UID map, then
+    iterates over the action's target entities. For every ``DestinationURL``
+    entity with a known UID it submits an approve request to the DRP API and
+    records the outcome (approved / failed / unmapped) per entity. Failures of
+    individual entities do not abort the action — they are aggregated into the
+    final output message and the action exits with ``EXECUTION_STATE_FAILED``
+    only if at least one entity could not be approved.
+    """
+
+    siemplify = SiemplifyAction()
     siemplify.script_name = Config.GC_APPROVE_SCRIPT_NAME
 
-    # Get poller
     poller = GIBConnector(siemplify).init_action_poller()
 
     siemplify.LOGGER.info('──── GATHER ENTITIES')
-    
-    # Gather received entities and detect their type return [(entity.identifier, type), ...]
+
     received_entities = [(entity.identifier, entity.entity_type) for entity in siemplify.target_entities]
 
     siemplify.LOGGER.info('──── PARSE DATA')
 
-    # Build URL → UID lookup once from event data
     url_to_uid = {}
     for event in siemplify.current_alert.security_events:
         props = getattr(event, 'additional_properties', {}) or {}
@@ -37,42 +40,56 @@ def main():
         if url and uid_val and url not in url_to_uid:
             url_to_uid[url] = uid_val
 
-    # Gather data
-    for _entity, _entity_type in received_entities:
+    approved_ids = []
+    failed_ids = []
+    unmapped_ids = []
 
+    for _entity, _entity_type in received_entities:
         siemplify.LOGGER.info("entity: {}, type: {}".format(_entity, _entity_type))
 
-        if _entity and _entity_type == "DestinationURL":
-            uid = url_to_uid.get(_entity.lower())
+        if not _entity or _entity_type != "DestinationURL":
+            continue
 
-            if not uid:
-                siemplify.LOGGER.error("No violation UID found for entity: {}".format(_entity))
-                continue
+        uid = url_to_uid.get(_entity.lower())
+        if not uid:
+            siemplify.LOGGER.error("No violation UID found for entity: {}".format(_entity))
+            unmapped_ids.append(_entity)
+            continue
 
-            data = {
-                "violationId": uid,
-                "approve": True
-            }
-            params = {
-                "q": None
-            }
+        data = {"violationId": uid, "approve": True}
+        params = {"q": None}
 
-            siemplify.LOGGER.info("data: {}".format(data))
-            
-            # Extract data
-            res = poller.send_request(endpoint="violation/change-approve", params=params, method="POST", json=data)
-            
+        siemplify.LOGGER.info("data: {}".format(data))
+
+        try:
+            res = poller.send_request(
+                endpoint="violation/change-approve",
+                params=params,
+                method="POST",
+                json=data,
+            )
             siemplify.LOGGER.info(res)
-            
-            # entity.__dict__
-            # dir(entity)
-            # siemplify.load_case_data()
-            # siemplify._get_case()
+            approved_ids.append(_entity)
+        except Exception as e:
+            siemplify.LOGGER.error("Approve failed for entity {} (uid={}): {}".format(_entity, uid, e))
+            siemplify.LOGGER.exception(e)
+            failed_ids.append(_entity)
 
-            # Sleep to keep API active
-            time.sleep(1)
-    
-    siemplify.end('done', 'done')
+    summary_lines = []
+    if approved_ids:
+        summary_lines.append("Approved: {}".format(", ".join(approved_ids)))
+    if failed_ids:
+        summary_lines.append("Failed: {}".format(", ".join(failed_ids)))
+    if unmapped_ids:
+        summary_lines.append("No matching violation UID: {}".format(", ".join(unmapped_ids)))
+    if not summary_lines:
+        summary_lines.append("No DestinationURL entities to approve.")
+
+    output_message = "\n".join(summary_lines)
+    result_value = bool(approved_ids)
+    status = EXECUTION_STATE_FAILED if failed_ids else EXECUTION_STATE_COMPLETED
+
+    siemplify.end(output_message, result_value, status)
 
 
 if __name__ == "__main__":
