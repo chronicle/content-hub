@@ -832,7 +832,7 @@ class WorkflowInstaller:
         """Currently configured SOC roles"""
         if "soc_roles" not in self._cache:
             self._cache["soc_roles"] = self.api.get_soc_roles()
-        return self._cache.get("soc_roles")
+        return self._cache.get("soc_roles") or []
 
     @property
     def _playbook_categories(self) -> dict:
