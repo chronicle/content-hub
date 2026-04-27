@@ -1,0 +1,26 @@
+from __future__ import annotations
+INTEGRATION_NAME = "iBoss"
+INTEGRATION_DISPLAY_NAME = "iBoss"
+
+# Actions name
+PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
+URLLOOKUP_SCRIPT_NAME = f"{INTEGRATION_NAME} - URLLookup"
+ADD_URL_TO_POLICY_BLOCK_LIST_SCRIPT_NAME = (
+    f"{INTEGRATION_NAME} - Add URL to Policy Block List"
+)
+REMOVE_URL_FROM_POLICY_BLOCK_LIST_SCRIPT_NAME = (
+    f"{INTEGRATION_NAME} - Remove URL from Policy Block List"
+)
+LIST_POLICY_BLOCK_LIST_ENTRIES_SCRIPT_NAME = (
+    f"{INTEGRATION_NAME} - List Policy Block List Entries"
+)
+ADD_IP_TO_POLICY_BLOCK_LIST = f"{INTEGRATION_NAME} - Add IP to Policy Block List"
+REMOVE_IP_FROM_POLICY_BLOCK_LIST_SCRIPT_NAME = (
+    f"{INTEGRATION_NAME} - Remove IP from Policy Block List"
+)
+URL_RECATEGORIZATION_SCRIPT_NAME = f"{INTEGRATION_NAME} - URL Recategorization"
+
+DIRECTION_MAPPER = {"Destination and Source": 0, "Source": 1, "Destination": 2}
+
+ENRICHMENT_PREFIX = "IBOSS"
+POLICY_BLOCKED_ENRICHMENT_NAME = "policy_blocked"

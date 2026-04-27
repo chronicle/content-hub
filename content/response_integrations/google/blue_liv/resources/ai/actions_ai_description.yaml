@@ -1,0 +1,589 @@
+Add Comment to a Threat:
+  ai_description: >-
+    Adds a text comment to a specific threat resource within the BlueLiv platform.
+    This action allows analysts to document findings or provide context directly on
+    a threat record in BlueLiv by specifying the module and resource identifiers.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Module Type | String | Yes | The category of the module the resource belongs
+    to (e.g., 'malware', 'hacktivism', 'credentials'). |
+
+    | Module ID | String | Yes | The unique identifier of the module containing the
+    resource. |
+
+    | Resource ID | String | Yes | The unique identifier of the specific threat or
+    resource to which the comment will be added. |
+
+    | Comment Text | String | Yes | The actual text content of the comment to be posted.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the BlueLiv manager using API credentials
+    and organization details.
+
+    2. **Parameter Extraction**: It retrieves the module type, module ID, resource
+    ID, and the comment text from the action input.
+
+    3. **API Interaction**: It sends a PUT request to the BlueLiv API endpoint corresponding
+    to the specific resource's comments.
+
+    4. **Result Processing**: Upon success, the action retrieves the updated list
+    of comments for that resource, formats them into a JSON result, and creates a
+    data table for display in the Google SecOps UI.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new comment to a threat resource in the BlueLiv platform via a PUT request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Labels to Threats:
+  ai_description: >-
+    Adds specified labels to one or more threat resources in BlueLiv. This action
+    allows users to organize and categorize threats by applying existing labels based
+    on the module type and ID. It validates the existence of both the labels and the
+    threats before attempting to apply the labels.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Module Type | String | Yes | The type of BlueLiv module the resource belongs
+    to (e.g., MALWARE, HACKTIVISM). |
+
+    | Module ID | String | Yes | The specific ID of the module the resource belongs
+    to. |
+
+    | Resource ID | String | Yes | A comma-separated list of Threat IDs to which the
+    labels should be added. |
+
+    | Label Names | String | Yes | A comma-separated list of label names to apply
+    to the specified threats. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves configuration parameters (API Root, Credentials,
+    Organization ID) and action parameters (Module Type, Module ID, Resource IDs,
+    and Label Names).
+
+    2. **Label Validation**: Fetches all available labels from BlueLiv and matches
+    the provided label names against existing labels for the specified Module ID.
+
+    3. **Threat Verification**: Checks if each provided Resource ID (Threat ID) exists
+    in BlueLiv and retrieves their current labels.
+
+    4. **Label Application**: For each valid threat, the action identifies which of
+    the requested labels are not already present and applies them using a PUT request
+    to the BlueLiv API.
+
+    5. **Reporting**: Compiles a summary message detailing which labels were successfully
+    added, which were already present, and which threats or labels could not be found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds labels to threat resources within the BlueLiv platform, modifying the state
+      of the threat objects in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches multiple entity types using threat intelligence from the Blueliv Threat
+    Context module. This action retrieves detailed context for IP addresses, file
+    hashes, URLs, threat actors, campaigns, signatures, and CVEs. It provides reputation
+    scores, TLP levels, and historical data, which are then used to update entity
+    attributes and optionally create case-level insights.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Create Insight | Boolean | No | If enabled (default is True), the action creates
+    a case insight summarizing the enrichment results for all successfully processed
+    entities. |
+
+    | Lowest Score To Mark as Suspicious | Integer | Yes | Defines the minimum risk
+    score (0-10) required to mark an entity as suspicious. Entities with a score equal
+    to or higher than this value will have their 'is_suspicious' attribute set to
+    True. |
+
+
+    ### Additional Notes
+
+    - Supported hash types: MD5, SHA1, SHA256, and SHA512.
+
+    - The action requires the 'Threat Context' module to be active in the Blueliv
+    instance.
+
+    - Risk-based suspicious marking is only applied to IP (ADDRESS), Hash (FILEHASH),
+    and URL (DestinationURL) entities.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Validates connection parameters and confirms the availability
+    of the Blueliv 'Threat Context' module.
+
+    2. **Entity Filtering**: Identifies entities within the current scope that match
+    supported types (IP, Hash, URL, Threat Actor, Campaign, Signature, CVE).
+
+    3. **Data Retrieval**: For each supported entity, the action queries the Blueliv
+    API. For hashes, it first validates that the identifier length matches a supported
+    algorithm.
+
+    4. **Enrichment**: Updates the entity's 'additional_properties' with Blueliv data
+    (prefixed with 'Blueliv'), sets 'is_enriched' to True, and attaches data tables
+    and source links.
+
+    5. **Risk Assessment**: Compares the retrieved risk score against the 'Lowest
+    Score To Mark as Suspicious' threshold for applicable entities and updates their
+    suspicious status accordingly.
+
+    6. **Finalization**: If enabled, generates a case insight containing a summary
+    of all enrichments and updates the entities within Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity attributes (additional properties, suspicious status,
+      enriched status), adds data tables and links to entities, and creates case insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - CVE
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Entity Threats:
+  ai_description: >-
+    ### General Description
+
+    Lists threats related to entities in the BlueLiv platform. This action retrieves
+    a list of threats associated with the provided entities, allowing for filtering
+    by specific labels or modules. It provides detailed threat information including
+    module names, URLs, titles, and labels.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Label Filter | String | No | A comma-separated list of labels used to filter
+    threats. The filter uses "OR" logic. |
+
+    | Module Filter | String | No | A comma-separated list of modules used to filter
+    threats. |
+
+    | Max Threats To Return | Integer | No | Specifies the maximum number of threats
+    to return per entity. Defaults to 50. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a session with the BlueLiv API using provided
+    credentials and organization ID.
+
+    2. **Entity Processing**: Iterates through all target entities provided in the
+    context.
+
+    3. **Data Retrieval**: For each entity, queries the BlueLiv API for related threat
+    resources using the entity's identifier as a search query.
+
+    4. **Filtering**: Applies the `Label Filter` and `Module Filter` to the retrieved
+    threat data if provided. The label filter matches any of the specified labels
+    (OR logic).
+
+    5. **Result Limitation**: Truncates the results for each entity based on the `Max
+    Threats To Return` parameter.
+
+    6. **Output Generation**: Adds the threat data to entity tables and the action's
+    JSON result for each successful entity.
+
+    7. **Entity Update**: Updates the processed entities in Google SecOps to reflect
+    successful processing.
+
+
+    ### Additional Notes
+
+    - This action supports all entity types.
+
+    - If "Max Threats To Return" is configured with a value less than 1, the action
+    will raise an exception and fail.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the entities in Google SecOps to reflect that threat data was successfully
+      retrieved for them.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Mark Threat as a Favorite:
+  ai_description: >-
+    Marks a specific threat as a favorite within the BlueLiv platform. This action
+    allows users to update the 'starred' or 'favorite' status of a threat resource
+    associated with a specific module. It is primarily used for organizing and prioritizing
+    threat intelligence data within the BlueLiv dashboard.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Module Type | String | Yes | The type of module the resource belongs to (e.g.,
+    MALWARE, HACKTIVISM). |
+
+    | Module ID | String | Yes | The specific ID of the module the resource belongs
+    to. |
+
+    | Resource ID | String | Yes | The unique identifier of the threat resource to
+    be marked. |
+
+    | Favorite Status | String (Dropdown) | Yes | The favorite status to apply. Options
+    include: 'Not Starred', 'User Starred', 'Group Starred', or 'Full Starred'. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the BlueLiv manager using the provided
+    API credentials and configuration.
+
+    2. **Parameter Extraction**: It retrieves the Module ID, Module Type, Resource
+    ID, and the desired Favorite Status from the action parameters.
+
+    3. **Status Mapping**: The human-readable 'Favorite Status' is mapped to the corresponding
+    API constant (e.g., 'User Starred' maps to 'USER_STARRED').
+
+    4. **API Execution**: A PUT request is sent to the BlueLiv API endpoint for marking
+    favorites, targeting the specific resource within the defined module.
+
+    5. **Completion**: The action returns a success message if the update is acknowledged
+    by the BlueLiv server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the favorite/starred status of a threat resource in the BlueLiv platform
+      via a PUT request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the BlueLiv platform. It validates the integration configuration parameters,
+    including credentials and network accessibility, by attempting to authenticate
+    and perform a basic API call to ensure the integration is functional.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies entirely on
+    the integration's configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the BlueLiv API instance. |
+
+    | User Name | String | Yes | The username used for authentication. |
+
+    | Password | String | Yes | The password used for authentication. |
+
+    | Organization ID | String | Yes | The unique identifier for the organization
+    within BlueLiv. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the BlueLiv server. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the API Root, User Name,
+    Password, Organization ID, and SSL verification settings from the integration
+    configuration.
+
+    2. **Authentication**: The `BlueLivManager` is initialized, which automatically
+    performs a POST request to the authentication endpoint to generate a session token.
+
+    3. **Connectivity Test**: The action executes a GET request to a resource endpoint
+    (specifically the organization's module resource) to verify that the API is reachable
+    and the provided credentials have the necessary permissions.
+
+    4. **Execution Result**: If the API call is successful, the action returns a success
+    message. If any step fails (e.g., authentication error, network timeout, or invalid
+    Organization ID), it catches the exception and reports a failure.
+
+
+    ### Additional Notes
+
+    This action is intended for testing and troubleshooting the connection to BlueLiv
+    and does not process any entities or modify data within the platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Labels From Threats:
+  ai_description: >-
+    Removes specified labels from threat resources in the BlueLiv platform. This action
+    allows users to manage threat metadata by detaching labels from specific resources
+    within a module. It performs validation to ensure that both the labels and the
+    threats exist before attempting the removal.
+
+
+    ### Parameters Description:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Module Type | String | Yes | Specify the module type the resource belongs to
+    (e.g., malware, hacktivism). |
+
+    | Module ID | String | Yes | Specify the module ID the resource belongs to. |
+
+    | Resource ID | String | Yes | A comma-separated list of resource (threat) IDs
+    from which you want to remove labels. |
+
+    | Label Names | String | Yes | A comma-separated list of labels that need to be
+    removed. Note: Case-sensitive. |
+
+
+    ### Flow Description:
+
+    1. **Authentication**: Initializes the BlueLiv manager and authenticates using
+    provided credentials.
+
+    2. **Label Validation**: Fetches all available labels from the BlueLiv organization
+    to map the provided label names to their internal IDs and verify their existence
+    for the specified module.
+
+    3. **Threat Validation**: Checks each provided Resource ID to ensure the threat
+    exists in the specified BlueLiv module.
+
+    4. **Current State Retrieval**: For each valid threat, retrieves the list of labels
+    currently associated with it.
+
+    5. **Label Removal**: Iterates through the target labels and, if they are currently
+    attached to the threat, performs the removal operation.
+
+    6. **Reporting**: Generates a detailed output message summarizing which labels
+    were successfully removed and which were already absent from the threats.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action modifies the state of threat resources in BlueLiv by removing associated
+      labels via PUT requests to the BlueLiv API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

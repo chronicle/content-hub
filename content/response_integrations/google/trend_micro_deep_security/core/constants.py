@@ -1,0 +1,11 @@
+from __future__ import annotations
+INTEGRATION_NAME = "TrendMicroDeepSecurity"
+INTEGRATION_DISPLAY_NAME = "TrendMicroDeepSecurity"
+
+# Actions
+PING_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Ping"
+GETHOSTINFO_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - GetHostInfo"
+SCANHOST_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - ScanHost"
+ASPROFILETOHOST_SCRIPT_NAME = (
+    f"{INTEGRATION_DISPLAY_NAME} - AssignSecurityProfileToHost"
+)

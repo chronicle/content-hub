@@ -1,0 +1,503 @@
+Add Tag:
+  ai_description: >-
+    ### General Description
+
+    The **Add Tag** action allows security analysts to apply a specific tag to endpoint
+    devices within McAfee Mvision ePO. This is useful for categorization, policy assignment,
+    or marking systems for further investigation during an incident response workflow.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Tag Name** | String | Yes | The name of the tag to be applied to the target
+    endpoints. |
+
+
+    ### Additional Notes
+
+    - The action supports both **IP Address** and **Hostname** entities.
+
+    - The tag must already exist in McAfee Mvision ePO; the action will fail if the
+    tag is not found.
+
+    - If a `Group Name` is configured in the integration settings, the action will
+    prioritize searching for devices within that specific group.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the McAfee Mvision ePO manager using
+    the provided credentials and configuration.
+
+    2. **Tag Verification**: It searches for the specified `Tag Name` in the external
+    system to retrieve its unique ID.
+
+    3. **Entity Filtering**: It identifies all `ADDRESS` and `HOSTNAME` entities from
+    the current context.
+
+    4. **Device Lookup**: For each entity, it queries McAfee Mvision ePO to find a
+    matching device.
+
+    5. **Tag Application**: If a device is found, the action sends a POST request
+    to the McAfee API to attach the tag to that device.
+
+    6. **Reporting**: The action provides a summary of which entities were successfully
+    tagged and which failed (e.g., if the device was not found).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action performs a POST request to the McAfee Mvision ePO API to add a tag
+      to a device, thereby modifying the state of the device record in the external
+      system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Endpoint:
+  ai_description: "Enriches Hostname and IP Address entities by fetching detailed\
+    \ system information from McAfee Mvision ePO. This action retrieves metadata such\
+    \ as operating system details, managed state, last communication time, and a list\
+    \ of installed products. The retrieved data is used to update entity attributes\
+    \ and provide a structured data table within the case for better context during\
+    \ investigations.\n\n### Parameters\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| API Root | String | Yes | The API root URL\
+    \ for the McAfee Mvision ePO instance. |\n| Client ID | String | Yes | The Client\
+    \ ID used for OAuth2 authentication. |\n| Client Secret | String | Yes | The Client\
+    \ Secret used for OAuth2 authentication. |\n| Scopes | String | Yes | The OAuth2\
+    \ scopes required for API access (e.g., epo.device.r). |\n| Group Name | String\
+    \ | No | If provided, the action will filter its search for the endpoint within\
+    \ this specific ePO group. |\n| Verify SSL | Boolean | No | If enabled (default),\
+    \ the action verifies the SSL certificate of the API endpoint. |\n\n### Flow Description\n\
+    1. **Authentication**: The action authenticates with the McAfee IAM service using\
+    \ the provided Client ID and Secret to obtain an access token.\n2. **Entity Filtering**:\
+    \ It identifies suitable entities from the case, specifically targeting those\
+    \ of type ADDRESS (IP) or HOSTNAME.\n3. **Data Retrieval**: For each suitable\
+    \ entity, the action queries the McAfee Mvision ePO API to find a matching device.\
+    \ It supports pagination to search through the device inventory.\n4. **Enrichment**:\
+    \ If a match is found, the action extracts system properties (OS platform, domain,\
+    \ username, etc.) and the list of installed products.\n5. **Internal Updates**:\
+    \ \n    *   Updates the entity's additional properties with the retrieved system\
+    \ information (prefixed with 'MMV_EPO').\n    *   Marks the entity as enriched.\n\
+    \    *   Adds a data table to the case listing all products installed on the endpoint\
+    \ and their versions.\n6. **Results**: Returns a success status and populates\
+    \ the JSON result with the raw device data."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with system information (OS, domain, last communication)
+      and adds a data table of installed products to the case context.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Endpoints In Group:
+  ai_description: >-
+    ### General Description
+
+    The **List Endpoints In Group** action retrieves a list of all endpoints (devices)
+    belonging to a specific group within McAfee Mvision ePO. This action is designed
+    to provide visibility into the assets managed under a particular organizational
+    unit or group structure in the ePO environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Group Name** | String | Yes | The exact name of the group in McAfee Mvision
+    ePO to search for. |
+
+    | **Max Endpoints to Return** | Integer | No | The maximum number of endpoint
+    records to return. Defaults to 100 if not specified or if a value less than or
+    equal to 0 is provided. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the McAfee Mvision ePO manager,
+    which authenticates using the provided API credentials and retrieves an OAuth
+    token.
+
+    2. **Group Resolution**: It queries the ePO API to find the unique identifier
+    (ID) for the group name provided in the parameters.
+
+    3. **Endpoint Fetching**: Using the resolved group ID, the action fetches the
+    list of devices associated with that group, applying the specified limit for the
+    number of results.
+
+    4. **Data Processing**: The retrieved endpoint data (including UUID, IP Address,
+    Hostname, and Username) is parsed into structured objects.
+
+    5. **Output**: The action populates a JSON result with the raw endpoint data and
+    creates a data table titled 'Available Endpoints' for display in the Google SecOps
+    UI.
+
+
+    ### Additional Notes
+
+    If the specified group name is not found in the system, the action will fail and
+    provide an error message suggesting the user verify the name or use the 'List
+    Groups' action to find valid group names.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Groups:
+  ai_description: >-
+    Lists groups available in McAfee Mvision ePO. This action retrieves a list of
+    organizational groups defined within the ePO environment, providing details such
+    as Group ID, Name, and Description. It is primarily used for discovery and to
+    provide context for other actions that require group identifiers.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Groups to Return | Integer | No | Specifies the maximum number of groups
+    to return. If not provided or less than or equal to 0, it defaults to 100. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the McAfee Mvision ePO service
+    using the configured Client ID and Client Secret to obtain an access token.
+
+    2. **Data Retrieval**: It sends a GET request to the `/epo/v1/groups` endpoint,
+    applying the `Max Groups to Return` parameter as a limit.
+
+    3. **Processing**: The retrieved group data is parsed into structured objects
+    containing the ID, Name, and Description of each group.
+
+    4. **Output**: The action populates a data table named 'Available Groups' and
+    provides the raw JSON results for use in downstream playbook tasks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Tags:
+  ai_description: >-
+    Lists tags that are available in McAfee Mvision ePO. This action retrieves a list
+    of tags defined in the ePO environment, providing details such as tag ID, name,
+    and description. The results are presented as a data table and a JSON object for
+    use in downstream playbooks.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Tags to Return | Integer | No | Specify how many tags to return. Default
+    is 100. If a value <= 0 is provided, the default is used. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with McAfee Mvision ePO using
+    the provided Client ID and Client Secret to obtain an OAuth token.
+
+    2. **Parameter Extraction**: It retrieves the 'Max Tags to Return' parameter to
+    limit the API response.
+
+    3. **Data Retrieval**: It sends a GET request to the `/epo/v1/tags` endpoint with
+    the specified limit.
+
+    4. **Processing**: The retrieved tags are parsed into a structured format.
+
+    5. **Output**: The action populates a data table named 'Available Tags' and attaches
+    the raw JSON results to the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the McAfee Mvision ePO server. It ensures that the provided
+    credentials (Client ID, Client Secret) and configuration (API Root, Scopes) are
+    valid and that the network path is open. It also optionally validates the existence
+    of a specific group within the ePO environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL for the McAfee Mvision ePO API endpoints.
+    |
+
+    | Client ID | String | Yes | The unique identifier for the client application
+    used for OAuth2 authentication. |
+
+    | Client Secret | String | Yes | The secret key associated with the Client ID
+    for secure authentication. |
+
+    | Verify SSL | Boolean | No | If enabled (True), the action will verify the SSL
+    certificate of the ePO server. Default is True. |
+
+    | Scopes | String | Yes | The specific OAuth scopes required to access the ePO
+    API resources. |
+
+    | Group Name | String | No | An optional parameter to check if a specific group
+    exists in the ePO server as part of the connectivity test. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the integration configuration and user-provided
+    parameters.
+
+    2. **Authentication**: The `McAfeeMvisionEPOManager` is initialized, which immediately
+    attempts to retrieve an OAuth2 access token from the McAfee IAM service using
+    the provided Client ID and Secret.
+
+    3. **Connectivity Test**: The manager executes a `test_connectivity` method which
+    performs a GET request to the `/epo/v1/groups` endpoint.
+
+    4. **Group Validation**: If a `Group Name` was provided, the connectivity test
+    adds a filter to the API request to verify that the specific group is reachable
+    and exists.
+
+    5. **Result Reporting**: If the authentication and API calls are successful, the
+    action returns a success message. If the group is not found or the connection
+    fails, it reports the specific error encountered.
+
+
+    ### Additional Notes
+
+    - This action does not process any entities.
+
+    - It is primarily used during the initial setup of the integration or for troubleshooting
+    communication issues.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Tag:
+  ai_description: >-
+    ### General Description
+
+    Removes a specific tag from endpoint devices in McAfee Mvision ePO. This action
+    is primarily used for administrative cleanup or state management, such as removing
+    a 'Quarantined' or 'Under Investigation' tag from a host once a security incident
+    has been resolved. It supports identifying endpoints by their Hostname or IP Address.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Tag Name | String | Yes | The exact name of the tag to be removed from the target
+    endpoints. |
+
+
+    ### Flow Description
+
+    1. **Tag Verification**: The action first queries McAfee Mvision ePO to find the
+    internal ID associated with the provided `Tag Name`. If the tag does not exist,
+    the action terminates with an error.
+
+    2. **Entity Filtering**: The action identifies all `HOSTNAME` and `ADDRESS` entities
+    within the current Google SecOps context.
+
+    3. **Device Discovery**: For each entity, the action searches the ePO inventory
+    to find a matching device. This search can be scoped to a specific 'Group Name'
+    if one is configured in the integration settings.
+
+    4. **Tag Removal**: Once a device is matched, the action sends a POST request
+    to the ePO API to remove the specified tag from that device's record.
+
+    5. **Result Aggregation**: The action tracks the success or failure of the removal
+    process for each entity and provides a summary message upon completion.
+
+
+    ### Additional Notes
+
+    - The action will fail if the `Tag Name` is misspelled or does not exist in the
+    ePO environment.
+
+    - If a device is not found in ePO for a given entity, that specific entity will
+    be marked as failed, but the action will continue processing other entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes a tag association from a device in McAfee Mvision ePO, which modifies
+      the device's metadata and state in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

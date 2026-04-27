@@ -1,0 +1,254 @@
+Execute Custom Query:
+  ai_description: >-
+    ### General Description
+
+    Executes a custom SQL query in Snowflake to retrieve data for investigations.
+    This action supports asynchronous execution, meaning it submits the query and
+    then polls for results, making it suitable for long-running queries. The results
+    are returned as a JSON object and displayed in a data table within the SOAR platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | String | Yes | The SQL query to execute. Note: A LIMIT clause is appended
+    automatically based on the 'Max Results To Return' parameter. |
+
+    | Database | String | Yes | The Snowflake database to run the query against. |
+
+    | Schema | String | No | The specific schema within the database. |
+
+    | Max Results To Return | Integer | No | The maximum number of rows to fetch (Default:
+    50). |
+
+
+    ### Additional Notes
+
+    - The action is asynchronous and may require adjusting the script timeout in the
+    IDE for very large queries.
+
+    - The 'Max Results To Return' parameter must be a positive number.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Generates a JWT token using the provided private key for
+    Snowflake Key Pair authentication.
+
+    2. **Query Submission**: Submits the SQL query to the Snowflake REST API. The
+    action automatically appends a `LIMIT` clause to the query.
+
+    3. **Asynchronous Handling**: If the query is not finished immediately, the action
+    enters an 'In Progress' state, storing the `query_id` to check status in subsequent
+    runs.
+
+    4. **Data Retrieval**: Once the query completes, the action fetches the result
+    set.
+
+    5. **Output**: The retrieved data is processed into a JSON result and a CSV-formatted
+    data table named 'Results'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute Simple Query:
+  ai_description: >-
+    Executes a SQL SELECT query against a Snowflake database to retrieve specific
+    records based on user-defined parameters. This action is designed for flexible
+    data retrieval, allowing users to specify the database, table, schema, and filtering
+    criteria. It operates asynchronously, submitting the query and then polling for
+    results.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Database | String | Yes | The name of the Snowflake database to query. |
+
+    | Table | String | Yes | The name of the table within the database to query. |
+
+    | Schema | String | No | The specific schema to use for the query. |
+
+    | Where Filter | String | No | SQL WHERE clause logic (e.g., `status = 'ACTIVE'`).
+    Do not include the 'WHERE' keyword. |
+
+    | Fields To Return | String | No | Comma-separated list of columns to return.
+    Defaults to `*` (all fields). |
+
+    | Sort Field | String | No | The column name to use for sorting results. |
+
+    | Sort Order | String | No | The direction of sorting: `ASC` (default) or `DESC`.
+    |
+
+    | Max Results To Return | Integer | No | The maximum number of rows to retrieve.
+    Defaults to 50. |
+
+
+    ### Additional Notes
+
+
+    - This action runs asynchronously. If the query takes time, the action will enter
+    an 'In Progress' state and poll for completion in subsequent cycles.
+
+    - The action results are provided as both a Data Table (for the Case Wall) and
+    a JSON object (for downstream logic).
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action initializes the Snowflake manager using the
+    integration's configuration (API Root, Account, Credentials).
+
+    2. **Query Construction**: It builds a SQL SELECT statement by combining the `Fields
+    To Return`, `Table`, `Where Filter`, `Sort Field`, and `Sort Order` parameters.
+
+    3. **Submission**: On the first run, it submits the query to the Snowflake SQL
+    API and receives a `statementHandle` (Query ID).
+
+    4. **Polling**: The action checks the status of the submitted query. If it is
+    still running, the action saves the Query ID and waits for the next execution
+    cycle.
+
+    5. **Data Retrieval**: Once the query is finished, the action fetches the result
+    set.
+
+    6. **Output**: The retrieved data is formatted into a CSV-style table and a JSON
+    array, which are then attached to the action's results in Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility used to verify the connectivity between
+    Google SecOps and a Snowflake instance. It ensures that the integration configuration
+    parameters, such as the API Root, Account, Username, and Private Key, are correctly
+    set and that the network path to the Snowflake SQL API is functional.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies on the following
+    integration configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **API Root** | String | Yes | The base URL for the Snowflake API. |
+
+    | **Account** | String | Yes | The Snowflake account identifier. |
+
+    | **Username** | String | Yes | The username used for authentication. |
+
+    | **Private Key** | String | Yes | The base64-encoded private key used for JWT
+    authentication. |
+
+    | **Verify SSL** | Boolean | Yes | Whether to verify the SSL certificate of the
+    Snowflake server. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the integration configuration parameters from
+    the Marketplace settings.
+
+    2. **Authentication**: Decodes the provided private key and generates a JSON Web
+    Token (JWT) for secure authentication with the Snowflake SQL API.
+
+    3. **Connectivity Check**: Executes a synchronous POST request to the Snowflake
+    API endpoint with a lightweight metadata query (`SHOW TABLES LIMIT 1`).
+
+    4. **Validation**: Evaluates the HTTP response. If the request is successful,
+    it confirms connectivity; otherwise, it captures and reports the specific error
+    encountered.
+
+
+    ### Additional Notes
+
+    This action does not process any entities, modify any data in Snowflake, or create
+    any internal records in Google SecOps. It is strictly for configuration validation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

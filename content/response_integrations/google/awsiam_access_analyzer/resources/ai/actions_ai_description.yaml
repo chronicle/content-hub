@@ -1,0 +1,225 @@
+Archive Finding:
+  ai_description: >-
+    Archives a specific finding in AWS IAM Access Analyzer. This action changes the
+    status of a finding to 'ARCHIVED', effectively removing it from the active findings
+    list in the AWS console. It requires the name of the analyzer and the specific
+    ID of the finding to be processed.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Finding ID | String | Yes | Specify the unique ID of the finding that you want
+    to archive. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts AWS configuration (Access Key, Secret
+    Key, Region, and Analyzer Name) and the target Finding ID.
+
+    2. **Analyzer Lookup**: It connects to AWS IAM Access Analyzer to retrieve the
+    metadata for the specified analyzer, specifically to obtain its ARN (Amazon Resource
+    Name).
+
+    3. **Archive Execution**: It calls the AWS API to update the status of the provided
+    Finding ID to 'ARCHIVED' within the context of the identified analyzer.
+
+    4. **Completion**: The action reports whether the archival was successful or if
+    errors occurred (e.g., analyzer not found or API failure).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of a finding in AWS IAM Access Analyzer to 'ARCHIVED', which
+      changes its state in the external AWS environment.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a connectivity test utility for the AWS IAM Access Analyzer
+    integration. Its primary purpose is to verify that the Google SecOps environment
+    can successfully communicate with the AWS service using the credentials and configuration
+    provided in the integration settings. It ensures that the API keys are valid,
+    the region is correct, and the specified analyzer exists and is accessible.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **AWS Access Key ID** | String | Yes | The AWS Access Key ID used for authentication.
+    This is an integration-level configuration parameter. |
+
+    | **AWS Secret Key** | String | Yes | The AWS Secret Access Key used for authentication.
+    This is an integration-level configuration parameter. |
+
+    | **AWS Default Region** | String | Yes | The AWS region where the IAM Access
+    Analyzer is located (e.g., us-east-1). This is an integration-level configuration
+    parameter. |
+
+    | **Analyzer Name** | String | Yes | The name of the specific IAM Access Analyzer
+    to verify connectivity against. This is an integration-level configuration parameter.
+    |
+
+
+    ### Additional Notes
+
+    * This action does not require or process any entities.
+
+    * It is typically executed during the initial setup of the integration or for
+    troubleshooting connection issues.
+
+    * According to standard SOAR practices, Ping actions are not classified as enrichment
+    actions.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** The action retrieves the AWS Access Key, Secret
+    Key, Region, and Analyzer Name from the integration's configuration settings.
+
+    2. **Manager Initialization:** It initializes the `AWSIAMAnalyzerManager` using
+    the retrieved credentials and settings.
+
+    3. **Connectivity Verification:** The action calls the `test_connectivity` method,
+    which performs a `get_analyzer` API call to AWS to verify the existence and accessibility
+    of the specified analyzer.
+
+    4. **Status Reporting:** If the API call succeeds, the action returns a success
+    message and sets the execution state to completed. If an exception occurs (e.g.,
+    authentication failure or resource not found), it logs the error and returns a
+    failure status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Scan Resources:
+  ai_description: >-
+    ### General Description
+
+    Initiates and monitors resource scans using AWS IAM Access Analyzer. This action
+    allows users to submit specific AWS Resource ARNs for analysis to identify potential
+    resource-sharing risks. It operates asynchronously, first triggering the scan
+    and then periodically checking for completion until results are available or a
+    timeout occurs.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Resource ARNs | String | Yes | A comma-separated list of AWS resource ARNs (e.g.,
+    S3 bucket ARNs, IAM role ARNs) that need to be scanned for access risks. |
+
+
+    ### Additional Notes
+
+    - This is an **asynchronous action**. It will remain in an 'In Progress' state
+    until the AWS IAM Access Analyzer finishes scanning the resources or the maximum
+    number of retries (10) is reached.
+
+    - The action compares the `analyzedAt` timestamp from AWS with the action's start
+    time to ensure that the returned results correspond to the scan initiated by this
+    action.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts AWS configuration (Access Key, Secret Key, Region,
+    Analyzer Name) and the list of Resource ARNs to scan.
+
+    2. **Scan Submission (First Run)**: Connects to AWS and calls the `start_resource_scan`
+    API for each provided ARN. It records the start time to track the freshness of
+    results.
+
+    3. **Status Monitoring (Subsequent Runs)**: Periodically retrieves the analysis
+    status for each resource using `get_analyzed_resource`.
+
+    4. **Completion Check**: For each resource, it verifies if the `analyzedAt` timestamp
+    is greater than or equal to the action's start time.
+
+    5. **Result Aggregation**: Once all resources are analyzed (or the retry limit
+    is hit), it aggregates the findings into a JSON result and completes the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a new resource scan in AWS IAM Access Analyzer for the specified resource
+      ARNs via the start_resource_scan API call.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,348 @@
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities using threat intelligence and asset
+    data from Nozomi Networks Guardian. This action retrieves detailed node information
+    such as MAC addresses, operating systems, firmware versions, vendors, and network
+    protocols to provide better context for security investigations.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Additional fields to add to enrichment | String | No | A comma-separated list
+    of specific fields from the Nozomi 'Nodes' query results that should be included
+    in the enrichment data, in addition to the default set of fields. |
+
+
+    ### Additional Notes
+
+    - The action specifically targets `HOSTNAME` and `ADDRESS` entity types.
+
+    - If multiple matches for an entity are found in Nozomi Networks, the action automatically
+    selects the most recent match based on the last activity time.
+
+    - Enrichment data is prefixed with 'Nozomi' when added to the entity's additional
+    properties.
+
+
+    ### Flow Description
+
+    1. **Filter Entities:** Identifies all Hostname and IP Address entities within
+    the current context.
+
+    2. **API Connection:** Establishes a connection to the Nozomi Networks API using
+    the configured credentials and SSL settings.
+
+    3. **Query Node Data:** For each entity, it executes a query against the Nozomi
+    'nodes' endpoint using the entity's identifier (IP or Label).
+
+    4. **Process Results:** If data is found, it selects the most recent record. It
+    then extracts a standard set of asset details (OS, MAC, Vendor, etc.) plus any
+    optional fields specified in the action parameters.
+
+    5. **Update SecOps:** Updates the entity's additional properties with the retrieved
+    data, marks the entity as enriched, and attaches the raw JSON results to the action
+    output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with asset information from Nozomi Networks
+      and sets the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Vulnerabilities:
+  ai_description: "### General Description\nLists vulnerabilities discovered by a\
+    \ Nozomi Networks device based on user-provided search criteria. This action allows\
+    \ security analysts to query the Nozomi 'node_cves' database to identify potential\
+    \ security gaps across the network. It supports filtering by specific IP addresses,\
+    \ CVE IDs, minimum risk scores, and vulnerability names. \n\n**Note:** This action\
+    \ does not automatically process entities from the Google SecOps case; it relies\
+    \ entirely on the manual input parameters provided at runtime.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| IP Address | String | No | A comma-separated list of IP addresses\
+    \ to filter vulnerabilities for. |\n| CVE Score | Integer | No | The minimum CVE\
+    \ score (0-10) a vulnerability must have to be included in the results. Values\
+    \ outside this range are automatically clamped to 0 or 10. |\n| Vulnerability\
+    \ Name Contains | String | No | A string filter to match against the vulnerability\
+    \ name (CWE name). |\n| CVE ID | String | No | A comma-separated list of specific\
+    \ CVE identifiers (e.g., CVE-2020-1207) to search for. |\n| Record Limit | Integer\
+    \ | Yes | The maximum number of vulnerability records to return. Defaults to 25.\
+    \ |\n| Include vulnerabilities that marked as resolved? | Boolean | No | If set\
+    \ to true, the results will include vulnerabilities that have been marked as resolved\
+    \ in the Nozomi system. |\n\n### Additional Notes\n- The action produces a UI\
+    \ data table titled 'Vulnerabilities Found' and a raw JSON result containing detailed\
+    \ vulnerability metadata, including CVE summaries, scores, zones, and reference\
+    \ URLs.\n- If no results match the criteria, the action completes successfully\
+    \ but indicates that no data was found.\n\n### Flow Description\n1. **Parameter\
+    \ Extraction:** The action retrieves the API configuration and user-defined search\
+    \ filters (IPs, CVE IDs, Score, etc.).\n2. **Input Validation:** The CVE Score\
+    \ is validated and clamped between 0 and 10 if necessary.\n3. **Query Construction:**\
+    \ A Nozomi-specific query string is built using the provided filters, targeting\
+    \ the `node_cves` endpoint.\n4. **API Execution:** The action performs a GET request\
+    \ to the Nozomi Networks API to retrieve matching vulnerability records.\n5. **Data\
+    \ Processing:** The raw API response is parsed into vulnerability objects.\n6.\
+    \ **Output Generation:** The action populates a data table for the case wall and\
+    \ attaches the full JSON result for further automation steps."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and a Nozomi Networks instance. It ensures that the provided integration
+    parameters (URL, credentials, and SSL settings) are correct and that the Nozomi
+    Networks API is reachable and responding to requests.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API URL | String | Yes | The base URL of the Nozomi Networks instance (e.g.,
+    https://nozomi-instance.com). |
+
+    | Username | String | Yes | The username used for authenticating with the Nozomi
+    Networks API. |
+
+    | Password | String | Yes | The password used for authenticating with the Nozomi
+    Networks API. |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Nozomi Networks instance. |
+
+    | CA Certificate File | String | No | A base64-encoded CA certificate file used
+    for SSL verification if a custom certificate authority is used. |
+
+
+    ### Additional Notes
+
+    - This action does not require any input entities and is typically used during
+    the initial setup or troubleshooting of the Nozomi Networks integration.
+
+    - The action performs a lightweight query (`node_cpes | head 5`) to confirm API
+    functionality.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the API URL, credentials, and
+    SSL configuration from the integration settings.
+
+    2. **Manager Initialization:** It initializes the `NozomiNetworksManager` with
+    the provided connection details, handling CA certificate decoding if provided.
+
+    3. **Connectivity Test:** The manager executes a `test_connectivity` call, which
+    sends a GET request to the Nozomi Networks API endpoint `/api/open/query/do` with
+    a sample query.
+
+    4. **Result Handling:** If the API returns a successful response, the action completes
+    with a success message. If an error occurs (e.g., authentication failure, network
+    timeout), it catches the exception and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Run a CLI Command:
+  ai_description: "Executes a CLI command on a Nozomi Networks device via the Nozomi\
+    \ API. This action allows administrators to perform operational tasks or configuration\
+    \ changes directly from Google SecOps. \n\n### Parameters\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| CLI Command |\
+    \ String | Yes | The specific CLI command to execute on the Nozomi Networks device.\
+    \ Note: The API does not validate the command syntax. |\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the Nozomi Networks manager using\
+    \ the provided API URL, credentials, and SSL configuration.\n2. **Parameter Extraction**:\
+    \ It retrieves the 'CLI Command' string provided by the user.\n3. **Execution**:\
+    \ The action sends a POST request to the `/api/open/cli` endpoint of the Nozomi\
+    \ device with the command payload.\n4. **Completion**: If the API returns a successful\
+    \ response, the action completes with a success status; otherwise, it logs the\
+    \ error and fails.\n\n### Additional Notes\n* This action does not process or\
+    \ interact with Google SecOps entities.\n* Users are responsible for ensuring\
+    \ the CLI command is valid and safe for the target environment, as the Nozomi\
+    \ API does not perform command validation."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes arbitrary CLI commands on the Nozomi Networks device, which can change
+      device configuration, state, or operational status.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Run a Query:
+  ai_description: >-
+    ### General Description
+
+    This action executes a custom query on a Nozomi Networks device to retrieve specific
+    data such as alerts, nodes, or vulnerabilities. It is designed as a flexible utility
+    to fetch information directly from the Nozomi platform using its native query
+    language. Note that this action does not interact with or process Google SecOps
+    entities; it operates solely based on the provided query string.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | String | Yes | The specific query to execute on the Nozomi Networks
+    device (e.g., `alerts | head 10`). |
+
+    | Record Limit | Integer | No | Specifies the maximum number of records to return.
+    If provided, the action appends `| head <limit>` to the query. Default is 10.
+    Negative values are ignored. |
+
+
+    ### Additional Notes
+
+    - This action is a generic data retrieval tool and does not perform entity-based
+    enrichment.
+
+    - If the `Record Limit` is left empty, the action will return all results provided
+    by the Nozomi API for that query.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Nozomi Networks manager using
+    the provided API URL and credentials.
+
+    2. **Query Preparation**: It retrieves the `Query` and `Record Limit` parameters.
+    If a positive record limit is provided, it modifies the query string to include
+    a `head` command.
+
+    3. **API Execution**: The action sends a GET request to the Nozomi Networks `/api/open/query/do`
+    endpoint with the prepared query.
+
+    4. **Data Parsing**: The raw JSON response from Nozomi is parsed into `QueryResult`
+    objects.
+
+    5. **Output**: The results are added to the action's JSON output. If no results
+    are found, a success message is returned indicating an empty result set.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

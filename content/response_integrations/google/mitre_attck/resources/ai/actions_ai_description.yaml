@@ -1,0 +1,467 @@
+Get Associated Intrusions:
+  ai_description: >-
+    ### General Description
+
+    The **Get Associated Intrusions** action retrieves detailed information about
+    intrusion sets (threat groups) that are known to utilize a specific MITRE ATT&CK
+    technique. This allows analysts to identify potential threat actors associated
+    with observed techniques during an investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Technique ID** | String | Yes | The identifier of the MITRE ATT&CK technique
+    to search for. |
+
+    | **Identifier Type** | String | Yes | The type of identifier provided in the
+    'Technique ID' field. Options: `Attack Name` (e.g., Access Token Manipulation),
+    `Attack ID` (e.g., attack-pattern--478aa214...), or `External Attack ID` (e.g.,
+    T1050). |
+
+    | **Max Intrusions to Return** | Integer | No | The maximum number of associated
+    intrusion sets to return. Default is 20. |
+
+
+    ### Flow Description
+
+    1. **Data Retrieval**: The action fetches the latest MITRE ATT&CK dataset from
+    the configured API Root via a GET request.
+
+    2. **Technique Identification**: It resolves the provided `Technique ID` to a
+    specific MITRE Attack Pattern based on the selected `Identifier Type` (Name, STIX
+    ID, or External ID).
+
+    3. **Relationship Mapping**: The action searches for "uses" relationships where
+    the target is the identified technique and the source is an "intrusion-set".
+
+    4. **Intrusion Enrichment**: It retrieves the full details for each discovered
+    intrusion set, including names, descriptions, and external references.
+
+    5. **Output Generation**: The results are presented as a data table, a JSON object
+    for downstream automation, and direct links to the MITRE ATT&CK website for further
+    research.
+
+
+    ### Additional Notes
+
+    This action does not require or process any entities from the Google SecOps case;
+    it performs a lookup based solely on the provided technique identifier.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Mitigations:
+  ai_description: >-
+    ### General Description
+
+    The **Get Mitigations** action retrieves detailed information about mitigation
+    strategies (Courses of Action) associated with a specific MITRE ATT&CK technique.
+    This action allows security analysts to identify recommended defensive measures
+    for identified threats by querying the MITRE ATT&CK framework.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Technique ID | String | Yes | The identifier used to find related mitigations
+    (e.g., 'T1022' or 'Data Encrypted'). |
+
+    | Identifier Type | String | Yes | Specifies the format of the Technique ID. Options:
+    'Attack Name', 'Attack ID', or 'External Attack ID'. |
+
+    | Max Mitigations to Return | Integer | No | Limits the number of mitigation records
+    returned. Default is 20. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the MITRE ATT&CK API configuration
+    and the user-provided parameters.
+
+    2. **Technique Resolution**: The action uses the `MitreAttckManager` to find the
+    specific attack technique based on the provided `Technique ID` and `Identifier
+    Type`.
+
+    3. **Relationship Lookup**: It queries the MITRE dataset for objects that have
+    a 'mitigates' relationship with the identified technique.
+
+    4. **Data Retrieval**: The action fetches the full details for each mitigation
+    object (Course of Action) found in the previous step, up to the specified limit.
+
+    5. **Result Generation**: The action populates a data table with mitigation names
+    and descriptions, provides a raw JSON result for automation, and adds external
+    links to the MITRE ATT&CK documentation for each mitigation.
+
+
+    ### Additional Notes
+
+    This action does not process entities from the case; it relies entirely on the
+    input parameters to perform its search.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Technique Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information about specific MITRE ATT&CK techniques from the
+    MITRE ATT&CK framework. This action allows security analysts to quickly pull context,
+    detection strategies, and platform information for techniques identified during
+    an investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Technique Identifier | String | Yes | A comma-separated list of identifiers
+    (e.g., "T1050, T1055" or "Access Token Manipulation"). |
+
+    | Identifier Type | String | Yes | Specifies the format of the identifiers provided.
+    Options: `Name`, `ID` (STIX ID), or `External ID` (e.g., T1050). |
+
+    | Create Insights | Boolean | No | If enabled, the action will generate a separate
+    SOAR insight for each successfully retrieved technique. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the configured MITRE ATT&CK API root and validates
+    the connection.
+
+    2. **Parsing**: Processes the comma-separated list of technique identifiers provided
+    by the user.
+
+    3. **Retrieval**: For each identifier, the action queries the MITRE dataset based
+    on the selected `Identifier Type` (Name, ID, or External ID).
+
+    4. **Data Processing**: Extracts key metadata including the technique's description,
+    detection logic, and affected operating systems.
+
+    5. **Output Generation**: Adds a data table to the case for each technique, adds
+    a direct link to the MITRE ATT&CK website, and optionally creates a Case Insight
+    containing the technique's description.
+
+
+    ### Additional Notes
+
+    This action does not run on specific entities; it is a utility action that fetches
+    reference data based on user-provided strings.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates case insights and adds data tables/links to the case based on the retrieved
+      MITRE ATT&CK technique details.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Techniques Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Techniques Details** action retrieves comprehensive information about
+    specific MITRE ATT&CK techniques. It allows users to query the MITRE ATT&CK framework
+    using various identifier types to obtain technical descriptions, detection strategies,
+    and supported platforms. This action is primarily used to provide security analysts
+    with immediate context regarding observed attack patterns within a case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Technique Identifier** | String | Yes | A comma-separated list of identifiers
+    for the techniques you want to retrieve details for. |
+
+    | **Identifier Type** | String | Yes | Defines the format of the provided identifiers.
+    Possible values are: `Name` (e.g., "Access Token Manipulation"), `ID` (e.g., "attack-pattern--478aa214-2ca7-4ec0-9978-18798e514790"),
+    or `External ID` (e.g., "T1050"). |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the list of technique identifiers and
+    the specified identifier type from the input parameters.
+
+    2. **Connectivity Check**: It establishes a connection to the MITRE ATT&CK data
+    source (typically a JSON file hosted at a specified API root).
+
+    3. **Data Retrieval**: For each provided identifier, the action searches the MITRE
+    ATT&CK dataset based on the selected identifier type (Name, ID, or External ID).
+
+    4. **Processing**: If a matching technique is found, the action extracts key metadata
+    including the technique's name, description, detection methods, and target operating
+    systems.
+
+    5. **Output Generation**: The retrieved data is formatted into a data table for
+    the case wall, an external link to the MITRE ATT&CK website is added for further
+    research, and the full raw data is returned in the JSON result.
+
+
+    ### Additional Notes
+
+    This action does not operate on SecOps entities; it is a utility action for threat
+    intelligence lookup based on manual or automated parameter input.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Techniques Mitigations:
+  ai_description: >-
+    Retrieves mitigation information associated with MITRE ATT&CK techniques from
+    a MITRE ATT&CK data source. This action allows users to provide technique identifiers
+    (Names, IDs, or External IDs) and returns the corresponding 'Course of Action'
+    objects that mitigate those techniques. The results include detailed descriptions
+    of the mitigations, their deprecation status, and direct links to the MITRE ATT&CK
+    website.
+
+
+    ### Flow Description:
+
+    1. **Connection Setup:** Establishes a connection to the MITRE ATT&CK API/Data
+    source and verifies connectivity.
+
+    2. **Identifier Resolution:** Processes the provided comma-separated 'Technique
+    ID' list. If the identifier type is 'Attack Name' or 'External Attack ID', it
+    first fetches the specific attack pattern to resolve its internal MITRE identifier.
+
+    3. **Relationship Mapping:** Queries the MITRE dataset for 'mitigates' relationships
+    where the target is the identified technique.
+
+    4. **Mitigation Retrieval:** Fetches the full details for each mitigation (Course
+    of Action) identified in the relationship mapping, up to the specified limit.
+
+    5. **Result Generation:** Populates a JSON result with the mitigation data, creates
+    a data table for each technique, and adds external reference links for further
+    investigation.
+
+
+    ### Parameters Description:
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Technique ID | String | Yes | Comma-separated list of MITRE technique identifiers
+    to investigate. |
+
+    | Identifier Type | String | Yes | Specifies the format of the 'Technique ID'
+    input. Options: 'Attack Name' (e.g., Access Token Manipulation), 'Attack ID' (e.g.,
+    attack-pattern--...), or 'External Attack ID' (e.g., T1050). |
+
+    | Max Mitigations to Return | Integer | No | The maximum number of mitigation
+    records to retrieve per technique. Defaults to 20. |
+
+
+    ### Additional Notes:
+
+    - This action does not run on entities; it is a utility action that queries threat
+    intelligence data based on user-provided parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    Google SecOps and the Mitre ATT&CK framework data source. It ensures that the
+    configured API Root is accessible and that the integration can successfully retrieve
+    the required JSON data for subsequent operations.
+
+
+    ### Parameters Description
+
+    This action does not have any action-specific parameters. It relies on the following
+    **Integration Configuration** parameters:
+
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | The URL pointing to the Mitre ATT&CK STIX JSON file. | String | Yes
+    |
+
+    | Verify SSL | If enabled, the SSL certificate for the connection will be verified.
+    | Boolean | No (Default: True) |
+
+
+    ### Additional Notes
+
+    - This action is primarily used during the initial setup or troubleshooting of
+    the Mitre ATT&CK integration.
+
+    - It performs a simple HTTP GET request to the provided URL to validate the connection.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Siemplify context and retrieves
+    the integration-level configuration (API Root and Verify SSL).
+
+    2. **Manager Setup**: It instantiates the `MitreAttckManager` with the provided
+    configuration.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    attempts to fetch the raw attack data from the specified API Root using an HTTP
+    GET request.
+
+    4. **Validation**: If the data is successfully retrieved, the action confirms
+    the connection is established.
+
+    5. **Completion**: The action returns a success status if the connection is verified,
+    or a failure status if the URL is unreachable or returns an error.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

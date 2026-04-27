@@ -1,0 +1,445 @@
+Get OAuth Authorization Code:
+  ai_description: >-
+    ### General Description
+
+    Generates an OAuth 2.0 authorization URL for Azure Security Center. This action
+    is the first step in the OAuth authentication process, allowing a user to manually
+    authorize the application in a web browser to obtain an authorization code. This
+    code is required for the subsequent 'Get OAuth Refresh Token' action.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Redirect URL | String | Yes | The redirect URI that was configured when the
+    application was registered in the Azure portal. The authorization code will be
+    sent to this URL. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the `Tenant ID` and `Client
+    ID` from the integration's global configuration.
+
+    2. **Parameter Extraction**: It retrieves the `Redirect URL` provided by the user
+    in the action parameters.
+
+    3. **URL Construction**: It formats a predefined Microsoft Online authorization
+    endpoint URL with the tenant, client ID, and redirect URI.
+
+    4. **Result Generation**: The action adds the generated URL as a clickable link
+    in the Google SecOps interface and provides instructions for the user to complete
+    the authorization manually in their browser.
+
+
+    ### Additional Notes
+
+    This action does not perform any network requests to Azure. It strictly performs
+    string formatting to generate a link for manual user intervention.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get OAuth Refresh Token:
+  ai_description: "Generates an OAuth refresh token for the Azure Security Center\
+    \ integration. This action is a prerequisite for configuring the integration's\
+    \ authentication, as it exchanges a temporary authorization code for a long-lived\
+    \ refresh token. \n\n### Flow Description:\n1. **Parameter Extraction:** Retrieves\
+    \ the Tenant ID, Client ID, and Client Secret from the integration configuration,\
+    \ along with the user-provided Authorization Code and Redirect URL from the action\
+    \ parameters.\n2. **Token Request:** Sends a POST request to the Microsoft identity\
+    \ platform (Azure AD) token endpoint using the `authorization_code` grant type.\n\
+    3. **Response Handling:** Captures the JSON response from Microsoft, which contains\
+    \ the access token and the refresh token.\n4. **Result Output:** Adds the full\
+    \ token response to the action's JSON results for use in integration setup.\n\n\
+    ### Parameters Description:\n| Parameter Name | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| Redirect URL | String | Yes | The redirect\
+    \ URI that was specified during the Azure App registration process. Defaults to\
+    \ `https://localhost`. |\n| Authorization Code | String | Yes | The temporary\
+    \ code obtained from the 'Get OAuth Authorization Code' action or the Azure authorization\
+    \ endpoint. |\n\n### Additional Notes:\n* This action does not run on entities\
+    \ and is intended for administrative/setup purposes.\n* The generated refresh\
+    \ token should be copied into the integration's configuration settings to enable\
+    \ persistent connectivity."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Regulatory Standard Controls:
+  ai_description: >-
+    ### General Description
+
+    The **List Regulatory Standard Controls** action retrieves a list of compliance
+    controls associated with specific regulatory standards (e.g., PCI-DSS, Azure-CIS)
+    within Microsoft Azure Security Center. This action is designed to help security
+    teams audit their compliance posture by fetching detailed information about controls,
+    including their current state (Passed, Failed, etc.) and assessment counts.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Subscription ID** | String | No | The Azure subscription ID to query. If provided,
+    it overrides the ID configured at the integration level. |
+
+    | **Standard Names** | String | Yes | A comma-separated list of regulatory standards
+    to retrieve details for (e.g., `Azure-CIS-1.1.0`, `PCI-DSS-3.2.1`). |
+
+    | **State Filter** | String | No | A comma-separated list of control states to
+    filter by. Valid values: `Passed`, `Failed`, `Unsupported`, `Skipped`. Defaults
+    to `Failed`. |
+
+    | **Max Standards To Return** | Integer | No | The maximum number of controls
+    to retrieve for each specified standard. Defaults to `50`. |
+
+
+    ### Additional Notes
+
+    - Either the integration-level or action-level **Subscription ID** must be configured
+    for the action to run.
+
+    - The action is read-only and does not modify any configurations in the Azure
+    environment.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration and action parameters,
+    prioritizing the action-level Subscription ID.
+
+    2. **Validation**: It validates the provided `State Filter` values against supported
+    Azure compliance states and ensures the `Max Standards To Return` is a non-negative
+    integer.
+
+    3. **Authentication**: Establishes a connection to the Azure Security Center API
+    using the provided credentials (OAuth or Basic).
+
+    4. **Data Retrieval**: Iterates through each provided standard name and fetches
+    the corresponding regulatory compliance controls from the Azure API.
+
+    5. **Filtering**: Applies the specified state filters to the retrieved controls.
+
+    6. **Output**: Generates a data table named "Regulatory Controls" and a detailed
+    JSON result containing control metadata such as ID, name, description, state,
+    and assessment statistics.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Regulatory Standards:
+  ai_description: >-
+    ### General Description
+
+    The **List Regulatory Standards** action retrieves a list of available regulatory
+    compliance standards from Microsoft Azure Security Center for a specified subscription.
+    This action allows security teams to audit the compliance posture of their Azure
+    environment against various frameworks such as Azure CIS, ISO 27001, or SOC TSP.
+    Results are presented as a data table and a JSON object for further processing.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Subscription ID** | String | No | The ID of the Azure subscription to query.
+    If not provided, the action uses the Subscription ID defined in the integration
+    configuration. |
+
+    | **State Filter** | String | No | A comma-separated list of compliance states
+    to filter the results (e.g., `Failed, Skipped`). Supported values include: `Passed`,
+    `Failed`, `Unsupported`, `Skipped`. |
+
+    | **Max Standards To Return** | Integer | No | The maximum number of standards
+    to return in the results. Defaults to 50. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the Subscription ID, State Filter,
+    and result limit from the input parameters, prioritizing action-level configuration
+    over integration-level settings.
+
+    2. **Authentication**: It initializes the Azure Security Center Manager, which
+    authenticates with the Azure Management API using OAuth2.
+
+    3. **API Request**: The action performs a GET request to the Azure `regulatoryComplianceStandards`
+    endpoint for the target subscription.
+
+    4. **Filtering and Parsing**: The retrieved standards are parsed into data models
+    and filtered based on the user-provided compliance states (case-insensitive).
+
+    5. **Output Generation**: The filtered standards are added to the case as a data
+    table named "Regulatory Standards" and as a raw JSON result.
+
+
+    ### Additional Notes
+
+    * A **Subscription ID** must be configured either at the integration level or
+    the action level for the action to execute successfully.
+
+    * If the `Max Standards To Return` parameter is set to a negative value, the action
+    defaults to returning 50 standards.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a utility designed to verify the connectivity between Google
+    SecOps and the Azure Security Center environment. It ensures that the provided
+    integration parameters (such as Client ID, Client Secret, and Tenant ID) are correct
+    and that the service is reachable. This action is typically used during the initial
+    setup or for troubleshooting connection issues.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Client ID | String | Yes | The Application (client) ID of the Azure AD application
+    used for authentication. |
+
+    | Client Secret | String | Yes | The client secret generated for the Azure AD
+    application. |
+
+    | Tenant ID | String | Yes | The Directory (tenant) ID of the Azure AD instance.
+    |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the Azure API endpoint. Default is `False`. |
+
+    | Username | String | No | The username for basic authentication (if applicable).
+    |
+
+    | Password | String | No | The password for basic authentication (if applicable).
+    |
+
+    | Refresh Token | String | No | An OAuth refresh token used to obtain a new access
+    token. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities.
+
+    - It requires either a combination of `Username` and `Password` or a `Refresh
+    Token` depending on the authentication flow configured in the Azure environment.
+    If neither is provided, the manager initialization will fail.
+
+    - Per Google SecOps standards, Ping actions are not classified as enrichment actions.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The script initializes the Siemplify action and extracts
+    configuration parameters from the integration settings.
+
+    2. **Manager Setup**: It instantiates the `AzureSecurityCenterManager`, which
+    handles authentication (OAuth or Basic) and session management.
+
+    3. **Connectivity Test**: The manager executes the `test_connectivity` method,
+    which sends a `GET` request to the Azure Security Center operations endpoint (`/providers/Microsoft.Security/operations`).
+
+    4. **Result Handling**: If the request is successful (HTTP 200), the action completes
+    with a success status. If an exception occurs (e.g., authentication failure or
+    network timeout), the action fails and returns the error details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Alert Status:
+  ai_description: >-
+    Updates the status of a specific alert in Microsoft Azure Security Center. This
+    action allows analysts to programmatically manage the lifecycle of Azure security
+    alerts by transitioning them to states such as 'Dismiss', 'Reactivate', or 'Resolve'.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Subscription ID | String | No | The ID of the Azure subscription. If provided,
+    it overrides the subscription ID configured at the integration level. |
+
+    | Alert ID | String | Yes | The unique identifier of the alert to update. |
+
+    | Location | String | Yes | The Azure location/region where the alert is located
+    (e.g., 'centralus'). |
+
+    | Status | String | Yes | The target status for the alert. Supported values: 'Dismiss',
+    'Reactivate', 'Resolve'. Default is 'Resolve'. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Azure Security Center manager
+    using credentials (Client ID, Secret, Tenant ID) and determines the active Subscription
+    ID.
+
+    2. **Parameter Mapping**: The input 'Status' is mapped from the user-friendly
+    display name to the specific API value required by Microsoft Azure (e.g., 'Resolve'
+    becomes 'resolve').
+
+    3. **API Execution**: A POST request is sent to the Azure Management API endpoint
+    for the specific alert ID and location to update its status.
+
+    4. **Result Handling**: The action confirms the success of the update or captures
+    any API errors returned by Azure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of an alert in Microsoft Azure Security Center to 'Dismiss',
+      'Reactivate', or 'Resolve' via a POST request to the Azure Management API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

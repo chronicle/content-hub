@@ -1,0 +1,1929 @@
+Add Attribute:
+  ai_description: >-
+    ### General Description
+
+    Adds attributes (indicators) to a specific MISP event based on entities identified
+    within a Google SecOps alert. This action allows security teams to programmatically
+    populate MISP events with threat intelligence gathered during an investigation,
+    supporting various entity types including Hostnames, URLs, File Hashes, IP Addresses,
+    and more.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The ID or UUID of the target MISP event where attributes
+    will be added. |
+
+    | Category | String | No | The MISP category for the attributes (e.g., 'Network
+    activity', 'External analysis'). If not provided, MISP defaults will apply. |
+
+    | Distribution | String | No | Defines the visibility of the attribute. Possible
+    values: 'Organisation', 'Community', 'Connected', 'All', or 'Inherit'. Default
+    is 'Community'. |
+
+    | For Intrusion Detection System | Boolean | Yes | If set to true, the attribute
+    will be flagged as eligible for generating IDS signatures. |
+
+    | Comment | String | No | An optional comment to be attached to the added attributes.
+    |
+
+    | Fallback IP Type | String | No | The attribute type to use for IP entities if
+    no source/destination relation is found in the alert. Options: 'Source Address',
+    'Destination Address'. |
+
+    | Fallback Email Type | String | No | The attribute type to use for Email entities
+    if no source/destination relation is found in the alert. Options: 'Source Email
+    Address', 'Destination Email Address'. |
+
+    | Extract Domain | Boolean | No | If enabled, the action will extract the domain
+    from URL entities and add it as a 'domain' attribute instead of a 'url' attribute.
+    |
+
+
+    ### Additional Notes
+
+    - The action supports a wide range of hash types: MD5, SHA1, SHA224, SHA256, SHA384,
+    SHA512, and SSDeep. The specific hash type is automatically detected based on
+    the string length or format.
+
+    - For IP and Email entities, the action attempts to determine if the entity is
+    a source or destination based on alert relations. If relations are unavailable,
+    it uses the provided fallback parameters.
+
+
+    ### Flow Description
+
+    1. **Event Validation**: The action first verifies the existence of the target
+    MISP event using the provided **Event ID**.
+
+    2. **Entity Filtering**: It filters the alert's entities to identify those matching
+    supported types (e.g., Hostname, URL, Filehash, Address).
+
+    3. **Type Mapping**: For each suitable entity, the action determines the correct
+    MISP attribute type. This includes logic for detecting hash algorithms, extracting
+    domains from URLs (if configured), and determining source/destination roles for
+    network-related entities.
+
+    4. **Attribute Creation**: The action performs a POST request to the MISP API
+    for each entity to create the attribute with the specified category, distribution,
+    and IDS flags.
+
+    5. **Result Reporting**: It collects the API responses and returns a summary of
+    successful and failed additions, along with the raw JSON data for the created
+    attributes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates new attribute records (indicators) within an existing MISP event via
+      the MISP API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - FILEHASH
+    - ADDRESS
+    - USERUNIQNAME
+    - FILENAME
+    - EMAILSUBJECT
+    - THREATCAMPAIGN
+    - THREATACTOR
+    - PHONENUMBER
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Sighting to an Attribute:
+  ai_description: >-
+    Adds a sighting to specific attributes within the MISP (Malware Information Sharing
+    Platform). This action allows security analysts to record occurrences of indicators,
+    mark them as false positives, or set expiration sightings. It supports searching
+    for attributes within a specific event or across all events, and can further filter
+    targets by category, type, or object UUID.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Attribute Name | String | No | Comma-separated list of attribute values to target.
+    |
+
+    | Attribute UUID | String | No | Comma-separated list of attribute UUIDs to target.
+    If both Name and UUID are provided, UUID is used. |
+
+    | Event ID | String | No | The ID or UUID of the MISP event. Required if 'Attribute
+    Search' is set to 'Provided Event'. |
+
+    | Attribute Search | Dropdown | No | Determines if the search is restricted to
+    the 'Provided Event' or 'All Events'. Default is 'Provided Event'. |
+
+    | Sightings Type | Dropdown | Yes | The type of sighting to add: 'Sighting', 'False
+    Positive', or 'Expiration'. |
+
+    | Source | String | No | The source of the sighting (e.g., 'Chronicle SOAR', 'SIEM').
+    |
+
+    | Date Time | String | No | The timestamp for the sighting (Format: YYYY-MM-DD
+    HH:MM:SS). |
+
+    | Category | String | No | Comma-separated list of MISP categories (e.g., 'Payload
+    delivery') to filter target attributes. |
+
+    | Type | String | No | Comma-separated list of MISP attribute types (e.g., 'md5',
+    'ip-src') to filter target attributes. |
+
+    | Object UUID | String | No | The UUID of a specific MISP object to search within
+    for attributes. |
+
+
+    ### Additional Notes
+
+    - If 'Attribute Search' is set to 'Provided Event', the 'Event ID' parameter must
+    be populated.
+
+    - If 'Object UUID' is provided, 'Event ID' must also be provided.
+
+    - The action does not process SecOps entities; it operates based on the provided
+    attribute identifiers in the parameters.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts MISP configuration and action parameters, validating
+    that the provided categories are supported by MISP.
+
+    2. **Search Scope**: Determines whether to search for attributes globally or within
+    a specific event based on the 'Attribute Search' and 'Event ID' parameters.
+
+    3. **Attribute Retrieval**: Fetches the target attributes from MISP using the
+    provided names, UUIDs, and filters (Category, Type, Object UUID).
+
+    4. **Sighting Creation**: Iterates through the found attributes and sends a POST
+    request to the MISP API to add the specified sighting record.
+
+    5. **Result Reporting**: Aggregates the results, providing a summary of successful
+    and failed sighting additions and returning the raw JSON response from MISP.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new sighting record (Sighting, False Positive, or Expiration) to one
+      or more attributes in the MISP platform via a POST request to the /sightings/add
+      endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Tag to an Attribute:
+  ai_description: "Adds tags to attributes in MISP. This action allows users to apply\
+    \ one or more tags to specific attributes identified by name or UUID. The search\
+    \ for attributes can be restricted to a specific MISP Event, a specific Object\
+    \ within an event, or performed across all events. Users can further filter the\
+    \ target attributes by category and type to ensure tags are applied precisely.\
+    \ \n\n### Parameters\n| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Tag Name | String | Yes | A comma-separated list of tags\
+    \ to add to the attributes. |\n| Attribute Name | String | No | A comma-separated\
+    \ list of attribute values to tag. |\n| Attribute UUID | String | No | A comma-separated\
+    \ list of attribute UUIDs to tag. If both Name and UUID are provided, UUID takes\
+    \ precedence. |\n| Event ID | String | No | The ID or UUID of the MISP event.\
+    \ Required if 'Attribute Search' is set to 'Provided Event' or if an 'Object UUID'\
+    \ is specified. |\n| Attribute Search | Dropdown | No | Determines the search\
+    \ scope: 'Provided Event' (default) or 'All Events'. |\n| Object UUID | String\
+    \ | No | The UUID of a specific object within an event to narrow down the attribute\
+    \ search. |\n| Category | String | No | Comma-separated list of MISP categories\
+    \ (e.g., 'Payload delivery', 'External analysis') to filter attributes. |\n| Type\
+    \ | String | No | Comma-separated list of MISP attribute types (e.g., 'md5', 'ip-src')\
+    \ to filter attributes. |\n\n### Additional Notes\n- If 'Attribute Search' is\
+    \ set to 'Provided Event', the 'Event ID' parameter must be populated.\n- If an\
+    \ 'Object UUID' is provided, the 'Event ID' must also be provided.\n\n### Flow\
+    \ Description\n1. **Initialization**: The action initializes the MISP manager\
+    \ using the provided API credentials and validates the input parameters.\n2. **Tag\
+    \ Verification**: It checks the MISP instance to ensure the requested tags exist;\
+    \ if none of the tags exist, the action fails.\n3. **Attribute Discovery**: It\
+    \ searches for attributes based on the provided identifiers (Name/UUID) and filters\
+    \ (Category/Type) within the chosen scope (Event/Object/Global).\n4. **Tag Application**:\
+    \ For every attribute found, the action sends a request to MISP to attach each\
+    \ of the valid tags.\n5. **Result Reporting**: The action returns a summary of\
+    \ successfully tagged attributes and lists any tags or attributes that were not\
+    \ found."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action adds tags to attributes within the MISP platform using the 'attachTagToObject'
+      API endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Tag to an Event:
+  ai_description: >-
+    Adds one or more tags to a specific event in the MISP (Malware Information Sharing
+    Platform) instance. The action validates the existence of the event and the tags
+    before attempting the attachment. It provides a detailed summary of which tags
+    were successfully added, which failed, and which were not found in the MISP system.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The unique ID or UUID of the MISP event to which the
+    tags will be added. |
+
+    | Tag Name | String | Yes | A comma-separated list of tag names to be attached
+    to the event. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves MISP connection details (API Root, API Key, SSL
+    settings) and action parameters (Event ID and Tag Names).
+
+    2. **Event Verification**: Queries the MISP API to ensure the specified Event
+    ID exists. If not found, the action fails.
+
+    3. **Tag Discovery**: Retrieves all available tags from MISP and filters them
+    to find matches for the provided tag names.
+
+    4. **Tag Attachment**: Iterates through the matched tags and sends a request to
+    MISP to attach each tag to the specified event.
+
+    5. **Result Processing**: Collects the responses from the API, categorizes tags
+    as 'added' or 'not added', and identifies any provided tag names that do not exist
+    in the MISP system. It then outputs a summary message and the raw JSON response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action adds tags to an existing event in the MISP platform, which modifies
+      the metadata state of that event.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Event:
+  ai_description: >-
+    ### General Description
+
+    Creates a new event in the MISP (Malware Information Sharing Platform) instance.
+    This action allows users to programmatically generate events to store threat intelligence,
+    specifying details such as threat levels, distribution scope, and analysis status.
+    It can also optionally publish the event to the MISP community immediately upon
+    creation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Event Name** | String | Yes | The name or 'info' field for the new MISP event.
+    |
+
+    | **Distribution** | String/Integer | No | Specifies the distribution scope. Possible
+    values: 0 (Organisation), 1 (Community), 2 (Connected), 3 (All). Defaults to 'Community'.
+    |
+
+    | **Threat Level** | String/Integer | No | Specifies the threat level. Possible
+    values: 1 (High), 2 (Medium), 3 (Low), 4 (Undefined). Defaults to 'High'. |
+
+    | **Analysis** | String/Integer | No | Specifies the analysis stage. Possible
+    values: 0 (Initial), 1 (Ongoing), 2 (Completed). Defaults to 'Initial'. |
+
+    | **Publish** | Boolean | No | If enabled (True), the action will publish the
+    event to the community after creation. Defaults to False. |
+
+    | **Comment** | String | No | Additional comments or notes related to the event.
+    |
+
+
+    ### Additional Notes
+
+    - The action accepts both numeric IDs and string labels (e.g., 'High' or '1')
+    for Distribution, Threat Level, and Analysis parameters.
+
+    - If 'Publish' is set to True but the publication step fails, the action will
+    still report success for the event creation but will include the publication error
+    in the output message.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts MISP integration configuration (API Root, Key,
+    SSL settings) and action parameters.
+
+    2. **Parameter Mapping**: Validates and converts string-based labels for Distribution,
+    Threat Level, and Analysis into their corresponding MISP integer IDs.
+
+    3. **Event Creation**: Sends a POST request to the MISP API to create the event
+    with the provided metadata.
+
+    4. **Optional Publication**: If the 'Publish' parameter is True, it makes a subsequent
+    API call to publish the newly created event ID.
+
+    5. **Result Processing**: Captures the new Event ID, adds the full event JSON
+    to the action results, and provides a status message to the SOAR platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new event record in the external MISP instance and optionally changes
+      its state to 'published'.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create File Misp Object:
+  ai_description: "Creates a 'file' object within a specified MISP event. This action\
+    \ allows for the structured addition of file-related metadata, such as filenames\
+    \ and various hash types (MD5, SHA1, SHA256, SSDEEP), to an existing threat intelligence\
+    \ event in MISP. It can process data manually provided via parameters or automatically\
+    \ extract information from entities present in the Google SecOps case.\n\n###\
+    \ Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Event ID | String | Yes | The unique ID or UUID of the MISP\
+    \ event where the file object should be created. |\n| FILENAME | String | No |\
+    \ The name of the file to be added to the MISP object. |\n| MD5 | String | No\
+    \ | The MD5 hash of the file. |\n| SHA1 | String | No | The SHA1 hash of the file.\
+    \ |\n| SHA256 | String | No | The SHA256 hash of the file. |\n| SSDEEP | String\
+    \ | No | The SSDEEP hash of the file (expected format: size:hash:hash). |\n| Use\
+    \ Entities | Boolean | No | If set to true, the action will ignore manual file\
+    \ parameters and instead use `FILEHASH` and `FILENAME` entities from the current\
+    \ case context. |\n\n### Additional Notes\nTo successfully execute, the action\
+    \ requires either the 'Use Entities' parameter to be enabled or at least one of\
+    \ the manual file attribute parameters (FILENAME, MD5, SHA1, SHA256, or SSDEEP)\
+    \ to be populated.\n\n### Flow Description\n1. **Initialization:** Retrieves MISP\
+    \ integration settings (API Root, API Key) and action parameters.\n2. **Event\
+    \ Verification:** Validates the existence of the target MISP event using the provided\
+    \ 'Event ID'.\n3. **Data Gathering:** \n    - If 'Use Entities' is enabled: Scans\
+    \ the case for `FILEHASH` and `FILENAME` entities. For hashes, it automatically\
+    \ identifies the hash type (MD5, SHA1, etc.).\n    - If 'Use Entities' is disabled:\
+    \ Uses the manually entered values from the action parameters.\n4. **MISP Object\
+    \ Creation:** Calls the MISP API to create a new 'file' object and attaches the\
+    \ identified attributes to the specified event.\n5. **Output Generation:** Adds\
+    \ the raw JSON response of the created object to the action results and constructs\
+    \ a data table for the case wall summarizing the added attributes."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new 'file' object and associated attributes (hashes, filenames) within
+      a specified event on the MISP platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    - FILENAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create IP-Port Misp Object:
+  ai_description: "Creates an IP-Port object within a specified MISP event. This action\
+    \ allows users to manually define network attributes (ports, domains, hostnames,\
+    \ IPs) or automatically use IP Address entities from the current context to populate\
+    \ the MISP object. It validates the existence of the target MISP event before\
+    \ attempting to create the object and provides a detailed data table of the created\
+    \ attributes upon success.\n\n### Parameters\n| Parameter | Type | Mandatory |\
+    \ Description |\n| :--- | :--- | :--- | :--- |\n| Event ID | String | Yes | Specify\
+    \ the ID or UUID of the MISP event to which you want to add the IP-Port object.\
+    \ |\n| Dst-port | String | No | The destination port to include in the MISP object.\
+    \ |\n| Src-port | String | No | The source port to include in the MISP object.\
+    \ |\n| Domain | String | No | The domain name to include in the MISP object. |\n\
+    | HOSTNAME | String | No | The hostname to include in the MISP object. |\n| IP-Src\
+    \ | String | No | The source IP address to include in the MISP object. |\n| IP-Dst\
+    \ | String | No | The destination IP address to include in the MISP object. |\n\
+    | Use Entities | Boolean | No | If enabled, the action will use ADDRESS entities\
+    \ from the context to create objects. This parameter takes priority over manual\
+    \ IP parameters. |\n| IP Type | Enum | No | Specify whether the IP entities should\
+    \ be treated as 'Source IP' or 'Destination IP' in the MISP object. Default is\
+    \ 'Source IP'. |\n\n### Additional Notes\n- Either manual parameters (Dst-port,\
+    \ Src-port, Domain, HOSTNAME, IP-Src, or IP-Dst) must be provided, or the 'Use\
+    \ Entities' parameter must be set to true for the action to execute.\n- The 'Use\
+    \ Entities' flag specifically targets ADDRESS entities.\n\n### Flow Description\n\
+    1. **Initialization**: Retrieves MISP API configuration and action parameters.\n\
+    2. **Validation**: Ensures that an Event ID is provided and that there is data\
+    \ to process (either via manual inputs or entities).\n3. **Connectivity**: Connects\
+    \ to the MISP instance and verifies that the specified Event ID exists.\n4. **Data\
+    \ Collection**: \n    - If 'Use Entities' is true, it iterates through ADDRESS\
+    \ entities and maps their identifiers to the chosen IP Type (Source or Destination).\n\
+    \    - If 'Use Entities' is false, it uses the manually provided network attributes.\n\
+    5. **Object Creation**: Calls the MISP API to create the IP-Port object(s) within\
+    \ the target event.\n6. **Reporting**: Adds the created object data to the action's\
+    \ JSON results and constructs a data table on the case wall for visibility."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new IP-Port object and associated attributes (IPs, ports, domains)
+      within a specified MISP event.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Url Misp Object:
+  ai_description: >-
+    ### General Description
+
+    This action creates a URL object within a specified MISP (Malware Information
+    Sharing Platform) event. It allows users to document URL-related threat intelligence
+    by associating a URL with metadata such as ports, domains, IP addresses, and timestamps.
+    The action can either take a single URL manually via parameters or automatically
+    process all URL entities present in the current Google SecOps case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Event ID** | String | Yes | The ID or UUID of the MISP event where the URL
+    object will be created. |
+
+    | **URL** | String | No | The specific URL to add to the event. This is required
+    if 'Use Entities' is set to false. |
+
+    | **Port** | String | No | The port number associated with the URL. |
+
+    | **First seen** | String | No | The timestamp when the URL was first observed
+    (Format: YYYY-MM-DDTHH:MM:SSZ). |
+
+    | **Last seen** | String | No | The timestamp when the URL was last observed (Format:
+    YYYY-MM-DDTHH:MM:SSZ). |
+
+    | **Domain** | String | No | The domain associated with the URL. |
+
+    | **Text** | String | No | Additional descriptive text or comments for the URL
+    object. |
+
+    | **IP** | String | No | The IP address associated with the URL. |
+
+    | **Host** | String | No | The hostname associated with the URL. |
+
+    | **Use Entities** | Boolean | No | If enabled, the action ignores the 'URL' parameter
+    and instead creates objects for all URL entities found in the case. |
+
+
+    ### Additional Notes
+
+    - **Dependency**: Either the 'URL' parameter must be populated or 'Use Entities'
+    must be set to true for the action to execute successfully.
+
+    - **Priority**: The 'Use Entities' parameter takes priority over the manual 'URL'
+    input if both are provided.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves connection settings and validates
+    the provided MISP Event ID to ensure the target event exists.
+
+    2. **Data Collection**: Depending on the configuration, the action identifies
+    the target URL(s) from the manual 'URL' parameter or by filtering the case's entities
+    for URL types.
+
+    3. **Object Creation**: For each identified URL, the action sends a request to
+    the MISP API to create a new URL object using the provided metadata (port, domain,
+    IP, etc.).
+
+    4. **Reporting**: The action returns the raw JSON of the created objects and updates
+    the Google SecOps case wall with a data table summarizing the new URL attributes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new URL object and associated attributes within a specified event
+      in the MISP platform via a POST request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Virustotal-Report Object:
+  ai_description: "### General Description\nThis action creates a 'virustotal-report'\
+    \ object within a specified MISP event. It allows security analysts to attach\
+    \ VirusTotal threat intelligence metadata\u2014such as permalinks, detection ratios,\
+    \ community scores, and submission timestamps\u2014directly to an existing MISP\
+    \ event for better context and sharing.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Event ID\
+    \ | String | Yes | The unique ID or UUID of the MISP event where the VirusTotal\
+    \ report object will be created. |\n| Permalink | String | Yes | The URL link\
+    \ to the specific VirusTotal report. |\n| Comment | String | No | An optional\
+    \ text comment to include with the VirusTotal report object. |\n| Detection Ratio\
+    \ | String | No | The detection ratio from VirusTotal (e.g., '15/72'). |\n| Community\
+    \ Score | String | No | The community score assigned by VirusTotal users. |\n\
+    | First Submission | String | No | The timestamp of the first submission to VirusTotal.\
+    \ Expected format: YYYY-MM-DDTHH:MM:SSZ. |\n| Last Submission | String | No |\
+    \ The timestamp of the most recent submission to VirusTotal. Expected format:\
+    \ YYYY-MM-DDTHH:MM:SSZ. |\n\n### Additional Notes\n- The action first validates\
+    \ that the provided Event ID exists in MISP before attempting to create the object.\n\
+    - It dynamically retrieves the 'virustotal-report' template ID from the MISP instance\
+    \ to ensure compatibility with the local MISP configuration.\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the MISP manager using the provided\
+    \ API root and credentials.\n2. **Event Validation**: It verifies the existence\
+    \ of the target MISP event using the provided 'Event ID'. If the event is not\
+    \ found, the action fails.\n3. **Template Retrieval**: The action queries MISP\
+    \ to find the internal template ID associated with the 'virustotal-report' object\
+    \ type.\n4. **Object Creation**: It constructs a payload with the provided VirusTotal\
+    \ metadata (permalink, scores, timestamps) and sends a POST request to MISP to\
+    \ create the object under the specified event.\n5. **Result Processing**: Upon\
+    \ success, the action retrieves the created object's details, formats them into\
+    \ a data table, and attaches the full JSON response to the action results."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new 'virustotal-report' object and associated attributes within a
+      specified event in the MISP platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create network-connection Misp Object:
+  ai_description: "### General Description\nThis action creates a 'network-connection'\
+    \ object within a specified MISP event. It allows users to document network traffic\
+    \ details such as source/destination IPs, ports, hostnames, and protocols (Layer\
+    \ 3, 4, and 7) directly into MISP. The action can either use manually provided\
+    \ parameters or automatically extract IP addresses from the entities present in\
+    \ the Google SecOps case.\n\n### Parameters Description\n| Parameter | Type |\
+    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Event ID | String\
+    \ | Yes | The ID or UUID of the MISP event where the object will be created. |\n\
+    | Dst-port | String | No | The destination port for the network connection. |\n\
+    | Src-port | String | No | The source port for the network connection. |\n| Hostname-src\
+    \ | String | No | The source hostname. |\n| Hostname-dst | String | No | The destination\
+    \ hostname. |\n| IP-Src | String | No | The source IP address. |\n| IP-Dst | String\
+    \ | No | The destination IP address. |\n| Layer3-protocol | String | No | The\
+    \ Layer 3 protocol (e.g., IPv4, IPv6). |\n| Layer4-protocol | String | No | The\
+    \ Layer 4 protocol (e.g., TCP, UDP). |\n| Layer7-protocol | String | No | The\
+    \ Layer 7 protocol (e.g., HTTP, DNS). |\n| Use Entities | Boolean | No | If enabled,\
+    \ the action will iterate through IP Address entities in the case to create objects.\
+    \ This takes priority over manual IP parameters. |\n| IP Type | Enum | No | Determines\
+    \ if the entity IP should be mapped to 'Source IP' or 'Destination IP' in the\
+    \ MISP object. Default is 'Source IP'. |\n\n### Additional Notes\nTo successfully\
+    \ run the action, you must provide at least one of the following: 'Dst-port',\
+    \ 'Src-port', 'IP-Src', 'IP-Dst', OR set 'Use Entities' to true. If 'Use Entities'\
+    \ is true, the action will create a separate MISP object for every IP Address\
+    \ entity found in the scope.\n\n### Flow Description\n1. **Initialization**: The\
+    \ action retrieves MISP configuration (API Key, Root URL) and validates the provided\
+    \ parameters.\n2. **Event Verification**: It checks if the specified 'Event ID'\
+    \ exists in the MISP instance.\n3. **Data Collection**: \n    - If 'Use Entities'\
+    \ is true, it identifies all 'ADDRESS' entities and maps them to either the source\
+    \ or destination IP field based on the 'IP Type' parameter.\n    - If 'Use Entities'\
+    \ is false, it uses the manually provided IP and port parameters.\n4. **Object\
+    \ Creation**: For each set of data, it calls the MISP API to create a 'network-connection'\
+    \ object using the standard MISP template.\n5. **Reporting**: It adds the resulting\
+    \ JSON data to the action output and creates a data table on the Google SecOps\
+    \ case wall summarizing the attributes added to MISP."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new 'network-connection' object and associated attributes within a
+      MISP event via a POST request to the MISP API.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a data table to the case wall containing the details of the attributes
+      created in MISP.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete an Attribute:
+  ai_description: "Deletes specific attributes from MISP events based on various filtering\
+    \ criteria. This action allows users to remove threat intelligence data (attributes)\
+    \ from the MISP platform by specifying identifiers such as attribute names, UUIDs,\
+    \ categories, or types. It can search for these attributes within a single specified\
+    \ event or across all events in the MISP instance.\n\n### Parameters Description\n\
+    \n| Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :---\
+    \ |\n| Attribute Name | String | No | A comma-separated list of attribute values\
+    \ (e.g., specific IPs or hashes) to delete. |\n| Event ID | String | No | The\
+    \ ID or UUID of the MISP event. This is **mandatory** if 'Attribute Search' is\
+    \ set to 'Provided Event' or if an 'Object UUID' is provided. |\n| Category |\
+    \ String | No | A comma-separated list of MISP categories (e.g., 'Payload delivery',\
+    \ 'External analysis') to filter the attributes for deletion. |\n| Type | String\
+    \ | No | A comma-separated list of attribute types (e.g., 'md5', 'ip-src') to\
+    \ filter the attributes for deletion. |\n| Object UUID | String | No | The UUID\
+    \ of a specific MISP object. If provided, the action will only delete attributes\
+    \ contained within this object. |\n| Attribute UUID | String | No | A comma-separated\
+    \ list of specific attribute UUIDs to delete. If both 'Attribute Name' and 'Attribute\
+    \ UUID' are provided, the action prioritizes UUIDs. |\n| Attribute Search | Dropdown\
+    \ | No | Determines the search scope: 'Provided Event' (searches only the event\
+    \ specified in 'Event ID') or 'All Events' (searches across the entire MISP instance).\
+    \ Defaults to 'Provided Event'. |\n\n### Additional Notes\n- Either 'Attribute\
+    \ Name' or 'Attribute UUID' should typically be provided to identify what to delete.\n\
+    - If 'Attribute Search' is set to 'Provided Event', the 'Event ID' parameter becomes\
+    \ mandatory.\n\n### Flow Description\n1. **Initialization**: The action initializes\
+    \ the MISP manager using the provided API root and credentials.\n2. **Validation**:\
+    \ It validates the provided 'Category' against allowed MISP categories and checks\
+    \ for mandatory parameters based on the 'Attribute Search' logic.\n3. **Attribute\
+    \ Retrieval**: \n    - If an 'Object UUID' is provided, it fetches attributes\
+    \ specifically from that object within the specified event.\n    - Otherwise,\
+    \ it searches for attributes matching the name, UUID, category, and type criteria\
+    \ across the specified scope (single event or all events).\n4. **Deletion**: The\
+    \ action iterates through all identified attributes and sends a deletion request\
+    \ to the MISP API for each attribute's UUID.\n5. **Result Reporting**: It tracks\
+    \ which attributes were successfully deleted and which failed, providing a summary\
+    \ message and raw JSON results for the API responses."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action deletes attributes from the MISP platform using the MISP API's delete
+      endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete an Event:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specific event from the MISP (Malware Information Sharing Platform)
+    instance. This action allows users to remove events by providing either a numeric
+    ID or a UUID. It is useful for cleaning up false positives, redundant data, or
+    incorrectly created events within the threat intelligence platform.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The unique identifier of the event to delete. This
+    can be either the numeric ID (e.g., '4') or the UUID string. |
+
+
+    ### Additional Notes
+
+    - The action first verifies the existence of the event before attempting deletion.
+    If the event is not found, the action will fail with a specific 'not found' error.
+
+    - This action performs a permanent deletion in the external MISP system.
+
+
+    ### Flow Description
+
+    1. **Setup**: The action initializes the MISP manager using the provided API root,
+    API key, and SSL configuration.
+
+    2. **Parameter Extraction**: It retrieves the `Event ID` from the action parameters
+    and determines if it is a numeric ID or a UUID.
+
+    3. **Verification**: It calls the MISP API to verify that the event exists. If
+    the event does not exist, an exception is raised, and the action fails.
+
+    4. **Execution**: If verified, it sends a POST request to the MISP deletion endpoint
+    for the specified event.
+
+    5. **Result Handling**: The action captures the API response message, adds it
+    to the result JSON, and completes with a success message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes an event record from the external MISP platform via a POST request to
+      the /events/delete/{id} endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download File:
+  ai_description: >-
+    ### General Description
+
+    This action downloads file samples associated with a specific event in MISP. It
+    allows users to either save the files to a local directory on the Google SecOps
+    runner or attach them directly to the case wall within the SOAR platform. This
+    is particularly useful for malware analysis workflows where samples need to be
+    retrieved from a threat intelligence platform for further investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The unique ID or UUID of the MISP event from which
+    to download files. |
+
+    | Download Folder Path | String | No | The absolute path on the local system where
+    files should be saved. If left empty, the action will instead upload the files
+    as attachments to the case wall. |
+
+    | Overwrite | Boolean | No | If set to true, the action will overwrite files in
+    the 'Download Folder Path' if they already exist. Default is false. |
+
+
+    ### Additional Notes
+
+    - If 'Download Folder Path' is not provided, files are uploaded to the case wall.
+    Note that there is a 3MB size limit for individual file attachments in the SOAR
+    platform. Files exceeding this limit will fail to upload unless a local path is
+    specified.
+
+    - If 'Download Folder Path' is provided and 'Overwrite' is false, the action will
+    fail if any of the files already exist in the target directory.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the MISP manager using the provided
+    API root and credentials.
+
+    2. **Event Verification**: It verifies the existence of the specified MISP event
+    using the 'Event ID'.
+
+    3. **Data Retrieval**: The action requests all file samples associated with the
+    event from the MISP API.
+
+    4. **Storage Logic**:
+        - **Local Storage**: If a 'Download Folder Path' is provided, the action checks
+    for existing files (respecting the 'Overwrite' flag) and saves the file content
+    to the specified directory.
+        - **SOAR Attachment**: If no path is provided, the action attempts to add
+    each file as an attachment to the case wall using the `add_attachment` method.
+    5. **Completion**: The action returns a success message listing the downloaded
+    files and, if saved locally, provides the absolute paths in the JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds downloaded files as attachments to the case wall if no local
+      download folder path is specified.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    Enriches entities by retrieving threat intelligence from MISP (Malware Information
+    Sharing Platform). The action searches for attributes matching the entity identifier
+    across MISP events and enriches the SecOps entity with event metadata, threat
+    levels, and attribute details.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Number of attributes to return | Integer | Yes | Limits the number of attributes
+    included in the raw JSON result for each entity. Default is 10. |
+
+    | Filtering condition | Enum | Yes | Determines which attribute to prioritize
+    if multiple are found. 'LAST' uses the oldest attribute, while 'FIRST' uses the
+    newest. |
+
+    | Create Insights | Boolean | No | If enabled (default), creates a SecOps insight
+    containing the MISP attribute comment. |
+
+    | Threat Level Threshold | Enum | No | The threshold (High, Medium, Low, Undefined)
+    used to evaluate the MISP event. If the event's threat level meets or exceeds
+    this threshold, the entity is marked as suspicious. |
+
+
+    ### Flow Description
+
+    1. **Filter Entities:** Identifies supported entities (IP, Hostname, URL, Domain,
+    File Hash, User) from the target list.
+
+    2. **Search MISP:** For each entity, it queries the MISP API for matching attributes,
+    optionally filtered by specific categories.
+
+    3. **Select Attribute:** Based on the 'Filtering condition', it selects either
+    the most recent or the oldest matching attribute.
+
+    4. **Fetch Event Context:** Retrieves the full MISP event details associated with
+    the selected attribute.
+
+    5. **Enrich Entity:** Updates the entity's additional properties with event data
+    (UUID, Org, Date, Threat Level) and attribute data (Category, Type, IDS flag).
+
+    6. **Internal Updates:** Adds a data table to the case wall, creates an insight
+    (if configured), and marks the entity as 'enriched'.
+
+    7. **Risk Assessment:** Compares the event's threat level against the user-defined
+    threshold and marks the entity as 'suspicious' if the threshold is met.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with MISP metadata, sets the 'is_suspicious'
+      and 'is_enriched' flags, creates entity insights, and adds data tables to the
+      case wall.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - FILEHASH
+    - DestinationURL
+    - DOMAIN
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Event Details:
+  ai_description: >-
+    ### General Description\nThe **Get Event Details** action retrieves comprehensive
+    information about specific events from a MISP instance using their unique identifiers
+    (IDs or UUIDs). This action is useful for analysts who need to deep-dive into
+    known MISP events to understand the associated attributes, threat levels, and
+    organizational context.\n\n### Parameters Description\n| Parameter | Type | Mandatory
+    | Description |\n| :--- | :--- | :--- | :--- |\n| **Event ID** | String | Yes
+    | A comma-separated list of MISP Event IDs or UUIDs to retrieve. |\n| **Return
+    Attributes Info** | Boolean | No | If enabled (default), the action will generate
+    an additional data table containing details for all attributes associated with
+    the event. |\n\n### Flow Description\n1. **Parameter Extraction**: The action
+    parses the provided comma-separated list of Event IDs and the boolean flag for
+    attribute retrieval.\n2. **API Interaction**: For each Event ID, the action queries
+    the MISP API to fetch the full event object.\n3. **Data Processing**: The raw
+    event data is captured for the action's JSON output.\n4. **Case Wall Updates**:\n    *
+    A data table named 'Event {ID} Details' is created, showing flattened event metadata
+    (e.g., Org, Date, Threat Level).\n    * If 'Return Attributes Info' is true, a
+    second table named 'Event {ID} Attributes Details' is created, listing all attributes
+    (e.g., type, value, category) linked to that event.\n5. **Final Reporting**: The
+    action concludes by summarizing which events were successfully retrieved and which
+    failed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates data tables on the case wall to display retrieved MISP event
+      and attribute details.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Related Events:
+  ai_description: "Retrieves information about events related to specific entities\
+    \ from a MISP (Malware Information Sharing Platform) instance. This action allows\
+    \ security analysts to identify if indicators in their current case have been\
+    \ previously seen or documented in other MISP events, providing critical context\
+    \ for threat intelligence. It supports enrichment for URLs, Hostnames, File Hashes,\
+    \ and IP Addresses. If related events are found, the action can automatically\
+    \ flag the entity as suspicious within Google SecOps and provides a detailed table\
+    \ of the matching events, including Event ID, Organization, Date, and Threat Level.\n\
+    \n### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| Events Limit | Integer | No | Specifies the maximum number\
+    \ of related events to retrieve per entity. If not provided, all matching events\
+    \ are returned. Must be a positive integer. |\n| Mark As Suspicious | Boolean\
+    \ | No | If enabled (default is true), the action will update the entity's status\
+    \ to 'suspicious' in Google SecOps if at least one related event is found in MISP.\
+    \ |\n\n### Flow Description\n1. **Initialization**: Extracts MISP connection details\
+    \ (API Root, Key, SSL settings) and action parameters (Events Limit, Mark As Suspicious).\n\
+    2. **Entity Filtering**: Identifies supported entities from the case, specifically\
+    \ targeting URLs, Hostnames, File Hashes, and IP Addresses.\n3. **MISP Querying**:\
+    \ For each supported entity, the action queries the MISP API to find events where\
+    \ the entity's identifier (or original identifier) appears as an attribute.\n\
+    4. **Data Processing**: If events are found, it parses the MISP response to extract\
+    \ key metadata such as Event ID, UUID, Organization, Date, Threat Level, and Analysis\
+    \ status.\n5. **Internal Updates**: \n    - Creates an entity-specific data table\
+    \ containing the related event details.\n    - If 'Mark As Suspicious' is true,\
+    \ it flags the entity as suspicious.\n6. **Finalization**: Updates the entities\
+    \ in Google SecOps and returns a summary message and a JSON result containing\
+    \ all retrieved event data."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates the 'is_suspicious' attribute of entities and adds data tables
+      to the case context.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - FILEHASH
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Event Objects:
+  ai_description: "### General Description\nRetrieves detailed information about objects\
+    \ associated with specific MISP events. This action allows analysts to inspect\
+    \ the structured data (objects) within one or more MISP events to understand the\
+    \ context of threat intelligence data, such as file attributes, network connection\
+    \ details, or other complex MISP object types.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Event ID | String | Yes | A comma-separated list of MISP Event IDs or UUIDs\
+    \ for which you want to retrieve object details. |\n| Max Objects to Return |\
+    \ Integer | No | Specifies the maximum number of objects to return in total across\
+    \ all processed events. Defaults to 50. |\n\n### Additional Notes\n- The action\
+    \ processes events sequentially and will stop fetching once the 'Max Objects to\
+    \ Return' limit is reached.\n- Results are presented as individual data tables\
+    \ for each event on the case wall and as a combined JSON result.\n\n### Flow Description\n\
+    1. **Initialization**: The action extracts MISP integration settings (API Root,\
+    \ API Key, SSL preferences) and action parameters (Event IDs and result limit).\n\
+    2. **Event Processing**: It iterates through the provided list of Event IDs.\n\
+    3. **Data Retrieval**: For each ID, it queries the MISP API to fetch the event's\
+    \ data and extracts the 'Object' attributes.\n4. **Limit Enforcement**: The action\
+    \ tracks the number of objects retrieved and stops if the user-defined limit is\
+    \ reached.\n5. **Output Generation**: \n    - For each event where objects are\
+    \ found, a data table is added to the case wall.\n    - A comprehensive JSON object\
+    \ containing all found objects is attached to the action result.\n    - A summary\
+    \ message is generated indicating which events were successfully processed and\
+    \ which were not found."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables to the case wall for each MISP event processed,
+      displaying the objects found within those events.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Sightings of an Attribute:
+  ai_description: >-
+    ### General Description
+
+    The **List Sightings of an Attribute** action retrieves a list of sightings for
+    specific attributes within the MISP (Malware Information Sharing Platform) instance.
+    This action allows security analysts to understand the prevalence and historical
+    context of specific indicators (such as IPs, hashes, or domains) by identifying
+    how many times and by which organizations they have been observed.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Attribute Name | String | No | A comma-separated list of attribute values (e.g.,
+    '1.1.1.1', 'malware.exe') to search for. |
+
+    | Event ID | String | No* | The ID or UUID of the MISP event to search within.
+    This is **mandatory** if 'Attribute Search' is set to 'Provided Event'. |
+
+    | Category | String | No | A comma-separated list of MISP categories to filter
+    attributes (e.g., 'External Analysis', 'Payload Delivery'). |
+
+    | Type | String | No | A comma-separated list of MISP attribute types to filter
+    (e.g., 'md5', 'ip-src', 'domain'). |
+
+    | Attribute Search | String | Yes | Determines the search scope: 'All Events'
+    for a global search or 'Provided Event' to search within a specific event. |
+
+    | Attribute UUID | String | No | A comma-separated list of specific MISP attribute
+    UUIDs to search for. |
+
+
+    ### Additional Notes
+
+    - **Priority Logic:** If both 'Attribute Name' and 'Attribute UUID' are provided,
+    the action prioritizes the 'Attribute UUID' values for the search.
+
+    - **Conditional Requirement:** The 'Event ID' parameter must be filled if 'Attribute
+    Search' is set to 'Provided Event'; otherwise, the action will fail.
+
+    - **Validation:** The action validates that provided categories match existing
+    MISP category types before execution.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action extracts the MISP configuration and user-provided
+    parameters, including search scope and attribute identifiers.
+
+    2. **Validation:** It verifies that an Event ID is provided if the search is scoped
+    to a specific event and ensures the provided categories are valid.
+
+    3. **Attribute Discovery:** The action queries the MISP API to find attributes
+    matching the provided names, UUIDs, types, and categories within the chosen scope.
+
+    4. **Sighting Retrieval:** For every matching attribute found, the action performs
+    a secondary request to the MISP sightings endpoint to retrieve all recorded observation
+    data.
+
+    5. **Output Generation:** The action compiles the sighting data into a JSON result
+    and generates formatted data tables on the case wall for each attribute processed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables to the case wall and populates the result JSON with
+      sightings information retrieved from MISP.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "The Ping action is a diagnostic utility designed to verify the\
+    \ connectivity between Google SecOps and a MISP (Malware Information Sharing Platform)\
+    \ instance. It ensures that the provided configuration parameters, such as the\
+    \ API Root and API Key, are correct and that the network path is open. \n\n###\
+    \ Parameters\n| Parameter Name | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| Api Root | String | Yes | The base URL of the MISP instance\
+    \ (e.g., https://misp.example.com). |\n| Api Key | String | Yes | The authentication\
+    \ token used to interact with the MISP API. |\n| Use SSL | Boolean | No | If enabled,\
+    \ the action will verify the SSL certificate of the MISP server. Defaults to False.\
+    \ |\n| CA Certificate File | String | No | A Base64 encoded string of a CA certificate\
+    \ used for SSL verification if a private or custom CA is used. |\n\n### Additional\
+    \ Notes\nThis action does not require any input entities and is typically used\
+    \ during the initial setup of the MISP integration or for troubleshooting connection\
+    \ issues.\n\n### Flow Description\n1. **Parameter Extraction:** The action retrieves\
+    \ the MISP server URL, API key, and SSL configuration from the integration settings.\n\
+    2. **Manager Initialization:** It initializes the MISPManager, which configures\
+    \ the request session with the provided authentication headers and SSL settings.\n\
+    3. **Connectivity Test:** The manager executes a 'test_connectivity' method, which\
+    \ performs a lightweight API call (searching for events with a limit of 1) to\
+    \ the MISP server.\n4. **Result Reporting:** If the API call is successful, the\
+    \ action returns a 'true' result and a success message. If the call fails due\
+    \ to authentication errors, network timeouts, or invalid certificates, it catches\
+    \ the exception and returns a 'false' result with the error details."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Publish Event:
+  ai_description: >-
+    ### General Description
+
+    This action allows users to publish a specific event in the MISP (Malware Information
+    Sharing Platform) instance. Publishing an event is a state-changing operation
+    that makes the event and its associated attributes visible to all members of the
+    sharing group assigned to that event. This is typically used after an event has
+    been fully populated with threat intelligence and is ready for distribution.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The unique numeric ID or UUID of the MISP event that
+    you wish to publish. |
+
+
+    ### Additional Notes
+
+    - The action first verifies the existence of the event before attempting to publish
+    it.
+
+    - If the event is already published, the action will still complete successfully,
+    returning the current state of the event.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the MISP manager using the provided
+    API root, API key, and SSL configuration.
+
+    2. **Verification**: It attempts to retrieve the event from MISP using the provided
+    `Event ID` to ensure it exists.
+
+    3. **Execution**: It sends a POST request to the MISP API's publish endpoint for
+    the specified event.
+
+    4. **Result Processing**: The action checks the `published` status of the returned
+    event object. If true, it reports success and attaches the full event data as
+    a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Changes the status of an event in MISP from unpublished to published, which
+      triggers notifications and makes the data visible to other users in the sharing
+      group.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Tag from an Attribute:
+  ai_description: "Removes specified tags from attributes within the MISP platform.\
+    \ This action allows users to target attributes based on their names, UUIDs, categories,\
+    \ or types. The search for these attributes can be scoped to a specific MISP event\
+    \ or performed across all events in the system. \n\n### Parameters\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Tag Name\
+    \ | String | Yes | A comma-separated list of tags to be removed from the identified\
+    \ attributes. |\n| Attribute Name | String | No | A comma-separated list of attribute\
+    \ identifiers (values) to target. |\n| Attribute UUID | String | No | A comma-separated\
+    \ list of attribute UUIDs to target. If both Name and UUID are provided, UUID\
+    \ takes precedence. |\n| Event ID | String | No | The ID or UUID of the MISP event.\
+    \ Required if 'Attribute Search' is set to 'Provided Event' or if an 'Object UUID'\
+    \ is specified. |\n| Attribute Search | Dropdown | No | Determines the search\
+    \ scope: 'Provided Event' (default) searches within the specified Event ID, while\
+    \ 'All Events' searches globally. |\n| Category | String | No | A comma-separated\
+    \ list of MISP categories (e.g., 'Payload delivery', 'Network activity') to filter\
+    \ the attributes. |\n| Type | String | No | A comma-separated list of MISP attribute\
+    \ types (e.g., 'md5', 'ip-src') to filter the attributes. |\n| Object UUID | String\
+    \ | No | The UUID of a specific MISP object. If provided, the action only targets\
+    \ attributes belonging to this object. |\n\n### Additional Notes\n- If 'Attribute\
+    \ Search' is set to 'Provided Event', the 'Event ID' parameter must be populated.\n\
+    - If an 'Object UUID' is provided, the 'Event ID' must also be provided to locate\
+    \ the object.\n\n### Flow Description\n1. **Initialization**: The action parses\
+    \ the input parameters and establishes a connection to the MISP API.\n2. **Validation**:\
+    \ It verifies that mandatory parameters are present and that conditional requirements\
+    \ (like Event ID for specific search scopes) are met.\n3. **Tag Resolution**:\
+    \ It fetches the internal MISP identifiers for the provided tag names to ensure\
+    \ they exist.\n4. **Attribute Discovery**: Based on the search scope (Global or\
+    \ Event-specific) and filters (Name, UUID, Category, Type, Object), it retrieves\
+    \ the list of matching attributes from MISP.\n5. **Tag Removal**: For every matching\
+    \ attribute found, the action sends a request to MISP to remove each of the specified\
+    \ tags.\n6. **Reporting**: The action summarizes which attributes had tags successfully\
+    \ removed and which failed or were not found."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes tags from attributes in the MISP platform via POST requests to the /tags/removeTagFromObject
+      endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Tag from an Event:
+  ai_description: >-
+    Removes one or more tags from a specific event in MISP. This action allows users
+    to manage event metadata by providing an Event ID (or UUID) and a list of tags
+    to be detached. It first validates the existence of the event and the tags within
+    the MISP instance before attempting the removal.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The unique ID or UUID of the MISP event from which
+    tags should be removed. |
+
+    | Tag Name | String | Yes | A comma-separated list of tag names to remove from
+    the event. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the MISP instance using the provided API Root
+    and API Key.
+
+    2. **Event Validation**: Verifies that the specified Event ID exists in MISP and
+    retrieves its internal ID.
+
+    3. **Tag Identification**: Searches for the provided tag names in the MISP system
+    to obtain their corresponding internal tag IDs.
+
+    4. **Tag Removal**: Iterates through the identified tags and sends a request to
+    the MISP API to remove each tag from the specified event.
+
+    5. **Result Reporting**: Compiles a summary of successfully removed tags, tags
+    that were not found in the system, and any tags that failed to be removed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specified tags from an existing event in the MISP platform via a POST
+      request to the /events/removeTag/ endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set IDS Flag for an Attribute:
+  ai_description: >-
+    ### General Description
+
+    Sets the IDS (Intrusion Detection System) flag for specific attributes within
+    a MISP instance. This action allows security analysts to programmatically mark
+    indicators as suitable for export to detection systems, either globally across
+    all events or scoped to a specific MISP event. It supports filtering attributes
+    by name, UUID, category, and type to ensure precise targeting.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Attribute Name | String | No | A comma-separated list of attribute values (e.g.,
+    an IP address or file hash) to search for. |
+
+    | Event ID | String | No | The ID or UUID of the MISP event. This is **mandatory**
+    if 'Attribute Search' is set to 'Provided Event'. |
+
+    | Category | String | No | A comma-separated list of MISP categories (e.g., 'Payload
+    delivery', 'External analysis') to filter the attributes. |
+
+    | Type | String | No | A comma-separated list of MISP attribute types (e.g., 'md5',
+    'ip-src') to filter the attributes. |
+
+    | Attribute Search | String | Yes | Defines the search scope. Options are 'All
+    Events' (search globally) or 'Provided Event' (search only within the event specified
+    by 'Event ID'). Default is 'Provided Event'. |
+
+    | Attribute UUID | String | No | A comma-separated list of specific MISP attribute
+    UUIDs to target. |
+
+
+    ### Additional Notes
+
+    - **Precedence:** If both 'Attribute Name' and 'Attribute UUID' are provided,
+    the action logic prioritizes 'Attribute UUID' for identification and reporting.
+
+    - **Validation:** The 'Category' parameter is validated against a hardcoded list
+    of acceptable MISP categories: 'External Analysis', 'Payload Delivery', 'Artifacts
+    Dropped', and 'Payload Installation'.
+
+    - **Dependency:** If 'Attribute Search' is set to 'Provided Event' but no 'Event
+    ID' is supplied, the action will fail.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Extracts MISP integration configuration (API Root, Key,
+    SSL settings) and action parameters.
+
+    2. **Validation:** Checks if the provided 'Category' values are valid and ensures
+    'Event ID' is present if the search is scoped to a specific event.
+
+    3. **Event Verification:** If 'Provided Event' is selected, the action verifies
+    that the specified event exists in MISP.
+
+    4. **Attribute Retrieval:** Queries the MISP API to find attributes matching the
+    provided criteria (Name/UUID, Category, Type) within the defined search scope.
+
+    5. **Flag Update:** Iterates through the discovered attributes and performs a
+    POST request to MISP for each, setting the 'to_ids' field to true.
+
+    6. **Reporting:** Compiles a list of successfully updated attributes and any that
+    failed the update process, providing a final status message to the SOAR case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the 'to_ids' flag of existing attributes in the MISP platform to 'true',
+      which changes the attribute's state to be included in IDS exports.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unpublish Event:
+  ai_description: "Unpublishes a specific event in MISP using its ID or UUID. Unpublishing\
+    \ an event is a state-changing operation that prevents the event from being visible\
+    \ to shared groups, effectively restricting its distribution. \n\n### Parameters\n\
+    | Parameter Name | Type | Mandatory | Description |\n| :--- | :--- | :--- | :---\
+    \ |\n| Event ID | String | Yes | The unique ID (numeric) or UUID of the MISP event\
+    \ you wish to unpublish. |\n\n### Flow Description\n1. **Initialization**: The\
+    \ action initializes the MISP manager using the provided API root, API key, and\
+    \ SSL configurations.\n2. **Verification**: It first attempts to retrieve the\
+    \ event from MISP using the provided 'Event ID' to ensure it exists before attempting\
+    \ to modify it.\n3. **Execution**: The action sends a POST request to the MISP\
+    \ unpublish endpoint for the specified event.\n4. **Validation**: It checks the\
+    \ 'published' attribute of the returned event object to confirm if the unpublish\
+    \ operation was successful.\n5. **Output**: The action returns the full JSON representation\
+    \ of the updated event and provides a status message indicating success or failure."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Changes the 'published' status of an event in the MISP platform to 'false',
+      which restricts its visibility to other organizations or shared groups.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unset IDS Flag for an Attribute:
+  ai_description: >-
+    ### General Description
+
+    Unsets the IDS (Intrusion Detection System) flag for specific attributes within
+    the MISP platform. This action is used to prevent specific indicators from being
+    exported to IDS/IPS systems by setting their 'to_ids' property to false. It can
+    target attributes within a specific event or across all events based on names,
+    UUIDs, categories, and types.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Attribute Name | String | No | A comma-separated list of attribute values (e.g.,
+    an IP address or file hash) to target. |
+
+    | Event ID | String | No | The ID or UUID of the MISP event. This is **mandatory**
+    if 'Attribute Search' is set to 'Provided Event'. |
+
+    | Category | String | No | A comma-separated list of MISP categories to filter
+    the search (e.g., 'Payload Delivery', 'Artifacts Dropped'). |
+
+    | Type | String | No | A comma-separated list of MISP attribute types to filter
+    the search (e.g., 'md5', 'ip-src'). |
+
+    | Attribute Search | String | No | Defines the search scope. Options are 'Provided
+    Event' (searches only within the specified Event ID) or 'All Events' (searches
+    globally). Default is 'Provided Event'. |
+
+    | Attribute UUID | String | No | A comma-separated list of specific attribute
+    UUIDs to target. If both 'Attribute Name' and 'Attribute UUID' are provided, the
+    action prioritizes UUIDs. |
+
+
+    ### Additional Notes
+
+    - Either 'Attribute Name' or 'Attribute UUID' should be provided to identify specific
+    attributes.
+
+    - If 'Attribute Search' is set to 'Provided Event', the 'Event ID' parameter must
+    be filled.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts MISP configuration and action parameters.
+
+    2. **Validation**: Validates that the 'Event ID' is provided if the search scope
+    is limited to a specific event and checks that provided categories are valid MISP
+    category types.
+
+    3. **Search**: Connects to MISP and retrieves attributes matching the provided
+    criteria (names, UUIDs, categories, types) within the chosen scope (specific event
+    or global).
+
+    4. **Mutation**: For every matching attribute found, the action sends a request
+    to the MISP API to set the 'to_ids' flag to '0' (False).
+
+    5. **Reporting**: Compiles a list of attributes that were successfully updated
+    and those that failed, providing a summary message to the user.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the 'to_ids' field of attributes in the MISP platform to False, which
+      changes the state of the indicator's export settings.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Upload File:
+  ai_description: >-
+    Uploads one or more files to a specific MISP event. This action allows users to
+    attach malware samples or other file-based evidence to existing MISP events by
+    providing local file paths. It supports configuring the MISP category, distribution
+    level, and IDS flags for the uploaded files.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event ID | String | Yes | The ID or UUID of the MISP event where the file(s)
+    will be uploaded. |
+
+    | File Path | String | Yes | A comma-separated list of absolute local file paths
+    for the files to be uploaded. |
+
+    | Category | String | No | The MISP category for the uploaded file (e.g., 'External
+    Analysis', 'Payload Delivery'). Defaults to 'External analysis'. |
+
+    | Distribution | String | No | The distribution level for the file (0-3 or string
+    names like 'Community'). Defaults to 'Community' (1). |
+
+    | For Intrusion Detection System | Boolean | Yes | If true, the uploaded file
+    will be flagged for use in Intrusion Detection Systems (to_ids). Defaults to False.
+    |
+
+    | Comment | String | No | An optional comment to associate with the uploaded file
+    attribute in MISP. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves integration configuration (API Root, Key, SSL
+    settings) and action parameters.
+
+    2. **Validation**: Validates that the provided distribution value is acceptable
+    and checks if all specified file paths exist on the local file system.
+
+    3. **Event Verification**: Checks if the target MISP event exists using the provided
+    Event ID/UUID.
+
+    4. **File Processing**: Iterates through the list of file paths, reads the binary
+    content, and encodes it into Base64.
+
+    5. **Upload**: Sends a POST request to the MISP `upload_sample` endpoint for each
+    file, including metadata like category, distribution, and IDS flags.
+
+    6. **Result Handling**: Retrieves the updated event details from MISP and returns
+    them as the action's JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Uploads files to the MISP platform, creating new attributes or objects within
+      a specific MISP event.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

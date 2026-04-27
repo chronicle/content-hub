@@ -1,0 +1,289 @@
+Enrich Entities:
+  ai_description: "### General Description\nEnriches Hostname and IP Address entities\
+    \ using information retrieved from the Fortinet FortiSIEM Configuration Management\
+    \ Database (CMDB). This action helps security analysts understand the context\
+    \ of a device within the network by providing details such as the device vendor,\
+    \ model, access protocols, and discovery time.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Target Organization | String | No | Specify an optional target organization\
+    \ name to restrict the CMDB search to a specific organization within FortiSIEM.\
+    \ |\n\n### Additional Notes\n- The action supports **ADDRESS** (IP) and **HOSTNAME**\
+    \ entity types.\n- For Hostname entities, the identifier should match the \"name\"\
+    \ of the device as registered in FortiSIEM.\n- Enrichment data is prefixed with\
+    \ \"FortiSIEM\" in the entity's additional properties.\n\n### Flow Description\n\
+    1. **Connectivity Check**: The action initializes the FortiSIEM manager and performs\
+    \ a connectivity test to ensure the API is reachable.\n2. **Entity Filtering**:\
+    \ It identifies all entities in the current context that are either IP Addresses\
+    \ or Hostnames.\n3. **CMDB Query**: For each supported entity, the action sends\
+    \ a GET request to the FortiSIEM CMDB endpoint (`/phoenix/rest/cmdbDeviceInfo/device`).\
+    \ If a `Target Organization` is provided, it is included in the query parameters.\n\
+    4. **Data Extraction**: The action parses the XML response from FortiSIEM, extracting\
+    \ device metadata including `accessIp`, `name`, `vendor`, `model`, and `discoverTime`.\n\
+    5. **Internal Mutation**: \n    - Updates the entity's **Additional Properties**\
+    \ with the retrieved metadata.\n    - Adds a detailed **Entity Table** to the\
+    \ entity's profile in the SOAR.\n    - Marks the entity as **Enriched**.\n6. **Finalization**:\
+    \ Updates the entities within Google SecOps and returns a summary of successful\
+    \ and failed enrichments."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with CMDB information and adds entity tables
+      to the entity profile.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute Custom Query:
+  ai_description: >-
+    Executes a custom XML-based event query in Fortinet FortiSIEM to retrieve specific
+    log data. This action is designed to handle long-running queries asynchronously
+    by polling the FortiSIEM API for progress until completion. It allows users to
+    define specific query conditions, select return fields, and manage result sorting
+    and time frames.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | String | Yes | The query string used to filter events (e.g., `(relayDevIpAddr
+    = 10.0.0.1)`). |
+
+    | Fields To Return | String | No | A comma-separated list of specific fields to
+    include in the results. If empty, all fields are returned. |
+
+    | Sort Field | String | No | The attribute name used to sort the results. |
+
+    | Sort Order | Enum | No | The direction of sorting: `DESC` (default) or `ASC`.
+    |
+
+    | Max Results To Return | Integer | No | The maximum number of event records to
+    retrieve. Default is 50. |
+
+    | Time Frame | Enum | No | Predefined time range for the query (e.g., `Last Hour`,
+    `Last 24 Hours`). Default is `Last Hour`. |
+
+    | Start Time | String | No | The start time in ISO 8601 format. **Mandatory**
+    if 'Time Frame' is set to 'Custom'. |
+
+    | End Time | String | No | The end time in ISO 8601 format. If omitted with 'Custom'
+    time frame, the current time is used. |
+
+
+    ### Additional Notes
+
+    - This action runs asynchronously. It will submit the query and then enter an
+    'In Progress' state, polling the external system until the data is ready.
+
+    - If the 'Time Frame' is set to 'Custom', the 'Start Time' parameter must be provided,
+    otherwise the action will fail.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts integration configuration and action parameters,
+    validating the 'Max Results To Return' value.
+
+    2. **Time Calculation**: Determines the start and end timestamps based on the
+    'Time Frame' selection or custom input strings.
+
+    3. **Payload Construction**: Generates an XML payload containing the query logic,
+    selected fields, and sorting instructions.
+
+    4. **Query Submission (First Run)**: Sends a POST request to FortiSIEM to initiate
+    the event query and retrieves a unique Query ID.
+
+    5. **Progress Polling**: In subsequent runs, the action checks the status of the
+    query using the Query ID.
+
+    6. **Data Retrieval**: Once the query status reaches 100% (completed), the action
+    fetches the event results up to the specified limit.
+
+    7. **Output**: The retrieved events are formatted and added to the action's JSON
+    results and a data table named 'Custom Query Results'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute Simple Query:
+  ai_description: >-
+    ### General Description\nThe **Execute Simple Query** action allows users to perform
+    targeted event searches within Fortinet FortiSIEM. It constructs a structured
+    XML query based on various filtering criteria such as event types, categories,
+    severity levels, and specific event IDs. This action is executed asynchronously,
+    meaning it submits the query and then polls the FortiSIEM system until the results
+    are ready, making it suitable for potentially long-running searches.\n\n### Parameters
+    Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- | :---
+    | :--- |\n| Fields To Return | String | No | A comma-separated list of specific
+    fields to include in the results. If left empty, all available fields are returned.
+    |\n| Sort Field | String | No | The field name to be used for sorting the results.
+    |\n| Sort Order | Enum | No | The direction of sorting: **DESC** (Descending)
+    or **ASC** (Ascending). Default is DESC. |\n| Minimum Severity to Fetch | Integer
+    | No | Filters results to only include events with a severity score equal to or
+    higher than this value. |\n| Event Types | String | No | A comma-separated list
+    of event types to filter the query. |\n| Event Category | String | No | A comma-separated
+    list of event categories to filter the query. |\n| Event IDs | String | No | A
+    comma-separated list of specific event IDs to retrieve. |\n| Start Time | String
+    | No | The start time for the query in ISO 8601 format (e.g., 2021-04-23T12:38Z).
+    Required if 'Time Frame' is set to 'Custom'. |\n| End Time | String | No | The
+    end time for the query in ISO 8601 format. If empty and 'Time Frame' is 'Custom',
+    it defaults to the current time. |\n| Max Results To Return | Integer | No | The
+    maximum number of event records to retrieve. Default is 50. |\n| Time Frame |
+    Enum | No | Predefined time ranges for the query (e.g., Last Hour, Last 24 Hours,
+    Last Week, Last Month, Custom). |\n\n### Additional Notes\n- **Conditional Requirement**:
+    If the **Time Frame** parameter is set to **Custom**, the **Start Time** parameter
+    must be provided for the action to run.\n- **Asynchronous Execution**: This action
+    is designed to handle long-running queries by polling the FortiSIEM server for
+    progress until completion.\n\n### Flow Description\n1. **Initialization**: The
+    action parses all input parameters and validates that the result limit and severity
+    are positive numbers.\n2. **Time Calculation**: It determines the start and end
+    timestamps based on the selected **Time Frame** or the provided **Start/End Time**
+    strings.\n3. **Payload Construction**: An XML query payload is built, incorporating
+    the specified filters (event types, categories, severity, etc.) and sorting preferences.\n4.
+    **Query Submission (First Run)**: The action sends the XML payload to the FortiSIEM
+    API to initiate the search and receives a unique `query_id`.\n5. **Progress Polling**:
+    In subsequent runs, the action uses the `query_id` to check the status of the
+    query on the server.\n6. **Data Retrieval**: Once the query status indicates completion
+    (100%), the action fetches the event data.\n7. **Output Generation**: The retrieved
+    events are processed into a JSON result and a data table named 'Simple Query Results'
+    for display in the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    Tests connectivity to the Fortinet FortiSIEM installation using the parameters
+    provided in the integration configuration. This action ensures that the Google
+    SecOps platform can successfully communicate with the FortiSIEM API by attempting
+    to access the monitored devices endpoint.
+
+
+    ### Parameters
+
+    | Parameter | Description | Type | Mandatory |
+
+    | --- | --- | --- | --- |
+
+    | API Root | The base URL of the FortiSIEM instance. | String | Yes |
+
+    | Username | The username used for authentication. | String | Yes |
+
+    | Password | The password used for authentication. | String | Yes |
+
+    | Verify SSL | Specifies whether to verify the SSL certificate of the FortiSIEM
+    instance. | Boolean | No |
+
+
+    ### Flow
+
+    1. **Parameter Initialization:** Extracts the connection details (API Root, Username,
+    Password, and SSL verification) from the integration's configuration settings.
+
+    2. **Manager Setup:** Initializes the FortiSIEM communication manager with the
+    extracted credentials.
+
+    3. **Connectivity Check:** Performs a GET request to the monitored devices endpoint
+    (`/phoenix/rest/deviceInfo/monitoredDevices`) to verify that the credentials are
+    valid and the service is reachable.
+
+    4. **Execution Result:** Returns a success state if the API responds correctly,
+    or a failure state with the specific error message if the connection fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,1563 @@
+Add User To Group:
+  ai_description: "### General Description\nThis action adds specified User entities\
+    \ to one or more Active Directory groups. It is primarily used for access management,\
+    \ containment (e.g., moving a user to a restricted group), or administrative automation.\
+    \ The action interacts with an Active Directory server via LDAP to modify group\
+    \ membership.\n\n### Parameters Description\n| Parameter | Type | Mandatory |\
+    \ Description |\n| :--- | :--- | :--- | :--- |\n| Group Name | String | Yes |\
+    \ A comma-separated list of Active Directory group names (e.g., 'Domain Admins,\
+    \ VPN_Users') to which the identified users should be added. |\n\n### Flow Description\n\
+    1. **Initialization**: Retrieves Active Directory connection settings (Server,\
+    \ Credentials, Domain, SSL) and the target group names from the action parameters.\n\
+    2. **Entity Filtering**: Identifies all `USERUNIQNAME` entities within the current\
+    \ scope.\n3. **Group Parsing**: Converts the comma-separated 'Group Name' string\
+    \ into a unique list of target groups.\n4. **LDAP Operations**: For each user\
+    \ entity, the action iterates through the target groups and performs an LDAP `MODIFY_ADD`\
+    \ operation on the group's 'member' attribute using the user's Distinguished Name\
+    \ (DN).\n5. **Result Handling**: \n    * Tracks successful additions.\n    * Identifies\
+    \ if a user was already a member of a group.\n    * Catches errors such as 'User\
+    \ Not Found', 'Group Not Found', or 'Insufficient Access Rights'.\n6. **Final\
+    \ Output**: Produces a summary message detailing which users were added to which\
+    \ groups and sets the action's success status based on whether any modifications\
+    \ were successfully processed."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action modifies the 'member' attribute of group objects within the external
+      Active Directory system to add user accounts to those groups.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Change Host OU:
+  ai_description: >-
+    ### General Description
+
+    This action changes the Organizational Unit (OU) of a Hostname entity within Active
+    Directory. It is primarily used for administrative tasks such as moving compromised
+    hosts to a quarantine OU or reorganizing network assets. The action connects to
+    the Active Directory server, locates the host and the target OU, and performs
+    a Distinguished Name (DN) modification to relocate the object.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **OU Name** | String | Yes | The name of the target Organizational Unit (OU)
+    where the host should be moved. Note: The metadata description mentions 'user's
+    OU', but the logic specifically targets Host objects. |
+
+
+    ### Additional Notes
+
+    - The action requires valid Active Directory credentials (Username, Password,
+    Domain) and server details configured in the integration settings.
+
+    - It uses the `modify_dn` LDAP operation, which changes the parent container of
+    the host object.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves Active Directory connection details
+    (Server, Credentials, SSL settings) and the target **OU Name**.
+
+    2. **Entity Filtering**: It identifies all `HOSTNAME` entities provided in the
+    current Google SecOps context.
+
+    3. **LDAP Search**: For each host, it queries Active Directory to find the host's
+    current Distinguished Name (DN) and the target OU's Distinguished Name.
+
+    4. **Relocation**: It executes a `modify_dn` command to move the host object from
+    its current location to the new superior container (the target OU).
+
+    5. **Reporting**: The action tracks which hosts were successfully moved and which
+    failed, providing a summary message and setting the final execution status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action modifies the Active Directory database by changing the 'distinguishedName'
+      of a computer object, effectively moving it to a different Organizational Unit
+      (OU).
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Change User OU:
+  ai_description: >-
+    ### General Description
+
+    Changes the Organizational Unit (OU) for User entities in Active Directory. This
+    action allows administrators to move user objects between different logical containers
+    within the directory structure, which is typically used for organizational restructuring
+    or applying different Group Policy Objects (GPOs).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | OU Name | String | Yes | The name of the target Organizational Unit where the
+    user(s) should be moved. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the Active Directory server using the integration's
+    configuration (Server, Domain, Credentials, SSL settings).
+
+    2. **Entity Filtering**: Filters the target entities to identify those of type
+    'USER'.
+
+    3. **Lookup**: For each identified user, the action queries Active Directory to
+    retrieve the user's current Distinguished Name (DN) and searches for the target
+    OU's Distinguished Name based on the provided 'OU Name'.
+
+    4. **Execution**: If both the user and the target OU are found, it executes an
+    LDAP `modify_dn` operation to move the user object to the new parent container.
+
+    5. **Reporting**: Tracks successful and failed operations, returning a summary
+    message to the Google SecOps case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Moves user objects to a different Organizational Unit (OU) within the Active
+      Directory hierarchy using the LDAP modify_dn operation.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Disable account:
+  ai_description: >-
+    ### General Description
+
+    Disables user accounts in Active Directory. This action is used to programmatically
+    lock out users by modifying their account control flags in the directory service,
+    typically as a response to a security incident or offboarding request.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server | String | Yes | The IP address or hostname of the Active Directory server.
+    |
+
+    | Username | String | Yes | The username of the service account used to authenticate
+    with Active Directory. |
+
+    | Password | String | Yes | The password of the service account used to authenticate
+    with Active Directory. |
+
+    | Domain | String | Yes | The Active Directory domain (e.g., example.com). |
+
+    | Use SSL | Boolean | Yes | Specifies whether to use a secure SSL (LDAPS) connection.
+    |
+
+    | Custom Query Fields | String | No | A comma-separated list of additional Active
+    Directory attributes to search against when identifying the user. |
+
+    | CA Certificate File | String | No | A Base64 encoded string of the CA certificate
+    file used for SSL validation. |
+
+
+    ### Additional Notes
+
+    - The action specifically targets entities of type `USERUNIQNAME`.
+
+    - It uses bitwise operations on the `userAccountcontrol` attribute to set the
+    `ACCOUNTDISABLE` flag (0x02).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the connection to Active Directory
+    using the provided server, domain, and credentials.
+
+    2. **Entity Filtering**: It identifies all `USERUNIQNAME` entities within the
+    current scope.
+
+    3. **User Lookup**: For each entity, it queries Active Directory to find the corresponding
+    user object and retrieve its Distinguished Name (DN) and current `userAccountcontrol`
+    value.
+
+    4. **Account Modification**: It performs a bitwise OR operation on the current
+    account control value to include the 'Disabled' flag and sends a modify request
+    to the AD server.
+
+    5. **Result Reporting**: The action tracks successful and failed modifications
+    and returns a summary message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Disables the user account in Active Directory by modifying the 'userAccountcontrol'
+      attribute to include the 'ACCOUNTDISABLE' flag.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Disable computer:
+  ai_description: >-
+    ### General Description
+
+    This action disables computer accounts in Active Directory for the provided Hostname
+    entities. It is primarily used for containment during security incidents to prevent
+    a compromised machine from authenticating or interacting with the domain.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server | String | Yes | The IP address or hostname of the Active Directory server.
+    |
+
+    | Username | String | Yes | The username used to authenticate with the Active
+    Directory server. |
+
+    | Password | String | Yes | The password used to authenticate with the Active
+    Directory server. |
+
+    | Domain | String | Yes | The Active Directory domain (e.g., example.com). |
+
+    | Use SSL | Boolean | Yes | Specifies whether to use a secure SSL connection for
+    the LDAP communication. |
+
+    | Custom Query Fields | String | No | A comma-separated list of additional LDAP
+    fields to include in the search query. |
+
+    | CA Certificate File | String | No | A Base64 encoded string of the CA certificate
+    file for SSL validation. |
+
+
+    ### Additional Notes
+
+    - The action specifically targets entities of type **HOSTNAME**.
+
+    - It modifies the `userAccountControl` attribute in Active Directory to the value
+    `4098` (Workstation/Server Account Disabled).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action connects to the Active Directory server using
+    the provided credentials and configuration (SSL, Domain, etc.).
+
+    2. **Entity Filtering**: It identifies all `HOSTNAME` entities within the current
+    Google SecOps context.
+
+    3. **Search**: For each Hostname, the action queries Active Directory to locate
+    the corresponding computer object's Distinguished Name (DN).
+
+    4. **Mutation**: If the computer object is found, the action sends an LDAP modification
+    request to update the `userAccountControl` attribute, effectively disabling the
+    computer account.
+
+    5. **Reporting**: The action tracks which entities were successfully disabled,
+    which were not found in AD, and which failed due to errors, providing a summary
+    in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the 'userAccountControl' attribute of the computer object in Active
+      Directory to the disabled state (value 4098).
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enable account:
+  ai_description: >-
+    ### General Description
+
+    The **Enable account** action allows security analysts to reactivate a disabled
+    user account within Microsoft Active Directory directly from the Google SecOps
+    platform. This is typically used during incident remediation when a previously
+    locked or disabled account is deemed safe to restore.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server | String | Yes | The IP address or FQDN of the Active Directory server.
+    |
+
+    | Username | String | Yes | The administrative username for LDAP authentication.
+    |
+
+    | Password | String | Yes | The password for the administrative user. |
+
+    | Domain | String | Yes | The target Active Directory domain (e.g., 'domain.local').
+    |
+
+    | Use SSL | Boolean | Yes | Specifies whether to use a secure LDAPS connection.
+    |
+
+    | Custom Query Fields | String | No | Optional comma-separated list of LDAP attributes
+    to include in the search. |
+
+    | CA Certificate File | String | No | Base64 encoded string of the CA certificate
+    for SSL verification. |
+
+
+    ### Additional Notes
+
+    - The action specifically targets `USER` entity types.
+
+    - It uses bitwise operations on the `userAccountcontrol` attribute to toggle the
+    `ACCOUNTDISABLE` flag (0x02).
+
+    - If an account is already enabled, the action will report it as such without
+    attempting a redundant modification.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration parameters and initializes
+    the `ActiveDirectoryManager` to establish a connection with the LDAP server.
+
+    2. **Entity Filtering**: It identifies all `USER` entities within the current
+    alert context.
+
+    3. **Timeout Check**: For each entity, it verifies if the execution deadline has
+    passed to prevent script timeouts.
+
+    4. **Account Lookup**: It queries Active Directory for the specific user using
+    the entity's identifier.
+
+    5. **Status Verification**: It checks the `userAccountcontrol` attribute to determine
+    if the account is already enabled.
+
+    6. **Account Activation**: If the account is disabled, it performs an LDAP `MODIFY_REPLACE`
+    operation on the `userAccountcontrol` attribute to enable the account.
+
+    7. **Result Reporting**: It tracks successful activations, accounts already active,
+    and failures, providing a summary message at the end of the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies the 'userAccountcontrol' attribute of the user object in Active Directory
+      to remove the 'ACCOUNTDISABLE' flag (0x02), thereby enabling the account.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enable computer:
+  ai_description: >-
+    ### General Description
+
+    Enables a computer account in Active Directory. This action is used to reactivate
+    disabled computer accounts within the domain, typically as part of a remediation
+    or recovery workflow. It targets Hostname entities and modifies their account
+    control status directly in the directory service.
+
+
+    ### Parameters Description
+
+    This action does not have any action-specific parameters. It relies on the following
+    integration-level configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server | String | Yes | The IP address or hostname of the Active Directory server.
+    |
+
+    | Username | String | Yes | The administrative username used to authenticate with
+    the AD server. |
+
+    | Password | String | Yes | The password for the administrative user. |
+
+    | Domain | String | Yes | The Active Directory domain (e.g., example.com). |
+
+    | Use SSL | Boolean | Yes | Indicates whether to use a secure SSL connection for
+    LDAP communication. |
+
+    | Custom Query Fields | String | No | A comma-separated list of additional LDAP
+    fields to query during the search. |
+
+    | CA Certificate File | String | No | A Base64 encoded string of the CA certificate
+    used for SSL validation. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `ActiveDirectoryManager` using
+    the integration's configuration settings (Server, Credentials, Domain, etc.).
+
+    2. **Entity Filtering**: It identifies all `HOSTNAME` entities provided in the
+    action context.
+
+    3. **LDAP Search**: For each hostname, the action performs an LDAP search to locate
+    the corresponding computer object in the directory using common host attributes
+    (e.g., `dNSHostName`, `cn`).
+
+    4. **Account Activation**: If the computer object is found, the action sends a
+    modify request to Active Directory to set the `userAccountcontrol` attribute to
+    `4096` (the standard value for an enabled computer account).
+
+    5. **Result Aggregation**: The action tracks which entities were successfully
+    enabled, which were not found in the directory, and which encountered errors,
+    providing a detailed summary in the output message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Enables a computer account in Active Directory by modifying the 'userAccountcontrol'
+      attribute of the computer object to the value 4096.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches **Hostname** and **User** entities with detailed properties from **Active
+    Directory**. This action allows security analysts to automatically pull contextual
+    information such as account status, group memberships, manager details, and organizational
+    unit paths directly into the Google SecOps case to aid in investigation and response.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Mark entities as internal | Boolean | No | If enabled, successfully enriched
+    entities will have their `is_internal` flag set to `true` within the platform.
+    |
+
+    | Specific Attribute Names To Enrich With | String | No | A comma-separated list
+    of specific Active Directory attributes to retrieve (e.g., `mail, department,
+    title`). If left empty, the action attempts to enrich with all available attributes.
+    |
+
+    | Should Case Wall Table be filtered by the specified Attributes? | Boolean |
+    No | If enabled, the visual data table displayed on the Case Wall will only show
+    the attributes explicitly listed in the 'Specific Attribute Names' parameter.
+    |
+
+    | Should JSON result be filtered by the specified Attributes? | Boolean | No |
+    If enabled, the raw JSON output for the action will only contain the attributes
+    explicitly listed in the 'Specific Attribute Names' parameter. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action establishes a connection to the Active Directory
+    server using the provided credentials and server configuration (supporting LDAP
+    or LDAPS).
+
+    2. **Entity Identification**: It identifies all supported entities (Users and
+    Hostnames) within the current alert or case scope.
+
+    3. **Data Retrieval**: For each entity, the action queries Active Directory for
+    its attributes. It uses recursive logic to resolve nested group memberships for
+    user entities.
+
+    4. **Attribute Filtering**: If specific attributes were requested via parameters,
+    the action filters the retrieved data to match those requirements.
+
+    5. **Internal Enrichment**: The action updates the entity's `additional_properties`
+    in Google SecOps with the retrieved data (prefixed with `AD_`) and sets the `is_enriched`
+    flag to `true`.
+
+    6. **Internal Flagging**: If the 'Mark entities as internal' parameter is set,
+    the action updates the entity's internal status.
+
+    7. **Reporting**: It generates a formatted CSV table for the Case Wall and attaches
+    the JSON result to the action output for further automation steps.
+
+    8. **Persistence**: Finally, it commits all entity updates back to the Google
+    SecOps platform.
+
+
+    ### Additional Notes
+
+    - The action is designed to be asynchronous, meaning it can handle large batches
+    of entities by processing them in iterations to avoid platform timeouts.
+
+    - Attribute names provided in the filtering parameters are case-sensitive.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with Active Directory attributes, sets
+      the is_enriched flag, optionally updates the is_internal flag, and adds data
+      tables to the case wall.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Force password update:
+  ai_description: >-
+    ### General Description
+
+    This action forces a user to update their password upon their next login to Active
+    Directory. It targets User entities and modifies the 'pwdLastSet' attribute in
+    the Active Directory database to a value of '0', which triggers the mandatory
+    password change requirement for the account.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server | String | Yes | The IP address or hostname of the Active Directory server.
+    |
+
+    | Username | String | Yes | The username used to authenticate with the Active
+    Directory server. |
+
+    | Password | String | Yes | The password used to authenticate with the Active
+    Directory server. |
+
+    | Domain | String | Yes | The Active Directory domain (e.g., example.com). |
+
+    | Use SSL | Boolean | Yes | If enabled, uses SSL (LDAPS) for the connection. |
+
+    | Custom Query Fields | String | No | Comma-separated list of additional LDAP
+    attributes to include in the search. |
+
+    | CA Certificate File | String | No | Base64 encoded string of the CA certificate
+    for SSL verification. |
+
+
+    ### Additional Notes
+
+    This action requires administrative privileges in Active Directory to modify user
+    attributes. It specifically targets the 'pwdLastSet' attribute. If the user is
+    not found in the directory, the action will report a failure for that specific
+    entity.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves connection details (Server, Credentials,
+    Domain) from the integration configuration.
+
+    2. **Connection**: It establishes a connection to the Active Directory server
+    using the `ldap3` library, optionally using SSL and a provided CA certificate.
+
+    3. **Entity Filtering**: It identifies all `USER` entities provided in the action
+    scope.
+
+    4. **User Lookup**: For each user entity, it queries Active Directory to find
+    the corresponding Distinguished Name (DN) using configured query fields.
+
+    5. **Attribute Modification**: It executes an LDAP modification command to set
+    the `pwdLastSet` attribute to '0' for the identified DN.
+
+    6. **Result Reporting**: The action tracks successes and failures, providing a
+    summary message and a boolean result indicating if any updates were successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the 'pwdLastSet' attribute to '0' for the specified user in Active Directory,
+      which forces a password change on the next login.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Group Members:
+  ai_description: "### General Description\nThis action retrieves the list of members\
+    \ (either Users or Hosts) belonging to a specific group within Active Directory.\
+    \ It is designed to provide visibility into group memberships, supporting both\
+    \ direct and nested (recursive) searches. The action is asynchronous and handles\
+    \ large datasets through pagination, ensuring that results are fetched efficiently\
+    \ up to a user-defined limit.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Group Name**\
+    \ | String | Yes | The name of the Active Directory group for which you want to\
+    \ retrieve members. |\n| **Members Type** | Dropdown | Yes | Specifies the type\
+    \ of members to fetch. Options are 'User' or 'Host'. This determines the `objectCategory`\
+    \ used in the LDAP query. |\n| **Perform Nested Search** | Boolean | Yes | If\
+    \ set to `True`, the action performs a recursive search to find all members, including\
+    \ those in sub-groups (using the LDAP_MATCHING_RULE_IN_CHAIN OID). If `False`,\
+    \ only direct members are returned. |\n| **Limit** | Integer | Yes | The maximum\
+    \ number of members to retrieve from Active Directory. This controls the pagination\
+    \ loop and total results returned. |\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the `ActiveDirectoryManager` using the integration's\
+    \ configuration (Server, Credentials, Domain, SSL settings).\n2. **Group Resolution**:\
+    \ It first resolves the provided **Group Name** to its Distinguished Name (DN)\
+    \ to ensure the group exists and to use it as a reference for the membership query.\n\
+    3. **Query Execution**: \n    * If it's the first run, it starts a new LDAP search\
+    \ for members of the specified **Members Type** belonging to the group.\n    *\
+    \ If **Perform Nested Search** is enabled, it applies the recursive matching rule\
+    \ to the LDAP filter.\n4. **Pagination & State Management**: The action uses LDAP\
+    \ paging. If the number of members exceeds the page size or the **Limit** hasn't\
+    \ been reached but more data is available (indicated by a cookie), the action\
+    \ saves its state (current results and pagination cookie) and enters an 'In Progress'\
+    \ state.\n5. **Completion**: Once all members are fetched or the **Limit** is\
+    \ reached, the action compiles the list of members (Common Name, Display Name,\
+    \ and Distinguished Name) and attaches it as a JSON result to the case."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Manager Contact Details:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves the contact details of a user's manager from Active Directory.
+    It is primarily used for enrichment during an investigation to identify the reporting
+    structure of a specific user entity. The action identifies the manager associated
+    with a user and then fetches that manager's name and telephone number.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server | String | Yes | The IP address or hostname of the Active Directory server.
+    |
+
+    | Username | String | Yes | The username used to authenticate with Active Directory.
+    |
+
+    | Password | String | Yes | The password used to authenticate with Active Directory.
+    |
+
+    | Domain | String | Yes | The Active Directory domain (e.g., example.com). |
+
+    | Use SSL | Boolean | Yes | If enabled, the connection to Active Directory will
+    use SSL/TLS. |
+
+    | Custom Query Fields | String | No | A comma-separated list of additional LDAP
+    fields to include in the search query. |
+
+    | CA Certificate File | String | No | A Base64-encoded string of the CA certificate
+    file for SSL validation. |
+
+
+    ### Additional Notes
+
+    - The action specifically looks for the `manager` attribute on the target user
+    entity and then performs a follow-up query to get the `name` and `telephoneNumber`
+    of that manager.
+
+    - If no manager is found for a user, the action will report success but indicate
+    that no manager details were available.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Active Directory manager using
+    the provided server, domain, and credentials.
+
+    2. **Entity Filtering**: It filters the target entities to identify those of type
+    `USERUNIQNAME`.
+
+    3. **User Lookup**: For each user entity, it queries Active Directory to find
+    the user's object and its `manager` attribute.
+
+    4. **Manager Enrichment**: If a manager is identified, the action performs a second
+    query to retrieve the manager's specific contact details (Name and Phone Number).
+
+    5. **Data Update**: The retrieved manager details are added to the user entity's
+    `additional_properties` (`AD_Manager_Name` and `AD_Manager_phone`).
+
+    6. **Result Generation**: A data table containing the manager's contact information
+    is attached to the entity, and the raw data is returned as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the User entity's additional properties with the manager's name and
+      phone number retrieved from Active Directory.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Is User In Group:
+  ai_description: >-
+    ### General Description
+
+    Checks whether specific User entities are members of a designated Active Directory
+    group. This action is primarily used for access verification and security policy
+    validation within an investigation flow. It supports recursive group membership
+    checks, meaning it will identify if a user is a member of a group even if that
+    membership is inherited through nested groups.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **GroupName** | String | Yes | The name of the Active Directory group to check
+    membership against (e.g., 'Administrators' or 'Domain Admins'). The name must
+    be spelled exactly as it appears in Active Directory. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Active Directory manager using
+    the integration's configuration parameters (Server, Credentials, Domain, SSL settings).
+
+    2. **Entity Filtering**: It identifies all `USERUNIQNAME` entities within the
+    current context.
+
+    3. **Group Retrieval**: For each identified user, the action queries Active Directory
+    to retrieve a complete list of groups the user belongs to. This process includes
+    a recursive search to account for nested group memberships.
+
+    4. **Membership Verification**: The action compares the user's retrieved group
+    list against the provided `GroupName` parameter.
+
+    5. **Result Compilation**: It records a boolean result (True/False) for each entity
+    and constructs a summary message detailing which users were found in the group
+    and which were not found in the directory.
+
+    6. **Final Output**: The results are returned as a JSON object mapping entity
+    identifiers to their membership status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List User Groups:
+  ai_description: >-
+    ### General Description\n\nThe **List User Groups** action retrieves a comprehensive
+    list of all Active Directory groups that a specific user belongs to. This includes
+    both direct group memberships and nested memberships (groups within groups). It
+    is primarily used for user access auditing and security investigations to understand
+    the full scope of a user's permissions.\n\n### Parameters Description\n\n| Parameter
+    | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| None | N/A
+    | N/A | This action does not require any action-specific input parameters. It
+    relies on the Active Directory integration configuration. |\n\n### Additional
+    Notes\n\n- The action automatically resolves nested group memberships recursively.\n-
+    It requires a valid connection to an Active Directory server configured in the
+    integration settings.\n\n### Flow Description\n\n1. **Initialization**: The action
+    initializes the connection to the Active Directory server using the integration's
+    global configuration (Server, Domain, Credentials, and SSL settings).\n2. **Entity
+    Filtering**: It identifies all `USERUNIQNAME` entities present in the current
+    context.\n3. **Group Retrieval**: For each identified user, the action queries
+    Active Directory to fetch the 'memberOf' attribute.\n4. **Recursive Resolution**:
+    The logic recursively traverses group memberships to identify all nested groups
+    the user is a part of.\n5. **Data Aggregation**: The resulting list of group names
+    is stored in a JSON object mapped to the user's identifier.\n6. **Finalization**:
+    The action attaches the JSON results to the case and provides a summary message
+    of the processed users.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Active Directory server using the provided credentials
+    and configuration. This action ensures that the Google SecOps platform can successfully
+    communicate with the Active Directory environment by attempting to bind to the
+    LDAP server and performing a basic search query.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server | String | Yes | The IP address or hostname of the Active Directory server.
+    |
+
+    | Username | String | Yes | The username used to authenticate with the Active
+    Directory server. |
+
+    | Password | String | Yes | The password used to authenticate with the Active
+    Directory server. |
+
+    | Domain | String | Yes | The Active Directory domain (e.g., example.com). |
+
+    | Use SSL | Boolean | Yes | Specifies whether to use a secure SSL connection for
+    the LDAP communication. |
+
+    | Custom Query Fields | String | No | A comma-separated list of additional LDAP
+    attributes to include in the test query. |
+
+    | CA Certificate File | String | No | A Base64 encoded string of the CA certificate
+    file used for SSL validation if 'Use SSL' is enabled. |
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action retrieves the connection details including
+    the server address, domain, credentials, and SSL settings from the integration
+    configuration.
+
+    2. **Manager Initialization**: It initializes the `ActiveDirectoryManager`, which
+    handles the LDAP connection logic, including TLS setup if a CA certificate is
+    provided.
+
+    3. **Connectivity Test**: The action invokes the `test_connectivity` method. This
+    method attempts to bind to the LDAP server and performs a search query for the
+    provided username to verify that the connection is active and the credentials
+    have the necessary permissions to read from the directory.
+
+    4. **Result Reporting**: If the LDAP search returns a result without errors, the
+    action completes with a success status and a 'Connection Established' message.
+    If any step fails (e.g., authentication failure, network timeout), an exception
+    is caught, and the action reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Release Locked Account:
+  ai_description: >-
+    ### General Description
+
+    This action unlocks a locked user account in Active Directory by resetting the
+    `lockoutTime` attribute. It is typically used in response to security incidents
+    where a user account has been locked due to multiple failed login attempts or
+    as part of a remediation workflow.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies on the global
+    integration configuration for Active Directory (Server, Domain, Username, Password,
+    etc.).
+
+
+    ### Additional Notes
+
+    * The action specifically targets entities of type **USER**.
+
+    * It requires the Active Directory integration to be properly configured with
+    administrative credentials capable of modifying user attributes.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `ActiveDirectoryManager` using
+    the provided integration configuration parameters (Server, Domain, Credentials,
+    SSL settings).
+
+    2. **Entity Filtering**: It identifies and filters the target entities to process
+    only those of type `USER`.
+
+    3. **Account Search**: For each valid user entity, the action queries Active Directory
+    to locate the user's Distinguished Name (DN) and verify their existence.
+
+    4. **Unlock Operation**: It performs an LDAP modify operation on the user's object,
+    setting the `lockoutTime` attribute to `0`, which effectively unlocks the account.
+
+    5. **Result Tracking**: The action tracks which accounts were successfully unlocked
+    and which failed, providing a summary message and a boolean result indicating
+    overall success.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Resets the 'lockoutTime' attribute to 0 in Active Directory for the specified
+      user account, which changes the account state from locked to unlocked.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove User From Group:
+  ai_description: >-
+    ### General Description
+
+    Removes User entities from one or more specified Active Directory groups. This
+    action is used for containment or access management, allowing security teams to
+    revoke group-based permissions for compromised or suspicious accounts directly
+    from Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Group Name | String | Yes | A comma-separated list of Active Directory groups
+    (e.g., 'Domain Admins, VPN_Users') from which the target users should be removed.
+    |
+
+
+    ### Additional Notes
+
+    - The action gracefully handles scenarios where a user is already not a member
+    of a specified group, reporting it as a successful state rather than a failure.
+
+    - It requires valid Active Directory credentials with sufficient permissions to
+    modify group memberships (specifically the 'member' attribute of the group objects).
+
+
+    ### Flow Description
+
+    1. **Initialization**: Establishes a connection to the Active Directory server
+    using the provided integration configuration (Server, Domain, Credentials, SSL).
+
+    2. **Parameter Parsing**: Converts the comma-separated 'Group Name' input into
+    a unique list of target groups.
+
+    3. **Entity Filtering**: Identifies all 'USER' entities within the current alert
+    or case scope.
+
+    4. **User Verification**: For each user entity, the action queries Active Directory
+    to verify the user's existence and retrieves their current group memberships.
+
+    5. **Membership Removal**: If a user is identified as a member of a target group,
+    the action sends an LDAP `MODIFY_DELETE` request to the group's 'member' attribute
+    to remove the user's Distinguished Name (DN).
+
+    6. **Result Aggregation**: Tracks the outcome for every user-group pair, distinguishing
+    between successful removals, users already absent from groups, and errors (e.g.,
+    insufficient permissions or missing groups).
+
+    7. **Final Reporting**: Returns a detailed summary message to the case wall and
+    sets the action result to true if at least one user was successfully processed
+    or verified as not in the group.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes user entities from Active Directory groups by executing an LDAP modification
+      request to delete the user's Distinguished Name from the group's 'member' attribute.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Active Directory:
+  ai_description: >-
+    ### General Description The Search Active Directory action allows users to execute
+    custom LDAP queries against an Active Directory (AD) environment to retrieve detailed
+    information about objects such as users, computers, or groups. This action is
+    useful for broad searches or finding specific objects that are not necessarily
+    linked to the current case entities. ### Parameters Description | Parameter |
+    Type | Mandatory | Description | | :--- | :--- | :--- | :--- | | Query String
+    | String | Yes | The LDAP query filter to execute (e.g., '(&(objectClass=user)(sAMAccountName=jdoe))').
+    | | Limit | Integer | No | The maximum number of records to retrieve from Active
+    Directory. If set to 0 or left empty, the action will fetch results based on internal
+    page sizes. | ### Flow Description 1. **Connection**: The action initializes a
+    connection to the Active Directory server using the integration's configuration
+    parameters (Server, Credentials, Domain, and SSL settings). 2. **Search Execution**:
+    It performs an LDAP search using the user-provided 'Query String'. 3. **Pagination**:
+    If the result set is large, the action uses pagination (with a page size of 1000)
+    and enters an asynchronous state to fetch subsequent pages until the 'Limit' is
+    reached or all results are retrieved. 4. **Data Parsing**: The retrieved AD entries
+    are parsed into a structured JSON format, including all standard and operational
+    attributes. 5. **Output**: The final list of objects is returned as the action's
+    result JSON. ### Additional Notes - This action is a standalone search utility
+    and does not iterate over or filter the entities present in the Google SecOps
+    case. - The action supports asynchronous execution to handle long-running searches
+    or large data volumes without timing out.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set User Password:
+  ai_description: >-
+    ### General Description
+
+    The **Set User Password** action allows security analysts to programmatically
+    update the password for a specific user account within Active Directory. This
+    is primarily used for account recovery, security resets after a compromise, or
+    administrative password management. The action requires a secure SSL connection
+    to the Active Directory server to perform the password modification.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **New Password** | String | Yes | The new password to be assigned to the target
+    user entity. This password must comply with the organization's Active Directory
+    password policy (complexity, length, etc.). |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves Active Directory connection details
+    (Server, Domain, Credentials, SSL settings) from the integration configuration.
+
+    2. **Entity Filtering**: It identifies all `USERUNIQNAME` entities within the
+    current alert or case scope.
+
+    3. **Connectivity**: Establishes a connection to the Active Directory server.
+    If SSL is enabled, it validates the certificate if provided.
+
+    4. **Password Update**: For each identified user entity, the action calls the
+    Active Directory `modify_password` extended operation to set the new password.
+
+    5. **Result Handling**: The action tracks which users were successfully updated
+    and which failed. Failures often occur if the password does not meet complexity
+    requirements or if an SSL connection is not established (which is a requirement
+    for password changes in AD).
+
+
+    ### Additional Notes
+
+    * **SSL Requirement**: Active Directory typically requires an encrypted (LDAPS/SSL)
+    connection to allow password changes. Ensure the 'Use SSL' configuration is enabled.
+
+    * **Password Policy**: If the action fails with an 'incorrect password' error
+    message, it usually indicates that the provided password did not meet the domain's
+    complexity or history requirements.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action changes the password of a user account in the external Active Directory
+      system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update attributes of an AD Host:
+  ai_description: >-
+    Updates specific attributes of existing Host entities in Active Directory. This
+    action allows administrators to modify LDAP properties (such as 'Description')
+    for computer objects directly from Google SecOps.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Attribute Name | String | Yes | The name of the Active Directory attribute to
+    update. Defaults to 'Description'. |
+
+    | Attribute Value | String | Yes | The new value to assign to the specified attribute.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Establishes a connection to the Active Directory server
+    using provided credentials and domain configurations.
+
+    2. **Entity Filtering**: Identifies all `HOSTNAME` entities within the current
+    context.
+
+    3. **Search**: For each host entity, the action queries Active Directory to locate
+    the corresponding computer object and retrieve its Distinguished Name (DN).
+
+    4. **Modification**: Executes an LDAP 'MODIFY_REPLACE' operation to update the
+    specified attribute with the new value.
+
+    5. **Outcome Reporting**: Tracks successes, missing objects (not found in AD),
+    and errors (such as invalid attributes or permission issues) to provide a detailed
+    summary in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies attribute values of computer objects within the Active Directory database
+      via LDAP modify operations.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update attributes of an AD User:
+  ai_description: >-
+    ### General Description
+
+    Updates specific attributes of existing Active Directory user entities. This action
+    allows security analysts to programmatically modify user properties such as descriptions,
+    phone numbers, or other LDAP-compliant attributes directly from the Google SecOps
+    interface.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Attribute Name | String | Yes | The name of the LDAP attribute to update (e.g.,
+    'Description', 'telephoneNumber'). Defaults to 'Description'. |
+
+    | Attribute Value | String | Yes | The new value to be assigned to the specified
+    attribute. |
+
+
+    ### Additional Notes
+
+    - The action requires valid Active Directory credentials and server details configured
+    in the integration settings.
+
+    - It specifically targets entities of type `USER`.
+
+    - If the attribute is unique or non-editable (read-only), the update will fail
+    for that specific entity.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `ActiveDirectoryManager` using
+    the provided server, domain, and credential parameters.
+
+    2. **Entity Filtering**: It identifies target entities and filters them to ensure
+    only `USER` types are processed.
+
+    3. **User Identification**: For each user entity, the action searches Active Directory
+    to locate the user's Distinguished Name (DN) using identifiers like `sAMAccountName`
+    or `mail`.
+
+    4. **Attribute Modification**: It performs an LDAP `MODIFY_REPLACE` operation
+    to update the specified attribute with the provided value.
+
+    5. **Outcome Tracking**: The action tracks successful updates, missing users (not
+    found in AD), and failures (e.g., invalid attributes or permission errors), providing
+    a detailed summary in the final output message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies user object attributes within the connected Active Directory instance
+      using the LDAP MODIFY_REPLACE operation.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

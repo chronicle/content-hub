@@ -1,0 +1,354 @@
+GetReport:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a detailed status report for a specific command previously issued to
+    the Symantec Endpoint Protection (SEP) 12 Manager. This action is primarily used
+    to monitor the progress or verify the completion of asynchronous operations such
+    as endpoint scans, quarantine actions, or policy updates. It fetches the current
+    state of the command directly from the SEP management server.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Command ID | String | Yes | The unique identifier of the command to retrieve
+    the status for. This ID is typically provided as an output from other SEP actions
+    like 'Scan' or 'Quarantine'. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a connection to the Symantec Endpoint Protection
+    Manager using OAuth2 credentials (Client ID, Secret, and Refresh Token) provided
+    in the integration configuration.
+
+    2. **Parameter Extraction**: Retrieves the `Command ID` from the action's input
+    parameters.
+
+    3. **API Request**: Constructs and sends a SOAP request to the `CommandService`
+    endpoint of the SEP Manager to fetch the `getCommandStatusDetails` for the specified
+    ID.
+
+    4. **Data Parsing**: Receives the XML response, cleanses it of SOAP-specific namespaces,
+    and converts the relevant command status data into a JSON-compatible dictionary.
+
+    5. **Result Output**: Adds the retrieved report to the action's JSON results and
+    ends the execution with a success message containing the report details.
+
+
+    ### Additional Notes
+
+    This action does not process or iterate over entities within a Google SecOps case.
+    It is a utility action that operates strictly on the provided `Command ID` parameter.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between Google SecOps and a Symantec Endpoint\
+    \ Protection (SEP) 12/14 instance. Its primary purpose is to ensure that the integration\
+    \ configuration\u2014specifically the API Root URL and OAuth credentials (Client\
+    \ ID, Client Secret, and Refresh Token)\u2014is valid and that the network path\
+    \ is open.\n\n### Parameters Description\nThere are no input parameters for this\
+    \ action.\n\n### Additional Notes\nThis action is a standard connectivity test.\
+    \ It does not interact with any entities or modify any data. It relies on the\
+    \ integration's global configuration settings to perform its check.\n\n### Flow\
+    \ Description\n1. **Configuration Extraction**: The action retrieves the integration's\
+    \ global settings, including the Client ID, Client Secret, Refresh Token, and\
+    \ API Root URL.\n2. **Manager Initialization**: It initializes the `SymantecEp12`\
+    \ manager class using the retrieved configuration.\n3. **Authentication Verification**:\
+    \ During initialization, the manager attempts to refresh the OAuth access token\
+    \ by making a GET request to the SEP Manager's token endpoint. \n4. **Connectivity\
+    \ Confirmation**: If the token refresh request is successful, the action confirms\
+    \ the connection is active and terminates with a success message. If an exception\
+    \ occurs (e.g., 401 Unauthorized or connection timeout), the action fails, indicating\
+    \ a configuration or network issue."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+ScanEndpoint:
+  ai_description: >-
+    ### General Description
+
+    This action initiates a full system scan on endpoints managed by Symantec Endpoint
+    Protection (SEP) 12. It targets specific entities within a case, resolves them
+    to their internal SEP computer identifiers, and triggers a remote scan command.
+    This is primarily used for on-demand forensic investigation or malware verification
+    during an incident response workflow.
+
+
+    ### Parameters Description
+
+    There are no user-configurable parameters for this action. The scan type is hardcoded
+    to perform a full system scan (`ScanNow_Full`).
+
+
+    ### Additional Notes
+
+    * The action supports both IP Address and Hostname entities.
+
+    * If a Hostname contains a domain (e.g., `host.domain.com`), the action will attempt
+    to resolve the computer ID using both the full FQDN and the short hostname.
+
+    * The resulting Command ID from the SEP Manager is stored in the entity's additional
+    properties under the key `sep_scan_command_id`.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Symantec Endpoint Protection Manager using
+    OAuth2 credentials (Client ID, Secret, and Refresh Token).
+
+    2. **Entity Resolution**: Iterates through the target entities. For `ADDRESS`
+    entities, it fetches the Computer ID via IP. For `HOSTNAME` entities, it fetches
+    the Computer ID via the hostname string.
+
+    3. **Command Execution**: For every successfully resolved Computer ID, it sends
+    a SOAP request to the SEP Command Service to initiate a `ScanNow_Full` operation.
+
+    4. **Data Enrichment**: Updates the entity object within Google SecOps by adding
+    the `sep_scan_command_id` to its additional properties.
+
+    5. **Reporting**: Returns a summary message to the case wall indicating which
+    entities are being scanned and provides the associated command IDs for tracking.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Initiates a remote system scan on the target endpoint via the Symantec Endpoint
+      Protection Manager API.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' attribute of the entities with the unique
+      command ID returned by the SEP Manager.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+UpdateAndScanEndpoint:
+  ai_description: >-
+    ### General Description
+
+    Triggers a content update and a full system scan on endpoints managed by Symantec
+    Endpoint Protection (SEP) 12. This action is used to ensure that a specific endpoint
+    has the latest security definitions and is immediately checked for threats. It
+    supports both IP Address and Hostname entities.
+
+
+    ### Parameters Description
+
+    There are no user-configurable parameters for this action. The scan type is hardcoded
+    to 'Update_ScanNow_Full'.
+
+
+    ### Additional Notes
+
+    * The action automatically attempts to resolve Hostnames by stripping domain suffixes
+    (e.g., 'host.domain.com' to 'host') if the initial lookup fails.
+
+    * The resulting Command ID from the SEP Manager is stored in the entity's additional
+    properties under the key 'sep_update_and_scan_command_id'.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Symantec Endpoint Protection Manager using
+    the configured API credentials and refreshes the access token.
+
+    2. **Entity Resolution**: For each target entity, the action queries the SEP Manager
+    to find the corresponding internal `computer_id` using either the IP address or
+    the hostname.
+
+    3. **Command Execution**: If a `computer_id` is found, the action sends a SOAP
+    request to the SEP Command Service to initiate the 'Update and Full Scan' task.
+
+    4. **Data Enrichment**: The unique Command ID returned by the SEP Manager is added
+    to the entity's metadata.
+
+    5. **Update**: The action updates the entities within Google SecOps to persist
+    the Command ID for tracking purposes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Triggers a content update and a full system scan command on the managed endpoint
+      via the Symantec Endpoint Protection Manager.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the entity's additional properties with the Command ID of the triggered
+      scan task.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+UpdateEndpoint:
+  ai_description: >-
+    ### General Description
+
+    The **UpdateEndpoint** action triggers a security content update on Symantec Endpoint
+    Protection (SEP) endpoints. It is used to ensure that specific hosts or IP addresses
+    are running the latest security definitions provided by the Symantec Endpoint
+    Protection Manager (SEPM). The action resolves the provided entities to their
+    internal SEP computer identifiers and then issues a remote command to initiate
+    the update process.
+
+
+    ### Parameters Description
+
+    There are no user-configurable parameters for this action. It relies on the integration's
+    global configuration (Client ID, Secret, API Root, etc.) to authenticate and communicate
+    with the Symantec Endpoint Protection Manager.
+
+
+    ### Additional Notes
+
+    * The action supports **ADDRESS** (IP) and **HOSTNAME** entities.
+
+    * For Hostname entities, if a direct match is not found, the action attempts to
+    resolve the computer ID using the short name (splitting by the first dot) to account
+    for FQDN variations.
+
+    * The resulting command ID from the SEPM is stored in the entity's additional
+    properties under the key `sep_update_command_id`.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Symantec Endpoint Protection Manager using
+    OAuth2 credentials provided in the integration settings.
+
+    2. **Entity Resolution**: Iterates through the target entities. For each IP address
+    or Hostname, it queries the SEPM API to retrieve the corresponding `computer_id`.
+
+    3. **Command Execution**: For every successfully identified computer, it calls
+    the `runClientCommandUpdateContent` SOAP method to trigger the update on the endpoint.
+
+    4. **Data Enrichment**: Captures the `command_id` returned by the SEPM and attaches
+    it to the entity's `additional_properties`.
+
+    5. **Internal Update**: Updates the entities within Google SecOps to reflect the
+    new metadata and provides a summary of the triggered updates in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Triggers a 'runClientCommandUpdateContent' command on the Symantec Endpoint
+      Protection Manager, which forces the target endpoint to update its security
+      content and definitions.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' of the processed entities with the 'sep_update_command_id'
+      returned by the SEP Manager.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

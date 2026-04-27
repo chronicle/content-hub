@@ -1,0 +1,235 @@
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Office 365 Management API. It ensures that the provided credentials and
+    configuration parameters are valid and that the environment can successfully communicate
+    with the Microsoft identity platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Root | String | Yes | The base URL for the Office 365 Management API. |
+
+    | Azure Active Directory ID | String | Yes | The Tenant ID of the Azure AD instance.
+    |
+
+    | Client ID | String | Yes | The Application (client) ID registered in Azure AD.
+    |
+
+    | Client Secret | String | No | The client secret for authentication. Required
+    if Certificate Path is not provided. |
+
+    | Certificate Path | String | No | Local path to the .pfx certificate file. Required
+    if Client Secret is not provided. |
+
+    | Certificate Password | String | No | Password for the certificate file. |
+
+    | OAUTH2 Login Endpoint Url | String | Yes | The URL used for OAuth2 authentication
+    (e.g., `https://login.microsoftonline.com`). |
+
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate of the API
+    endpoint. |
+
+
+    ### Additional Notes
+
+    Either the **Client Secret** or the **Certificate Path** must be provided for
+    the authentication to succeed. If both are missing, the action will raise an exception
+    during initialization.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves all configuration settings from the integration's
+    settings, including authentication details and endpoint URLs.
+
+    2. **Manager Initialization**: Creates an instance of the `Office365ManagementAPIManager`,
+    which triggers the authentication logic.
+
+    3. **Authentication Attempt**: The manager attempts to generate an OAuth2 access
+    token by making a POST request to the Microsoft identity platform using either
+    the Client Secret or the provided Certificate (JWT-based assertion).
+
+    4. **Connectivity Validation**: If a token is successfully retrieved and the response
+    is validated, the action confirms connectivity.
+
+    5. **Result Reporting**: Returns a success message if authentication works, or
+    an error message detailing the failure if an exception occurs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Start Subscription:
+  ai_description: >-
+    ### General Description
+
+    Starts a subscription to a chosen Office 365 Management API content type. This
+    action is a prerequisite for collecting activity logs from the Office 365 environment,
+    such as Data Loss Prevention (DLP) events or general audit logs. By initiating
+    a subscription, the Office 365 Management API begins to aggregate and make available
+    the activity data for the specified content type.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Start a Subscription for | String (Dropdown) | Yes | Specifies the Office 365
+    content type to subscribe to. Available options typically include `DLP.All` and
+    `Audit.General`. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the connection using the provided
+    Azure Active Directory credentials, supporting both Client Secret and Certificate-based
+    authentication.
+
+    2. **Token Acquisition**: It requests an OAuth2 access token from the Microsoft
+    identity platform for the Office 365 Management API resource.
+
+    3. **Subscription Request**: The action sends a POST request to the Office 365
+    Management API's subscription start endpoint, targeting the specific content type
+    selected in the parameters.
+
+    4. **Execution Result**: The action validates the API response and reports whether
+    the subscription was successfully created or if an error occurred during the process.
+
+
+    ### Additional Notes
+
+    - This action does not operate on entities and is used for system-level configuration.
+
+    - For successful execution, the integration must be configured with either a valid
+    Client Secret or a Certificate Path/Password.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a subscription for activity feeds in the Office 365 Management API,
+      which changes the logging state for the tenant.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Stop Subscription:
+  ai_description: >-
+    ### General Description
+
+    Stops a subscription to a specific Office 365 Management API content type. This
+    action is used to halt the flow of notifications and content retrieval for specific
+    audit or DLP logs from the Microsoft environment. Note that once a subscription
+    is stopped, you will no longer receive notifications, and content generated during
+    the inactive period cannot be retrieved even if the subscription is later restarted.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Stop a Subscription for | String | Yes | Specifies the content type for which
+    to stop the subscription. Common values include `DLP.All` and `Audit.General`.
+    |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the Office 365 Management API manager,
+    authenticating via Azure Active Directory using either a Client Secret or a Certificate.
+
+    2. **Parameter Extraction**: It retrieves the target content type (e.g., DLP or
+    Audit logs) from the action configuration.
+
+    3. **API Execution**: It sends a POST request to the Microsoft Management API
+    endpoint specifically designed to stop activity feed subscriptions for the chosen
+    content type.
+
+    4. **Outcome Reporting**: The action validates the API response and reports whether
+    the subscription was successfully stopped or if an error occurred.
+
+
+    ### Additional Notes
+
+    This action does not process entities and operates at the integration/tenant level
+    to modify subscription states.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Stops an active subscription in the Office 365 Management API for a specific
+      content type, which changes the state of the external logging/notification service.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

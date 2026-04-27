@@ -1,0 +1,245 @@
+Get File References:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves file references from McAfee Threat Intelligence Exchange
+    (TIE) via the Data Exchange Layer (DXL) for File Hash entities. It identifies
+    which endpoints (agents) have encountered a specific file and provides the timestamp
+    of the first contact. This is useful for identifying the scope of a file's presence
+    across an enterprise environment.
+
+
+    ### Parameters
+
+    There are no action-specific parameters for this action. It utilizes the global
+    integration configuration for connectivity.
+
+
+    ### Flow Description
+
+    1. **Connection**: Establishes a connection to the McAfee DXL fabric using the
+    configured server address and client certificates.
+
+    2. **Entity Filtering**: Iterates through the target entities and filters for
+    those of type `FILEHASH` (supporting MD5, SHA1, and SHA256).
+
+    3. **Reference Lookup**: For each valid hash, it queries the McAfee TIE service
+    to retrieve 'first reference' data, which includes Agent GUIDs and timestamps.
+
+    4. **Data Formatting**: Converts the retrieved reference data into a human-readable
+    CSV format.
+
+    5. **Enrichment**: Attaches the CSV data as an entity table (e.g., 'References
+    - [Hash]') to the corresponding entity in the SOAR.
+
+    6. **Completion**: Updates the entities in the case and provides a summary message
+    of the entities for which references were found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entities and attaches data tables containing file reference information
+      (Agent GUIDs and timestamps) to the entities within the SOAR case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get File Reputation:
+  ai_description: "### General Description\nEnriches File Hash entities with reputation\
+    \ data retrieved from McAfee Threat Intelligence Exchange (TIE) via the Data Exchange\
+    \ Layer (DXL) fabric. This action allows security analysts to understand the trust\
+    \ level of a file across multiple providers, including Global Threat Intelligence\
+    \ (GTI), Enterprise reputation, and Advanced Threat Defense (ATD).\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Enrich with all services | Boolean | No | If enabled (True),\
+    \ the action will populate the entity's additional properties with reputation\
+    \ data from every available provider. If disabled (False), only the data from\
+    \ the provider with the 'worst' (lowest) trust level will be used for enrichment.\
+    \ Default is False. |\n\n### Flow Description\n1. **Initialization**: Establishes\
+    \ a connection to the DXL fabric using the configured broker address and client\
+    \ certificates.\n2. **Entity Filtering**: Identifies all `FILEHASH` entities within\
+    \ the current context.\n3. **Reputation Retrieval**: For each hash, it queries\
+    \ the McAfee TIE client to fetch reputation details, including trust levels and\
+    \ first-contact timestamps.\n4. **Data Processing**: \n    * Generates a CSV-formatted\
+    \ table of all reputations found for the entity.\n    * Depending on the `Enrich\
+    \ with all services` parameter, it either selects the single most malicious reputation\
+    \ or aggregates all provider data.\n5. **Internal Update**: Updates the entity's\
+    \ additional properties with the processed reputation data and marks the entity\
+    \ as enriched.\n6. **Result Reporting**: Adds a JSON result containing the raw\
+    \ reputation data and provides a summary message of enriched entities."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with file reputation scores and provider
+      details, and sets the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity between Google SecOps and the McAfee Threat Intelligence
+    Exchange (TIE) through the Data Exchange Layer (DXL) fabric. This action validates
+    the integration's configuration, including the server address and the required
+    SSL certificates/keys, ensuring the environment is ready for communication.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not take any input parameters. It relies
+    on the integration's global configuration. |
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and verifying that the DXL fabric
+    is reachable and that the provided certificates are valid for authentication.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the DXL connection details
+    (Server Address, CA Bundle, Client Certificate, and Private Key) from the integration
+    settings.
+
+    2. **Client Initialization**: It initializes the DXL client using the provided
+    file paths and broker address.
+
+    3. **Connection Attempt**: The action attempts to establish a connection to the
+    DXL fabric. If the connection fails, an exception is raised.
+
+    4. **TIE Client Setup**: Upon a successful DXL connection, it initializes the
+    TIE client to ensure the TIE service is accessible.
+
+    5. **Result Reporting**: If all steps complete without error, it returns a success
+    message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set File Reputation:
+  ai_description: >-
+    ### General Description: Sets the enterprise reputation (trust level) for file
+    hash entities in McAfee Threat Intelligence Exchange (TIE) via the Data Exchange
+    Layer (DXL). This action allows security analysts to manually override the reputation
+    of a file across the enterprise environment to either block or trust specific
+    hashes. ### Parameters Description: | Parameter | Type | Mandatory | Description
+    | | :--- | :--- | :--- | :--- | | Trust Level | String | Yes | The reputation
+    level to assign to the file. Supported values: NOT_SET, KNOWN_MALICIOUS, MOST_LIKELY_MALICIOUS,
+    MIGHT_BE_MALICIOUS, UNKNOWN, MIGHT_BE_TRUSTED, MOST_LIKELY_TRUSTED, KNOWN_TRUSTED,
+    KNOWN_TRUSTED_INSTALLER. | | File Name | String | No | An optional filename to
+    associate with the hash in the TIE database. | | Comment | String | No | An optional
+    comment to provide context for the reputation change. | ### Flow Description:
+    1. **Initialization**: Connects to the McAfee DXL fabric and initializes the TIE
+    client using the provided server address and certificates. 2. **Parameter Extraction**:
+    Retrieves the target trust level, optional filename, and optional comment from
+    the action parameters. 3. **Entity Processing**: Iterates through all FILEHASH
+    entities provided in the current context. 4. **External Update**: For each hash
+    (MD5, SHA1, or SHA256), it sends a request to McAfee TIE to update the 'Enterprise'
+    reputation to the specified trust level. 5. **Internal Update**: Updates the entity
+    objects within Google SecOps to reflect the action. 6. **Completion**: Returns
+    a summary message indicating which file hashes were successfully updated. ###
+    Additional Notes: This action supports MD5 (32 characters), SHA1 (40 characters),
+    and SHA256 (64 characters) hash formats.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Updates the enterprise reputation (trust level) of a file hash in the McAfee
+      Threat Intelligence Exchange (TIE) database.
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the entity objects in the case to reflect that the reputation has been
+      set.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

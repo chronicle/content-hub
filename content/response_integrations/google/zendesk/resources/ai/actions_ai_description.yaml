@@ -1,0 +1,524 @@
+Add Comment To Ticket:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to an existing ticket in Zendesk. This action allows users to append
+    text to a ticket's conversation, with the option to specify the author and whether
+    the note should be public or internal (private).
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Ticket ID | The unique identifier of the Zendesk ticket to which the comment
+    will be added. | String | Yes |
+
+    | Comment Body | The text content of the comment. | String | Yes |
+
+    | Author Name | The full name of the author of the comment. This name must already
+    exist in Zendesk to be resolved to a User ID. | String | No |
+
+    | Internal Note | Determines the visibility of the comment. If checked (True),
+    the comment is added as a private internal note. If unchecked (False), the comment
+    is public. | Boolean | Yes |
+
+
+    ### Additional Notes
+
+    - This action does not operate on Google SecOps entities; it requires a specific
+    Ticket ID as input.
+
+    - The 'Author Name' is case-sensitive and must match an existing user in the Zendesk
+    system.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Zendesk manager using the provided
+    server address, user email, and API token.
+
+    2. **Parameter Extraction**: It retrieves the Ticket ID, Comment Body, Author
+    Name, and the Internal Note flag from the action parameters.
+
+    3. **Ticket Verification**: The action fetches the current details of the specified
+    ticket from Zendesk to verify its existence.
+
+    4. **Author Resolution**: If an 'Author Name' is provided, the action performs
+    a lookup to find the corresponding Zendesk User ID.
+
+    5. **Payload Construction**: It constructs a JSON payload containing the comment
+    body and visibility settings. If 'Internal Note' is selected, the comment's 'public'
+    attribute is set to false.
+
+    6. **Execution**: The action sends a PUT request to the Zendesk API to update
+    the ticket with the new comment.
+
+    7. **Completion**: The action returns a success message if the ticket was updated
+    or an error message if the operation failed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new comment to an existing Zendesk ticket by performing a PUT request
+      to the Zendesk tickets API endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Apply Macros On Ticket:
+  ai_description: "### General Description\nThis action applies a predefined Zendesk\
+    \ macro to a specific ticket. Macros in Zendesk are sets of predefined actions\u2014\
+    such as changing the ticket status, adding tags, or inserting standard responses\u2014\
+    that can be applied to a ticket in a single operation. This action automates the\
+    \ process of updating ticket metadata and content based on existing Zendesk templates.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| Ticket ID | String/Integer | Yes | The unique\
+    \ numerical identifier of the Zendesk ticket to which the macro will be applied.\
+    \ |\n| Macro Title | String | Yes | The exact title (case-sensitive) of the macro\
+    \ to be executed. |\n\n### Flow Description\n1. **Macro Identification**: The\
+    \ action first queries the Zendesk API to retrieve the unique ID associated with\
+    \ the provided `Macro Title`.\n2. **Preview Application**: It calls the Zendesk\
+    \ 'apply macro' endpoint for the specific `Ticket ID`. This step calculates the\
+    \ resulting state of the ticket if the macro were applied but does not yet commit\
+    \ the changes.\n3. **Ticket Mutation**: The action then takes the resulting data\
+    \ from the preview and performs a `PUT` request to the Zendesk ticket endpoint,\
+    \ effectively updating the ticket with the macro's actions.\n4. **Finalization**:\
+    \ The action returns a success message if the ticket was successfully updated\
+    \ or an error message if the macro could not be found or applied."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates a specific Zendesk ticket by applying the changes (status, tags, comments,
+      etc.) defined within a macro.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Ticket:
+  ai_description: >-
+    Creates a new ticket in Zendesk with specified properties such as subject, description,
+    priority, and type. This action allows for assigning the ticket to specific users
+    or groups, adding tags, and including CC recipients. It also supports validating
+    CC email addresses against existing Zendesk users before creation.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the Zendesk API using provided credentials
+    (User Email, API Token, and Server Address).
+
+    2. **Email Format Validation**: Checks the syntax of provided CC email addresses
+    using a regular expression to ensure they are valid email formats.
+
+    3. **User Verification (Optional)**: If the 'Validate Email CCs' parameter is
+    enabled, the action fetches all existing Zendesk users and verifies that every
+    CC recipient exists in the system.
+
+    4. **Identity Resolution**: Resolves the provided 'Assigned User' and 'Assignment
+    Group' names into their corresponding numeric Zendesk IDs by querying the Zendesk
+    API.
+
+    5. **Ticket Creation**: Constructs a ticket object and sends a POST request to
+    the Zendesk API to create the ticket with the defined subject, description, priority,
+    type, tags, and CCs.
+
+    6. **Result Handling**: Returns the ID of the newly created ticket to the Google
+    SecOps platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Subject | String | Yes | The subject line of the ticket. |
+
+    | Description | String | Yes | The initial comment or body text of the ticket.
+    |
+
+    | Assigned User | String | No | The full name of the Zendesk user to whom the
+    ticket should be assigned. |
+
+    | Assignment Group | String | No | The name of the Zendesk group to which the
+    ticket should be assigned. |
+
+    | Priority | String | No | The priority level of the ticket. Expected values:
+    'urgent', 'high', 'normal', or 'low'. |
+
+    | Ticket Type | String | No | The category of the ticket. Expected values: 'problem',
+    'incident', 'question', or 'task'. |
+
+    | Tag | String | No | A single tag to be added to the ticket. |
+
+    | Internal Note | Boolean | No | If checked, the initial comment will be marked
+    as private (internal). If unchecked, it will be public. |
+
+    | Email CCs | String | No | A comma-separated list of email addresses to be added
+    as CCs on the ticket. |
+
+    | Validate Email CCs | Boolean | No | If enabled, the action will fail if any
+    email in 'Email CCs' does not correspond to an existing Zendesk user. |
+
+
+    ### Additional Notes
+
+    - **Zendesk Limitation**: A maximum of 48 email CCs can be added to a single ticket.
+
+    - **Case Sensitivity**: User and Group names are case-sensitive when being resolved
+    to IDs.
+
+    - **Validation**: The action will fail if the CC email format is invalid, regardless
+    of the 'Validate Email CCs' setting.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new ticket record in the Zendesk platform via a POST request to the
+      /api/v2/tickets.json endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Ticket Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive information for a specific Zendesk ticket using its unique
+    identifier. This action fetches the core ticket metadata, the full conversation
+    history (comments), and any associated file attachments, making them available
+    within the Google SecOps platform for investigation and record-keeping.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Ticket ID | String | Yes | The unique numerical ID of the Zendesk ticket to
+    retrieve details for. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes the Zendesk manager using the provided server
+    address, user email, and API token.
+
+    2. **Data Retrieval**: Executes three distinct API calls to Zendesk to fetch the
+    ticket's metadata, its comments, and its attachments.
+
+    3. **Comment Processing**: Converts the retrieved ticket comments into a CSV format
+    and adds them as a Data Table named 'Ticket Comments' to the action results.
+
+    4. **Attachment Handling**: Iterates through all retrieved attachments, encodes
+    the file content in Base64, and attaches them directly to the SOAR case.
+
+    5. **Result Output**: Formats the primary ticket metadata into a JSON object and
+    provides it as the main action output, while also setting the execution status
+    based on whether the ticket was successfully found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table containing ticket comments and uploads file attachments
+      retrieved from Zendesk directly to the SOAR case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    Google SecOps and the Zendesk instance. It ensures that the provided credentials
+    (User Email Address and API Token) and the Server Address are correct and that
+    the Zendesk API is reachable.
+
+
+    ### Parameters Description
+
+    There are no input parameters for this action. It relies entirely on the integration's
+    global configuration settings.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action retrieves the 'User Email Address',
+    'Api Token', and 'Server Address' from the Zendesk integration configuration.
+
+    2. **Manager Initialization**: It initializes the `ZendeskManager` with the retrieved
+    credentials.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    internally attempts to fetch a list of tickets from the Zendesk `/api/v2/tickets.json`
+    endpoint using a GET request.
+
+    4. **Result Handling**: If the API returns a valid response, the action concludes
+    with a 'Connection Established' message. If the request fails or returns an error,
+    it concludes with 'Connection Failed'.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the integration or for
+    troubleshooting communication issues.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Tickets:
+  ai_description: "### General Description\nThe **Search Tickets** action allows users\
+    \ to search for tickets within a Zendesk instance using a keyword or a structured\
+    \ query string. This action is designed to retrieve ticket data based on specific\
+    \ criteria, such as status, priority, or type, without modifying any data in Zendesk.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| **Search Query** | String | Yes | The search\
+    \ string used to filter tickets. It supports Zendesk's advanced search syntax\
+    \ (e.g., `type:ticket status:pending` or specific keywords). |\n\n### Flow Description\n\
+    1. **Authentication**: The action initializes a connection to the Zendesk API\
+    \ using the configured User Email, API Token, and Server Address.\n2. **Parameter\
+    \ Retrieval**: It extracts the mandatory 'Search Query' provided by the user.\n\
+    3. **API Request**: The action executes a GET request to the Zendesk search endpoint\
+    \ with the specified query.\n4. **Result Processing**: \n    * If tickets are\
+    \ found, the action iterates through the results and adds each ticket's full JSON\
+    \ data to the action's output.\n    * It calculates the total count of tickets\
+    \ found.\n5. **Completion**: The action ends by returning the total count of results\
+    \ and a summary message indicating success or failure to find matches.\n\n###\
+    \ Additional Notes\nThis action does not operate on specific SecOps entities (like\
+    \ IPs or Hostnames). It performs a global search based solely on the input parameter.\
+    \ There are no internal or external data mutations performed by this action."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Ticket:
+  ai_description: >-
+    Updates the details of an existing ticket in Zendesk and optionally adds a comment.
+    This action allows for the modification of various ticket attributes including
+    the subject, assignee, assignment group, priority, type, tags, and status. It
+    interacts with the Zendesk API to first retrieve the current state of the ticket
+    and then applies the requested changes via a PUT request. Additionally, if a comment
+    is provided, it can be posted as either a public response or an internal note.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Zendesk manager using the provided
+    server address, user email, and API token.
+
+    2. **Parameter Extraction**: It retrieves the mandatory Ticket ID and other optional
+    parameters like Subject, Status, and Priority.
+
+    3. **Identity Resolution**: If an 'Assigned User' or 'Assignment Group' is provided
+    by name, the action performs lookup requests to Zendesk to find the corresponding
+    numeric IDs.
+
+    4. **Ticket Update**: The action fetches the current ticket data, applies the
+    new attribute values, and sends a PUT request to Zendesk to update the ticket.
+
+    5. **Comment Addition**: If the 'Additional Comment' parameter is populated, a
+    second update is performed to append the comment to the ticket's conversation
+    history, respecting the 'Internal Note' visibility setting.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Ticket ID | String | Yes | The unique numeric identifier of the Zendesk ticket
+    to be updated. |
+
+    | Subject | String | No | The new subject line for the ticket. |
+
+    | Assigned User | String | No | The full name of the Zendesk user to whom the
+    ticket should be assigned. |
+
+    | Assignment Group | String | No | The name of the group to which the ticket should
+    be assigned. |
+
+    | Priority | String | No | The priority level of the ticket. Expected values:
+    'urgent', 'high', 'normal', or 'low'. |
+
+    | Ticket Type | String | No | The category of the ticket. Expected values: 'problem',
+    'incident', 'question', or 'task'. |
+
+    | Tag | String | No | A single tag to be added to the ticket's existing tags.
+    |
+
+    | Status | String | No | The current state of the ticket. Expected values: 'new',
+    'open', 'pending', 'hold', 'solved', or 'closed'. |
+
+    | Additional Comment | String | No | Text to be added as a new comment on the
+    ticket. |
+
+    | Internal Note | Boolean | No | If checked (True), the 'Additional Comment' will
+    be added as a private internal note. If unchecked (False), it will be a public
+    comment. |
+
+
+    ### Additional Notes
+
+    - The action performs name-to-ID resolution for users and groups, which requires
+    the names to match exactly (case-sensitive) in Zendesk.
+
+    - Updating the 'Tag' parameter will append the new tag to the existing list of
+    tags on the ticket rather than overwriting them.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates ticket attributes (status, priority, assignee, etc.) and adds comments
+      to existing tickets in the Zendesk platform via PUT requests.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

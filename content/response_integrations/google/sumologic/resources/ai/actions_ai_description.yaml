@@ -1,0 +1,177 @@
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Sumo Logic instance. It ensures that the provided integration
+    parameters (Api Root, Access ID, and Access Key) are correct and that the network
+    path is open and functional.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Api Root** | String | Yes | The base URL of the Sumo Logic API (e.g., `https://api.eu.sumologic.com`).
+    |
+
+    | **Access ID** | String | Yes | The Access ID generated from the Sumo Logic console
+    for authentication. |
+
+    | **Access Key** | String | Yes | The Access Key associated with the Access ID.
+    |
+
+    | **Verify SSL** | Boolean | Yes | If set to `True`, the action will validate
+    the SSL certificate of the Sumo Logic server. Default is `False`. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities and is intended for system health
+    checks.
+
+    - It is primarily used during the initial setup or troubleshooting of the Sumo
+    Logic integration.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the connection details (Api
+    Root, Access ID, Access Key, and SSL verification preference) from the integration
+    configuration.
+
+    2. **Manager Initialization:** A `SumoLogicManager` instance is created to handle
+    communication with the Sumo Logic API.
+
+    3. **Connectivity Test:** The action executes a minimal search query (`| count
+    _sourceCategory`) with a very narrow time range to confirm that the API is reachable
+    and the credentials have sufficient permissions to run jobs.
+
+    4. **Cleanup:** Immediately after verifying the search job creation, the action
+    deletes the temporary search job to maintain a clean environment in Sumo Logic.
+
+    5. **Result Reporting:** If the search job is successfully created and deleted,
+    the action returns a success message. If any step fails, it captures the exception
+    and reports a failure status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search:
+  ai_description: >-
+    ### General Description
+
+    Runs a search query in Sumo Logic and retrieves the results. This is an asynchronous
+    action that first initiates a search job and then polls for its completion. It
+    is designed to handle large datasets by allowing users to specify time ranges
+    and result limits.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query** | String | Yes | The Sumo Logic query to execute (e.g., `_collector=*`).
+    |
+
+    | **Delete Search Job** | Boolean | No | If checked, the action will delete the
+    search job from Sumo Logic after the search is completed or fails. Default is
+    `False`. |
+
+    | **Since** | String | No | The start date of the search in ISO-8601 format or
+    unix timestamp (milliseconds). Defaults to the last 30 days if not provided. |
+
+    | **To** | String | No | The end date of the search in ISO-8601 format or unix
+    timestamp (milliseconds). Defaults to the current UTC time if not provided. |
+
+    | **Limit** | Integer | No | The maximum number of results to return. Default
+    is 25. |
+
+
+    ### Additional Notes
+
+    - This action is asynchronous and will run in multiple stages (initiation and
+    polling).
+
+    - The `Query` must be in a valid Sumo Logic format.
+
+    - If `Delete Search Job` is enabled, it helps in cleaning up the Sumo Logic environment
+    but prevents manual review of the job in the Sumo Logic UI later.
+
+
+    ### Flow Description
+
+    1. **Initiation (First Run):** The action connects to Sumo Logic and creates a
+    search job using the provided `Query`, `Since`, and `To` parameters. It returns
+    the Job ID and sets the status to 'In Progress'.
+
+    2. **Polling (Subsequent Runs):** The action checks the status of the search job
+    using the Job ID. If the job is still running, it remains 'In Progress'.
+
+    3. **Data Retrieval:** Once the job status is 'DONE GATHERING RESULTS', the action
+    fetches the messages (results) up to the specified `Limit`.
+
+    4. **Internal Mutation:** The retrieved results are formatted into a data table
+    and attached to the case. The raw JSON results are also added to the action's
+    output.
+
+    5. **Cleanup:** If the `Delete Search Job` parameter is set to `True`, the action
+    sends a request to Sumo Logic to delete the job after results are collected.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      If the 'Delete Search Job' parameter is enabled, the action performs a DELETE
+      request to Sumo Logic to remove the search job object after completion.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table to the Google SecOps case containing the search
+      results retrieved from Sumo Logic.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,310 @@
+Detonate File:
+  ai_description: >-
+    ### General Description
+
+    Submits one or more files to a Cuckoo Sandbox instance for automated malware analysis.
+    This action operates asynchronously, meaning it first initiates the upload and
+    then periodically checks the status until the analysis is complete. Once finished,
+    it retrieves the full report, calculates a threat score, and attaches the results
+    to the case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Paths | String | Yes | A comma-separated list of local file paths to be
+    submitted to Cuckoo for detonation. |
+
+
+    ### Flow Description
+
+    1. **Initiation**: The action parses the provided file paths and uploads each
+    file to the Cuckoo server using a POST request.
+
+    2. **Task Tracking**: It stores the resulting Task IDs and enters an 'In Progress'
+    state.
+
+    3. **Polling (Async)**: The action periodically checks the status of each Task
+    ID until Cuckoo marks them as 'reported'.
+
+    4. **Data Retrieval**: Once all tasks are finished, it fetches the JSON reports
+    for each file.
+
+    5. **Case Enrichment**: It calculates the maximum threat score, adds a data table
+    for each file containing analysis metadata, and provides direct links to the Cuckoo
+    web interface for detailed review.
+
+
+    ### Additional Notes
+
+    - This action does not run on SecOps entities; it relies entirely on the file
+    paths provided in the input parameter.
+
+    - Ensure the Cuckoo API Root and Web Interface Address are correctly configured
+    in the integration settings.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits files to the Cuckoo sandbox for analysis, which creates new analysis
+      tasks in the external Cuckoo system.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds data tables containing file analysis summaries and entity links pointing
+      to the Cuckoo web interface for each submitted file.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Detonate Url:
+  ai_description: >-
+    ### General Description
+
+    This action detonates URL entities in a Cuckoo Sandbox environment to perform
+    behavioral analysis. It is an asynchronous action that operates in two stages:
+    initial submission and subsequent polling for results. The action retrieves a
+    detailed analysis report, including a risk score, and enriches the entity within
+    Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Root | String | Yes | The base URL of the Cuckoo API server. |
+
+    | Web Interface Address | String | Yes | The URL of the Cuckoo web interface,
+    used to generate direct links to analysis reports. |
+
+    | CA Certificate File | String | No | A base64 encoded CA certificate file for
+    SSL verification. |
+
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate of the Cuckoo
+    server. |
+
+    | API Token | String | No | The authentication token for the Cuckoo API. |
+
+    | Warning Threshold | String | Yes | A numeric threshold (default '5.0'). If the
+    Cuckoo analysis score meets or exceeds this value, the entity is marked as suspicious.
+    |
+
+
+    ### Additional Notes
+
+    - This action is **asynchronous**. It first submits the URL and then enters a
+    polling state to wait for the analysis to complete.
+
+    - The action specifically targets entities of type `URL` (DestinationURL).
+
+
+    ### Flow Description
+
+    1. **Submission Stage**: The action identifies URL entities and submits them to
+    the Cuckoo Sandbox via the `/tasks/create/url` endpoint.
+
+    2. **Task Tracking**: The resulting Cuckoo Task ID is stored in the entity's `additional_properties`
+    under the key `Cuckoo_task_id`.
+
+    3. **Polling Stage (Async)**: The action periodically checks the status of the
+    task using the task ID.
+
+    4. **Report Retrieval**: Once the task status is 'reported', the action fetches
+    the full JSON analysis report.
+
+    5. **Enrichment**: The action updates the entity with the Cuckoo score, marks
+    it as suspicious if the threshold is exceeded, adds a data table with report details,
+    and provides a direct link to the Cuckoo web interface for the specific task.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      The action creates a new analysis task in the Cuckoo Sandbox by submitting a
+      URL for detonation.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity properties with task IDs and analysis scores, modifies
+      the 'is_suspicious' and 'is_enriched' flags, and adds data tables and external
+      links to the case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Report:
+  ai_description: "### General Description\nThe **Get Report** action retrieves a\
+    \ comprehensive analysis report from a Cuckoo Sandbox instance for a specific\
+    \ task identified by its Task ID. This is an asynchronous action, meaning it will\
+    \ poll the Cuckoo server until the analysis is complete and the report is generated.\
+    \ Once the report is available, the action extracts key metrics such as the threat\
+    \ score and duration, formats the data into a readable table, and provides a direct\
+    \ link to the report in the Cuckoo web interface.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Task ID** | String | Yes | The unique identifier of the task in Cuckoo for\
+    \ which the report should be retrieved (e.g., '10'). |\n\n### Flow Description\n\
+    1.  **Connection:** The action establishes a connection to the Cuckoo server using\
+    \ the configured API Root and credentials (API Token).\n2.  **Status Check:**\
+    \ It queries the Cuckoo API to check if the task associated with the provided\
+    \ **Task ID** has reached the 'reported' status.\n3.  **Asynchronous Handling:**\
+    \ If the task is still in progress (not yet reported), the action returns an 'In\
+    \ Progress' state, allowing the SOAR platform to retry later.\n4.  **Data Retrieval:**\
+    \ Once the task is reported, the action fetches the full JSON report from the\
+    \ Cuckoo server.\n5.  **Data Processing:** It extracts specific information from\
+    \ the report, including the analysis score, start time, and duration.\n6.  **Output\
+    \ Generation:** \n    *   A data table is created containing the flattened summary\
+    \ of the report.\n    *   A direct URL link to the Cuckoo Web Interface for that\
+    \ specific task is added to the results.\n    *   The full JSON report is attached\
+    \ as the action's result JSON.\n7.  **Completion:** The action finishes with a\
+    \ success message and returns the analysis score as the primary output value.\n\
+    \n### Additional Notes\n*   This action does not operate on entities (IPs, Files,\
+    \ etc.) directly; it requires a specific **Task ID** usually generated by a previous\
+    \ submission action.\n*   The **Web Interface Address** configuration parameter\
+    \ must be set to generate the clickable report link."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    This action is designed to verify the connectivity between Google SecOps and a
+    Cuckoo Sandbox instance. It serves as a health check to ensure that the provided
+    configuration parameters (such as API Root and credentials) are correct and that
+    the Cuckoo server is reachable and responding to status requests.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Root | String | Yes | The base URL of the Cuckoo API server (e.g., `http://127.0.0.1:8090`).
+    |
+
+    | Web Interface Address | String | Yes | The URL of the Cuckoo web interface used
+    for constructing report links. |
+
+    | CA Certificate File | String | No | A base64 encoded CA certificate file used
+    for SSL verification. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the Cuckoo server. Defaults to `False`. |
+
+    | API Token | String | No | The Bearer token used for authentication if the Cuckoo
+    API requires it. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities.
+
+    - It is primarily used during the initial setup or troubleshooting of the Cuckoo
+    integration.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the connection details (API
+    Root, Web Interface Address, SSL settings, and API Token) from the integration
+    settings.
+
+    2. **Manager Initialization**: It initializes the `CuckooManager` which handles
+    the HTTP session and SSL configuration (including decoding the CA certificate
+    if provided).
+
+    3. **Connectivity Test**: The action calls the `/cuckoo/status` endpoint of the
+    Cuckoo API using a GET request.
+
+    4. **Result Handling**: If the request is successful (HTTP 200), the action concludes
+    with a success message. If an error occurs (e.g., connection timeout, 401 Unauthorized),
+    an exception is raised and reported to the user.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

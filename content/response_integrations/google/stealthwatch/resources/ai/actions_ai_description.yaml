@@ -1,0 +1,179 @@
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connection between Google SecOps and a Cisco Stealthwatch\
+    \ (SMC) instance. Its primary purpose is to validate that the integration's configuration\
+    \ parameters\u2014such as the API Root, Username, and Password\u2014are correct\
+    \ and that the Stealthwatch server is reachable.\n\n### Parameters Description\n\
+    There are no parameters for this action.\n\n### Additional Notes\n- This action\
+    \ is a standard connectivity test and does not process any security entities or\
+    \ alert data.\n- It relies on the integration's global configuration settings\
+    \ to perform the check.\n\n### Flow Description\n1. **Configuration Retrieval**:\
+    \ The action retrieves the 'Api Root', 'Username', 'Password', and 'Verify SSL'\
+    \ settings from the Stealthwatch integration configuration.\n2. **Authentication**:\
+    \ It initializes the `StealthwatchManager`, which attempts to authenticate with\
+    \ the Stealthwatch server via a POST request to the `/token/v2/authenticate` endpoint\
+    \ to retrieve a session cookie.\n3. **Connectivity Verification**: The manager\
+    \ executes the `test_connectivity` method, which performs a GET request to the\
+    \ `/smc/rest/product/info` endpoint using the session cookie.\n4. **Final Status**:\
+    \ If the API call returns a successful response, the action ends with a 'Connected\
+    \ Successfully' message and a boolean `True` result."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Events:
+  ai_description: >-
+    ### General Description
+
+    Retrieves security events from Cisco Stealthwatch for specific IP address entities
+    within a specified lookback window. This action helps analysts understand the
+    security context of an IP by correlating it with Stealthwatch domains, alerts,
+    and detailed event logs. The results are provided as raw JSON and formatted CSV
+    tables.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Timeframe | Integer | Yes | The number of hours (relative to the current time)
+    to search for security events. |
+
+
+    ### Additional Notes
+
+    - The action requires valid Stealthwatch credentials (API Root, Username, and
+    Password) configured in the integration settings.
+
+    - It automatically identifies the correct Stealthwatch Domain ID for each IP address
+    before performing the search.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Stealthwatch API using the provided credentials
+    to obtain a session token.
+
+    2. **Time Calculation**: Determines the start and end timestamps based on the
+    `Timeframe` parameter and the current UTC time.
+
+    3. **Domain Identification**: For each IP address entity, the action queries Stealthwatch
+    to find the associated Domain ID.
+
+    4. **Alert Search**: Queries for alerts related to the IP address within the specified
+    timeframe for the identified domain.
+
+    5. **Event Retrieval**: For every alert found, the action performs a secondary
+    search to retrieve the granular security event details.
+
+    6. **Data Formatting**: Filters the raw event data and constructs CSV-formatted
+    tables for better readability.
+
+    7. **Output**: Attaches the raw JSON data and the formatted CSV tables to the
+    case for each processed entity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Flows:
+  ai_description: "### General Description\nThe **Search Flows** action retrieves\
+    \ network flow data from Cisco Stealthwatch for specific IP address entities.\
+    \ It allows security analysts to investigate inbound and outbound network traffic\
+    \ associated with an IP within a defined time window, helping to identify suspicious\
+    \ connections, lateral movement, or data exfiltration.\n\n### Parameters\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Timeframe**\
+    \ | Integer | Yes | The lookback period in hours (e.g., 3) from the current time\
+    \ to search for flows. |\n| **Limit** | Integer | Yes | The maximum number of\
+    \ flow records to retrieve for each entity. |\n\n### Flow Description\n1. **Authentication**:\
+    \ The action initializes the Stealthwatch manager and authenticates with the Stealthwatch\
+    \ Management Console (SMC) API using the provided credentials.\n2. **Time Window\
+    \ Setup**: It calculates the start and end timestamps for the search based on\
+    \ the provided `Timeframe` parameter and the current UTC time.\n3. **Domain Identification**:\
+    \ For each IP address entity in the scope, the action queries Stealthwatch to\
+    \ find the corresponding Domain ID that owns the host.\n4. **Flow Querying**:\
+    \ It executes two separate asynchronous searches for each IP: one where the IP\
+    \ is the source and one where it is the destination. \n5. **Job Management**:\
+    \ The action polls the Stealthwatch search jobs until they reach 100% completion.\n\
+    6. **Data Processing and Enrichment**: \n    - Raw flow data is attached as JSON\
+    \ to the action results for each entity.\n    - A filtered, human-readable version\
+    \ of the flow data (including timestamps, duration, source/destination details,\
+    \ and transfer bytes) is formatted into a CSV table and attached to the entity.\n\
+    7. **Final Reporting**: The action provides a summary message listing all entities\
+    \ for which flows were successfully found."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

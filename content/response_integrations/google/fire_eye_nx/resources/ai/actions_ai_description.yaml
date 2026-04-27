@@ -1,0 +1,211 @@
+Add IPS Policy Exception:
+  ai_description: >-
+    ### General Description
+
+    Adds an IPS policy exception in FireEye NX for specific IP Address entities. This
+    action is used to manage traffic filtering rules by defining exceptions based
+    on an attacker's IP (the entity) and a specified victim subnet. It allows security
+    teams to automate the blocking, unblocking, or suppression of traffic directly
+    from the Google SecOps platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Victim IP Subnet** | String | Yes | The IP subnet of the victim to be used
+    in the policy exception (e.g., `10.0.0.1/24`). |
+
+    | **Interface** | String | Yes | The specific network interface where the exception
+    should be applied. Options include `A`, `B`, `C`, `D`, or `ALL`. Default is `ALL`.
+    |
+
+    | **Mode** | String | Yes | The action mode for the exception. Options include
+    `Block`, `Unblock`, `Suppress`, or `Suppress-unblock`. Default is `Block`. |
+
+    | **Name** | String | No | A custom name for the policy exception. If left blank,
+    the action generates a name using the format `Siemplify_{Interface}_{Mode}`. |
+
+
+    ### Additional Notes
+
+    - IP entities are treated as the "Attacker IP Address" in the FireEye NX policy
+    logic.
+
+    - The action automatically masks plain IPv4 addresses to `/32` CIDR notation if
+    a mask is not already present.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the FireEye NX connection details and action
+    parameters (Victim Subnet, Interface, Mode, and Name).
+
+    2. **Entity Filtering:** Identifies all `ADDRESS` entities within the current
+    alert context.
+
+    3. **IP Masking:** For each entity, the script ensures the IP address is in a
+    valid CIDR format (appending `/32` to single IPs).
+
+    4. **API Interaction:** Authenticates with FireEye NX and sends a POST request
+    to the `/ips/policy_exceptions` endpoint with the exception details.
+
+    5. **Result Reporting:** Tracks which entities were successfully added to the
+    policy and which failed, providing a summary message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new IPS policy exception entry in the FireEye NX configuration via
+      a POST request to the management API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download Alert Artifacts:
+  ai_description: "Downloads forensic artifacts associated with a specific FireEye\
+    \ NX alert and saves them as a ZIP file to a specified local path on the execution\
+    \ runner. \n\n### Parameters\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| Alert UUID | String | Yes | The unique identifier\
+    \ (UUID) of the FireEye NX alert from which to retrieve artifacts. |\n| Download\
+    \ Path | String | Yes | The local directory path on the system where the downloaded\
+    \ ZIP file should be saved. |\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the FireEye NX manager using provided credentials and\
+    \ API root.\n2. **Artifact Retrieval**: It performs a GET request to the FireEye\
+    \ NX API endpoint for artifacts using the provided Alert UUID.\n3. **File System\
+    \ Check**: The action checks if a file already exists at the target destination\
+    \ (Download Path + Alert UUID.zip).\n4. **File Writing**: If the path is clear,\
+    \ it streams the binary content from the API response and writes it to the local\
+    \ filesystem.\n5. **Result Reporting**: Upon success, it returns the absolute\
+    \ file path of the saved artifact in the JSON results. If the file already exists\
+    \ or the alert is not found, it reports the specific failure reason.\n\n### Additional\
+    \ Notes\nThis action does not operate on entities. It requires a direct Alert\
+    \ UUID as input. Note that the action will fail if the file already exists at\
+    \ the specified path to prevent accidental overwrites."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and a FireEye NX instance. It ensures that the provided credentials
+    and network configurations (API Root, Username, Password, and SSL settings) are
+    correct and that the FireEye NX API is reachable.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the FireEye NX instance (e.g., https://10.0.0.1).
+    |
+
+    | Username | String | Yes | The username used for authentication with the FireEye
+    NX server. |
+
+    | Password | String | Yes | The password used for authentication with the FireEye
+    NX server. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the FireEye NX server. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the integration configuration
+    parameters including the API Root, credentials, and SSL verification preference.
+
+    2. **Authentication:** The action initializes the FireEye NX Manager, which automatically
+    attempts to obtain an authentication token by sending a POST request to the `/wsapis/v2.0.0/auth/login`
+    endpoint.
+
+    3. **Connectivity Test:** Once authenticated, the action performs a GET request
+    to the system health endpoint (`/wsapis/v2.0.0/health/system`) to confirm the
+    API is responsive.
+
+    4. **Result Reporting:** If the health check is successful, the action returns
+    a success message. If any step fails (auth or health check), it catches the exception
+    and reports a failure.
+
+
+    ### Additional Notes
+
+    This action does not process any entities and is strictly used for configuration
+    validation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

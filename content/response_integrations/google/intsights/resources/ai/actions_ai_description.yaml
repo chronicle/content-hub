@@ -1,0 +1,677 @@
+Add Note:
+  ai_description: >-
+    ### General Description
+
+    Adds a note to a specific alert within the IntSights platform. This action allows
+    analysts to append textual information or context to an existing alert for better
+    tracking and collaboration within the external threat intelligence system.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Type | Mandatory | Notes |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Alert ID | The unique identifier of the alert in IntSights to which the note
+    will be added. | String | Yes | This ID must correspond to an existing alert in
+    the IntSights environment. |
+
+    | Note | The content of the note to be added to the alert. | String | Yes | The
+    text provided here will be visible in the IntSights alert timeline/notes section.
+    |
+
+
+    ### Additional Notes
+
+    This action does not process or interact with Google SecOps entities. It operates
+    directly on a specific Alert ID provided as an input parameter.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the IntSights manager using the
+    provided API Root, Account ID, and API Key.
+
+    2. **Parameter Extraction**: It retrieves the 'Alert ID' and the 'Note' content
+    from the action parameters.
+
+    3. **API Interaction**: The action sends a POST request to the IntSights API endpoint
+    (`public/v1/data/alerts/add-note/{alert_id}`) with the note content in the request
+    body.
+
+    4. **Error Handling**: If the alert is not found, a specific `NotFoundError` is
+    caught and reported. Other general exceptions are logged as failures.
+
+    5. **Completion**: The action returns a success status if the note is successfully
+    added to the external system.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new note to an existing alert in the IntSights platform, which modifies
+      the state of the alert's metadata in the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ask An Analyst:
+  ai_description: >-
+    ### General Description
+
+    The **Ask An Analyst** action enables users to interact with IntSights analysts
+    by submitting questions or comments regarding a specific alert. This feature is
+    primarily used to gain deeper insights into a threat, request further investigation,
+    or provide additional context to the IntSights team directly from the Google SecOps
+    platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Alert ID** | String | Yes | The unique identifier of the alert in the IntSights
+    platform for which the inquiry is being made. |
+
+    | **Comment** | String | Yes | The specific question or message intended for the
+    IntSights analyst. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the necessary integration configuration
+    (API Root, Account ID, API Key, and SSL verification settings) and the action
+    parameters (Alert ID and Comment).
+
+    2. **API Interaction**: It utilizes the `IntsightsManager` to send a POST request
+    to the IntSights API endpoint `public/v1/data/alerts/ask-the-analyst/{alert_id}`.
+    The comment is passed as the 'Question' in the request payload.
+
+    3. **Error Handling**: The action specifically checks for `AlertNotFoundError`
+    if the provided ID does not exist in IntSights. It also handles general exceptions
+    during the API call.
+
+    4. **Finalization**: The action returns a success message if the comment was successfully
+    posted to the external system, or a failure message if the alert was not found
+    or a connection error occurred.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action performs a POST request to the IntSights API to create a new 'Ask
+      an Analyst' entry (comment/question) associated with a specific alert, thereby
+      changing the state of that alert's communication log in the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Assign Alert:
+  ai_description: >-
+    ### General Description
+
+    Assigns a specific alert in the IntSights platform to an analyst. This action
+    facilitates automated incident management by updating the ownership of an alert
+    based on either a User ID or an Email Address.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert in IntSights that
+    needs to be reassigned. |
+
+    | Assignee ID | String | No | The unique internal ID of the analyst in IntSights.
+    If provided, this takes precedence over the Email Address. |
+
+    | Assignee Email Address | String | No | The email address of the analyst. If
+    the Assignee ID is not provided, the action will attempt to resolve this email
+    to a User ID first. |
+
+
+    ### Additional Notes
+
+    Either **Assignee ID** or **Assignee Email Address** must be provided for the
+    action to execute successfully. If both are provided, the **Assignee ID** is prioritized.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the Alert ID and the assignee identifiers
+    (ID or Email) from the action parameters.
+
+    2. **Validation:** Checks that at least one assignee identifier (ID or Email)
+    is present.
+
+    3. **User Resolution (Optional):** If only an email is provided, the action queries
+    the IntSights API to retrieve the corresponding User ID.
+
+    4. **Assignment Update:** Sends a PATCH request to the IntSights API to update
+    the alert's assignee to the specified User ID.
+
+    5. **Error Handling:** Manages specific exceptions such as User Not Found, Alert
+    Not Found, or general API errors, providing descriptive feedback in the action
+    output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the assignee field of an alert within the IntSights platform via a PATCH
+      request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Close Alert:
+  ai_description: >-
+    Closes a specific alert within the IntSights platform. This action allows users
+    to programmatically resolve alerts by providing a closure reason, optional descriptive
+    notes, and a numerical rating. It interacts with the IntSights API via a PATCH
+    request to update the alert's status.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert in IntSights that
+    needs to be closed. |
+
+    | Additional Info | String | No | Supplemental information or comments explaining
+    the context of the alert closure. |
+
+    | Rate | Integer | No | A numerical rating for the alert, ranging from 1 to 5.
+    |
+
+    | Reason | String (Enum) | Yes | The specific reason for closing the alert. Supported
+    values include: 'Problem Solved', 'Informational Only', 'Problem We Are Aware
+    Of', 'Company Owned Domain', 'Legitimate Application/Profile', 'Not Related To
+    My Company', 'False Positive', and 'Other'. |
+
+
+    ### Additional Notes
+
+    - The 'Rate' parameter must be an integer between 1 and 5. If a value outside
+    this range is provided, the action will fail with a validation error.
+
+    - The 'Reason' parameter is mapped from human-readable strings to specific API
+    keys (e.g., 'Problem Solved' maps to 'ProblemSolved').
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the IntSights API configuration
+    (Root URL, Account ID, API Key) and the specific action parameters (Alert ID,
+    Reason, Additional Info, Rate).
+
+    2. **Validation**: It validates that the 'Rate' (if provided) is within the allowed
+    range of 1 to 5.
+
+    3. **Reason Mapping**: The selected closure reason is mapped to the corresponding
+    internal IntSights API value.
+
+    4. **API Interaction**: The action initializes the `IntsightsManager` and sends
+    a PATCH request to the IntSights endpoint `public/v1/data/alerts/close-alert/{alert_id}`
+    with the closure details.
+
+    5. **Result Handling**: If the request is successful, the action completes with
+    a success message. If the alert is not found or a general API error occurs, it
+    logs the error and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action changes the state of an alert in the external IntSights platform
+      from 'Open' to 'Closed' and updates it with a reason, rating, and additional
+      comments.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download Alert CSV:
+  ai_description: >-
+    ### General Description
+
+    Downloads a CSV file containing detailed information related to a specific alert
+    from the IntSights platform. This action is useful for archiving alert data or
+    performing offline analysis on threat intelligence reports.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert in IntSights for
+    which the CSV data is requested. |
+
+    | Download Folder Path | String | Yes | The local directory path on the execution
+    machine where the CSV file will be saved. |
+
+    | Overwrite | Boolean | No | If set to true, the action will replace an existing
+    file with the same name in the target directory. Defaults to false. |
+
+
+    ### Additional Notes
+
+    - The action requires the local directory specified in 'Download Folder Path'
+    to exist prior to execution.
+
+    - The resulting file is named using the Alert ID with a `.csv` extension.
+
+    - This action does not process entities and relies solely on the provided Alert
+    ID.
+
+
+    ### Flow Description
+
+    1. **Path Validation**: Checks if the specified `Download Folder Path` exists
+    on the local filesystem.
+
+    2. **API Connection**: Initializes the IntSights manager and authenticates using
+    the provided API credentials.
+
+    3. **Data Retrieval**: Makes a request to the IntSights API to download the CSV
+    content for the specified `Alert ID`.
+
+    4. **File Persistence**: Saves the downloaded content to the local disk. If `Overwrite`
+    is false and the file exists, it raises an error.
+
+    5. **Result Reporting**: Returns the absolute path of the saved file and marks
+    the action as successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Alert Image:
+  ai_description: >-
+    ### General Description
+
+    The **Get Alert Image** action retrieves raw image data associated with specific
+    alert image IDs from the IntSights platform. This action is designed to provide
+    visual context for threats or data leaks identified by IntSights by fetching the
+    binary image content and rendering it directly within the Google SecOps case wall.
+    The retrieved images are also provided in base64 format in the action's JSON results
+    for further processing.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description | How it affects the flow |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Alert Image IDs | String | Yes | A comma-separated list of unique identifiers
+    for the alert images to be retrieved. | The action iterates through each ID provided
+    in this list to fetch the corresponding image content from the IntSights API.
+    |
+
+
+    ### Additional Notes
+
+    - This action does not operate on case entities; it relies entirely on the provided
+    image IDs.
+
+    - Images are displayed as HTML in a Case Insight for immediate visibility on the
+    case wall.
+
+    - The action handles partial failures, reporting which IDs were successfully processed
+    and which failed.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the API configuration (Root
+    URL, Account ID, API Key) and the list of Alert Image IDs from the action parameters.
+
+    2. **Manager Initialization:** An instance of the IntSightsManager is initialized
+    to handle authenticated communication with the IntSights API.
+
+    3. **Data Retrieval:** The action iterates through the provided list of IDs, making
+    a GET request for each to fetch the raw binary content of the image.
+
+    4. **Data Processing:** Successfully retrieved images are encoded into base64
+    strings. An HTML string is constructed using these base64 strings to embed the
+    images into an insight.
+
+    5. **Insight Creation:** A Case Insight is created and posted to the Google SecOps
+    case wall, containing the rendered images.
+
+    6. **Result Reporting:** The action populates the JSON results with the image
+    names and base64 content and provides a summary message of the execution status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies connectivity to the IntSights platform using the provided credentials
+    and API root. This action is primarily used to ensure that the integration is
+    correctly configured and can successfully communicate with the IntSights API.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Root | String | Yes | The base URL for the IntSights API. |
+
+    | Account ID | String | Yes | The account identifier used for authentication.
+    |
+
+    | Api Key | String | Yes | The API key used for authentication. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the API endpoint. Default is False. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the API Root, Account ID, Api
+    Key, and Verify SSL settings from the integration configuration.
+
+    2. **Manager Initialization**: It initializes the `IntsightsManager` with the
+    provided credentials and connection settings.
+
+    3. **Connectivity Test**: The manager executes a `test_connectivity` call, which
+    performs a GET request to the IntSights API version endpoint (`public/v1/api/version`).
+
+    4. **Result Handling**: If the request is successful, the action returns a 'Connection
+    Established' message. If an exception occurs (e.g., bad credentials or network
+    issues), it captures the error and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reopen Alert:
+  ai_description: "### General Description\nThe **Reopen Alert** action is designed\
+    \ to change the status of a previously closed alert in the IntSights platform\
+    \ back to an open state. This action is essential for workflows where an investigation\
+    \ needs to be resumed due to new evidence or if an alert was closed prematurely.\n\
+    \n### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| Alert ID | String | Yes | The unique identifier of the specific\
+    \ alert in IntSights that you wish to reopen. |\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the IntSights manager using the provided API Root, Account\
+    \ ID, and API Key from the integration configuration.\n2. **Parameter Extraction**:\
+    \ The `Alert ID` is extracted from the action parameters.\n3. **API Interaction**:\
+    \ The action sends a `PATCH` request to the IntSights API endpoint `public/v1/data/alerts/reopen-alert/{alert_id}`.\n\
+    4. **Error Handling**: \n    * If the alert is successfully reopened, a success\
+    \ message is returned.\n    * If the alert is not found, an `AlertNotFoundError`\
+    \ is caught and reported.\n    * For any other connection or API issues, a failure\
+    \ state is triggered.\n5. **Completion**: The action concludes by providing the\
+    \ execution status and a descriptive output message to the Google SecOps case\
+    \ wall.\n\n### Additional Notes\n- This action does not process or filter Google\
+    \ SecOps entities; it operates solely based on the provided `Alert ID` parameter."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action performs a PATCH request to the IntSights API to change the status
+      of an alert from 'Closed' to 'Open'.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search IOCs:
+  ai_description: "### General Description\nEnriches entities by searching for Indicators\
+    \ of Compromise (IOCs) within the Intsights threat intelligence platform. This\
+    \ action retrieves detailed threat data, including severity, status, related malware,\
+    \ campaigns, and threat actors, to provide context for security investigations.\n\
+    \n### Parameters Description\nThere are no action-specific parameters for this\
+    \ action. It relies on the global integration configuration (Api Root, Account\
+    \ ID, Api Key, and Verify SSL).\n\n### Additional Notes\n* The action marks entities\
+    \ as suspicious if the retrieved threat severity from Intsights is 'Medium' or\
+    \ 'High'.\n* It updates the entity's additional properties with flattened enrichment\
+    \ data prefixed with 'Intsights'.\n\n### Flow Description\n1. **Initialization**:\
+    \ Establishes a connection to the Intsights API using the integration's configuration\
+    \ parameters.\n2. **Entity Iteration**: Processes each target entity provided\
+    \ in the current context.\n3. **IOC Lookup**: For each entity, it queries the\
+    \ Intsights `/public/v3/iocs/ioc-by-value` endpoint using the entity's identifier.\n\
+    4. **Data Processing**: If threat data is found, it parses the results, including\
+    \ severity, related campaigns, and reported feeds.\n5. **Internal Updates**: \n\
+    \    * Adds the raw JSON result to the entity's context.\n    * Updates the entity's\
+    \ enrichment fields with the retrieved threat intelligence.\n    * If the severity\
+    \ is 'Medium' or 'High', it marks the entity as suspicious and creates a detailed\
+    \ entity insight.\n6. **Finalization**: Updates all enriched entities in Google\
+    \ SecOps and returns a summary message of the findings."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity enrichment fields (additional_properties), sets the 'is_suspicious'
+      flag, and creates entity insights based on threat intelligence findings from
+      Intsights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

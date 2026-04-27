@@ -1,0 +1,312 @@
+Get File Hash Reputation:
+  ai_description: >-
+    Enriches File Hash entities (MD5, SHA1, SHA256) using the CheckPoint Threat Reputation
+    service. This action retrieves detailed threat intelligence, including risk scores,
+    classifications (e.g., Malware, Benign), and malware family context. It evaluates
+    the risk score against a user-defined threshold to automatically mark entities
+    as suspicious within Google SecOps.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Threshold | Integer | Yes | The risk score threshold (0-100). If the returned
+    risk value is above this number and the classification is not 'Benign' or 'Unclassified',
+    the entity is marked as suspicious. |
+
+    | Create Insight? | Boolean | No | If enabled, creates a detailed Siemplify Insight
+    for each enriched entity containing classification, confidence, severity, and
+    risk data. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves API credentials and action parameters (Threshold
+    and Insight toggle).
+
+    2. **Connection**: Establishes a session with the CheckPoint Threat Reputation
+    service using the provided API Key to generate a session token.
+
+    3. **Entity Processing**: Iterates through all File Hash entities in the current
+    context.
+
+    4. **Data Retrieval**: For each hash, it queries the CheckPoint service for reputation
+    data.
+
+    5. **Risk Evaluation**: Compares the retrieved risk score against the 'Threshold'.
+    If the risk exceeds the threshold and the classification is considered malicious,
+    the entity's 'is_suspicious' attribute is set to true.
+
+    6. **Enrichment**: Updates the entity's additional properties with prefixed data
+    (e.g., malware family, protection name) and creates a CSV data table for the case
+    wall.
+
+    7. **Insight Creation**: If 'Create Insight?' is true, it generates a summary
+    insight for the entity.
+
+    8. **Finalization**: Updates all processed entities in the Google SecOps platform
+    and returns a summary message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity suspicious status, adds enrichment data to entity properties,
+      creates data tables on the case wall, and optionally creates insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Host Reputation:
+  ai_description: >-
+    Enriches Hostname entities using the CheckPoint Threat Reputation service. This
+    action retrieves detailed threat intelligence, including risk scores, classifications
+    (e.g., Benign, Malicious), and contextual data like Alexa rank and VirusTotal
+    positive counts. It evaluates the risk score against a user-defined threshold
+    to determine if an entity should be marked as suspicious within Google SecOps.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Threshold | Integer | Yes | The risk score limit (0-100). If the returned risk
+    value is above this threshold and the classification is not 'Benign' or 'Unclassified',
+    the entity is marked as suspicious. |
+
+    | Create Insight? | Boolean | No | If set to true, the action will generate a
+    Siemplify Insight for each processed entity containing the reputation summary.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the CheckPoint Threat Reputation service using
+    the provided API Root and API Key to generate a session token.
+
+    2. **Entity Filtering**: Iterates through the target entities and processes only
+    those of type HOSTNAME.
+
+    3. **Data Retrieval**: For each hostname, it queries the CheckPoint API to fetch
+    reputation data, including risk level and classification.
+
+    4. **Suspicion Evaluation**: Compares the retrieved risk score against the 'Threshold'
+    parameter. If the score exceeds the threshold and the classification is not whitelisted
+    (Benign/Unclassified), the entity is marked as suspicious.
+
+    5. **Enrichment**: Updates the entity's additional properties with prefixed reputation
+    data ('CPThreatRep') and adds a detailed data table to the case.
+
+    6. **Insight Creation**: If 'Create Insight?' is enabled, it generates a summary
+    insight for the entity.
+
+    7. **Finalization**: Updates all processed entities in the Google SecOps environment
+    and returns a JSON result of the raw data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity fields (is_suspicious, is_enriched), adds additional properties
+      to entities, creates case insights, and adds data tables to the case wall.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get IP Reputation:
+  ai_description: >-
+    ### General Description
+
+    The **Get IP Reputation** action enriches IP Address entities with threat intelligence
+    from the CheckPoint Threat Reputation service. It provides detailed context including
+    classification (e.g., Benign, Malicious), severity, confidence levels, and risk
+    scores. Additionally, it retrieves geographical and network information such as
+    ASN, owner, and country.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Threshold** | Integer | Yes | The risk score threshold. If the returned risk
+    value is higher than this threshold and the classification is not 'Benign' or
+    'Unclassified', the entity is marked as suspicious in Google SecOps. |
+
+    | **Create Insight?** | Boolean | No | If enabled, the action creates a detailed
+    insight on the entity in the Google SecOps case wall containing classification,
+    confidence, severity, and risk data. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action establishes a session with the CheckPoint Threat
+    Reputation API using the provided API Key and Root URL to generate a session token.
+
+    2. **Entity Filtering**: It identifies and processes only `ADDRESS` (IP) entities
+    within the current scope.
+
+    3. **Data Retrieval**: For each IP, it sends a POST request to the CheckPoint
+    service to fetch reputation and context data.
+
+    4. **Risk Assessment**: It evaluates the returned risk score against the user-defined
+    `Threshold`. If the risk exceeds the threshold and the classification is not whitelisted
+    (Benign/Unclassified), the entity's `is_suspicious` flag is set to `True`.
+
+    5. **Enrichment**: The action updates the entity's additional properties with
+    the retrieved data (prefixed with `CPThreatRep`) and marks the entity as enriched.
+
+    6. **Reporting**: It generates a data table for the case wall and, if the `Create
+    Insight?` parameter is true, creates an entity insight.
+
+
+    ### Additional Notes
+
+    - Entities classified as 'Benign' or 'Unclassified' will not be marked as suspicious
+    regardless of the risk score.
+
+    - The action uses a session token generated during initialization for subsequent
+    API calls.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity fields (is_suspicious, is_enriched, additional_properties),
+      creates entity insights, and adds data tables to the case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the **CheckPoint Threat Reputation** service. It ensures that
+    the integration is correctly configured and that the API is accessible using the
+    provided credentials.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL for the CheckPoint Threat Reputation
+    API. |
+
+    | API Key | String | Yes | The client key used to authenticate and generate session
+    tokens. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the API server. Defaults to `True`. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the `API Root`, `API Key`,
+    and `Verify SSL` settings from the integration configuration.
+
+    2. **Manager Initialization**: It initializes the `CheckPointThreatReputationManager`.
+    During initialization, the manager automatically attempts to retrieve a session
+    token from the CheckPoint service by making a GET request to the authentication
+    endpoint.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    sends a GET request to the service's request endpoint to confirm the API is responsive.
+
+    4. **Result Reporting**: If the request is successful, it returns a success message
+    and sets the execution status to completed. If any step fails (e.g., invalid credentials,
+    network timeout), it logs the error and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

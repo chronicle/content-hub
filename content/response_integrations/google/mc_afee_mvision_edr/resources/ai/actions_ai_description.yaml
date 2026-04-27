@@ -1,0 +1,605 @@
+Dismiss Threat:
+  ai_description: >-
+    Dismisses a specific threat in McAfee Mvision EDR using its Threat ID. This action
+    is asynchronous; it initiates a dismissal task and then polls for its completion
+    status.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Threat ID | String | Yes | The unique identifier of the threat to be dismissed.
+    |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes the McAfee Mvision EDR manager using provided
+    credentials (API Root, Client ID/Secret or Username/Password).
+
+    2. **Task Creation (First Run)**: Searches for the case associated with the provided
+    Threat ID and initiates a 'DismissThreat' action task in the external system.
+
+    3. **Status Polling (Subsequent Runs)**: Retrieves the status of the previously
+    created task using the task ID stored in the additional data.
+
+    4. **Completion**: Monitors the task until it reaches a 'COMPLETED' or 'ERROR'
+    state, reporting the final outcome to Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a 'DismissThreat' action in McAfee Mvision EDR, which changes the
+      status of the threat in the external platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Endpoint:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich Endpoint** action retrieves comprehensive system information for
+    endpoint entities (Hostnames or IP Addresses) from McAfee Mvision EDR. It serves
+    as an enrichment tool to provide security analysts with technical context such
+    as the Operating System version, last boot time, and unique identifiers (maGuid)
+    directly within the Google SecOps environment.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It relies entirely on
+    the integration's configuration (API Root, Credentials, etc.) and the entities
+    present in the current context.
+
+
+    ### Additional Notes
+
+    *   The action performs a broad fetch of all hosts from the McAfee Mvision EDR
+    environment and then matches them locally against the entities in the SecOps case.
+
+    *   Matching is performed by comparing the entity identifier against the EDR host's
+    hostname or any of its associated network interface IP addresses.
+
+
+    ### Flow Description
+
+    1.  **Authentication:** Connects to the McAfee Mvision EDR API using either Client
+    ID/Secret or Username/Password credentials.
+
+    2.  **Data Retrieval:** Fetches the complete list of managed hosts from the EDR
+    platform via a paginated GET request.
+
+    3.  **Entity Matching:** Iterates through all `ADDRESS` and `HOSTNAME` entities
+    in the SecOps case, attempting to find a match in the retrieved host list based
+    on hostname or IP.
+
+    4.  **Internal Enrichment:** For every match found, the action flattens the host
+    data and updates the entity's `additional_properties` with a prefix of `MMV_EDR`.
+
+    5.  **Reporting:** Adds a detailed data table to each matched entity and provides
+    a JSON result containing the raw host data for further downstream processing.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity 'additional_properties' with enriched host data, sets
+      the 'is_enriched' flag to true, and attaches data tables to the entities.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Kill Process:
+  ai_description: >-
+    Stops a running process and removes its associated file on managed endpoints using
+    McAfee Mvision EDR. This action identifies target endpoints by matching IP addresses
+    or Hostnames against the Mvision EDR inventory, then issues a remediation command
+    to terminate the specified process and delete the file. If the process is not
+    currently running, the action attempts to remove the file from the disk. The action
+    operates asynchronously, polling the EDR service for the status of each remediation
+    task until completion.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Process Identifier Type | String | Yes | Specifies the type of identifier used
+    to target the process. Supported types in logic include PID, SHA256, Name, and
+    Full Path (though the UI configuration may default to PID). |
+
+    | Process Identifier | String | Yes | The actual value of the identifier (e.g.,
+    the numeric PID or the file name) for the process to be terminated. |
+
+
+    ### Additional Notes
+
+    - The action supports multiple process identifier types (PID, SHA256, Name, Full
+    Path) in the underlying Python logic, even if the integration UI configuration
+    primarily lists PID.
+
+    - This is an asynchronous action that will remain in an 'In Progress' state while
+    it polls the McAfee Mvision EDR API for task completion status.
+
+
+    ### Flow Description
+
+    1. **Host Identification**: Retrieves a list of all managed hosts from McAfee
+    Mvision EDR and matches them against the provided Hostname or IP Address entities.
+
+    2. **Task Initiation**: For each matched host, it sends a request to the EDR API
+    to initiate a 'Kill Process' or 'Remove File' action based on the provided identifier.
+
+    3. **Status Polling**: Enters an asynchronous loop where it periodically checks
+    the status of the remediation task on the EDR platform.
+
+    4. **Completion**: Once the EDR reports the task as 'COMPLETED' or 'ERROR', the
+    action summarizes the results for all processed entities and finishes the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Stops a running process and removes its file from the managed endpoint via the
+      McAfee Mvision EDR remediation API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ used to verify the connection between Google SecOps and the McAfee Mvision EDR\
+    \ server. Its primary purpose is to validate that the integration's configuration\
+    \ parameters\u2014such as the API Root, authentication credentials, and SSL settings\u2014\
+    are correct and that the service is reachable.\n\n### Parameters\nThis action\
+    \ does not require any input parameters. It uses the global integration configuration\
+    \ settings.\n\n### Additional Notes\n- The action supports two authentication\
+    \ methods: Client ID/Secret (OAuth) or Username/Password. If both are provided,\
+    \ the Client ID/Secret method takes precedence.\n- The connectivity test is performed\
+    \ by attempting to fetch a single host record from the McAfee Mvision EDR API.\n\
+    \n### Flow Description\n1. **Parameter Extraction**: The script retrieves the\
+    \ API Root, Username, Password, Client ID, Client Secret, and SSL verification\
+    \ settings from the integration configuration.\n2. **Manager Initialization**:\
+    \ It initializes the `McAfeeMvisionEDRManager`, which automatically handles authentication\
+    \ and token retrieval based on the provided credentials.\n3. **Connectivity Test**:\
+    \ The manager executes the `test_connectivity` method, which sends a GET request\
+    \ to the hosts endpoint (`/ft/api/v2/ft/hosts`) with a limit of 1.\n4. **Status\
+    \ Reporting**: If the API call is successful, the action completes with a success\
+    \ message. If an exception occurs (e.g., authentication failure or connection\
+    \ timeout), the action reports a failure and provides the error details."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Quarantine Endpoint:
+  ai_description: >-
+    ### General Description
+
+    The **Quarantine Endpoint** action isolates a compromised or suspicious endpoint
+    from the network by triggering a quarantine task in **McAfee Mvision EDR**. It
+    identifies the correct endpoint in the EDR system by matching Siemplify IP Address
+    or Hostname entities against the EDR's managed host list.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **API Root** | String | Yes | The base URL for the McAfee Mvision EDR API instance.
+    |
+
+    | **Username** | String | No* | Username for authentication. Required if Client
+    ID/Secret is not provided. |
+
+    | **Password** | String | No* | Password for authentication. Required if Client
+    ID/Secret is not provided. |
+
+    | **Client ID** | String | No* | OAuth Client ID for authentication. Required
+    if Username/Password is not provided. |
+
+    | **Client Secret** | String | No* | OAuth Client Secret for authentication. Required
+    if Username/Password is not provided. |
+
+    | **Verify SSL** | Boolean | Yes | If enabled, verifies the SSL certificate of
+    the API server. Defaults to `False`. |
+
+
+    ### Additional Notes
+
+    * **Authentication**: The action requires either a **Username/Password** pair
+    or a **Client ID/Client Secret** pair to function. If both are provided, the integration
+    defaults to using the Client ID and Client Secret.
+
+    * **Matching Logic**: The action performs a lookup by fetching all hosts from
+    the EDR and comparing the entity identifier against hostnames and all associated
+    network interface IP addresses.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts configuration parameters and initializes the McAfee
+    Mvision EDR manager.
+
+    2. **Host Discovery**: Fetches the current list of all managed hosts from the
+    McAfee Mvision EDR server.
+
+    3. **Entity Processing**: Filters the target entities to identify those of type
+    `ADDRESS` (IP) or `HOSTNAME`.
+
+    4. **Endpoint Matching**: For each entity, the action searches the EDR host list
+    for a matching hostname or IP address.
+
+    5. **Quarantine Execution**: If a match is found, the action sends a POST request
+    to the EDR remediation API to create a `QuarantineHost` task for that specific
+    host GUID.
+
+    6. **Result Summary**: The action tracks successful quarantines, failed matches,
+    and duplicate matches, providing a detailed summary in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a 'QuarantineHost' remediation task in McAfee Mvision EDR, which changes
+      the network isolation state of the target endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove File:
+  ai_description: >-
+    Removes a specified file from target endpoints using McAfee Mvision EDR. This
+    action identifies the correct endpoint by matching Hostname or IP Address entities
+    against the EDR's managed host list, then triggers a remote file deletion task.
+    It supports a 'Safe Removal' mode to prevent the accidental deletion of critical
+    system files. As an asynchronous action, it initiates the removal and then polls
+    the EDR for the task's completion status across all targeted entities.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Full File Path | String | Yes | The absolute path of the file to be removed
+    from the endpoint. |
+
+    | Safe Removal | Boolean | Yes | If enabled (True), the action uses the 'removeFileSafe'
+    method which avoids deleting files identified as critical or trusted by the EDR.
+    Default is False. |
+
+
+    ### Flow Description
+
+    1. **Host Identification**: The action retrieves the list of all managed hosts
+    from McAfee Mvision EDR and matches the provided Hostname or Address entities
+    to their internal EDR identifiers (maGuid).
+
+    2. **Task Initiation**: For each matched host, the action sends a request to the
+    EDR to start a file removal task using the provided file path and safety setting.
+
+    3. **Asynchronous Polling**: The action transitions to an 'In Progress' state,
+    periodically querying the EDR API to check the status of the removal tasks for
+    each entity.
+
+    4. **Finalization**: Once all tasks reach a terminal state (Completed or Error),
+    the action aggregates the results and reports which files were successfully removed
+    and which failed, including error reasons if provided by the EDR.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes files from the file system of remote endpoints managed by McAfee Mvision
+      EDR.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Stop And Remove Content:
+  ai_description: >-
+    ### General Description
+
+    The **Stop And Remove Content** action is a remediation capability for McAfee
+    Mvision EDR. It allows security analysts to remotely terminate a specific process
+    (identified by its PID) and simultaneously delete a file (identified by its full
+    path) on target endpoints. This is particularly useful for stopping malicious
+    scripts (like Python or Bash) and removing the source file in a single operation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **PID** | Integer | Yes | The Process ID of the interpreter or process to be
+    stopped. |
+
+    | **Full File Path** | String | Yes | The absolute path to the file that should
+    be removed from the endpoint. |
+
+
+    ### Flow Description
+
+    1. **Host Identification**: The action retrieves a list of all hosts from McAfee
+    Mvision EDR and matches the input `HOSTNAME` or `ADDRESS` entities to their internal
+    `ma_guid` (McAfee Agent GUID).
+
+    2. **Task Initiation**: For each matched host, it sends a request to the EDR to
+    execute the `stopAndRemoveContent` command using the provided PID and file path.
+
+    3. **Asynchronous Monitoring**: The action enters an asynchronous state, periodically
+    polling the EDR API to check the status of the remediation task.
+
+    4. **Result Reporting**: Once the tasks are finished, it reports whether the process
+    was successfully stopped and the file removed for each entity.
+
+
+    ### Additional Notes
+
+    - This action is asynchronous and will continue to run until the EDR reports a
+    final status (Success/Failure) for the tasks.
+
+    - If multiple matches are found for an entity in the EDR, it defaults to the first
+    match.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Terminates a running process and deletes a file on the remote endpoint via the
+      McAfee Mvision EDR API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unquarantine Endpoint:
+  ai_description: >-
+    ### General Description
+
+    Reverses the quarantine (isolation) status of endpoints in McAfee Mvision EDR.
+    This action identifies the correct host in the EDR system using IP Address or
+    Hostname entities and issues a command to restore normal network connectivity.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. However, it relies on
+    the following integration configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The URL of the McAfee Mvision EDR server. |
+
+    | Username | String | No* | Username for authentication. Required if Client ID/Secret
+    are not used. |
+
+    | Password | String | No* | Password for authentication. Required if Client ID/Secret
+    are not used. |
+
+    | Client ID | String | No* | Client ID for authentication. Preferred over Username/Password.
+    |
+
+    | Client Secret | String | No* | Client Secret for authentication. Preferred over
+    Username/Password. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates. Defaults to
+    False. |
+
+
+    ### Additional Notes
+
+    *Authentication:* The integration requires either a Client ID and Client Secret
+    pair OR a Username and Password pair to function. If both are provided, the Client
+    ID and Client Secret will take precedence.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Establishes a connection to the McAfee Mvision EDR manager
+    using the provided configuration credentials.
+
+    2. **Host Retrieval:** Fetches a complete list of hosts currently managed by the
+    EDR server to facilitate entity matching.
+
+    3. **Entity Filtering:** Identifies `ADDRESS` (IP) and `HOSTNAME` entities from
+    the current Google SecOps context.
+
+    4. **Matching Logic:** Iterates through the identified entities and attempts to
+    match them against the EDR host list by comparing hostnames (case-insensitive)
+    or IP addresses.
+
+    5. **Task Creation:** For every matching host found, the action sends a POST request
+    to the EDR to initiate an `UnquarantineHost` remediation task using the host's
+    unique `ma_guid`.
+
+    6. **Result Reporting:** Consolidates the results and reports which entities were
+    successfully unquarantined, which had no matches in the EDR, and if multiple matches
+    were found for a single entity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates an 'UnquarantineHost' remediation task on the McAfee Mvision EDR server,
+      which changes the operational state of the physical or virtual endpoint by removing
+      network isolation restrictions.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

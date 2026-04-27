@@ -1,0 +1,800 @@
+Add Note to Incident:
+  ai_description: >-
+    Adds a note (journal entry) to a specific incident in the RSA NetWitness Platform.
+    This action is used to document findings, updates, or administrative notes directly
+    within the RSA NetWitness Respond module.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident ID | String | Yes | The unique identifier of the RSA NetWitness incident
+    that will receive the note. |
+
+    | Note | String | Yes | The actual text content of the note to be added to the
+    incident's journal. |
+
+    | Author | String | Yes | The name or identifier of the user or system responsible
+    for creating the note. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the RSA NetWitness Web API credentials
+    from the integration configuration and the Incident ID, Note, and Author from
+    the action parameters.
+
+    2. **Manager Initialization:** It initializes the `RSAManager`, which handles
+    authentication and session management with the RSA NetWitness Web API.
+
+    3. **API Interaction:** The action performs a POST request to the RSA NetWitness
+    `/incidents/{incident_id}/journal` endpoint with the provided note and author
+    details.
+
+    4. **Outcome Reporting:** If the request is successful, the action completes with
+    a success message; otherwise, it catches specific exceptions (like `UpdateFailException`)
+    and reports the failure reason.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new journal entry (note) to an existing incident in the RSA NetWitness
+      Platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Endpoint:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities using the RSA NetWitness Platform. This
+    action retrieves detailed system information, including agent IDs, risk scores,
+    and network interface details (MAC addresses, IPv4/IPv6, gateways, DNS). It allows
+    security analysts to automatically assess the risk level of an endpoint based
+    on a configurable threshold.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Risk Score Threshold | Integer | No | Specifies the risk threshold for the endpoint.
+    If the endpoint's risk score from RSA NetWitness exceeds this value, the entity
+    will be marked as suspicious in Google SecOps. Default value is 50. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the RSA NetWitness Web API using configured
+    credentials and identifies the required endpoint-server service ID.
+
+    2. **Entity Filtering**: Identifies all IP Address (`ADDRESS`) and `HOSTNAME`
+    entities within the current context.
+
+    3. **Data Retrieval**: For each entity, it queries the RSA NetWitness endpoint
+    server to find matching host records.
+
+    4. **Enrichment**: If a match is found, it flattens the host data (including network
+    interfaces) and updates the entity's additional properties with the prefix `RSA_NTW`.
+
+    5. **Risk Assessment**: Compares the retrieved risk score against the `Risk Score
+    Threshold`. If the score is higher, the entity is marked as suspicious.
+
+    6. **Finalization**: Updates the entities in the case, attaches the raw JSON results,
+    and provides a summary message of successful and failed enrichments.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with enrichment data and modifies the 'is_suspicious'
+      flag based on the risk score threshold.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich File:
+  ai_description: "### General Description\nEnriches File Name and File Hash entities\
+    \ using RSA NetWitness Platform. This action retrieves comprehensive file metadata,\
+    \ including reputation status, global risk scores, file size, and checksums (MD5,\
+    \ SHA1, SHA256). It allows security analysts to automatically assess the risk\
+    \ of files based on a configurable threshold and marks entities as suspicious\
+    \ if they exceed that limit.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Risk Score Threshold\
+    \ | Integer | No | Specifies the risk threshold (0-100). If a file's global risk\
+    \ score exceeds this value, the entity is marked as suspicious in Google SecOps.\
+    \ Default is 50. |\n\n### Flow Description\n1. **Authentication**: Connects to\
+    \ the RSA NetWitness Web API using provided credentials and retrieves a security\
+    \ token.\n2. **Service Discovery**: Identifies the required `endpoint-server`\
+    \ service ID within the RSA environment to perform file searches.\n3. **Entity\
+    \ Processing**: Iterates through target entities (File Names and File Hashes).\n\
+    4. **Data Retrieval**: \n    * For **File Names**: Searches the RSA database for\
+    \ matching filenames.\n    * For **File Hashes**: Searches using MD5 or SHA256\
+    \ identifiers.\n5. **Enrichment**: If a match is found, the action flattens the\
+    \ file metadata and updates the entity's additional properties with the prefix\
+    \ `RSA_NTW`.\n6. **Risk Assessment**: Compares the file's `globalRiskScore` against\
+    \ the user-defined `Risk Score Threshold`. If the score is higher, the entity\
+    \ is flagged as suspicious.\n7. **Finalization**: Updates the entities in Google\
+    \ SecOps and returns the raw JSON data for further playbook logic.\n\n### Additional\
+    \ Notes\n* This action specifically supports MD5 and SHA256 hash types. Other\
+    \ hash formats will result in a failure for that specific entity.\n* Requires\
+    \ the RSA NetWitness Respond license and an active endpoint server service."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with file metadata from RSA NetWitness and modifies
+      the 'is_suspicious' flag based on the risk score threshold.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    - FILENAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Isolate Endpoint:
+  ai_description: >-
+    ### General Description
+
+    The **Isolate Endpoint** action requests the isolation of specific endpoints within
+    the RSA NetWitness Platform. This is a containment action used to restrict the
+    network connectivity of a potentially compromised host to prevent lateral movement
+    or data exfiltration. It requires the RSA NetWitness Respond license and an active
+    endpoint server service running in the background.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Comment** | String | Yes | A descriptive reason for the isolation request,
+    which will be logged in RSA NetWitness for auditing purposes. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action connects to the RSA NetWitness Web API using
+    the configured root URL and credentials.
+
+    2. **Service Discovery**: It retrieves the internal Service ID for the 'endpoint-server',
+    which is a prerequisite for endpoint management operations.
+
+    3. **Entity Search**: For each provided IP Address or Hostname entity, the action
+    searches the RSA NetWitness inventory to identify the corresponding Agent ID.
+
+    4. **Isolation Request**: If a matching agent is found, the action sends a POST
+    request to the isolation endpoint, applying the isolation state to the agent and
+    attaching the user-provided comment.
+
+    5. **Result Reporting**: The action tracks successful and failed isolation requests
+    and returns a summary message to the case wall.
+
+
+    ### Additional Notes
+
+    - This action supports **ADDRESS** (IPv4) and **HOSTNAME** entity types.
+
+    - Isolation is an external state change; this action does not modify entity attributes
+    or create insights within Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Isolates the target endpoint in RSA NetWitness, restricting its network communication
+      to prevent further threats.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between Google SecOps and the RSA NetWitness\
+    \ Platform. It validates the configuration for multiple components of the RSA\
+    \ environment, including the Broker, Concentrator, and Web (UI) API. The action\
+    \ ensures that the provided credentials and API roots are correct and that the\
+    \ network path is open.\n\n### Parameters Description\n| Parameter | Description\
+    \ | Type | Mandatory |\n| :--- | :--- | :--- | :--- |\n| None | This action does\
+    \ not take any input parameters. It relies on the integration's global configuration.\
+    \ | N/A | No |\n\n### Additional Notes\n* The action requires at least one of\
+    \ the following configuration sets to be fully populated in the integration settings:\
+    \ Broker API, Concentrator API, or Web API.\n* If the Web API is configured, the\
+    \ action will attempt to obtain an authentication token.\n* If the Broker or Concentrator\
+    \ API is configured, the action will execute a lightweight test query (`select\
+    \ sessionid`) to confirm data access.\n\n### Flow Description\n1. **Configuration\
+    \ Extraction:** The action retrieves API roots, usernames, passwords, and SSL\
+    \ verification settings for the Broker, Concentrator, and Web components from\
+    \ the integration configuration.\n2. **Manager Initialization:** It initializes\
+    \ the `RSAManager`. During initialization, if Web API credentials are provided,\
+    \ it immediately attempts to authenticate and retrieve an access token.\n3. **Connectivity\
+    \ Test:** The action calls the `test_connectivity` method. \n    * If a Broker\
+    \ or Concentrator is configured, it sends a GET request to the `/sdk` endpoint\
+    \ with a minimal query.\n    * If only the Web API is configured, it relies on\
+    \ the successful token acquisition from the initialization step.\n4. **Result\
+    \ Reporting:** If all configured connections succeed, it returns a success status\
+    \ with the message \"Connection Established.\" If any step fails (e.g., authentication\
+    \ error, timeout), it catches the exception and reports a failure."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Query NetWitness For Events Around Host:
+  ai_description: >-
+    ### General Description
+
+    Queries RSA NetWitness to retrieve network events and associated PCAP files for
+    Hostname entities. This action is used to gather forensic evidence and network
+    activity context during an investigation by searching for sessions where the hostname
+    is identified as a source or destination domain.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Hours Backwards | Integer | No | Specifies the time window (in hours) to
+    look back from the current time for relevant events. Defaults to 1 hour if not
+    specified. |
+
+    | Max Events To Return | Integer | No | Limits the number of events retrieved
+    and displayed for each hostname. Defaults to 50 if not specified. |
+
+
+    ### Additional Notes
+
+    * This action requires either the **Broker API** or the **Concentrator API** to
+    be fully configured in the integration settings to function.
+
+    * The action downloads PCAP files, which are attached directly to the entities
+    in the Google SecOps case.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves connection details (API roots and
+    credentials) for the RSA NetWitness Broker or Concentrator and initializes the
+    management session.
+
+    2. **Entity Filtering**: It identifies all `HOSTNAME` entities provided in the
+    action scope.
+
+    3. **Session Querying**: For each hostname, it queries RSA NetWitness for session
+    IDs where the hostname matches the `domain.src` or `domain.dst` fields within
+    the specified time range.
+
+    4. **Event Retrieval**: It fetches detailed metadata for the identified sessions
+    to construct event objects.
+
+    5. **PCAP Acquisition**: It requests and downloads the PCAP data associated with
+    the identified sessions.
+
+    6. **Data Output**: It populates an entity-specific data table with the event
+    details and attaches the PCAP file to the entity in the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Query NetWitness For Events Around IP:
+  ai_description: >-
+    Queries RSA NetWitness for network events and packet captures (PCAP) associated
+    with IP Address entities. This action searches for sessions where the target IP
+    is either the source or destination within a specified lookback period. It retrieves
+    event metadata, formats it into a data table, and downloads the corresponding
+    PCAP file as an attachment for the entity.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Hours Backwards | Integer | No | Specifies how many hours back from the
+    current time to search for events. Default is 1 hour. |
+
+    | Max Events To Return | Integer | No | Limits the total number of events retrieved
+    per entity. Default is 50. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with the RSA NetWitness Broker or Concentrator
+    using the provided configuration credentials.
+
+    2. **Entity Scoping**: Filters the target entities to identify IP Address (ADDRESS)
+    types.
+
+    3. **Event Querying**: For each IP, the action performs a query to find session
+    IDs where the IP is the source (`ip.src`) or destination (`ip.dst`) within the
+    defined time range.
+
+    4. **Metadata Extraction**: Retrieves detailed metadata for the discovered sessions
+    and converts them into a structured format.
+
+    5. **PCAP Retrieval**: Downloads the raw packet capture data for the identified
+    sessions from the NetWitness appliance.
+
+    6. **Internal Enrichment**: Adds a CSV-formatted table of events to the entity
+    and attaches the PCAP file to the entity in the SOAR case.
+
+    7. **Finalization**: Summarizes the results, indicating which IPs had events found
+    and which did not.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables to entities and attaches PCAP files to the entities
+      within the SOAR case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Query NetWitness For Events Around User:
+  ai_description: >-
+    ### General Description
+
+    Queries the RSA NetWitness Platform to retrieve historical network events and
+    associated PCAP files for specific User entities. This action is designed to provide
+    forensic context by identifying network sessions where the user is either the
+    source or destination, and then attaching the raw packet data directly to the
+    Google SecOps case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Hours Backwards | Integer | No | Specifies the time window (in hours) to
+    look back for events. Defaults to 1 hour. |
+
+    | Max Events To Return | Integer | No | Limits the number of events retrieved
+    from RSA NetWitness per user. Defaults to 50. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the RSA NetWitness manager using
+    provided Broker or Concentrator credentials and API roots from the integration
+    configuration.
+
+    2. **Entity Filtering**: It identifies all `USER` entities present in the current
+    alert context.
+
+    3. **Event Querying**: For each user, it queries RSA NetWitness for network sessions
+    where the user is identified as either the source (`user.src`) or destination
+    (`user.dst`).
+
+    4. **Data Retrieval**: It fetches the metadata for the identified sessions and
+    converts them into a readable format.
+
+    5. **PCAP Extraction**: It requests the raw PCAP data for the sessions associated
+    with the user.
+
+    6. **Case Enrichment**: The action adds a data table to the entity containing
+    the event details and attaches the PCAP file to the case for further analysis.
+
+
+    ### Additional Notes
+
+    - This action requires either the Broker or Concentrator API to be correctly configured
+    in the integration settings.
+
+    - If no events are found for a user, the action will report this in the output
+    message but continue processing other entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds entity tables and PCAP file attachments to the case in Google
+      SecOps.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Run General Query:
+  ai_description: >-
+    ### General Description
+
+    Runs a custom query against the RSA NetWitness Platform to retrieve event metadata
+    and associated PCAP files. This action is designed for flexible threat hunting
+    and forensic investigation, allowing users to specify a raw query string and a
+    time range to extract detailed network traffic data and session information.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | String | Yes | The custom RSA NetWitness query string used to filter
+    sessions (e.g., `ip.src=1.1.1.1`). |
+
+    | Max Hours Backwards | Integer | No | Specifies the time window for the query,
+    looking back from the current time in hours. Defaults to 1 hour. |
+
+    | Max Events To Return | Integer | No | Limits the number of events retrieved
+    and displayed in the results. Defaults to 50. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities but rather on a user-provided
+    query string.
+
+    - If results are found, the action automatically downloads and attaches a PCAP
+    file containing the traffic for all identified sessions to the case.
+
+    - Event metadata is presented in a data table for easy review within the SOAR
+    interface.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the RSA Manager using the provided
+    Broker or Concentrator API credentials and connection details.
+
+    2. **Session Identification**: It executes the provided query string within the
+    specified time range to identify relevant session IDs from the RSA NetWitness
+    SDK.
+
+    3. **PCAP Retrieval**: If session IDs are found, it requests the combined PCAP
+    data for those sessions and attaches the resulting file to the case.
+
+    4. **Metadata Extraction**: The action iterates through the identified session
+    IDs to fetch detailed metadata for each event.
+
+    5. **Output Generation**: It constructs a data table containing the event metadata
+    and returns the raw JSON results for use in downstream playbook logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unisolate Endpoint:
+  ai_description: >-
+    ### General Description
+
+    This action requests the unisolation of endpoint entities (IP Addresses or Hostnames)
+    within the RSA NetWitness Platform. It is used to restore normal network connectivity
+    to endpoints that were previously isolated for security reasons. The action requires
+    the RSA NetWitness Respond license and the endpoint server service to be active.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Comment | String | Yes | A descriptive reason for the unisolation request, which
+    is logged in RSA NetWitness. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves connection details (API Root, Credentials)
+    and the mandatory unisolation comment.
+
+    2. **Service Discovery**: It connects to the RSA NetWitness API to identify the
+    specific `service_id` for the 'endpoint-server'.
+
+    3. **Entity Resolution**: For each provided IP or Hostname entity, the action
+    searches the RSA NetWitness database to find the corresponding `agent_id`.
+
+    4. **Unisolation Request**: If a matching agent is found, the action sends a `DELETE`
+    request to the isolation endpoint in RSA NetWitness to lift the network restrictions.
+
+    5. **Result Reporting**: The action tracks which entities were successfully unisolated
+    and which failed (e.g., if the agent was not found or the API request failed)
+    and returns a summary message to the Google SecOps case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Performs a DELETE request to the RSA NetWitness isolation API to remove network
+      restrictions from a specific endpoint agent.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Incident:
+  ai_description: >-
+    ### General Description
+
+    Updates the details of an existing incident in RSA NetWitness Respond. This action
+    allows users to modify the status and the assignee of a specific incident identified
+    by its ID. It is primarily used for incident management and workflow synchronization
+    between Google SecOps and RSA NetWitness.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident ID | String | Yes | The unique identifier of the incident that needs
+    to be updated. |
+
+    | Status | Enum | No | Specify the new status for the incident. Options include:
+    New, Assigned, In Progress, Task Requested, Task Complete, Closed, Closed - False
+    Positive. |
+
+    | Assignee | String | No | Specify the new assignee (username) for the incident.
+    |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the Incident ID, Status, and
+    Assignee from the input parameters.
+
+    2. **Manager Initialization**: It initializes the `RSAManager` using the provided
+    Web API Root, Username, and Password from the integration configuration.
+
+    3. **Status Mapping**: If a status is provided, the action maps the user-friendly
+    status name to the internal RSA NetWitness status value (e.g., 'In Progress' becomes
+    'InProgress').
+
+    4. **API Update**: The action sends a PATCH request to the RSA NetWitness API
+    endpoint for the specific incident ID, updating the status and/or assignee fields.
+
+    5. **Result Handling**: Upon success, the action retrieves the updated incident
+    object and adds it to the action's JSON results for further use in the playbook.
+
+
+    ### Additional Notes
+
+    - This action requires an RSA NetWitness Respond license.
+
+    - At least one of the optional parameters (Status or Assignee) should be provided
+    to perform a meaningful update.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status and/or assignee of an existing incident record within the
+      RSA NetWitness Respond module.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

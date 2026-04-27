@@ -1,0 +1,334 @@
+Enrich Hash:
+  ai_description: >-
+    ### General Description
+
+    Enriches File Hash entities using VMware Carbon Black Enterprise EDR. This action
+    retrieves comprehensive file metadata and device prevalence information for SHA256
+    hashes. It is designed to provide security analysts with context regarding where
+    a file has been seen in the environment and its technical specifications (e.g.,
+    file size, version, company name).
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | No action-specific parameters | N/A | N/A | This action does not require any
+    action-specific parameters. It relies on the integration's configuration (API
+    Root, Org Key, etc.) and the target entities in the scope. |
+
+
+    ### Additional Notes
+
+    * **Supported Format:** This action strictly supports **SHA256** hashes. It will
+    skip any hash entities that do not have a length of 64 characters.
+
+    * **Data Sources:** The action performs two distinct API calls per entity: one
+    for file metadata and one for a device summary.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering:** The action identifies all `FILEHASH` entities within
+    the current context.
+
+    2. **Format Validation:** For each hash, it verifies the length is exactly 64
+    characters (SHA256). Non-compliant hashes are skipped.
+
+    3. **Metadata Retrieval:** It queries the Carbon Black UBS (Unified Binary Store)
+    API to fetch technical metadata such as `original_filename`, `file_version`, `company_name`,
+    and `os_type`.
+
+    4. **Summary Retrieval:** It queries the Carbon Black UBS API to fetch a device
+    summary, including the total number of devices where the file was seen and the
+    timestamps for the first and last occurrences.
+
+    5. **Internal Enrichment:** The retrieved data is flattened, prefixed with `CB_ENT_EDR`,
+    and added to the entity's `additional_properties`. The entity is marked as enriched.
+
+    6. **Result Reporting:** The action updates the entities in Google SecOps and
+    provides a raw JSON result containing the combined data from both API calls.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with file metadata and device summary information,
+      and sets the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+"Get Events Associated With Process by Process Guid":
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed event data associated with specific processes from
+    VMware Carbon Black Enterprise EDR using their unique Process GUIDs. It is designed
+    to provide more granular visibility into process activities (such as network connections,
+    file modifications, or registry changes) than a standard process search. The action
+    allows for complex filtering using EDR query syntax and specific event type criteria.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Process GUID | String | Yes | A comma-separated list of Carbon Black Process
+    GUIDs to fetch events for. |
+
+    | Search Criteria | String | No | Comma-separated list of event types to filter
+    the results (e.g., 'netconn', 'filemod'). |
+
+    | Query | String | Yes | The EDR query string to execute for the event search
+    (e.g., 'netconn_action:ACTION_CONNECTION_ESTABLISHED'). |
+
+    | Time Frame | Integer | No | The lookback period in hours for the search. Defaults
+    to 4 hours if not specified. |
+
+    | Record limit | Integer | Yes | The maximum number of event records to return
+    per Process GUID. Defaults to 20. |
+
+    | Sort By | String | No | The field name used to sort the returned event data.
+    |
+
+    | Sort Order | Enum | No | The direction of sorting: 'ASC' (Ascending) or 'DESC'
+    (Descending). Defaults to 'ASC'. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration configuration (API credentials)
+    and user-provided parameters.
+
+    2. **Input Parsing**: The 'Process GUID' and 'Search Criteria' strings are split
+    into lists for processing.
+
+    3. **API Interaction**: For each provided Process GUID, the action calls the Carbon
+    Black Enterprise EDR API's event search endpoint.
+
+    4. **Data Retrieval**: The action paginates through the API results until the
+    'Record limit' is reached or all events are fetched.
+
+    5. **Internal Updates**: For every GUID with results, a data table is added to
+    the Google SecOps case containing the flattened event details.
+
+    6. **Finalization**: The action aggregates all retrieved events into a JSON result
+    and provides a summary message of successful and failed GUID lookups.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables to the case containing the retrieved event details
+      for each processed GUID.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the VMware Carbon Black Enterprise EDR instance. It ensures
+    that the provided credentials (API ID, Secret Key, and Organization Key) are valid
+    and that the network path to the API Root is open.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **API Root** | String | Yes | The base URL of the VMware Carbon Black Enterprise
+    EDR API instance. |
+
+    | **Organization Key** | String | Yes | The unique organization key associated
+    with the Carbon Black account. |
+
+    | **API ID** | String | Yes | The API ID used for authentication. |
+
+    | **API Secret Key** | String | Yes | The API Secret Key used for authentication.
+    |
+
+    | **Verify SSL** | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Carbon Black server. Default is `False`. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities and is typically used during the initial
+    setup or troubleshooting of the integration.
+
+    - As per standard SOAR practices, Ping actions are not categorized as enrichment
+    actions.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the connection details (API
+    Root, Org Key, API ID, Secret Key, and SSL settings) from the integration configuration.
+
+    2. **Manager Initialization**: It initializes the `CBEnterpriseEDRManager` with
+    the provided credentials.
+
+    3. **Connectivity Test**: The manager executes a `GET` request to the `/threathunter/watchlistmgr/v3/orgs/{org_key}/watchlists`
+    endpoint.
+
+    4. **Validation**: The action validates the HTTP response. A successful response
+    (200 OK) confirms connectivity.
+
+    5. **Result Reporting**: The action returns a success message if the connection
+    is established, or a failure message with error details if the connection fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Process Search:
+  ai_description: >-
+    ### General Description
+
+    This action searches for process activity on a specific host using Carbon Black
+    Enterprise EDR. It allows security analysts to query process-level telemetry (such
+    as process names, hashes, or network connections) associated with a `HOSTNAME`
+    entity within a specified timeframe. The results are returned as a data table
+    and a JSON result for further automation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query** | String | No | A Carbon Black search query to filter process results
+    (e.g., `process_name:svchost.exe` or `process_hash:9520a99e...`). |
+
+    | **Time Frame** | Integer | No | The number of hours back from the current time
+    to search for process activity. Defaults to 4 hours. |
+
+    | **Record limit** | Integer | Yes | The maximum number of process records to
+    return for each entity. Defaults to 20. |
+
+    | **Sort By** | String | No | The field name used to sort the results (e.g., `device_timestamp`).
+    |
+
+    | **Sort Order** | Enum | No | The direction of sorting: `ASC` (Ascending) or
+    `DESC` (Descending). Defaults to `ASC`. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration configuration (API credentials)
+    and action parameters.
+
+    2. **Entity Filtering**: It identifies all `HOSTNAME` entities within the current
+    scope.
+
+    3. **Search Initiation**: For each host, it sends a request to Carbon Black to
+    initiate an asynchronous process search job using the provided query and timeframe.
+
+    4. **Result Retrieval**: The action polls the search job and paginates through
+    the results until the `Record limit` is reached or all data is retrieved.
+
+    5. **Data Processing**: Retrieved process data is formatted into a CSV-style data
+    table and attached to the entity in the Google SecOps case.
+
+    6. **Finalization**: The action updates the entities in the case and provides
+    a summary message of the search results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates the entities in the Google SecOps case to reflect that process
+      information was successfully retrieved and processed.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

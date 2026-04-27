@@ -1,0 +1,251 @@
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ used to verify the connectivity between Google SecOps and the PassiveTotal (RiskIQ)\
+    \ platform. Its primary purpose is to ensure that the integration's configuration\u2014\
+    specifically the Username and API Key\u2014is correct and that the PassiveTotal\
+    \ API is reachable.\n\n### Parameters Description\nThere are no parameters for\
+    \ this action.\n\n### Additional Notes\nThis action performs a test lookup for\
+    \ a hardcoded domain ('google.com') to validate the connection. It does not interact\
+    \ with or process any entities within the Google SecOps case.\n\n### Flow Description\n\
+    1. **Initialization:** The action initializes the PassiveTotal manager using the\
+    \ Username and API Key provided in the integration configuration.\n2. **Connectivity\
+    \ Test:** It executes a WHOIS report request for the domain 'google.com' via the\
+    \ PassiveTotal API.\n3. **Error Handling:** The script checks the API response\
+    \ for error messages or missing data.\n4. **Final Status:** If the request is\
+    \ successful, it returns a 'Connection Established' message; otherwise, it reports\
+    \ 'Connection Failed'."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+WhoIs Address Reputation:
+  ai_description: "### General Description\nThe **WhoIs Address Reputation** action\
+    \ enriches IP Address entities by retrieving passive DNS (pDNS) data from RiskIQ\
+    \ (PassiveTotal). It focuses on identifying historical DNS resolutions associated\
+    \ with an IP address to provide security analysts with context regarding the domains\
+    \ that have pointed to the specific infrastructure. This action is strictly for\
+    \ enrichment and does not modify any external system state.\n\n### Parameters\
+    \ Description\nThere are no parameters for this action.\n\n### Additional Notes\n\
+    This action specifically targets external (non-internal) IP addresses. If an entity\
+    \ is marked as internal in the Google SecOps environment, it will be skipped to\
+    \ avoid unnecessary API calls and potential data leakage of internal infrastructure\
+    \ details to a third-party service.\n\n### Flow Description\n1. **Configuration\
+    \ Retrieval:** The action fetches the PassiveTotal API credentials (Username and\
+    \ API Key) from the integration settings.\n2. **Entity Filtering:** It identifies\
+    \ all `ADDRESS` entities within the current scope that are not marked as internal.\n\
+    3. **Data Retrieval:** For each valid entity, the action calls the PassiveTotal\
+    \ API to retrieve a passive DNS report.\n4. **Data Processing:** \n    * The raw\
+    \ DNS report is converted into a flat dictionary format for entity enrichment.\n\
+    \    * The report is also formatted into a CSV-style list for display in a data\
+    \ table.\n5. **Internal Mutation:** \n    * The entity's `additional_properties`\
+    \ are updated with the DNS resolution details (prefixed with `WH_dns_resolve_`).\n\
+    \    * A data table containing the DNS history (Address, Record Hash, Last Seen,\
+    \ etc.) is attached to the entity.\n6. **Finalization:** The action updates the\
+    \ entities in Google SecOps and returns a summary message indicating which entities\
+    \ were successfully enriched."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity 'additional_properties' with DNS resolution data and
+      adds entity tables to the case for visualization.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+WhoIs Scan Address:
+  ai_description: "### General Description\nThe **WhoIs Scan Address** action performs\
+    \ a WHOIS lookup for IP address entities using the RiskIQ PassiveTotal service.\
+    \ Its primary purpose is to enrich security alerts with ownership and registration\
+    \ data, such as the registrar, registrant organization, and geographic location\
+    \ (City/Country). This context helps analysts determine the legitimacy or risk\
+    \ level of an external IP address.\n\n### Parameters Description\nThere are no\
+    \ user-configurable parameters for this action. It relies on the global integration\
+    \ configuration (Username and API Key) and the entities present in the current\
+    \ scope.\n\n### Additional Notes\n* This action only processes entities of type\
+    \ **ADDRESS**.\n* It explicitly excludes internal entities (where `is_internal`\
+    \ is true) to avoid unnecessary API calls for local infrastructure.\n* The action\
+    \ maps specific WHOIS fields (`WH_country`, `WH_city`) directly to standard entity\
+    \ attributes for better visibility in the Google SecOps UI.\n\n### Flow Description\n\
+    1. **Initialization**: The action retrieves the PassiveTotal API credentials from\
+    \ the integration settings and initializes the manager.\n2. **Entity Filtering**:\
+    \ It identifies all `ADDRESS` entities in the current scope that are not marked\
+    \ as internal.\n3. **Data Retrieval**: For each valid entity, it queries the PassiveTotal\
+    \ API to retrieve a comprehensive WHOIS report.\n4. **Data Processing**: The raw\
+    \ WHOIS report is parsed into a flat dictionary and a CSV-formatted list for display.\n\
+    5. **Internal Enrichment**: \n    * Updates the entity's `additional_properties`\
+    \ with the flattened WHOIS data.\n    * Specifically updates the `Country` and\
+    \ `City` attributes if found in the report.\n    * Attaches a detailed data table\
+    \ to the entity in the case wall.\n6. **Finalization**: Updates all modified entities\
+    \ in the Google SecOps platform and returns a JSON summary of the results."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with WHOIS metadata (e.g., registrar, organization)
+      and populates standard fields like City and Country. It also adds a data table
+      to the entity.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+WhoIs Scan Domain:
+  ai_description: "### General Description\nThis action enriches Hostname entities\
+    \ by performing a WHOIS query using the RiskIQ (PassiveTotal) service. It retrieves\
+    \ detailed registration information, including registrar details, creation/expiration\
+    \ dates, and registrant contact information. The retrieved data is used to update\
+    \ entity attributes and provide a structured data table within the case.\n\n###\
+    \ Parameters Description\nThere are no parameters for this action.\n\n### Additional\
+    \ Notes\nThis action specifically targets non-internal Hostname entities to avoid\
+    \ unnecessary API calls for internal assets.\n\n### Flow Description\n1. **Filter\
+    \ Entities**: The action identifies all `HOSTNAME` entities in the current scope\
+    \ that are not marked as internal.\n2. **API Query**: For each valid entity, it\
+    \ calls the PassiveTotal API to retrieve the WHOIS report.\n3. **Data Parsing**:\
+    \ The raw WHOIS report is parsed into a dictionary for attribute mapping and a\
+    \ CSV format for table display.\n4. **Entity Enrichment**: \n    *   Updates the\
+    \ entity's `additional_properties` with the WHOIS data.\n    *   Specifically\
+    \ maps `WH_country` to the `Country` attribute and `WH_city` to the `City` attribute\
+    \ if available.\n5. **UI Integration**: Adds a data table to the entity in the\
+    \ Google SecOps UI containing the WHOIS property-value pairs.\n6. **Final Update**:\
+    \ Commits the changes to the entities and returns a summary of enriched hostnames."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with WHOIS data and adds entity-level data
+      tables.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Whois Host Reputation:
+  ai_description: "### General Description\nThis action enriches Hostname entities\
+    \ by retrieving passive DNS reputation data from RiskIQ (PassiveTotal). It focuses\
+    \ on identifying historical DNS resolutions associated with a host to provide\
+    \ security analysts with context regarding the entity's network footprint.\n\n\
+    ### Parameters Description\nThere are no parameters for this action.\n\n### Additional\
+    \ Notes\nThis action specifically targets non-internal Hostname entities to avoid\
+    \ unnecessary API calls for local infrastructure.\n\n### Flow Description\n1.\
+    \ **Entity Filtering**: The action identifies all `HOSTNAME` entities within the\
+    \ current scope that are not marked as internal.\n2. **Data Retrieval**: For each\
+    \ identified entity, it queries the PassiveTotal API to fetch a passive DNS report.\n\
+    3. **Data Transformation**: The raw API response is converted into two formats:\
+    \ a dictionary for entity property updates and a CSV-formatted list for UI tables.\n\
+    4. **Internal Enrichment**: \n    *   Updates the entity's `additional_properties`\
+    \ with DNS resolution details (prefixed with 'WH_').\n    *   Adds a data table\
+    \ to the entity in the Google SecOps UI containing fields like Address, Record\
+    \ Hash, and Seen dates.\n5. **Finalization**: The action updates the entities\
+    \ in the system and returns a summary message of the enriched hosts."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with DNS resolution data and attaches data
+      tables to the entities within the case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

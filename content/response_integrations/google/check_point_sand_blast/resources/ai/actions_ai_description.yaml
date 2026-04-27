@@ -1,0 +1,204 @@
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is designed to verify\
+    \ the connectivity between Google SecOps and the Check Point SandBlast server.\
+    \ It ensures that the provided API Root and API Key are valid and that the network\
+    \ connection is functional by performing a test query against the SandBlast API.\n\
+    \n### Parameters Description\n\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| API Root | String | Yes | The base URL for the\
+    \ Check Point SandBlast API. |\n| API Key | String | Yes | The API key used for\
+    \ authentication with the SandBlast service. |\n| Verify SSL | Boolean | No |\
+    \ If set to true, the action will verify the SSL certificate of the SandBlast\
+    \ server. Defaults to False. |\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the Siemplify context and logs the start of the process.\n\
+    2. **Configuration Extraction**: It retrieves the mandatory `API Root` and `API\
+    \ Key`, along with the optional `Verify SSL` setting from the integration configuration.\n\
+    3. **Connectivity Test**: The action uses the `SandBlastManager` to call the `test_connectivity`\
+    \ method. This method executes a hardcoded hash query (`8dfa1440953c3d93daafeae4a5daa326`)\
+    \ to the `/query` endpoint of the SandBlast API.\n4. **Result Handling**: \n \
+    \   * If the API call is successful, the action returns a success message and\
+    \ sets the result value to `true`.\n    * If an exception occurs (e.g., authentication\
+    \ failure, network timeout), the action logs the error and returns a failure message\
+    \ with the result value set to `false`.\n\n### Additional Notes\n* This action\
+    \ does not process any entities from the case; it is strictly for system-level\
+    \ connectivity testing.\n* As per standard SOAR practices, Ping actions are used\
+    \ during the initial setup or troubleshooting of an integration."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Query:
+  ai_description: "### General Description\nThis action retrieves threat reputation\
+    \ and analysis information for `FILEHASH` entities from Check Point SandBlast.\
+    \ It queries the service for Threat Emulation (TE) and Anti-Virus (AV) data to\
+    \ determine the safety of a file based on its hash. The action supports MD5, SHA1,\
+    \ and SHA256 hash types and can handle asynchronous scan states by waiting for\
+    \ completion.\n\n### Parameters Description\n| Parameter | Type | Mandatory |\
+    \ Description |\n| :--- | :--- | :--- | :--- |\n| Threshold | Integer | Yes |\
+    \ A numerical value used to evaluate the severity of the Anti-Virus results. If\
+    \ the detected malware severity is equal to or greater than this threshold, the\
+    \ entity is marked as suspicious in Google SecOps. |\n\n### Additional Notes\n\
+    - The action is asynchronous; if a scan is still in progress on the SandBlast\
+    \ side, the action will enter an 'In Progress' state and retry until a terminal\
+    \ result (Found, Not Found, or Failed) is reached.\n- Supported hash types are\
+    \ MD5 (32 chars), SHA1 (40 chars), and SHA256 (64 chars).\n\n### Flow Description\n\
+    1. **Validation**: The action iterates through the provided entities and validates\
+    \ that they are file hashes of a supported length (MD5, SHA1, or SHA256).\n2.\
+    \ **External Query**: It sends a request to the Check Point SandBlast API to query\
+    \ the status of the hash for both Threat Emulation and Anti-Virus features.\n\
+    3. **Status Check**: If the API indicates the scan is still running (Pending or\
+    \ Upload Success), the action pauses and remains in an 'In Progress' state.\n\
+    4. **Data Retrieval**: Once the scan is complete, the action retrieves the detailed\
+    \ report, including verdicts, severity scores, and confidence levels.\n5. **Enrichment**:\
+    \ \n    - Updates the entity's additional properties with Threat Emulation data\
+    \ (verdict, severity, confidence) and Anti-Virus data (signature name, severity,\
+    \ confidence).\n    - Sets the `is_enriched` flag to true.\n6. **Suspicious Marking**:\
+    \ \n    - Marks the entity as suspicious if the Threat Emulation verdict is 'malicious'.\n\
+    \    - Marks the entity as suspicious if the Anti-Virus severity meets or exceeds\
+    \ the user-defined `Threshold` parameter.\n7. **Internal Update**: Updates the\
+    \ entities within Google SecOps with the new metadata and provides a raw JSON\
+    \ result of the API response."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes (additional properties), sets the 'is_enriched' flag,
+      and marks entities as suspicious based on scan results and the user-defined
+      threshold.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Upload File:
+  ai_description: >-
+    ### General Description
+
+    The **Upload File** action allows users to upload local files to the Check Point
+    SandBlast service for security analysis. It supports multiple analysis features
+    including Threat Emulation (sandboxing), AntiVirus scanning, and Threat Extraction
+    (content disarming and reconstruction). This action is primarily used to submit
+    suspicious files found on a system for deep inspection to determine their maliciousness.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **File Path** | String | Yes | The full local path of the file to upload. Multiple
+    paths can be provided as a comma-separated list. |
+
+    | **Enable Threat Emulation feature** | Boolean | No | If enabled (default: True),
+    the file will be processed by the Threat Emulation (sandboxing) engine. |
+
+    | **Enable AntiVirus feature** | Boolean | No | If enabled, the file will be scanned
+    using the AntiVirus engine. |
+
+    | **Enable Threat Extraction feature** | Boolean | No | If enabled, the file will
+    be processed by the Threat Extraction engine to remove potentially malicious active
+    content. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the integration configuration (API
+    Root, API Key) and action parameters.
+
+    2. **Validation**: It parses the provided file paths (up to a maximum of 5 files)
+    and verifies that each file exists on the local filesystem and does not exceed
+    the 100MB size limit.
+
+    3. **Feature Selection**: It determines which SandBlast features (TE, AV, Extraction)
+    to activate based on the boolean input parameters. If no features are selected,
+    the system defaults to Threat Emulation.
+
+    4. **Execution**: For each valid file, the action performs a POST request to the
+    SandBlast `/upload` endpoint, transmitting the file binary and the requested analysis
+    features.
+
+    5. **Result Processing**: The action captures the API response for each file,
+    including status codes (e.g., UPLOAD_SUCCESS, PENDING) and file identifiers (MD5,
+    SHA256). It aggregates these results into a JSON object and provides a summary
+    message to the user.
+
+
+    ### Additional Notes
+
+    - This action does not automatically wait for the analysis to complete; it returns
+    the initial upload status and metadata. Subsequent actions (like 'Get Report')
+    may be needed to retrieve the final verdict.
+
+    - If a file path is invalid or the file is too large, the action will log a warning
+    and skip that specific file.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Uploads file binaries to the Check Point SandBlast service, creating new analysis
+      tasks and resources on the external platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,280 @@
+Get Related Associations:
+  ai_description: >-
+    ### General Description
+
+    Retrieves entity-related associations from Anomali ThreatStream. This action allows
+    analysts to discover connections between indicators in a case and broader threat
+    intelligence constructs like campaigns, threat actors, malware families, and vulnerabilities.
+    It supports enrichment for IP addresses, file hashes, URLs, and email addresses.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: Identifies supported entities within the case, specifically
+    IP Addresses, File Hashes, URLs, and Users (which are processed as Email addresses
+    if they match the email format).
+
+    2. **Indicator Retrieval**: Queries the Anomali API to retrieve internal indicator
+    IDs for the identified entities.
+
+    3. **Association Discovery**: Requests related association IDs for all enabled
+    categories (e.g., Campaigns, Actors, Malware) based on the retrieved indicator
+    IDs.
+
+    4. **Detail Fetching (Async)**: The action runs asynchronously to fetch full details
+    for each identified association ID, ensuring performance even with large datasets.
+
+    5. **Data Output**: Compiles the retrieved details into a comprehensive JSON result
+    and a summary data table named 'Related Associations'.
+
+    6. **Case Mutation**: If configured via parameters, the action creates new entities
+    (Campaign, Actor, Signature, or Vulnerability) directly within the Google SecOps
+    case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Return Campaigns | Boolean | No | If enabled, fetches related campaigns. Default
+    is True. |
+
+    | Return Threat Bulletins | Boolean | No | If enabled, fetches related threat
+    bulletins. Default is True. |
+
+    | Return Actors | Boolean | No | If enabled, fetches related actors. Default is
+    True. |
+
+    | Return Attack Patterns | Boolean | No | If enabled, fetches related attack patterns.
+    Default is True. |
+
+    | Return Courses Of Action | Boolean | No | If enabled, fetches related courses
+    of action. Default is True. |
+
+    | Return Identities | Boolean | No | If enabled, fetches related identities. Default
+    is True. |
+
+    | Return Incidents | Boolean | No | If enabled, fetches related incidents. Default
+    is True. |
+
+    | Return Infrastructure | Boolean | No | If enabled, fetches related infrastructure.
+    Default is True. |
+
+    | Return Intrusion Sets | Boolean | No | If enabled, fetches related intrusion
+    sets. Default is True. |
+
+    | Return Malware | Boolean | No | If enabled, fetches related malware. Default
+    is True. |
+
+    | Return Signatures | Boolean | No | If enabled, fetches related signatures. Default
+    is True. |
+
+    | Return Tools | Boolean | No | If enabled, fetches related tools. Default is
+    True. |
+
+    | Return TTPs | Boolean | No | If enabled, fetches related TTPs. Default is True.
+    |
+
+    | Return Vulnerabilities | Boolean | No | If enabled, fetches related vulnerabilities.
+    Default is True. |
+
+    | Max Associations To Return | Integer | No | Maximum number of associations to
+    return per type. Default is 5. |
+
+    | Create Campaign Entity | Boolean | No | If enabled, creates a THREATCAMPAIGN
+    entity in the case for found associations. |
+
+    | Create Actors Entity | Boolean | No | If enabled, creates a THREATACTOR entity
+    in the case for found associations. |
+
+    | Create Signature Entity | Boolean | No | If enabled, creates a THREATSIGNATURE
+    entity in the case for found associations. |
+
+    | Create Vulnerability Entity | Boolean | No | If enabled, creates a CVE entity
+    in the case for found associations. |
+
+
+    ### Additional Notes
+
+    This action is asynchronous. It will first identify associations and then enter
+    an 'In Progress' state to retrieve the full details for each association found.
+    The 'Create ... Entity' parameters allow for automated case expansion based on
+    threat intelligence.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds new entities to the Google SecOps case (such as Threat Campaigns, Threat
+      Actors, Signatures, or CVEs) based on the associations found in Anomali ThreatStream.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+GetThreatInfo:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP, URL, Hash, and Email entities using threat intelligence from Anomali
+    ThreatStream. This action retrieves detailed metadata including severity, confidence,
+    threat types, and associated tags to provide context for security investigations.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Limit | Integer | Yes | The maximum number of threat records to retrieve for
+    each entity. |
+
+    | Severity Threshold | Enum | No | The minimum severity level (Low, Medium, High,
+    Very High) required to automatically mark an entity as suspicious. |
+
+    | Confidence Threshold | Integer | No | The minimum confidence score (0-100) required
+    to automatically mark an entity as suspicious. |
+
+    | Ignore False Positive Status | Boolean | No | If set to True, the action will
+    evaluate the entity's suspicious status based on thresholds even if the record
+    is marked as a false positive in Anomali. |
+
+
+    ### Additional Notes
+
+    - Email enrichment is supported for User entities that match a standard email
+    regex pattern.
+
+    - The action uses a prefix `Anomali_Info_` for all enriched entity properties.
+
+    - If multiple records are found for an entity, the action prioritizes active threats
+    and calculates an aggregate severity (highest) and confidence (average).
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts API credentials and user-defined thresholds for
+    severity and confidence.
+
+    2. **Entity Identification**: Filters the case entities to identify supported
+    types: IP Addresses, URLs, File Hashes, and Emails (User entities).
+
+    3. **Threat Lookup**: Queries the Anomali ThreatStream API for each identified
+    entity to fetch associated threat intelligence.
+
+    4. **Data Aggregation**: Processes the returned records, prioritizing active threats
+    to determine the overall risk level.
+
+    5. **Entity Update**: Marks entities as suspicious if they meet the specified
+    thresholds and updates them with enrichment flags.
+
+    6. **Contextualization**: Appends detailed threat data (e.g., ASN, country, source)
+    to the entity's additional properties and creates CSV tables for the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DestinationURL
+    - FILEHASH
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connectivity between Google SecOps and the **Anomali\
+    \ ThreatStream** platform. Its primary purpose is to validate that the integration's\
+    \ configuration parameters\u2014specifically the API Root, Username, and API Key\u2014\
+    are correct and that the service is reachable over the network.\n\n### Parameters\
+    \ Description\nThis action does not have any action-specific parameters. It utilizes\
+    \ the global integration configuration:\n| Parameter Name | Type | Mandatory |\
+    \ Description |\n| :--- | :--- | :--- | :--- |\n| **Api Root** | String | Yes\
+    \ | The base URL for the Anomali ThreatStream API. |\n| **Username** | String\
+    \ | Yes | The username associated with the Anomali account. |\n| **Api Key** |\
+    \ String | Yes | The API key used for authentication. |\n\n### Additional Notes\n\
+    - This action is a standard connectivity test and does not process any entities\
+    \ or modify any data.\n- Following Google SecOps best practices, Ping actions\
+    \ are explicitly excluded from the 'Enrichment' category.\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The action retrieves the global configuration settings\
+    \ (API Root, Username, and API Key) from the integration environment.\n2. **Manager\
+    \ Initialization**: It initializes the `AnomaliManager` with the `force_check_connectivity`\
+    \ flag set to `True`.\n3. **Connectivity Test**: The manager performs a lightweight\
+    \ `GET` request to the Anomali `v2/intelligence` endpoint, requesting a single\
+    \ record (`limit=1`) to verify that the credentials and network path are functional.\n\
+    4. **Response Validation**: The action checks the HTTP response status. If the\
+    \ request is successful, it confirms connectivity. If an error occurs (e.g., 401\
+    \ Unauthorized), it catches the exception and reports the failure.\n5. **Final\
+    \ Output**: The action returns a boolean success value and a descriptive message\
+    \ to the Google SecOps workbench."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

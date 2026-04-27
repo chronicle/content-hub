@@ -1,0 +1,1057 @@
+Download Report:
+  ai_description: >-
+    ### General Description
+
+    The **Download Report** action retrieves a specific report from Qualys VM using
+    its unique Report ID. It is designed to poll the Qualys system until the report
+    generation is complete and then download the file (e.g., PDF, CSV) directly into
+    the Google SecOps case as an attachment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Report ID | String | Yes | The unique identifier of the Qualys report to be
+    fetched. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `Report ID` from the input
+    parameters.
+
+    2. **Status Polling**: The script enters a loop to check the status of the report
+    via the Qualys API. It waits for the status to reach 'Finished'.
+
+    3. **Error Handling**: If the report status indicates an error (e.g., Canceled,
+    Paused, Error), the action fails with a descriptive message.
+
+    4. **Data Retrieval**: Once the report is ready, the script fetches the binary
+    content and metadata (title, format).
+
+    5. **Output Generation**: The report is added as an attachment to the case, and
+    the metadata is returned as a JSON result.
+
+
+    ### Additional Notes
+
+    - This action does not operate on entities; it requires a specific ID provided
+    as a parameter.
+
+    - The action includes a retry mechanism that sleeps for 1 second if the report
+    is not yet initiated in the Qualys database.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download Vm Scan Results:
+  ai_description: "### General Description\nThe **Download Vm Scan Results** action\
+    \ retrieves detailed vulnerability scan data from Qualys VM for a specific scan\
+    \ identifier. It performs two primary functions: fetching the raw scan data in\
+    \ JSON format and generating/downloading a PDF report based on the 'Executive\
+    \ Report' template. This action is useful for security analysts who need to review\
+    \ the findings of a specific scan directly within the Google SecOps platform.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| **Scan ID** | String | Yes | The unique identifier\
+    \ of the scan to retrieve. The expected format is `scan/{integer}.{integer}` (e.g.,\
+    \ `scan/1533110666.07264`). |\n\n### Flow Description\n1. **Parameter Extraction:**\
+    \ The action retrieves the mandatory `Scan ID` from the input.\n2. **Data Retrieval:**\
+    \ It calls the Qualys VM API to fetch extended scan results for the provided ID.\n\
+    3. **Report Generation:** The action initiates a request to Qualys to launch a\
+    \ new scan report using the 'Executive Report' template in PDF format.\n4. **Polling:**\
+    \ It enters a polling loop, checking the status of the report generation at regular\
+    \ intervals until it reaches a 'Finished' state or the action execution deadline\
+    \ is reached.\n5. **File Download:** Once the report is ready, the action downloads\
+    \ the PDF content.\n6. **Output Generation:** \n    * The PDF report is added\
+    \ as an attachment to the case.\n    * A 'Report Summary' data table is created.\n\
+    \    * A 'Scan Results' data table containing the vulnerability findings is created.\n\
+    \    * The full raw results are returned as a JSON object."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action launches a new scan report in the Qualys VM platform to generate
+      a downloadable PDF version of the scan results. This creates a new report object/entry
+      in the external Qualys system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Host:
+  ai_description: >-
+    Enriches IP Address and Hostname entities with detailed asset information retrieved
+    from Qualys VM. This action requires the Qualys AssetView module to be active.
+    It fetches comprehensive host metadata including Operating System, NetBIOS name,
+    DNS data, and assigned tags.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Default | Description |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Create Insight | Boolean | No | True | If enabled, the action will create a
+    detailed insight on the entity containing all retrieved information such as IP,
+    NetBIOS, DNS Domain, FQDN, OS, and Tags. |
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action extracts the 'Create Insight' configuration
+    and initializes the Qualys VM manager using provided credentials.
+
+    2. **Connectivity Check**: It performs a connectivity test to ensure the Qualys
+    API is reachable.
+
+    3. **Entity Filtering**: It identifies suitable entities from the target list,
+    specifically looking for IP Addresses and Hostnames.
+
+    4. **Data Retrieval**: For each entity, it queries the Qualys API:
+        * For IP Addresses, it fetches details using the IP.
+        * For Hostnames, it fetches details using the NetBIOS name.
+    5. **Enrichment**: If data is found, the action:
+        * Updates the entity's additional properties with a 'Qualys' prefix.
+        * Sets the entity as 'enriched'.
+        * Adds a detailed data table to the entity.
+        * Optionally creates a case insight if the 'Create Insight' parameter is enabled.
+    6. **Finalization**: The action updates all processed entities in Google SecOps
+    and returns a JSON result containing the raw data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity additional properties with enrichment data, sets the
+      'is_enriched' flag to true, creates entity insights, and adds data tables to
+      the entities within Google SecOps.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Launch Compliance Report:
+  ai_description: >-
+    Launches a compliance report in Qualys VM based on a specified template and configuration.
+    This action allows users to trigger report generation for specific IP ranges or
+    asset groups directly from Google SecOps.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Report Title | String | Yes | A user-defined title for the report (max 128 characters).
+    |
+
+    | Report Type | String | Yes | The name of the Qualys report template to use (e.g.,
+    'Qualys Top 20 Report'). |
+
+    | Output Format | String | Yes | The desired file format for the report (e.g.,
+    'pdf', 'mht', 'html'). |
+
+    | IPs/Ranges | String | No | Comma-separated IP addresses or ranges to override
+    the report target defined in the template. |
+
+    | Asset Groups | String | No | Comma-separated names of asset groups to include
+    in the report. |
+
+    | Scan Reference | String | No | A specific scan reference code to filter the
+    report data. |
+
+
+    ### Additional Notes
+
+    - The action automatically resolves Asset Group names provided in the parameters
+    to their corresponding Qualys IDs before launching the report.
+
+    - It also resolves the 'Report Type' (template name) to its internal Qualys Template
+    ID.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the report title, type, format, and optional
+    targets (IPs, Asset Groups, Scan Reference) from the action input.
+
+    2. **Asset Group Resolution:** For each provided Asset Group name, the action
+    queries the Qualys API to find the matching Asset Group ID.
+
+    3. **Template Resolution:** Queries Qualys to find the internal ID associated
+    with the provided 'Report Type' template name.
+
+    4. **Report Launch:** Sends a request to the Qualys API to initiate the compliance
+    report generation using the gathered IDs and parameters.
+
+    5. **Result Handling:** Returns the unique Report ID generated by Qualys upon
+    successful initialization.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates the generation of a new compliance report job within the Qualys VM
+      platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Launch Patch Report:
+  ai_description: >-
+    ### General Description
+
+    Launches a patch report in the Qualys VM platform. This action allows users to
+    initiate the generation of a vulnerability patch report based on a specific template,
+    title, and output format. It can target specific IP ranges or asset groups, overriding
+    the default targets defined in the template if provided.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Report Title | String | Yes | A user-defined title for the report (maximum 128
+    characters). |
+
+    | Report Type | String | Yes | The name of the Qualys Patch Report template to
+    be used (e.g., 'Qualys Patch Report'). |
+
+    | Output Format | String | Yes | The desired file format for the report. Supported
+    values include 'pdf', 'online', 'xml', or 'csv'. |
+
+    | IPs/Ranges | String | No | Comma-separated IP addresses or ranges to override
+    the report target defined in the template. |
+
+    | Asset Groups | String | No | Comma-separated list of asset group names to include
+    in the report target. |
+
+
+    ### Additional Notes
+
+    This action does not run on entities. It uses the provided parameters to define
+    the scope of the report. If 'Asset Groups' are provided by name, the action will
+    automatically resolve them to their corresponding Qualys IDs before launching
+    the report.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the report title, template name, output
+    format, and optional targets (IPs and Asset Groups) from the action configuration.
+
+    2. **Asset Group Resolution**: If asset group names are provided, the action queries
+    the Qualys API to find the matching asset group IDs.
+
+    3. **Template ID Retrieval**: Queries the Qualys platform to find the internal
+    ID associated with the provided 'Report Type' (template name).
+
+    4. **Report Launch**: Sends a POST request to the Qualys API to launch the patch
+    report with the specified configuration.
+
+    5. **Result Handling**: Captures the unique Report ID generated by Qualys and
+    returns it as the action result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates the generation of a new patch report job within the Qualys VM platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Launch Remediation Report:
+  ai_description: >-
+    ### General Description
+
+    Launches a remediation report in the Qualys VM platform. This action allows users
+    to trigger the generation of a report based on a specific template, defining the
+    output format and targeting specific IP ranges or asset groups. It is primarily
+    used to automate the reporting process for vulnerability remediation tracking.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Report Title | String | Yes | A user-defined title for the report (max 128 characters).
+    |
+
+    | Report Type | String | Yes | The name of the Qualys report template to use (e.g.,
+    'Tickets per Asset Group'). |
+
+    | Output Format | String | Yes | The desired file format for the report (e.g.,
+    pdf, mht, html). |
+
+    | IPs/Ranges | String | No | Comma-separated list of IPs or ranges to override
+    the report target defined in the template. |
+
+    | Asset Groups | String | No | Comma-separated list of asset group names to include
+    in the report. |
+
+    | Display Results For All tickets | Boolean | No | If true, includes all tickets
+    in the account; if false (default), includes only tickets assigned to the current
+    user. |
+
+
+    ### Additional Notes
+
+    This action does not run on entities. It uses the provided parameters to define
+    the scope of the report. The action first resolves asset group names to their
+    respective IDs and the template name to its ID before initiating the launch request.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the report title, template name, format,
+    and target filters from the action configuration.
+
+    2. **Asset Group Resolution**: If asset group names are provided, the action queries
+    Qualys to find the corresponding internal Asset Group IDs.
+
+    3. **Template Resolution**: Queries the Qualys API to find the internal ID associated
+    with the provided 'Report Type' (template name).
+
+    4. **Report Launch**: Sends a POST request to the Qualys API to launch the remediation
+    report with the specified configuration.
+
+    5. **Result Handling**: Captures the generated Report ID from the Qualys response
+    and returns it as the action result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates the creation and generation of a new remediation report object within
+      the Qualys VM platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Launch Scan Report:
+  ai_description: >-
+    ### General Description
+
+    The **Launch Scan Report** action initiates the generation of a scan report within
+    the Qualys VM platform. It allows users to programmatically trigger reports based
+    on existing templates, targeting specific IP ranges or asset groups. This action
+    is essential for automating the reporting phase of vulnerability management workflows.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Report Title** | String | Yes | A user-defined title for the report (maximum
+    128 characters). |
+
+    | **Report Type** | String | Yes | The name of the Qualys report template to use
+    (e.g., 'Technical Report'). |
+
+    | **Output Format** | String | Yes | The desired file format for the report. Supported
+    values include `pdf`, `mht`, and `html`. |
+
+    | **IPs/Ranges** | String | No | Comma-separated list of IP addresses or ranges
+    to override the default targets defined in the template. |
+
+    | **Asset Groups** | String | No | Comma-separated list of Qualys Asset Group
+    names to include in the report. |
+
+    | **Scan Reference** | String | No | Specifically for PCI compliance reports,
+    this identifies the scan reference (e.g., `scan/12345`) to include. |
+
+
+    ### Additional Notes
+
+    - The action automatically resolves Asset Group names to their internal Qualys
+    IDs before launching the report.
+
+    - It also resolves the Template Name (Report Type) to its corresponding internal
+    Template ID.
+
+    - For PCI compliance reports, the `Scan Reference` parameter is typically required
+    by the Qualys API.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the report title, template name, format,
+    and target overrides (IPs/Asset Groups) from the action input.
+
+    2. **Asset Group Resolution**: For each provided Asset Group name, the action
+    queries Qualys to find the corresponding internal ID.
+
+    3. **Template Resolution**: Queries Qualys to find the internal ID for the specified
+    'Report Type' (template name).
+
+    4. **Report Launch**: Sends a request to the Qualys API to start the report generation
+    using the gathered IDs and parameters.
+
+    5. **Result Handling**: Returns the unique `report_id` generated by Qualys upon
+    successful initialization.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a new report generation task in the Qualys VM platform, creating a
+      new report resource.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Launch VM Scan And Fetch Results:
+  ai_description: >-
+    Launches a Qualys Vulnerability Management (VM) scan on targeted IP Address entities
+    and retrieves the resulting security data. This action operates asynchronously,
+    first initiating the scan and then periodically checking for completion to fetch
+    the final report. Notably, this action automatically adds the target IP addresses
+    to the Qualys subscription as assets before scanning, which may impact license
+    limits.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Title | String | No | The title of the scan. If left empty, a unique identifier
+    will be automatically generated. |
+
+    | Processing Priority | String | Yes | Sets the processing priority (0-9). 0 is
+    No Priority, 1 is Emergency, and 9 is Low. |
+
+    | Scan Profile | String | Yes | The title of the Qualys option profile to be used
+    for the scan (e.g., 'Qualys Top 20 Options'). |
+
+    | Scanner Appliance | String | No | The friendly name of the scanner appliance
+    to use. Use 'External' for Qualys external scanners. |
+
+    | Network | String | No | The ID of the network used to filter IPs. Default is
+    '0' for the Global Default Network. |
+
+
+    ### Additional Notes
+
+    - This action is **Async**, meaning it will run in the background until the Qualys
+    scan is finished.
+
+    - It performs external mutations by adding hosts to the Qualys asset list and
+    starting a scan task.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering:** Filters the target entities to identify supported IP
+    Address types.
+
+    2. **Asset Registration:** For each identified IP, it calls the Qualys API to
+    ensure the IP is added as a managed asset.
+
+    3. **Scan Initiation:** Launches a VM scan in Qualys using the provided title,
+    priority, and profile.
+
+    4. **Internal Update:** Updates the entities in Google SecOps with the `qualys_last_scan_id`
+    and marks them as enriched.
+
+    5. **Status Monitoring (Async):** Periodically polls Qualys to check if the scan
+    state is 'Finished'.
+
+    6. **Report Generation:** Once the scan is complete, it requests a scan report
+    from Qualys.
+
+    7. **Data Retrieval:** Downloads the report file and fetches the raw scan results.
+
+    8. **Case Enrichment:** Attaches the report file to the case and populates 'Report
+    Summary' and 'Scan Results' data tables.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Adds IP addresses as assets to the Qualys platform and initiates a new vulnerability
+      scan task.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with the scan reference ID, marks entities
+      as enriched, attaches scan reports to the case, and creates data tables with
+      scan findings.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Endpoint Detections:
+  ai_description: >-
+    ### General Description
+
+    The **List Endpoint Detections** action retrieves a list of vulnerabilities (detections)
+    associated with specific **IP Address** or **Hostname** entities from Qualys VM.
+    It allows security analysts to gain visibility into the security posture of endpoints
+    by fetching detailed vulnerability data, including QIDs, titles, diagnoses, and
+    solutions.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Status Filter** | String | No | A comma-separated list of statuses to filter
+    detections (e.g., "New, Active, Re-Opened, Fixed"). Defaults to "New, Active,
+    Re-Opened". |
+
+    | **Lowest Severity To Fetch** | String (Enum) | No | The minimum severity level
+    (Info, Low, Medium, High, Critical) required for a detection to be returned. Defaults
+    to "Medium". |
+
+    | **Max Detections To Return** | Integer | No | The maximum number of detections
+    to retrieve per entity. Must be between 1 and 200. Defaults to 50. |
+
+    | **Ingest Ignored Detections** | Boolean | No | If true, includes detections
+    marked as 'ignored' in Qualys. Defaults to false. |
+
+    | **Ingest Disabled Detections** | Boolean | No | If true, includes detections
+    marked as 'disabled' in Qualys. Defaults to false. |
+
+    | **Create Insight** | Boolean | No | If true, generates a detailed insight on
+    the entity in Google SecOps. Defaults to true. |
+
+
+    ### Additional Notes
+
+    - If a **Hostname** entity is provided, the action first attempts to resolve it
+    to an IP address using the Qualys API before fetching detections.
+
+    - The action creates a **Data Table** for each entity containing the vulnerability
+    details.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: The action validates the `Max Detections To Return`
+    (1-200) and maps the `Lowest Severity To Fetch` to Qualys-specific severity levels.
+
+    2. **Entity Processing**: For each supported entity (IP or Hostname):
+        - If the entity is a Hostname, it queries Qualys to find the corresponding
+    IP address.
+    3. **Fetch QIDs**: It requests a list of vulnerability IDs (QIDs) from Qualys
+    for the target IP, applying the status, severity, and inclusion filters.
+
+    4. **Fetch Details**: For the retrieved QIDs, it fetches full vulnerability metadata
+    (Title, Diagnosis, Solution, etc.).
+
+    5. **Internal Updates**:
+        - Adds a **Data Table** to the case with the vulnerability list.
+        - If enabled, creates an **Entity Insight** summarizing the findings.
+        - Updates the entity's metadata in Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity attributes, adds data tables to the case, and generates
+      entity insights based on the retrieved vulnerability data.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Groups:
+  ai_description: "### General Description\nThe **List Groups** action retrieves a\
+    \ comprehensive list of asset groups configured within the user's Qualys VM account.\
+    \ This utility action provides visibility into the organizational structure of\
+    \ assets in Qualys, including group titles, IDs, and associated network metadata.\
+    \ It is primarily used for administrative oversight and to verify asset categorization\
+    \ during investigation workflows.\n\n### Parameters Description\nThis action does\
+    \ not require any input parameters.\n\n### Additional Notes\n* This action does\
+    \ not operate on specific entities; it fetches global account data from the Qualys\
+    \ VM platform.\n* The results are presented both as a raw JSON object and as a\
+    \ formatted data table for easier analysis within the Google SecOps interface.\n\
+    \n### Flow Description\n1. **Authentication**: The action initializes a connection\
+    \ to the Qualys VM API using the integration's global configuration (API Root,\
+    \ Username, Password, and SSL settings).\n2. **API Request**: It executes a GET\
+    \ request to the Qualys asset group endpoint (`/api/2.0/fo/asset/group/`) with\
+    \ the `action=list` parameter.\n3. **Data Parsing**: The XML response from Qualys\
+    \ is parsed into a structured Python dictionary format.\n4. **Output Generation**:\
+    \ \n    * The action converts the group data into a JSON string for the action's\
+    \ result JSON.\n    * It constructs a CSV representation of the groups and attaches\
+    \ it as a data table named \"Groups\" to the action output.\n    * It returns\
+    \ a success message indicating the number of groups retrieved."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Ips:
+  ai_description: >-
+    ### General Description
+
+
+    The **List Ips** action retrieves a comprehensive list of IP addresses and IP
+    ranges configured within the user's Qualys VM account. This is a utility action
+    used to audit or verify the scope of assets managed by Qualys.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not take any input parameters. |
+
+
+    ### Additional Notes
+
+
+    * The results are presented both as a JSON object for downstream automation and
+    as a formatted data table for analyst review.
+
+    * By default, all hosts in the user's account are included.
+
+
+    ### Flow Description
+
+
+    1. **Authentication**: Connects to the Qualys VM API using the configured credentials
+    (API Root, Username, Password).
+
+    2. **Data Retrieval**: Sends a request to the `/api/2.0/fo/asset/ip/` endpoint
+    with the `list` action.
+
+    3. **Parsing**: Processes the XML response from Qualys, extracting both individual
+    `IP` elements and `IP_RANGE` elements.
+
+    4. **Reporting**: Generates a CSV-formatted table titled "IPs / Ip Ranges" and
+    attaches the raw JSON results to the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Reports:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a comprehensive list of reports available in the user's Qualys VM account,
+    provided the Report Share feature is enabled. This action fetches metadata for
+    all report types, including scan, compliance, and scorecard reports, allowing
+    users to identify report IDs, statuses, and expiration dates directly within Google
+    SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    * This action is primarily used for discovery and auditing of available reports.
+
+    * The output is provided both as a raw JSON result and as a formatted data table
+    named 'Reports' attached to the case.
+
+    * There are no parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the Qualys VM API
+    using the configured credentials (API Root, Username, Password).
+
+    2. **Data Retrieval**: It sends a GET request to the Qualys reports endpoint (`/api/2.0/fo/report/`)
+    with the `action=list` parameter.
+
+    3. **Parsing**: The XML response from Qualys is parsed into a structured Python
+    dictionary format.
+
+    4. **Internal Mutation**: A data table titled 'Reports' is constructed from the
+    retrieved data and attached to the Google SecOps case.
+
+    5. **Completion**: The action returns a JSON representation of the reports and
+    completes with a success message indicating the number of reports found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates and attaches a data table named 'Reports' to the Google SecOps
+      case containing the list of retrieved report metadata.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Scans:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of vulnerability scans from Qualys VM that were launched within
+    the past 30 days. This action provides visibility into recent scanning activity
+    by fetching scan details such as status, target, title, and duration. The results
+    are presented as a data table and a JSON object within the case. Sensitive information
+    like user logins is automatically masked for security.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    This action is useful for auditing recent scan history and ensuring that scheduled
+    or manual scans have completed successfully. It does not require any entity context
+    to run.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a connection to the Qualys VM API using the
+    integration's configuration (API Root, Username, Password, and X-Requested-With
+    Header).
+
+    2. **Data Retrieval**: Executes a GET request to the Qualys scan endpoint to fetch
+    scans from the last 30 days.
+
+    3. **Data Sanitization**: Iterates through the retrieved scans and masks the 'USER_LOGIN'
+    field with asterisks to protect user privacy.
+
+    4. **Output Generation**: Converts the scan data into a CSV format for a data
+    table and a JSON string for raw results.
+
+    5. **Case Integration**: Adds the 'Scans' data table to the case and returns the
+    final execution status and message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a data table named "Scans" to the Google SecOps case containing the list
+      of retrieved scans.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ used to verify the connectivity between Google SecOps and the Qualys VM platform.\
+    \ It validates that the integration's configuration parameters, such as the API\
+    \ Root, Username, and Password, are correct and that the environment can successfully\
+    \ communicate with the Qualys API.\n\n### Parameters Description\n| Parameter\
+    \ Name | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| None\
+    \ | N/A | N/A | This action does not take any input parameters. |\n\n### Additional\
+    \ Notes\n- This action is primarily used for troubleshooting and initial setup\
+    \ verification.\n- It performs a non-intrusive 'Read-Only' operation by attempting\
+    \ to list reports to confirm API access.\n- According to standard SOAR practices,\
+    \ Ping actions are not categorized as enrichment.\n\n### Flow Description\n1.\
+    \ **Manager Initialization**: The action retrieves global configuration settings\
+    \ (API Root, Credentials, SSL settings) to initialize the Qualys VM communication\
+    \ manager.\n2. **Connectivity Check**: The action calls the `test_connectivity`\
+    \ method, which triggers a request to the Qualys `list_reports` endpoint.\n3.\
+    \ **Response Handling**: \n    - If the API call is successful, the action returns\
+    \ a success message indicating a valid connection.\n    - If an exception occurs\
+    \ (e.g., 401 Unauthorized, 404 Not Found, or Connection Timeout), the error is\
+    \ caught, logged, and the action terminates with a failure status and the specific\
+    \ reason for the error."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

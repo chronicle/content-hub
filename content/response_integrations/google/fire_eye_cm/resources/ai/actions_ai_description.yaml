@@ -1,0 +1,864 @@
+Acknowledge Alert:
+  ai_description: "Acknowledges a specific alert within the FireEye CM (Central Management)\
+    \ platform. This action allows a user to mark an alert as acknowledged and provide\
+    \ a mandatory annotation explaining the reasoning or context for the acknowledgment.\
+    \ \n\n### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- |\
+    \ :--- | :--- | :--- |\n| Alert UUID | String | Yes | The unique identifier (UUID)\
+    \ of the alert in FireEye CM that needs to be acknowledged. |\n| Annotation |\
+    \ String | Yes | A text string providing the reason or notes associated with the\
+    \ acknowledgment. |\n\n### Flow Description\n1. **Authentication**: The action\
+    \ establishes a session with the FireEye CM API using the provided credentials\
+    \ and API Root.\n2. **Parameter Extraction**: It retrieves the 'Alert UUID' and\
+    \ 'Annotation' from the action input.\n3. **API Execution**: It sends a POST request\
+    \ to the FireEye CM endpoint `wsapis/v2.0.0/alerts/alert/{alert_uuid}` with the\
+    \ annotation in the request body.\n4. **Error Handling**: The action specifically\
+    \ handles cases where the alert is not found or if the validation fails on the\
+    \ FireEye side.\n5. **Cleanup**: The action terminates the session by logging\
+    \ out of the FireEye CM manager."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of an alert in the FireEye CM system to 'acknowledged' and
+      attaches a user-provided annotation to that alert record.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add IOC Feed:
+  ai_description: >-
+    ### General Description
+
+    This action adds Indicators of Compromise (IOC) feeds to FireEye CM based on entities
+    present in the current Google SecOps case. It supports IP addresses, URLs, and
+    File Hashes (specifically MD5 and SHA256). The action allows users to define the
+    response behavior (Alert or Block) for the newly created feeds and provides an
+    option to extract domains from URL entities for broader coverage.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Action | String | Yes | Specifies the action FireEye CM should take when the
+    IOC is matched. Options are 'Alert' or 'Block'. |
+
+    | Comment | String | No | Allows adding a descriptive comment or note to the IOC
+    feed for better context. |
+
+    | Extract Domain | Boolean | Yes | If set to true, the action will extract the
+    domain portion of a URL entity and use it to create the IOC feed instead of the
+    full URL. |
+
+
+    ### Additional Notes
+
+    - **Hash Support:** Only MD5 and SHA256 file hashes are supported. Providing other
+    hash types will result in a failure for that specific entity.
+
+    - **Feed Naming:** The action automatically generates a unique feed name by base64
+    encoding the entity identifier and prefixing it with 'Siemplify_'.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering:** The action identifies all supported entities (ADDRESS,
+    URL, FILEHASH) from the target entities list.
+
+    2. **Parameter Extraction:** It retrieves the integration configuration (API Root,
+    credentials) and action parameters (Action type, Comment, Domain Extraction flag).
+
+    3. **Identifier Preparation:** For each entity, it determines the identifier to
+    be used. If 'Extract Domain' is enabled for a URL, it parses the URL to extract
+    the host/domain.
+
+    4. **File Creation:** The action creates a temporary text file containing the
+    entity identifier, which is a requirement for the FireEye CM feed upload API.
+
+    5. **API Interaction:** It performs a POST request to the FireEye CM 'add_ioc_feed'
+    endpoint, uploading the identifier file along with metadata like the feed name,
+    action, and comments.
+
+    6. **Result Reporting:** The action collects the names of all successfully created
+    feeds and reports them in the final output message and JSON results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates new custom IOC feeds in the FireEye CM instance based on the provided
+      entities.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DestinationURL
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Rule To Custom Rules File:
+  ai_description: >-
+    Adds a new Snort rule to the custom rules file on a FireEye CM appliance. This
+    action specifically targets FireEye NX (wMPS) sensors. It works by creating a
+    new ruleset that includes the user-provided rule and the existing rules downloaded
+    from the appliance, then uploading the updated file back to the system.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Rule | String | Yes | The specific Snort rule string that needs to be added
+    to the custom rules file. |
+
+    | Sensor Name | String | No | The name of the sensor where the rule should be
+    added. If not specified, the action will automatically discover and use the first
+    available FireEye NX (wMPS) appliance. |
+
+
+    ### Flow Description
+
+    1. **Sensor Identification**: The action identifies the target sensor. If a 'Sensor
+    Name' is provided, it validates its existence. If not, it searches for available
+    FireEye NX (wMPS) appliances and selects the first one.
+
+    2. **Local Preparation**: A temporary local file is created containing the new
+    rule provided in the parameters.
+
+    3. **Data Retrieval**: The action downloads the current custom Snort rules file
+    from the identified sensor.
+
+    4. **Merging**: The content of the existing rules file is appended to the temporary
+    local file containing the new rule.
+
+    5. **Update**: The combined rules file is uploaded back to the FireEye CM appliance,
+    effectively updating the custom ruleset.
+
+    6. **Cleanup**: The temporary local file is deleted, and the session with FireEye
+    CM is closed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the custom Snort rules configuration on the FireEye CM appliance by
+      uploading a modified rules file.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete IOC Feed:
+  ai_description: >-
+    Deletes a specific custom Indicator of Compromise (IOC) feed from a FireEye CM
+    (Central Management) appliance. This action is used to manage threat intelligence
+    feeds by removing outdated or unnecessary IOC collections.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Feed Name | String | Yes | The exact name of the IOC feed that should be deleted
+    from the FireEye CM system. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves connection details (API Root, credentials) and
+    the target feed name from the action parameters.
+
+    2. **Pre-check**: Queries the FireEye CM API to list all existing IOC feeds and
+    verifies if the specified 'Feed Name' exists. If not found, the action terminates
+    with a 'Not Found' status.
+
+    3. **Deletion**: Executes a POST request to the FireEye CM deletion endpoint for
+    the specified feed.
+
+    4. **Verification**: Performs a follow-up query to list IOC feeds again, confirming
+    that the target feed is no longer present in the system to ensure the operation
+    was successful.
+
+    5. **Cleanup**: Logs out of the FireEye CM session.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a custom IOC feed resource from the FireEye CM appliance via a POST
+      request to the deletion endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete Quarantined Email:
+  ai_description: >-
+    Deletes a quarantined email from a FireEye EX appliance via the FireEye CM (Central
+    Management) platform. This action is used to permanently remove malicious or unwanted
+    emails that have been held in quarantine.
+
+
+    ### Flow Description:
+
+    1. **Authentication**: Connects to the FireEye CM API using provided credentials
+    and obtains a security token.
+
+    2. **Sensor Identification**: If a 'Sensor Name' is provided, the action validates
+    its existence. If not provided, it automatically searches for and selects the
+    first available 'FireEye EX' (eMPS) appliance managed by the CM.
+
+    3. **Deletion Request**: Sends a POST request to the FireEye CM email management
+    endpoint to delete the email associated with the specified 'Queue ID' on the identified
+    sensor.
+
+    4. **Verification**: Validates the API response to ensure the email was successfully
+    removed from the quarantine queue.
+
+    5. **Cleanup**: Logs out of the FireEye CM session.
+
+
+    ### Parameters Description:
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Queue ID | String | Yes | The unique identifier of the email in the quarantine
+    queue that needs to be deleted. |
+
+    | Sensor Name | String | No | The specific name of the FireEye EX sensor where
+    the email is quarantined. If left blank, the action will attempt to auto-discover
+    a suitable sensor. |
+
+
+    ### Additional Notes:
+
+    * This action requires the FireEye EX appliance to be properly integrated and
+    reachable through the FireEye CM instance.
+
+    * If multiple EX sensors are connected and no 'Sensor Name' is specified, the
+    action defaults to the first one returned by the API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Permanently deletes an email record from the quarantine queue on a FireEye EX
+      appliance.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download Alert Artifacts:
+  ai_description: >-
+    ### General Description
+
+    Downloads malware artifact data associated with a specific alert from FireEye
+    CM as a ZIP file. This action is used to retrieve forensic evidence or samples
+    collected by FireEye appliances for further analysis or archiving outside of the
+    FireEye platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert UUID | String | Yes | The unique identifier (UUID) of the alert in FireEye
+    CM from which to download artifacts. |
+
+    | Download Folder Path | String | Yes | The absolute local directory path on the
+    execution runner where the downloaded ZIP file should be saved. |
+
+    | Overwrite | Boolean | Yes | If set to `True`, the action will replace any existing
+    file at the destination path. If `False`, the action will fail if a file already
+    exists. |
+
+
+    ### Additional Notes
+
+    - The action saves the file locally on the SOAR runner's filesystem. The resulting
+    JSON output contains the `file_path` to the saved artifact.
+
+    - The filename is automatically generated in the format: `Alert_Artifacts_{Alert_UUID}.zip`.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the FireEye CM API using
+    the provided credentials to obtain a security token.
+
+    2. **Path Validation**: It constructs the target file path and verifies that the
+    destination folder exists and is a directory. It also checks the `Overwrite` logic
+    against existing files.
+
+    3. **Data Retrieval**: It sends a GET request to the FireEye CM artifacts endpoint
+    for the specified `Alert UUID` with the `Accept` header set to `application/octet-stream`.
+
+    4. **File Persistence**: The binary stream from the API response is written to
+    the local filesystem in chunks.
+
+    5. **Result Reporting**: Upon success, it returns the absolute path of the saved
+    file and marks the action as successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download Custom Rules File:
+  ai_description: "Downloads a custom Snort rules file from a FireEye CM (Central\
+    \ Management) sensor to a specified local directory. The action allows for targeted\
+    \ downloading from a specific sensor or automatic discovery of available Network\
+    \ Security (NX) appliances.\n\n### Flow Description:\n1. **Authentication**: Connects\
+    \ to the FireEye CM API using provided credentials and obtains a security token.\n\
+    2. **Sensor Identification**: \n    * If a **Sensor Name** is provided, the action\
+    \ verifies its existence on the CM.\n    * If no sensor is specified, the action\
+    \ automatically searches for the first available 'wMPS' (FireEye NX) appliance\
+    \ attached to the CM.\n3. **Path Validation**: Checks if the provided **Download\
+    \ Folder Path** exists. If the path is a directory, it appends a default filename\
+    \ (`Siemplify_custom_rules_file.txt`). It also checks for existing files and respects\
+    \ the **Overwrite** setting.\n4. **File Retrieval**: Executes a GET request to\
+    \ the FireEye CM API to retrieve the Snort rules content for the identified sensor.\n\
+    5. **Local Storage**: Saves the retrieved content to the local file system in\
+    \ the SOAR execution environment and returns the absolute file path.\n\n### Parameters\
+    \ Description:\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| **Sensor Name** | String | No | The name of the sensor/appliance\
+    \ from which to download the rules. If left empty, the action auto-discovers the\
+    \ first available NX appliance. |\n| **Download Folder Path** | String | Yes |\
+    \ The absolute path to the folder or file location where the rules file should\
+    \ be saved. |\n| **Overwrite** | Boolean | Yes | If set to `True`, the action\
+    \ will replace any existing file at the specified path. If `False` and the file\
+    \ exists, the action will fail. |\n\n### Additional Notes:\n* This action is primarily\
+    \ used for managing and auditing custom Snort rules across the FireEye deployment.\n\
+    * The action requires the 'wMPS' (NX) appliance type for auto-discovery."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download Quarantined Email:
+  ai_description: >-
+    ### General Description
+
+    Downloads a quarantined email from a FireEye EX appliance via the FireEye CM (Central
+    Management) platform. This action retrieves the raw email content associated with
+    a specific Queue ID and saves it as an `.eml` file to a designated local directory
+    on the execution environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Queue ID | String | Yes | The unique identifier of the quarantined email to
+    be downloaded. |
+
+    | Download Folder Path | String | Yes | The absolute local path on the runner
+    where the downloaded email file will be saved. |
+
+    | Overwrite | Boolean | Yes | If set to `True`, the action will replace any existing
+    file at the target path. If `False` and the file exists, the action will fail.
+    |
+
+    | Sensor Name | String | No | The name of the specific FireEye EX sensor where
+    the email is quarantined. If not provided, the action will automatically attempt
+    to find and use the first available EX appliance. |
+
+
+    ### Additional Notes
+
+    * This action requires a FireEye EX appliance to be connected to the FireEye CM
+    instance.
+
+    * The action performs local filesystem checks to ensure the download directory
+    exists and is writable before attempting the API call.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration credentials and user-provided
+    parameters (Queue ID, Path, Overwrite, and Sensor Name).
+
+    2. **Environment Validation**: It verifies that the provided `Download Folder
+    Path` exists and is a directory. It also checks for file existence if `Overwrite`
+    is disabled.
+
+    3. **Sensor Identification**: If a `Sensor Name` is provided, it validates its
+    existence. If not, it queries FireEye CM for available `eMPS` (FireEye EX) appliances
+    and selects the first one found.
+
+    4. **Data Retrieval**: It makes a request to the FireEye CM API to download the
+    quarantined email content for the specified Queue ID from the identified sensor.
+
+    5. **File Persistence**: The retrieved content is saved to the local filesystem
+    at the specified path using the filename format `Quarantined_email_{queue_id}.eml`.
+
+    6. **Completion**: The action returns the absolute file path of the saved email
+    in the JSON results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List IOC Feeds:
+  ai_description: >-
+    ### General Description
+
+    Lists available Indicator of Compromise (IOC) feeds from the FireEye CM (Central
+    Management) platform. This action is used to retrieve metadata about custom feeds,
+    including their status, type, and the count of specific indicators (IPs, domains,
+    URLs, hashes) they contain.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max IOC Feeds To Return | Integer | No | Specifies the maximum number of IOC
+    feeds to return in the results. If not provided or if a non-positive value is
+    given, the default value of 50 is used. |
+
+
+    ### Additional Notes
+
+    - This action does not require any entities to run.
+
+    - The results are presented both as a JSON object and as a formatted data table
+    for easy viewing in the case wall.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the FireEye CM manager using the
+    provided API Root, Username, and Password.
+
+    2. **Parameter Validation**: It retrieves the 'Max IOC Feeds To Return' parameter
+    and ensures it is a positive integer, falling back to the default if necessary.
+
+    3. **Data Retrieval**: It calls the FireEye CM API to fetch the list of custom
+    IOC feeds.
+
+    4. **Processing**: The retrieved feeds are parsed into data models and limited
+    to the requested count.
+
+    5. **Output**: The action generates a JSON result containing the feed details
+    and constructs a data table showing feed names, statuses, types, actions, and
+    content counts.
+
+    6. **Cleanup**: The action explicitly logs out of the FireEye CM session to ensure
+    security and resource management.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Quarantined Emails:
+  ai_description: >-
+    ### General Description
+
+    The **List Quarantined Emails** action retrieves a list of emails currently held
+    in quarantine on a FireEye CM (Central Management) instance. This action is specifically
+    designed for environments where FireEye EX appliances are managed via a FireEye
+    CM. It allows security analysts to search and filter quarantined messages based
+    on timeframes, senders, and subjects to identify potentially malicious or false-positive
+    email detections.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Start Time | String | No | If specified, only emails created after this time
+    will be returned. Format: YYYY-MM-DD'T'HH:MM:SS.SSS-HHMM. |
+
+    | End Time | String | No | If specified, only emails created before this time
+    will be returned. Format: YYYY-MM-DD'T'HH:MM:SS.SSS-HHMM. |
+
+    | Sender Filter | String | No | Filters the results to only include quarantined
+    emails from this specific sender address. |
+
+    | Subject Filter | String | No | Filters the results to only include quarantined
+    emails containing this specific subject line. |
+
+    | Max Emails To Return | Integer | No | Specifies the maximum number of email
+    records to retrieve. The value is capped between 1 and 10,000 (FireEye CM limit).
+    Default is 50. |
+
+
+    ### Additional Notes
+
+    * If neither **Start Time** nor **End Time** is provided, the action defaults
+    to retrieving quarantined emails from the last 24 hours.
+
+    * This action does not require or process specific entities (like IPs or Hashes)
+    from the SecOps environment; it performs a global search based on the provided
+    parameters.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration configuration (API Root,
+    Credentials) and user-provided filter parameters.
+
+    2. **Validation**: It validates the `Max Emails To Return` parameter, ensuring
+    it stays within the API's supported range (1 to 10,000).
+
+    3. **API Interaction**: The action establishes a session with FireEye CM and sends
+    a GET request to the quarantine endpoint with the specified filters (time, sender,
+    subject, and limit).
+
+    4. **Data Processing**: The retrieved email metadata (including UUIDs, Queue IDs,
+    Message IDs, and timestamps) is parsed into a structured format.
+
+    5. **Output**: The results are added to the action's execution context as a JSON
+    result and a formatted data table for the Case Wall.
+
+    6. **Cleanup**: The action explicitly logs out of the FireEye CM session to ensure
+    security and resource management.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connectivity between Google SecOps and a FireEye CM (Central\
+    \ Management) instance. Its primary purpose is to ensure that the integration\
+    \ configuration parameters\u2014such as the API Root, credentials, and SSL settings\u2014\
+    are correct and that the FireEye CM server is reachable and responding to API\
+    \ requests.\n\n### Parameters Description\nThis action does not take any dynamic\
+    \ input parameters during execution. Instead, it relies entirely on the **Integration\
+    \ Configuration** parameters defined in the Google SecOps Marketplace:\n\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| API Root\
+    \ | String | Yes | The base URL of the FireEye CM instance (e.g., `https://<fireeye-cm-ip>/`).\
+    \ |\n| Username | String | Yes | The username used for authentication. |\n| Password\
+    \ | String | Yes | The password used for authentication. |\n| Verify SSL | Boolean\
+    \ | Yes | If enabled, the action will verify the SSL certificate of the FireEye\
+    \ CM server. |\n\n### Flow Description\n1. **Parameter Extraction:** The script\
+    \ retrieves the connection details (API Root, Username, Password, and SSL verification\
+    \ setting) from the integration's configuration.\n2. **Manager Initialization:**\
+    \ It initializes the `FireEyeCMManager`. During this process, the manager performs\
+    \ an authentication request (`POST /wsapis/v2.0.0/auth/login`) to obtain a session\
+    \ token (`X-FeApi-Token`).\n3. **Connectivity Test:** The action calls the `test_connectivity`\
+    \ method, which sends a `GET` request to the FireEye CM health endpoint (`/wsapis/v2.0.0/health/system`).\n\
+    4. **Result Handling:** \n    * If the request is successful (HTTP 200), the action\
+    \ returns a success message and sets the execution state to `COMPLETED`.\n   \
+    \ * If an exception occurs (e.g., authentication failure, network timeout, or\
+    \ invalid API Root), the action captures the error, logs it, and sets the execution\
+    \ state to `FAILED`.\n5. **Termination:** The script ends by providing the connection\
+    \ status and a descriptive message to the Google SecOps workbench."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Release Quarantined Email:
+  ai_description: >-
+    ### General Description
+
+    Releases a quarantined email from a FireEye EX appliance via FireEye CM. This
+    action is used to restore emails that were incorrectly flagged or quarantined
+    for investigation, allowing them to proceed to their destination.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Queue ID | String | Yes | The unique identifier of the email in the quarantine
+    queue that needs to be released. |
+
+    | Sensor Name | String | No | The name of the FireEye EX sensor where the email
+    is quarantined. If not provided, the action will attempt to automatically find
+    a suitable 'eMPS' (FireEye EX) sensor managed by the FireEye CM. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to FireEye CM using the configured API Root, Username,
+    and Password to obtain an authentication token.
+
+    2. **Sensor Identification**: If a `Sensor Name` is provided, the action verifies
+    its existence on the FireEye CM. If no sensor name is provided, the action queries
+    the system configuration to find all available 'eMPS' (FireEye EX) appliances
+    and selects the first one found.
+
+    3. **Email Release**: Sends a POST request to the FireEye CM API to release the
+    email associated with the specified `Queue ID` from the identified sensor.
+
+    4. **Cleanup**: Logs out of the FireEye CM session to ensure the security token
+    is invalidated.
+
+
+    ### Additional Notes
+
+    - This action requires a FireEye EX appliance to be properly connected to and
+    managed by the FireEye CM instance.
+
+    - If multiple FireEye EX sensors are available and no `Sensor Name` is specified,
+    the action will default to the first one returned by the API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Releases a quarantined email from the FireEye EX appliance, which changes the
+      state of the email in the external system from quarantined to released.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

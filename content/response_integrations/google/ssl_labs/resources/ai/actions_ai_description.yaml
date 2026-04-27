@@ -1,0 +1,160 @@
+Analyse Entity:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and URL entities by performing a comprehensive SSL/TLS security
+    analysis using the Qualys SSL Labs API. This action retrieves detailed security
+    information, including certificate details, protocol support, and overall security
+    grades (e.g., A+, A, B, C) for all endpoints associated with a host. It helps
+    security analysts identify weak encryption configurations or expired certificates
+    by automatically flagging entities that do not meet a defined security threshold.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Warning Threshold | String | Yes | The security grade threshold used to determine
+    if an entity is suspicious. Since grades are alphabetical, a 'higher' value (e.g.,
+    'B') is considered worse than 'A'. If the analysis returns a grade worse than
+    this threshold, the entity is marked as suspicious. |
+
+    | Verify SSL | Boolean | No | Determines whether the action should verify the
+    SSL certificate of the SSL Labs API endpoint itself. Defaults to `False`. |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the `Warning Threshold` and
+    `Verify SSL` settings from the integration configuration.
+
+    2. **Entity Filtering**: It identifies and processes only `HOSTNAME` and `DestinationURL`
+    entities from the target list.
+
+    3. **Analysis Initiation**: For each valid entity, it sends a request to SSL Labs
+    to start a new analysis.
+
+    4. **Status Polling**: The script enters a loop, polling the SSL Labs API every
+    10 seconds until the analysis status is either 'READY' or 'ERROR'.
+
+    5. **Data Extraction**: Once ready, it retrieves the full report and identifies
+    the 'lowest' (worst) security grade across all endpoints.
+
+    6. **Internal Enrichment**: It updates the entity's `additional_properties` with
+    the specific SSL grades and IP addresses found.
+
+    7. **Suspicion Logic**: If the worst grade found exceeds the `Warning Threshold`,
+    the entity's `is_suspicious` flag is set to `True`.
+
+    8. **Result Reporting**: The action updates the entities in Google SecOps and
+    provides the full raw JSON report as a result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with SSL grades and sets the 'is_suspicious'
+      flag if the security grade is worse than the configured threshold.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    the Google SecOps environment and the SSL Labs API. Its primary purpose is to
+    ensure that the integration is correctly configured, the API credentials (if applicable)
+    are valid, and the external service is reachable over the network.
+
+
+    ### Parameters Description
+
+    This action does not have any action-specific input parameters. It utilizes the
+    following integration configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Verify SSL** | Boolean | No | Determines whether the action should verify
+    the SSL certificate of the SSL Labs API server. Defaults to `False`. |
+
+    | **Warning Threshold** | String/Numeric | No | Extracted from configuration but
+    not actively used in the connectivity test logic. |
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the SSL Labs integration
+    or for troubleshooting communication issues.
+
+    - If the action fails, it will raise an exception indicating the nature of the
+    connection error (e.g., timeout, DNS failure, or HTTP error status).
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action starts by extracting the global integration
+    settings, specifically the `Verify SSL` and `Warning Threshold` parameters.
+
+    2. **Manager Initialization**: It initializes the `SSLLabsManager` using the retrieved
+    SSL verification setting.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    performs a `GET` request to the SSL Labs `/info` API endpoint.
+
+    4. **Result Handling**: If the API responds with a successful status code, the
+    action concludes with a success message and a boolean `true` result. If the request
+    fails, an exception is raised, signaling a connection failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

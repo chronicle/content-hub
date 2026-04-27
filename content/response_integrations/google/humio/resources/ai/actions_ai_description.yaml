@@ -1,0 +1,261 @@
+Execute Custom Search:
+  ai_description: >-
+    ### General Description
+
+    The **Execute Custom Search** action allows users to perform advanced event searching
+    within a specific Humio repository using Humio's native query language. This is
+    a utility for threat hunting and investigation, enabling the retrieval of raw
+    event data directly into the Google SecOps platform for further analysis.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Repository Name** | String | Yes | The name of the Humio repository where
+    the search will be executed. |
+
+    | **Query** | String | Yes | The Humio query string to execute. Note: Do not include
+    the `head()` function as the action handles result limiting automatically. |
+
+    | **Max Results To Return** | Integer | No | The maximum number of event results
+    to retrieve. Defaults to 50. Must be a value greater than 0. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities; it is a global search action
+    that returns data based on the provided query.
+
+    - Results are presented both as a raw JSON object and a formatted data table named
+    "Results" on the case wall.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Humio manager using the provided
+    API root and token from the integration configuration.
+
+    2. **Parameter Validation**: It validates that the `Max Results To Return` parameter
+    is a positive integer.
+
+    3. **Query Construction**: It constructs the final query string by appending the
+    `| head(limit)` clause to the user-provided query to ensure the result set matches
+    the requested limit.
+
+    4. **Execution**: A POST request is sent to the Humio query API for the specified
+    repository.
+
+    5. **Output Generation**: If events are found, they are parsed into JSON objects
+    and a data table is created. If no results are found, the action completes with
+    a message indicating no data was returned.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute Simple Search:
+  ai_description: >-
+    ### General Description
+
+    The **Execute Simple Search** action allows users to query events from a specific
+    Humio repository based on various filtering and sorting criteria. It is designed
+    to retrieve log data and present it within Google SecOps for investigation and
+    analysis.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Repository Name** | String | Yes | The name of the Humio repository to search
+    within. |
+
+    | **Query Filter** | String | No | A Humio query string to filter results. Note:
+    `head()` and `select()` functions should not be included as they are handled by
+    other parameters. |
+
+    | **Time Frame** | Enum | No | Predefined time ranges (e.g., Last Hour, Last 24
+    Hours). If set to 'Custom', **Start Time** must be provided. |
+
+    | **Start Time** | String | No | The start time for the search in ISO 8601 format.
+    Mandatory if **Time Frame** is 'Custom'. |
+
+    | **End Time** | String | No | The end time for the search in ISO 8601 format.
+    Defaults to the current time if left empty and **Time Frame** is 'Custom'. |
+
+    | **Fields To Return** | String | No | A comma-separated list of specific fields
+    to include in the results. If empty, all fields are returned. |
+
+    | **Sort Field** | String | No | The field name used to sort the results. |
+
+    | **Sort Field Type** | Enum | No | The data type of the sort field (String, Number,
+    or Hex). |
+
+    | **Sort Order** | Enum | No | The direction of sorting (ASC or DESC). |
+
+    | **Max Results To Return** | Integer | No | The maximum number of events to retrieve.
+    Default is 50. Must be greater than 0. |
+
+
+    ### Additional Notes
+
+    - Either a predefined **Time Frame** or a **Custom** time frame with a **Start
+    Time** must be configured for the action to execute successfully.
+
+    - The action automatically constructs the final Humio query by appending `select()`,
+    `head()`, and `sort()` operators based on the provided parameters.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves configuration settings (API
+    Root, Token) and user-provided search parameters.
+
+    2. **Time Validation:** It calculates the start and end timestamps based on the
+    selected **Time Frame**. If 'Custom' is selected, it validates that **Start Time**
+    is provided and is earlier than **End Time**.
+
+    3. **Query Construction:** The `HumioManager` builds a Humio-compatible query
+    string by combining the **Query Filter** with the specified fields, result limit,
+    and sorting logic.
+
+    4. **API Execution:** A POST request is sent to the Humio API's query endpoint
+    for the specified repository.
+
+    5. **Data Processing:** The returned JSON events are parsed into internal data
+    models.
+
+    6. **Output Generation:** If events are found, they are added to the case as a
+    JSON result and a formatted data table named 'Results'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action populates the case with a data table named 'Results' and adds the
+      raw event data as JSON results.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Humio instance. It ensures that the provided credentials (API Root and
+    API Token) are valid and that the network path is open by executing a minimal
+    test query.
+
+
+    ### Parameters Description
+
+    This action does not have any action-specific parameters. It relies on the following
+    integration configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Humio API instance. |
+
+    | API Token | String | Yes | The API token used for authentication with Humio.
+    |
+
+    | Verify SSL | Boolean | Yes | Specifies whether to verify the SSL certificate
+    of the Humio server. |
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup or troubleshooting of the
+    Humio integration to confirm that the environment can communicate with the Humio
+    API.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the API Root, API Token, and
+    SSL verification settings from the integration configuration.
+
+    2. **Manager Initialization**: It initializes the `HumioManager` with the retrieved
+    connection settings.
+
+    3. **Connectivity Test**: It executes a minimal query (`|select([@id]) | head(1)`)
+    against the `humio-fleet` repository to verify API access and authentication.
+
+    4. **Result Reporting**: If the query succeeds, it returns a success message;
+    otherwise, it catches the exception and reports a failure with the error details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

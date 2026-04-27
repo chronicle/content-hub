@@ -1,0 +1,934 @@
+Create Memdump:
+  ai_description: "### General Description\nThis action creates a memory dump (memdump)\
+    \ on a remote host running the VMware Carbon Black Cloud Agent. It utilizes the\
+    \ Carbon Black Live Response API to establish a session with the target endpoint\
+    \ and execute the memory acquisition command. The action is designed to work asynchronously,\
+    \ handling session establishment and command execution monitoring over multiple\
+    \ steps.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| File Name | String | No | The name of the\
+    \ memdump file to be created. If not provided, the action will attempt to use\
+    \ the identifiers of any 'FILENAME' entities present in the scope. |\n| Remote\
+    \ Directory Path | String | No | The directory path on the remote host where the\
+    \ memdump will be stored (e.g., `C:\\TMP\\`). If provided, it is concatenated\
+    \ with the File Name. |\n| Check for active session x times | Integer | Yes |\
+    \ The number of attempts the action will make to verify that the Live Response\
+    \ session is active before timing out. Checks occur every 2 seconds. |\n\n###\
+    \ Additional Notes\n- **File Name Logic**: The file name can be provided as a\
+    \ full path in the 'File Name' parameter. If so, the 'Remote Directory Path' should\
+    \ be left empty. \n- **Entity Support**: The action primarily targets 'HOSTNAME'\
+    \ and 'ADDRESS' entities to identify the remote host. It also consumes 'FILENAME'\
+    \ entities if the 'File Name' parameter is not specified.\n- **API Versions**:\
+    \ Supports both V3 and V6 of the Carbon Black Live Response API based on the integration\
+    \ configuration.\n\n### Flow Description\n1. **Initialization**: The action validates\
+    \ input parameters and identifies target Hostname/IP entities and the desired\
+    \ filename(s).\n2. **Device Identification**: It queries the Carbon Black Cloud\
+    \ API to find the corresponding Device ID for each Hostname or IP entity.\n3.\
+    \ **Session Establishment**: It initiates a Live Response session for each identified\
+    \ device.\n4. **Session Monitoring**: The action polls the session status until\
+    \ it becomes 'ACTIVE', retrying based on the 'Check for active session x times'\
+    \ parameter.\n5. **Command Execution**: Once the session is active, it issues\
+    \ the `memdump` command to the remote host using the specified file path.\n6.\
+    \ **Command Monitoring**: It monitors the status of the memdump command until\
+    \ completion or failure, providing the final result in the action output."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a memory dump process on the remote endpoint, which involves running
+      a forensic process and creating a new file on the target system's disk.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - FILENAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete File:
+  ai_description: >-
+    Deletes a specified file from a remote host running the VMware Carbon Black Cloud
+    agent. This action leverages the Live Response API to establish a remote session
+    and execute a file deletion command. It supports targeting hosts via IP Address
+    or Hostname entities and identifies the file to delete through either a FILENAME
+    entity or an action parameter.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Remote Directory Path | String | No | The directory path where the file is located
+    (e.g., `C:\TMP\`). |
+
+    | File Name | String | No | The name of the file to delete. Can be a full path.
+    If provided, it overrides any FILENAME entities in the case. |
+
+    | Check for active session x times | Integer | Yes | The number of attempts to
+    check if the Live Response session is active (checked every 2 seconds). |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action identifies target hosts (IP or Hostname) and
+    the file(s) to be deleted. It prioritizes the 'File Name' parameter over FILENAME
+    entities.
+
+    2. **Device Identification**: It queries Carbon Black Cloud to find the specific
+    device ID associated with each host entity.
+
+    3. **Session Establishment**: It initiates a Live Response session for each device
+    and polls the status until the session becomes active, respecting the configured
+    retry limit.
+
+    4. **Command Execution**: Once the session is active, it issues a 'delete file'
+    command to the remote agent for the specified file path.
+
+    5. **Monitoring**: The action monitors the command status asynchronously until
+    it is completed, failed, or the action reaches a timeout, reporting the final
+    success or failure for each entity.
+
+
+    ### Additional Notes
+
+    - Either the 'File Name' parameter must be provided, or 'FILENAME' entities must
+    exist in the context for the action to run.
+
+    - If 'Remote Directory Path' is provided, 'File Name' should be a simple filename.
+    If 'Remote Directory Path' is empty, 'File Name' (or the FILENAME entity) must
+    represent a full path.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a specified file from the remote host's file system via the Carbon Black
+      Cloud Live Response API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - FILENAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete File from Cloud Storage:
+  ai_description: >-
+    Deletes a file from the VMware Carbon Black Cloud file storage for an existing
+    live response session. This action is designed to clean up or remove specific
+    artifacts from the cloud storage associated with a device's Live Response session.
+    It supports targeting devices via IP or Hostname entities and identifying files
+    via Filename entities or a direct input parameter.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Name | String | No | The name of the file to delete. If provided, this
+    takes precedence over Filename entities. If not provided, the action will attempt
+    to use all Filename entities present in the scope. |
+
+    | Check for active session x times | Integer | Yes | The number of attempts the
+    action will make to verify if a Live Response session has become active. Checks
+    occur every 2 seconds. |
+
+
+    ### Additional Notes
+
+    * **API Requirement:** This action is only supported using the Carbon Black Live
+    Response API v6. It will fail if the 'Use Live Response V6 API' configuration
+    parameter is not enabled.
+
+    * **Case Sensitivity:** The file name matching logic is case-insensitive.
+
+    * **Async Execution:** This is an asynchronous action that polls for session activation
+    before attempting the deletion.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action identifies the target filenames (from parameters
+    or entities) and target devices (from ADDRESS or HOSTNAME entities).
+
+    2. **Device Identification:** For each target device, the action queries the Carbon
+    Black Cloud API to retrieve the corresponding internal Device ID.
+
+    3. **Session Management:** The action initiates a Live Response session for the
+    identified devices and enters a polling loop to wait for the sessions to reach
+    an 'ACTIVE' state.
+
+    4. **File Discovery:** Once a session is active, the action retrieves a list of
+    all files currently stored in the cloud storage for that specific session.
+
+    5. **Deletion:** The action iterates through the retrieved file list, identifies
+    files matching the target filename(s), and issues a delete command to the Carbon
+    Black Cloud API for each match.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes specified files from the VMware Carbon Black Cloud Live Response storage
+      associated with a device session.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILENAME
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download File:
+  ai_description: "### General Description\nThe **Download File** action retrieves\
+    \ a specific file from a remote host managed by VMware Carbon Black Cloud. It\
+    \ utilizes the Live Response API to establish a secure session with the target\
+    \ endpoint, initiate a file retrieval command, and download the file content directly\
+    \ to a specified local directory on the Google SecOps (Chronicle) server. This\
+    \ action is essential for forensic investigations and incident response where\
+    \ physical artifacts from a compromised or suspicious host are required for analysis.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| **File Name** | String | No | The name or full\
+    \ path of the file to download. If not provided, the action attempts to use `FILENAME`\
+    \ entities from the case. If a full path is provided here, the 'Remote Directory\
+    \ Path' is ignored. |\n| **Remote Directory Path** | String | No | The directory\
+    \ on the remote host where the file is located (e.g., `C:\\TMP\\`). |\n| **Local\
+    \ Directory Path** | String | Yes | The destination path on the Google SecOps\
+    \ server where the downloaded file will be saved (e.g., `/tmp/`). |\n| **Check\
+    \ for active session x times** | Integer | Yes | The number of attempts the action\
+    \ will make to wait for the Live Response session to become active. Checks occur\
+    \ every 2 seconds. |\n\n### Additional Notes\n- **Entity Support:** The action\
+    \ targets `ADDRESS` (IP) or `HOSTNAME` entities to identify the remote host. It\
+    \ can also use `FILENAME` entities to identify the file to be retrieved if the\
+    \ 'File Name' parameter is empty.\n- **File Naming:** If the action is executed\
+    \ against multiple hosts, the downloaded file name is prefixed with the hostname\
+    \ or IP address (e.g., `hostname_filename`) to prevent overwriting.\n- **Path\
+    \ Validation:** The action validates that the 'Local Directory Path' is writable\
+    \ before proceeding.\n\n### Flow Description\n1. **Initialization:** Extract configuration\
+    \ and action parameters, and identify target host entities (`ADDRESS`, `HOSTNAME`)\
+    \ and file identifiers (`FILENAME` entities or parameter).\n2. **Device Identification:**\
+    \ Query VMware Carbon Black Cloud to find the unique Device ID associated with\
+    \ the provided IP or Hostname.\n3. **Session Establishment:** Initiate a Live\
+    \ Response session for the identified device and poll the status until it becomes\
+    \ 'ACTIVE' (based on the retry parameter).\n4. **Command Execution:** \n    -\
+    \ If a specific file is identified, initiate a `get file` command.\n    - If only\
+    \ a directory path is provided without a filename, the action first lists the\
+    \ directory contents and then attempts to download files.\n5. **File Retrieval:**\
+    \ Once the command completes, the action fetches the file content from the Carbon\
+    \ Black cloud storage.\n6. **Internal Storage:** The retrieved content is saved\
+    \ as a physical file in the specified 'Local Directory Path' on the SOAR server."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action saves the downloaded file content to the local filesystem of the
+      Google SecOps server at the path specified in the 'Local Directory Path' parameter.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - FILENAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute File:
+  ai_description: >-
+    ### General Description
+
+    Executes a file on a remote host running the VMware Carbon Black Cloud agent.
+    This action leverages the Live Response capability to initiate a process on the
+    target endpoint, optionally passing command-line arguments and redirecting output
+    to a log file. It is designed to run on Hostname or IP Address entities and can
+    use Filename entities as the source for the executable name.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **File Name** | String | No | The name of the file to execute. Can be a full
+    path. If omitted, the action will attempt to use the identifiers of `FILENAME`
+    entities present in the context. |
+
+    | **Remote Directory Path** | String | No | The directory path on the remote host
+    where the file is located. Example: `C:\TMP\`. |
+
+    | **Output Log File on Remote Host** | String | No | Path on the remote host to
+    save the redirected output of the execution. Example: `C:\TMP\cmdoutput.log`.
+    |
+
+    | **Command Arguments to Pass to File** | String | No | Arguments to be passed
+    to the executable (e.g., `/C whoami`). |
+
+    | **Wait for the Result** | Boolean | No | If enabled, the action will poll the
+    external system until the command completes or fails. |
+
+    | **Check for active session x times** | Integer | Yes | The number of attempts
+    to make (every 2 seconds) to establish an active Live Response session with the
+    target device. |
+
+
+    ### Additional Notes
+
+    - Either the **File Name** parameter must be provided, or `FILENAME` entities
+    must be available in the case context for the action to identify what to execute.
+
+    - If **Remote Directory Path** is provided, the **File Name** should be a simple
+    filename without folder separators.
+
+    - The action supports both V3 and V6 versions of the Carbon Black Live Response
+    API based on the integration configuration.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves API credentials and action parameters, including
+    the file(s) to be executed and the target hosts/IPs.
+
+    2. **Device Identification**: Maps the provided `HOSTNAME` or `ADDRESS` entities
+    to specific Carbon Black Cloud Device IDs.
+
+    3. **Session Management**: Initiates a Live Response session for each target device
+    and polls the session status until it becomes 'ACTIVE'.
+
+    4. **Command Dispatch**: Sends a 'create process' command to the active session
+    to execute the specified file with the provided arguments and output redirection.
+
+    5. **Result Tracking**: If configured to wait, the action monitors the command's
+    progress and retrieves the final execution details, such as the Process ID (PID)
+    and return code, which are then attached to the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes a file or process on a remote endpoint via the VMware Carbon Black
+      Cloud Live Response service, which changes the state of the target host.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - FILENAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Kill Process:
+  ai_description: >-
+    ### General Description
+
+    This action terminates a specific process on a remote host using VMware Carbon
+    Black Cloud Live Response. It supports targeting hosts via IP Address or Hostname
+    entities. The action is designed to handle the end-to-end Live Response workflow,
+    including device discovery, session establishment, process enumeration to find
+    the correct Process ID (PID), and the final termination command. It is an asynchronous
+    action that polls for session readiness and command completion.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Process Name | String | No | The name of the process to search for and terminate.
+    If not provided, the action will attempt to use the identifier of the first 'PROCESS'
+    entity found in the alert context. |
+
+    | Check for active session x times | Integer | Yes | The number of attempts the
+    action will make to wait for a Live Response session to become active on the target
+    device. Checks are performed every 2 seconds. Default is 20. |
+
+
+    ### Additional Notes
+
+    - **Process Identification:** If the `Process Name` parameter is provided, it
+    takes precedence over any `PROCESS` entities. If the parameter is empty and no
+    `PROCESS` entities exist, the action will fail.
+
+    - **Device Matching:** The action automatically resolves Hostname or IP entities
+    to Carbon Black Sensor IDs. If multiple sensors match a single entity, it selects
+    the one with the most recent contact time.
+
+    - **API Versions:** Supports both Live Response V3 and V6 APIs based on the integration
+    configuration.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Extract configuration and parameters. Determine the target
+    process name from the input parameter or available `PROCESS` entities.
+
+    2. **Device Discovery:** Search for the corresponding VMware Carbon Black Cloud
+    agent (device) for each `ADDRESS` or `HOSTNAME` entity.
+
+    3. **Session Establishment:** Initiate a Live Response session for each identified
+    device.
+
+    4. **Session Polling:** Periodically check the status of the session until it
+    becomes 'ACTIVE' or the retry limit is reached.
+
+    5. **Process Enumeration:** Once the session is active, the action triggers a
+    'list processes' command on the remote host.
+
+    6. **PID Resolution:** Parse the process list to find the PID associated with
+    the target process name.
+
+    7. **Termination:** Issue a 'kill' command using the resolved PID to terminate
+    the process.
+
+    8. **Verification:** Monitor the kill command status to confirm successful termination
+    and report the results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Terminates a running process on a remote endpoint via VMware Carbon Black Live
+      Response.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - PROCESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Files:
+  ai_description: >-
+    ### General Description
+
+    Lists files in a specified directory on a remote host running a VMware Carbon
+    Black Cloud agent. This action uses the Carbon Black Live Response API to establish
+    a remote session and execute a directory listing command. It is designed to help
+    investigators browse the file system of a target endpoint directly from Google
+    SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Remote Directory Path | String | Yes | The target directory path on the remote
+    host to list (e.g., `C:\TMP\` or `/tmp/`). |
+
+    | Max Rows to Return | Integer | No | The maximum number of file entries to return
+    in the results. Default is 50. |
+
+    | Start from Row | Integer | No | The starting index for the file list, used for
+    pagination. Default is 0. |
+
+    | Check for active session x times | Integer | Yes | The number of times the action
+    will poll to check if the Live Response session has become active. Polling occurs
+    every 2 seconds. Default is 20. |
+
+
+    ### Additional Notes
+
+    - This action is asynchronous and involves multiple steps including device identification,
+    session establishment, and command execution.
+
+    - It supports both IP Address and Hostname entities.
+
+    - If multiple agents are found for a single entity, the action selects the one
+    with the most recent contact time.
+
+
+    ### Flow Description
+
+    1. **Device Identification**: Searches for the corresponding VMware Carbon Black
+    Cloud device ID based on the provided Hostname or IP entity.
+
+    2. **Session Initiation**: Requests the creation of a Live Response session for
+    the identified device.
+
+    3. **Session Activation Check**: Polls the Carbon Black API until the session
+    status becomes 'ACTIVE' or the retry limit is reached.
+
+    4. **Command Execution**: Sends a `directory list` command to the active session
+    for the specified remote path.
+
+    5. **Result Retrieval**: Polls for the completion of the command and retrieves
+    the list of files.
+
+    6. **Data Presentation**: Formats the file list into a data table and adds it
+    to the Case Wall for the investigator.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a data table to the Case Wall containing the list of files found in the
+      specified remote directory.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Files in Cloud Storage:
+  ai_description: >-
+    ### General Description
+
+    The **List Files in Cloud Storage** action retrieves a list of files currently
+    stored in the VMware Carbon Black Cloud file storage for a specific device. This
+    action is primarily used during forensic investigations to audit files that have
+    been uploaded to or are available within the cloud-side storage of a Live Response
+    session. It operates asynchronously, establishing a communication channel with
+    the target endpoint before querying the cloud storage.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Max Rows to Return** | Integer | No | The maximum number of file records to
+    include in the results. Default is 50. |
+
+    | **Start from Row** | Integer | No | The index of the first record to retrieve,
+    used for pagination. Default is 0. |
+
+    | **Check for active session x times** | Integer | Yes | The number of times the
+    action will poll Carbon Black to check if the Live Response session has become
+    active. Each check occurs every 2 seconds. Default is 20. |
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all Hostname and IP Address entities
+    in the current context.
+
+    2. **Device Identification**: For each entity, it queries VMware Carbon Black
+    Cloud to find the matching device ID. If multiple devices match, it selects the
+    one with the most recent contact time.
+
+    3. **Session Initiation**: It attempts to start a Live Response session for the
+    identified device.
+
+    4. **Session Polling**: The action enters an asynchronous loop, checking the session
+    status until it becomes "ACTIVE" or the retry limit (defined by the 'Check for
+    active session x times' parameter) is reached.
+
+    5. **Data Retrieval**: Once the session is active, it fetches the list of files
+    from the cloud storage associated with that session using the specified pagination
+    parameters.
+
+    6. **Reporting**: The retrieved file list is added to the Case Wall as a data
+    table and provided as a JSON result for downstream actions.
+
+
+    ### Additional Notes
+
+    - This action is asynchronous and its duration depends on the target device's
+    responsiveness to the Live Response session request.
+
+    - If a Hostname and IP entity refer to the same physical device, the action prioritizes
+    the Hostname entity to avoid duplicate processing.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table to the case wall containing the list of files retrieved
+      from the VMware Carbon Black Cloud storage.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Processes:
+  ai_description: >-
+    ### General Description
+
+    The **List Processes** action retrieves a comprehensive list of all processes
+    currently running on a remote endpoint. It leverages the **VMware Carbon Black
+    Cloud Live Response** capabilities to interact directly with the host associated
+    with a provided **Hostname** or **IP Address** entity. This action is primarily
+    used for forensic investigation and incident response to identify suspicious or
+    unauthorized software execution.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Process Name** | String | No | A string used to filter the results. Only processes
+    whose command line contains this string will be returned. |
+
+    | **How Many Records To Return** | Integer | No | The maximum number of process
+    records to return per entity. Defaults to 25. |
+
+    | **Check for active session x times** | Integer | Yes | The number of attempts
+    the action will make to verify if the Live Response session has become active.
+    Checks occur every 2 seconds. |
+
+
+    ### Flow Description
+
+    1. **Device Identification**: The action queries Carbon Black Cloud to find the
+    specific device ID corresponding to the Hostname or IP entity. If multiple devices
+    match, it selects the one with the most recent contact time.
+
+    2. **Session Initiation**: A Live Response session is requested for the identified
+    device.
+
+    3. **Session Polling**: The action enters a retry loop, checking the session status
+    until it becomes 'ACTIVE' or the retry limit specified in the parameters is reached.
+
+    4. **Command Execution**: Once the session is active, the action sends a `ps`
+    (process list) command to the endpoint.
+
+    5. **Result Retrieval**: The action polls for the command's completion. Upon success,
+    it retrieves the process list and applies the optional name filter and result
+    limit.
+
+    6. **Data Output**: The resulting process list is formatted as a CSV and added
+    to the **Case Wall** as a data table. The raw data is also returned in the action's
+    JSON result.
+
+
+    ### Additional Notes
+
+    - This action is asynchronous and may take several minutes depending on the endpoint's
+    responsiveness and the session activation time.
+
+    - If the session fails to activate within the allotted retries, the action will
+    report a failure for that specific entity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a data table to the case wall containing the list of processes found on
+      the endpoint for each successful entity.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between Google SecOps and the **VMware Carbon\
+    \ Black Endpoint Standard Live Response** service. It ensures that the provided\
+    \ API credentials and configuration parameters are valid and that the external\
+    \ service is reachable.\n\n### Parameters Description\n| Parameter Name | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **API Root** |\
+    \ String | Yes | The base URL for the Carbon Black Cloud API. |\n| **Organization\
+    \ Key** | String | Yes | The unique identifier for your Carbon Black organization.\
+    \ |\n| **Carbon Black Cloud API ID** | String | Yes | The API ID used for general\
+    \ Carbon Black Cloud authentication. |\n| **Carbon Black Cloud API Secret Key**\
+    \ | String | Yes | The API Secret Key used for general Carbon Black Cloud authentication.\
+    \ |\n| **Live Response API ID** | String | No | The API ID specifically for Live\
+    \ Response operations (required for V3 API). |\n| **Live Response API Secret Key**\
+    \ | String | No | The API Secret Key specifically for Live Response operations\
+    \ (required for V3 API). |\n| **Use Live Response V6 API** | Boolean | No | If\
+    \ enabled, the action will use the newer V6 API endpoints for connectivity testing.\
+    \ |\n\n### Additional Notes\n- This action does not process any entities.\n- It\
+    \ is primarily used during the initial setup of the integration or for troubleshooting\
+    \ connection issues.\n- Depending on the **Use Live Response V6 API** toggle,\
+    \ the action will validate different sets of credentials (general Cloud API vs.\
+    \ specific Live Response API).\n\n### Flow Description\n1. **Parameter Extraction:**\
+    \ The action retrieves the integration configuration parameters (API Root, Org\
+    \ Key, API IDs, and Secrets).\n2. **Manager Initialization:** Based on the `Use\
+    \ Live Response V6 API` parameter, it initializes either the V3 or V6 version\
+    \ of the Carbon Black Live Response Manager.\n3. **Connectivity Test:** \n   \
+    \ - For **V3**: It performs a POST request to search for devices and a POST request\
+    \ to the Live Response service session endpoint to validate both sets of credentials.\n\
+    \    - For **V6**: It performs a GET request to the sessions endpoint to validate\
+    \ the unified credentials.\n4. **Result Reporting:** If the API calls return successful\
+    \ responses, the action completes with a success status. If an exception occurs\
+    \ (e.g., 401 Unauthorized), it reports a failure and provides the error details."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Put File:
+  ai_description: >-
+    ### General Description
+
+    This action uploads a file to a remote host running the VMware Carbon Black Cloud
+    agent. It utilizes the Live Response API to establish a secure session with the
+    target endpoint and transfer the specified file. The action supports targeting
+    hosts via IP Address or Hostname entities and can identify the file to be uploaded
+    either through a provided parameter or via Filename entities (artifacts) present
+    in the case.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | File Name | String | No | The name of the file to upload. If not provided, the
+    action attempts to use Filename entities from the case. If both are provided,
+    the parameter takes precedence. |
+
+    | Check for active session x times | Integer | Yes | The number of attempts the
+    action will make to verify if a Live Response session is active. Checks occur
+    every 2 seconds. Default is 20. |
+
+    | Source Directory Path | String | No | The local directory path on the runner
+    where the source file is located (e.g., `/tmp/`). |
+
+    | Destination Directory Path | String | Yes | The target directory path on the
+    remote host where the file should be uploaded (e.g., `C:\TMP\`). |
+
+
+    ### Additional Notes
+
+    - The action is asynchronous and will poll for session activation and command
+    completion.
+
+    - If multiple IP and Hostname entities refer to the same Carbon Black agent, the
+    action will prioritize the Hostname entity to avoid redundant operations.
+
+    - File names are case-insensitive.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action identifies target hosts (IP/Hostname) and the
+    files to be uploaded (from parameters or entities).
+
+    2. **Device Identification**: It searches the VMware Carbon Black Cloud environment
+    for device IDs corresponding to the provided entities.
+
+    3. **Session Establishment**: A Live Response session is initiated for each identified
+    device. The action polls the session status based on the 'Check for active session
+    x times' parameter.
+
+    4. **File Upload to Server**: The file is first uploaded from the local source
+    path to the Carbon Black server's temporary storage.
+
+    5. **File Deployment to Endpoint**: A `put file` command is issued to move the
+    file from the Carbon Black server storage to the specified destination path on
+    the target endpoint.
+
+    6. **Command Verification**: The action monitors the status of the `put file`
+    command until it reaches a 'complete' or 'failed' state.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action uploads a file to a remote endpoint managed by VMware Carbon Black
+      Cloud, which changes the file system state of the external host.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILENAME
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

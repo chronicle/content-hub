@@ -1,0 +1,294 @@
+Detonate File:
+  ai_description: >-
+    ### General Description
+
+    The **Detonate File** action allows users to submit local files to JoeSandbox
+    for automated dynamic analysis and reputation checking. It is an asynchronous
+    action that handles the initial submission, monitors the analysis progress, and
+    retrieves the final results once completed. This action is designed to provide
+    deep visibility into file behavior by leveraging JoeSandbox's detonation capabilities.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **File Paths** | String | Yes | A comma-separated list of local file paths to
+    be uploaded and scanned. |
+
+    | **Comment** | String | No | A custom comment to associate with the submission
+    in JoeSandbox. Defaults to "Uploaded by Siemplify". |
+
+    | **Report Format** | String | No | The desired format for the downloaded report
+    (e.g., html, xml, json, pdf). Defaults to "html". |
+
+
+    ### Flow Description
+
+    1. **Submission Phase**: The action reads the provided file paths, opens the files
+    from the local system, and uploads them to JoeSandbox. Each successful submission
+    returns a unique `webid`.
+
+    2. **Status Check (Async)**: The action enters an asynchronous state, periodically
+    polling the JoeSandbox API to check if the analysis for each `webid` has reached
+    the 'finished' status.
+
+    3. **Data Retrieval**: Once all analyses are complete, the action fetches the
+    detailed analysis information and downloads the full report in the user-specified
+    format.
+
+    4. **Internal Updates**: The action attaches the downloaded reports to the Google
+    SecOps case and adds a direct web link to the JoeSandbox analysis page.
+
+    5. **Insight Generation**: If JoeSandbox detects the file as 'suspicious' or 'malicious',
+    the action creates a Case Insight to highlight the risk to the analyst.
+
+
+    ### Additional Notes
+
+    * This action requires a JoeSandbox Pro level account to function.
+
+    * The action includes built-in error handling for API rate limits (e.g., the default
+    20 submissions per day limit).
+
+    * File attachments are subject to a 3MB size limit; if a report exceeds this,
+    it will not be attached, though the web link will still be provided.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits files to the JoeSandbox platform, which creates new analysis tasks and
+      consumes submission quotas in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates case insights for suspicious files and adds analysis reports as attachments
+      to the case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the JoeSandbox instance. It ensures that the provided API credentials (API
+    Root and API Key) are valid and that the JoeSandbox server is currently online
+    and not in maintenance mode.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the JoeSandbox integration
+    or for troubleshooting communication issues. It does not process any entities
+    or modify any data.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action retrieves the API Root, API Key, and
+    SSL verification settings from the integration configuration.
+
+    2. **Manager Initialization:** It initializes the `JoeSandboxManager` with the
+    retrieved settings.
+
+    3. **Connectivity Check:** It calls the JoeSandbox API endpoint `api/v2/server/online`
+    via a POST request.
+
+    4. **Response Validation:** The action checks the `online` status in the API response.
+
+    5. **Final Result:** If the server is online, it returns a success message and
+    a result value of `true`. If the server is in maintenance mode or unreachable,
+    it returns a failure message and a result value of `false`.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Hash:
+  ai_description: >-
+    ### General Description
+
+    Searches for a file hash in JoeSandbox's historical records to retrieve existing
+    analysis data. This action is used to determine if a file has been previously
+    analyzed in the sandbox and to gather its reputation and detailed report without
+    submitting a new sample.
+
+
+    ### Parameters
+
+    There are no parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all `FILEHASH` entities within
+    the current context.
+
+    2. **Search**: For each hash, it queries the JoeSandbox API to find matching analysis
+    records (Web IDs).
+
+    3. **Data Retrieval**: If a match is found, it retrieves the full analysis metadata
+    and downloads the corresponding PDF report.
+
+    4. **Attachment and Linking**: The PDF report is attached to the entity in Google
+    SecOps (if under 3MB), and a direct web link to the JoeSandbox analysis page is
+    added.
+
+    5. **Enrichment**: The entity's additional properties are updated with the flattened
+    analysis data, and the entity is marked as enriched.
+
+    6. **Risk Assessment**: If the sandbox detection status is 'malicious' or 'suspicious',
+    the entity is marked as suspicious, and a detailed insight is created in the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity attributes with analysis metadata, marks entities
+      as suspicious based on sandbox results, attaches PDF reports to entities, and
+      generates case insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Url:
+  ai_description: >-
+    ### General Description
+
+    The **Search Url** action queries Joe Sandbox for existing analysis records associated
+    with URL entities. It allows security analysts to leverage historical sandbox
+    data to determine the reputation and behavior of a URL without triggering a new
+    analysis submission.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all URL entities in the current
+    scope.
+
+    2. **Search Query**: For each URL, it performs a search against the Joe Sandbox
+    database using the URL string as the query.
+
+    3. **Data Retrieval**: If a record is found, the action fetches the analysis summary
+    and downloads the full PDF report.
+
+    4. **Attachment & Linking**: The PDF report is attached to the entity in Google
+    SecOps, and a direct web link to the Joe Sandbox analysis page is added.
+
+    5. **Enrichment**: Entity properties are updated with analysis metadata, including
+    hashes (MD5, SHA256) and analysis IDs.
+
+    6. **Risk Assessment**: If the sandbox detection indicates the URL is 'malicious'
+    or 'suspicious', the entity is marked as suspicious in Google SecOps, and a detailed
+    insight is created.
+
+
+    ### Additional Notes
+
+    - This action only retrieves existing records; it does not perform new sandbox
+    detonations.
+
+    - PDF attachments are subject to a 3MB size limit; if the report exceeds this,
+    the attachment step is skipped and an error is logged, but the enrichment continues.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity attributes with analysis data, marks entities as suspicious
+      if threats are detected, attaches PDF reports to entities, and creates case
+      insights.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

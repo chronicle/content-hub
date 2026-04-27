@@ -1,0 +1,986 @@
+Add Note:
+  ai_description: >-
+    ### General Description
+
+    Adds a note to a specific request in ServiceDesk Plus V3. This action allows users
+    to append information, updates, or internal comments to an existing ticket, with
+    options to control visibility and notifications.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Request ID | String | Yes | The unique identifier of the request in ServiceDesk
+    Plus. |
+
+    | Note | String | Yes | The text content of the note to be added. |
+
+    | Show To Requester | Boolean | No | If true, the note will be visible to the
+    requester of the ticket. Default is False. |
+
+    | Notify Technician | Boolean | No | If true, the assigned technician will receive
+    a notification about the new note. Default is False. |
+
+    | Mark First Response | Boolean | No | If true, this note will be flagged as the
+    first response to the request. Default is False. |
+
+    | Add To Linked Requests | Boolean | No | If true, the note will also be added
+    to any requests linked to the target request. Default is False. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the ServiceDesk Plus manager using
+    the provided API credentials and connection settings.
+
+    2. **Parameter Extraction**: It retrieves the Request ID, Note content, and optional
+    flags (visibility, notifications, etc.) from the action input.
+
+    3. **API Interaction**: The action attempts to post the note to the ServiceDesk
+    Plus API. It includes a fallback mechanism: it first tries the modern API payload
+    structure (`note` key), and if that fails, it retries using the legacy structure
+    (`request_note` key) to ensure compatibility across different ServiceDesk Plus
+    versions.
+
+    4. **Result Handling**: Upon success, the action returns the details of the created
+    note as a JSON object. If an error occurs, it logs the failure and reports it
+    to the SOAR platform.
+
+
+    ### Additional Notes
+
+    This action does not run on entities and requires a specific Request ID to be
+    provided manually or via a previous playbook step.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new note to a specific request in ServiceDesk Plus.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Note And Wait For Reply:
+  ai_description: >-
+    ### General Description
+
+    Adds a note to a specific request in ServiceDesk Plus and waits for the operation
+    to be confirmed. This action is asynchronous, meaning it initiates the note creation
+    and then periodically checks the status until the note is successfully indexed
+    and retrievable from the system.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Request ID | String | Yes | The unique identifier of the ServiceDesk Plus request
+    (ticket) where the note will be added. |
+
+    | Note | String | Yes | The actual text content of the note. |
+
+    | Show To Requester | Boolean | No | If set to `True`, the note will be visible
+    to the person who opened the request. Default is `False`. |
+
+    | Notify Technician | Boolean | No | If set to `True`, the technician assigned
+    to the request will receive a notification about the new note. Default is `False`.
+    |
+
+    | Mark First Response | Boolean | No | If set to `True`, this note will be recorded
+    as the 'First Response' for SLA tracking purposes. Default is `False`. |
+
+    | Add To Linked Requests | Boolean | No | If set to `True`, the note will also
+    be added to any requests linked to the primary Request ID. Default is `False`.
+    |
+
+
+    ### Additional Notes
+
+    This action is designed to handle both newer (v12+) and older versions of the
+    ServiceDesk Plus API by attempting multiple payload structures for the note creation.
+    Because it is an asynchronous action, ensure the IDE timeout for the action is
+    configured to allow for polling cycles.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts API configuration and action parameters.
+
+    2. **Start Operation (First Run)**: Sends a POST request to ServiceDesk Plus to
+    create the note using the provided parameters. It then fetches the current list
+    of notes to establish a baseline and sets the action status to `IN_PROGRESS`.
+
+    3. **Query Status (Subsequent Runs)**: Retrieves the list of notes for the request
+    and identifies the latest note ID. It then attempts to fetch that specific note
+    to verify it has been fully processed by the external system.
+
+    4. **Completion**: Once the note is successfully retrieved, the action attaches
+    the raw note data to the result and marks the execution as `COMPLETED`.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new note to a request in ServiceDesk Plus, which changes the state of
+      the ticket in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Close Request:
+  ai_description: >-
+    ### General Description
+
+    Closes a specific request in ServiceDesk Plus V3. This action is used to finalize
+    a ticket by providing a mandatory closing comment and optionally acknowledging
+    the resolution. It interacts with the ServiceDesk Plus API via a PUT request to
+    transition the request state.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Request ID | String | Yes | The unique identifier of the ServiceDesk Plus request
+    to be closed. |
+
+    | Comment | String | Yes | The closing comment or reason for closing the request.
+    |
+
+    | Resolution Acknowledged | Boolean | No | Whether the resolution of the request
+    is acknowledged or not. Defaults to False. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the ServiceDesk Plus manager using
+    the provided API Root, API Key, and SSL verification settings.
+
+    2. **Parameter Extraction**: It retrieves the mandatory `Request ID` and `Comment`,
+    along with the optional `Resolution Acknowledged` flag from the action input.
+
+    3. **API Interaction**: The action sends a PUT request to the ServiceDesk Plus
+    endpoint (`requests/{request_id}/close`) with a payload containing the closure
+    information.
+
+    4. **Result Processing**: If the request is successful, the API response is captured
+    and added to the action's JSON results. If an error occurs, the action fails and
+    logs the reason.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of a specific request in ServiceDesk Plus to 'Closed' and
+      attaches closure comments and acknowledgment status.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Alert Request:
+  ai_description: >-
+    Creates a new request (ticket) in ServiceDesk Plus V3 that is specifically associated
+    with the current Google SecOps alert. The action automatically populates the request's
+    description with the Siemplify Alert ID and Alert Name to maintain traceability
+    between the two systems.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Subject | String | Yes | The subject/title of the request to be created. |
+
+    | Requester | String | Yes | The name of the requester. If not specified in the
+    external system, it usually defaults to the API key user. |
+
+    | Assets | String | No | A comma-separated list of asset names to associate with
+    the request. |
+
+    | Status | String | No | The initial status of the request (e.g., Open, In Progress).
+    |
+
+    | Technician | String | No | The name of the technician to assign to the request.
+    |
+
+    | Priority | String | No | The priority level of the request. |
+
+    | Urgency | String | No | The urgency level of the request. |
+
+    | Category | String | No | The category classification for the request. |
+
+    | Request Template | String | No | The specific template to use for creating the
+    request. |
+
+    | Request Type | String | No | The type of request (e.g., Incident, Service Request).
+    |
+
+    | Due By Time (ms) | Integer | No | The due date for the request expressed in
+    Unix milliseconds. |
+
+    | Mode | String | No | The mode of the request (e.g., E-mail, Phone). |
+
+    | Level | String | No | The level of the request. |
+
+    | Site | String | No | The site to which this request belongs. |
+
+    | Group | String | No | The group to which this request belongs. |
+
+    | Impact | String | No | The impact level of the request. |
+
+
+    ### Additional Notes
+
+    - This action does not run on specific entities; it operates at the alert level.
+
+    - If a parameter is set to "None" (case sensitive), the integration logic treats
+    it as an empty value for dropdown-based fields.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves integration configuration (API Root, API Key,
+    SSL verification) and extracts all action parameters.
+
+    2. **Context Building**: Automatically generates a description string containing
+    the `external_id` and `name` of the current Google SecOps alert.
+
+    3. **API Interaction**: Sends a POST request to the ServiceDesk Plus V3 API (`/requests`
+    endpoint) with the provided metadata to create the ticket.
+
+    4. **Result Processing**: Captures the API response, converts it to a JSON result,
+    and marks the action as successful if the ticket is created.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new request (ticket) record in the ServiceDesk Plus V3 external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Request:
+  ai_description: >-
+    Creates a new request in ServiceDesk Plus V3. This action allows users to programmatically
+    generate tickets within the ServiceDesk Plus environment by providing various
+    details such as subject, requester, description, and priority. It is typically
+    used for incident management or service request fulfillment within a SOAR workflow.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Subject | String | Yes | The subject of the request. |
+
+    | Requester | String | Yes | The requester of the request. |
+
+    | Description | String | No | Detailed description of the request. |
+
+    | Assets | String | No | Comma-separated names of assets to be associated with
+    the request. |
+
+    | Status | String | No | The status of the request (e.g., Open, In Progress).
+    |
+
+    | Technician | String | No | The name of the technician assigned to the request.
+    |
+
+    | Priority | String | No | The priority of the request. |
+
+    | Urgency | String | No | The urgency of the request. |
+
+    | Category | String | No | The category of the request. |
+
+    | Request Template | String | No | The template to apply to the request. |
+
+    | Request Type | String | No | The type of the request (e.g., Incident, Service
+    Request). |
+
+    | Due By Time (ms) | Integer | No | The due date of the request in milliseconds.
+    |
+
+    | Mode | String | No | The mode in which this request is created (e.g., E-mail).
+    |
+
+    | Level | String | No | The level of the request. |
+
+    | Site | String | No | The site to which this request belongs. |
+
+    | Group | String | No | The group to which this request belongs. |
+
+    | Impact | String | No | The impact of the request. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves connection settings (API Root,
+    Key) and all user-provided request fields from the SOAR environment.
+
+    2. **Manager Initialization**: Initializes the ServiceDeskPlusManagerV3 to handle
+    API communication using the provided credentials.
+
+    3. **Request Construction**: Builds a JSON payload containing the request attributes.
+    If a parameter is set to 'None' (via dropdown logic), it is excluded from the
+    payload.
+
+    4. **API Execution**: Sends a POST request to the ServiceDesk Plus 'requests'
+    endpoint to create the ticket.
+
+    5. **Result Processing**: Captures the API response, including the new Request
+    ID and metadata, and attaches it as a JSON result to the action for use in downstream
+    tasks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new request (ticket) record in the ServiceDesk Plus system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Request - Dropdown Lists:
+  ai_description: >-
+    Creates a new request (ticket) in ServiceDesk Plus V3 using a variety of input
+    parameters, many of which are provided as dropdown selections. This action allows
+    for detailed ticket creation by specifying core information like subject and requester,
+    as well as organizational context like site, group, and technician assignment.
+
+
+    ### Flow Description:
+
+    1. **Parameter Extraction:** The action retrieves connection details (API Root,
+    API Key) and a comprehensive set of ticket attributes from the user input.
+
+    2. **Manager Initialization:** It initializes the `ServiceDeskPlusManagerV3` to
+    handle API communication.
+
+    3. **Payload Construction:** The action builds a JSON payload for the ServiceDesk
+    Plus API. It specifically handles dropdown parameters by ignoring them if they
+    are set to "None".
+
+    4. **External API Call:** It executes a POST request to the ServiceDesk Plus 'requests'
+    endpoint to create the new ticket.
+
+    5. **Result Processing:** Upon success, the details of the newly created request
+    are returned as JSON results in the SOAR platform.
+
+
+    ### Parameters Description:
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Subject** | String | Yes | The summary or title of the request. |
+
+    | **Requester** | String | Yes | The name of the person requesting the service.
+    If omitted, the API key user is typically used. |
+
+    | **Description** | String | No | Detailed information about the request. |
+
+    | **Assets** | String | No | Comma-separated list of asset names to associate
+    with the request. |
+
+    | **Status** | Dropdown | No | The initial status of the request (e.g., Open,
+    In Progress). |
+
+    | **Technician** | String | No | The name of the technician to assign to the request.
+    |
+
+    | **Priority** | Dropdown | No | The priority level (e.g., Low, Normal, High).
+    |
+
+    | **Urgency** | Dropdown | No | The urgency level (e.g., Low, Urgent). |
+
+    | **Category** | Dropdown | No | The IT category for the request (e.g., Network,
+    Software). |
+
+    | **Request Template** | String | No | The name of the ServiceDesk Plus template
+    to use for creation. |
+
+    | **Request Type** | Dropdown | No | The type of request (e.g., Incident, Request
+    For Information). |
+
+    | **Due By Time (ms)** | Integer | No | The deadline for the request in Unix epoch
+    milliseconds. |
+
+    | **Mode** | Dropdown | No | The channel through which the request was received
+    (e.g., E-mail, Web Form). |
+
+    | **Level** | Dropdown | No | The support tier level (e.g., Tier 1, Tier 2). |
+
+    | **Site** | String | No | The physical or logical site the request belongs to.
+    |
+
+    | **Group** | String | No | The support group assigned to the request. |
+
+    | **Impact** | Dropdown | No | The business impact of the request (e.g., Low,
+    High). |
+
+
+    ### Additional Notes:
+
+    - This action does not operate on specific SOAR entities; it is a standalone creation
+    task.
+
+    - Dropdown parameters set to "None" are treated as empty and will not be sent
+    to the external system.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new request (ticket) record in the ServiceDesk Plus external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Request:
+  ai_description: >-
+    ### General Description
+
+    The **Get Request** action retrieves comprehensive details about a specific request
+    within ServiceDesk Plus. It is used to fetch the current status, requester information,
+    priority, and other metadata associated with a ticket ID. This action is useful
+    for playbooks that need to verify the state of a ticket or retrieve information
+    from a service desk ticket to inform subsequent logic.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Request ID** | String | Yes | The unique identifier of the ServiceDesk Plus
+    request to be retrieved. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the API connection details (Root
+    URL, API Key, SSL Verification) from the integration configuration and the specific
+    `Request ID` from the action parameters.
+
+    2. **API Interaction**: It establishes a connection to the ServiceDesk Plus instance
+    and performs a GET request to the `requests/{request_id}` endpoint via the `ServiceDeskPlusManagerV3`.
+
+    3. **Data Processing**: The action validates the response. If the request is found,
+    it parses the data into a structured `Request` object.
+
+    4. **Output**: The retrieved request details are returned as a JSON object via
+    `add_result_json`, and the action completes successfully.
+
+
+    ### Additional Notes
+
+    - This action does not interact with Google SecOps entities; it operates solely
+    based on the provided `Request ID` parameter.
+
+    - If the Request ID does not exist, the action will fail with a specific error
+    indicating the request was not found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and a ServiceDesk Plus V3 instance. It ensures that the provided configuration
+    parameters, such as the API Root and API Key, are correct and that the service
+    is reachable over the network.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Root | The base URL of the ServiceDesk Plus instance (e.g., `https://sdp.example.com/api/v3/`).
+    | String | Yes |
+
+    | Api Key | The technician key used for authenticating API requests. | String
+    | Yes |
+
+    | Verify SSL | Specifies whether to verify the SSL certificate of the ServiceDesk
+    Plus server. | Boolean | No (Default: False) |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the `Api Root`, `Api Key`, and
+    `Verify SSL` settings from the integration configuration.
+
+    2. **Manager Initialization:** It initializes the `ServiceDeskPlusManagerV3` using
+    the extracted credentials and connection settings.
+
+    3. **Connectivity Test:** The manager executes the `test_connectivity` method,
+    which performs a `GET` request to the `/requests` endpoint of the ServiceDesk
+    Plus API. To minimize data transfer, it requests a row count of zero.
+
+    4. **Response Validation:** The action validates the HTTP response. If the status
+    code indicates success (e.g., 200 OK), the connection is confirmed.
+
+    5. **Final Result:** If successful, the action returns a positive result and a
+    success message. If the request fails or an exception occurs, it logs the error
+    and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Request:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing request in ServiceDesk Plus V3 using its unique Request ID.
+    This action allows for modifying various attributes of a ticket, such as its status,
+    priority, assigned technician, and description, to keep the external ticketing
+    system synchronized with the incident response progress in Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Request ID | String | Yes | The unique identifier of the request to update.
+    |
+
+    | Subject | String | No | The new subject for the request. |
+
+    | Requester | String | No | The name of the requester. |
+
+    | Description | String | No | The new description for the request. |
+
+    | Assets | String | No | Comma-separated names of assets to associate. |
+
+    | Status | String | No | The new status (e.g., Open, Closed). |
+
+    | Technician | String | No | The name of the technician to assign. |
+
+    | Priority | String | No | The priority level. |
+
+    | Urgency | String | No | The urgency level. |
+
+    | Category | String | No | The category of the request. |
+
+    | Request Template | String | No | The template to apply. |
+
+    | Request Type | String | No | The type (e.g., Incident). |
+
+    | Due By Time (ms) | Integer | No | Due date in milliseconds. |
+
+    | Mode | String | No | The mode (e.g., E-mail). |
+
+    | Level | String | No | The level of the request. |
+
+    | Site | String | No | The site associated with the request. |
+
+    | Group | String | No | The group associated with the request. |
+
+    | Impact | String | No | The impact level. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the API configuration and the
+    specific request details provided as input parameters.
+
+    2. **Manager Initialization**: Initializes the ServiceDesk Plus V3 manager with
+    the provided API Root and Key.
+
+    3. **Payload Construction**: Builds a JSON payload containing only the fields
+    that were provided in the action parameters.
+
+    4. **API Interaction**: Executes a PUT request to the ServiceDesk Plus API endpoint
+    for the specific Request ID.
+
+    5. **Result Handling**: Captures the API response, converts it to JSON, and marks
+    the action as successful if the update was accepted.
+
+
+    ### Additional Notes
+
+    This action does not operate on Google SecOps entities; it requires a specific
+    Request ID as input.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the fields and attributes of an existing request/ticket in the ServiceDesk
+      Plus system via a PUT request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait For Field Update:
+  ai_description: >-
+    ### General Description
+
+    This action is an asynchronous control-flow mechanism designed to pause a playbook's
+    execution until a specific field within a ServiceDesk Plus V3 request reaches
+    a desired state. It periodically polls the ServiceDesk Plus API to retrieve the
+    latest request data and compares a specified field's value against a list of target
+    values. This is particularly useful for waiting for manual approvals, status changes,
+    or technician assignments before proceeding with automated response steps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Request ID** | String | Yes | The unique identifier of the ServiceDesk Plus
+    request to monitor. |
+
+    | **Values** | String | Yes | A comma-separated list of target values. The action
+    will complete successfully if the monitored field matches any value in this list.
+    |
+
+    | **Field Name** | String | Yes | The name of the field to monitor. Supports dot
+    notation (e.g., `status.name`) to access nested JSON properties within the request
+    object. |
+
+
+    ### Additional Notes
+
+    * **Asynchronous Execution:** This action is marked as `IsAsync`. If the condition
+    is not met during the first check, the action will enter an 'In Progress' state
+    and retry based on the environment's polling configuration.
+
+    * **Timeout Configuration:** Users should adjust the action's timeout in the IDE
+    to ensure it has enough time to wait for the expected update.
+
+    * **Field Flattening:** The action flattens the request JSON, converting nested
+    structures into underscore-separated keys (e.g., `status.name` becomes `status_name`)
+    for comparison.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves API credentials and action parameters (`Request
+    ID`, `Field Name`, and target `Values`).
+
+    2. **Data Retrieval:** Calls the ServiceDesk Plus V3 API to fetch the current
+    details of the specified request.
+
+    3. **Data Transformation:** Flattens the resulting JSON object to simplify access
+    to nested fields.
+
+    4. **Comparison Logic:** Extracts the current value of the specified `Field Name`
+    and compares it against the provided list of `Values`.
+
+    5. **State Determination:**
+        * If the current value matches any of the target values, the action completes
+    successfully and returns the full request JSON.
+        * If the value does not match, the action remains 'In Progress' to be retried
+    later.
+        * If the field cannot be found in the request data, the action completes with
+    a failure message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait For Status Update:
+  ai_description: >-
+    ### General Description
+
+    This action polls ServiceDesk Plus V3 to monitor the status of a specific request
+    (ticket) and waits until it reaches one of the desired statuses. It is an asynchronous
+    action designed for workflow orchestration, allowing a playbook to pause until
+    an external ticket is updated to a specific state (e.g., 'Closed' or 'Resolved').
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Request ID | String | Yes | The unique identifier of the request in ServiceDesk
+    Plus that the action should monitor. |
+
+    | Values | String | Yes | A comma-separated list of target statuses (e.g., 'Closed,Resolved').
+    The action will successfully complete only when the request's status matches one
+    of these values. |
+
+
+    ### Additional Notes
+
+    - **Asynchronous Execution**: This action is marked as `IsAsync`. If the desired
+    status is not met during a check, the action returns an 'In Progress' state, triggering
+    the Google SecOps platform to re-execute the script at a later interval.
+
+    - **Timeout Configuration**: Users should ensure the action's timeout in the IDE
+    is configured to accommodate the expected duration of the wait period.
+
+    - **Case Sensitivity**: The status comparison is direct; ensure the values provided
+    in the 'Values' parameter exactly match the status names in ServiceDesk Plus.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the API configuration and the
+    specific 'Request ID' and 'Values' from the input.
+
+    2. **API Request**: It performs a GET request to the ServiceDesk Plus API to fetch
+    the current metadata of the specified request.
+
+    3. **Status Verification**: The logic extracts the current status of the ticket
+    from the API response.
+
+    4. **Condition Check**: It compares the current status against the list of desired
+    statuses provided by the user.
+
+    5. **State Management**:
+        - If a match is found: The action sets the execution state to `COMPLETED`,
+    attaches the request details as a JSON result, and finishes.
+        - If no match is found: The action sets the execution state to `IN_PROGRESS`,
+    which causes the platform to poll again later.
+    6. **Error Handling**: If the request cannot be found or the API returns an error,
+    the action will fail with a descriptive error message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

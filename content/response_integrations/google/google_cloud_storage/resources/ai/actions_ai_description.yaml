@@ -1,0 +1,613 @@
+Download an Object From a Bucket:
+  ai_description: >-
+    ### General Description
+
+    Downloads a specific object (file) from a Google Cloud Storage (GCS) bucket to
+    a designated local directory on the system running the action. This action is
+    primarily used for retrieving logs, artifacts, or data files stored in GCS for
+    further local processing or analysis.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket Name | String | Yes | The name of the Google Cloud Storage bucket where
+    the target object is stored. |
+
+    | Object Name | String | Yes | The name of the object to download. If the object
+    is within a folder structure in the bucket, the full path must be provided (e.g.,
+    `logs/2023/app.log`). |
+
+    | Download Path | String | Yes | The absolute local directory path on the execution
+    environment where the file will be saved. The action will append the object name
+    to this path. |
+
+
+    ### Additional Notes
+
+    - The action requires the local `Download Path` to already exist and be a directory.
+
+    - The action will attempt to create subdirectories within the `Download Path`
+    if the `Object Name` contains a folder structure.
+
+    - Per security guidelines, actions that download files are not classified as enrichment
+    actions.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with Google Cloud Storage using the provided
+    Service Account or Workload Identity credentials.
+
+    2. **Bucket Retrieval**: Connects to the specified GCS bucket to verify its existence
+    and accessibility.
+
+    3. **Object Discovery**: Searches for the specified object (blob) within the bucket.
+    If the object is not found, the action fails.
+
+    4. **Path Validation**: Checks if the provided local `Download Path` exists and
+    is a valid directory.
+
+    5. **File Transfer**: Downloads the object's content and writes it to the local
+    filesystem at the constructed path (`Download Path` + `Object Name`).
+
+    6. **Result Reporting**: Returns a JSON object containing the `object_name` and
+    the final `download_path` upon successful completion.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+"Get a Bucket\u2019s Access Control List":
+  ai_description: >-
+    ### General Description
+
+    Retrieves the Access Control List (ACL) for specified Google Cloud Storage buckets.
+    This action allows security administrators to audit who has access to specific
+    buckets and what roles (OWNER, WRITER, READER) are assigned to various entities
+    such as users, groups, or domains. It is primarily used for security auditing
+    and compliance checks within GCP environments.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket Name | String | Yes | A comma-separated list of bucket names from which
+    to retrieve the Access Control List. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google Cloud Storage manager
+    using the integration's configuration parameters, including Service Account credentials
+    or Workload Identity, Project ID, and SSL verification settings.
+
+    2. **Input Parsing**: The action extracts the `Bucket Name` parameter and converts
+    the comma-separated string into a list of individual bucket identifiers.
+
+    3. **Data Retrieval**: For each bucket name in the list, the action calls the
+    Google Cloud Storage API to fetch the bucket object and its associated ACL entries.
+
+    4. **Error Handling**:
+        - **Uniform Bucket-Level Access**: If a bucket has uniform bucket-level access
+    enabled, the action catches a `GoogleCloudStorageBadRequestError` and informs
+    the user that legacy ACLs are not available for that bucket.
+        - **Not Found/Forbidden**: If a bucket does not exist or the credentials lack
+    permission, the action logs these specific buckets as 'not found'.
+    5. **Output**: The action aggregates the successfully retrieved ACL data (Entity
+    and Role) into a JSON result, updates the action's result value, and provides
+    a summary message detailing which buckets were successfully processed and which
+    encountered issues.
+
+
+    ### Additional Notes
+
+    - This action does not process SOAR entities (like IP or Hostname); it operates
+    strictly on the bucket names provided as input parameters.
+
+    - Legacy ACLs are only applicable to buckets that do not have 'Uniform bucket-level
+    access' enforced.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Bucket Objects:
+  ai_description: >-
+    ### General Description
+
+    Lists objects stored within a specific Google Cloud Storage (GCS) bucket. This
+    action is used to gain visibility into the contents of a bucket, retrieving metadata
+    for each object such as its name, size, content type, and creation/update timestamps.
+    It is particularly useful for auditing bucket contents or identifying specific
+    files during an investigation.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket Name | String | Yes | The unique name of the Google Cloud Storage bucket
+    from which to retrieve the list of objects. |
+
+    | Max Objects to Return | Integer | No | The maximum number of objects to include
+    in the results. Defaults to 50. If a value less than 1 is provided, the default
+    is used. |
+
+    | Retrieves the Access Control List of an object | Boolean | No | If enabled,
+    the action will attempt to fetch the Access Control List (ACL) for each object,
+    detailing permissions and roles. Note: This may fail or return empty results for
+    buckets using Uniform Bucket-Level Access. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on SecOps entities; it requires a manual input
+    of the bucket name.
+
+    - The action uses the Google Cloud Storage Python SDK to interface with the GCP
+    API.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google Cloud Storage manager
+    using provided credentials (Service Account or Workload Identity).
+
+    2. **Parameter Validation**: It validates the 'Bucket Name' and ensures the 'Max
+    Objects to Return' is within valid bounds.
+
+    3. **Data Retrieval**: It calls the GCS API to list blobs (objects) within the
+    specified bucket, respecting the maximum result limit.
+
+    4. **ACL Fetching (Optional)**: If requested, it retrieves the ACL metadata for
+    each identified object.
+
+    5. **Result Processing**: The metadata for all found objects is parsed into a
+    structured JSON format and returned as the action's output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Buckets:
+  ai_description: >-
+    ### General Description
+
+    The **List Buckets** action retrieves a list of available buckets from Google
+    Cloud Storage (GCS) for a specified project. This utility action provides visibility
+    into the storage infrastructure of a GCP environment, allowing users to see bucket
+    names, creation/modification timestamps, and ownership details.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Max Results | Integer | No | The maximum number of buckets to retrieve. Defaults
+    to 50. If a value less than 1 is provided, the default is used. |
+
+    | Project ID | String | No | The GCP Project ID to query. If not provided, the
+    action defaults to the Project ID configured in the integration settings. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to Google Cloud Storage
+    using the provided Service Account or Workload Identity credentials.
+
+    2. **Configuration**: It determines the target Project ID by checking the action
+    parameters first, falling back to the integration's global configuration if necessary.
+
+    3. **API Call**: The action invokes the GCS `list_buckets` method, applying the
+    `Max Results` limit to the request.
+
+    4. **Data Transformation**: The raw response from Google Cloud is processed by
+    a parser that extracts key metadata (Name, Owner, Creation Date, and Modification
+    Date) for each bucket.
+
+    5. **Result Delivery**: The structured list of buckets is attached to the action's
+    JSON results, and the execution completes with a success message.
+
+
+    ### Additional Notes
+
+    - This action does not require or process any SOAR entities (such as IP addresses
+    or Hostnames).
+
+    - If the specified Project ID is invalid or the credentials lack sufficient permissions,
+    the action will fail with a descriptive error message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ used to verify the connectivity between Google SecOps and the Google Cloud Storage\
+    \ environment. Its primary purpose is to ensure that the integration configuration\u2014\
+    including credentials, project identifiers, and network settings\u2014is correctly\
+    \ established and that the Google Cloud Storage API is reachable.\n\n### Parameters\
+    \ Description\nThis action does not have any action-specific parameters. It relies\
+    \ entirely on the **Integration Configuration** parameters provided during the\
+    \ setup of the Google Cloud Storage integration:\n\n| Parameter Name | Type |\
+    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Service Account\
+    \ | String (JSON) | No | The JSON key file for the Google Cloud Service Account\
+    \ used for authentication. |\n| Workload Identity Email | String | No | The email\
+    \ address used for Workload Identity Federation or service account impersonation.\
+    \ |\n| API Root | String | No | A custom API endpoint URL for Google Cloud Storage,\
+    \ if not using the default. |\n| Project ID | String | No | The specific Google\
+    \ Cloud Project ID to connect to. |\n| Quota Project ID | String | No | The Project\
+    \ ID used for billing and quota tracking. |\n| Verify SSL | Boolean | Yes | Specifies\
+    \ whether to verify the SSL certificate of the API endpoint. |\n\n### Additional\
+    \ Notes\n- This action is typically used during the initial setup or for troubleshooting\
+    \ authentication and network issues.\n- It does not interact with or process any\
+    \ entities within a case.\n- Either a Service Account or Workload Identity configuration\
+    \ must be valid for the connection to succeed.\n\n### Flow Description\n1. **Configuration\
+    \ Extraction**: The action retrieves the integration's global configuration parameters\
+    \ (Service Account, Project ID, etc.) from the environment.\n2. **Validation**:\
+    \ It validates the format of the Service Account JSON and the Workload Identity\
+    \ Email using internal validation utilities.\n3. **Manager Initialization**: It\
+    \ initializes the `GoogleCloudStorageManager`, which handles the creation of an\
+    \ authenticated session and the Google Cloud Storage client.\n4. **Connectivity\
+    \ Test**: The action executes a `list_buckets` request with a limit of one result.\
+    \ This serves as a lightweight check to confirm that the client can successfully\
+    \ authenticate and communicate with the GCP service.\n5. **Execution Completion**:\
+    \ If the API call succeeds, the action returns a success message. If an error\
+    \ occurs (e.g., authentication failure, network timeout), it captures the exception\
+    \ and reports a failure status with the error details."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Public Access From Bucket:
+  ai_description: >-
+    Removes public access from a specified Google Cloud Storage (GCS) bucket by modifying
+    its IAM policy and configuration. This action is designed to secure buckets that
+    have been inadvertently exposed to the public.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Resource Name | String | Yes | The unique name of the GCS bucket on which to
+    modify access controls. |
+
+    | Prevent Public Access From Bucket | Boolean | Yes | If set to `True`, the action
+    will also enable the 'Public Access Prevention' setting on the bucket, which prevents
+    the bucket from being made public in the future. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google Cloud Storage manager
+    using provided service account or workload identity credentials.
+
+    2. **Bucket Retrieval**: It fetches the metadata for the bucket specified in the
+    `Resource Name` parameter.
+
+    3. **IAM Policy Modification**: The action retrieves the current IAM policy of
+    the bucket and iterates through all bindings to remove the `allUsers` and `allAuthenticatedUsers`
+    principals.
+
+    4. **Policy Update**: The modified IAM policy (with public access removed) is
+    applied back to the bucket.
+
+    5. **Configuration Enforcement**: If `Prevent Public Access From Bucket` is enabled,
+    the action performs a patch request to the bucket configuration to set `public_access_prevention`
+    to `enforced`.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action modifies the IAM policy of a Google Cloud Storage bucket to remove
+      public access permissions and can also update the bucket's configuration to
+      enforce Public Access Prevention.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update an ACL entry on Bucket:
+  ai_description: >-
+    Updates the Access Control List (ACL) entry for a specific entity on a Google
+    Cloud Storage bucket. This action allows administrators to modify permissions
+    (OWNER, READER, WRITER) for users, groups, or special identifiers like 'allUsers'.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket Name | String | Yes | The name of the Google Cloud Storage bucket where
+    the ACL will be modified. |
+
+    | Entity | String | Yes | The identifier for the entity receiving permissions.
+    Supported formats: `user-userId`, `user-emailAddress`, `group-groupId`, `group-emailAddress`,
+    `allUsers`, or `allAuthenticatedUsers`. |
+
+    | Role | String | Yes | The permission level to assign. Possible values are `OWNER`,
+    `READER`, or `WRITER`. |
+
+
+    ### Flow Description
+
+
+    1.  **Initialization**: The action initializes the Google Cloud Storage manager
+    using provided service account or workload identity credentials.
+
+    2.  **ACL Retrieval**: It fetches the current Access Control List (ACL) for the
+    specified bucket.
+
+    3.  **Validation**: It validates the format of the `Entity` parameter and checks
+    if the entity already exists within the bucket's ACL.
+
+    4.  **Role Comparison**: It determines if an update is necessary by checking if
+    the requested role is already assigned to the entity.
+
+    5.  **Mutation**: If an update is required, the action revokes all current roles
+    for that specific entity and grants the new specified role.
+
+    6.  **Commit**: The updated ACL is saved back to the Google Cloud Storage service.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the Access Control List (ACL) of a Google Cloud Storage bucket by revoking
+      existing roles for a specific entity and granting a new specified role via the
+      GCS API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Upload an Object To a Bucket:
+  ai_description: >-
+    ### General Description
+
+    This action uploads a local file to a specified Google Cloud Storage (GCS) bucket.
+    It is used to move data from the local environment where the Google SecOps agent
+    is running into a cloud storage repository for archiving, sharing, or further
+    processing.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket Name | String | Yes | The name of the target Google Cloud Storage bucket
+    where the file will be uploaded. |
+
+    | Source File Path | String | Yes | The absolute local path to the file that needs
+    to be uploaded (e.g., `/tmp/logs/evidence.log`). |
+
+    | Object Name | String | Yes | The name/key that will be assigned to the object
+    within the GCS bucket. |
+
+
+    ### Additional Notes
+
+    - The action validates that the provided `Source File Path` exists and is a file
+    (not a directory) before attempting the upload.
+
+    - If an object with the same `Object Name` already exists in the bucket, it will
+    be overwritten by this action.
+
+    - The action requires appropriate IAM permissions (Service Account or Workload
+    Identity) to write to the specified bucket.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google Cloud Storage manager
+    using provided configuration parameters (Service Account, Project ID, etc.).
+
+    2. **Validation**: It verifies that the `Source File Path` exists on the local
+    filesystem and is a valid file.
+
+    3. **Bucket Retrieval**: It attempts to fetch the metadata for the specified `Bucket
+    Name` to ensure it exists and is accessible.
+
+    4. **Upload**: The action initiates the upload process, streaming the local file
+    content to the GCS bucket under the specified `Object Name`.
+
+    5. **Metadata Retrieval**: After a successful upload, it reloads the object metadata
+    (ID, MD5 hash, path) from GCS.
+
+    6. **Completion**: The action returns the object metadata as a JSON result and
+    marks the execution as successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action uploads a file to a Google Cloud Storage bucket, which creates a
+      new object or overwrites an existing one in the external cloud environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

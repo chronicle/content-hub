@@ -1,0 +1,637 @@
+Create Saved Query:
+  ai_description: >-
+    ### General Description
+
+    Creates a new saved query in Rapid7 InsightIDR based on user-provided parameters.
+    This action allows users to define a search statement using Log Entry Query Language
+    (LEQL), specify a time range, and target specific logs. The action does not interact
+    with Google SecOps entities and operates as a standalone utility to manage search
+    configurations within the Rapid7 platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The unique name for the new saved query to be created
+    in InsightIDR. |
+
+    | Statement | String | Yes | The query logic following LEQL syntax (e.g., `where(foo=bar)`).
+    |
+
+    | Time Frame | Integer | Yes | The lookback period in hours from the current time
+    for which the query should fetch data. Default is 4. |
+
+    | Logs | String | No | A comma-separated list of log names that the query should
+    execute against. If left empty, the query may apply to all or default logs depending
+    on platform settings. |
+
+
+    ### Additional Notes
+
+    - This action is not entity-based and will ignore any entities present in the
+    current scope.
+
+    - If the `Logs` parameter is provided, the action will first attempt to resolve
+    the log names to their internal IDs by querying the Rapid7 management API.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the API configuration and action parameters
+    (Name, Statement, Time Frame, and Logs).
+
+    2. **Log Resolution**: If log names are provided, the action calls the Rapid7
+    API to fetch all available logs and filters them to find the corresponding IDs
+    for the requested names.
+
+    3. **Time Range Calculation**: Calculates the 'from' and 'to' timestamps in milliseconds
+    based on the current time and the provided `Time Frame` (hours).
+
+    4. **Query Creation**: Sends a POST request to the Rapid7 InsightIDR `/log_search/query/saved_queries`
+    endpoint with the constructed LEQL statement, time range, and log IDs.
+
+    5. **Result Handling**: If successful, the action returns the JSON details of
+    the newly created saved query, including its unique ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new saved query resource in the Rapid7 InsightIDR platform via a POST
+      request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete Saved Query:
+  ai_description: "### General Description\nDeletes a specific saved query from the\
+    \ Rapid7 InsightIDR platform. This action is used to programmatically manage and\
+    \ clean up log search queries that are no longer needed. It is important to note\
+    \ that this action does not operate on Google SecOps entities and requires a specific\
+    \ Query ID to function.\n\n### Parameters Description\n| Parameter Name | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Saved Query ID\
+    \ | String | Yes | The unique identifier (UUID) of the saved query to delete (e.g.,\
+    \ 00000000-0003-7218-0000-000000000000). |\n\n### Additional Notes\n- This action\
+    \ does not support or interact with entities (IPs, Hostnames, etc.) within the\
+    \ Google SecOps environment.\n- If the specified Saved Query ID is not found,\
+    \ the action will return a failure message indicating the resource was not found.\n\
+    \n### Flow Description\n1. **Initialization**: The action initializes the Rapid7\
+    \ InsightIDR manager using the provided API Root, API Key, and SSL verification\
+    \ settings.\n2. **Parameter Extraction**: The action retrieves the mandatory `Saved\
+    \ Query ID` from the input parameters.\n3. **API Execution**: The manager constructs\
+    \ a DELETE request to the Rapid7 InsightIDR API endpoint `/log_search/query/saved_queries/{saved_query_id}`.\n\
+    4. **Response Handling**: \n    - If the API returns a success status, the action\
+    \ completes successfully.\n    - If a `404 Not Found` error occurs, it catches\
+    \ the `NotFoundException` and reports the failure.\n    - For other errors, it\
+    \ logs the exception and marks the execution as failed."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a saved query configuration from the Rapid7 InsightIDR platform via
+      a DELETE API request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Investigations:
+  ai_description: >-
+    Lists Rapid7 InsightIDR investigations based on user-defined filters such as time
+    frame and status. This action is a utility search tool that retrieves investigation
+    metadata directly from the Rapid7 platform and presents it within the action results.
+    It does not process or enrich specific entities within the Google SecOps environment.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Time Frame | Integer | No | The lookback period in hours from the current time
+    to search for investigations. Default is 4 hours. |
+
+    | Record limit | Integer | No | The maximum number of investigation records to
+    return in the results. Default is 20. |
+
+    | Include Closed Investigations? | Boolean | No | Determines whether to include
+    investigations with a 'CLOSED' status. If false, only 'OPEN' investigations are
+    returned. |
+
+
+    ### Additional Notes
+
+    - This action operates independently of the entities present in the current case
+    or alert.
+
+    - Results are provided as both a raw JSON object and a formatted data table.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action extracts the integration configuration (API
+    Root, API Key) and the user-provided search parameters.
+
+    2. **Time Calculation:** It calculates the start and end timestamps based on the
+    'Time Frame' parameter to define the search window.
+
+    3. **API Request:** The action sends a GET request to the Rapid7 InsightIDR `/idr/v1/investigations`
+    endpoint with the specified filters (status, size, and time range).
+
+    4. **Data Processing:** The retrieved investigation data is parsed into structured
+    objects.
+
+    5. **Output Generation:** The action populates the result JSON and creates a data
+    table titled 'Rapid7 InsightIDR Investigations' containing key details like Title,
+    Status, Source, and Assignee.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Saved Queries:
+  ai_description: >-
+    ### General Description
+
+    The **List Saved Queries** action retrieves a list of saved queries from the Rapid7
+    InsightIDR platform. This utility action allows users to view existing log search
+    queries, including their LEQL statements and associated logs, which is useful
+    for auditing or preparing for query execution.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Record limit | Integer | No | Specifies the maximum number of saved queries
+    to return. Default is 20. |
+
+
+    ### Additional Notes
+
+    - This action does not interact with or require any Google SecOps entities.
+
+    - Results are presented in a data table and as a JSON result.
+
+
+    ### Flow Description
+
+    1. **Configuration**: Retrieves API credentials and connection settings.
+
+    2. **Request**: Sends a GET request to the Rapid7 InsightIDR saved queries endpoint.
+
+    3. **Parsing**: Converts the API response into internal SavedQuery objects.
+
+    4. **Limiting**: Applies the user-specified record limit to the result set.
+
+    5. **Output**: Returns the list of queries as a JSON object and populates a data
+    table.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ used to verify the connectivity between Google SecOps and the Rapid7 InsightIDR\
+    \ service. Its primary purpose is to ensure that the integration's configuration\
+    \ parameters, such as the API Root and API Key, are correct and that the service\
+    \ is reachable over the network.\n\n### Parameters Description\nThis action does\
+    \ not require any action-specific parameters. It utilizes the global configuration\
+    \ parameters defined at the integration level:\n\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| **API Root** | String | Yes\
+    \ | The base URL for the Rapid7 InsightIDR API instance. |\n| **API Key** | String\
+    \ | Yes | The API key used for authentication with the Rapid7 service. |\n| **Verify\
+    \ SSL** | Boolean | No | Determines whether to verify the SSL certificate of the\
+    \ API endpoint. Defaults to False if not specified. |\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The action retrieves the API Root, API Key, and SSL\
+    \ verification settings from the integration configuration.\n2. **Manager Initialization**:\
+    \ It initializes the `Rapid7InsightIDRManager` using the extracted credentials\
+    \ and settings.\n3. **Connectivity Test**: The action calls the `test_connectivity`\
+    \ method, which performs a GET request to the `/validate` endpoint of the Rapid7\
+    \ InsightIDR API.\n4. **Execution Outcome**: \n    * If the request is successful\
+    \ (HTTP 200), the action returns a success message indicating a functional connection.\n\
+    \    * If an exception occurs (e.g., HTTP 401 for invalid keys or connection timeouts),\
+    \ the action catches the error and reports a failure with the specific error details.\n\
+    \n### Additional Notes\nThis action is strictly for system health checks and does\
+    \ not interact with or modify any security data, alerts, or entities within the\
+    \ environment."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Run Saved Query:
+  ai_description: >-
+    ### General Description
+
+    The **Run Saved Query** action executes a pre-defined saved query within Rapid7
+    InsightIDR and retrieves the resulting log events. This utility action is designed
+    to pull specific datasets from the InsightIDR log search engine into Google SecOps
+    for analysis. It is important to note that this action does not operate on specific
+    entities within a case but rather executes a global query based on a provided
+    ID.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Saved Query ID | String | Yes | The unique identifier of the saved query to
+    be executed. Because query names are not unique in InsightIDR, the ID is required
+    to ensure the correct query is run. |
+
+
+    ### Additional Notes
+
+    - **Entity Support**: This action does not use or filter by Google SecOps entities.
+    It is a standalone search utility.
+
+    - **Timeout Management**: The action includes logic to stop fetching paginated
+    results if it approaches the global action timeout limit (minus a safety buffer)
+    to ensure the script terminates gracefully.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Rapid7 InsightIDR manager using
+    the API Root and API Key from the integration configuration.
+
+    2. **Parameter Extraction**: It retrieves the mandatory `Saved Query ID` from
+    the action parameters.
+
+    3. **Execution**: The action calls the Rapid7 API to trigger the execution of
+    the saved query.
+
+    4. **Pagination Handling**: The action retrieves the initial set of results and
+    then iteratively follows pagination links (`next_query_link`) to collect all available
+    log events.
+
+    5. **Result Processing**: The collected log events are compiled into a JSON array
+    and returned as the action's result output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set Investigation Assignee:
+  ai_description: >-
+    ### General Description
+
+    The **Set Investigation Assignee** action updates the assigned user for a specific
+    investigation within Rapid7 InsightIDR. This is a management action used to reassign
+    ownership of security investigations to different team members based on their
+    email addresses.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Investigation ID | String | Yes | The unique identifier (UUID format, e.g.,
+    8ec8e324-4522-4a6e-9838-81496a0cadb0) of the investigation in Rapid7 InsightIDR
+    that needs an assignee update. |
+
+    | Assignee email | String | Yes | The email address of the user who will be assigned
+    to the investigation. |
+
+
+    ### Additional Notes
+
+    - **Entity Support:** This action does **not** operate on Google SecOps entities.
+    It requires the Investigation ID to be provided manually or via a previous playbook
+    step.
+
+    - **External Mutation:** This action performs a state change in the Rapid7 InsightIDR
+    platform by updating the assignee field.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the API connection details (API
+    Root, API Key) and the specific Investigation ID and Assignee Email from the input
+    parameters.
+
+    2. **Manager Initialization:** It initializes the Rapid7 InsightIDR Manager to
+    handle API communication.
+
+    3. **API Request:** The action sends a `PUT` request to the Rapid7 InsightIDR
+    `/idr/v1/investigations/{investigation_id}/assignee` endpoint with the new email
+    address in the payload.
+
+    4. **Result Processing:** Upon success, the action retrieves the updated investigation
+    object and attaches it to the action results as a JSON object for use in subsequent
+    playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the assignee field of a specific investigation in the Rapid7 InsightIDR
+      platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set Investigation Status:
+  ai_description: >-
+    ### General Description
+
+    Updates the status of a specific investigation within the Rapid7 InsightIDR platform.
+    This action allows users to programmatically transition investigations between
+    'open' and 'closed' states. It is designed to work with a specific investigation
+    identifier rather than processing entities from the SecOps environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Investigation ID | String | Yes | The unique identifier (UUID) of the investigation
+    to be updated (e.g., 8ec8e324-4522-4a6e-9838-81496a0cadb0). |
+
+    | Status | String | Yes | The new status to apply to the investigation. Options
+    include 'open' or 'closed'. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Rapid7 InsightIDR manager using
+    the provided API Root and API Key.
+
+    2. **API Request**: It constructs a PUT request to the Rapid7 InsightIDR endpoint
+    `/idr/v1/investigations/{investigation_id}/status/{status}`.
+
+    3. **Response Handling**: Upon a successful request, the action retrieves the
+    updated investigation details, converts them to JSON, and attaches them to the
+    action results.
+
+    4. **Error Management**: If the investigation is not found or a connection error
+    occurs, the action reports a failure with a descriptive error message.
+
+
+    ### Additional Notes
+
+    This action does not utilize or filter SecOps entities. It relies entirely on
+    the provided 'Investigation ID' parameter.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of an investigation in the Rapid7 InsightIDR platform to
+      either 'open' or 'closed' via a PUT request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Investigation:
+  ai_description: >-
+    ### General Description
+
+    Updates the details of a specific investigation in Rapid7 InsightIDR. This action
+    allows users to modify the status and disposition of an investigation using the
+    Rapid7 preview API endpoints.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Investigation ID | String | Yes | The unique identifier (RRN) of the investigation
+    to be updated. |
+
+    | Status | Dropdown | No | The new status to assign to the investigation. Options:
+    Open, Investigating, Closed. |
+
+    | Disposition | Dropdown | No | The new disposition to assign to the investigation.
+    Options: Benign, Malicious, Not Applicable. |
+
+
+    ### Additional Notes
+
+    - At least one of the optional parameters (**Status** or **Disposition**) must
+    be provided for the action to execute.
+
+    - This action utilizes API endpoints that are currently in preview release.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the Investigation ID, Status, and Disposition
+    from the action input.
+
+    2. **Validation:** Ensures that at least one update field (Status or Disposition)
+    is specified.
+
+    3. **Mapping:** Converts the human-readable status and disposition values into
+    the format required by the Rapid7 API.
+
+    4. **API Interaction:** Executes a PATCH request to the Rapid7 InsightIDR service
+    to update the investigation record.
+
+    5. **Result Processing:** Captures the updated investigation data and attaches
+    it as a JSON result to the action.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status and/or disposition of an investigation record within the
+      Rapid7 InsightIDR platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

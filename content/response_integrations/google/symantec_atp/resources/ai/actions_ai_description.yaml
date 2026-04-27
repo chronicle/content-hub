@@ -1,0 +1,1368 @@
+Add Comment To Incident:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to a specific incident within the Symantec ATP platform. This action
+    is used to document findings, provide updates, or add context to an existing incident
+    record in the external system.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident UUID | String | Yes | The unique identifier (UUID) of the Symantec
+    ATP incident to which the comment will be attached. |
+
+    | Comment | String | Yes | The text content of the comment. Note: Symantec ATP
+    imposes a limit of 512 characters for comments. |
+
+
+    ### Additional Notes
+
+    - This action does not interact with Google SecOps entities; it operates solely
+    based on the provided Incident UUID parameter.
+
+    - The action uses a PATCH request to the Symantec ATP API to append the comment.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Symantec ATP manager using the
+    API Root, Client ID, and Client Secret from the integration configuration.
+
+    2. **Parameter Extraction**: It retrieves the `Incident UUID` and the `Comment`
+    text from the user input.
+
+    3. **API Interaction**: It calls the `add_incident_comment` method in the manager,
+    which sends a JSON PATCH request to the Symantec ATP incidents endpoint.
+
+    4. **Result Handling**: The action checks if the comment was successfully added
+    and returns a corresponding success or failure message to the Google SecOps workbench.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new comment to an existing incident record in the Symantec ATP platform
+      via an API PATCH request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add To Blacklist:
+  ai_description: >-
+    ### General Description
+
+    The **Add To Blacklist** action enables the creation of blacklist policies within
+    Symantec ATP for specific entities identified in a Google SecOps case. This action
+    is used to block malicious activity by blacklisting IP addresses, hostnames, file
+    hashes, or URLs at the endpoint or network level via the Symantec ATP platform.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters beyond
+    the entities themselves. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action connects to the Symantec ATP manager using the
+    integration's configuration (API Root, Credentials, and SSL settings).
+
+    2. **Entity Processing**: The action iterates through all entities attached to
+    the alert/case.
+
+    3. **Type Validation**: For each entity, the action determines its type and maps
+    it to the corresponding Symantec ATP target type:
+        * **File Hash**: Checks if the hash is SHA256 or MD5 and applies the policy
+    accordingly.
+        * **Hostname**: Maps the entity to a 'domain' target type.
+        * **IP Address**: Maps the entity to an 'ip' target type.
+        * **URL**: Maps the entity to a 'url' target type.
+    4. **API Execution**: A POST request is sent to the Symantec ATP `atpapi/v2/policies/blacklist`
+    endpoint to create the policy.
+
+    5. **Insight Generation**: If the policy is successfully created, a Google SecOps
+    entity insight is added to the entity, documenting the blacklisting event.
+
+    6. **Final Status**: The action concludes by providing a summary message of all
+    entities that were successfully blacklisted and any errors encountered during
+    the process.
+
+
+    ### Additional Notes
+
+    This action performs a state-changing operation in Symantec ATP and should be
+    used as a containment step in response to confirmed threats.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new blacklist policy entry in the Symantec ATP console for the provided
+      entity (IP, Hostname, File Hash, or URL).
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Creates an entity insight in Google SecOps to record that the entity was successfully
+      blacklisted in Symantec ATP.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - FILEHASH
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add To WhiteList:
+  ai_description: >-
+    ### General Description
+
+    The **Add To WhiteList** action allows users to create new whitelist policies
+    within Symantec ATP for specific entities identified in a case. By whitelisting
+    entities such as IP addresses, hostnames, URLs, and SHA256 file hashes, security
+    teams can reduce false positives and ensure that known-safe assets or indicators
+    do not trigger unnecessary alerts in the Symantec ATP environment.
+
+
+    ### Parameters Description
+
+    There are no user-configurable parameters for this action. It operates directly
+    on the entities present in the current context.
+
+
+    ### Additional Notes
+
+    * **MD5 Limitation:** Due to Symantec ATP platform limitations, MD5 hashes cannot
+    be added to the whitelist. Only SHA256 hashes are supported for file-based whitelisting.
+
+    * **Insight Generation:** For every entity successfully added to the whitelist,
+    an insight is attached to the entity in Google SecOps to provide visibility into
+    the action taken.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action retrieves the Symantec ATP API credentials
+    (API Root, Client ID, Client Secret) and SSL verification settings from the integration
+    configuration.
+
+    2. **Manager Initialization:** A connection is established with the Symantec ATP
+    manager, including OAuth2 token retrieval.
+
+    3. **Entity Iteration:** The action iterates through all target entities in the
+    current scope.
+
+    4. **Type-Specific Processing:**
+        * **File Hashes:** Validates if the hash is SHA256. If so, it requests a whitelist
+    policy creation.
+        * **Hostnames/IPs/URLs:** Directly requests whitelist policy creation for
+    these types.
+    5. **External Mutation:** A POST request is sent to the Symantec ATP `atpapi/v2/policies/whitelist`
+    endpoint to create the policy.
+
+    6. **Internal Update:** Upon a successful API response, a SOAR insight is created
+    for the entity, noting that it has been whitelisted.
+
+    7. **Final Reporting:** The action concludes by providing a summary of which entities
+    were successfully whitelisted and reporting any errors encountered during the
+    process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new whitelist policy in the Symantec ATP system for the specified
+      entity (IP, Host, URL, or SHA256 Hash).
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Creates entity insights within Google SecOps to document the whitelisting action.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Close Incident:
+  ai_description: "Closes a specific incident in Symantec ATP. This action targets\
+    \ a single incident identified by its unique identifier (UUID) and updates its\
+    \ status to 'Closed' within the Symantec ATP platform. \n\n### Parameters\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Incident\
+    \ UUID | String | Yes | The unique identifier (UUID) of the incident to be closed\
+    \ in Symantec ATP. |\n\n### Flow Description\n1. **Authentication**: Connects\
+    \ to the Symantec ATP API using the configured API Root, Client ID, and Client\
+    \ Secret.\n2. **Parameter Retrieval**: Extracts the mandatory Incident UUID from\
+    \ the action parameters.\n3. **API Request**: Sends a PATCH request to the Symantec\
+    \ ATP incidents endpoint. The request uses a JSON patch operation to replace the\
+    \ 'state' value of the specified incident with '4', which corresponds to the 'Closed'\
+    \ status in Symantec ATP.\n4. **Result Handling**: Returns a success message if\
+    \ the incident was successfully closed or an error message if the operation failed."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of an incident in Symantec ATP to 'Closed' (state value 4)
+      via a PATCH request to the incidents API endpoint.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete Blacklist Policy:
+  ai_description: >-
+    ### General Description\nDeletes blacklist policies in Symantec ATP for specific
+    entities including IP Addresses, File Hashes, and URLs. This action is used to
+    remediate or reverse previous blocking actions by removing the entity's identifier
+    from the global blacklist within the Symantec ATP environment.\n\n### Parameters
+    Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- | :---
+    | :--- |\n| API Root | String | Yes | The API root URL of the Symantec ATP instance.
+    |\n| Client ID | String | Yes | The Client ID for authentication. |\n| Client
+    Secret | String | Yes | The Client Secret for authentication. |\n| Verify SSL
+    | Boolean | No | If enabled, the SSL certificate will be verified. Default is
+    False. |\n\n### Flow Description\n1. **Initialization**: Extracts configuration
+    parameters and establishes a session with the Symantec ATP API.\n2. **Entity Selection**:
+    Filters the target entities to process only supported types: ADDRESS, FILEHASH,
+    and DestinationURL.\n3. **Policy Identification**: For each entity, the action
+    searches the existing Symantec ATP blacklist to find a policy ID associated with
+    the entity's identifier.\n4. **Deletion Execution**: If a policy is found, the
+    action sends a DELETE request to Symantec ATP to remove that specific blacklist
+    entry.\n5. **Finalization**: Provides a summary of successfully deleted policies
+    and identifies any entities that were not found in the blacklist.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes existing blacklist policies from the Symantec ATP environment based
+      on the provided entity identifiers.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete File:
+  ai_description: "Deletes a specific file from an endpoint managed by Symantec ATP.\
+    \ This action targets Hostname or IP Address entities, resolves their internal\
+    \ Symantec device identifiers, and issues a remote deletion command for a provided\
+    \ file hash. \n\n### Parameters\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| File Hash | String | Yes | The hash of the\
+    \ file to be deleted from the target endpoints. |\n\n### Flow Description\n1.\
+    \ **Entity Filtering**: The action filters the target entities to process only\
+    \ Hostnames and IP Addresses (ADDRESS).\n2. **Endpoint Identification**: For each\
+    \ entity, it queries the Symantec ATP API to retrieve the unique `device_uid`\
+    \ associated with that IP or Hostname.\n3. **Deletion Command**: If a device is\
+    \ identified, the action sends a `delete_endpoint_file` command to Symantec ATP\
+    \ for the specified file hash.\n4. **Insight Generation**: Upon successfully sending\
+    \ the command, an insight is added to the entity in Google SecOps indicating the\
+    \ command was sent.\n5. **Result Reporting**: The action compiles a list of Command\
+    \ IDs and presents them in a data table named 'Command IDs' for tracking the status\
+    \ of the deletion tasks."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Issues a command to the Symantec ATP manager to delete a file from a remote
+      endpoint, which changes the state of the file system on that endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates entity insights and adds a data table containing command IDs to the
+      case results.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete WhiteList Policy:
+  ai_description: >-
+    ### General Description
+
+    The **Delete WhiteList Policy** action removes specific entities from the whitelist
+    in Symantec ATP. This action is used to revoke the 'trusted' status of an entity
+    (such as an IP address, domain, or file hash), ensuring that Symantec ATP resumes
+    standard security monitoring and policy enforcement for that entity.
+
+
+    ### Parameters Description
+
+    - **No Parameters**: This action does not require any user-defined parameters.
+    It operates directly on the entities provided in the action's scope.
+
+
+    ### Additional Notes
+
+    - The action performs a lookup to find the internal Symantec ATP policy ID associated
+    with the entity's identifier before attempting the deletion.
+
+    - If an entity is not found in the whitelist, the action will report a failure
+    for that specific entity but will continue to process other entities in the list.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Symantec ATP API using the configured Client
+    ID and Client Secret to obtain a bearer token.
+
+    2. **Policy Lookup**: For each target entity, the action queries the Symantec
+    ATP whitelist policies to identify the unique ID associated with the entity's
+    identifier (e.g., IP, Hostname, or Hash).
+
+    3. **Policy Deletion**: Sends a DELETE request to the Symantec ATP API for each
+    identified policy ID to remove the entity from the whitelist.
+
+    4. **Result Summary**: Provides a summary of the operation, indicating whether
+    the policies were successfully deleted or if errors occurred during the process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes existing whitelist policies from the Symantec ATP platform via DELETE
+      requests to the /atpapi/v2/policies/whitelist/{id} endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich File Hash:
+  ai_description: "### General Description\nEnriches File Hash entities using Symantec\
+    \ ATP. This action retrieves detailed file information, including health scores\
+    \ and metadata, to provide security analysts with deeper context during investigations.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| None | N/A | N/A | This action does not require\
+    \ any input parameters. |\n\n### Additional Notes\n- The action specifically targets\
+    \ entities of type `FILEHASH`.\n- It calculates a `max_file_health` score across\
+    \ all processed entities, which is returned as the script result.\n\n### Flow\
+    \ Description\n1. **Initialization**: Establishes a connection to the Symantec\
+    \ ATP API using the integration's configuration (API Root, Client ID, and Client\
+    \ Secret).\n2. **Entity Filtering**: Identifies all `FILEHASH` entities within\
+    \ the current scope.\n3. **Data Retrieval**: For each identified hash, it performs\
+    \ a GET request to Symantec ATP to fetch file details.\n4. **Internal Enrichment**:\
+    \ \n    - Updates the entity's `additional_properties` with the flattened file\
+    \ metadata.\n    - Adds a detailed CSV-formatted table to the entity's record\
+    \ in the case.\n5. **Result Calculation**: Tracks the highest `file_health` value\
+    \ encountered among the processed entities.\n6. **Completion**: Ends the action\
+    \ with a summary message and the maximum health score."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with file details and adds an entity table
+      to the case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Commands Status:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the status and detailed report of specific commands previously executed
+    in Symantec ATP. This action is useful for tracking the progress or outcome of
+    asynchronous tasks like endpoint isolation or file deletion.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Commands IDs | String | Yes | A comma-separated list of unique Command IDs for
+    which to retrieve status information. |
+
+
+    ### Flow Description
+
+    1. **Input Parsing**: The action accepts a comma-separated string of Command IDs.
+
+    2. **API Interaction**: For each provided ID, the action queries the Symantec
+    ATP API (`atpapi/v2/commands/{id}`) using a query verb to fetch the status report.
+
+    3. **Data Processing**: The retrieved JSON response for each command is flattened
+    and converted into a CSV format.
+
+    4. **Internal Update**: A data table is created within the Google SecOps case
+    for each Command ID, displaying the full status report.
+
+    5. **Final Output**: The action concludes by providing a summary message and a
+    concatenated string of status messages as the result value.
+
+
+    ### Additional Notes
+
+    This action does not operate on entities and relies solely on the provided Command
+    IDs. If multiple IDs are provided, it will attempt to fetch data for each one
+    sequentially.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables to the Google SecOps case containing the status
+      reports for the requested Command IDs.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Events  For Entity:
+  ai_description: >-
+    ### General Description
+
+    The **Get Events For Entity** action retrieves historical event data from Symantec
+    ATP for specific entities within a defined lookback period. It allows analysts
+    to gather context on the activities associated with an IP address, hostname, or
+    user by querying the Symantec ATP event logs.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Minutes Back To Fetch | Integer | Yes | Specifies the timeframe (in minutes)
+    for the event search. The maximum lookback is 10,080 minutes (7 days), per Symantec
+    ATP limitations. |
+
+
+    ### Flow Description
+
+    1. **Parameter Retrieval**: The action extracts the `Minutes Back To Fetch` value
+    to define the search window.
+
+    2. **Entity Filtering**: It identifies supported entities within the current context,
+    specifically focusing on IP Addresses, Hostnames, and Usernames.
+
+    3. **API Query**: For each valid entity, the action maps the entity type to the
+    corresponding Symantec ATP search field (`device_ip`, `device_name`, or `user_name`)
+    and requests events from the `/atpapi/v2/events` endpoint.
+
+    4. **Data Transformation**: Retrieved events are flattened and converted into
+    a CSV format.
+
+    5. **Internal Updates**: The action attaches the event data as a table to the
+    specific entity and updates the entity's state within Google SecOps.
+
+    6. **Completion**: Returns the total count of events found across all processed
+    entities.
+
+
+    ### Additional Notes
+
+    - This action is strictly read-only regarding the external Symantec ATP system;
+    it does not modify any external logs or configurations.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity attributes and attaches data tables containing retrieved
+      event logs to the entities within Google SecOps.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Events Free Query:
+  ai_description: >-
+    ### General Description
+
+    This action fetches event data from Symantec ATP using a Lucene-style free query.
+    It allows security analysts to perform custom searches across the Symantec ATP
+    event database to retrieve specific logs related to investigations. The results
+    are presented as a data table within the Google SecOps case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | String | Yes | The Lucene query string used to search for events in
+    Symantec ATP. |
+
+    | Limit | String/Integer | Yes | The maximum number of events to retrieve. Note
+    that Symantec ATP imposes a hard limit of 5000 events per query. |
+
+
+    ### Additional Notes
+
+    - This action does not run on specific entities; it performs a global search based
+    on the provided query string.
+
+    - The retrieved events are flattened and converted into a CSV format for display
+    in the SOAR data table.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Symantec ATP manager using the
+    provided API credentials and configuration.
+
+    2. **Parameter Retrieval**: It extracts the 'Query' and 'Limit' parameters from
+    the action input.
+
+    3. **API Execution**: It sends a POST request to the Symantec ATP `/atpapi/v2/events`
+    endpoint with the query and limit.
+
+    4. **Data Processing**: If events are found, the action flattens the JSON response
+    and constructs a CSV-formatted table.
+
+    5. **Internal Mutation**: The action adds the resulting CSV data as a new data
+    table named 'Events Related to the Query' to the current case.
+
+    6. **Completion**: The action concludes by reporting the total number of events
+    found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table named 'Events Related to the Query' to the Google
+      SecOps case containing the results of the search.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Incident Comments:
+  ai_description: >-
+    ### General Description
+
+    The **Get Incident Comments** action retrieves all comments associated with a
+    specific incident in Symantec ATP. This action allows security analysts to view
+    the communication history, responder notes, and automated logs linked to an incident
+    directly within Google SecOps, facilitating better context during investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Incident UUID** | String | Yes | The unique identifier (UUID) of the Symantec
+    ATP incident for which comments are being retrieved. |
+
+    | **Max Comments To Return** | Integer | No | The maximum number of comments to
+    fetch from the API. The default value is 20, and the maximum allowed value is
+    1000 (enforced by Symantec ATP limitations). |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the integration configuration (API
+    Root, credentials) and the action parameters (`Incident UUID` and `Max Comments
+    To Return`).
+
+    2. **Validation**: It ensures the `Max Comments To Return` does not exceed the
+    Symantec ATP limit of 1000.
+
+    3. **API Request**: The action calls the Symantec ATP API using a POST request
+    with a query verb to retrieve comments for the specified incident.
+
+    4. **Data Transformation**: The raw JSON response is parsed into `Comment` data
+    models, which are then converted into a structured format for display.
+
+    5. **Output**: The action populates a data table with the comment text, creation
+    time, and source (responder name) and provides the full raw JSON results for use
+    in playbooks.
+
+
+    ### Additional Notes
+
+    - If no comments are found for the provided UUID, the action will complete successfully
+    but report that no comments were found.
+
+    - The action handles specific error cases such as missing incidents (404) or permission
+    issues (403) with descriptive error messages.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Sandbox Commands Status:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the status and results of sandbox analysis commands from Symantec ATP.
+    This action allows users to track the progress and outcome of files previously
+    submitted for sandbox detonation and analysis using their unique command IDs.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Commands IDs | String | Yes | A comma-separated list of Sandbox Command IDs
+    to fetch the status for. |
+
+
+    ### Additional Notes
+
+    This action does not operate on entities. It requires specific Command IDs generated
+    by previous sandbox submission actions to function. If multiple IDs are provided,
+    the action will attempt to fetch the status for each one and aggregate the results.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the Symantec ATP API using the provided credentials
+    (API Root, Client ID, Client Secret) and SSL configuration.
+
+    2. **Input Parsing**: Retrieves the `Commands IDs` input parameter and splits
+    the comma-separated string into a list of individual command identifiers.
+
+    3. **Status Retrieval**: Iterates through each Command ID and performs a GET request
+    to the Symantec ATP sandbox command status endpoint (`atpapi/v2/sandbox/commands/{id}`).
+
+    4. **Data Processing**: For each successful API response, the raw JSON data is
+    flattened and converted into a CSV-formatted data table.
+
+    5. **Result Aggregation**: Adds the generated data tables to the action results
+    and sets the action's success status based on whether at least one command status
+    was successfully retrieved.
+
+    6. **Completion**: Returns a summary message to the SOAR platform, including any
+    error messages encountered for specific IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Isolate Endpoint:
+  ai_description: >-
+    ### General Description
+
+    Isolates endpoint entities (IP address or Hostname) within Symantec Endpoint Protection
+    (ATP) to contain potential threats. This action is a containment measure that
+    changes the network state of the target machine to prevent further communication
+    and mitigate threat propagation.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | N/A | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    * The action will report errors for any entities that cannot be found or are not
+    managed within the Symantec ATP environment.
+
+    * Successful isolation results in a Command ID being returned for each entity,
+    which is also added to a data table in the case.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the Symantec ATP manager using the
+    integration's configuration (API Root, Client ID, and Client Secret).
+
+    2. **Entity Identification**: It filters the case for `ADDRESS` (IP) and `HOSTNAME`
+    entities.
+
+    3. **UUID Retrieval**: For each identified entity, the action queries the Symantec
+    ATP API to find the corresponding internal `device_uid`.
+
+    4. **Isolation Command**: Once the UUID is retrieved, the action issues an `isolate_endpoint`
+    command to the Symantec ATP system.
+
+    5. **Case Documentation**: If successful, the action adds an entity insight stating
+    the command was sent and populates a data table named 'Command IDs' with the entity
+    identifiers and their respective command IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends an isolation command to Symantec ATP to disconnect the target endpoint
+      from the network.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates entity insights and adds a data table to the case containing the command
+      IDs for the isolation requests.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    between Google SecOps and the Symantec ATP (Advanced Threat Protection) instance.
+    Its primary purpose is to validate that the integration's configuration parameters,
+    such as the API Root, Client ID, and Client Secret, are correct and that the service
+    is reachable.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action does not interact with any entities or alert data. It is strictly
+    used for testing the communication channel and authentication flow (OAuth2) with
+    the Symantec ATP API.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action retrieves the API Root, Client ID,
+    Client Secret, and SSL verification settings from the integration's shared configuration.
+
+    2. **Manager Initialization**: It initializes the `SymantecATPManager` class.
+
+    3. **Authentication**: During initialization, the manager attempts to retrieve
+    an OAuth2 access token from the Symantec ATP service using the provided credentials.
+
+    4. **Connection Status**: If the token retrieval is successful, the action concludes
+    that the connection is established; otherwise, it reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Rejoin Endpoint:
+  ai_description: "### General Description\nThis action rejoins an endpoint in Symantec\
+    \ Endpoint Protection that was previously isolated from the network. It targets\
+    \ specific entities (IP Addresses or Hostnames) and communicates with the Symantec\
+    \ ATP (Advanced Threat Protection) API to issue a rejoin command, effectively\
+    \ restoring the endpoint's network connectivity.\n\n### Parameters Description\n\
+    There are no additional parameters for this action beyond the standard integration\
+    \ configuration (API Root, Client ID, Client Secret, and Verify SSL).\n\n### Flow\
+    \ Description\n1. **Initialization**: The action retrieves the Symantec ATP configuration\
+    \ and initializes the API manager.\n2. **Entity Filtering**: It identifies and\
+    \ filters the target entities, focusing exclusively on `ADDRESS` (IP) and `HOSTNAME`\
+    \ types.\n3. **UUID Resolution**: For each valid entity, the action queries the\
+    \ Symantec ATP service to find the corresponding internal `device_uid` based on\
+    \ the IP or Hostname.\n4. **Command Execution**: If a UUID is found, the action\
+    \ sends a `rejoin_endpoint` command to the Symantec ATP API.\n5. **Reporting**:\
+    \ \n    *   If successful, it generates an **Entity Insight** stating \"Rejoin\
+    \ command sent.\"\n    *   It compiles a **Data Table** named \"Command IDs\"\
+    \ mapping the entity identifiers to their respective command IDs.\n    *   The\
+    \ action concludes by providing a summary message of rejoined entities and any\
+    \ errors encountered during the process."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a 'rejoin_endpoint' command to the Symantec ATP API, which changes the
+      operational state of the endpoint in the Symantec Endpoint Protection environment
+      by restoring its network access.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates entity insights within the Google SecOps case to document that the rejoin
+      command was successfully initiated for specific entities.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Revoke From Blacklist:
+  ai_description: >-
+    ### General Description
+
+    This action revokes (deletes) existing blacklist policies for specific entities
+    within Symantec ATP. It is used to remove restrictions previously placed on indicators
+    such as IP addresses, domains, URLs, or file hashes, allowing them to interact
+    with the environment normally again.
+
+
+    ### Parameters
+
+    There are no additional parameters for this action. It operates directly on the
+    entities provided in the current context.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action establishes a connection with the Symantec ATP
+    service using the configured API credentials.
+
+    2. **Entity Iteration**: The script iterates through all entities in the current
+    Google SecOps scope.
+
+    3. **Policy Identification**: For each entity, the action queries the Symantec
+    ATP API to retrieve the list of active blacklist policies and identifies the specific
+    ID associated with the entity's identifier.
+
+    4. **Revocation**: If a matching blacklist policy is found, the action sends a
+    DELETE request to Symantec ATP to remove that policy.
+
+    5. **Internal Updates**: Upon successful revocation, the action adds an entity
+    insight to the case in Google SecOps to document the change.
+
+    6. **Reporting**: The action concludes by providing a summary of which entities
+    were successfully revoked and detailing any errors encountered during the process.
+
+
+    ### Additional Notes
+
+    This action requires the entity identifier to exactly match the value stored in
+    the Symantec ATP blacklist for a successful lookup and deletion.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action performs a DELETE request to the Symantec ATP API to remove existing
+      blacklist policies for the specified entities.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates entity insights within Google SecOps to record that a blacklist
+      policy was revoked for a specific entity.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit Files To Sandbox:
+  ai_description: >-
+    ### General Description
+
+    Submits file hashes to the Symantec ATP sandbox for analysis. This action is used
+    to trigger the detonation and inspection of suspicious files by providing their
+    SHA256 hashes to the Symantec ATP platform. It is a proactive containment or investigation
+    step that initiates an external analysis process.
+
+
+    ### Parameters Description
+
+    There are no user-configurable parameters for this action beyond the standard
+    integration configuration (API Root, Client ID, Client Secret, and Verify SSL).
+
+
+    ### Flow Description
+
+    1. **Entity Identification**: The action iterates through all target entities
+    provided in the current context.
+
+    2. **Type Filtering**: It filters for entities of type **FILEHASH**.
+
+    3. **Format Validation**: For each file hash, it validates that the identifier
+    is in the **SHA256** format (64 characters) using the `is_hash_sha256` manager
+    method.
+
+    4. **Sandbox Submission**: It calls the Symantec ATP API's `analyze` endpoint
+    to submit the valid SHA256 hashes for sandbox detonation.
+
+    5. **Command Tracking**: The action retrieves a `command_id` for each successful
+    submission to allow for future status tracking.
+
+    6. **Completion**: The action concludes by returning a summary of the submitted
+    hashes and providing the comma-separated list of command IDs as the result value.
+
+
+    ### Additional Notes
+
+    - **SHA256 Requirement**: This action strictly supports SHA256 hashes. MD5 or
+    SHA1 hashes will be skipped.
+
+    - **Asynchronous Operation**: This action only initiates the analysis; it does
+    not wait for the sandbox results to be generated. A separate action would be required
+    to check the status of the returned command IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a new 'analyze' command in the Symantec ATP sandbox, which creates
+      a task/job in the external system to detonate and inspect the provided file
+      hash.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Incident Resolution:
+  ai_description: >-
+    Updates the resolution status of a specific incident in Symantec ATP. This action
+    allows users to programmatically set the resolution and state of an incident within
+    the Symantec ATP console.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident UUID | String | Yes | The unique identifier (UUID) of the incident
+    in Symantec ATP that needs to be updated. |
+
+    | Resolution Status | String | Yes | The resolution status to be applied to the
+    incident. Supported values: `INSUFFICIENT DATA`, `SECURITY RISK`, `FALSE POSITIVE`,
+    `MANAGED EXTERNALLY`, `NOT SET`, `BENIGN`, `TEST`. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `Incident UUID` and the
+    selected `Resolution Status` from the input parameters.
+
+    2. **Status Mapping**: The string-based resolution status is mapped to its corresponding
+    integer value required by the Symantec ATP API (e.g., 'SECURITY RISK' maps to
+    1).
+
+    3. **API Interaction**: The action sends a `PATCH` request to the Symantec ATP
+    `/atpapi/v2/incidents` endpoint. This request performs two operations: it replaces
+    the incident's state with '4' (typically representing a closed/resolved state)
+    and updates the 'resolution' field with the mapped integer value.
+
+    4. **Error Handling**: The action specifically handles cases where the incident
+    is not found (404) or the API token lacks sufficient permissions (403).
+
+    5. **Completion**: The action returns a success message if the update is confirmed
+    by the external system, or a failure message if an error occurs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the 'state' and 'resolution' fields of an incident in the Symantec ATP
+      platform via a PATCH request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

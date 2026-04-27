@@ -1,0 +1,455 @@
+Classify Incident:
+  ai_description: >-
+    ### General Description
+
+
+    The **Classify Incident** action allows users to update the classification of
+    one or more incidents within the IronScales platform. This is typically used to
+    mark incidents as confirmed attacks, false positives, or spam based on investigation
+    results.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incidents IDs | String | Yes | A comma-separated list of IronScales incident
+    IDs to be classified. |
+
+    | New Classification | String (Dropdown) | Yes | The new classification to apply.
+    Options: 'Attack', 'False positive', 'Spam'. Default is 'Attack'. |
+
+    | Classifying User Email | String | Yes | The email address of the user performing
+    the classification. This email must be recognized by IronScales. |
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action retrieves the IronScales API configuration and
+    the user-provided parameters (Incident IDs, New Classification, and User Email).
+
+    2. **Incident Processing**: The action splits the provided comma-separated string
+    of Incident IDs into a list.
+
+    3. **Data Retrieval**: For each Incident ID, the action first fetches the current
+    incident details from IronScales to identify the existing classification.
+
+    4. **Classification Update**: The action sends a POST request to the IronScales
+    API to update the incident's classification to the new value, providing the old
+    classification and the classifying user's email.
+
+    5. **Result Aggregation**: The action tracks which incidents were successfully
+    updated and which failed, providing a summary message and setting the action result
+    to true if at least one update succeeded.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the classification status (e.g., to 'Attack', 'Spam', or 'False Positive')
+      of specified incidents in the IronScales platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Incident Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive details for one or more specific incidents from IronScales
+    using their unique identifiers. This action gathers deep context on phishing incidents,
+    including classification, reporter information, affected mailbox counts, sender
+    reputation, and technical email headers.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incidents IDs | String | Yes | A comma-separated list of IronScales incident
+    IDs (e.g., '753123, 753456') to fetch details for. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the IronScales API configuration (Root,
+    Token, Company ID, Partner status) and the user-provided incident IDs.
+
+    2. **Manager Setup**: It initializes the `IronScalesManager` which handles authentication
+    via JWT and manages the connection to the IronScales API.
+
+    3. **Data Retrieval**: The action splits the input string into individual IDs
+    and iterates through them, making a GET request to the IronScales incident details
+    endpoint for each ID.
+
+    4. **Error Handling**: If an incident ID is not found (404), the action logs the
+    error and continues to the next ID in the list.
+
+    5. **Result Aggregation**: Successfully retrieved incident data is converted to
+    JSON and added to the action's result output. A summary message is generated indicating
+    which IDs were successfully fetched and which failed.
+
+
+    ### Additional Notes
+
+    - This action does not process SOAR entities; it relies entirely on the manually
+    provided 'Incidents IDs' parameter.
+
+    - The output is a JSON array containing the full raw data objects for all successfully
+    retrieved incidents.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Incident Mitigation Details:
+  ai_description: >-
+    Retrieves the latest incident mitigation details for a company from IronScales
+    based on a specified time period. This action is designed to provide visibility
+    into remediated email threats, including details such as incident IDs, remediation
+    timestamps, affected mailbox counts, sender information, and threat classifications.
+    The results are limited to the latest 1000 incidents within the selected timeframe.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Period | Dropdown | Yes | Specifies the time range for which to retrieve mitigation
+    details. Options include 'Last 24 hours', 'Last 7 days', 'Last 90 days', 'Last
+    180 days', 'Last 360 days', 'Current year to date', and 'All time'. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action first authenticates with the IronScales API
+    using the provided API Token and Company ID to obtain a JWT bearer token.
+
+    2. **Parameter Mapping**: The human-readable 'Period' parameter is mapped to a
+    specific integer value required by the IronScales API.
+
+    3. **Data Retrieval**: A GET request is sent to the IronScales mitigation details
+    endpoint, filtered by the selected time period.
+
+    4. **Output Generation**: The retrieved mitigation records are parsed into a structured
+    format and added to the action's JSON results for use in subsequent playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Mitigation Impersonation Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Mitigation Impersonation Details** action retrieves a list of the latest
+    company impersonation incidents from the IronScales platform. This action is designed
+    to provide visibility into impersonation attempts (such as Display Name Impersonation)
+    that have been mitigated within a specific timeframe. The results are limited
+    to the latest 1,000 incidents.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Period** | Dropdown | Yes | Specifies the time range for fetching impersonation
+    details. Options include 'Last 24 hours', 'Last 7 days', 'Last 90 days', 'Last
+    180 days', 'Last 360 days', 'Current year to date', and 'All time'. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration parameters (API Root,
+    Token, Company ID, etc.) and the user-provided `Period` parameter.
+
+    2. **Authentication**: It authenticates with the IronScales API to obtain a JWT
+    token using the provided API Token and Company ID.
+
+    3. **Data Retrieval**: It calls the IronScales `get_impersonation_details` endpoint,
+    passing the mapped integer value for the selected time period as a query parameter.
+
+    4. **Processing**: The action parses the raw JSON response into internal data
+    models representing impersonation attempts.
+
+    5. **Output**: The retrieved impersonation details are added to the action's JSON
+    results for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    * The IDs returned by this action refer to **impersonation attempts**, not standard
+    incident or report IDs. Searching these IDs in other incident-specific endpoints
+    may not yield results.
+
+    * If the number of incidents in the selected period exceeds 1,000, only the latest
+    1,000 are returned.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Mitigations Per Mailbox:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed mitigation information for specific mailboxes associated with
+    provided incident IDs from IronScales. This action is used to understand how specific
+    incidents were handled across different mailboxes, providing visibility into remediation
+    actions, incident states, and sender details.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incidents IDs | String | Yes | A comma-separated list of IronScales incident
+    IDs to query for mitigation details. |
+
+    | Period | String | No | The timeframe for which to retrieve mitigation data.
+    Options include 'Last 24 hours', 'Last 7 days', 'Last 90 days', 'Last 180 days',
+    'Last 360 days', 'Current year to date', and 'All time'. Defaults to 'All time'.
+    |
+
+    | Max Pages to Fetch | Integer | Yes | The maximum number of result pages to retrieve
+    from the API to control data volume. Defaults to 1. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on SOAR entities (like IP or Email); it relies
+    strictly on the provided Incident IDs.
+
+    - Although the underlying API call uses a POST method, it is used for complex
+    filtering and does not mutate data in IronScales.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts configuration parameters (API Root, Token, Company
+    ID) and action parameters (Incident IDs, Period, Max Pages).
+
+    2. **Manager Setup**: Initializes the IronScalesManager, which handles authentication
+    and JWT token acquisition.
+
+    3. **Request Preparation**: Parses the comma-separated string of Incident IDs
+    into a list and maps the selected time period to its corresponding API value.
+
+    4. **Data Retrieval**: Executes a paginated request to the IronScales mitigation
+    details endpoint.
+
+    5. **Pagination**: Iterates through result pages until the specified `Max Pages
+    to Fetch` limit is reached or all available data is retrieved.
+
+    6. **Output**: Returns the collected mitigation records as a JSON result and provides
+    a summary message in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the IronScales platform. It ensures that the provided configuration
+    parameters (API Root, API Token, Company ID, etc.) are correct and that the network
+    path is open. This action is typically used during the initial setup of the integration
+    or for troubleshooting communication issues.
+
+
+    ### Parameters Description
+
+    This action relies on configuration parameters defined at the integration level
+    rather than action-specific parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **API Root** | String | Yes | The base URL for the IronScales API instance.
+    |
+
+    | **API Token** | String | Yes | The API key used to authenticate requests. |
+
+    | **Company ID** | String | Yes | The unique identifier for the company within
+    IronScales. |
+
+    | **Verify SSL** | Boolean | Yes | If enabled, the action will verify the SSL
+    certificate of the IronScales server. |
+
+    | **Is Partner** | Boolean | Yes | Specifies if the provided Company ID belongs
+    to a partner account, which affects the API scopes used for authentication. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities.
+
+    - It performs a two-step process: first obtaining a JWT token and then testing
+    the specific company endpoint.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the integration's configuration
+    settings (API Root, Token, Company ID, SSL settings, and Partner status).
+
+    2. **Authentication:** It calls the IronScales `get-token` endpoint using the
+    API Token and appropriate scopes (Partner vs. Company) to retrieve a JSON Web
+    Token (JWT).
+
+    3. **Connectivity Test:** Using the JWT, it sends a GET request to the `appapi/company/{company_id}`
+    endpoint.
+
+    4. **Validation:** The action validates the HTTP response. If the response is
+    successful (200 OK), it confirms connectivity. If an error occurs (e.g., 401 Unauthorized,
+    404 Not Found), it catches the exception and reports the failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

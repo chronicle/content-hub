@@ -1,0 +1,14 @@
+from __future__ import annotations
+INTEGRATION_NAME = "APIVoid"
+
+# ACTION_NAMES
+PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
+GET_DOMAIN_REPUTATION_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Domain Reputation"
+GET_IP_REPUTATION_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Ip Reputation"
+GET_SCREENSHOT_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Screenshot"
+GET_URL_REPUTATION_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Url Reputation"
+VERIFY_EMAIL_SCRIPT_NAME = f"{INTEGRATION_NAME} - Verify Email"
+
+# Constants
+INSIGHT_MSG = "Country: {0}"
+LIMIT_EXCEEDED = "you have 0 credits remained"

@@ -1,0 +1,531 @@
+Download File From Bucket:
+  ai_description: >-
+    ### General Description
+
+    Downloads a file from a specified AWS S3 bucket path to a local directory on the
+    Google SecOps runner. This action is primarily used for retrieving logs, artifacts,
+    or other data stored in S3 for further processing or analysis within a playbook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket File Path | String | Yes | The full S3 path of the file to download.
+    It must follow the format `s3://{bucket_name}/{file_path}`. Example: `s3://my-bucket/logs/app.log`.
+    |
+
+    | Download Path | String | Yes | The absolute local path on the runner where the
+    file should be saved. Example: `/tmp/downloaded_file.txt`. |
+
+
+    ### Additional Notes
+
+    - The action will fail if the local `Download Path` already exists or if the runner
+    lacks the necessary permissions to write to that directory.
+
+    - This action does not process entities; it operates strictly based on the provided
+    string parameters.
+
+    - Per Google SecOps categorization rules, actions that download files are not
+    classified as enrichment actions.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves AWS credentials (Access Key, Secret Key, Region)
+    from the integration configuration and the file paths from the action parameters.
+
+    2. **Connectivity Check**: Establishes a connection to the AWS S3 service and
+    validates credentials by attempting to list buckets.
+
+    3. **Path Parsing**: Parses the `Bucket File Path` to separate the bucket name
+    from the object key using a regular expression.
+
+    4. **Local Validation**: Checks if the target `Download Path` is valid and ensures
+    no file already exists at that location to prevent accidental overwrites.
+
+    5. **Execution**: Downloads the file from the S3 bucket and saves it to the local
+    filesystem using the Boto3 library.
+
+    6. **Completion**: Returns a success message and the paths used in the JSON result
+    if the download is successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Bucket Policy:
+  ai_description: >-
+    ### General Description
+
+    The **Get Bucket Policy** action retrieves the access policy associated with a
+    specific AWS S3 bucket. This action is primarily used for security auditing and
+    compliance checks to understand the permissions, principals, and actions allowed
+    on a target bucket.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket Name | String | Yes | The name of the AWS S3 bucket from which to retrieve
+    the policy information. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the AWS S3 manager using the provided
+    integration credentials (Access Key, Secret Key, and Region).
+
+    2. **Connectivity Validation**: It performs a connectivity test to ensure the
+    credentials are valid and the service is reachable.
+
+    3. **Data Retrieval**: The action calls the AWS S3 API to fetch the bucket policy
+    for the specified bucket name.
+
+    4. **Parsing**: The retrieved policy JSON is parsed into a structured data model
+    containing the policy version and a list of statements (Sid, Effect, Principal,
+    Action, Resource).
+
+    5. **Result Processing**: The structured policy data is added to the action's
+    JSON results, and a success message is returned to the user.
+
+
+    ### Additional Notes
+
+    - This action does not operate on entities; it requires a manual input for the
+    bucket name.
+
+    - If the bucket does not have a policy or the action lacks permissions, it will
+    return a failure status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Bucket Objects:
+  ai_description: >-
+    ### General Description
+
+    The **List Bucket Objects** action retrieves a list of objects stored within a
+    specific AWS S3 bucket. It provides metadata for each object, such as the key
+    (file path), last modified timestamp, size, owner information, and storage class.
+    This action is primarily used for auditing bucket contents or identifying specific
+    files for follow-up automation steps within a playbook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Bucket Name** | String | Yes | The name of the AWS S3 bucket from which to
+    retrieve the list of objects. |
+
+    | **Max Objects to Return** | Integer | No | The maximum number of objects to
+    return in the results. Defaults to 50 if not specified or if a negative value
+    is provided. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts AWS credentials (Access Key, Secret
+    Key, Region) from the integration configuration and retrieves the `Bucket Name`
+    and `Max Objects to Return` from the action parameters.
+
+    2. **Connectivity Check**: It validates the AWS credentials by attempting to list
+    buckets via the `AWSS3Manager`.
+
+    3. **Data Retrieval**: The action calls the AWS S3 API to list objects within
+    the specified bucket, applying the user-defined or default limit on the number
+    of objects returned.
+
+    4. **Data Processing**: The raw response from AWS is parsed into structured `BucketContent`
+    data models, capturing key metadata like size and modification dates.
+
+    5. **Output Generation**: The action generates a CSV-formatted data table for
+    the case wall and a detailed JSON result containing the object metadata for use
+    in subsequent playbook logic.
+
+
+    ### Additional Notes
+
+    - This action does not download the actual content of the files; it only retrieves
+    metadata about the objects.
+
+    - The bucket name is automatically converted to lowercase to comply with AWS S3
+    naming conventions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Buckets:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of all Amazon S3 buckets associated with the configured AWS account.
+    This action provides visibility into the storage infrastructure by listing bucket
+    names, creation dates, and account owner information. It is primarily used for
+    resource discovery, auditing, and verifying AWS S3 connectivity.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It utilizes the global
+    integration configuration for authentication and region selection.
+
+
+    ### Additional Notes
+
+    This action does not require or process any Google SecOps entities. It operates
+    at the account level to list global resources.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts AWS credentials (Access Key, Secret
+    Key) and the default region from the integration settings.
+
+    2. **Connectivity Test**: It initializes the AWS S3 Manager and performs a connectivity
+    check to validate the provided credentials.
+
+    3. **Bucket Retrieval**: The action calls the AWS S3 service to fetch the list
+    of all buckets accessible to the account.
+
+    4. **Data Transformation**: The raw AWS response is parsed into structured data
+    models, capturing the bucket names, creation timestamps, and the owner's display
+    name and ID.
+
+    5. **Result Reporting**: The structured list is returned as a JSON result and
+    the action execution status is updated to completed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the AWS S3 service. It ensures that the provided AWS credentials (Access Key
+    ID and Secret Key) and the specified region are valid and have the necessary permissions
+    to interact with the S3 environment. This is typically used during the initial
+    setup or troubleshooting of the AWSS3 integration.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | AWS Access Key ID | String | Yes | The unique identifier for the AWS account
+    used to authenticate requests. |
+
+    | AWS Secret Key | String | Yes | The secret key associated with the Access Key
+    ID used for signing AWS requests. |
+
+    | AWS Default Region | String | Yes | The AWS region where the S3 client will
+    attempt to connect (e.g., 'us-east-1'). |
+
+
+    ### Additional Notes
+
+    - This action does not require any input entities to run.
+
+    - It uses the `list_buckets` API call as a lightweight method to verify connectivity
+    and permissions.
+
+    - If the connection fails, the action will provide a detailed error message to
+    assist in debugging.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the AWS Access Key ID, Secret
+    Key, and Default Region from the integration's configuration settings.
+
+    2. **Manager Initialization:** It initializes the `AWSS3Manager` using the extracted
+    credentials and region.
+
+    3. **Connectivity Test:** The manager executes the `test_connectivity` method,
+    which triggers a `list_buckets` call to the AWS S3 API.
+
+    4. **Response Validation:** The action checks the HTTP response status code. A
+    code of 200 or 204 is considered a successful connection.
+
+    5. **Final Output:** If successful, it returns a completion status with a success
+    message. If an exception occurs (e.g., authentication failure, network timeout),
+    it catches the error and returns a failed status with the error details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set Bucket Policy:
+  ai_description: >-
+    ### General Description
+
+    Sets a bucket policy for a specific AWS S3 bucket. This action allows users to
+    define or update access controls and permissions for an S3 bucket by providing
+    a JSON policy object. It is useful for automating security configurations, such
+    as enforcing encryption or restricting public access.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Bucket Name | String | Yes | Specify the name of the bucket on which you want
+    to update the policy. |
+
+    | Policy JSON Object | String | Yes | Specify the JSON object of the policy that
+    you want to set for the bucket. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves AWS credentials (Access Key, Secret
+    Key, and Region) from the integration configuration.
+
+    2. **Connectivity Check**: It initializes the AWS S3 Manager and performs a connectivity
+    test to validate the provided credentials.
+
+    3. **Policy Application**: The action sends a `put_bucket_policy` request to AWS
+    S3 for the specified bucket name using the provided JSON policy string.
+
+    4. **Result Handling**: If the operation is successful, it returns a success message.
+    If the AWS service returns an error (e.g., invalid bucket name or malformed JSON),
+    it catches the exception and reports the failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates or sets the access policy configuration for a specific AWS S3 bucket
+      using the provided JSON policy object.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Upload File To Bucket:
+  ai_description: >-
+    ### General Description
+
+    The **Upload File To Bucket** action allows users to upload a file from the local
+    Google SecOps environment to a specified AWS S3 bucket. This action is primarily
+    used for data archival, sharing logs with external teams, or moving evidence to
+    cloud storage during an investigation.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **File Path** | String | Yes | The absolute local path to the file that needs
+    to be uploaded (e.g., `/tmp/evidence.txt`). The action verifies that the file
+    exists and is accessible before attempting the upload. |
+
+    | **Bucket Upload Path** | String | Yes | The destination URI in AWS S3 where
+    the file should be stored. It must follow the format `s3://{bucket_name}/{file_key}`
+    (e.g., `s3://my-security-bucket/incident-logs/log.txt`). |
+
+
+    ### Additional Notes
+
+    - This action requires valid AWS credentials (Access Key ID, Secret Key, and Default
+    Region) to be configured in the integration settings.
+
+    - If a file already exists at the specified `Bucket Upload Path`, it will be overwritten
+    by the new file.
+
+    - The action does not process or require any SecOps entities to run.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves AWS configuration parameters and the
+    specific file paths provided by the user.
+
+    2. **Path Parsing**: It parses the `Bucket Upload Path` using a regular expression
+    to separate the bucket name from the object key.
+
+    3. **Connectivity & Authentication**: It initializes the AWS S3 client and performs
+    a connectivity test to ensure the credentials have the necessary permissions.
+
+    4. **Local Validation**: The action checks if the source file exists on the local
+    filesystem and is a valid file (not a directory).
+
+    5. **Execution**: It performs the upload operation to the target AWS S3 bucket.
+
+    6. **Result Reporting**: Upon success, it returns a JSON object containing the
+    source and destination paths and updates the action status to completed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action uploads a file to an AWS S3 bucket, which creates a new object or
+      overwrites an existing one in the external AWS environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

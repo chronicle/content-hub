@@ -1,0 +1,10 @@
+from __future__ import annotations
+INTEGRATION_NAME = "SCCM"
+PING_ACTION = f"{INTEGRATION_NAME} - Ping"
+GET_LOGIN_HISTORY_ACTION = f"{INTEGRATION_NAME} - Get Login History"
+GET_COMPUTER_PROPERTIES_ACTION = f"{INTEGRATION_NAME} - Get Computer Properties"
+ENRICH_ENTITIES_ACTION = f"{INTEGRATION_NAME} - Enrich Entities"
+RUN_WQL_QUERY_ACTION = f"{INTEGRATION_NAME} - Run WQL Query"
+
+DOMAIN_USER = r"{domain}\{username}"
+ENRICH_PREFIX = "SCCM"

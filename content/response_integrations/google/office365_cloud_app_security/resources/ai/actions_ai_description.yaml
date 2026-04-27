@@ -1,0 +1,808 @@
+Add IP To IP Address Range:
+  ai_description: >-
+    Adds IP address entities to a specific IP address range configuration in Microsoft
+    Cloud App Security (MCAS). This action is primarily used to manage network locations
+    by updating the subnets associated with a named range. It identifies the target
+    range by name, checks if the IP is already present, and performs a two-step update
+    process to ensure the range is correctly modified in the external system.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The exact name of the IP address range in Microsoft Cloud
+    App Security that you want to update. |
+
+
+    ### Flow Description
+
+    1. **Fetch Ranges:** Retrieves all defined IP address ranges from the Microsoft
+    Cloud App Security API.
+
+    2. **Identify Target:** Searches the retrieved list for a range matching the provided
+    'Name' parameter.
+
+    3. **Entity Processing:** Iterates through the provided IP Address entities.
+
+    4. **Duplicate Check:** For each IP, verifies if it is already included in the
+    target range's subnet list.
+
+    5. **Update Range:** If the IP is new, it updates the range in MCAS. This involves
+    a two-step API call (using a temporary name and then reverting to the original
+    name) to successfully append the new IP to the existing subnet list.
+
+    6. **Result Reporting:** Returns the updated IP address range configuration as
+    a JSON result and provides a summary message of successful, existing, or failed
+    additions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of an IP address range in Microsoft Cloud App Security
+      by adding new IP addresses to its subnet list.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Bulk Resolve Alert:
+  ai_description: >-
+    ### General Description
+
+
+    The **Bulk Resolve Alert** action allows users to resolve multiple alerts within
+    Office 365 Cloud App Security in a single operation. This action is primarily
+    used for administrative cleanup or closing out related security incidents that
+    have been addressed. Note: This action is deprecated; users are encouraged to
+    use the "Close Alert" action for future workflows.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Alert ID** | String | Yes | A comma-separated list of unique Alert Identifiers
+    (e.g., `ca123, ca456`) to be resolved. |
+
+    | **Comment** | String | No | An optional comment providing context or justification
+    for why the alerts are being resolved. Defaults to "Resolved". |
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action retrieves the API credentials (Portal URL and
+    API Token) from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the list of Alert IDs and the optional
+    comment provided by the user.
+
+    3. **Processing**: The comma-separated string of Alert IDs is split into a list
+    based on a comma and space separator.
+
+    4. **API Interaction**: The action calls the Office 365 Cloud App Security API's
+    bulk resolve endpoint via a POST request, passing the IDs and the comment.
+
+    5. **Completion**: The action reports whether the alerts were successfully resolved
+    or if an error occurred during the process.
+
+
+    ### Additional Notes
+
+
+    - This action does not operate on SecOps entities; it requires manual input of
+    Alert IDs.
+
+    - The Alert IDs should be separated by a comma and a space (`, `) for correct
+    parsing based on the script logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of specified alerts to 'Resolved' in the Office 365 Cloud
+      App Security portal.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Close Alert:
+  ai_description: >-
+    ### General Description
+
+    Closes a specific alert in Microsoft Cloud App Security (MCAS) by updating its
+    resolution state and providing optional context. This action allows analysts to
+    programmatically manage the lifecycle of MCAS alerts directly from Google SecOps,
+    ensuring that the status in the external security platform reflects the investigation's
+    outcome.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Alert ID** | String | Yes | The unique identifier of the alert in Microsoft
+    Cloud App Security that needs to be closed. |
+
+    | **State** | Enum | Yes | The resolution state to apply to the alert. Options
+    include: `True Positive`, `Benign`, or `False Positive`. |
+
+    | **Comment** | String | No | An optional text comment providing additional details
+    or justification for closing the alert. |
+
+    | **Reason** | Enum | No | A specific reason for the closure. This is required
+    for `Benign` or `False Positive` states but is ignored if the state is set to
+    `True Positive`. |
+
+
+    ### Additional Notes
+
+    - If the `State` is set to `Benign` or `False Positive`, the `Reason` parameter
+    should be populated with a valid sub-reason supported by MCAS (e.g., 'Actual Severity
+    Is Lower' for Benign, or 'Alert Is Not Accurate' for False Positive).
+
+    - The action will fail if the provided `Alert ID` does not exist in the target
+    Microsoft Cloud App Security environment.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves API credentials (Portal URL and API Token) and
+    action parameters from the environment.
+
+    2. **Validation & Mapping**: Maps the user-selected `State` and `Reason` to the
+    specific integer IDs and endpoint keys required by the Microsoft Cloud App Security
+    API.
+
+    3. **API Interaction**: Executes a POST request to the MCAS alert resolution endpoint
+    with the specified alert ID, state, reason, and comment.
+
+    4. **Verification**: Parses the API response to confirm that the alert was successfully
+    found and updated. If the response indicates zero alerts were modified, an error
+    is raised.
+
+    5. **Completion**: Reports the success or failure of the operation to the Google
+    SecOps case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the resolution status, reason, and comments of an alert within the Microsoft
+      Cloud App Security platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create IP Address Range:
+  ai_description: >-
+    Creates a new IP address range configuration in Microsoft Cloud App Security.
+    This action allows users to define and categorize network segments by specifying
+    subnets, assigning them to specific categories (like Corporate or VPN), and associating
+    them with organizations and tags. This is useful for refining security policies
+    and activity monitoring based on network location.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The unique name for the IP address range. |
+
+    | Category | Dropdown | Yes | The classification for the range. Options: Corporate,
+    Administrative, Risky, VPN, Cloud provider, Other. |
+
+    | Organization | String | No | The name of the organization associated with this
+    IP range. |
+
+    | Subnets | String | Yes | A comma-separated list of subnets (e.g., '192.168.1.0/24,
+    10.0.0.0/8') to include in the range. |
+
+    | Tags | String | No | A comma-separated list of tags to apply to the IP address
+    range. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves API credentials and portal URL from the integration
+    configuration.
+
+    2. **Parameter Processing**: Extracts action parameters, converts comma-separated
+    strings for Subnets and Tags into lists, and maps the Category name to its corresponding
+    internal ID.
+
+    3. **Creation**: Sends a request to the Microsoft Cloud App Security API to create
+    the new IP address range.
+
+    4. **Verification**: Upon successful creation, the action fetches the full details
+    of the newly created range using its ID.
+
+    5. **Output**: Returns the JSON representation of the created IP address range
+    and completes the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new IP address range configuration (subnet rule) in the Microsoft
+      Cloud App Security environment.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Dismiss Alert:
+  ai_description: >-
+    ### General Description
+
+    Dismisses a specific alert in Microsoft Defender for Cloud Apps (formerly Office
+    365 Cloud App Security) using its unique identifier. This action is used to acknowledge
+    alerts and transition them to a dismissed state in the external security portal.
+    Note: The action is marked as deprecated in favor of the 'Close Alert' action.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert to be dismissed.
+    |
+
+    | Comment | String | No | An optional explanation or justification for dismissing
+    the alert. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the API root and token from the integration configuration.
+
+    2. **Parameter Extraction**: Collects the mandatory Alert ID and the optional
+    Comment from the action input.
+
+    3. **API Interaction**: Executes a POST request to the `/api/v1/alerts/{alert_id}/dismiss/`
+    endpoint via the manager.
+
+    4. **ID Normalization**: The manager includes logic to automatically strip the
+    'ca' prefix from alert IDs if present before sending the request.
+
+    5. **Result Reporting**: Returns a success status and an output message confirming
+    the dismissal of the alert in the external system.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of an alert to 'Dismissed' within the Microsoft Defender
+      for Cloud Apps portal.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    Enriches User entities using information from Microsoft Cloud App Security (MCAS).
+    This action retrieves detailed user profile information, including administrative
+    status, roles, email addresses, and threat scores, to provide security analysts
+    with better context during investigations.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | portal URL | String | Yes | The base URL for the Microsoft Cloud App Security
+    portal API. |
+
+    | API token | String | Yes | The API token used for authenticating requests to
+    the MCAS service. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the integration configuration (Portal
+    URL and API Token) and initializes the Microsoft Cloud App Security manager.
+
+    2. **Entity Filtering**: The action iterates through the target entities in the
+    current context, specifically filtering for entities of type `USER`.
+
+    3. **Data Retrieval**: For each identified User entity, the action queries the
+    Microsoft Cloud App Security API to retrieve detailed account information using
+    the entity's identifier.
+
+    4. **Enrichment**: The retrieved data (such as admin status, role, email, domain,
+    and threat score) is mapped to the entity's additional properties.
+
+    5. **Case Wall Update**: A data table containing a summary of the user's information
+    is added to the case wall for immediate visibility.
+
+    6. **Entity Update**: The action marks the entities as enriched and updates them
+    within Google SecOps to persist the new metadata.
+
+
+    ### Additional Notes
+
+    - This action is strictly an enrichment task and does not modify any data within
+    the Microsoft Cloud App Security platform.
+
+    - It only processes entities identified as `USER` types.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with enrichment data and adds data tables
+      to the case wall for each successfully enriched entity.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get IP related activities:
+  ai_description: "### General Description\nThe **Get IP Related Activities** action\
+    \ retrieves a list of activities associated with specific IP address entities\
+    \ from Microsoft Cloud App Security (MCAS). This action is designed to provide\
+    \ security analysts with historical context regarding an IP's behavior across\
+    \ cloud applications, helping to identify patterns of compromise or unauthorized\
+    \ access.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| **Activity Display Limit** | Integer | No\
+    \ | Specifies the maximum number of activity records to retrieve and display for\
+    \ each IP address. Default is 10. |\n| **Product name** | String | No | Filters\
+    \ the search to a specific cloud application (e.g., 'Office 365'). If set to 'All'\
+    \ or left empty, the action searches across all apps connected to MCAS. |\n| **Time\
+    \ Frame** | Integer | Yes | Defines the lookback period in hours (e.g., 24) to\
+    \ fetch activities that occurred within that window. |\n\n### Flow Description\n\
+    1. **Initialization**: The action extracts the MCAS API credentials and user-defined\
+    \ parameters (Limit, Product Name, and Time Frame).\n2. **Entity Selection**:\
+    \ It identifies all `ADDRESS` (IP) entities within the current SOAR context.\n\
+    3. **Data Retrieval**: For each valid IP entity, the action queries the MCAS API\
+    \ for activity logs, applying the specified time frame and product filters.\n\
+    4. **Data Transformation**: \n    - Retrieved activities are parsed into a structured\
+    \ format.\n    - A CSV-formatted data table is generated for each IP containing\
+    \ key details like Activity Description, User, Location, Device, and Date.\n5.\
+    \ **Internal Updates**: \n    - The action attaches the generated data tables\
+    \ to the case wall for immediate visibility.\n    - The full raw activity data\
+    \ is added to the action's JSON results for use in subsequent playbook steps.\n\
+    \n### Additional Notes\n- This action is strictly read-only for the external MCAS\
+    \ environment; it does not modify any data in Microsoft Cloud App Security.\n\
+    - If no activities are found for a specific IP, the action will log a message\
+    \ and continue processing other entities."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables to the Google SecOps case wall containing the retrieved
+      activity logs for each processed IP address.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get User related activities:
+  ai_description: "### General Description\nThe **Get User Related Activities** action\
+    \ retrieves a list of activities associated with specific **USER** entities from\
+    \ Microsoft Cloud App Security (MCAS). This action is designed for security investigations\
+    \ and auditing, allowing analysts to examine actions performed by a user across\
+    \ various connected cloud applications within a defined timeframe.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| **Activity Display Limit** | Integer | No | The maximum number\
+    \ of activities to retrieve and display in the data table. Default is 10. |\n\
+    | **Time Frame** | Integer | Yes | The number of hours back from the current time\
+    \ to search for activities. Default is 24. |\n| **Product Name** | String | No\
+    \ | Filters activities by a specific application connected to MCAS (e.g., \"Office\
+    \ 365\"). If set to \"All\", activities from all connected apps are retrieved.\
+    \ |\n\n### Flow Description\n1. **Initialization**: The action extracts the API\
+    \ configuration (Portal URL, Token) and the user-provided parameters (Limit, Time\
+    \ Frame, Product Name).\n2. **Entity Filtering**: The action iterates through\
+    \ the target entities in the case and filters for those of type **USER**.\n3.\
+    \ **Data Retrieval**: For each identified user, the action queries the MCAS API\
+    \ to fetch activities. It uses the entity's `OriginalIdentifier` if available,\
+    \ otherwise it uses the standard identifier. The query is filtered by the specified\
+    \ timeframe and product.\n4. **Result Processing**: \n    * If activities are\
+    \ found, they are formatted into a data table titled \"{User} Related Activity\
+    \ Table\" and attached to the case.\n    * The raw activity data is added to the\
+    \ action's JSON results for further processing.\n5. **Finalization**: The action\
+    \ provides a summary message indicating which users had activities successfully\
+    \ retrieved and which did not.\n\n### Additional Notes\n* This action does not\
+    \ modify any data in Microsoft Cloud App Security; it is a read-only operation.\n\
+    * The timeframe parameter is converted from hours to days for the API request\
+    \ logic."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds data tables to the case containing the retrieved user activities.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Files:
+  ai_description: >-
+    Lists available files in Microsoft Cloud App Security (MCAS) based on specified
+    filtering criteria. This action allows users to search for files across connected
+    cloud applications by attributes such as filename, ID, file type, or sharing status.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Filter Key | String | No | The attribute to filter files by. Options: `ID`,
+    `Filename`, `File Type`, `Share Status`. |
+
+    | Filter Logic | String | No | The logic to apply to the filter. Options: `Equal`,
+    `Contains`. Note: `Contains` is only supported for `ID` and `Filename`. |
+
+    | Filter Value | String | No | The value to search for. For `File Type`, use values
+    like `Document` or `Image`. For `Share Status`, use values like `Internal` or
+    `Public`. |
+
+    | Max Records To Return | Integer | No | The maximum number of file records to
+    retrieve. Defaults to 50. For `Contains` logic, the action scans up to 1000 results.
+    |
+
+
+    ### Additional Notes
+
+    - If a `Filter Logic` is selected, a `Filter Key` must also be provided.
+
+    - If `Filter Value` is left empty, the filter will not be applied even if a key
+    and logic are selected.
+
+    - `File Type` and `Share Status` filters only support `Equal` logic.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves API credentials and action parameters.
+
+    2. **Validation**: Checks if the provided filter logic is compatible with the
+    selected filter key and validates specific values for `File Type` and `Share Status`
+    against supported MCAS enums.
+
+    3. **API Request**: Calls the Microsoft Cloud App Security API to retrieve file
+    data. If `Equal` logic is used, the filter is applied at the API level. If `Contains`
+    logic is used, the action retrieves a larger set of data for client-side processing.
+
+    4. **Processing**: Parses the raw API response into structured file objects, applying
+    client-side substring matching if `Contains` logic was specified.
+
+    5. **Output**: Generates a data table named 'Available Files' and attaches the
+    full JSON result to the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    between Google SecOps and the Office 365 Cloud App Security (Microsoft Defender
+    for Cloud Apps) instance. It validates that the integration's configuration parameters,
+    specifically the Portal URL and API Token, are correctly configured and that the
+    external service is reachable.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    This action is strictly for connectivity testing and does not process entities,
+    create insights, or modify any data within Google SecOps or the external system.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the 'Portal URL' and 'API
+    Token' from the integration's shared configuration.
+
+    2. **Manager Initialization**: It initializes the `Office365CloudAppSecurityManager`
+    with the provided credentials.
+
+    3. **Connectivity Test**: The action executes the `test_connectivity` method,
+    which sends an authenticated POST request to the activities endpoint (`/api/v1/activities/`)
+    with a limit of 1 to verify the API token's validity.
+
+    4. **Response Validation**: The action checks the HTTP response status. If successful,
+    it returns a 'Connection Established' message; otherwise, it catches the exception
+    and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove IP From IP Address Range:
+  ai_description: >-
+    Removes specific IP address entities from a named IP address range in Microsoft
+    Cloud App Security (MCAS). This action is useful for managing network boundaries
+    and exclusion lists within the MCAS environment.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The exact name of the IP address range in Microsoft Cloud
+    App Security that you want to update. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the MCAS portal URL and API token from the integration
+    configuration and the target IP address range name from the action parameters.
+
+    2. **Range Retrieval**: Fetches all existing IP address ranges from MCAS and searches
+    for the one matching the provided 'Name'.
+
+    3. **Validation**: Checks if the specified range exists and ensures that the action
+    is not attempting to remove the last remaining IP address from the range (MCAS
+    requires at least one entry).
+
+    4. **Entity Processing**: Iterates through the provided IP Address entities. For
+    each entity, it verifies if the IP is an exact match within the range's subnet
+    list.
+
+    5. **External Update**: If matches are found, it updates the IP address range
+    in MCAS by removing the specified IPs. This involves a two-step update process
+    (using a temporary name and then reverting to the original) to ensure the API
+    processes the change correctly.
+
+    6. **Reporting**: Returns the updated IP address range details as JSON and provides
+    a summary message of successful and failed removals.
+
+
+    ### Additional Notes
+
+    * **Exact Matches Only**: The action only removes exact string matches. It cannot
+    remove an individual IP (e.g., 192.168.1.30) if that IP is covered by a broader
+    CIDR block (e.g., 192.168.1.0/24) defined in the range.
+
+    * **Last Item Constraint**: The action will fail to remove an IP if it is the
+    only entry in the range.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of an IP Address Range in Microsoft Cloud App Security
+      by removing specific IP addresses from its subnet list.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

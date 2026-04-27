@@ -1,0 +1,168 @@
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool used to verify the connectivity between Google
+    SecOps and the BulkWhoIs service. It ensures that the provided API credentials
+    (API Key and Secret Key) are valid and that the network configuration allows communication
+    with the BulkWhoIs API endpoint.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Key | String | Yes | The API key used for authenticating requests to the
+    BulkWhoIs service. |
+
+    | Secret Key | String | Yes | The Secret key used to generate a signature for
+    API requests. |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the BulkWhoIs API. Default is False. |
+
+
+    ### Additional Notes
+
+    * This action does not interact with any entities within a case. It uses a hardcoded
+    IP address (8.8.8.8) to perform a test scan and verify the connection.
+
+    * As a 'Ping' type action, it is excluded from being categorized as an enrichment
+    action.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the integration configuration, specifically
+    the API Key, Secret Key, and SSL verification preference.
+
+    2. **Connectivity Test**: It initializes the `WhoisManager` and calls the `test_connectivity`
+    method.
+
+    3. **API Interaction**: The manager performs a signed POST request to the BulkWhoIs
+    API, attempting to scan the IP address '8.8.8.8'.
+
+    4. **Validation**: The action checks if the API response indicates a successful
+    query.
+
+    5. **Outcome**: If the scan is successful, it returns a 'Connection Established'
+    message. If the request fails or credentials are invalid, it returns 'Connection
+    Failed'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+WhoIs Details:
+  ai_description: >-
+    ### General Description
+
+    Enriches Domain, Hostname, and IP Address entities with Whois registration details
+    using the BulkWhoIs API. This action retrieves comprehensive ownership and registration
+    data, such as registrar information, creation/expiry dates, and registrant location,
+    to provide context for security investigations.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the BulkWhoIs API. Default is False. |
+
+    | Api Key | String | Yes | The API key used for authentication with the BulkWhoIs
+    service. |
+
+    | Secret Key | String | Yes | The Secret key used for authentication with the
+    BulkWhoIs service. |
+
+
+    ### Additional Notes
+
+    - The action specifically filters out internal Hostname entities to avoid unnecessary
+    external queries for local assets.
+
+    - Enrichment data added to entities is prefixed with 'WhoisQuery_' for easy identification.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts API credentials and SSL configuration to initialize
+    the BulkWhoIs manager.
+
+    2. **Entity Filtering**: Iterates through target entities, identifying supported
+    types: ADDRESS, HOSTNAME, and DestinationURL.
+
+    3. **Domain Extraction**: For URL and Hostname entities, the logic extracts the
+    base domain name for the Whois query.
+
+    4. **External API Query**: Performs a signed POST request to the BulkWhoIs API
+    for each identified entity.
+
+    5. **Data Parsing**: Processes the API response to extract key fields like Registrar,
+    Country, and City.
+
+    6. **Internal Updates**: Updates the entity's additional properties with the Whois
+    data and sets the 'is_enriched' flag to true.
+
+    7. **Reporting**: Generates a data table for each entity and a final JSON result
+    containing all retrieved information.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with Whois information (e.g., Registrar,
+      Creation Date, Country) and sets the 'is_enriched' flag to true. It also attaches
+      data tables to the entities for visual representation in the SOAR.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

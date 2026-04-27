@@ -1,0 +1,255 @@
+Disconnect Sessions:
+  ai_description: >-
+    ### General Description
+
+    This action disconnects active sessions from an F5 BIG-IP Access Policy Manager
+    (APM) instance. It allows security administrators to terminate specific user sessions
+    based on session identifiers, usernames, or client IP addresses. The action can
+    be configured to automatically target entities present in the Google SecOps case
+    or to use manually provided parameters.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Use Case Entities | Boolean | No | If set to `True`, the action will use IP
+    Address and User entities found in the case to identify sessions. If `True`, manual
+    parameters (Session IDs, Logon User Names, Client IPs) are ignored. Default is
+    `False`. |
+
+    | Session IDs | String | No | A comma-separated list of specific F5 session IDs
+    to disconnect. |
+
+    | Logon User Names | String | No | A comma-separated list of usernames. Any active
+    session associated with these users will be disconnected. |
+
+    | Client IPs | String | No | A comma-separated list of client IP addresses. Any
+    active session originating from these IPs will be disconnected. |
+
+
+    ### Additional Notes
+
+    * **Logic:** The action uses an 'OR' logic for filtering. Any session matching
+    at least one of the provided criteria (ID, User, or IP) will be targeted for disconnection.
+
+    * **Verification:** After sending the disconnect command, the action performs
+    a follow-up check by re-listing active sessions to verify that the targeted sessions
+    were successfully removed.
+
+    * **Precedence:** If `Use Case Entities` is enabled, the action strictly processes
+    case entities and ignores the manual CSV input fields.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves connection details (API root, credentials, SSL
+    settings) and action parameters.
+
+    2. **Target Identification:** Depending on the `Use Case Entities` flag, it either
+    collects identifiers from the case's `ADDRESS` and `USER` entities or parses the
+    provided CSV strings for Session IDs, Usernames, and IPs.
+
+    3. **Session Retrieval:** Fetches the complete list of currently active sessions
+    from the F5 BIG-IP APM via a GET request.
+
+    4. **Matching:** Compares the target identifiers against the active session data
+    to find the internal F5 session IDs.
+
+    5. **Termination:** Executes a DELETE request for each matched session ID to terminate
+    the connection.
+
+    6. **Verification:** Retrieves the active session list again to confirm the sessions
+    are no longer present.
+
+    7. **Reporting:** Returns a summary message indicating which sessions were successfully
+    disconnected, which failed, and which targets were not found in the active session
+    list.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Terminates active user sessions on the F5 BIG-IP Access Policy Manager by sending
+      DELETE requests to the session management endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Active Sessions:
+  ai_description: >-
+    ### General Description
+
+    The **List Active Sessions** action retrieves a list of all currently active sessions
+    from the F5 BIG-IP Access Policy Manager (APM). This action is primarily used
+    for visibility and monitoring, allowing security analysts to see who is currently
+    connected to the network via the APM and from which IP addresses.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Limit** | String | No | Specifies the maximum number of session entries to
+    retrieve from the F5 BIG-IP APM. If left empty or set to 0, the action will attempt
+    to retrieve all available sessions or follow the system's default limit. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the F5 BIG-IP APM.
+    It manages authentication tokens automatically, including generation, encryption
+    for local storage, and periodic updates of the token timeout.
+
+    2. **Session Retrieval**: It executes a GET request to the F5 Access Info endpoint,
+    incorporating the `Limit` parameter to restrict the result set size.
+
+    3. **Data Parsing**: The raw response from F5 is parsed to extract key session
+    details such as the `sessionID`, `clientIp`, and `logonUser`.
+
+    4. **Result Output**: The list of active sessions is formatted as a JSON array
+    and attached to the action results for use in playbooks.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities (like IPs or Users) within the
+    SOAR case; instead, it queries the external system for a global list of active
+    sessions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the F5 BIG-IP Access Policy Manager (APM). It ensures that the provided credentials
+    and network path are valid by attempting to authenticate and perform a basic API
+    call to the management interface.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | BIG-IP APM Address | String | Yes | The base URL of the F5 BIG-IP APM instance
+    (e.g., `https://10.0.0.1`). |
+
+    | User Name | String | Yes | The username used to authenticate with the F5 BIG-IP
+    APM. |
+
+    | Password | String | Yes | The password used to authenticate with the F5 BIG-IP
+    APM. |
+
+    | Token Timeout (in Seconds) | Integer | No | If provided, the action will attempt
+    to set the expiration timeout for the generated authentication token. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the F5 BIG-IP APM server. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the connection details and credentials
+    from the integration configuration.
+
+    2. **Manager Initialization:** It initializes the F5 BIG-IP APM Manager, which
+    automatically triggers the authentication flow.
+
+    3. **Authentication (Token Mechanism):** The manager checks for a locally cached
+    token. If no valid token exists, it sends a **POST** request to the login endpoint
+    to generate a new one. If a `Token Timeout` is specified, it sends a **PATCH**
+    request to update the token's lifespan.
+
+    4. **Connectivity Test:** It performs a **GET** request to the tokens endpoint
+    to confirm the session is active and the credentials have the necessary permissions.
+
+    5. **Result Reporting:** The action returns a success message if the handshake
+    completes or an error message if any step fails.
+
+
+    ### Additional Notes
+
+    - This action does not process any entities and is used strictly for troubleshooting
+    and initial setup verification.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action creates a new authentication token on the F5 BIG-IP APM via a POST
+      request and may update the token's timeout value via a PATCH request during
+      the connectivity test.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

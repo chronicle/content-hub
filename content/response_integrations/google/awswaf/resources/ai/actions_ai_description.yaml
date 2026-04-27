@@ -1,0 +1,1599 @@
+Add Entity To Regex Pattern Set:
+  ai_description: >-
+    ### General Description
+
+    Adds string patterns derived from entities to specified Regex Pattern Sets in
+    AWS WAF. This action allows security teams to dynamically update AWS WAF configurations
+    by converting IP addresses and URLs into regex patterns. It supports both Regional
+    and CloudFront scopes and includes logic to handle AWS's limit of 10 patterns
+    per set.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Regex Pattern Set Names | String | Yes | A comma-separated list of the names
+    of the Regex Pattern sets in AWS WAF where the patterns should be added. |
+
+    | Scope | String | Yes | The deployment scope for the AWS WAF resources. Options
+    are 'CloudFront', 'Regional', or 'Both'. |
+
+    | Domain Pattern | Boolean | No | If enabled (default), the action extracts the
+    domain from URL entities and creates a regex pattern in the format: `^(http|https)(:\/\/)(\Q<domain>\E).*`.
+    |
+
+    | IP Pattern | Boolean | No | If enabled (default), the action wraps IP address
+    entities in a regex pattern in the format: `^(http|https)(:\/\/)(\Q<ip>\E).*`.
+    |
+
+
+    ### Additional Notes
+
+    * **AWS Quota:** AWS WAF Regex Pattern Sets have a hard limit of 10 patterns per
+    set. The action will check the current count and only add patterns up to this
+    limit, reporting any failures due to capacity.
+
+    * **Deduplication:** The action automatically checks for existing patterns in
+    the target sets to avoid adding duplicates.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves AWS credentials and action parameters, including
+    the target set names and scope.
+
+    2. **Connectivity Check:** Validates the connection to the AWS WAF service.
+
+    3. **Resource Discovery:** Lists and identifies the existing Regex Pattern Sets
+    in the specified AWS scopes that match the provided names.
+
+    4. **Entity Processing:** Iterates through the target entities (IPs and URLs).
+    If 'Domain Pattern' or 'IP Pattern' is enabled, it transforms the entity identifier
+    into a specific regex string; otherwise, it uses the raw identifier.
+
+    5. **State Synchronization:** For each target set, it retrieves the current list
+    of patterns and the required lock token for optimistic locking.
+
+    6. **Update Execution:** Filters out duplicates and checks against the 10-pattern
+    limit. It then updates the Regex Pattern Set in AWS WAF with the new combined
+    list of patterns.
+
+    7. **Reporting:** Returns a summary of successfully added patterns, existing duplicates,
+    and any patterns that could not be added due to errors or capacity limits.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates existing Regex Pattern Sets in AWS WAF by adding new regular expression
+      patterns derived from entities.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add IP To IP Set:
+  ai_description: >-
+    Adds IP Address entities to specified AWS WAF IP Sets across Regional and/or CloudFront
+    scopes. This action is used to manage network access control by dynamically updating
+    IP Sets with new addresses. It validates IP versions (IPv4 vs IPv6) against the
+    target IP Set configuration before performing the update.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | IP Set Names | String | Yes | A comma-separated list of the names of the IP
+    sets where the addresses should be added. |
+
+    | Scope | String | Yes | Specifies the AWS WAF scope. Options are 'CloudFront',
+    'Regional', or 'Both'. If 'Both' is selected, the action attempts to find and
+    update sets in both environments. |
+
+
+    ### Flow Description
+
+    1. **Connection**: Establishes a connection to the AWS WAF service using provided
+    credentials and region.
+
+    2. **Discovery**: Lists and identifies the target IP Sets in AWS based on the
+    provided names and scope.
+
+    3. **Entity Filtering**: Iterates through target entities, selecting only those
+    of type ADDRESS.
+
+    4. **Version Validation**: For each valid entity, it checks if the IP version
+    (IPv4 or IPv6) matches the version required by the target AWS IP Set.
+
+    5. **State Retrieval**: Fetches the current addresses and the 'LockToken' for
+    each target IP Set to ensure optimistic locking during the update.
+
+    6. **Mutation**: Appends the new masked IP addresses to the existing list and
+    updates the IP Set in AWS WAF.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of AWS WAF IP Sets by adding new IP addresses to the
+      existing 'Addresses' list.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Pattern To Regex Pattern Set:
+  ai_description: >-
+    ### General Description
+
+    This action adds specific string patterns to one or more Regex Pattern Sets in
+    AWS WAF. It is used to update the filtering criteria of WAF rules by expanding
+    the list of regular expressions the service inspects. The action supports both
+    Regional and CloudFront scopes and handles duplicate patterns and AWS service
+    limits automatically.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Regex Pattern Set Names** | String | Yes | A comma-separated list of the names
+    of the Regex Pattern Sets you want to update (e.g., `Set1,Set2`). |
+
+    | **Patterns** | String | Yes | A comma-separated list of the actual regex patterns
+    to be added to the sets (e.g., `^admin.*,.*\.php$`). |
+
+    | **Scope** | String | Yes | Defines the AWS WAF scope. Options are `CloudFront`,
+    `Regional`, or `Both`. If `Both` is selected, the action attempts to find and
+    update sets in both environments. |
+
+
+    ### Additional Notes
+
+    * **AWS Quotas:** AWS WAF enforces a strict limit of **10 patterns per Regex Pattern
+    Set**. If the addition of new patterns exceeds this limit, the action will only
+    add patterns up to the limit and report the remaining as failed.
+
+    * **Duplicates:** The action automatically detects if a pattern already exists
+    in the target set and will not attempt to add it again, preventing unnecessary
+    API calls.
+
+    * **Entity Usage:** This action does not run on SecOps entities; it relies entirely
+    on the provided input parameters.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves AWS credentials from the integration configuration
+    and parses the input parameters (names, patterns, and scope).
+
+    2. **Connectivity:** Establishes a connection to the AWS WAF service and validates
+    credentials.
+
+    3. **Discovery:** Lists existing Regex Pattern Sets in the specified scope(s)
+    and filters them to find matches for the provided names.
+
+    4. **Validation & Preparation:** For each matching set, the action retrieves the
+    current pattern list and a `LockToken` (required for updates). It identifies which
+    new patterns are duplicates and checks if the set has remaining capacity (under
+    the 10-pattern limit).
+
+    5. **Execution:** Calls the AWS WAF API to update the Regex Pattern Sets with
+    the new, non-duplicate patterns that fit within the capacity limits.
+
+    6. **Reporting:** Generates a detailed summary message indicating which patterns
+    were successfully added, which were duplicates, and which failed due to capacity
+    limits or missing sets.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of Regex Pattern Sets in AWS WAF by adding new regular
+      expression patterns to them.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Rule To Rule Group:
+  ai_description: >-
+    ### General Description
+
+    Adds a specific rule to one or more existing AWS WAF Rule Groups. This action
+    allows for the programmatic expansion of WAF protections by injecting rule logic
+    (provided as a JSON object) into managed rule groups across different AWS scopes
+    (Regional or CloudFront).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Rule Group Names | String | Yes | A comma-separated list of the names of the
+    Rule Groups where the rule should be added. Example: `group1, group2`. |
+
+    | Scope | String (Enum) | Yes | The AWS WAF scope to target. Options are `CloudFront`,
+    `Regional`, or `Both`. If `Both` is selected, the action attempts to find and
+    update groups in both environments. |
+
+    | Rule JSON Object | String (JSON) | Yes | A JSON string representing the rule
+    configuration. It must include a `Name` field to identify the rule and prevent
+    duplicates. |
+
+
+    ### Additional Notes
+
+    - The action performs a duplicate check: if a rule with the same name already
+    exists within a target Rule Group, the action will skip that group to avoid errors
+    and report it as a duplicate.
+
+    - The action uses optimistic locking (`LockToken`) to ensure that the Rule Group
+    configuration hasn't changed between the time it was read and the time it is updated.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts AWS credentials and action parameters.
+
+    2. **Validation**: Parses the `Rule Group Names` CSV and validates that the `Rule
+    JSON Object` is valid JSON containing a `Name` key.
+
+    3. **Discovery**: Connects to the AWS WAF service and lists rule groups in the
+    specified scope(s) to find matches for the provided names.
+
+    4. **Rule Retrieval**: For each matching Rule Group, the action fetches the current
+    configuration, including the existing list of rules and the current `LockToken`.
+
+    5. **Duplicate Check**: Verifies if a rule with the same name already exists in
+    the group's rule list.
+
+    6. **Update**: If no duplicate is found, it appends the new rule to the existing
+    list and calls the AWS WAF API to update the Rule Group.
+
+    7. **Reporting**: Aggregates the results (successes, duplicates, failures, and
+    missing groups) into a final output message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new rule configuration to existing AWS WAF Rule Groups by updating their
+      rule lists.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Rule To Web ACL:
+  ai_description: >-
+    Adds a rule to one or more AWS WAF Web ACLs based on an existing IP Set or Rule
+    Group. This action allows for centralized management of web access control by
+    attaching predefined rule sources to multiple Web ACLs across different AWS scopes
+    (Regional or CloudFront).
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Web ACL Names** | String | Yes | A comma-separated list of Web ACL names where
+    the rule should be added. |
+
+    | **Rule Source Type** | Enum | Yes | Specifies whether the rule is based on an
+    'IP Set' or a 'Rule Group'. |
+
+    | **Rule Source Name** | String | Yes | The name of the IP Set or Rule Group to
+    be used as the rule source. |
+
+    | **Scope** | Enum | Yes | The AWS WAF scope: 'CloudFront', 'Regional', or 'Both'.
+    |
+
+    | **Rule Priority** | Integer | Yes | The unique priority value for the rule within
+    the Web ACL. Lower values are processed first. |
+
+    | **IP Set Action** | Enum | No | The action to take (Allow, Block, Count) if
+    the source type is 'IP Set'. Defaults to 'Block'. |
+
+
+    ### Additional Notes
+
+    - The action performs a duplicate check; if a rule with the same name already
+    exists in a target Web ACL, it will skip that specific ACL to avoid errors.
+
+    - A Web ACL can contain a maximum of 1500 rules (WCUs).
+
+    - If 'Both' is selected for Scope, the action will attempt to find and update
+    Web ACLs in both Regional and CloudFront environments.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves AWS credentials and action parameters.
+
+    2. **Connectivity**: Validates connection to the AWS WAF service.
+
+    3. **Discovery**: Lists existing Web ACLs in the specified scopes to identify
+    targets matching the provided names.
+
+    4. **Source Retrieval**: Searches for the specified IP Set or Rule Group to obtain
+    its Amazon Resource Name (ARN).
+
+    5. **Validation**: Ensures the rule source exists in the target scope.
+
+    6. **Update Logic**: For each target Web ACL, the action fetches the current configuration
+    (including the lock token and existing rules), checks for duplicates, and appends
+    the new rule.
+
+    7. **Execution**: Commits the updated rule list back to AWS WAF using the `update_web_acl`
+    method.
+
+    8. **Reporting**: Returns a summary of successful updates, duplicates found, and
+    any failures.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of AWS WAF Web ACLs by adding a new rule to their
+      existing rule lists.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create IP Set:
+  ai_description: >-
+    Creates IP Sets in AWS WAF based on provided IP Address entities. This action
+    automates the creation of network security boundaries by grouping entities into
+    AWS WAF IP Sets for either Regional or CloudFront scopes.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The base name for the IP set. The action appends the IP
+    version to this name (e.g., Siemplify_Name_IPv4). |
+
+    | Scope | Dropdown | Yes | Specifies the AWS WAF scope: 'Regional', 'CloudFront',
+    or 'Both'. |
+
+    | Description | String | No | A description for the created IP set in AWS. |
+
+    | Tags | String | No | Key-value pairs to tag the AWS resource (format: key_1:value_1,key_2:value_2).
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Validates AWS credentials and retrieves action parameters
+    including the desired scope and naming convention.
+
+    2. **Entity Processing**: Iterates through target entities, filtering for IP addresses.
+    It determines the IP version (IPv4 or IPv6) and applies standard CIDR masking
+    (/32 for IPv4, /128 for IPv6).
+
+    3. **Grouping**: Organizes the processed IP addresses into separate collections
+    based on their version to comply with AWS WAF requirements.
+
+    4. **Resource Creation**: Communicates with the AWS WAF service to create the
+    IP Sets in the specified scopes (Regional and/or CloudFront) with the provided
+    tags and descriptions.
+
+    5. **Result Reporting**: Returns a list of successfully created IP Set names and
+    identifies any entities that failed processing.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates new IP Set resources within the user's AWS WAF environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Regex Pattern Set:
+  ai_description: >-
+    ### General Description
+
+    Creates a Regex Pattern Set in AWS WAF based on provided IP and URL entities.
+    This action allows users to group multiple regex patterns into a single set, which
+    can then be referenced in AWS WAF rules to inspect and control web requests. It
+    supports both Regional and CloudFront scopes.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The name of the Regex Pattern set. Must be 1-128 characters.
+    Valid characters: A-Z, a-z, 0-9, - (hyphen), and _ (underscore). |
+
+    | Scope | String | Yes | The deployment scope for the Regex Pattern set. Options:
+    'CloudFront', 'Regional', or 'Both'. |
+
+    | Description | String | No | A description for the Regex Pattern set to help
+    with identification. |
+
+    | Tags | String | No | Additional tags to associate with the resource in `key:value`
+    format, separated by commas (e.g., `Environment:Production,Team:Security`). |
+
+    | Domain Pattern | Boolean | No | If enabled (default), the action extracts the
+    domain from URL entities and wraps it in a regex pattern: `^(http)(s|)(://)(domain.com).*`.
+    |
+
+    | IP Pattern | Boolean | No | If enabled (default), the action wraps IP address
+    entities in a regex pattern: `^(http)(s|)(://)(ip_address).*`. |
+
+
+    ### Additional Notes
+
+    - **AWS Quotas**: A single Regex Pattern Set can contain a maximum of 10 patterns.
+    If more than 10 valid entities are provided, the action will fail with a limit
+    exceeded error.
+
+    - **Account Limits**: AWS WAF allows a maximum of 10 Regex Pattern Sets per account/region.
+
+    - **Scope**: If 'Both' is selected, the action will attempt to create the set
+    in both the Regional and CloudFront environments.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts AWS credentials from the integration configuration
+    and retrieves action parameters including the set name, scope, and pattern preferences.
+
+    2. **Entity Processing**: Iterates through the target entities in the current
+    context, filtering for supported types (ADDRESS and DestinationURL).
+
+    3. **Pattern Generation**: For each valid entity, it generates a regex string.
+    If 'Domain Pattern' or 'IP Pattern' is enabled, it applies a protocol-wrapping
+    template; otherwise, it uses the raw entity identifier.
+
+    4. **Validation**: Checks if the number of generated patterns exceeds the AWS
+    limit of 10.
+
+    5. **AWS Interaction**: Connects to the AWS WAF service and creates the Regex
+    Pattern Set in the specified scope(s) (Regional, CloudFront, or both).
+
+    6. **Reporting**: Updates the action results with the names of the successfully
+    created sets and provides a summary message to the user.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new Regex Pattern Set resource in the user's AWS WAF configuration
+      (Regional, CloudFront, or both).
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Rule Group:
+  ai_description: >-
+    ### General Description
+
+    Creates a new Rule Group in AWS WAF. Rule groups are reusable collections of rules
+    that you can use in Web ACLs to inspect and control web requests. This action
+    allows for the creation of rule groups in Regional scopes (ALB, API Gateway, AppSync),
+    CloudFront scopes, or both simultaneously.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The name of the rule group (1-128 characters). Valid characters:
+    A-Z, a-z, 0-9, - (hyphen), and _ (underscore). |
+
+    | Scope | Enum | Yes | The scope for the rule group: 'CloudFront', 'Regional',
+    or 'Both'. |
+
+    | Capacity | String | Yes | The web ACL capacity units (WCUs) required for this
+    rule group (Maximum 1500). This value is immutable after creation. |
+
+    | Enable Sampled Requests | Boolean | Yes | If enabled, AWS WAF stores a sampling
+    of web requests that match the rules. |
+
+    | Enable CloudWatch Metrics | Boolean | Yes | If enabled, the resource sends metrics
+    to CloudWatch. |
+
+    | CloudWatch Metric Name | String | Yes | The name of the CloudWatch metric (1-128
+    characters). |
+
+    | Description | String | No | A description for the Rule Group to help with identification.
+    |
+
+    | Tags | String | No | Additional tags to associate with the Rule Group. Format:
+    `key_1:value_1,key_2:value_2`. |
+
+
+    ### Additional Notes
+
+    - The **Capacity** parameter is critical as it cannot be changed once the rule
+    group is created.
+
+    - If **Both** is selected in the Scope parameter, the action will attempt to create
+    the rule group in both the Regional and CloudFront environments.
+
+    - The action handles cases where a rule group with the same name already exists,
+    reporting them as successful/duplicate rather than failing the entire action.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts AWS credentials and action parameters from the
+    environment.
+
+    2. **Connectivity Check**: Validates the provided AWS credentials by attempting
+    to list existing IP sets.
+
+    3. **Scope Resolution**: Determines the target AWS scopes (Regional, CloudFront,
+    or both) based on user input.
+
+    4. **Resource Creation**: Iterates through the resolved scopes and calls the AWS
+    WAF API to create the Rule Group with the specified capacity, visibility configurations,
+    and optional tags/description.
+
+    5. **Error Handling**: Specifically catches `AWSWAFDuplicateItemException` to
+    identify existing groups and logs other API errors.
+
+    6. **Result Compilation**: Aggregates the status of creation across all targeted
+    scopes and returns a JSON summary of the results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new Rule Group resource in the AWS WAF service for the specified scopes
+      (Regional and/or CloudFront).
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Web ACL:
+  ai_description: >-
+    ### General Description
+
+    Creates a Web Access Control List (Web ACL) in AWS WAF (v2). This action allows
+    users to define a collection of rules to inspect and control web requests for
+    AWS resources like CloudFront distributions or regional applications (ALB, API
+    Gateway). It supports associating the new ACL with either an existing IP Set or
+    a Rule Group and allows configuration of default actions, CloudWatch metrics,
+    and request sampling.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | The name of the Web ACL (1-128 characters). Valid characters:
+    A-Z, a-z, 0-9, hyphen (-), and underscore (_). |
+
+    | Rule Source Type | String | Yes | Specifies the type of rule source to use.
+    Options: `IP Set`, `Rule Group`. |
+
+    | Rule Source Name | String | Yes | The name of the existing IP Set or Rule Group
+    to be used as the rule source for the Web ACL. |
+
+    | Scope | String | Yes | The deployment scope. `CloudFront` (Global), `Regional`,
+    or `Both`. If `Both` is selected, the action attempts to create the ACL in both
+    environments. |
+
+    | Enable Sampled Requests | Boolean | Yes | If enabled, AWS WAF stores a sampling
+    of web requests that match the rules for analysis. |
+
+    | Enable CloudWatch Metrics | Boolean | Yes | If enabled, the Web ACL sends metrics
+    to Amazon CloudWatch. |
+
+    | CloudWatch Metric Name | String | Yes | The name for the CloudWatch metric (1-128
+    characters). |
+
+    | Default Action | String | Yes | The action to perform for requests that do not
+    match any rules. Options: `Allow`, `Block`. |
+
+    | IP Set Action | String | No | The action to take when a request matches an IP
+    Set rule. Options: `Allow`, `Block`, `Count`. Default is `Block`. |
+
+    | Rule Priority | Integer | Yes | The priority of the rule within the Web ACL.
+    Must be unique within the ACL. |
+
+    | Description | String | No | A description for the Web ACL. |
+
+    | Tags | String | No | Additional tags to add to the Web ACL in `key:value` format
+    (e.g., `Environment:Production,Dept:Security`). |
+
+
+    ### Additional Notes
+
+    - The action requires that the specified `Rule Source Name` already exists in
+    the target AWS environment/scope.
+
+    - AWS limits the number of Web ACLs to 100 per region.
+
+    - When using the `Both` scope, the action will attempt to find the rule source
+    and create the ACL in both the specified region and the `us-east-1` region (required
+    for CloudFront).
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves AWS credentials from the integration configuration
+    and ACL settings from the action parameters.
+
+    2. **Connectivity Validation**: Tests the connection to the AWS WAF service using
+    the provided credentials.
+
+    3. **Source ARN Retrieval**: For each selected scope (Regional/CloudFront), the
+    action searches for the existing IP Set or Rule Group by name to retrieve its
+    Amazon Resource Name (ARN).
+
+    4. **Web ACL Creation**: Invokes the AWS WAFv2 `create_web_acl` API, configuring
+    the rules, visibility settings (CloudWatch/Sampling), and default actions.
+
+    5. **Tagging**: Applies any provided metadata tags to the newly created resource.
+
+    6. **Result Aggregation**: Collects the names of successfully created ACLs and
+    reports any errors or duplicate name conflicts.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new Web Access Control List (Web ACL) resource in the user's AWS WAF
+      environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List IP Sets:
+  ai_description: >-
+    ### General Description
+
+    Lists available IP Sets in AWS WAF (v2). This action allows users to discover
+    and retrieve metadata for IP Sets configured within specific AWS scopes (CloudFront
+    or Regional). It is primarily used for visibility and auditing of existing IP-based
+    access control lists in the AWS environment.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Scope | String | Yes | Specifies the AWS scope to query. Options include `CloudFront`
+    (global), `Regional` (specific to an AWS region), or `Both`. |
+
+    | Max IP Sets To Return | Integer | No | The maximum number of IP sets to retrieve.
+    The value is constrained between 1 and 100. If not provided, it defaults to 50.
+    |
+
+
+    ### Additional Notes
+
+    - This action does not require or process any entities from the Google SecOps
+    case.
+
+    - If the `Both` scope is selected, the action will perform separate API calls
+    for both CloudFront and Regional scopes and aggregate the results.
+
+    - The action includes built-in validation to ensure the `Max IP Sets To Return`
+    parameter stays within the AWS API limits (1-100).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves AWS configuration (Access Key, Secret
+    Key, Region) and action parameters (`Scope`, `Max IP Sets To Return`).
+
+    2. **Validation**: It validates the `Max IP Sets To Return` parameter, clamping
+    it to the minimum (1) or maximum (100) if the input is out of bounds.
+
+    3. **Connection**: Establishes a connection to the AWS WAFv2 service using the
+    provided credentials.
+
+    4. **Data Retrieval**: Iterates through the requested scopes and calls the AWS
+    `list_ip_sets` API for each.
+
+    5. **Result Processing**: For each scope, it parses the raw AWS response into
+    structured data models.
+
+    6. **Output**: Generates a data table for each scope containing IP Set details
+    (Name, ID, ARN, etc.) and attaches the full results as a JSON object to the action
+    execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Regex Pattern Sets:
+  ai_description: >-
+    ### General Description: Lists available Regex Pattern Sets in AWS WAF. This action
+    allows users to discover and retrieve metadata for regex pattern sets across different
+    AWS WAF scopes, including CloudFront and Regional applications. It provides detailed
+    information such as Name, ID, Description, and ARN for each set found. ### Parameters
+    Description: | Parameter | Type | Mandatory | Description | | :--- | :--- | :---
+    | :--- | | Scope | String | Yes | Specifies the AWS WAF scope for listing: 'CloudFront',
+    'Regional', or 'Both'. | | Max Regex Pattern Sets To Return | Integer | No | Limits
+    the number of returned sets. Default is 5, maximum is 10. | ### Additional Notes:
+    - This action is a utility for discovery and does not operate on specific entities.
+    - If 'Both' is selected, the action aggregates results from both Regional and
+    CloudFront scopes. ### Flow Description: 1. Parameter Setup: Extracts AWS credentials
+    and action parameters (Scope, Max Results). 2. Validation: Ensures the result
+    limit is within the valid range (1-10). 3. AWS Connection: Connects to the AWS
+    WAF service and tests connectivity. 4. Data Retrieval: Fetches Regex Pattern Sets
+    for the specified scope(s) (Regional, CloudFront, or both). 5. Result Formatting:
+    Converts the retrieved data into JSON and CSV formats for the case. 6. Case Update:
+    Adds data tables and JSON results to the case and provides a summary message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action populates the Google SecOps case with data tables and JSON results
+      containing the retrieved AWS WAF Regex Pattern Sets.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Rule Groups:
+  ai_description: >-
+    Lists available rule groups in AWS WAF for specified scopes (CloudFront, Regional,
+    or Both). This action is useful for identifying existing security configurations
+    and rule group identifiers required for other WAF management tasks. It retrieves
+    metadata for each rule group, including its Name, ID, Description, Lock Token,
+    and ARN.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Scope | String | Yes | Specifies the scope for listing Rule Groups. Options
+    are 'CloudFront' (global), 'Regional', or 'Both'. |
+
+    | Max Rule Groups To Return | Integer | No | Specifies how many Rule Groups to
+    return. The value must be between 1 and 100. Default is 50. |
+
+
+    ### Flow
+
+    1. **Parameter Initialization:** Extracts AWS configuration (Access Key, Secret
+    Key, Region) and action parameters (`Scope`, `Max Rule Groups To Return`).
+
+    2. **Validation:** Validates that the `Max Rule Groups To Return` parameter is
+    within the allowed range of 1 to 100, adjusting to defaults if necessary.
+
+    3. **Connectivity Check:** Initializes the AWS WAF Manager and tests connectivity
+    to the AWS service using the provided credentials.
+
+    4. **Data Retrieval:** Iterates through the requested scopes (Regional and/or
+    CloudFront) and fetches the list of rule groups from AWS.
+
+    5. **Result Processing:** Formats the retrieved rule groups into data tables (one
+    for CloudFront and one for Regional) and a consolidated JSON result for downstream
+    use in the playbook.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Web ACLs:
+  ai_description: >-
+    ### General Description
+
+    The **List Web ACLs** action retrieves a list of available Web Access Control
+    Lists (ACLs) from the AWS WAF (v2) service. It allows security analysts to discover
+    and audit the web protection configurations across different AWS scopes, such
+    as CloudFront distributions or regional resources like Application Load Balancers
+    and API Gateways.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Scope** | String | Yes | Specifies the scope for listing Web ACLs. Options
+    are `CloudFront` (global), `Regional`, or `Both`. |
+
+    | **Max Web ACLs To Return** | Integer | No | The maximum number of Web ACLs to
+    retrieve. Default is 50, with a minimum of 1 and a maximum of 100. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves AWS credentials (Access Key,
+    Secret Key, Region) from the integration settings and the `Scope` and `Max Web
+    ACLs To Return` from the action parameters.
+
+    2. **Validation**: The `Max Web ACLs To Return` value is validated and clamped
+    between 1 and 100.
+
+    3. **Connectivity**: The action initializes the `AWSWAFManager` and performs a
+    connectivity test to ensure the AWS credentials are valid.
+
+    4. **API Interaction**: The action calls the AWS WAFv2 API to list Web ACLs for
+    the specified scope(s). If 'Both' is selected, it performs separate calls for
+    both CloudFront and Regional scopes.
+
+    5. **Data Parsing**: The raw API responses are parsed into structured `WebACL`
+    data models.
+
+    6. **Output Generation**: The action populates data tables (CSV format) for each
+    scope and attaches the full JSON results to the execution context.
+
+
+    ### Additional Notes
+
+    - This action is a utility/discovery task and does not operate on specific SecOps
+    entities (IPs, Hostnames, etc.).
+
+    - If no ACLs are found for a requested scope, the action will complete successfully
+    but notify the user that no results were found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    Google SecOps and the AWS WAF service. It ensures that the provided AWS credentials
+    (Access Key ID and Secret Key) and the specified region are valid and have the
+    necessary permissions to interact with the AWS WAF API. The action attempts to
+    communicate with both Regional and CloudFront WAF scopes.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not take any direct input parameters. It
+    uses the credentials and region defined in the integration's configuration settings.
+    |
+
+
+    ### Additional Notes
+
+    *   The action requires the following integration configuration parameters to
+    be set: `AWS Access Key ID`, `AWS Secret Key`, and `AWS Default Region`.
+
+    *   Connectivity is considered successful if the manager can successfully list
+    at least one IP set from either the Regional or CloudFront scope.
+
+
+    ### Flow Description
+
+    1.  **Initialization**: The action retrieves the AWS Access Key, Secret Key, and
+    Default Region from the integration configuration.
+
+    2.  **Manager Setup**: An `AWSWAFManager` instance is created, which initializes
+    boto3 clients for both the specified AWS region (Regional scope) and the `us-east-1`
+    region (required for CloudFront scope).
+
+    3.  **Connectivity Test**: The manager executes the `test_connectivity` method,
+    which calls the `list_ip_sets` API for both scopes with a limit of 1.
+
+    4.  **Validation**: The action validates the HTTP response status codes from AWS.
+    If at least one scope responds successfully, the connectivity is verified.
+
+    5.  **Completion**: The action returns a success message if connectivity is established;
+    otherwise, it catches exceptions and reports a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Entity From Regex Pattern Set:
+  ai_description: >-
+    Removes regex patterns derived from entities (IP Addresses and URLs) from specified
+    AWS WAF Regex Pattern Sets. This action is used to manage access control lists
+    by dynamically removing patterns that were previously added for blocking or filtering
+    purposes.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves AWS credentials and action parameters, including
+    the target Regex Pattern Set names and the desired scope (Regional, CloudFront,
+    or Both).
+
+    2. **Connectivity**: Validates the AWS credentials by testing connectivity to
+    the AWS WAF service.
+
+    3. **Discovery**: Searches for the specified Regex Pattern Sets within the selected
+    scopes to retrieve their unique IDs and current configurations.
+
+    4. **Pattern Generation**: Processes target entities (ADDRESS and URL). If 'Domain
+    Pattern' or 'IP Pattern' is enabled, it wraps the entity identifier in a protocol-specific
+    regex template (e.g., `^(http|https)(:\/\/)(\Q<identifier>\E).*`). Otherwise,
+    it uses the raw identifier.
+
+    5. **Mutation**: For each identified Regex Pattern Set, the action retrieves the
+    current list of patterns, identifies which target patterns exist, and updates
+    the set on AWS WAF by submitting a new list that excludes those patterns.
+
+    6. **Reporting**: Provides a detailed summary of which patterns were successfully
+    removed, which were not found in the sets, and any failures encountered.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Regex Pattern Set Names | String | Yes | A comma-separated list of the names
+    of the Regex Pattern Sets in AWS WAF from which patterns should be removed. |
+
+    | Scope | String | Yes | The scope of the Regex Pattern Sets. Options: 'CloudFront',
+    'Regional', or 'Both'. |
+
+    | Domain Pattern | Boolean | No | If enabled (default: True), the action extracts
+    the domain from URL entities and creates a regex pattern matching both HTTP and
+    HTTPS protocols for that domain. |
+
+    | IP Pattern | Boolean | No | If enabled (default: True), the action creates a
+    regex pattern matching both HTTP and HTTPS protocols for IP Address entities.
+    |
+
+
+    ### Additional Notes
+
+    - The action requires the exact names of the Regex Pattern Sets as they appear
+    in the AWS Console.
+
+    - If 'Both' is selected for Scope, the action will attempt to find and update
+    sets in both the Regional and CloudFront environments.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of AWS WAF Regex Pattern Sets by removing specific
+      regular expression strings from their 'RegularExpressionList'.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove IP From IP Set:
+  ai_description: >-
+    ### General Description
+
+    Removes IP address entities from specified AWS WAF IP Sets. This action allows
+    security teams to programmatically manage IP-based access control by removing
+    specific addresses from blocklists or allowlists within AWS WAF.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | IP Set Names | String | Yes | A comma-separated list of the names of the IP
+    sets from which the IP addresses should be removed. |
+
+    | Scope | String | Yes | Defines the scope of the IP sets. Options are `CloudFront`,
+    `Regional`, or `Both`. If `Both` is selected, the action attempts to find and
+    update IP sets in both scopes. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts AWS configuration and action parameters.
+
+    2. **Connectivity Check**: Validates the connection to the AWS WAF service.
+
+    3. **IP Set Retrieval**: Searches for the specified IP sets within the selected
+    scope(s).
+
+    4. **Entity Filtering**: Identifies all `ADDRESS` entities provided in the action
+    context.
+
+    5. **Version Validation**: For each IP set, it verifies that the entity's IP version
+    (IPv4/IPv6) matches the IP set's configuration.
+
+    6. **Removal Logic**: Fetches the current list of addresses for each IP set, identifies
+    which target entities are present, and performs an update to the IP set in AWS
+    WAF with those entities removed.
+
+    7. **Reporting**: Provides a summary of which IPs were successfully removed, which
+    were not found, and any failures encountered.
+
+
+    ### Additional Notes
+
+    - The action uses optimistic locking (LockToken) to ensure data consistency during
+    updates.
+
+    - IP addresses are automatically masked (e.g., /32 for IPv4) to match AWS WAF
+    requirements.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes IP addresses from AWS WAF IP Sets by updating the address list of the
+      specified IP Set resources.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Pattern From Regex Pattern Set:
+  ai_description: >-
+    Removes specific regex patterns from one or more Regex Pattern Sets in AWS WAF.
+    This action is used to manage WAF configurations by programmatically cleaning
+    up or updating regex-based detection rules across different AWS scopes (Regional
+    or CloudFront).
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Regex Pattern Set Names | String | Yes | A comma-separated list of the names
+    of the Regex Pattern Sets from which patterns should be removed. |
+
+    | Patterns | String | Yes | A comma-separated list of the specific regex strings
+    to be removed from the identified sets. |
+
+    | Scope | String | Yes | Defines the AWS WAF scope. Options are 'CloudFront',
+    'Regional', or 'Both'. If 'Both' is selected, the action attempts to find and
+    update sets in both environments. |
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action extracts AWS credentials and parameters, then
+    initializes the AWS WAF manager.
+
+    2. **Discovery**: It lists Regex Pattern Sets in the specified scope(s) and filters
+    them to find those matching the provided names.
+
+    3. **Validation**: If no matching sets are found in the specified scope, the action
+    terminates with an error.
+
+    4. **Pattern Removal**: For each identified set, the action:
+        * Retrieves the current list of patterns and the required lock token for optimistic
+    locking.
+        * Identifies which of the requested patterns actually exist within the set.
+        * Constructs a new pattern list excluding the identified patterns.
+    5. **Update**: If patterns to remove are found, it calls the AWS WAF API to update
+    the Regex Pattern Set with the new list.
+
+    6. **Reporting**: The action aggregates results, detailing which patterns were
+    successfully removed, which were not found, and any failures encountered during
+    the process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of Regex Pattern Sets in AWS WAF by removing specified
+      regex strings.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Rule From Rule Group:
+  ai_description: >-
+    Removes a specific rule from one or more AWS WAF Rule Groups. This action is used
+    to manage WAF configurations by programmatically deleting rules from existing
+    groups across different scopes (Regional or CloudFront). It identifies the target
+    rule groups, retrieves their current rule sets, filters out the specified rule,
+    and updates the group configuration in AWS.
+
+
+    ### Parameters
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Rule Group Names | A comma-separated list of Rule Group names where the rule
+    should be removed. Example: `group_1,group_2`. | String | Yes |
+
+    | Scope | The deployment scope of the rule group. Options are `CloudFront`, `Regional`,
+    or `Both`. | String | Yes |
+
+    | Rule Name | The exact name of the rule to be deleted from the specified rule
+    groups. | String | Yes |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with AWS WAF using provided credentials and
+    parses the input parameters.
+
+    2. **Discovery**: Lists rule groups in the specified scopes (Regional, CloudFront,
+    or both) and filters them to find those matching the provided names.
+
+    3. **Retrieval**: For each identified rule group, the action fetches the current
+    configuration, including the list of rules and the required lock token for updates.
+
+    4. **Modification**: It iterates through the rules in the group and creates a
+    new list that excludes the rule matching the `Rule Name` parameter.
+
+    5. **Update**: If the rule was found and removed from the list, the action calls
+    the AWS WAF API to update the rule group with the modified rule set.
+
+    6. **Reporting**: Aggregates the results and provides a summary of which rule
+    groups were successfully updated, which were not found, and where the specific
+    rule was missing.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of AWS WAF Rule Groups by removing a specified rule
+      from their rule lists.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Rule From Web ACL:
+  ai_description: >-
+    ### General Description
+
+    This action removes a specific rule from one or more Web Access Control Lists
+    (Web ACLs) in AWS WAF. It is used to programmatically manage firewall rules by
+    targeting specific ACL names across different AWS scopes (CloudFront or Regional).
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Web ACL Names | String | Yes | A comma-separated list of the names of the Web
+    ACLs from which the rule should be removed. |
+
+    | Scope | String | Yes | The deployment scope of the Web ACLs. Options are 'CloudFront',
+    'Regional', or 'Both'. Default is 'CloudFront'. |
+
+    | Rule Name | String | Yes | The exact name of the rule that should be deleted
+    from the specified Web ACLs. |
+
+
+    ### Additional Notes
+
+    - The action uses optimistic locking (via lock tokens) to ensure that the Web
+    ACL configuration hasn't changed between the time it was retrieved and the time
+    the update is submitted.
+
+    - If 'Both' is selected for the Scope, the action will attempt to find and modify
+    Web ACLs in both the Regional and CloudFront environments.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the AWS WAF manager using provided
+    credentials and parses the input parameters, including the list of Web ACL names
+    and the target scopes.
+
+    2. **Discovery**: It connects to the AWS WAF service and retrieves a list of existing
+    Web ACLs within the specified scopes that match the provided names.
+
+    3. **Rule Removal Logic**: For each identified Web ACL, the action:
+        - Fetches the current rule set and a lock token.
+        - Filters the rule list to exclude the rule matching the 'Rule Name' parameter.
+        - Compares the original rule list with the filtered list to verify if the
+    rule existed.
+    4. **Execution**: If the rule was found, the action sends an update request to
+    AWS WAF to save the Web ACL with the modified rule list.
+
+    5. **Reporting**: The action aggregates the results, identifying which Web ACLs
+    were successfully updated, which did not contain the specified rule, and any errors
+    that occurred during the process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action modifies the configuration of AWS WAF Web ACLs by removing a specified
+      rule from their active rule sets.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

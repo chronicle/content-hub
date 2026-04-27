@@ -1,0 +1,667 @@
+Add IP To IP List Asset:
+  ai_description: >-
+    Adds IP Address entities to a specific static IP list asset in Tenable Security
+    Center (Tenable.sc). This action allows for the dynamic management of asset groups
+    by appending new IP addresses to existing lists, which can be used for targeted
+    scanning or reporting within the Tenable platform.
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Asset Name | String | Yes | The exact name of the static IP list asset in Tenable.sc
+    where the IP addresses should be added. |
+
+
+    ### Flow Description
+
+    1. **Entity Filtering:** The action identifies all entities of type `ADDRESS`
+    (IP addresses) within the current scope.
+
+    2. **Asset Identification:** It queries Tenable.sc to find the unique ID associated
+    with the provided `Asset Name`.
+
+    3. **Data Retrieval:** It fetches the current list of IP addresses already defined
+    in the target asset to ensure existing data is preserved.
+
+    4. **List Merging:** The action combines the existing IP list with the new IP
+    addresses from the SecOps entities into a comma-separated string.
+
+    5. **External Mutation:** It performs a PATCH request to the Tenable.sc API to
+    update the asset's `definedIPs` field with the new combined list.
+
+    6. **Result Reporting:** The action retrieves the updated asset details and returns
+    them as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the 'definedIPs' field of a static asset in Tenable.sc by appending
+      new IP addresses to the existing list via a PATCH request to the /rest/asset/{asset_id}
+      endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create IP List Asset:
+  ai_description: >-
+    ### General Description
+
+    Creates a static IP list asset in Tenable.sc using the IP address entities provided
+    in the action scope. This action allows security teams to dynamically group identified
+    IP addresses into a managed asset list within Tenable for further scanning or
+    reporting.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Name | String | Yes | Specify the name for the new IP list asset in Tenable.sc.
+    |
+
+    | Description | String | No | Specify a description for the IP list asset to provide
+    context. |
+
+    | Tag | String | No | Specify a tag to be associated with the IP list asset for
+    organizational purposes. |
+
+
+    ### Additional Notes
+
+    * The action requires at least one entity of type **ADDRESS** to be present in
+    the scope to execute successfully.
+
+    * The asset created is of type 'static', meaning the IP list is fixed at the time
+    of creation based on the entities processed.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves the Tenable.sc connection details (Server
+    Address, Credentials, SSL settings) and action parameters (Name, Description,
+    Tag).
+
+    2. **Entity Filtering:** Filters the target entities to identify all IP Address
+    (**ADDRESS**) entities.
+
+    3. **Validation:** Checks if any IP entities were found. If none are present,
+    the action terminates with an informative message.
+
+    4. **API Interaction:** Initializes the TenableSecurityCenterManager and calls
+    the `create_ip_list_asset` method, which sends a POST request to the `/rest/asset`
+    endpoint with the joined IP identifiers.
+
+    5. **Result Processing:** Captures the API response containing the new asset's
+    metadata, adds it to the action's JSON results, and reports a successful execution
+    status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new static IP list asset in the Tenable.sc platform via a POST request
+      to the /rest/asset endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich IP:
+  ai_description: "Enriches IP Address entities using Tenable Security Center by retrieving\
+    \ detailed device information from a specified repository. \n\n### Parameters\n\
+    | Parameter Name | Type | Mandatory | Description |\n| :--- | :--- | :--- | :---\
+    \ |\n| Repository Name | String | Yes | The name of the repository in Tenable\
+    \ Security Center where the IP information should be retrieved from. |\n\n###\
+    \ Flow Description\n1. **Authentication**: Initializes the Tenable Security Center\
+    \ manager using provided credentials and server address.\n2. **Repository Resolution**:\
+    \ Retrieves the internal ID for the provided 'Repository Name' via the Tenable\
+    \ API.\n3. **Entity Processing**: Iterates through all IP Address entities in\
+    \ the current context.\n4. **Data Retrieval**: For each IP, it performs a GET\
+    \ request to the Tenable Security Center to fetch device-specific information\
+    \ (e.g., MAC address, severity counts, OS, last scan time).\n5. **Internal Enrichment**:\
+    \ Updates the entity's 'additional_properties' with the flattened Tenable data,\
+    \ prefixes keys with 'Tenable', and marks the entity as enriched.\n6. **Finalization**:\
+    \ Updates the entities in the Google SecOps platform and returns a JSON result\
+    \ containing the raw data for all processed entities."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with Tenable device information and marks
+      the entities as enriched.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Related Assets:
+  ai_description: >-
+    ### General Description
+
+    The **Get Related Assets** action retrieves a list of assets associated with a
+    specific IP address from a designated repository in Tenable Security Center. This
+    action is primarily used for enrichment to understand the blast radius or context
+    of an IP within the managed infrastructure by identifying which defined assets
+    intersect with the target entity.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Repository Name** | String | Yes | The name of the repository in Tenable Security
+    Center to query for asset intersections. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Tenable Security Center
+    API using the integration's configuration (Server Address, Credentials, and SSL
+    settings).
+
+    2. **Repository Resolution**: It resolves the provided **Repository Name** to
+    its internal internal ID by querying the Tenable repository list.
+
+    3. **Entity Filtering**: The action identifies all `ADDRESS` entities within the
+    current Google SecOps scope.
+
+    4. **Data Retrieval**: For each identified IP address, it queries the Tenable
+    API (`/rest/repository/{repo_id}/assetIntersections`) to find related assets.
+
+    5. **Data Processing**: The retrieved asset list is converted into a CSV-formatted
+    data table for each entity.
+
+    6. **Internal Update**: The action attaches the data table to the entity, updates
+    the entity's context within Google SecOps, and provides the raw JSON results for
+    further playbook logic.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entities and adds data tables containing related asset information
+      to the entity's context within Google SecOps.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Report:
+  ai_description: "### General Description\nRetrieves report metadata and content\
+    \ details from Tenable Security Center using either a specific Report ID or a\
+    \ Report Name. This action is primarily used for auditing, compliance verification,\
+    \ or gathering historical vulnerability data associated with a specific report\
+    \ generated within the Tenable platform.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Report\
+    \ ID | String | No | The unique numerical identifier for the report. This can\
+    \ typically be found in the report's URL within the Tenable SC interface. |\n\
+    | Report Name | String | No | The display name of the report as it appears in\
+    \ the Tenable SC GUI. |\n\n### Additional Notes\n* **Requirement:** While both\
+    \ parameters are marked as optional in the configuration, the action logic requires\
+    \ that **either** `Report ID` or `Report Name` must be provided. If both are missing,\
+    \ the action will fail.\n* **Priority:** If both parameters are provided, the\
+    \ action prioritizes fetching by `Report ID`.\n\n### Flow Description\n1. **Authentication:**\
+    \ Establishes a session with the Tenable Security Center using provided credentials\
+    \ (API keys or Username/Password).\n2. **Parameter Validation:** Checks if a `Report\
+    \ ID` or `Report Name` has been provided by the user.\n3. **Data Retrieval:**\
+    \ \n    * If a `Report ID` is provided, it queries the `/rest/report` endpoint\
+    \ with the ID parameter.\n    * If only a `Report Name` is provided, it queries\
+    \ the `/rest/report` endpoint with the name parameter.\n4. **Result Processing:**\
+    \ \n    * If a report is found, the raw JSON data is added to the action's execution\
+    \ results.\n    * If no report matches the criteria, the action completes with\
+    \ a 'false' result value."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Scan Results:
+  ai_description: >-
+    ### General Description
+
+    The **Get Scan Results** action retrieves the findings of a vulnerability scan
+    from Tenable Security Center. It is designed to be used after a scan has been
+    initiated, providing a mechanism to wait for the scan's completion and then ingest
+    the resulting vulnerability data and severity summaries into Google SecOps.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Scan Result ID** | String | Yes | The unique identifier of the scan result
+    to be retrieved from Tenable Security Center. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Tenable Security Center
+    API using the configured credentials (either API keys or username/password).
+
+    2. **Completion Check**: It enters a polling loop, checking the status of the
+    scan associated with the provided **Scan Result ID** every 2 seconds until the
+    scan is no longer marked as 'running'.
+
+    3. **Data Fetching**: Once the scan is complete, the action performs two primary
+    data requests: one for the detailed vulnerability results and another for a summary
+    of findings by severity level.
+
+    4. **Data Transformation**: The retrieved JSON data is processed and converted
+    into CSV format for presentation.
+
+    5. **Output Generation**: The action populates the SOAR case with two data tables
+    ('Tenable Scan Results' and 'Tenable Severity Summary') and attaches the full
+    raw data to the action's JSON result for use in downstream playbooks.
+
+
+    ### Additional Notes
+
+    - This is a synchronous, blocking action. It will remain in a 'running' state
+    within the playbook until the external Tenable scan finishes.
+
+    - If the scan result contains no data, the action will complete with a 'false'
+    result value.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action populates the SOAR case with two data tables ('Tenable Scan Results'
+      and 'Tenable Severity Summary') and updates the action's JSON result with the
+      fetched scan data.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Vulnerabilities for IP:
+  ai_description: "### General Description\nThe **Get Vulnerabilities for IP** action\
+    \ retrieves comprehensive vulnerability data and severity summaries for IP Address\
+    \ entities from Tenable Security Center. It enables security analysts to assess\
+    \ the risk profile of network assets by identifying known vulnerabilities, their\
+    \ severity levels, and associated plugin details. The action enriches entities\
+    \ with summary counts and provides a detailed breakdown in a tabular format.\n\
+    \n### Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
+    \ | :--- | :--- |\n| N/A | N/A | N/A | This action does not require any input\
+    \ parameters. |\n\n### Additional Notes\n- The action specifically targets entities\
+    \ of type **ADDRESS**.\n- If a vulnerability with a **High** severity is found,\
+    \ the entity is automatically marked as suspicious within Google SecOps.\n\n###\
+    \ Flow Description\n1. **Authentication**: Establishes a session with Tenable\
+    \ Security Center using the configured credentials (API keys or Username/Password).\n\
+    2. **Entity Filtering**: Iterates through the target entities and selects those\
+    \ of type `ADDRESS`.\n3. **Data Retrieval**: For each IP address, it performs\
+    \ a POST request to the Tenable `/rest/analysis` endpoint to fetch cumulative\
+    \ vulnerability data.\n4. **Severity Analysis**: Processes the retrieved vulnerabilities\
+    \ to calculate a summary count for each severity level (Info, Low, Medium, High,\
+    \ Critical).\n5. **Risk Marking**: If any vulnerability is found with a severity\
+    \ of 'High', the entity's `is_suspicious` attribute is set to `True`.\n6. **Enrichment**:\
+    \ \n    - Updates the entity's additional properties with the severity counts\
+    \ (prefixed with 'Tenable').\n    - Constructs a CSV data table containing detailed\
+    \ vulnerability information (Plugin ID, Name, Severity, Port, etc.) and attaches\
+    \ it to the entity result.\n7. **Internal Update**: Commits the changes to the\
+    \ entities (enrichment status, suspicious flag, and additional properties) within\
+    \ Google SecOps."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes including 'is_suspicious', 'is_enriched', and populates
+      'additional_properties' with vulnerability severity counts. It also attaches
+      a data table to the entity results.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between Google SecOps and a Tenable Security\
+    \ Center instance. It ensures that the provided configuration parameters, such\
+    \ as the server address and authentication credentials, are correct and that the\
+    \ service is reachable.\n\n### Parameters\nThere are no input parameters for this\
+    \ action. It relies entirely on the integration's global configuration.\n\n###\
+    \ Additional Notes\n* The action supports two authentication methods: **Access\
+    \ Key/Secret Key** or **Username/Password**. \n* It validates the SSL certificate\
+    \ based on the 'Use SSL' configuration setting.\n* As per standard SOAR practices,\
+    \ Ping actions are used for health checks and do not process alert entities.\n\
+    \n### Flow Description\n1. **Configuration Retrieval:** The action fetches the\
+    \ 'Server Address', 'Username', 'Password', 'Access Key', 'Secret Key', and 'Use\
+    \ SSL' settings from the integration configuration.\n2. **Manager Initialization:**\
+    \ It initializes the `TenableSecurityCenterManager`, which establishes a session\
+    \ and handles the authentication logic (API keys or session tokens).\n3. **Connectivity\
+    \ Test:** The manager executes a GET request to the `/rest/currentUser` endpoint\
+    \ of the Tenable Security Center API.\n4. **Validation:** The action validates\
+    \ the API response. If the status code is successful and the credentials are valid,\
+    \ it returns a success message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Run Asset Scan:
+  ai_description: >-
+    ### General Description
+
+    This action executes an asset scan in Tenable.sc (Security Center). It allows
+    users to trigger a scan for a specific asset using a predefined policy and repository.
+    The action first resolves the asset name to an internal Tenable ID and then initiates
+    the scan immediately.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Scan Name** | String | Yes | The name to assign to the newly created scan
+    job. |
+
+    | **Asset Name** | String | Yes | The name of the asset (as defined in Tenable.sc)
+    that should be scanned. |
+
+    | **Policy ID** | Integer | Yes | The unique identifier of the scan policy to
+    be used for the operation. |
+
+    | **Repository ID** | Integer | Yes | The unique identifier of the repository
+    where the scan results will be stored. |
+
+    | **Description** | String | No | An optional description to provide context for
+    the scan job. |
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it relies entirely on the provided parameters
+    to identify the target asset.
+
+    - The scan is scheduled to run immediately (`type: "now"`).
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Tenable.sc server using provided credentials
+    (API keys or Username/Password).
+
+    2. **Asset Resolution**: Queries the Tenable.sc API to find the internal `asset_id`
+    corresponding to the provided `Asset Name`.
+
+    3. **Scan Execution**: Sends a POST request to the `/rest/scan` endpoint with
+    the scan configuration, including the resolved `asset_id`, `Policy ID`, and `Repository
+    ID`.
+
+    4. **Result Handling**: Captures the scan creation response (including the scan
+    ID) and attaches it to the action results in Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action creates and initiates a new scan job in Tenable.sc, which changes
+      the state of the external system by adding a new task to the scan queue.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Scan Ips:
+  ai_description: >-
+    ### General Description
+
+    Initiates a vulnerability scan for specific IP address entities within Tenable
+    Security Center. This action allows security teams to trigger on-demand scans
+    for identified assets directly from a case, using predefined policies. It creates
+    a new scan configuration in the external system and immediately launches it.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Scan Name | String | Yes | The name to be assigned to the scan created in Tenable
+    Security Center. |
+
+    | Policy Name | String | Yes | The name of the existing scan policy in Tenable
+    Security Center to use for this scan (e.g., 'Basic Network Scan'). |
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action iterates through the target entities and identifies
+    all entities of type `ADDRESS`.
+
+    2. **Policy Resolution**: It communicates with Tenable Security Center to retrieve
+    the list of available policies and resolves the provided `Policy Name` to its
+    internal unique identifier.
+
+    3. **Scan Creation**: A new scan object is created in Tenable Security Center
+    using the specified `Scan Name`, the resolved policy ID, and the list of collected
+    IP addresses.
+
+    4. **Scan Launch**: The action triggers the immediate execution of the newly created
+    scan.
+
+    5. **Result Handling**: The action returns the `scan_result_id` as the result
+    value, which can be used for tracking the scan's status in subsequent steps.
+
+
+    ### Additional Notes
+
+    This action is asynchronous regarding the scan results; it initiates the scan
+    and provides the ID but does not wait for the vulnerability analysis to complete.
+    Either a username/password or an access_key/secret_key pair must be configured
+    in the integration settings for the action to authenticate successfully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new scan configuration and initiates a scan execution task within
+      the Tenable Security Center platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

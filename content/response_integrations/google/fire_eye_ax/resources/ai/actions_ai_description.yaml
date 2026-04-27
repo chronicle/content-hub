@@ -1,0 +1,343 @@
+Get Appliance Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive configuration and status information for a FireEye AX
+    appliance. This action is used to gather technical details about the appliance's
+    sensors, operating system versions, available VM profiles, and installed applications.
+    It serves as a diagnostic or environmental discovery tool within a workflow.
+
+
+    ### Parameters
+
+    There are no action-specific parameters for this action. It relies entirely on
+    the integration's global configuration (API Root, Username, Password, and SSL
+    verification).
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action first authenticates with the FireEye AX API
+    using the provided credentials to obtain a security token.
+
+    2. **Data Retrieval**: It sends a GET request to the appliance configuration endpoint
+    (`wsapis/v2.0.0/config`).
+
+    3. **Processing**: The response, containing details such as sensor IDs, OS product
+    releases, and profile definitions (e.g., Windows/CentOS versions and supported
+    applications), is captured.
+
+    4. **Output**: The retrieved data is attached to the action result as a JSON object
+    for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    This action does not require any input entities and is typically used to verify
+    the connectivity and capabilities of the FireEye AX instance before performing
+    analysis tasks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a utility designed to verify the connectivity between the
+    Google SecOps platform and a FireEye AX instance. It ensures that the provided
+    credentials and API root URL are correct and that the network path is open and
+    responsive.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the FireEye AX API instance. |
+
+    | Username | String | Yes | The username used to authenticate with the FireEye
+    AX server. |
+
+    | Password | String | Yes | The password used to authenticate with the FireEye
+    AX server. |
+
+    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
+    of the FireEye AX server. |
+
+
+    ### Additional Notes
+
+    This action does not process any entities and is typically used during the initial
+    setup of the integration or for troubleshooting connection issues. Note that the
+    parameters are extracted from the integration's configuration settings rather
+    than being passed as action-specific inputs.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the connection details (API
+    Root, Username, Password, and SSL verification preference) from the integration's
+    global configuration.
+
+    2. **Manager Initialization**: It initializes the `FireEyeAXManager`, which triggers
+    an authentication flow to obtain a security token (`X-FeApi-Token`) via the `/auth/login`
+    endpoint.
+
+    3. **Connectivity Test**: It performs a GET request to the configuration endpoint
+    (`/config`) to verify that the session is valid and the server is responsive.
+
+    4. **Result Reporting**: If the request is successful, it returns a completion
+    state. If any step fails (authentication or the ping request), it catches the
+    exception and reports a failure state.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit File:
+  ai_description: >-
+    Submits one or more files to FireEye AX for automated malware analysis. This action
+    operates asynchronously, meaning it uploads the files and then periodically polls
+    the FireEye AX appliance until the analysis is complete or a timeout is reached.
+    Users can specify the virtual machine profile, application ID, and analysis type
+    (Live or Sandbox) to customize the execution environment. The action retrieves
+    detailed analysis results, including maliciousness status, severity, network activity
+    (C&C services), process executions, and registry changes. Results are returned
+    as JSON, and the action can optionally generate detailed case insights for each
+    analyzed file.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **File Paths** | String | Yes | A comma-separated list of absolute file paths
+    on the local system to be submitted for analysis. |
+
+    | **VM Profile** | String | Yes | The specific virtual machine profile (OS/Environment)
+    to use for the analysis. |
+
+    | **Application ID** | String | No | The ID of the application to be used during
+    analysis. If omitted, FireEye AX selects the application automatically. |
+
+    | **Priority** | String | No | Sets the submission priority. Options are 'Normal'
+    (bottom of queue) or 'Urgent' (top of queue). Default is 'Normal'. |
+
+    | **Force Rescan** | Boolean | No | If true, forces FireEye AX to rescan the file
+    even if it has been analyzed previously. Default is false. |
+
+    | **Analysis Type** | String | No | Determines the analysis environment: 'Live'
+    (MVX engine) or 'Sandbox' (closed environment). Default is 'Live'. |
+
+    | **Create Insight** | Boolean | Yes | If true, the action will create a Google
+    SecOps case insight for each successfully analyzed file. |
+
+
+    ### Additional Notes
+
+    - This action is **Asynchronous**. It may take several minutes to complete depending
+    on the file size and queue depth. Ensure the script timeout in the IDE is configured
+    appropriately.
+
+    - The action requires the files to be accessible at the provided absolute paths
+    on the machine where the Google SecOps runner is executing.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts configuration parameters and validates the provided
+    file paths.
+
+    2. **Submission**: Uploads each file to the FireEye AX appliance using the specified
+    VM profile and analysis settings.
+
+    3. **Polling (Async)**: Enters an asynchronous loop, checking the status of each
+    submission ID until the analysis is finished.
+
+    4. **Data Retrieval**: Once analysis is complete, it fetches the 'extended' info
+    level report for each file.
+
+    5. **Internal Updates**: If 'Create Insight' is enabled, it generates formatted
+    insights for the case.
+
+    6. **Completion**: Returns the full analysis report as JSON and provides a summary
+    message of successful and failed submissions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits files to the FireEye AX appliance, which creates new analysis jobs/submissions
+      within the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates case insights within Google SecOps to display the results of the malware
+      analysis if the 'Create Insight' parameter is enabled.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit URL:
+  ai_description: >-
+    Submits URL entities to FireEye AX for automated malware analysis. This action
+    allows security analysts to perform deep inspection of suspicious URLs using FireEye's
+    Multi-Vector Virtual Execution (MVX) engine. It supports both 'Live' and 'Sandbox'
+    analysis modes and provides options to specify virtual machine profiles and application
+    environments for the analysis. The action operates asynchronously, polling FireEye
+    AX until the analysis is complete, at which point it retrieves a detailed report
+    including maliciousness status, severity, and technical artifacts like process
+    changes and network connections.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | VM Profile | String | Yes | The specific virtual machine profile (OS/Environment)
+    to use for the analysis. Available profiles can be found using the 'Get Appliance
+    Details' action. |
+
+    | Application ID | String | No | The ID of the application to be used during analysis.
+    If omitted, FireEye AX selects the appropriate application automatically. |
+
+    | Priority | Enum | No | Sets the submission priority. 'Normal' (default) places
+    the job at the end of the queue, while 'Urgent' moves it to the front. |
+
+    | Force Rescan | Boolean | No | If true, forces FireEye AX to perform a new analysis
+    even if the URL has been analyzed previously. |
+
+    | Analysis Type | Enum | No | Determines the analysis environment: 'Live' (MVX
+    engine) or 'Sandbox' (closed environment). Default is 'Live'. |
+
+    | Create Insight | Boolean | Yes | If true, generates a detailed Google SecOps
+    insight containing the analysis summary for the entity. |
+
+
+    ### Additional Notes
+
+    - This is an **asynchronous** action. It will submit the URL and then enter a
+    polling state. Ensure the script timeout in the IDE is sufficient for sandbox
+    analysis (default is 300 seconds).
+
+    - If the action times out before analysis is complete, it will raise an exception
+    listing the pending entities.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Filters the input entities to identify supported URL types.
+
+    2. **Submission**: For each URL, it sends a POST request to FireEye AX to create
+    a new analysis submission using the provided VM profile and settings.
+
+    3. **Polling**: The action enters an asynchronous loop, checking the status of
+    each submission ID until the status is 'Submission Done'.
+
+    4. **Data Retrieval**: Once finished, it fetches the extended analysis results,
+    including severity, maliciousness, and counts of OS changes (processes, registry,
+    files) and C&C services.
+
+    5. **Internal Updates**: Updates the entities with enrichment data, attaches a
+    results table, and creates a case insight if configured.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Submitting a URL for analysis creates a new submission record and triggers a
+      resource-intensive analysis job within the FireEye AX appliance.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity enrichment attributes with analysis results and creates case
+      insights to summarize the findings.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

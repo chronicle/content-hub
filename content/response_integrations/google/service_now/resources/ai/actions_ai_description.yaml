@@ -1,0 +1,1871 @@
+Add Attachment:
+  ai_description: >-
+    ### General Description
+
+    The **Add Attachment** action allows users to upload one or more files from the
+    local environment to a specific record within a ServiceNow table. This is useful
+    for attaching evidence, logs, or reports directly to ServiceNow incidents, change
+    requests, or other table-based records.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Table Name** | String | Yes | The name of the ServiceNow table where the target
+    record is located (e.g., 'incident', 'change_request'). |
+
+    | **Record Sys ID** | String | Yes | The unique system identifier (sys_id) of
+    the record to which the files will be attached. |
+
+    | **File Path** | String | Yes | A comma-separated list of absolute file paths
+    on the local system that need to be uploaded. |
+
+    | **Mode** | String | No | Defines the upload behavior. 'Add New Attachment' (default)
+    adds the file regardless of existing names. 'Overwrite Existing Attachment' will
+    first delete any existing attachments on that record with the same filename before
+    uploading the new one. |
+
+
+    ### Additional Notes
+
+    - The action first verifies that the record exists in the specified table before
+    attempting any uploads.
+
+    - If multiple file paths are provided, the action processes them sequentially
+    and reports success or failure for each file.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the ServiceNow manager using provided
+    credentials and configuration.
+
+    2. **Record Verification**: It checks if the record specified by `Record Sys ID`
+    exists in the `Table Name` provided.
+
+    3. **File Processing**: It splits the `File Path` string into individual paths.
+
+    4. **Mode Handling**: For each file, if 'Overwrite Existing Attachment' is selected,
+    the action queries ServiceNow for existing attachments with the same filename
+    on that record and deletes them.
+
+    5. **Upload**: The action uploads the file(s) to the ServiceNow record using the
+    Attachment API.
+
+    6. **Result Reporting**: It collects the metadata of successful uploads and provides
+    a summary message of successes and failures.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action uploads files to ServiceNow records. If the 'Overwrite Existing
+      Attachment' mode is selected, it also deletes existing attachments with the
+      same filename from the target record.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Comment:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to a specific ServiceNow incident. This action allows security
+    analysts to document findings, provide updates, or communicate within a ServiceNow
+    ticket directly from Google SecOps. It targets a specific incident identified
+    by its number and appends the provided text to the incident's activity log.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident Number | String | Yes | The unique identifier of the ServiceNow incident
+    (e.g., INC0000001). The action will resolve this number to an internal system
+    ID before posting the comment. |
+
+    | Comment | String | Yes | The text content to be added to the ServiceNow incident.
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves ServiceNow connection settings (API
+    Root, credentials, and default table) from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the `Incident Number` and the `Comment`
+    text provided by the user.
+
+    3. **ID Resolution**: The action communicates with ServiceNow to find the internal
+    `sys_id` associated with the provided `Incident Number`.
+
+    4. **Mutation**: It performs a `PUT` request to the ServiceNow Table API, updating
+    the `comments` field of the identified record with the new text.
+
+    5. **Completion**: The action reports a success message to the SOAR case wall
+    upon a successful API response or fails if the incident is not found or the API
+    returns an error.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action performs a PUT request to the ServiceNow Table API to update the
+      'comments' field of an incident record, thereby changing the state of data in
+      the external ServiceNow system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Comment And Wait For Reply:
+  ai_description: >-
+    ### General Description
+
+    This action adds a comment to a specific ServiceNow incident and then enters an
+    asynchronous waiting state to detect a reply. It is designed for workflows where
+    a SOAR analyst or automated process needs to prompt a ServiceNow user for information
+    and capture their response as the action's output.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident Number | String | Yes | The unique identifier of the ServiceNow incident
+    (e.g., INC0000001). |
+
+    | Comment | String | Yes | The text content of the comment to be posted to the
+    ServiceNow incident. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the ServiceNow manager using the
+    provided integration configuration (API Root, Credentials, etc.).
+
+    2. **Post Comment**: It calls the ServiceNow API to add the specified `Comment`
+    to the incident identified by `Incident Number`.
+
+    3. **Timestamp Capture**: After posting, the action retrieves the incident's comment
+    history to find the exact creation timestamp (`sys_created_on`) of the comment
+    it just added.
+
+    4. **Asynchronous Wait**: The action transitions to an 'In Progress' state, storing
+    the incident ID and the timestamp as state data.
+
+    5. **Polling (Query Job)**: In subsequent execution cycles, the action polls ServiceNow
+    for any new comments on the same incident that have a creation timestamp later
+    than the captured one.
+
+    6. **Completion**: Once a new comment (the reply) is detected, the action captures
+    the text of the reply, sets the execution state to 'Completed', and returns the
+    reply content as the result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action adds a new comment to a ServiceNow incident record via a PUT request
+      to the ServiceNow API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Comment To Record:
+  ai_description: "### General Description\nAdds a comment or a work note to a specific\
+    \ record in a ServiceNow table (e.g., incident, change_request). This action allows\
+    \ for automated communication within ServiceNow tickets directly from Google SecOps.\
+    \ It supports an asynchronous mode where it can wait for a reply to the posted\
+    \ comment before finalizing the action execution.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Table Name | String | Yes | Specify the name of the ServiceNow table where the\
+    \ record resides (e.g., 'incident'). |\n| Type | String | Yes | Choose whether\
+    \ to add a 'Comment' (public) or a 'Work Note' (internal). |\n| Record Sys ID\
+    \ | String | Yes | The unique system identifier (Sys ID) of the record to be updated.\
+    \ |\n| Text | String | Yes | The actual content of the comment or work note to\
+    \ be added. |\n| Wait For Reply | Boolean | Yes | If set to true, the action will\
+    \ remain in an 'In Progress' state and periodically poll ServiceNow until a new\
+    \ comment/reply is detected on the record. |\n\n### Additional Notes\n- When 'Wait\
+    \ For Reply' is enabled, the action uses the 'QueryState' mechanism to check for\
+    \ new entries in the `sys_journal_field` table that are newer than the comment\
+    \ just posted.\n- Ensure the script timeout in the IDE is adjusted if 'Wait For\
+    \ Reply' is used, as the polling might take significant time.\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the ServiceNow manager using provided\
+    \ credentials and configuration.\n2. **Comment Submission**: It performs a PUT\
+    \ request to the ServiceNow Table API to append the provided text to the specified\
+    \ record's comments or work notes field.\n3. **Async Handling**: \n    - If 'Wait\
+    \ For Reply' is **False**, the action completes immediately with a success message.\n\
+    \    - If 'Wait For Reply' is **True**, the action transitions to an 'In Progress'\
+    \ state.\n4. **Polling (Async Mode)**: In subsequent runs, the action queries\
+    \ ServiceNow for all comments associated with the record. It identifies the index\
+    \ of the original comment posted by the action and checks if any newer comments\
+    \ exist.\n5. **Completion**: Once a newer comment (reply) is found, it is added\
+    \ to the action's JSON results, and the action state is set to 'Completed'."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a comment or a work note to a specific record in a ServiceNow table via
+      a PUT request to the Table API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Parent Incident:
+  ai_description: >-
+    Links multiple child incidents to a single parent incident in ServiceNow. This
+    action establishes a hierarchical relationship between tickets by updating the
+    'parent_incident' field of the specified child incidents to point to the provided
+    parent incident. It is primarily used for incident management and grouping related
+    tickets.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Parent Incident Number | String | Yes | The incident number (e.g., INC0000001)
+    that will serve as the parent. |
+
+    | Child Incident Numbers | String | Yes | A comma-separated list of incident numbers
+    (e.g., INC0000002, INC0000003) to be linked to the parent. |
+
+
+    ### Flow Description
+
+    1. **Validate Parent:** The action queries ServiceNow to verify that the specified
+    Parent Incident Number exists and retrieves its unique System ID (sys_id).
+
+    2. **Validate Children:** The action queries ServiceNow for all incident numbers
+    provided in the 'Child Incident Numbers' list to ensure they exist and to retrieve
+    their respective sys_ids.
+
+    3. **Link Incidents:** For each found child incident, the action performs a PUT
+    request to the ServiceNow Incident table, updating the 'parent_incident' field
+    with the sys_id of the parent incident.
+
+    4. **Output Results:** The action returns a success message and a JSON array containing
+    the updated details of the child incidents.
+
+
+    ### Additional Notes
+
+    - The action will raise an error and stop execution if the parent incident or
+    any of the specified child incidents cannot be found in ServiceNow.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the 'parent_incident' field of existing incident records in ServiceNow
+      to establish a parent-child relationship.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Close Incident:
+  ai_description: >-
+    ### General Description
+
+    The **Close Incident** action allows users to programmatically close a specific
+    incident in ServiceNow. It updates the incident's state to 'Closed' and attaches
+    necessary resolution metadata such as the reason, resolution code, and closing
+    notes. This is typically used at the end of a response workflow to synchronize
+    the status of a ServiceNow ticket with the resolution of a security case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Incident Number** | String | Yes | The unique identifier of the ServiceNow
+    incident to be closed (e.g., INC0010001). |
+
+    | **Close Reason** | String | Yes | A brief explanation or comment describing
+    why the incident is being closed. This is added as a comment to the ticket. |
+
+    | **Resolution Code** | String | Yes | A predefined category for the resolution.
+    Options include: Duplicate, Known error, No resolution provided, Resolved by caller,
+    Resolved by change, Resolved by problem, Resolved by request, Solution provided,
+    Workaround provided, User error. |
+
+    | **Close Notes** | String | Yes | Detailed technical or administrative notes
+    regarding the final resolution of the incident. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts connection details (API Root, credentials)
+    and the specific incident parameters provided by the user.
+
+    2. **ID Retrieval**: The action first queries ServiceNow to find the internal
+    system ID (`sys_id`) associated with the provided **Incident Number**.
+
+    3. **Payload Construction**: It constructs a data payload that sets the incident
+    state to 'Closed' (ID 7) and maps the provided **Close Reason**, **Resolution
+    Code**, and **Close Notes** to their respective ServiceNow fields.
+
+    4. **Update Execution**: A PUT request is sent to the ServiceNow Table API to
+    update the record.
+
+    5. **Validation**: The action verifies if the update was successful and returns
+    a confirmation message to the Google SecOps platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the state of a ServiceNow incident record to 'Closed' and populates
+      resolution-related fields (close_code, close_notes, and comments).
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Alert Incident:
+  ai_description: >-
+    ### General Description\n\nThe **Create Alert Incident** action creates a new
+    incident in ServiceNow that is directly linked to a specific Google SecOps alert.
+    It maps alert details to ServiceNow incident fields, allowing for seamless escalation
+    and tracking of security events within the IT Service Management (ITSM) platform.\n\n###
+    Parameters Description\n\n| Parameter | Type | Mandatory | Description |\n| :---
+    | :--- | :--- | :--- |\n| **Impact** | String | Yes | Specifies the impact of
+    the incident (1: High, 2: Medium, 3: Low). |\n| **Urgency** | String | Yes | Specifies
+    the urgency of the incident (1: High, 2: Medium, 3: Low). |\n| **Category** |
+    String | No | The category of the incident (e.g., Inquiry, Software, Hardware).
+    |\n| **Assignment group ID** | String | No | The full name of the group to which
+    the incident should be assigned. |\n| **Assigned User ID** | String | No | The
+    full name of the user to whom the incident should be assigned. |\n| **Description**
+    | String | No | A detailed description of the incident. |\n\n### Flow Description\n\n1.
+    **Parameter Extraction:** The action retrieves configuration settings (API credentials,
+    table names) and user-provided parameters (Impact, Urgency, etc.).\n2. **Alert
+    Context Retrieval:** It fetches the `external_id` of the current alert to use
+    as the incident's `short_description`.\n3. **Incident Creation:** It interacts
+    with the ServiceNow API to create a new record in the specified incident table
+    (defaulting to `incident`).\n4. **Internal Updates:** Upon successful creation,
+    the action:\n    * Adds the `ServiceNow` tag to the alert.\n    * Sets the `TICKET_ID`
+    context property for the alert.\n    * Updates the alert's additional data with
+    the new ServiceNow incident number.\n5. **Result Reporting:** Returns the incident
+    number as the action result and adds the full incident JSON to the action results.\n\n###
+    Additional Notes\n\n* The action uses the `Incident Table` defined in the integration
+    configuration.\n* The `short_description` in ServiceNow is automatically populated
+    with the Google SecOps Alert External ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: true
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new incident record in the ServiceNow 'incident' table (or the table
+      specified in the configuration).
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Adds a 'ServiceNow' tag to the alert, sets the 'TICKET_ID' alert context property,
+      and updates the alert's additional data with the incident number.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Incident:
+  ai_description: >-
+    Creates a new incident in the ServiceNow system. This action allows users to programmatically
+    generate tickets with specific attributes like priority, category, and assignments.
+    It also supports passing custom fields for advanced configurations.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Short Description | String | Yes | A brief summary of the incident. |
+
+    | Impact | String | Yes | The measure of the effect of an incident (1: High, 2:
+    Medium, 3: Low). |
+
+    | Urgency | String | Yes | The measure of how quickly the business needs the incident
+    resolved (1: High, 2: Medium, 3: Low). |
+
+    | Category | String | No | The category the incident belongs to (e.g., network,
+    software). |
+
+    | Assignment group ID | String | No | The full name of the group to assign the
+    incident to. |
+
+    | Assigned User ID | String | No | The full name or username of the user to assign
+    the incident to. |
+
+    | Description | String | No | A detailed description of the incident. |
+
+    | Custom Fields | String | No | A JSON object or comma-separated list (field:value)
+    of additional fields to set. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves incident details and authentication configuration.
+
+    2. **Custom Field Parsing:** Processes the 'Custom Fields' parameter into a dictionary.
+
+    3. **Identity Resolution:** If an assigned user is specified, the action queries
+    ServiceNow to resolve the user's full name and ID.
+
+    4. **Incident Creation:** Sends a POST request to the ServiceNow Table API to
+    create the incident record.
+
+    5. **Context Update:** Upon success, the action adds a 'ServiceNow' tag to the
+    alert and stores the incident number in the 'TICKET_ID' alert context property.
+
+
+    ### Additional Notes
+
+    The 'Assigned User ID' parameter accepts the user's full name or username, which
+    the action attempts to resolve automatically.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: true
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new incident record in the ServiceNow system via a POST request to
+      the Table API.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds an integration tag to the alert and sets the 'TICKET_ID' alert context
+      property with the newly created ServiceNow incident number.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Record:
+  ai_description: >-
+    Creates a new record in a specified ServiceNow table. This action allows for the
+    creation of various record types (e.g., incidents, change requests, or custom
+    table entries) by providing the table name and the record data in JSON format.
+    It automatically handles the resolution of 'assignment_group' and 'assigned_to'
+    names to their corresponding ServiceNow Sys IDs if they are included in the input
+    data.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Table Name | String | No | The name of the ServiceNow table where the record
+    will be created. If not provided, it defaults to the 'Incident Table' specified
+    in the integration configuration. |
+
+    | Object Json Data | String | No | A JSON-formatted string containing the field
+    names and values for the new record. If the JSON is invalid or not provided, an
+    empty record will be attempted. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the API connection details from the configuration
+    and the target table name and record data from the action parameters.
+
+    2. **JSON Validation**: Attempts to parse the 'Object Json Data'. If parsing fails,
+    it logs an info message and proceeds with an empty data set.
+
+    3. **Identity Resolution**: If the input data contains 'assignment_group' or 'assigned_to',
+    the action queries ServiceNow to resolve these names into their internal Sys IDs.
+
+    4. **Record Creation**: Executes a POST request to the ServiceNow Table API to
+    create the record in the specified table.
+
+    5. **Result Processing**: Captures the Sys ID of the newly created record and
+    retrieves the full record details. It also identifies any fields provided in the
+    input that were not successfully processed or updated in the resulting ServiceNow
+    record.
+
+    6. **Output**: Returns the Sys ID as the main result and attaches the full record
+    JSON to the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new record in the specified ServiceNow table (e.g., incident, change_request)
+      with the provided field values.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Download Attachments:
+  ai_description: >-
+    ### General Description
+
+    Downloads all attachments associated with a specific record in a ServiceNow table
+    and saves them to a designated local directory on the Google SecOps server. This
+    action is useful for retrieving evidence or documentation attached to ServiceNow
+    incidents, change requests, or other table records for local processing or archival.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Table Name | String | Yes | The name of the ServiceNow table where the record
+    is located (e.g., 'incident', 'change_request'). |
+
+    | Record Sys ID | String | Yes | The unique system identifier (sys_id) of the
+    record containing the attachments. |
+
+    | Download Folder Path | String | Yes | The absolute folder path on the local
+    filesystem where the attachments should be stored. Must start with a forward slash
+    (/). |
+
+    | Overwrite | Boolean | Yes | If set to true, the action will overwrite any existing
+    files in the destination folder that have the same name as the attachments being
+    downloaded. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on SecOps entities; it requires manual input of
+    the Table Name and Record Sys ID.
+
+    - The execution environment must have the necessary permissions to write to the
+    specified 'Download Folder Path'.
+
+    - If 'Overwrite' is false and a file with the same name exists, the action will
+    fail to prevent data loss.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration parameters and initializes
+    the ServiceNow API manager.
+
+    2. **Validation**: It verifies that the provided download path is absolute and
+    checks if the specified record exists in the target ServiceNow table.
+
+    3. **Metadata Retrieval**: It fetches metadata for all attachments linked to the
+    record, including filenames and download URLs.
+
+    4. **Conflict Check**: If 'Overwrite' is disabled, the action checks the local
+    filesystem for existing files that match the attachment names.
+
+    5. **Download and Storage**: The action iterates through the attachments, downloads
+    the binary content for each, and saves it to the specified local path.
+
+    6. **Reporting**: It compiles a list of successfully downloaded files and any
+    failures, providing a summary message and a JSON result containing the absolute
+    paths of the saved files.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get CMDB Record Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get CMDB Record Details** action retrieves comprehensive information for
+    specific Configuration Items (CIs) within the ServiceNow Configuration Management
+    Database (CMDB). It is designed to fetch not only the attributes of the records
+    but also their inbound and outbound relationships, providing a clear view of how
+    these items interact within the infrastructure.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Class Name** | String | Yes | The specific ServiceNow CMDB class/table to
+    query (e.g., `cmdb_ci_win_server`). |
+
+    | **Sys ID** | String | Yes | A comma-separated list of unique ServiceNow System
+    Identifiers (Sys IDs) for the records you wish to inspect. |
+
+    | **Max Records To Return** | Integer | No | The maximum number of relationship
+    records to retrieve per relationship type. Defaults to 50 if not specified or
+    if a non-positive value is provided. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action establishes a session with ServiceNow using
+    the provided API root and authentication credentials (Basic or OAuth).
+
+    2. **Parameter Parsing**: It extracts the target CMDB class name and splits the
+    provided Sys IDs string into a list for individual processing.
+
+    3. **Data Retrieval**: For each Sys ID, the action queries the ServiceNow CMDB
+    Instance API to fetch detailed attributes and relationship data.
+
+    4. **Relationship Processing**: The logic iterates through both inbound and outbound
+    relations, formatting them into a structured format for tabular display.
+
+    5. **Output Generation**: The action produces a CSV data table named `Relations.csv`
+    containing the relationship details and attaches the full raw record data as a
+    JSON result for further use in the playbook.
+
+
+    ### Additional Notes
+
+    - This action does not run on SecOps entities; it requires explicit Sys IDs as
+    input parameters.
+
+    - If a provided Sys ID or Class Name is not found in ServiceNow, the action will
+    report the specific failure but continue processing other IDs in the list if applicable.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Child Incident Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Child Incident Details** action retrieves comprehensive information
+    about child incidents associated with a specific parent incident in ServiceNow.
+    This action is primarily used to gain visibility into related sub-tasks or linked
+    issues within the ServiceNow platform, providing a structured view of the incident
+    hierarchy.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Parent Incident Number | String | Yes | The unique identifier of the parent
+    incident for which you want to retrieve child details (e.g., INC0010123). |
+
+    | Max Child Incident To Return | Integer | No | Specifies the maximum number of
+    child incidents to retrieve. If not provided, it defaults to 50. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the ServiceNow manager using the
+    provided API root and credentials (supporting both Basic and OAuth authentication).
+
+    2. **Parent Incident Verification**: It first retrieves the details of the specified
+    parent incident to verify its existence and check the count of associated child
+    incidents.
+
+    3. **Child Incident Retrieval**: If child incidents are present, the action queries
+    the ServiceNow `incident` table for all records where the `parent_incident` field
+    matches the System ID of the parent incident, applying the user-defined limit.
+
+    4. **Data Processing**: The retrieved child incidents are processed into a structured
+    format, including fields such as System ID, Incident Number, Short Description,
+    and Creation Time.
+
+    5. **Output Generation**: The results are added to the Google SecOps case as a
+    data table titled "Child Incident Details" and also provided as a raw JSON object
+    for downstream playbook logic.
+
+
+    ### Additional Notes
+
+    - If the parent incident is not found, the action will report a failure indicating
+    the incident was missing.
+
+    - If the parent incident exists but has no associated child incidents, the action
+    will complete with a message stating that no child incidents were found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Incident:
+  ai_description: >-
+    ### General Description
+
+    The **Get Incident** action retrieves comprehensive details for a specific incident
+    in ServiceNow based on its unique incident number (e.g., INC0010001). This action
+    is used to gather context about an existing ticket, allowing analysts to view
+    state, priority, assignment, and description data within Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Incident Number** | String | Yes | The unique identifier of the ServiceNow
+    incident to retrieve. It must follow the standard ServiceNow format (e.g., INC0010001).
+    |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves connection details, including
+    API root, credentials (Basic or OAuth), and the target incident table name from
+    the integration settings.
+
+    2. **Authentication**: Initializes the `ServiceNowManager` which handles session
+    management and authentication tokens.
+
+    3. **ID Resolution**: The action first queries ServiceNow to find the internal
+    system ID (`sys_id`) associated with the provided human-readable incident number.
+
+    4. **Data Retrieval**: Using the `sys_id`, the action performs a GET request to
+    fetch the full incident record, requesting display values for reference fields
+    (like users and groups) to ensure readability.
+
+    5. **Output Generation**: The retrieved incident data is converted into a CSV-formatted
+    table and a raw JSON object, which are then attached to the action results for
+    use in playbooks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Oauth Token:
+  ai_description: "### General Description\nThe **Get Oauth Token** action is a utility\
+    \ task designed to facilitate the initial OAuth2 authentication setup for the\
+    \ ServiceNow integration. It retrieves an OAuth refresh token and access token\
+    \ from ServiceNow using the Resource Owner Password Credentials grant type. This\
+    \ action is typically run once during the initial configuration phase to obtain\
+    \ a long-lived refresh token, which is then manually saved into the integration's\
+    \ configuration to allow for seamless, password-less authentication in subsequent\
+    \ actions.\n\n### Parameters Description\nThis action does not have action-specific\
+    \ parameters. Instead, it relies entirely on the **Integration Configuration**\
+    \ parameters provided in the ServiceNow integration settings:\n\n| Parameter |\
+    \ Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Api Root\
+    \ | String | Yes | The base URL of the ServiceNow instance (e.g., https://instance.service-now.com).\
+    \ |\n| Username | String | Yes | The ServiceNow username used to request the token.\
+    \ |\n| Password | String | Yes | The ServiceNow password used to request the token.\
+    \ |\n| Client ID | String | Yes | The Client ID generated in ServiceNow's Application\
+    \ Registry. |\n| Client Secret | String | Yes | The Client Secret generated in\
+    \ ServiceNow's Application Registry. |\n| Verify SSL | Boolean | No | If enabled,\
+    \ the action verifies the SSL certificate of the ServiceNow instance. Default\
+    \ is True. |\n\n### Flow Description\n1. **Configuration Extraction:** The action\
+    \ retrieves the API root, credentials (Username/Password), and OAuth application\
+    \ details (Client ID/Secret) from the integration's global configuration.\n2.\
+    \ **Validation:** It verifies that all four mandatory authentication components\
+    \ (Client ID, Client Secret, Username, and Password) are present.\n3. **Token\
+    \ Request:** The action initializes the `ServiceNowManager` and executes a POST\
+    \ request to the ServiceNow OAuth endpoint (`oauth_token.do`) using the `password`\
+    \ grant type.\n4. **Result Processing:** Upon a successful response, the action\
+    \ captures the JSON payload containing the `access_token` and `refresh_token`.\n\
+    5. **Output:** The retrieved JSON is attached to the action results, and a success\
+    \ message is displayed providing instructions on how to use the `refresh_token`\
+    \ to finalize the integration setup.\n\n### Additional Notes\n* This action is\
+    \ a prerequisite for using OAuth authentication in the ServiceNow integration.\
+    \ \n* Once the `refresh_token` is obtained and saved in the integration settings,\
+    \ the `Username` and `Password` fields in the configuration can be cleared for\
+    \ improved security."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Record Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information for a specific record from a ServiceNow table using
+    its unique System ID (Sys ID). This action is useful for fetching context about
+    incidents, change requests, or any other ServiceNow object when the specific ID
+    is known, allowing playbooks to access all field values associated with that record.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Table Name | String | Yes | The name of the ServiceNow table to query (e.g.,
+    'incident', 'change_request', 'sys_user'). |
+
+    | Record Sys ID | String | Yes | The unique 32-character GUID (Sys ID) of the
+    record to retrieve. |
+
+    | Fields | String | No | A comma-separated list of specific fields to return (e.g.,
+    'short_description,state,priority'). If left empty, the action returns the default
+    fields for that record. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the ServiceNow manager using the
+    provided integration configuration (API Root, credentials, etc.).
+
+    2. **Parameter Parsing**: It extracts the target table name, the specific record's
+    Sys ID, and parses the optional comma-separated fields list into a Python list.
+
+    3. **API Request**: The action performs a GET request to the ServiceNow Table
+    API endpoint (`table/{table}/{sys_id}`) with the specified field filters.
+
+    4. **Data Processing**: The retrieved record data is converted into a JSON-compatible
+    format.
+
+    5. **Output**: The action returns the record details as a JSON result and provides
+    a success message to the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    This action does not run on entities; it requires the specific `Record Sys ID`
+    to be provided as an input parameter, typically sourced from a previous step in
+    a playbook.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get User Details:
+  ai_description: "### General Description\nThe **Get User Details** action retrieves\
+    \ comprehensive information about specific users from ServiceNow using their unique\
+    \ System IDs (sys_id) or email addresses. This utility is primarily used to gather\
+    \ identity context, such as job titles, departments, and contact information,\
+    \ which can be used in subsequent playbook steps. The action outputs the data\
+    \ in both a structured JSON format and a formatted data table within the Google\
+    \ SecOps platform.\n\n### Parameters Description\n\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| **User Sys IDs** | String\
+    \ | No | A comma-separated list of ServiceNow unique identifiers (sys_ids) for\
+    \ the users you want to look up. Example: `9ee1b13dc6112271007f9xxxxx,8ee...`\
+    \ |\n| **Emails** | String | No | A comma-separated list of user email addresses\
+    \ to look up in ServiceNow. Example: `user1@example.com,user2@example.com` |\n\
+    \n### Additional Notes\n* **Requirement:** At least one of the parameters (**User\
+    \ Sys IDs** or **Emails**) must be provided for the action to run successfully.\
+    \ If both are empty, the action will fail with an error.\n* **Output:** The action\
+    \ generates a data table named 'User Details' and populates the JSON result with\
+    \ the raw user records.\n\n### Flow Description\n1. **Initialization:** The action\
+    \ initializes the ServiceNow manager using the provided integration configuration\
+    \ (API Root, Credentials, etc.).\n2. **Parameter Parsing:** It extracts and splits\
+    \ the comma-separated strings from the **User Sys IDs** and **Emails** parameters\
+    \ into lists.\n3. **Validation:** It verifies that at least one identifier (ID\
+    \ or Email) has been provided.\n4. **Data Retrieval:** The action queries the\
+    \ ServiceNow `sys_user` table using a combined query for all provided sys_ids\
+    \ and emails.\n5. **Processing:** It identifies which requested users were successfully\
+    \ found and which were not.\n6. **Output Generation:** \n    * It adds the raw\
+    \ user data to the action's JSON results.\n    * It constructs and attaches a\
+    \ data table titled 'User Details' to the case.\n7. **Completion:** The action\
+    \ finishes with a summary message indicating the successfully retrieved identifiers\
+    \ and any that could not be found."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action populates the action's JSON results and creates a data table named
+      'User Details' within the Google SecOps case context.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List CMDB Records:
+  ai_description: "### General Description\nThe **List CMDB Records** action retrieves\
+    \ a list of Configuration Management Database (CMDB) records from a specified\
+    \ class in ServiceNow. This action is designed to provide visibility into assets\
+    \ and configuration items stored in ServiceNow based on user-defined filters and\
+    \ limits. It is a utility action that does not require existing entities in a\
+    \ case to function, making it ideal for broad searches or asset discovery within\
+    \ the SOAR workflow.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| **Class Name** | String |\
+    \ Yes | The name of the ServiceNow CMDB class to query. For example, `cmdb_ci_appl`\
+    \ for applications or `cmdb_ci_server` for servers. |\n| **Query Filter** | String\
+    \ | No | A ServiceNow-formatted query string used to filter the results. For example,\
+    \ `sys_idLIKE1^sys_idSTARTSWITH0`. |\n| **Max Records To Return** | Integer |\
+    \ No | The maximum number of records to retrieve from ServiceNow. Defaults to\
+    \ 50 if not specified. |\n\n### Additional Notes\nThis action operates independently\
+    \ of the entities present in the Google SecOps case. It uses the provided parameters\
+    \ to query the ServiceNow CMDB Instance API directly. The results are presented\
+    \ as both a raw JSON object and a formatted data table.\n\n### Flow Description\n\
+    1. **Initialization:** The action initializes the ServiceNow manager using the\
+    \ integration's configuration parameters (API Root, Credentials, etc.).\n2. **Parameter\
+    \ Extraction:** It extracts the mandatory `Class Name` and optional `Query Filter`\
+    \ and `Max Records To Return` from the action input.\n3. **API Execution:** The\
+    \ action sends a GET request to the ServiceNow CMDB Instance API endpoint (`/api/now/cmdb/instance/{class_name}`)\
+    \ with the specified query and limit parameters.\n4. **Result Processing:** \n\
+    \    * If records are found, they are parsed into a JSON result.\n    * A data\
+    \ table is constructed containing the `Sys ID` and `Name` of each retrieved record.\n\
+    5. **Finalization:** The action completes by attaching the JSON data and the data\
+    \ table to the case and providing a success message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Record Comments:
+  ai_description: >-
+    ### General Description
+
+    The **List Record Comments** action retrieves a list of comments or work notes
+    associated with a specific record in a ServiceNow table. This is useful for auditing
+    communication history or retrieving updates made to tickets (like incidents or
+    change requests) directly within a Google SecOps playbook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Table Name** | String | Yes | The name of the ServiceNow table where the record
+    resides (e.g., `incident`, `change_request`). |
+
+    | **Record Sys ID** | String | Yes | The unique system identifier (`sys_id`) of
+    the specific record to query. |
+
+    | **Type** | String | Yes | Specifies whether to retrieve 'Comment' (public) or
+    'Work Note' (internal) entries. |
+
+    | **Max Results To Return** | Integer | No | The maximum number of comment entries
+    to return. Defaults to 50. Must be a positive number. |
+
+
+    ### Additional Notes
+
+    - This action does not run on SecOps entities; it requires the specific ServiceNow
+    `sys_id` as an input parameter.
+
+    - The results are returned as a JSON array containing details such as the comment
+    text, creation time, and the user who created it.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the ServiceNow connection details
+    (API Root, credentials) and the user-provided parameters (Table Name, Sys ID,
+    Type, and Limit).
+
+    2. **Validation:** It ensures the `Max Results To Return` is a positive integer.
+
+    3. **Manager Initialization:** A connection to the ServiceNow API is established
+    using the provided credentials (Basic Auth or OAuth).
+
+    4. **Data Retrieval:** The action queries the ServiceNow `sys_journal_field` table,
+    filtering by the provided `element_id` (Record Sys ID), `name` (Table Name), and
+    `element` (Comment or Work Note type).
+
+    5. **Output:** The retrieved comments are parsed into a structured format and
+    added to the action's JSON results. If no comments are found, the action completes
+    with a message indicating no results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Records Related To User:
+  ai_description: >-
+    ### General Description
+
+    The **List Records Related To User** action retrieves records from a specified
+    ServiceNow table (such as 'incident') that are associated with a list of provided
+    usernames. This action is designed to gather historical context or audit user
+    activity by fetching records created within a specific timeframe. It outputs the
+    results as individual data tables for each user and provides a comprehensive JSON
+    result.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Table Name** | String | Yes | The name of the ServiceNow table to search (e.g.,
+    `incident`, `change_request`). |
+
+    | **Usernames** | String | Yes | A comma-separated list of ServiceNow usernames
+    for which you want to retrieve related records. |
+
+    | **Max Days Backwards** | Integer | Yes | Specifies how many days back from the
+    current time to fetch related records. Default is 1. |
+
+    | **Max Records To Return** | Integer | No | Specifies the maximum number of records
+    to return per user. Default is 50. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a connection to ServiceNow using either Basic
+    or OAuth authentication based on the integration configuration.
+
+    2. **User Resolution**: Resolves the provided comma-separated usernames into ServiceNow
+    system identifiers (sys_ids) and emails.
+
+    3. **Record Querying**: For each successfully resolved user, the action queries
+    the specified ServiceNow table for records where the user is the opener (`opened_by`)
+    and the record was created within the 'Max Days Backwards' window.
+
+    4. **Data Processing**: Formats the retrieved records into a tabular structure
+    and a JSON object.
+
+    5. **Output**: Adds a data table to the case wall for each user found and attaches
+    the full result set as JSON to the action output.
+
+
+    ### Additional Notes
+
+    This action does not iterate over or filter Google SecOps entities. It operates
+    strictly based on the usernames provided in the input parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates data tables on the case wall for each user to display the
+      retrieved ServiceNow records.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity between Google SecOps and the ServiceNow instance. This
+    action validates the provided credentials (either Basic Authentication or OAuth)
+    and ensures that the API endpoint is reachable by performing a lightweight GET
+    request to a specified ServiceNow table.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Api Root | String | Yes | The base URL of the ServiceNow instance (e.g., https://instance.service-now.com).
+    |
+
+    | Username | String | No | The username for basic authentication. Required if
+    'Use Oauth Authentication' is disabled. |
+
+    | Password | String | No | The password for basic authentication. Required if
+    'Use Oauth Authentication' is disabled. |
+
+    | Incident Table | String | No | The ServiceNow table used to test connectivity.
+    Defaults to 'incident'. |
+
+    | Verify SSL | Boolean | No | If enabled, verifies the SSL certificate of the
+    ServiceNow instance. Defaults to True. |
+
+    | Use Oauth Authentication | Boolean | No | If enabled, the integration uses OAuth
+    2.0 for authentication. |
+
+    | Client ID | String | No | The Client ID for OAuth authentication. Required if
+    'Use Oauth Authentication' is enabled. |
+
+    | Client Secret | String | No | The Client Secret for OAuth authentication. Required
+    if 'Use Oauth Authentication' is enabled. |
+
+    | Refresh Token | String | No | The Refresh Token for OAuth authentication. Required
+    if 'Use Oauth Authentication' is enabled. |
+
+
+    ### Additional Notes
+
+    - Either Basic Authentication (Username/Password) or OAuth (Client ID/Client Secret/Refresh
+    Token) must be correctly configured for the action to succeed.
+
+    - This action does not process any entities and is used strictly for health checks.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** Retrieves the API root, authentication credentials,
+    and connection settings from the integration configuration.
+
+    2. **Manager Initialization:** Initializes the ServiceNow API manager, handling
+    authentication logic for either Basic Auth or OAuth.
+
+    3. **Connectivity Test:** Executes a `test_connectivity` call, which sends a GET
+    request to the configured ServiceNow table with a limit of 1 record to minimize
+    data transfer.
+
+    4. **Result Reporting:** Returns a success status if the API responds correctly,
+    or a failure status with the specific error message if the connection fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Incident:
+  ai_description: >-
+    Updates an existing incident in ServiceNow with new information. This action allows
+    for the modification of various incident fields including its state, description,
+    priority (impact/urgency), and assignment details. It also supports updating custom
+    fields via a JSON object or a comma-separated string.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Incident Number | String | Yes | The unique identifier of the incident to update
+    (e.g., INC0010041). |
+
+    | Short Description | String | No | A brief summary of the incident. |
+
+    | Impact | String | No | The measure of the effect of the incident (1: High, 2:
+    Medium, 3: Low). |
+
+    | Urgency | String | No | The measure of how quickly the incident needs resolution
+    (1: High, 2: Medium, 3: Low). |
+
+    | Category | String | No | The classification category of the incident. |
+
+    | Assignment group ID | String | No | The name of the group to which the incident
+    should be assigned. |
+
+    | Assigned User ID | String | No | The email or username of the specific user
+    to assign the incident to. |
+
+    | Description | String | No | Detailed information about the incident. |
+
+    | Incident State | String | No | The new status of the incident (e.g., 'New',
+    'In Progress', 'Resolved'). |
+
+    | Custom Fields | String | No | A JSON object or comma-separated list (field:value)
+    of additional fields to update. This parameter takes priority over others if overlapping.
+    |
+
+
+    ### Flow Description
+
+
+    1.  **Initialization**: The action initializes the ServiceNow manager using provided
+    credentials and configuration (API Root, Authentication method).
+
+    2.  **Parameter Parsing**: It extracts the incident number and all optional update
+    fields. If 'Custom Fields' are provided, they are parsed into a dictionary.
+
+    3.  **Identity Resolution**: If an 'Assigned User ID' is provided, the action
+    attempts to resolve the user's full name via the ServiceNow API.
+
+    4.  **Update Execution**: The action calls the ServiceNow API (PUT request) to
+    update the incident record identified by the 'Incident Number'.
+
+    5.  **Result Handling**: The action retrieves the updated incident data, adds
+    it to the execution results as JSON, and reports success or failure based on the
+    API response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates existing incident records in the ServiceNow 'incident' table (or a custom
+      table if configured) by modifying fields such as state, description, and assignment.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Record:
+  ai_description: >-
+    Updates an existing record in a specified ServiceNow table. This action allows
+    for granular updates to any field within a ServiceNow record by providing the
+    record's unique System ID (Sys ID) and a JSON object containing the fields to
+    be modified.
+
+
+    ### Flow Description:
+
+    1. **Parameter Extraction:** The action retrieves connection details (API Root,
+    credentials) and action-specific parameters: `Table Name`, `Record Sys ID`, and
+    `Object Json Data`.
+
+    2. **JSON Validation:** It validates that the `Object Json Data` provided by the
+    user is a valid JSON string.
+
+    3. **ServiceNow Interaction:** It initializes the `ServiceNowManager` and executes
+    a `PUT` request to the ServiceNow Table API for the specified table and Sys ID.
+
+    4. **Field Verification:** After the update, the action compares the requested
+    fields with the returned record data to identify any fields that were not processed
+    by ServiceNow (e.g., due to incorrect field names or permissions).
+
+    5. **Result Handling:** The action outputs the full updated record as a JSON result
+    and returns the Sys ID of the updated record.
+
+
+    ### Parameters Description:
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Table Name** | String | No | The name of the ServiceNow table where the record
+    resides (e.g., `incident`, `change_request`). If not provided, it defaults to
+    the 'Incident Table' defined in the integration configuration. |
+
+    | **Object Json Data** | String (JSON) | Yes | A JSON-formatted string representing
+    the fields and values to update (e.g., `{"short_description": "Updated Title",
+    "state": "2"}`). |
+
+    | **Record Sys ID** | String | Yes | The unique 32-character alphanumeric identifier
+    (Sys ID) of the record to be updated. |
+
+
+    ### Additional Notes:
+
+    - This action does not run on entities; it targets a specific record via its Sys
+    ID.
+
+    - If the provided JSON contains fields that do not exist in the target table,
+    ServiceNow typically ignores them, and the action will list these unprocessed
+    fields in the output message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the values of fields within an existing record in the ServiceNow database
+      via a PUT request to the Table API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait For Comments:
+  ai_description: "### General Description\nWaits for new comments or work notes to\
+    \ be added to a specific record in a ServiceNow table. This is an asynchronous\
+    \ action designed to pause playbook execution until a specific communication event\
+    \ occurs in ServiceNow, such as a user reply or a specific status update provided\
+    \ via comments.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Table Name | String | Yes\
+    \ | The name of the ServiceNow table containing the record (e.g., 'incident',\
+    \ 'change_request'). |\n| Record Sys ID | String | Yes | The unique system identifier\
+    \ (sys_id) of the specific record to monitor. |\n| Type | Enum | Yes | Specifies\
+    \ whether to monitor for 'Comment' (public) or 'Work Note' (internal) entries.\
+    \ |\n| Wait Mode | Enum | Yes | Defines the completion criteria: <br>1. **Until\
+    \ Timeout**: Waits until the action's global timeout is reached and returns all\
+    \ comments found during that period. <br>2. **Until First Message**: Completes\
+    \ as soon as any new comment/work note is detected. <br>3. **Until Specific Text**:\
+    \ Completes only when a new comment/work note matches the string provided in the\
+    \ 'Text' parameter. |\n| Text | String | No | The specific string to look for\
+    \ when 'Wait Mode' is set to 'Until Specific Text'. This parameter is mandatory\
+    \ if that mode is selected. |\n\n### Additional Notes\n- This action is **asynchronous**\
+    \ and will poll ServiceNow periodically until the specified condition is met or\
+    \ the SOAR action timeout is reached.\n- It uses a time filter to ensure only\
+    \ comments created *after* the action was initially triggered are processed.\n\
+    \n### Flow Description\n1. **Initialization**: The action extracts ServiceNow\
+    \ credentials and connection settings.\n2. **Validation (First Run)**: On the\
+    \ first execution, it verifies that the record specified by 'Record Sys ID' exists\
+    \ in the target table.\n3. **Polling**: In subsequent async cycles, the action\
+    \ queries the `sys_journal_field` table in ServiceNow to retrieve comments or\
+    \ work notes associated with the record.\n4. **Filtering**: It filters the retrieved\
+    \ entries to include only those created after the action's start time (or the\
+    \ last check).\n5. **Condition Evaluation**: \n    - If 'Until First Message'\
+    \ is selected, it completes if any new entries are found.\n    - If 'Until Specific\
+    \ Text' is selected, it completes if an entry matches the 'Text' parameter.\n\
+    \    - If 'Until Timeout' is selected, it continues polling until the global timeout\
+    \ is approaching, then returns all accumulated entries.\n6. **Completion**: Once\
+    \ the condition is met, the action returns the detected comments as a JSON result\
+    \ and finishes."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait For Field Update:
+  ai_description: "### General Description\n'Wait For Field Update' is an asynchronous\
+    \ polling action designed to monitor a specific field within a ServiceNow record.\
+    \ It continuously checks the value of a designated column until it matches one\
+    \ of the user-specified target values or until the record reaches a terminal state\
+    \ (Resolved, Closed, or Canceled). This is primarily used in playbooks to pause\
+    \ execution until an external manual or automated process in ServiceNow has reached\
+    \ a specific milestone.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Table Name | String | Yes\
+    \ | The technical name of the ServiceNow table where the record resides (e.g.,\
+    \ 'incident', 'change_request', 'task'). |\n| Record Sys ID | String | Yes | The\
+    \ unique 32-character GUID (Sys ID) of the specific record to monitor. |\n| Field\
+    \ - Column name | String | Yes | The technical name of the field/column to check\
+    \ (e.g., 'state', 'u_custom_status', 'assigned_to'). |\n| Field - Values | String\
+    \ | Yes | A comma-separated list of values (case-insensitive) that the action\
+    \ is waiting for. If the field matches any of these, the action completes. |\n\
+    \n### Flow Description\n1. **Initialization**: The action initializes the ServiceNow\
+    \ manager using the provided integration configuration (API Root, Credentials,\
+    \ etc.).\n2. **Data Retrieval**: It fetches the current state of the record identified\
+    \ by the 'Record Sys ID' from the specified 'Table Name'.\n3. **State Verification**:\
+    \ \n    * If the record is found and its current state is 'Open' (not Resolved,\
+    \ Closed, or Canceled), it proceeds to check the specific field.\n    * If the\
+    \ record is already in a terminal state (Resolved, Closed, or Canceled), the action\
+    \ stops waiting and completes, regardless of whether the field value matched.\n\
+    4. **Value Comparison**: The action compares the current value of the 'Field -\
+    \ Column name' against the list provided in 'Field - Values'.\n5. **Execution\
+    \ State Determination**:\n    * **Completed**: If a match is found, the action\
+    \ finishes successfully and returns the full record data in JSON format.\n   \
+    \ * **In Progress**: If no match is found and the record is still open, the action\
+    \ remains in an 'In Progress' state, triggering a retry after the platform's polling\
+    \ interval.\n    * **Failed**: If the record or table cannot be found, or if an\
+    \ API error occurs, the action fails."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Wait For Status Update:
+  ai_description: >-
+    ### General Description
+
+    The **Wait For Status Update** action is a flow-control utility designed to pause
+    playbook execution until a specific ServiceNow incident reaches one of the user-defined
+    statuses. It is an asynchronous action that polls the ServiceNow API at intervals
+    to check the current state of a ticket, enabling synchronization between ServiceNow
+    workflows and Google SecOps playbooks.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Incident Number** | String | Yes | The unique identifier of the ServiceNow
+    incident to monitor (e.g., `INC0010001`). |
+
+    | **Statuses** | String | Yes | A comma-separated list of target statuses that
+    will trigger the completion of the action (e.g., `In Progress, Resolved`). |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action establishes a connection to the ServiceNow instance
+    using the configured API root and credentials (Basic Auth or OAuth).
+
+    2. **Data Retrieval**: It performs a lookup for the incident specified by the
+    `Incident Number` parameter to retrieve its current metadata.
+
+    3. **Status Evaluation**: The action extracts the current `state` of the incident
+    and compares it against the list of target `Statuses` provided by the user (performing
+    a case-insensitive match).
+
+    4. **Execution State Management**:
+       - **Match Found**: If the incident's status matches any of the target statuses,
+    the action sets its state to `COMPLETED`, returns the incident details as a JSON
+    result, and allows the playbook to proceed.
+       - **No Match**: If the status does not match, the action sets its state to
+    `IN_PROGRESS`, which signals the SOAR platform to reschedule the action for another
+    check later.
+    5. **Error Handling**: If the incident number is invalid or cannot be found, the
+    action terminates with a failure message.
+
+
+    ### Additional Notes
+
+    - This action is **Asynchronous** and is intended to be used when a playbook needs
+    to wait for manual or external intervention in ServiceNow before continuing.
+
+    - It does not process or filter SecOps entities; it operates exclusively based
+    on the provided incident identifier.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

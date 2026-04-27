@@ -1,0 +1,497 @@
+Get Client Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Client Details** action retrieves comprehensive information for specific
+    Google GRR clients. It is designed to provide deep visibility into a host's hardware,
+    operating system, agent status, and network configuration by querying the Google
+    GRR API using unique Client IDs.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Client ID** | String | Yes | A comma-separated list of Google GRR Client IDs
+    (e.g., `C.1234567890abcdef`). The action will attempt to fetch details for every
+    ID provided in this list. |
+
+
+    ### Additional Notes
+
+    - This action does not run on SecOps entities (like IP or Hostname) automatically.
+    It relies entirely on the manually provided **Client ID** parameter.
+
+    - If a provided Client ID does not exist in the Google GRR instance, the action
+    will report the failure for that specific ID but continue processing others in
+    the list.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action parses the comma-separated string of Client
+    IDs into a list.
+
+    2. **Connection Initialization:** It establishes an authenticated session with
+    the Google GRR server using the configured API Root, Username, and Password.
+
+    3. **Data Retrieval:** For each Client ID, the action sends a GET request to the
+    `/api/clients/{client_id}` endpoint.
+
+    4. **Data Parsing:** The raw JSON response is parsed into structured data models
+    covering:
+        - **Hardware Info:** BIOS version, serial number, and manufacturer.
+        - **OS Info:** Kernel version, install date, and distribution details.
+        - **Agent Info:** Client version and build time.
+        - **Network Interfaces:** MAC addresses and IP addresses.
+        - **Storage:** Volume and partition information.
+    5. **Output Generation:** The action aggregates the results into a JSON object
+    for downstream logic and populates a data table named "GRR Clients Details" for
+    the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Hunt Details:
+  ai_description: "### General Description\nRetrieves comprehensive details for specific\
+    \ hunts from a Google GRR instance. This action is used to gather metadata, execution\
+    \ status, and performance metrics (such as CPU and network usage) for one or more\
+    \ hunts identified by their unique IDs. It provides a structured JSON output of\
+    \ the hunt's configuration and results summary, along with direct links to the\
+    \ Google GRR web interface for further investigation.\n\n### Parameters Description\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Hunt ID** | String | Yes | A comma-separated list of unique identifiers for\
+    \ the hunts you wish to retrieve (e.g., `H:123456, H:789012`). |\n\n### Flow Description\n\
+    1. **Initialization**: The action extracts connection settings (API Root, Credentials)\
+    \ and the `Hunt ID` parameter.\n2. **Parsing**: The provided `Hunt ID` string\
+    \ is converted into a list of individual identifiers.\n3. **Data Retrieval**:\
+    \ For each ID, the action performs a GET request to the Google GRR API endpoint\
+    \ `api/hunts/{hunt_id}`.\n4. **Processing**: \n    * If a hunt is found, its details\
+    \ (creator, status, client statistics, flow arguments, etc.) are parsed into a\
+    \ structured data model.\n    * A direct URL link to the hunt in the Google GRR\
+    \ UI is generated and added to the action results.\n5. **Output**: The action\
+    \ aggregates all successfully retrieved hunt details into a JSON result and provides\
+    \ a summary message indicating which IDs were found and which (if any) were missing."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Clients:
+  ai_description: "### General Description\nLists available clients from a Google\
+    \ GRR instance. This action is used to discover and retrieve metadata about managed\
+    \ endpoints (clients) to facilitate further interaction or investigation. It retrieves\
+    \ detailed information including Agent Info, OS Info, and hardware metadata, presenting\
+    \ the results in both a data table and a JSON format.\n\n### Parameters Description\n\
+    | Parameter | Description | Type | Mandatory | Notes |\n| :--- | :--- | :--- |\
+    \ :--- | :--- |\n| Offset | Specify the starting offset for the list of found\
+    \ clients. | String | No | Used for paginating through large sets of clients.\
+    \ |\n| Max Results To Return | Specify how many clients to return in the response.\
+    \ | String | No | Defaults to 5 if not specified. |\n\n### Additional Notes\n\
+    - This action does not require any input entities to run; it queries the global\
+    \ list of clients managed by the Google GRR server.\n- The results are displayed\
+    \ in a data table named \"GRR Clients\".\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the Google GRR manager using the provided API Root, Username,\
+    \ and Password.\n2. **Data Retrieval**: It calls the Google GRR API to fetch a\
+    \ list of clients based on the provided `Offset` and `Max Results To Return` parameters.\n\
+    3. **Parsing**: The raw API response is parsed into structured `Client` data models,\
+    \ extracting details like OS version, installation time, and agent versions.\n\
+    4. **Output Generation**: \n    - A JSON result is created mapping Client IDs\
+    \ to their full metadata.\n    - A CSV-formatted data table is generated for the\
+    \ Siemplify UI.\n5. **Completion**: The action ends by reporting the number of\
+    \ clients found and attaching the results to the case."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Hunts:
+  ai_description: "### General Description\nRetrieves a list of available hunts from\
+    \ a Google GRR instance. This action allows security analysts to audit or monitor\
+    \ active and historical forensic investigations (hunts) across the fleet. It supports\
+    \ filtering by the hunt creator and provides paginated results.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Creator | String | No | Filters the results to only include\
+    \ hunts created by a specific username. |\n| Offset | String | No | The starting\
+    \ index for the list of hunts, used for pagination. |\n| Max Results To Return\
+    \ | String | No | Limits the number of hunt records returned in the response.\
+    \ Defaults to 5 if not specified. |\n\n### Additional Notes\n- This action does\
+    \ not require or process any entities from the Google SecOps case.\n- Results\
+    \ are presented both as a JSON object for downstream automation and as a formatted\
+    \ data table for analyst review.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action initializes the Google GRR manager using the integration's API root\
+    \ and credentials.\n2. **Parameter Extraction**: It retrieves the optional filters:\
+    \ `Creator`, `Offset`, and `Max Results To Return`.\n3. **API Request**: It performs\
+    \ a GET request to the Google GRR `/api/hunts` endpoint with the specified query\
+    \ parameters.\n4. **Data Parsing**: The raw API response is cleaned (removing\
+    \ the GRR-specific XSSI prefix `)]}'`) and parsed into structured `Hunt` data\
+    \ models.\n5. **Output Generation**: \n    - A JSON array containing detailed\
+    \ hunt metadata (ID, State, Creator, Timestamps) is added to the action results.\n\
+    \    - A data table named \"Hunts\" is created and attached to the case, displaying\
+    \ a summary of the retrieved hunts in CSV format."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table named 'Hunts' to the Google SecOps case to display
+      the retrieved hunt information.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Launched Flows:
+  ai_description: >-
+    ### General Description
+
+    The **List Launched Flows** action retrieves a list of forensic flows that have
+    been executed on a specific client (endpoint) within Google GRR. This action is
+    primarily used for auditing previous investigative actions or checking the status
+    of forensic tasks performed on a host. It allows analysts to see what automated
+    or manual forensic collections have been run against a specific machine.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Offset** | String | No | Specifies the starting index for the list of flows.
+    This is used for pagination when a client has a large number of flows. |
+
+    | **Max Results To Return** | String | No | Specifies the maximum number of flow
+    records to retrieve in the response. The default value is 5. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the Google GRR API
+    using the configured credentials (API Root, Username, and Password).
+
+    2. **Client Identification**: For each provided Hostname or IP Address entity,
+    the action queries Google GRR to find the corresponding internal `Client ID`.
+    It checks the entity's `OriginalIdentifier` property first, falling back to the
+    main identifier if necessary.
+
+    3. **Flow Retrieval**: Once the Client ID is obtained, the action requests the
+    list of launched flows for that specific client, applying the user-defined `Offset`
+    and `Max Results To Return` parameters.
+
+    4. **Data Processing**: The retrieved flow data (including Creator, State, Start
+    Time, and Flow Name) is parsed and formatted.
+
+    5. **Output Generation**: The action populates a JSON result with the flow details
+    and creates a data table named "GRR Launched Flows" on the case wall for easy
+    review.
+
+
+    ### Additional Notes
+
+    * This action supports **HOSTNAME** and **ADDRESS** (IP) entities.
+
+    * If a client cannot be found in Google GRR for a specific entity, the action
+    will report a failure for that specific entity but continue processing others.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Google GRR server using the credentials and API root
+    provided in the integration configuration. This action ensures that the Google
+    SecOps platform can successfully communicate with the Google GRR instance.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL of the Google GRR API. |
+
+    | Username | String | Yes | The username used for basic authentication. |
+
+    | Password | String | Yes | The password used for basic authentication. |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Google GRR server. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the API Root, Username, Password, and SSL
+    verification setting from the integration configuration.
+
+    2. **Manager Initialization**: Initializes the `GoogleGRRManager` which sets up
+    the authenticated session and handles CSRF tokens.
+
+    3. **Connectivity Test**: Sends a GET request to the `/api/config` endpoint of
+    the Google GRR server to verify the service is reachable and credentials are valid.
+
+    4. **Response Validation**: Checks the HTTP response status. If the status is
+    200 OK, the connection is considered successful.
+
+    5. **Result Reporting**: Returns a success status and message if the connection
+    is verified, or a failure status with the error details if the connection fails.
+
+
+    ### Additional Notes
+
+    This action is a standard diagnostic tool and does not process any entities or
+    modify any data within Google GRR or Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Start a Hunt:
+  ai_description: >-
+    Starts or restarts specific hunts in Google GRR. This action is primarily used
+    to activate newly created hunts (which default to a 'PAUSED' state) or to resume
+    hunts that were paused due to reaching client limits. It interacts with the Google
+    GRR API to transition the state of one or more hunts to 'STARTED'.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Hunt ID | String | Yes | A comma-separated list of unique identifiers for the
+    hunts to be started. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google GRR manager using the
+    provided API root and credentials.
+
+    2. **Input Parsing**: The 'Hunt ID' parameter is parsed from a comma-separated
+    string into a list of individual IDs.
+
+    3. **Execution**: For each Hunt ID, the action sends a PATCH request to the Google
+    GRR endpoint (`api/hunts/{hunt_id}`) with the state set to 'STARTED'.
+
+    4. **Error Handling**: The action identifies and reports hunts that were not found
+    or those that could not be started because they were not in a 'PAUSED' state.
+
+    5. **Output**: Returns a JSON result containing the updated state of each processed
+    hunt and provides a summary message in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Changes the operational state of a hunt in the Google GRR system from 'PAUSED'
+      to 'STARTED' via a PATCH request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Stop a Hunt:
+  ai_description: "### General Description\nStops one or more hunts in Google GRR.\
+    \ Stopping a hunt prevents new clients from being scheduled and interrupts in-progress\
+    \ flows the next time they change state. This is a permanent action; once a hunt\
+    \ is stopped, it cannot be restarted. Results already reported are unaffected,\
+    \ but in-progress results will be lost.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Hunt ID\
+    \ | String | Yes | A comma-separated list of the unique identifiers (IDs) for\
+    \ the hunts you wish to stop. |\n\n### Additional Notes\n- The action only succeeds\
+    \ for hunts that are currently in a 'STARTED' or 'PAUSED' state.\n- If a hunt\
+    \ ID is not found in Google GRR, the action will report it as not found but continue\
+    \ processing other IDs in the list.\n\n### Flow Description\n1. **Initialization**:\
+    \ Retrieves connection details (API Root, credentials) and the list of Hunt IDs\
+    \ from the action parameters.\n2. **Parsing**: Converts the comma-separated string\
+    \ of Hunt IDs into a list.\n3. **Execution**: Iterates through each Hunt ID and\
+    \ sends a PATCH request to the Google GRR API to update the hunt's state to 'STOPPED'.\n\
+    4. **Error Handling**: \n    - Catches 'Not Found' exceptions if a hunt ID does\
+    \ not exist.\n    - Catches status code exceptions if the hunt is in a state that\
+    \ cannot be stopped (e.g., already stopped).\n5. **Reporting**: Aggregates the\
+    \ results, providing a summary of successfully stopped hunts and those that failed,\
+    \ and attaches the raw JSON response for successful operations."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the state of the specified hunt(s) to 'STOPPED' in the Google GRR instance
+      via a PATCH request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

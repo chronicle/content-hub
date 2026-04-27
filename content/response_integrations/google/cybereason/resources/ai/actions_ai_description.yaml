@@ -1,0 +1,1637 @@
+Add Comment To Malop:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to a specific Malop (Malicious Operation) within the Cybereason
+    platform. This action is used to document findings, provide updates, or add context
+    to an investigation directly in the Cybereason console from Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Malop ID | String | Yes | The unique identifier (GUID) of the Malop in Cybereason
+    to which the comment will be added. |
+
+    | Comment | String | Yes | The text content of the comment to be added to the
+    Malop. |
+
+
+    ### Additional Notes
+
+    - This action does not process entities from the Google SecOps case; it relies
+    entirely on the provided 'Malop ID' parameter.
+
+    - The action first validates the existence of the Malop before attempting to add
+    the comment.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the Cybereason API using the provided credentials
+    (API Root, Username, Password).
+
+    2. **Validation**: Checks if the specified Malop ID exists in Cybereason using
+    the `get_malop_or_raise` method.
+
+    3. **Execution**: Sends a POST request to the Cybereason `/rest/crimes/comment/{malop_guid}`
+    endpoint with the encoded comment text.
+
+    4. **Completion**: Returns a success message if the comment is successfully posted,
+    or an error message if the Malop is not found or the API call fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new comment to a Malop record in the Cybereason platform via a POST request
+      to the /rest/crimes/comment endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Allow File:
+  ai_description: >-
+    Removes MD5 file hashes from the Cybereason blacklist. This action allows security
+    administrators to programmatically permit files that were previously blocked by
+    the Cybereason platform, effectively moving them from a 'prevent' state to an
+    'allowed' state.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The API root URL of the Cybereason instance. |
+
+    | Username | String | Yes | The username for the Cybereason account. |
+
+    | Password | String | Yes | The password for the Cybereason account. |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Cybereason server. Default is False. |
+
+    | CA Certificate Base64 | String | No | The base64-encoded CA certificate to use
+    for SSL verification if 'Verify SSL' is enabled. |
+
+
+    ### Additional Notes
+
+    - **Supported Hashes:** This action strictly supports **MD5** hashes. If a SHA1
+    or other hash type is encountered, the action will skip that specific entity and
+    mark it as failed in the final summary.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action extracts connection parameters and initializes
+    the Cybereason API manager, performing a connectivity check.
+
+    2. **Entity Selection:** It identifies all `FILEHASH` entities provided in the
+    current context.
+
+    3. **Hash Validation:** For each entity, the script determines the hash type.
+    If the hash is not MD5, it is added to the failed entities list.
+
+    4. **API Interaction:** For valid MD5 hashes, the action calls the Cybereason
+    `unprevent_file` endpoint to remove the hash from the blacklist.
+
+    5. **Completion:** The action provides a summary of which hashes were successfully
+    removed and which failed (due to unsupported types or API errors).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes the specified MD5 file hash from the Cybereason blacklist, changing
+      its status from blocked/prevented to allowed in the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Clear Reputation:
+  ai_description: "### General Description\nThe **Clear Reputation** action removes\
+    \ custom reputation classifications (such as whitelist or blacklist entries) for\
+    \ specific entities within the Cybereason platform. This action is used to revert\
+    \ previous reputation assignments, ensuring that entities are no longer explicitly\
+    \ blocked or allowed based on custom rules.\n\n### Parameters\nThere are no additional\
+    \ parameters for this action.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action establishes a connection to the Cybereason API using the integration's\
+    \ configuration (API Root, Username, Password).\n2. **Entity Filtering**: It identifies\
+    \ supported entities from the case, specifically IP Addresses, File Hashes, and\
+    \ URLs.\n3. **Data Normalization**: \n    * For **URLs**, the action extracts\
+    \ the domain part to match Cybereason's classification format.\n    * For **File\
+    \ Hashes**, it validates that the hash is either MD5 or SHA1, as these are the\
+    \ only types supported for reputation management in Cybereason.\n4. **Existence\
+    \ Check**: The action searches the Cybereason classification list to verify if\
+    \ the entity has a custom reputation assigned.\n5. **Reputation Removal**: If\
+    \ the entity is found, the action sends a request to Cybereason to remove the\
+    \ custom classification (setting 'remove' to true).\n6. **Result Aggregation**:\
+    \ The action summarizes which entities were successfully cleared, which were not\
+    \ found in Cybereason, and which failed due to errors."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes custom reputation classifications (whitelist or blacklist) for entities
+      in the Cybereason platform via a POST request to the classification update endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname, IP Address, File Hash, and URL entities using threat intelligence
+    and machine data from Cybereason. This action retrieves detailed metadata about
+    machines (for Hostnames) or classification data (for IPs, URLs, and Hashes) to
+    determine reputation and suspicious status. It updates the entities within Google
+    SecOps with this supplemental context and can optionally generate insights.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Create Insights | Boolean | No | If enabled (default: true), the action will
+    create a SOAR insight for each successfully enriched entity. |
+
+    | Only Malicious Entity Insight | Boolean | No | If enabled (default: true), insights
+    will only be created for entities classified as malicious (e.g., ransomware, malware,
+    blacklist). This applies to IP, Hash, and URL entities; Hostnames always receive
+    insights if 'Create Insights' is enabled. |
+
+
+    ### Additional Notes
+
+    - **IP Addresses:** This action is intended for external IP addresses.
+
+    - **File Hashes:** Only MD5 and SHA-1 hash types are supported.
+
+    - **URLs:** The action automatically extracts the domain part from URL entities
+    for processing.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Establishes a connection to the Cybereason API using provided
+    credentials and validates the environment.
+
+    2. **Entity Filtering:** Identifies supported entities (Hostname, IP, File Hash,
+    URL) from the current alert context.
+
+    3. **Data Retrieval (Hostnames):** For Hostname entities, the action searches
+    for the machine's GUID and retrieves comprehensive system information, including
+    OS version, isolation status, and connection history.
+
+    4. **Data Retrieval (Other Entities):** For IP, URL, and File Hash entities, the
+    action fetches classification details. For File Hashes, it additionally retrieves
+    file instance data and identifies owner machines.
+
+    5. **Internal Updates:** Updates the entity's 'additional_properties' with the
+    retrieved data, marks the entity as 'enriched', and sets the 'is_suspicious' flag
+    if Cybereason classifies the entity as malicious.
+
+    6. **Insight Generation:** Based on the 'Create Insights' and 'Only Malicious
+    Entity Insight' parameters, generates SOAR insights containing formatted summaries
+    of the findings.
+
+    7. **Finalization:** Attaches detailed CSV data tables to the case and returns
+    a JSON result containing the raw API responses.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes including 'additional_properties', 'is_enriched',
+      and 'is_suspicious' status. It also creates entity-level insights and adds data
+      tables to the case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute Custom Investigation Search:
+  ai_description: >-
+    ### General Description
+
+    Executes a custom investigation search in Cybereason based on a structured JSON
+    query. This action allows users to perform complex, nested searches across various
+    Cybereason item types (such as Machines, Users, Processes, Files, etc.) by defining
+    specific filters and connections. It is designed for advanced threat hunting and
+    deep investigation where standard entity-based enrichment is insufficient.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query Filters JSON** | String | Yes | A JSON array of objects defining the
+    search. Each object must include `request_type` (e.g., 'Machine', 'Process') and
+    `queries` (a list of filter strings like 'elementDisplayName Equals PC1'). It
+    can optionally include a `connection` key to link to related features. |
+
+    | **Fields To Return** | String | Yes | A comma-separated list of Cybereason API
+    field names to be included in the results (e.g., 'osVersionType, platformArchitecture').
+    |
+
+    | **Max Results To Return** | Integer | No | The maximum number of search results
+    to retrieve. Defaults to 50. |
+
+
+    ### Additional Notes
+
+    - The `Query Filters JSON` must follow a strict syntax for queries: `"{API field}
+    {Operator} {Value}"`. Supported operators include `Equals`, `NotEquals`, `ContainsIgnoreCase`,
+    `LessThan`, etc.
+
+    - For multiple values in a single query string, use the `OR` keyword (e.g., `"elementDisplayName
+    Equals PC1 OR PC2"`).
+
+    - This action does not run on specific SecOps entities; it performs a global search
+    based on the provided JSON configuration.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the API configuration and the
+    user-provided search parameters.
+
+    2. **Query Validation**: It parses the `Query Filters JSON` to ensure it is a
+    valid JSON structure and validates the integer limit for results.
+
+    3. **Manager Initialization**: Authenticates with the Cybereason platform using
+    the provided credentials.
+
+    4. **Search Execution**: Sends a POST request to the Cybereason Visual Search
+    API (`/rest/visualsearch/query/simple`) with the constructed query path and requested
+    fields.
+
+    5. **Result Processing**: Parses the API response into structured data objects.
+
+    6. **Output Generation**: If data is found, it populates a SOAR data table named
+    'Search Results' and attaches the raw JSON results to the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute Simple Investigation Search:
+  ai_description: >-
+    ### General Description
+
+    Executes a simple investigation search in Cybereason based on user-defined parameters.
+    This action allows users to query various data types such as Machines, Users,
+    Processes, Files, Connections, Domain Names, IP Addresses, or Services without
+    needing to write complex nested queries. It is primarily used for threat hunting
+    or gathering specific telemetry data from the Cybereason environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Request Type | String | No | Specifies the category of data to be queried (e.g.,
+    Machine, User, Process, File, Connection, Domain Name, IP Address, Service). Default
+    is 'Machine'. |
+
+    | Query Filters | String | No | Defines the search criteria using the pattern
+    `{API field} {Operator} {Value}`. Multiple filters can be provided on new lines
+    using 'OR'. Note: Nested queries are not supported in this action. |
+
+    | Fields To Return | String | Yes | A comma-separated list of API field names
+    to be included in the search results. |
+
+    | Max Results To Return | Integer | No | The maximum number of results to retrieve.
+    Default is 50. Must be a positive integer. |
+
+
+    ### Additional Notes
+
+    This action is designed for flat queries. For complex, nested investigation logic,
+    use the 'Execute Custom Investigation Search' action. The action will fail if
+    the query syntax is incorrect or if the API fields provided in 'Fields To Return'
+    are invalid for the selected 'Request Type'.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves connection settings (API Root, Credentials) and
+    action parameters from the environment.
+
+    2. **Validation**: Checks if the 'Max Results To Return' is a positive integer
+    and converts the 'Fields To Return' string into a list.
+
+    3. **Connection**: Initializes the Cybereason Manager and authenticates with the
+    server.
+
+    4. **Execution**: Constructs a visual search query based on the provided filters
+    and request type, then executes it against the Cybereason `/rest/visualsearch/query/simple`
+    endpoint.
+
+    5. **Output**: If data is found, it formats the results into a Siemplify data
+    table named 'Search Results' and attaches the raw JSON data to the action result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Malop:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive details for a specific Malop (Malicious Operation) from
+    the Cybereason platform using its unique identifier. This action is essential
+    for incident investigation, providing deep visibility into the scope of an attack,
+    including affected machines, users, and the root cause elements identified by
+    Cybereason.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Malop ID | String | Yes | Specify the unique GUID of the Malop for which you
+    want to return details. |
+
+
+    ### Additional Notes
+
+    This action does not operate on entities within the Google SecOps context. It
+    relies entirely on the provided Malop ID parameter. The results are presented
+    as a JSON object for automation and a formatted table on the case wall for analyst
+    review.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the Cybereason API credentials
+    from the integration configuration and the Malop ID from the action parameters.
+
+    2. **Manager Initialization**: Initializes the Cybereason Manager, which handles
+    authentication and session management.
+
+    3. **Data Retrieval**: The action attempts to fetch Malop details. It first tries
+    the specific detection details endpoint and, if unsuccessful, falls back to a
+    visual search query to ensure the data is captured.
+
+    4. **Internal Data Output**: The retrieved Malop details are processed and added
+    to the Google SecOps case wall as a data table for visibility.
+
+    5. **Result Finalization**: The full Malop data is returned as a JSON result,
+    and the action completes with a success message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Sensor Details:
+  ai_description: "### General Description\nRetrieves detailed sensor information\
+    \ from Cybereason for Hostname and IP Address entities. This action is used to\
+    \ enrich entities with real-time sensor status, isolation state, policy information,\
+    \ and network details directly from the Cybereason platform.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Default | Description |\n| :---\
+    \ | :--- | :--- | :--- | :--- |\n| Create Insight | Boolean | No | True | If enabled,\
+    \ the action will create a detailed SecOps insight for each entity containing\
+    \ sensor information such as service status, isolation state, and uptime. |\n\n\
+    ### Additional Notes\n- The action queries the Cybereason `/rest/sensors/query`\
+    \ endpoint.\n- Enrichment data is added to entities with the prefix `Cybereason_sensor`.\n\
+    - The action supports both internal IP addresses and FQDNs for identification.\n\
+    \n### Flow Description\n1. **Initialization**: Establishes a connection to the\
+    \ Cybereason API using provided credentials and configuration.\n2. **Entity Filtering**:\
+    \ Identifies supported entities (Hostname and IP Address) from the current context.\n\
+    3. **Data Retrieval**: For each supported entity, it queries Cybereason for sensor\
+    \ details using the entity's identifier (FQDN for Hostnames, Internal IP for Addresses).\n\
+    4. **Internal Enrichment**: \n    - Updates the entity's additional properties\
+    \ with sensor metadata (e.g., status, group name, policy, isolation status).\n\
+    \    - Adds a data table to the entity in the SecOps UI.\n    - Sets the entity's\
+    \ `is_enriched` flag to true.\n5. **Insight Generation**: If the `Create Insight`\
+    \ parameter is enabled, it generates an HTML-formatted insight for the entity.\n\
+    6. **Finalization**: Updates all processed entities in the SecOps platform and\
+    \ returns a JSON summary of the retrieved data."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with sensor details, adds entity data tables,
+      and creates case insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Is Probe Connected:
+  ai_description: >-
+    ### General Description
+
+    The **Is Probe Connected** action checks the connectivity status of Hostname entities
+    within the Cybereason platform. Its primary purpose is to verify if the Cybereason
+    sensor (probe) installed on a target endpoint is currently online and communicating
+    with the management server.
+
+
+    ### Parameters
+
+    This action does not require any additional input parameters. It utilizes the
+    global integration configuration (API Root, Username, Password, and SSL settings)
+    to authenticate and perform the check.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action establishes a session with the Cybereason API
+    using the configured credentials.
+
+    2. **Entity Filtering**: It identifies all `HOSTNAME` entities provided in the
+    current Google SecOps context.
+
+    3. **Sensor Lookup**: For each hostname, the action queries the Cybereason sensor
+    inventory (`/rest/sensors/query`) to find the corresponding sensor record.
+
+    4. **Connectivity Validation**: It inspects the `status` attribute of the retrieved
+    sensor. If the status is 'online', the probe is marked as connected.
+
+    5. **Reporting**: The connectivity results (connected vs. disconnected) are compiled
+    into a 'Connection Status' data table and a JSON result attached to the case for
+    further automation or analyst review.
+
+
+    ### Additional Notes
+
+    - This action is read-only regarding the external Cybereason system; it does not
+    change the state of the sensors.
+
+    - If a hostname cannot be matched to a sensor in Cybereason, it will be reported
+    as a failed entity in the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a 'Connection Status' data table and a result JSON object to the Google
+      SecOps case containing the connectivity details of the processed hostnames.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Isolate Machine:
+  ai_description: >-
+    ### General Description
+
+    The **Isolate Machine** action is designed to isolate a machine (endpoint) from
+    the network using the Cybereason platform. This is a containment action typically
+    used during incident response to prevent a compromised host from communicating
+    with other systems or exfiltrating data, while still allowing it to communicate
+    with the Cybereason management server for investigation.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not have any user-facing parameters. |
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all `HOSTNAME` entities in the
+    current alert or case scope.
+
+    2. **Status Check**: For each identified hostname, the action queries Cybereason
+    to retrieve sensor details and determine if the machine is already isolated.
+
+    3. **Isolation Trigger**: If a machine is found and is not currently isolated,
+    the action sends a command to Cybereason to initiate the isolation process.
+
+    4. **Asynchronous Monitoring**: Because isolation can take time, the action enters
+    an asynchronous state. It periodically polls Cybereason to check the status of
+    the isolation command.
+
+    5. **Completion**: Once the machines are confirmed as isolated (or the action
+    reaches a timeout), it provides a final summary of which machines were successfully
+    isolated, which were already isolated, and which could not be found or failed
+    the operation.
+
+
+    ### Additional Notes
+
+    This action is asynchronous and will continue to run in the background until the
+    isolation is confirmed or the global timeout is reached.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers the isolation command in Cybereason for the specified machine, which
+      disconnects it from the network except for communication with the Cybereason
+      server.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Malop Affected Machines:
+  ai_description: "### General Description\nThe 'List Malop Affected Machines' action\
+    \ retrieves a list of all machines impacted by a specific Malop (Malicious Operation)\
+    \ in the Cybereason platform. It is primarily used for investigation and scoping\
+    \ to understand the breadth of an incident across the network. The action fetches\
+    \ detailed machine metadata, including OS version, architecture, uptime, and connection\
+    \ status.\n\n### Parameters Description\n| Parameter Name | Type | Mandatory |\
+    \ Description |\n| :--- | :--- | :--- | :--- |\n| Malop ID | String | Yes | The\
+    \ unique identifier (GUID) of the Malop for which you want to retrieve affected\
+    \ machines. |\n| Results Limit | Integer | Yes | The maximum number of machine\
+    \ results to return. Default is 100. |\n| Create Hostname Entity | Boolean | No\
+    \ | If enabled (True), the action will automatically create and add 'HOSTNAME'\
+    \ entities to the current Google SecOps case for every machine found in the Malop.\
+    \ |\n\n### Additional Notes\n- This action does not require existing entities\
+    \ in the case to run; it operates based on the provided 'Malop ID'.\n- If 'Create\
+    \ Hostname Entity' is enabled, it will populate the case with new entities, which\
+    \ can trigger subsequent automated enrichment playbooks.\n\n### Flow Description\n\
+    1. **Parameter Extraction:** The action retrieves the Cybereason API credentials\
+    \ and the user-provided Malop ID, result limit, and entity creation flag.\n2.\
+    \ **API Interaction:** It connects to the Cybereason API and executes a visual\
+    \ search query to find machines linked to the specified Malop GUID.\n3. **Data\
+    \ Processing:** The retrieved machine data is parsed into structured objects containing\
+    \ details like OS type, DNS hostname, and isolation status.\n4. **Output Generation:**\
+    \ \n    - A data table named 'Affected Machines' is added to the Case Wall containing\
+    \ a summary of the machines.\n    - The full raw data for all machines is returned\
+    \ as a JSON result.\n5. **Internal Mutation (Optional):** If 'Create Hostname\
+    \ Entity' is set to True, the action iterates through the results and calls the\
+    \ SDK to add each machine as a new 'HOSTNAME' entity to the case context."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action can create new Hostname entities within the Google SecOps case context
+      if the 'Create Hostname Entity' parameter is enabled.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Malop Processes:
+  ai_description: "### General Description\nThe **List Malop Processes** action retrieves\
+    \ a list of all processes associated with a specific Malop (Malicious Operation)\
+    \ ID from the Cybereason platform. This action is primarily used during incident\
+    \ investigation to identify the specific execution details, such as command lines,\
+    \ PIDs, and parent-child relationships, that are linked to a detected threat.\n\
+    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| Malop ID | String | Yes | The unique GUID of\
+    \ the Malop for which you want to retrieve related processes. |\n| Results Limit\
+    \ | Integer | Yes | The maximum number of process records to return. Defaults\
+    \ to 100. Must be a positive integer. |\n\n### Additional Notes\n- This action\
+    \ does not run on specific entities (like IPs or Hostnames) but instead uses the\
+    \ provided **Malop ID** as the primary search key.\n- The action attempts to fetch\
+    \ data using the specific Malop details endpoint first and falls back to a visual\
+    \ search query if the primary method fails.\n\n### Flow Description\n1. **Initialization**:\
+    \ The action extracts the Cybereason API credentials and the user-provided parameters\
+    \ (**Malop ID** and **Results Limit**).\n2. **Connectivity**: It establishes a\
+    \ session with the Cybereason server and validates the connection.\n3. **Data\
+    \ Retrieval**: It queries the Cybereason API to find all process elements associated\
+    \ with the specified Malop GUID.\n4. **Processing**: The retrieved process data\
+    \ is parsed into structured objects, capturing details like `elementDisplayName`,\
+    \ `creationTime`, `commandLine`, `pid`, and `ownerMachine`.\n5. **Output Generation**:\
+    \ \n    - A data table named **Processes** is created containing the CSV-formatted\
+    \ process list.\n    - A raw JSON object containing the full process details is\
+    \ added to the action results.\n6. **Completion**: The action returns the total\
+    \ count of processes found and a success message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Malop Remediations:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of available remediation actions for a specific Malop (Malicious
+    Operation) in Cybereason. This action is used to identify which response actions
+    (such as file quarantine, process termination, or machine isolation) are supported
+    by the Cybereason platform for a specific detection. It provides the necessary
+    metadata (like unique IDs and target names) required to execute subsequent remediation
+    actions.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Malop ID | String | Yes | The unique identifier of the Malop for which you want
+    to list available remediations. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Cybereason API manager using
+    the provided integration configuration (API Root, credentials, and SSL settings).
+
+    2. **Data Retrieval**: It sends a POST request to the Cybereason `/rest/detection/custom-remediation`
+    endpoint to fetch suspicious details and potential remediation paths associated
+    with the provided Malop ID.
+
+    3. **Parsing**: The response is parsed into a list of `MalopSuspeciousDetails`
+    objects, extracting structured information such as the remediation type, target
+    name, target ID, machine name, and machine ID.
+
+    4. **Output**: The list of available remediations is returned as a JSON result.
+    If no remediations are found, the action completes with a failure status and an
+    informative message.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not execute any remediations; it
+    is intended to be used as a reconnaissance step in a playbook before calling a
+    remediation execution action.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Processes:
+  ai_description: >-
+    ### General Description
+
+    This action lists processes within the Cybereason environment based on a variety
+    of user-defined criteria. It allows security analysts to search for processes
+    by name, machine, or specific behavioral characteristics such as suspicious activity,
+    network connections, or privilege escalation. The results are returned as a data
+    table and a JSON object for further automation steps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Process Name | String | No | A comma-separated list of process names to search
+    for. |
+
+    | Machine Name | String | No | A comma-separated list of machine names where the
+    search should be performed. |
+
+    | Has Suspicions | Boolean | No | If enabled, the action will only return processes
+    that are labeled as suspicious. |
+
+    | Has Incoming Connection | Boolean | No | If enabled, the action will only return
+    processes that have incoming connections. |
+
+    | Has Outgoing Connection | Boolean | No | If enabled, the action will only return
+    processes that have outgoing connections. |
+
+    | Has External Connection | Boolean | No | If enabled, the action will only return
+    processes that have external connections. |
+
+    | Unsigned process with unknown reputation | Boolean | No | If enabled, the action
+    will only return unsigned processes with unknown reputation. |
+
+    | Running from temporary folder | Boolean | No | If enabled, the action will only
+    return processes running from a temporary folder. |
+
+    | Privilege Escalation | Boolean | No | If enabled, the action will only return
+    processes with escalated privileges. |
+
+    | Malicious use of PsExec | Boolean | No | If enabled, the action will only return
+    processes related to malicious use of PsExec. |
+
+    | Results Limit | Integer | Yes | Specify how many processes to return (default
+    is 100). |
+
+
+    ### Additional Notes
+
+    - If no filters are provided, the action will attempt to list all processes up
+    to the specified limit.
+
+    - The 'Results Limit' must be a positive integer.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action connects to the Cybereason API using the provided
+    credentials (Username, Password) and API Root.
+
+    2. **Parameter Parsing**: It extracts and validates the search filters and the
+    results limit from the action parameters.
+
+    3. **Query Construction**: A complex query is built for the Cybereason 'visualsearch'
+    endpoint, incorporating all enabled filters such as process name, machine name,
+    and behavioral flags.
+
+    4. **Data Retrieval**: The action executes the search via the CybereasonManager
+    and retrieves process metadata.
+
+    5. **Output Generation**: The retrieved processes are formatted into a CSV table
+    named 'Processes' and a raw JSON result. The total count of found processes is
+    returned as the action's result value.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Reputation Items:
+  ai_description: "### General Description\nThe **List Reputation Items** action retrieves\
+    \ and displays a list of items (such as file hashes) that have a defined reputation\
+    \ status (e.g., blacklist, whitelist) within the Cybereason platform. This action\
+    \ allows security analysts to audit existing reputation entries or search for\
+    \ specific indicators across the Cybereason environment without needing to run\
+    \ the action on specific entities.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Filter\
+    \ Logic** | String (Dropdown) | No | Specifies the matching logic for the filter.\
+    \ Options are `Equal` (for an exact match) or `Contains` (for a substring match).\
+    \ Default is `Equal`. |\n| **Filter Value** | String | No | The specific value\
+    \ (e.g., a file hash) to search for in the reputation list. If left empty, the\
+    \ action returns all items up to the limit. |\n| **Max Results To Return** | Integer\
+    \ | No | Limits the number of reputation items returned in the output. Default\
+    \ is 50. |\n\n### Flow Description\n1. **Initialization**: The action initializes\
+    \ the Cybereason manager using the provided API credentials and connection settings.\n\
+    2. **Data Retrieval**: It fetches the complete classification/reputation list\
+    \ from the Cybereason server via a GET request.\n3. **Filtering**: The action\
+    \ applies the user-defined `Filter Logic` and `Filter Value` to the retrieved\
+    \ list to identify matching reputation items.\n4. **Result Processing**: It limits\
+    \ the results based on the `Max Results To Return` parameter and converts the\
+    \ raw data into structured objects.\n5. **Output Generation**: \n    *   Creates\
+    \ a data table named \"Available Reputation Items\" on the Google SecOps Case\
+    \ Wall.\n    *   Returns a JSON object containing the detailed reputation data\
+    \ for further use in playbooks.\n\n### Additional Notes\n* This action does not\
+    \ require entities to be present in the context; it queries the global reputation\
+    \ database of the Cybereason instance."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table to the case wall containing the retrieved reputation
+      items from Cybereason.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List files:
+  ai_description: >-
+    ### General Description
+
+    The **List files** action retrieves detailed metadata about files from the Cybereason
+    platform. It allows security analysts to search for specific files using SHA-1
+    or MD5 hashes or to perform a broader search to list files based on a specified
+    limit. The action provides comprehensive file details, including paths, signatures,
+    and ownership information, which are outputted as a data table and a JSON result
+    for further analysis.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **File Hash** | String | No | A comma-separated list of SHA-1 or MD5 file hashes
+    to query. If provided, the action retrieves data specifically for these hashes.
+    Note: Only SHA-1 and MD5 formats are supported. |
+
+    | **Results Limit** | Integer | Yes | The maximum number of file records to return
+    from the search. Default is 100. |
+
+    | **Fields To Return** | String | No | A comma-separated list of specific file
+    attributes to retrieve (e.g., `md5String`, `ownerMachine`, `correctedPath`, `isSigned`).
+    If left empty, the action returns a predefined set of standard fields. |
+
+
+    ### Flow Description
+
+    1.  **Initialization:** The action extracts the Cybereason API configuration (Root
+    URL, Credentials) and the user-provided parameters.
+
+    2.  **Validation:** It validates that the `Results Limit` is a positive integer
+    and checks the `Fields To Return` against a list of supported Cybereason file
+    attributes.
+
+    3.  **Hash Filtering:** If the `File Hash` parameter is populated, the action
+    identifies and filters for supported hash types (MD5 and SHA-1), ignoring unsupported
+    formats.
+
+    4.  **API Query:** The action executes a visual search query against the Cybereason
+    API. If specific hashes were provided, it queries for those; otherwise, it performs
+    a general search up to the specified limit.
+
+    5.  **Data Processing:** The retrieved file objects are parsed into a structured
+    format. The action generates a Siemplify Data Table named "Files" containing key
+    metadata and attaches the full raw data as a JSON result.
+
+
+    ### Additional Notes
+
+    *   **Entity Support:** This action does not automatically iterate over entities
+    in the current alert context. It relies entirely on the provided `File Hash` parameter
+    or general search logic.
+
+    *   **Supported Hashes:** The action explicitly supports MD5 (32 characters) and
+    SHA-1 (40 characters) hashes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is used to verify the connectivity between Google SecOps and
+    the Cybereason server. It ensures that the provided credentials (Username and
+    Password) and the API Root URL are correct and that the SOAR platform can successfully
+    communicate with the Cybereason API.
+
+
+    ### Parameters Description
+
+    This action does not have specific action-level parameters. It utilizes the following
+    **Integration Configuration** parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **API Root** | String | Yes | The base URL of the Cybereason instance (e.g.,
+    `https://<instance>.cybereason.net`). |
+
+    | **Username** | String | Yes | The username used to authenticate with the Cybereason
+    server. |
+
+    | **Password** | Password | Yes | The password used to authenticate with the Cybereason
+    server. |
+
+    | **Verify SSL** | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Cybereason server. Default is `False`. |
+
+    | **CA Certificate Base64** | String | No | The Base64 encoded CA certificate
+    to use for SSL verification if a private CA is used. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the connection details (API
+    Root, Username, Password, SSL settings) from the integration configuration.
+
+    2. **Manager Initialization**: It initializes the `CybereasonManager`, which immediately
+    attempts to log in to the Cybereason server using the provided credentials via
+    a POST request to the `/login.html` endpoint.
+
+    3. **Connectivity Test**: Upon successful login, the manager executes a test query
+    (a simple visual search for a single Malop process via the `/rest/visualsearch/query/simple`
+    endpoint) to confirm that the account has the necessary permissions to interact
+    with the API.
+
+    4. **Result Reporting**: If both the login and the test query succeed, the action
+    returns a success message. If any step fails, an error message is returned, and
+    the action is marked as failed.
+
+
+    ### Additional Notes
+
+    * This action is primarily used for troubleshooting and initial setup verification.
+
+    * It does not process any entities or modify any data within Cybereason.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Prevent File:
+  ai_description: >-
+    ### General Description
+
+    The **Prevent File** action allows security analysts to blacklist specific file
+    hashes within the Cybereason platform. By adding a hash to the blacklist, the
+    action ensures that any execution attempts of the associated file are prevented
+    across the environment managed by Cybereason. This is a containment action used
+    to stop the spread of known malicious files.
+
+
+    ### Parameters
+
+    There are no specific action parameters for this action. It relies on the integration's
+    global configuration (API Root, Username, Password, etc.) to authenticate and
+    communicate with the Cybereason server.
+
+
+    ### Additional Notes
+
+    *   **Supported Hash Types:** This action strictly supports **MD5** hashes. If
+    a SHA1 or other hash type is provided, the action will skip that entity and log
+    a warning.
+
+    *   **Prevention Mode:** The action explicitly sets the `prevent` flag to `True`
+    in Cybereason, meaning it doesn't just categorize the file but actively blocks
+    it from executing.
+
+
+    ### Flow Description
+
+    1.  **Initialization:** The action establishes a session with the Cybereason API
+    using the provided configuration parameters and performs a connectivity test.
+
+    2.  **Entity Filtering:** It identifies all `FILEHASH` entities within the current
+    Google SecOps context.
+
+    3.  **Validation:** For each entity, it verifies if the hash is an MD5 string
+    (32 characters). Non-MD5 hashes are skipped.
+
+    4.  **Execution:** It sends a POST request to the Cybereason `/rest/classification/update`
+    endpoint for each valid MD5 hash, setting the classification to `blacklist` and
+    enabling prevention.
+
+    5.  **Completion:** The action tracks successful and failed preventions and returns
+    a summary message to the case wall, indicating which hashes were successfully
+    blacklisted.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds the specified MD5 file hash to the Cybereason blacklist and enables the
+      prevention setting for that hash to block execution.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remediate Malop:
+  ai_description: "### General Description\nThis action executes remediation tasks\
+    \ on a specific Malop (Malicious Operation) within the Cybereason platform. It\
+    \ allows security analysts to programmatically trigger actions such as killing\
+    \ processes or blocking files based on unique remediation identifiers. The action\
+    \ operates asynchronously, meaning it initiates the remediation and then periodically\
+    \ polls Cybereason for the status of each task until they succeed, fail, or the\
+    \ action times out.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Malop ID | String | Yes |\
+    \ The unique identifier of the Malop in Cybereason that requires remediation.\
+    \ |\n| Remediation Unique IDs | String | Yes | A comma-separated list of specific\
+    \ remediation action IDs to be executed. These IDs are typically retrieved using\
+    \ the 'List Malop Remediations' action. |\n\n### Additional Notes\n- **Asynchronous\
+    \ Execution:** This action is designed to run asynchronously. Users should ensure\
+    \ the script timeout in the Chronicle SOAR IDE is sufficiently high to allow for\
+    \ polling of long-running remediation tasks.\n- **Block Actions:** Remediation\
+    \ actions categorized as 'Block' (e.g., `BLOCK_FILE`) are treated as immediate\
+    \ successes in the initial run and do not require asynchronous polling.\n- **Prerequisite:**\
+    \ It is highly recommended to run the 'List Malop Remediations' action first to\
+    \ obtain the correct `Remediation Unique IDs` for the target Malop.\n\n### Flow\
+    \ Description\n1. **Initialization:** The action extracts configuration parameters\
+    \ (API Root, credentials) and action parameters (Malop ID, Remediation IDs).\n\
+    2. **Validation:** It fetches the list of available remediation actions for the\
+    \ specified Malop from Cybereason and validates that the provided `Remediation\
+    \ Unique IDs` exist.\n3. **Execution:** For each valid ID, the action sends a\
+    \ request to Cybereason to initiate the remediation.\n4. **Status Tracking (Async):**\
+    \ \n    - If the action is a 'Block' type, it is marked as successful immediately.\n\
+    \    - For other actions (like `KILL_PROCESS`), the action enters an asynchronous\
+    \ state, storing the remediation IDs.\n5. **Polling:** In subsequent runs, the\
+    \ action queries Cybereason for the status of each pending remediation task.\n\
+    6. **Completion:** Once all tasks reach a terminal state (SUCCESS, FAILED, or\
+    \ ABORTED) or a timeout occurs, the action aggregates the results and updates\
+    \ the case with the final status of each remediation."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action performs remediation on external systems via Cybereason, such as
+      killing malicious processes or blocking files on affected endpoints.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Set Reputation:
+  ai_description: >-
+    ### General Description
+
+    The **Set Reputation** action allows users to classify entities within the Cybereason
+    platform by adding them to specific reputation lists. This action is used to proactively
+    block known threats (Blacklist) or allow trusted entities (Whitelist), helping
+    to manage security policies and reduce false positives.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Reputation List Type** | String | Yes | Determines which reputation list the
+    entity will be added to. Supported values are `Whitelist` and `Blacklist`. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Cybereason API using
+    the configured credentials and API Root.
+
+    2. **Entity Selection**: It identifies supported entities from the case, specifically
+    targeting IP Addresses, URLs, and File Hashes.
+
+    3. **Validation and Normalization**:
+        * **URLs**: The action extracts the domain component from the URL entity.
+        * **File Hashes**: It validates the hash type, supporting only MD5 and SHA1.
+    Unsupported hash types (like SHA256) are skipped.
+    4. **Reputation Update**: For each valid entity, the action sends a request to
+    Cybereason's `/rest/classification/update` endpoint to set the custom reputation
+    based on the user-selected list type.
+
+    5. **Completion**: The action summarizes the results, listing which entities were
+    successfully updated and which failed (e.g., due to unsupported hash types or
+    API errors).
+
+
+    ### Additional Notes
+
+    * **Hash Support**: Only MD5 and SHA1 hashes are supported for reputation setting
+    in Cybereason via this action.
+
+    * **URL Processing**: The action automatically converts URL entities to domains
+    before submission.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the reputation classification (Whitelist or Blacklist) of file hashes,
+      IP addresses, or domains within the Cybereason platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unisolate Machine:
+  ai_description: >-
+    ### General Description
+
+    Unisolates machine entities in Cybereason. This action is designed to revert the
+    isolation state of a host, allowing it to communicate on the network again. It
+    is an asynchronous action, meaning it sends the unisolation command and then periodically
+    polls the Cybereason API to verify that the machine has successfully transitioned
+    out of the isolated state.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all Hostname entities within the
+    current context.
+
+    2. **Initial Status Check**: For each Hostname, the action retrieves sensor details
+    from Cybereason to determine if the machine is currently isolated.
+
+    3. **Command Execution**: If a machine is found to be isolated, the action sends
+    a POST request to the Cybereason API to initiate the unisolation process.
+
+    4. **Asynchronous Monitoring**: The action enters an 'In Progress' state and periodically
+    re-checks the sensor status of the machines to confirm the unisolation command
+    has been fully processed by the sensor.
+
+    5. **Completion**: Once all machines are confirmed as unisolated, or if the action
+    approaches a timeout, it provides a final summary of successful, failed, and not-found
+    entities.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters. |
+
+
+    ### Additional Notes
+
+    - If a machine is already in an unisolated state when the action starts, it will
+    be marked as completed immediately.
+
+    - The action requires the machine to be active and known to the Cybereason console
+    to perform the operation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action sends a command to the Cybereason sensor to change the machine's
+      state from isolated to unisolated, which modifies the network connectivity state
+      of the external endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Malop Status:
+  ai_description: >-
+    Updates the status of a specific Malop (Malicious Operation) within the Cybereason
+    platform. This action allows security analysts to programmatically transition
+    Malops between different lifecycle states such as 'Open', 'Remediated', or 'Not
+    Relevant'.
+
+
+    ### Flow Description:
+
+    1. **Parameter Extraction:** Retrieves the Malop ID and the target Status from
+    the action parameters.
+
+    2. **Validation:** Checks if the provided status is valid according to the Cybereason
+    API requirements.
+
+    3. **Existence Check:** Verifies that the Malop ID exists in the Cybereason environment
+    before attempting an update.
+
+    4. **Status Update:** Executes a POST request to the Cybereason API to update
+    the Malop's status.
+
+
+    ### Parameters Description:
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Malop ID | String | Yes | The unique GUID of the Malop that needs to be updated.
+    |
+
+    | Status | String (Enum) | Yes | The new status to assign to the Malop. Supported
+    values: 'To Review', 'Remediated', 'Unread', 'Not Relevant', 'Open'. |
+
+
+    ### Additional Notes:
+
+    - Detection Malops specifically support 'Remediated', 'Not Relevant', or 'Open'
+    statuses.
+
+    - This action does not process entities; it operates directly on the provided
+    Malop ID parameter.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of a Malop in the Cybereason platform via a POST request
+      to the /rest/crimes/status endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

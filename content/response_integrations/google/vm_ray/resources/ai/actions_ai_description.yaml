@@ -1,0 +1,389 @@
+Add Tag to Submission:
+  ai_description: >-
+    ### General Description
+
+    Adds a specific tag to an existing submission in the VMRay platform using its
+    Submission ID. This action allows users to programmatically label or categorize
+    submissions for better organization and tracking within VMRay.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Submission ID | Integer | Yes | The unique identifier of the VMRay submission
+    to which the tag will be added. |
+
+    | Tag Name | String | Yes | The name of the tag to apply to the submission. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the VMRay API credentials and
+    the specific `Submission ID` and `Tag Name` provided by the user.
+
+    2. **API Interaction:** It constructs a POST request to the VMRay REST API endpoint
+    (`/rest/submission/{id}/tag/{tag}`).
+
+    3. **Execution:** The request is sent to the VMRay server to apply the tag.
+
+    4. **Result Handling:** If the API returns a successful response, the action completes
+    with a success message; otherwise, it logs the error and fails.
+
+
+    ### Additional Notes
+
+    This action does not process entities from the Google SecOps environment; it operates
+    directly on the provided Submission ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a tag to a submission in the VMRay platform via a POST request to the VMRay
+      REST API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe Ping action is a utility designed\
+    \ to verify the connectivity between Google SecOps and the VMRay instance. It\
+    \ ensures that the provided API credentials (API Root and API Key) are valid and\
+    \ that the network path is open. This action is typically used during the initial\
+    \ setup of the integration or for troubleshooting communication issues.\n\n###\
+    \ Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---\
+    \ | :--- | :--- | :--- |\n| Api Root | String | Yes | The base URL of the VMRay\
+    \ API instance (e.g., https://cloud.vmray.com). |\n| Api Key | String | Yes |\
+    \ The API key used for authentication with the VMRay service. |\n| Verify SSL\
+    \ | Boolean | Yes | Specifies whether to validate the SSL certificate of the VMRay\
+    \ server. |\n\n### Flow Description\n1. **Parameter Extraction:** The action retrieves\
+    \ the integration configuration parameters, including the API Root, API Key, and\
+    \ SSL verification preference.\n2. **Client Initialization:** It initializes the\
+    \ `VMRayClient` using the extracted configuration and system version information.\n\
+    3. **Connectivity Test:** The client executes the `test_connectivity` method,\
+    \ which performs a low-overhead GET request to the VMRay API endpoint (`/rest/analysis?_limit=1`).\n\
+    4. **Result Handling:** \n    * If the request is successful, the action returns\
+    \ a 'Connection Established' message and a success status.\n    * If an exception\
+    \ occurs (e.g., authentication failure or network timeout), it logs the error\
+    \ and returns a failure status.\n\n### Additional Notes\n* This action does not\
+    \ process any entities and has no side effects on external data.\n* It is strictly\
+    \ used for health checks of the integration."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Scan Hash:
+  ai_description: >-
+    Enriches File Hash entities by retrieving detailed analysis reports from VMRay.
+    This action identifies the hash type (MD5, SHA1, or SHA256) and fetches the sample's
+    verdict, threat names, classifications, and associated Indicators of Compromise
+    (IOCs) such as IPs, domains, and URLs. It also retrieves specific threat indicators
+    based on a configurable score threshold. The action updates the entity's suspicious
+    status, adds enrichment data to entity properties, and can generate detailed insights
+    within the Google SecOps case.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Threat Indicator Score Threshold | Integer | Yes | The minimum score (0-5) required
+    for a threat indicator to be included in the results. |
+
+    | IOC Type Filter | String | Yes | Comma-separated list of IOC types to retrieve
+    (e.g., ips, files, emails, urls, domains, mutexes, processes, registry). |
+
+    | IOC Verdict Filter | String | Yes | Comma-separated list of IOC verdicts to
+    include (e.g., Malicious, Suspicious, Clean, None). |
+
+    | Max IOCs To Return | Integer | No | Maximum number of IOCs to return per entity
+    per type. Default is 10. |
+
+    | Max Threat Indicators To Return | Integer | No | Maximum number of threat indicators
+    to return per entity. Default is 10. |
+
+    | Create Insight | Boolean | No | If enabled, creates a detailed insight for the
+    entity. Default is true. |
+
+    | Only Suspicious Insight | Boolean | No | If enabled, insights are only created
+    for entities with a suspicious or malicious verdict. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Validates input parameters, including the score threshold
+    range and filter values.
+
+    2. **Entity Filtering**: Identifies all File Hash entities within the current
+    context.
+
+    3. **Data Retrieval**: For each hash, it queries VMRay to find an existing sample
+    analysis. If found, it fetches filtered IOCs and threat indicators.
+
+    4. **Data Presentation**: Populates entity-specific tables with the retrieved
+    IOCs (categorized by type) and threat indicators.
+
+    5. **Enrichment**: Updates the entity's additional properties with VMRay metadata
+    and sets the `is_enriched` flag. If the verdict is 'malicious' or 'suspicious',
+    the entity is marked as suspicious.
+
+    6. **Insight Generation**: If configured, generates a formatted insight containing
+    the verdict, threat names, and a summary of indicators.
+
+    7. **Finalization**: Updates the entities in the SOAR platform and returns a JSON
+    result of all findings.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with enrichment data, sets suspicious status based
+      on VMRay verdict, and creates insights with threat details.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Scan URL:
+  ai_description: >-
+    ### General Description
+
+    The **Scan URL** action submits URL entities to VMRay for automated browser-based
+    analysis and retrieves comprehensive threat intelligence. It is an asynchronous
+    action that handles the submission, waits for the analysis to complete, and then
+    fetches detailed results including verdicts, IOCs, and threat indicators.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Threat Indicator Score Threshold** | Integer | Yes | The minimum score (0-5)
+    required for a threat indicator to be included in the results. Default is 3. |
+
+    | **IOC Type Filter** | String | Yes | A comma-separated list of IOC types to
+    retrieve (e.g., `ips, urls, domains`). |
+
+    | **IOC Verdict Filter** | String | Yes | A comma-separated list of verdicts to
+    filter IOCs (e.g., `Malicious, Suspicious, Clean, None`). |
+
+    | **Max IOCs To Return** | Integer | No | The maximum number of IOCs to return
+    per entity per type. Default is 10. |
+
+    | **Max Threat Indicators To Return** | Integer | No | The maximum number of threat
+    indicators to return per entity. Default is 10. |
+
+    | **Create Insight** | Boolean | No | If enabled, the action creates a detailed
+    insight for the entity in Google SecOps. |
+
+    | **Only Suspicious Insight** | Boolean | No | If enabled, insights are only created
+    for entities with a 'Malicious' or 'Suspicious' verdict. |
+
+    | **Tag Names** | String | No | Optional tags to add to the VMRay submission.
+    |
+
+    | **Comment** | String | No | An optional comment to include with the VMRay submission.
+    |
+
+
+    ### Additional Notes
+
+    - This action is **asynchronous**. It will first submit the URL and then enter
+    an 'In Progress' state while waiting for VMRay to complete the analysis.
+
+    - The action supports the `DestinationURL` entity type.
+
+
+    ### Flow Description
+
+    1. **Submission**: The action sends the URL to VMRay using the `submit_url_for_browser_analysis`
+    method, optionally including tags and comments.
+
+    2. **Polling**: The action checks the status of the analysis job. If the job is
+    still running, the action remains in an 'In Progress' state.
+
+    3. **Data Retrieval**: Once the analysis is finished, the action fetches the sample
+    analysis report, filtered IOCs (based on type and verdict), and threat indicators
+    (based on the score threshold).
+
+    4. **Internal Updates**: The action updates the Google SecOps entity with enrichment
+    data, sets the `is_suspicious` flag if the verdict is malicious/suspicious, adds
+    data tables, and creates insights if configured.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Submits the URL to the VMRay platform for analysis, which creates a new submission
+      and analysis job in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with enrichment data, sets the suspicious status of
+      entities, and creates insights and data tables within the case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Upload File And Get Report:
+  ai_description: >-
+    Submits local files to VMRay for automated sandbox analysis and retrieves comprehensive
+    threat reports. This action is designed to handle the end-to-end process of file
+    submission, status monitoring, and result retrieval in an asynchronous manner.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Sample File Path | String | Yes | A comma-separated list of absolute file paths
+    on the local system to be uploaded to VMRay for analysis. |
+
+    | Tag Names | String | No | A comma-separated list of tags to be applied to the
+    submission in the VMRay platform. |
+
+    | Comment | String | No | A text comment to be associated with the file submission
+    for tracking or context. |
+
+
+    ### Flow Description
+
+
+    1.  **Validation**: The action first verifies that the provided file paths exist
+    and are readable by the system.
+
+    2.  **Submission**: Files are uploaded to the VMRay API via a POST request. If
+    a file has been analyzed previously, the action identifies the existing sample
+    ID.
+
+    3.  **Monitoring**: As an asynchronous action, it enters a polling state, periodically
+    checking the VMRay submission status until the analysis is complete.
+
+    4.  **Data Retrieval**: Once the analysis is finished, the action fetches IOCs
+    (including Files, IPs, URLs, Domains, Mutexes, and Registry Keys) and detailed
+    Threat Indicators.
+
+    5.  **Reporting**: The action attaches the full JSON and ZIP analysis reports
+    to the case, adds data tables for all identified IOCs, and provides a direct link
+    to the VMRay web interface for the full report.
+
+
+    ### Additional Notes
+
+
+    This action is asynchronous. Users should ensure that the script timeout in the
+    Google SecOps IDE is configured to allow sufficient time for both the file upload
+    and the sandbox analysis process to complete.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Uploads local files to the VMRay platform to initiate new sandbox analysis submissions.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

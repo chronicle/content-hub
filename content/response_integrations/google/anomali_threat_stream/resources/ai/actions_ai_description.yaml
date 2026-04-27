@@ -1,0 +1,784 @@
+Add Tags To Entities:
+  ai_description: >-
+    ### General Description
+
+    Adds tags to existing indicators in Anomali ThreatStream for specific entity types.
+    This action allows security analysts to label and categorize threat intelligence
+    data directly from Google SecOps, facilitating better organization and tracking
+    of indicators within the ThreatStream platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Tags | String | Yes | A comma-separated list of tags to be added to the indicators
+    in Anomali ThreatStream. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts the integration configuration (API credentials)
+    and the 'Tags' action parameter.
+
+    2. **Entity Filtering**: Identifies supported entities from the case, including
+    File Hashes, IP Addresses, URLs, and User entities that match an email format.
+
+    3. **Indicator Retrieval**: Queries the Anomali ThreatStream API to fetch existing
+    indicator details for the identified entities to obtain their internal indicator
+    IDs.
+
+    4. **Tag Application**: For every entity successfully matched to an existing indicator
+    in ThreatStream, the action sends a POST request to append the specified tags.
+
+    5. **Reporting**: Returns a summary message indicating which entities were successfully
+    tagged and which entities could not be found in the Anomali ThreatStream database.
+
+
+    ### Additional Notes
+
+    * This action only applies tags to entities that **already exist** as indicators
+    in Anomali ThreatStream. It does not create new indicators.
+
+    * User entities are only processed if their identifier matches a standard email
+    regex pattern.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds specified tags to existing indicators in Anomali ThreatStream via a POST
+      request to the tagging endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    - ADDRESS
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches multiple entity types including IP Addresses, URLs, Domains, File Hashes,
+    Hostnames, and Email Addresses using threat intelligence from Anomali ThreatStream.
+    The action retrieves indicator details, calculates risk based on severity and
+    confidence thresholds, and provides contextual data through entity tables and
+    insights.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Severity Threshold | String (Dropdown) | Yes | The minimum severity level (Very
+    High, High, Medium, Low) required to mark an entity as suspicious. |
+
+    | Confidence Threshold | Integer | Yes | The minimum confidence score (0-100)
+    required to mark an entity as suspicious. |
+
+    | Ignore False Positive Status | Boolean | No | If enabled, the action will evaluate
+    thresholds even for indicators marked as 'False Positive' in ThreatStream. |
+
+    | Add Threat Type To Case | Boolean | No | If enabled, threat types (e.g., 'apt',
+    'bot') found in the indicators will be added as tags to the case. |
+
+    | Create Insight | Boolean | Yes | If enabled, creates a detailed HTML insight
+    for each processed entity. |
+
+    | Only Suspicious Entity Insight | Boolean | Yes | If enabled, insights will only
+    be generated for entities that meet the suspicious thresholds. |
+
+
+    ### Additional Notes
+
+    - **Email Support:** User entities are only processed if their identifier matches
+    a valid email format.
+
+    - **Validation:** Entities containing spaces in their identifiers are automatically
+    skipped.
+
+    - **Aggregation:** If multiple indicators are found for a single entity, the action
+    uses the highest severity and the average confidence of active records.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Validates the provided Severity and Confidence thresholds.
+
+    2. **Entity Filtering:** Identifies supported entities (IP, URL, Domain, Hash,
+    Hostname, Email) and filters out invalid identifiers (e.g., those containing spaces).
+
+    3. **Data Retrieval:** Fetches indicator data from Anomali ThreatStream for all
+    supported entities in a single batch request.
+
+    4. **Processing & Enrichment:** For each entity, it matches retrieved indicators,
+    updates entity attributes with metadata, and adds a data table containing indicator
+    details.
+
+    5. **Risk Assessment:** Compares the indicator's severity and confidence against
+    the user-defined thresholds to determine if the entity should be marked as suspicious.
+
+    6. **Contextual Analysis:** Fetches additional analysis links and specific intel
+    details (e.g., VirusTotal or DomainTools classifications) for the entities.
+
+    7. **Internal Updates:** Optionally adds threat-type tags to the case and creates
+    detailed insights (IP, URL, Domain, Hash, or Email specific) based on configuration.
+
+    8. **Finalization:** Updates all enriched entities within Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: true
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with threat intelligence, marks entities as suspicious
+      based on thresholds, adds threat-type tags to the case, and creates detailed
+      entity insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - DestinationURL
+    - USERUNIQNAME
+    - DOMAIN
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Related Associations:
+  ai_description: >-
+    ### General Description
+
+    Retrieves related threat intelligence associations from Anomali ThreatStream for
+    specific entities within a case. This action allows analysts to pivot from basic
+    observables (IPs, URLs, Hashes, Emails) to higher-level threat constructs such
+    as Campaigns, Actors, Malware, and TTPs. It provides a comprehensive view of the
+    threat landscape associated with the indicators, including detailed metadata and
+    top-level statistics for related IOCs.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Return Campaigns | Boolean | No | If enabled, fetches related campaigns and
+    their details. |
+
+    | Return Threat Bulletins | Boolean | No | If enabled, fetches related threat
+    bulletins. |
+
+    | Return Actors | Boolean | No | If enabled, fetches related actors and their
+    details. |
+
+    | Return Attack Patterns | Boolean | No | If enabled, fetches related attack patterns.
+    |
+
+    | Return Courses Of Action | Boolean | No | If enabled, fetches related courses
+    of action. |
+
+    | Return Identities | Boolean | No | If enabled, fetches related identities. |
+
+    | Return Incidents | Boolean | No | If enabled, fetches related incidents. |
+
+    | Return Infrastructure | Boolean | No | If enabled, fetches related infrastructure.
+    |
+
+    | Return Intrusion Sets | Boolean | No | If enabled, fetches related intrusion
+    sets. |
+
+    | Return Malware | Boolean | No | If enabled, fetches related malware. |
+
+    | Return Signatures | Boolean | No | If enabled, fetches related signatures. |
+
+    | Return Tools | Boolean | No | If enabled, fetches related tools. |
+
+    | Return TTPs | Boolean | No | If enabled, fetches related TTPs. |
+
+    | Return Vulnerabilities | Boolean | No | If enabled, fetches related vulnerabilities.
+    |
+
+    | Create Campaign Entity | Boolean | No | If enabled, creates a THREATCAMPAIGN
+    entity for found associations. |
+
+    | Create Actors Entity | Boolean | No | If enabled, creates a THREATACTOR entity
+    for found associations. |
+
+    | Create Signature Entity | Boolean | No | If enabled, creates a THREATSIGNATURE
+    entity for found associations. |
+
+    | Create Vulnerability Entity | Boolean | No | If enabled, creates a CVE entity
+    for found associations. |
+
+    | Create Case Tag | Boolean | No | If enabled, adds association names as case
+    tags. |
+
+    | Create Insight | Boolean | No | If enabled, creates a case insight with the
+    results. |
+
+    | Max Associations To Return | Integer | No | Max associations to return per type
+    (Default: 5). |
+
+    | Max Statistics To Return | Integer | No | Max top statistics regarding IOCs
+    to return (Default: 3). |
+
+
+    ### Additional Notes
+
+    - **Asynchronous Execution:** This action runs asynchronously, meaning it will
+    continue to process in the background until all association details are retrieved
+    or the execution deadline is reached.
+
+    - **Entity Support:** Email addresses are supported when provided as USER entities
+    that match a standard email regex.
+
+    - **Statistics Limit:** The action processes a maximum of 1000 IOCs related to
+    an association to generate statistics.
+
+
+    ### Flow Description
+
+    1. **Entity Identification:** The action filters the case entities to find supported
+    types: IP Addresses, URLs, File Hashes, and Emails.
+
+    2. **Indicator Retrieval:** It queries Anomali ThreatStream to find the internal
+    indicator IDs corresponding to the identified entities.
+
+    3. **Association Discovery:** For each enabled association type (e.g., Actors,
+    Campaigns), it fetches the IDs of related associations linked to the indicators.
+
+    4. **Detail Enrichment:** The action enters an asynchronous loop to retrieve detailed
+    metadata and IOC statistics (countries, types, sources, severities) for every
+    discovered association.
+
+    5. **Case Population:** Upon completion, it adds a summary data table and raw
+    JSON results to the case. If configured, it also creates new entities, adds case
+    tags based on association names, and generates a detailed case insight.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action can create new entities in the case (Campaigns, Actors, Signatures,
+      Vulnerabilities), add tags to the case based on association names, and generate
+      case insights.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    - ADDRESS
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Related Entities:
+  ai_description: >-
+    Retrieves related entities and indicators from Anomali ThreatStream based on associations
+    linked to the entities present in the Google SecOps case. This action acts as
+    a pivot tool, discovering connected infrastructure, malware, or actors by traversing
+    ThreatStream's threat model.
+
+
+    ### Flow Description:
+
+    1. **Entity Identification**: The action identifies supported entities in the
+    case, including IP Addresses, File Hashes, URLs, Emails (User entities), CVEs,
+    and Threat Actors.
+
+    2. **Indicator Retrieval**: For standard entities (IP, Hash, URL, Email), it fetches
+    the corresponding Indicator IDs from Anomali.
+
+    3. **Association Discovery**: It searches for associations (such as Campaigns,
+    Malware, Incidents, or TTPs) linked to those indicators based on the enabled 'Search'
+    parameters.
+
+    4. **Model-Based Search**: For CVE and Threat Actor entities, it searches the
+    Anomali threat model directly by name/identifier to find related associations.
+
+    5. **Indicator Expansion**: For every discovered association, the action retrieves
+    all other indicators (IPs, Domains, URLs, etc.) that share that association, filtered
+    by the specified confidence threshold.
+
+    6. **Aggregation**: The results are aggregated into a structured JSON object containing
+    lists of related IPs, Domains, URLs, Emails, and Hashes.
+
+
+    ### Parameters Description:
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Confidence Threshold | Integer | Yes | The minimum confidence score (0-100)
+    required for a related indicator to be included in the results. |
+
+    | Search [Type] | Boolean | No | A series of 14 boolean flags (e.g., Search Actors,
+    Search Malware) that determine which association types in ThreatStream are traversed
+    to find related data. Defaults to True. |
+
+    | Max Entities To Return | Integer | No | Limits the number of related entities
+    returned per type (e.g., max 50 IPs). Default is 50. |
+
+
+    ### Additional Notes:
+
+    - This action does not automatically update entity fields or create insights;
+    it provides the raw related data in the action's JSON result for use in subsequent
+    playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - DestinationURL
+    - USERUNIQNAME
+    - THREATACTOR
+    - CVEID
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Anomali ThreatStream server. It ensures that the provided
+    configuration parameters (credentials and URLs) are correct and that the network
+    path is open.
+
+
+    ### Parameters Description
+
+    This action does not take any dynamic input parameters during execution. It relies
+    entirely on the integration's configuration settings:
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Web Root** | String | Yes | The base URL for the Anomali ThreatStream web
+    interface. |
+
+    | **Api Root** | String | Yes | The base URL for the Anomali ThreatStream API.
+    |
+
+    | **Email Address** | String | Yes | The username/email address used for API authentication.
+    |
+
+    | **API Key** | String | Yes | The API key associated with the provided email
+    address. |
+
+    | **Verify SSL** | Boolean | Yes | Determines whether to verify the SSL certificate
+    of the Anomali server. |
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the integration or
+    for troubleshooting connection issues.
+
+    - It performs a simple `GET` request to the `/api/v2/intelligence/` endpoint with
+    a limit of 1 to minimize data transfer while confirming access.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The script retrieves the connection details (URLs,
+    credentials, and SSL settings) from the integration configuration.
+
+    2. **Manager Initialization**: It initializes the `AnomaliManager` with the `force_check_connectivity`
+    flag set to `True`.
+
+    3. **Connectivity Test**: The manager executes a `GET` request to the Anomali
+    ThreatStream API's intelligence endpoint.
+
+    4. **Validation**: The script validates the HTTP response. If the status code
+    indicates success (e.g., 200 OK), the action completes successfully.
+
+    5. **Error Handling**: If the request fails (e.g., due to invalid credentials,
+    incorrect URLs, or network timeouts), an exception is caught, and the action reports
+    a failure with the specific error message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Tags From Entities:
+  ai_description: >-
+    ### General Description
+
+    Removes specified tags from indicators in Anomali ThreatStream for supported entities.
+    This action allows security analysts to manage and clean up metadata associated
+    with threat intelligence indicators directly from the Google SecOps platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Tags | String | Yes | A comma-separated list of tags that should be removed
+    from the indicators associated with the entities in Anomali ThreatStream. |
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action retrieves the configuration parameters
+    (API credentials) and the list of tags to be removed from the action parameters.
+
+    2. **Entity Filtering**: It filters the target entities to identify those supported
+    by the action: FileHash, Address (IP), DestinationURL, and User (if the identifier
+    matches an email format).
+
+    3. **Indicator Retrieval**: The action queries Anomali ThreatStream to find existing
+    indicators corresponding to the identifiers of the suitable entities.
+
+    4. **Tag Identification**: For each found indicator, it checks if any of the user-provided
+    tags are currently assigned to it.
+
+    5. **Tag Removal**: If matching tags are found, the action sends a DELETE request
+    to the Anomali API to remove each specific tag from the indicator.
+
+    6. **Result Compilation**: The action generates a summary message detailing which
+    tags were successfully removed, which were already missing, and which entities
+    were not found in ThreatStream.
+
+
+    ### Additional Notes
+
+    - This action performs external mutations by deleting tags from the Anomali ThreatStream
+    platform.
+
+    - User entities are only processed if their identifier matches a standard email
+    regex.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specific tags from indicators in Anomali ThreatStream via DELETE requests
+      to the platform's API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    - ADDRESS
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Report As False Positive:
+  ai_description: >-
+    ### General Description
+
+    The **Report As False Positive** action allows analysts to mark specific entities
+    as false positives within the Anomali ThreatStream platform. This action is used
+    to update the status of threat indicators in the external threat intelligence
+    system based on manual verification, effectively reducing noise for future detections.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Reason** | String | Yes | The justification for marking the entity as a false
+    positive (e.g., 'False Detection', 'Internal Traffic'). |
+
+    | **Comment** | String | Yes | Additional context or detailed notes regarding
+    the decision to mark the entity as a false positive. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the integration configuration (API
+    credentials) and the action parameters (**Reason** and **Comment**).
+
+    2. **Entity Filtering**: It identifies suitable entities from the current case.
+    Supported types include File Hashes, IP Addresses, URLs, and User entities that
+    match a standard email format.
+
+    3. **Indicator Retrieval**: The action queries Anomali ThreatStream to find existing
+    indicator records corresponding to the target entities.
+
+    4. **Reporting**: For every entity found in ThreatStream, the action sends a POST
+    request to the `/api/v1/falsepositive/report/` endpoint, providing the indicator
+    ID, the specified reason, and the comment.
+
+    5. **Completion**: The action tracks successful and failed reports and provides
+    a summary message to the analyst via the case wall.
+
+
+    ### Additional Notes
+
+    - This action only works for entities that already exist as indicators in Anomali
+    ThreatStream.
+
+    - User entities are only processed if their identifier matches a standard email
+    regex pattern.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of indicators in Anomali ThreatStream to 'False Positive'
+      via a POST request to the false positive reporting endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    - ADDRESS
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit Observables:
+  ai_description: >-
+    ### General Description
+
+    This action submits observables (IP addresses, URLs, File Hashes, and Email Addresses)
+    to the Anomali ThreatStream platform. It allows security analysts to contribute
+    intelligence to their organization's private repository or the public community.
+    The action supports detailed configuration of the intelligence metadata, including
+    classification, threat types, TLP levels, and sharing with specific Trusted Circles.
+    After submission, the action polls the Anomali API to ensure the import session
+    is approved and provides a direct link to the review page for each submitted entity.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Classification** | String | Yes | Specifies the classification of the observable
+    (e.g., 'Public' or 'Private'). |
+
+    | **Threat Type** | String | Yes | Specifies the threat category (e.g., APT, Malware,
+    Phish, Bot). |
+
+    | **Source** | String | No | The intelligence source name (defaults to 'Siemplify').
+    |
+
+    | **Expiration Date** | Integer | No | The number of days until the observable
+    expires. If empty, it never expires. |
+
+    | **Trusted Circle IDs** | String | No | Comma-separated list of IDs for Trusted
+    Circles to share the intelligence with. |
+
+    | **TLP** | String | No | The Traffic Light Protocol level (Red, Green, Amber,
+    White). |
+
+    | **Confidence** | Integer | No | A confidence score (0-100) for the observable.
+    |
+
+    | **Override System Confidence** | Boolean | No | If true, the provided 'Confidence'
+    value will override the system's default. |
+
+    | **Anonymous Submission** | Boolean | No | If true, the submission will be made
+    anonymously. |
+
+    | **Tags** | String | No | Comma-separated list of tags to attach to the observable.
+    |
+
+
+    ### Additional Notes
+
+    - **Permissions:** Requires "Org admin", "Create Anomali Community Intel", and
+    "Approve Intel" permissions in Anomali ThreatStream.
+
+    - **Email Support:** User entities are processed as email observables only if
+    their identifier matches a standard email regex.
+
+    - **Polling:** The action includes a built-in polling mechanism that waits for
+    the import session to reach an 'approved' status before completing.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Extracts integration configuration (API keys, roots) and
+    action parameters.
+
+    2. **Entity Filtering:** Identifies supported entities (IP, URL, Hash, Email)
+    from the target list.
+
+    3. **Submission:** For each valid entity, it sends a POST request to Anomali's
+    `/api/v2/intelligence/import/` endpoint with the specified metadata.
+
+    4. **Status Polling:** It retrieves the import session ID and enters a loop, calling
+    the `/api/v1/importsession/` endpoint until the job is approved or the action
+    times out.
+
+    5. **Reporting:** Adds an entity-specific table containing a direct link to the
+    Anomali review page and outputs a summary JSON of approved and excluded jobs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits new intelligence indicators (observables) to the Anomali ThreatStream
+      platform via the import API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - FILEHASH
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

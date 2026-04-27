@@ -1,0 +1,483 @@
+Add Comment To Insight:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to a specific insight within Sumo Logic Cloud SIEM. This action
+    allows security analysts to document findings, provide status updates, or collaborate
+    on investigations directly from Google SecOps by pushing text-based comments to
+    the external SIEM platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Insight ID | String | Yes | The unique identifier of the Sumo Logic Cloud SIEM
+    insight where the comment will be added. |
+
+    | Comment | String | Yes | The actual text content of the comment to be appended
+    to the insight. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Sumo Logic Cloud SIEM manager
+    using the provided API credentials (API Key or Access ID/Key) and connection settings.
+
+    2. **Parameter Extraction**: It retrieves the mandatory `Insight ID` and the `Comment`
+    text from the action input.
+
+    3. **API Interaction**: The action performs a POST request to the Sumo Logic Cloud
+    SIEM API endpoint `/insights/{insight_id}/comments` with the comment body.
+
+    4. **Result Processing**: Upon a successful API response, the action returns the
+    JSON data of the created comment and marks the execution as completed. If the
+    API returns an error, the action fails and provides the error reason.
+
+
+    ### Additional Notes
+
+    This action does not operate on entities; it requires a specific Insight ID to
+    be provided manually or via a previous playbook step.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new comment record to an existing insight in the Sumo Logic Cloud SIEM
+      platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add Tags To Insight:
+  ai_description: >-
+    ### General Description
+
+    The **Add Tags To Insight** action allows users to append one or more tags to
+    a specific insight within Sumo Logic Cloud SIEM. This is useful for categorizing
+    insights, marking them for specific workflows, or adding metadata that can be
+    used for filtering and reporting within the Sumo Logic platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Insight ID** | String | Yes | The unique identifier of the insight in Sumo
+    Logic Cloud SIEM to which the tags will be added. |
+
+    | **Tags** | String | Yes | A comma-separated list of tags (e.g., "HighPriority,
+    Investigated, Phishing") to be applied to the insight. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Sumo Logic Cloud SIEM manager
+    using the provided API credentials (API Key or Access ID/Key).
+
+    2. **Input Parsing**: The comma-separated string of tags is converted into a Python
+    list.
+
+    3. **API Interaction**: For each tag in the list, the action sends a POST request
+    to the Sumo Logic API endpoint `/insights/{insight_id}/tags`.
+
+    4. **Result Processing**: The action captures the response from the final tag
+    addition and returns it as a JSON result. It then provides a success message indicating
+    the tags were added to the specified Insight ID.
+
+
+    ### Additional Notes
+
+    * This action does not run on entities; it requires a specific **Insight ID**
+    as input.
+
+    * If multiple tags are provided, the action performs a separate API call for each
+    tag.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds tags to an existing insight in Sumo Logic Cloud SIEM by sending POST requests
+      to the insight's tags endpoint.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    Enriches Hostname, User, and IP Address entities using information from Sumo Logic
+    Cloud SIEM. This action retrieves detailed metadata for each entity, including
+    activity scores, criticality levels, first/last seen timestamps, and whether the
+    entity is suppressed or whitelisted. The retrieved data is used to populate entity
+    enrichment fields, create data tables, and optionally generate insights within
+    the Google SecOps case.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Create Insight | Boolean | No | If enabled (default: true), the action will
+    create a detailed HTML insight for each enriched entity containing its activity
+    score, criticality, and tags. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts configuration parameters (API Root, Credentials,
+    SSL settings) and the 'Create Insight' action parameter.
+
+    2. **Entity Filtering**: Identifies supported entities (Hostname, IP Address,
+    User) from the target entities list.
+
+    3. **Data Retrieval**: For each supported entity, it queries the Sumo Logic Cloud
+    SIEM API (`/entities`) using the entity's identifier.
+
+    4. **Enrichment**: If data is found, it maps the results to the entity's additional
+    properties (prefixed with 'SumoLogicCloudSIEM') and marks the entity as enriched.
+
+    5. **Visualization**: Adds a flat data table to the entity and, if configured,
+    generates a formatted HTML insight.
+
+    6. **Finalization**: Updates the entities in the Google SecOps platform and returns
+    a JSON summary of the results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity enrichment attributes, sets the 'is_enriched' status, and creates
+      entity insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Sumo Logic Cloud SIEM platform. It ensures that the provided credentials
+    (API Key or Access ID/Key) and the API Root URL are correct and that the network
+    path is open.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **API Root** | String | Yes | The base URL of the Sumo Logic Cloud SIEM instance.
+    |
+
+    | **API Key** | String | No | The API Key used for authentication. Either this
+    or the Access ID/Key pair must be provided. |
+
+    | **Access ID** | String | No | The Access ID for authentication. Used in conjunction
+    with the Access Key. |
+
+    | **Access Key** | String | No | The Access Key for authentication. Used in conjunction
+    with the Access ID. |
+
+    | **Verify SSL** | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the API Root. |
+
+
+    ### Additional Notes
+
+    * Authentication requires either the **API Key** or both the **Access ID** and
+    **Access Key**.
+
+    * This action does not process any entities.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** Retrieves connection details from the integration
+    configuration.
+
+    2. **Manager Initialization:** Sets up the Sumo Logic Cloud SIEM manager with
+    the provided credentials and SSL settings.
+
+    3. **Connectivity Test:** Executes a lightweight GET request to the `/insights`
+    endpoint (limited to 1 result) to verify the API connection.
+
+    4. **Result Reporting:** Returns a success message if the request is successful,
+    or an error message detailing the failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Entity Signals:
+  ai_description: >-
+    ### General Description
+
+    This action searches for security signals related to specific entities (IP Addresses,
+    Hostnames, and Usernames) within Sumo Logic Cloud SIEM. It allows analysts to
+    retrieve historical signal data to understand the context and frequency of security
+    events associated with an entity over a specified period.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Lowest Severity To Return | Integer | No | Specifies the minimum severity level
+    (1-10) for signals to be included in the results. Defaults to 5. |
+
+    | Time Frame | Dropdown | No | Defines the search window. Options include relative
+    times (e.g., 'Last Hour', 'Last 24 Hours'), times relative to the alert (e.g.,
+    '30 Minutes Around Alert Time'), or 'Custom'. Defaults to 'Last Hour'. |
+
+    | Start Time | String | No | The start time for the search in ISO 8601 format.
+    This is **mandatory** if 'Time Frame' is set to 'Custom'. |
+
+    | End Time | String | No | The end time for the search in ISO 8601 format. If
+    'Custom' is selected and this is left blank, the current time is used. |
+
+    | Max Signals To Return | Integer | No | The maximum number of signals to retrieve
+    for each entity. Defaults to 50. |
+
+
+    ### Additional Notes
+
+    - The action supports **ADDRESS** (IP), **HOSTNAME**, and **USERUNIQNAME** entity
+    types.
+
+    - If 'Custom' is selected for the 'Time Frame', the 'Start Time' parameter must
+    be provided, or the action will fail.
+
+    - The 'Lowest Severity To Return' must be between 1 and 10; values outside this
+    range will revert to the default (5).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration configuration (API Root,
+    Credentials) and action parameters (Severity, Timeframe, Limits).
+
+    2. **Time Calculation**: It calculates the specific start and end timestamps based
+    on the selected 'Time Frame' and any provided custom strings.
+
+    3. **Entity Filtering**: The action iterates through the target entities in the
+    current scope, filtering for supported types: IP Address, Hostname, and Username.
+
+    4. **Data Retrieval**: For each supported entity, it queries the Sumo Logic Cloud
+    SIEM API for signals that match the entity identifier, severity threshold, and
+    time range.
+
+    5. **Result Aggregation**: The retrieved signals are converted to JSON format
+    and aggregated into a single result object.
+
+    6. **Finalization**: The action provides a summary message of successful/failed
+    entity searches and attaches the raw signal data as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Insight:
+  ai_description: >-
+    Updates the status and/or assignee of a specific insight in Sumo Logic Cloud SIEM.
+    This action allows security analysts to programmatically manage the lifecycle
+    of an insight by changing its operational state or reassigning it to a different
+    user or team.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Insight ID** | String | Yes | The unique identifier of the insight in Sumo
+    Logic Cloud SIEM that needs to be updated. |
+
+    | **Status** | Dropdown | Yes | The new status to assign to the insight. Options
+    include: `New`, `In Progress`, and `Closed`. Selecting `Select One` will result
+    in no status update unless an assignee is provided. |
+
+    | **Assignee Type** | Dropdown | Yes | Specifies whether the `Assignee` parameter
+    refers to a `User` or a `Team`. |
+
+    | **Assignee** | String | No | The identifier (username or team name) of the person
+    or group to whom the insight should be assigned. |
+
+
+    ### Additional Notes
+
+    - **Logic Dependency:** While the `Status` parameter is marked as mandatory in
+    the configuration, the action logic requires that either a valid status (other
+    than `Select One`) or an `Assignee` value must be provided for the action to perform
+    an update. If both are empty/default, the action will fail.
+
+    - **Output:** Upon successful update, the action retrieves and returns the full
+    updated insight object in JSON format.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Extracts the API configuration (API Root, Credentials)
+    and action parameters (`Insight ID`, `Status`, `Assignee Type`, `Assignee`).
+
+    2. **Validation:** Checks if at least one update (Status or Assignee) has been
+    requested.
+
+    3. **Assignee Update:** If an `Assignee` is provided, the action sends a PUT request
+    to the Sumo Logic API to update the insight's assignee based on the specified
+    `Assignee Type`.
+
+    4. **Status Update:** If a valid `Status` is selected, the action sends a PUT
+    request to the Sumo Logic API to update the insight's status.
+
+    5. **Data Retrieval:** After the updates are processed, the action performs a
+    GET request to fetch the latest state of the insight.
+
+    6. **Completion:** The updated insight data is added to the action's JSON results,
+    and the action completes successfully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status and assignee fields of an insight record within the Sumo
+      Logic Cloud SIEM platform via PUT requests.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -1,0 +1,199 @@
+Block Entities:
+  ai_description: >-
+    Blocks IP address entities on a Symantec Blue Coat ProxySG device using SSH. The
+    action establishes a secure shell connection, enters the configuration terminal,
+    and executes block commands within the attack-detection client context.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | SSH Root | String | Yes | The connection string for the ProxySG device, typically
+    in the format 'IP' or 'IP:Port'. |
+
+    | Username | String | Yes | The username used for SSH authentication. |
+
+    | Password | String | Yes | The password used for SSH authentication and for entering
+    'enable' mode. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves SSH connection details (Root, Username, Password)
+    from the integration configuration.
+
+    2. **Entity Filtering**: Identifies all IP Address entities (ADDRESS) from the
+    current context.
+
+    3. **Connection**: Establishes an SSH session with the ProxySG device using the
+    provided credentials.
+
+    4. **Command Execution**: For each valid entity, the action enters 'enable' mode,
+    navigates to the 'attack-detection' configuration, and issues a 'block' command
+    for the entity's identifier.
+
+    5. **Result Processing**: Parses the SSH output to verify if the 'ok' status was
+    returned for each block attempt.
+
+    6. **Reporting**: Updates the action results with a JSON summary of successes
+    and failures and provides a status message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes SSH commands on the Symantec Blue Coat ProxySG device to add specific
+      IP addresses to the block list within the attack-detection configuration.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: "Enriches Hostname, IP Address, and URL entities using information\
+    \ retrieved from Symantec Blue Coat ProxySG via SSH. The action performs diagnostic\
+    \ lookups to gather threat intelligence, geolocation, and DNS data.\n\n### Parameters\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Create Insight | Boolean | No | If enabled (default), the action will create\
+    \ a detailed insight on the entity containing the retrieved information. |\n\n\
+    ### Flow Description\n1. **Connection**: Establishes an SSH connection to the\
+    \ Symantec Blue Coat ProxySG using the provided credentials and SSH root.\n2.\
+    \ **Entity Filtering**: Identifies supported entities (Hostname, IP Address, URL)\
+    \ from the target list.\n3. **Data Retrieval**: \n    * For **Hostnames**: Executes\
+    \ the `test dns` command to retrieve official hostnames and resolved IP addresses.\n\
+    \    * For **IP Addresses**: Executes the `test geolocation` command to identify\
+    \ the country of origin.\n    * For **URLs**: Executes `test threat-risk` and\
+    \ `test content-filter` commands to determine risk levels and category classifications.\n\
+    4. **Enrichment**: Updates the entity's additional properties with the retrieved\
+    \ data (prefixed with 'BCProxySG') and marks the entity as enriched.\n5. **Output**:\
+    \ Generates entity tables, adds JSON results for downstream use, and creates insights\
+    \ if the 'Create Insight' parameter is enabled."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates entity enrichment fields (additional_properties), sets the
+      'is_enriched' flag to true, and creates entity insights.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a utility designed to verify the connectivity between Google
+    SecOps and the Symantec Blue Coat ProxySG server. It ensures that the provided
+    SSH credentials and network path are valid by establishing an SSH session and
+    executing a basic 'help' command.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | SSH Root | String | Yes | The SSH root address (IP:Port) of the Symantec Blue
+    Coat ProxySG server. |
+
+    | Username | String | Yes | The username used for SSH authentication. |
+
+    | Password | String | Yes | The password used for SSH authentication. |
+
+
+    ### Additional Notes
+
+    - This action does not process any entities and is typically used during the initial
+    setup or troubleshooting of the integration.
+
+    - It uses the `paramiko` library to handle SSH communications.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the SSH Root, Username, and
+    Password from the integration's configuration settings.
+
+    2. **Manager Initialization**: It initializes the `SymantecBlueCoatProxySGManager`
+    with the provided credentials.
+
+    3. **Connectivity Test**: The manager attempts to create an SSH client and connect
+    to the target server.
+
+    4. **Command Execution**: Upon successful connection, it executes the 'help' command
+    to confirm the session is interactive and responsive.
+
+    5. **Result Reporting**: If the connection and command execution succeed, the
+    action returns a success status; otherwise, it catches the exception and reports
+    a failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

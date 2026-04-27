@@ -1,0 +1,220 @@
+Get Reputation:
+  ai_description: >-
+    Enriches IP Address, Hostname, and URL entities using Cisco Talos ThreatSource
+    intelligence. This action retrieves comprehensive reputation data, including threat
+    levels, spam levels, geographic location, organization details, and blocklist
+    status. It processes entities asynchronously to ensure stability and avoid timeouts
+    during large-scale enrichment tasks.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Use SSL | Boolean | Yes | Specifies whether to verify the SSL certificate for
+    API requests to the Talos service. |
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies supported entities (IP Address,
+    Hostname, and URL) from the target list.
+
+    2. **Data Retrieval**: For each entity, the action performs multiple GET requests
+    to Talos endpoints to fetch reputation scores, category information, and blocklist
+    status. For URL entities, the domain is extracted and used for the query.
+
+    3. **Async Processing**: The action processes entities one by one across multiple
+    execution cycles (async) to manage state and prevent execution timeouts.
+
+    4. **Internal Updates**: Once data is retrieved, the action updates the entity's
+    additional properties with enrichment data (prefixed with 'CiscoTalos') and marks
+    the entity as 'enriched'.
+
+    5. **Output Generation**: The action generates detailed CSV tables for each entity
+    and a comprehensive JSON result containing all raw intelligence data.
+
+
+    ### Additional Notes
+
+    - For URL entities, the action specifically extracts the domain part to perform
+    the reputation lookup.
+
+    - The action uses a custom User-Agent and specific headers to interact with the
+    Talos Intelligence web-based API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes with enrichment data (e.g., geo-location, organization
+      name, threat level) and sets the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Talos ThreatSource API to ensure that the integration
+    can successfully communicate with the external service. This action is primarily
+    used for verification of configuration settings and network accessibility.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Use SSL | Boolean | Yes | Determines whether to verify the SSL certificate of
+    the Talos API endpoint during the connection test. |
+
+
+    ### Additional Notes
+
+    This action does not process any entities and uses a hardcoded domain ('google.com')
+    to perform a test WHOIS lookup against the Talos API.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the 'Use SSL' configuration parameter.
+
+    2. **Manager Initialization**: Initializes the TalosManager with the specified
+    SSL verification setting.
+
+    3. **Connectivity Check**: Executes a GET request to the Talos WHOIS endpoint
+    using a test query for 'google.com'.
+
+    4. **Response Validation**: Checks the HTTP response status and parses the JSON
+    body for any service-level errors.
+
+    5. **Execution Result**: Returns a success status if the API responds correctly,
+    or a failure status with the specific error message if the connection fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Whois:
+  ai_description: >-
+    Retrieves Whois information for IP Address, Hostname, and URL entities using the
+    Talos ThreatSource service. This action is designed to provide administrative
+    and registration details for network identifiers, which is crucial for investigating
+    the ownership and history of potentially malicious infrastructure.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Use SSL | Boolean | Yes | (Configuration Parameter) If enabled, the action will
+    verify the SSL certificate of the Talos API endpoint. Defaults to False. |
+
+    | additional_data | String (JSON) | No | (Action Parameter) Used internally to
+    maintain state across asynchronous execution cycles. It stores processed entity
+    identifiers and accumulated results. |
+
+
+    ### Flow Description
+
+
+    1.  **Initialization**: The action initializes the Talos manager and identifies
+    supported entities (IP Address, Hostname, and URL) from the target entities list.
+
+    2.  **Domain Extraction**: For URL entities, the action extracts the domain component
+    to perform the Whois lookup.
+
+    3.  **Asynchronous Processing**: To prevent being blocked by the external service,
+    the action processes entities sequentially. In each execution cycle, it selects
+    the first unprocessed entity.
+
+    4.  **API Interaction**: It performs a GET request to the Talos Whois endpoint
+    for the selected entity.
+
+    5.  **State Management**: If more entities remain to be processed, the action
+    saves its current state (successful/failed identifiers and JSON results) into
+    the `additional_data` parameter and sets the execution state to `IN_PROGRESS`.
+
+    6.  **Completion**: Once all entities are processed, the action aggregates the
+    Whois reports into a final JSON result and completes the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

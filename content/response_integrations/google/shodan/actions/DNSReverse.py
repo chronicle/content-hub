@@ -1,0 +1,89 @@
+from __future__ import annotations
+from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
+from ..core.ShodanManager import ShodanManager
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import flat_dict_to_csv
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from TIPCommon import extract_configuration_param
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+
+INTEGRATION_NAME = "Shodan"
+
+
+@output_handler
+def main():
+    siemplify = SiemplifyAction()
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
+    api_key = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="API key"
+    )
+    verify_ssl = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Verify SSL",
+        default_value=False,
+        input_type=bool,
+    )
+
+    siemplify.LOGGER.info("----------------- Main - Started -----------------")
+    successful_lookup = []
+    unsuccessful_lookup = []
+    status = EXECUTION_STATE_COMPLETED
+    output_message = ""
+    result_value = True
+    try:
+        shodan = ShodanManager(api_key, verify_ssl=verify_ssl)
+        ips_list = []
+        json_results = {}
+        table_result = {}
+        for entity in siemplify.target_entities:
+            if entity.entity_type == EntityTypes.ADDRESS:
+                ips_list.append(entity.identifier)
+        if not ips_list:
+            output_message += "No IPs were defined"
+            result_value = False
+        for ip in ips_list:
+            ips_info = shodan.dns_reverse(ip)
+            if ips_info[ip] is not None:
+                json_results.update(ips_info)
+                table_result.update(ips_info)
+                successful_lookup.append(ip)
+            else:
+                unsuccessful_lookup.append(ip)
+        if successful_lookup:
+            # Added Result in Table
+            csv_data = flat_dict_to_csv(table_result)
+            siemplify.result.add_data_table("Shodan DNS Reverse Report", csv_data)
+            output_message += (
+                "Successfully look up hostnames that have been defined for"
+                " the following IP address: {0} \n".format(", ".join(successful_lookup))
+            )
+        if unsuccessful_lookup:
+            output_message += (
+                "Failed to look up hostnames that have been defined for"
+                " the following IP address: {0} \n".format(
+                    ", ".join(unsuccessful_lookup)
+                )
+            )
+        if not successful_lookup:
+            result_value = False
+        # Main JSON result
+        if json_results:
+            siemplify.result.add_result_json(
+                {"results": convert_dict_to_json_result_dict(json_results)}
+            )
+    except Exception as err:
+        output_message = f"Error executing action 'DNS Reverse'. Reason: {err}"
+        result_value = False
+        status = EXECUTION_STATE_FAILED
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(err)
+    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
+    siemplify.LOGGER.info(
+        f"\n  status: {status}\n  is_success: {result_value}\n  output_message: {output_message}"
+    )
+    siemplify.end(output_message, result_value, status)
+
+
+if __name__ == "__main__":
+    main()

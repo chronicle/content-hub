@@ -1,0 +1,761 @@
+Add To Global List:
+  ai_description: >-
+    ### General Description
+
+    The **Add To Global List** action allows users to add a specific file hash to
+    Cylance's global lists, specifically **GlobalSafe** or **GlobalQuarantine**. This
+    is a containment and policy management action used to either whitelist known safe
+    files or blacklist known threats across the entire Cylance-managed environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **List Type** | String | Yes | Specifies which global list to add the hash to.
+    Common values are `GlobalSafe` or `GlobalQuarantine`. |
+
+    | **Category** | String | No | The category classification for the hash (e.g.,
+    Malware, Administrative). |
+
+    | **Reason** | String | No | A text description providing the justification for
+    adding the hash to the list. If not provided, it defaults to "None". |
+
+
+    ### Additional Notes
+
+    - This action only supports **FILEHASH** entities.
+
+    - If a hash already exists in the specified list, the action will identify it
+    as an existing entry rather than failing.
+
+    - The action returns a success status of "true" regardless of whether hashes were
+    added, already existed, or failed, but the output message provides the specific
+    details for each entity.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches Cylance integration settings
+    (Server Address, Credentials) and user-provided parameters (List Type, Category,
+    Reason).
+
+    2. **Manager Initialization**: Initializes the `CylanceManager` to handle API
+    communication.
+
+    3. **Entity Filtering**: Iterates through the target entities and filters for
+    those of type `FILEHASH`.
+
+    4. **API Interaction**: For each file hash, it calls the Cylance API to add the
+    hash to the designated global list.
+
+    5. **Response Handling**:
+        - If the API returns success, the entity is added to the "affected" list.
+        - If the API returns a 409 Conflict (already exists), the entity is added
+    to the "existing" list.
+        - If an exception occurs, the error is logged and the entity is added to the
+    "failed" list.
+    6. **Final Reporting**: Constructs a comprehensive output message summarizing
+    which hashes were added, which already existed, and which failed, then terminates
+    the action.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a file hash to the GlobalSafe or GlobalQuarantine list in Cylance, which
+      changes the reputation and handling of that file across the managed environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Change Policy:
+  ai_description: >-
+    ### General Description
+
+    Changes the security policy of a specific endpoint in Cylance to an existing policy.
+    This action is used to modify the protection level or configuration of devices
+    identified by their Hostname or IP Address within the Cylance console.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Policy Name | String | Yes | The name of the existing policy in Cylance that
+    you want to apply to the target entities. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action connects to the Cylance API using the provided
+    configuration (Server Address, Secret, ID, and Tenant Identifier).
+
+    2. **Policy Identification**: It retrieves the list of all available policies
+    from Cylance to find the unique ID associated with the provided 'Policy Name'.
+
+    3. **Entity Processing**: For each target entity (Hostname or IP Address):
+        * It searches for the device in Cylance using the entity's identifier.
+        * If found, it retrieves the device's current details.
+    4. **Policy Update**: It sends a request to the Cylance API to update the device's
+    configuration, assigning it the new policy ID.
+
+    5. **Completion**: The action returns a summary message listing all entities that
+    were successfully updated.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the policy assignment for specific devices/endpoints within the Cylance
+      console via a PUT request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Change Zone:
+  ai_description: >-
+    ### General Description
+
+    This action modifies the zone assignments for endpoints (devices) within the Cylance
+    environment. It allows security analysts to dynamically move devices between zones,
+    which is often used for isolation, policy adjustment, or organizational restructuring.
+    The action supports both adding a device to new zones and removing it from existing
+    ones simultaneously.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Zones to Add** | String | No | A comma-separated list of Cylance Zone names
+    to which the target endpoints should be added. |
+
+    | **Zones to Remove** | String | No | A comma-separated list of Cylance Zone names
+    from which the target endpoints should be removed. |
+
+
+    ### Additional Notes
+
+    * Either **Zones to Add** or **Zones to Remove** (or both) must be provided for
+    the action to perform any changes. If both are empty, the action will report that
+    no entities were affected.
+
+    * The action identifies devices based on their IP address (ADDRESS entity) or
+    Hostname (HOSTNAME entity).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Cylance API manager using the
+    provided integration configuration (Server Address, Credentials, etc.).
+
+    2. **Parameter Parsing**: It retrieves and splits the comma-separated strings
+    for zones to add and remove into lists.
+
+    3. **Entity Processing**: It iterates through the target entities in the current
+    context, filtering for `ADDRESS` and `HOSTNAME` types.
+
+    4. **Device Resolution**: For each valid entity, it queries the Cylance API to
+    find the corresponding internal Device ID. IPs are matched against the device's
+    registered IP addresses, and Hostnames are matched against the device name.
+
+    5. **Zone Resolution**: The action resolves the provided zone names into their
+    respective internal Cylance Zone IDs.
+
+    6. **API Mutation**: It executes a `PUT` request to the Cylance `/devices/v2/{id}`
+    endpoint, updating the device's `add_zone_ids` and `remove_zone_ids` fields.
+
+    7. **Reporting**: The action compiles a list of successfully updated entities
+    and provides a summary message detailing which zones were added or removed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action performs a PUT request to the Cylance API to modify the zone configuration
+      of a device, effectively changing its group membership and associated security
+      policies in the external system.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Delete From Global List:
+  ai_description: >-
+    ### General Description
+
+    Removes a specific file hash from a designated global list within the Cylance
+    console. This action is primarily used to manage exceptions or revert previous
+    containment or allowlist actions by deleting entries from lists like 'GlobalSafe'
+    or 'GlobalQuarantine'.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | List Type | String | Yes | The name of the global list to remove the hash from.
+    Common values include `GlobalSafe` or `GlobalQuarantine`. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Cylance API manager using the
+    integration's configuration (Server Address, Application ID, Secret, and Tenant
+    Identifier).
+
+    2. **Entity Filtering**: It iterates through the target entities and filters for
+    those of type `FILEHASH`.
+
+    3. **External Request**: For each identified file hash, it sends a DELETE request
+    to the Cylance Global List API endpoint, passing the hash identifier and the specified
+    `List Type`.
+
+    4. **Result Reporting**: The action tracks which hashes were successfully processed
+    and returns a summary message listing the deleted hashes or indicating if no hashes
+    were removed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes a file hash entry from a global list (e.g., GlobalSafe or GlobalQuarantine)
+      in the Cylance management console via a DELETE request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities with detailed device information retrieved
+    from the Cylance PROTECT console. This action helps analysts understand the security
+    posture, operating system, and network configuration of a device as seen by the
+    Cylance agent.
+
+
+    ### Parameters
+
+    There are no additional parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes a connection to the Cylance API using the provided
+    Server Address, Application ID, Secret, and Tenant Identifier.
+
+    2. **Entity Filtering**: Iterates through the target entities in the current scope,
+    specifically looking for entities of type `ADDRESS` (IP) or `HOSTNAME`.
+
+    3. **Data Retrieval**: For each supported entity, the action queries the Cylance
+    API to find a matching device. If the entity is an IP address, it searches the
+    device's reported IP list; if it is a hostname, it matches against the device
+    name.
+
+    4. **Enrichment**: If a matching device is found, the action retrieves the full
+    device profile, including OS version, MAC addresses, last logged-in user, agent
+    version, and assigned policy.
+
+    5. **Internal Update**: The retrieved data is flattened, prefixed with 'Cylance',
+    and added to the entity's additional properties. The entity is then marked as
+    'enriched' within Google SecOps.
+
+    6. **Finalization**: Updates the entities in the case and returns a JSON result
+    containing the raw device data for all successfully enriched entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with device metadata from Cylance and sets
+      the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Global List:
+  ai_description: "### General Description\nRetrieves a comprehensive list of file\
+    \ hashes and their associated metadata from a specified Cylance global list, such\
+    \ as 'GlobalSafe' or 'GlobalQuarantine'. This action is useful for auditing allowed\
+    \ or blocked files across the environment and for synchronizing threat intelligence\
+    \ lists.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
+    \ |\n| :--- | :--- | :--- | :--- |\n| List Type | String | Yes | The name of the\
+    \ Cylance global list to retrieve. Common values include 'GlobalSafe' (whitelist)\
+    \ or 'GlobalQuarantine' (blacklist). |\n\n### Flow Description\n1. **Authentication**:\
+    \ Initializes the Cylance Manager and authenticates using the provided API credentials\
+    \ (Application ID, Secret, and Tenant Identifier).\n2. **Data Retrieval**: Calls\
+    \ the Cylance API to fetch the specified global list. The action automatically\
+    \ handles pagination to ensure all entries are retrieved from the server.\n3.\
+    \ **Data Processing**: Flattens the nested JSON response from the API into a simplified\
+    \ format suitable for display and further automation.\n4. **Output Generation**:\
+    \ \n    *   Constructs a CSV-formatted table from the retrieved data.\n    * \
+    \  Attaches the table to the Google SecOps case wall for visibility.\n    *  \
+    \ Returns the full list of hashes as a JSON result for use in downstream playbook\
+    \ steps.\n\n### Additional Notes\nThis action does not require any input entities\
+    \ and operates globally at the integration level."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table to the Google SecOps case containing the list of
+      hashes retrieved from Cylance.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Threat:
+  ai_description: >-
+    ### General Description
+
+    Enriches File Hash entities with threat intelligence data from Cylance. This action
+    retrieves detailed information about a file's reputation, classification, and
+    Cylance score. It allows users to define a risk threshold to automatically mark
+    entities as suspicious within Google SecOps based on the retrieved score.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Threshold | Integer | Yes | The numerical score threshold. If the Cylance score
+    for a file hash exceeds this value, the entity will be marked as suspicious in
+    Google SecOps. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes the Cylance API client using the integration
+    configuration (Server Address, App ID, Secret, and Tenant ID).
+
+    2. **Entity Filtering**: Iterates through the target entities and filters for
+    those of type `FILEHASH`.
+
+    3. **Data Retrieval**: For each hash, it queries the Cylance API. If the hash
+    is SHA256, it performs a direct lookup; if it is MD5, it searches through the
+    global threat list.
+
+    4. **Risk Assessment**: Compares the `cylance_score` from the API response against
+    the user-provided `Threshold` parameter. If the score is higher, the entity's
+    `is_suspicious` attribute is set to `True`.
+
+    5. **Enrichment**: Flattens the threat data and maps it to the entity's `additional_properties`
+    with a `Cylance` prefix. The entity is also marked as `is_enriched`.
+
+    6. **Update**: Updates the modified entities in Google SecOps and returns the
+    raw JSON data for further use in the playbook.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'is_suspicious' status and 'additional_properties' of File Hash
+      entities based on the retrieved threat intelligence and the provided threshold.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Threat Devices:
+  ai_description: "### General Description\nThe **Get Threat Devices** action identifies\
+    \ endpoints within the environment that are associated with a specific file hash\
+    \ by querying the Cylance console. It retrieves a list of devices where the threat\
+    \ has been detected, providing critical visibility into the scope of a potential\
+    \ infection across the network.\n\n### Parameters\nThis action does not require\
+    \ any additional input parameters. It automatically processes relevant entities\
+    \ found in the current context.\n\n### Flow Description\n1. **Authentication**:\
+    \ The action establishes a connection with the Cylance API using the configured\
+    \ Server Address, Application ID, Application Secret, and Tenant Identifier.\n\
+    2. **Entity Filtering**: It iterates through all entities in the scope and filters\
+    \ for those of type **FILEHASH**.\n3. **Threat Lookup**: For each file hash, the\
+    \ action calls the Cylance API to retrieve a list of devices associated with that\
+    \ specific threat.\n4. **Data Enrichment**: \n    * If devices are found, the\
+    \ action flattens the data and constructs a CSV-formatted table.\n    * The table\
+    \ is attached to the entity in the Google SecOps case wall for immediate analyst\
+    \ review.\n5. **Result Reporting**: The action populates the JSON result with\
+    \ the raw data and provides a summary message listing the entities for which threats\
+    \ were found.\n\n### Additional Notes\n* **Hash Support**: This action specifically\
+    \ targets **SHA256** hashes. While the underlying manager supports MD5 for some\
+    \ operations, the direct device lookup endpoint used here is optimized for SHA256.\n\
+    * **Metadata Discrepancy**: Although the integration metadata suggests support\
+    \ for hostnames or IP addresses, the implementation logic is strictly limited\
+    \ to processing **File Hash** entities."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds data tables to entities within the case and populates the action's
+      JSON result with device association data.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Threat Download Link:
+  ai_description: "### General Description\nThis action retrieves a temporary download\
+    \ URL for a specific threat file from Cylance using its SHA256 hash. It is designed\
+    \ to facilitate the retrieval of malicious samples for further analysis without\
+    \ automatically downloading the file to the local environment. The action can\
+    \ process either a manually provided list of hashes or existing File Hash entities\
+    \ within the case.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Threat SHA256 Hash | String\
+    \ | No | A comma-separated list of SHA256 hashes to fetch download links for.\
+    \ If this parameter is provided, the action will prioritize these hashes and ignore\
+    \ any File Hash entities in the current scope. If left empty, the action will\
+    \ automatically process all supported File Hash entities. |\n\n### Additional\
+    \ Notes\n- **Entity Enrichment:** If the action runs on entities (i.e., the 'Threat\
+    \ SHA256 Hash' parameter is empty), it will update the entities' additional properties\
+    \ with the download link (prefixed with 'Cylance_dl') and mark them as enriched.\n\
+    - **No File Download:** This action only provides the URL; it does not perform\
+    \ the actual file download.\n\n### Flow Description\n1. **Initialization:** The\
+    \ action extracts configuration parameters (Server Address, Application ID, Secret,\
+    \ and Tenant Identifier) and the optional 'Threat SHA256 Hash' action parameter.\n\
+    2. **Target Identification:** It identifies the target hashes to process. If the\
+    \ 'Threat SHA256 Hash' parameter is populated, it splits the string into a list.\
+    \ Otherwise, it collects the identifiers of all `FILEHASH` entities in the current\
+    \ context.\n3. **API Interaction:** For each target hash, the action calls the\
+    \ Cylance API endpoint `/threats/v2/download/{hash}` to request a download link.\n\
+    4. **Data Processing:** \n    - If the hash was derived from an entity, the action\
+    \ flattens the result and updates the entity's `additional_properties` with the\
+    \ download URL.\n    - The action collects all retrieved links into a JSON result\
+    \ object.\n5. **Finalization:** The action updates the entities in Google SecOps\
+    \ (if applicable), adds the JSON results to the action output, and provides a\
+    \ summary message of successful and failed hash lookups."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates the 'additional_properties' of File Hash entities with the
+      retrieved download link and sets the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Threats:
+  ai_description: >-
+    ### General Description
+
+    The **Get Threats** action retrieves a comprehensive list of all threats identified
+    within the Cylance PROTECT environment. It is a global data retrieval task that
+    provides visibility into the threat landscape by fetching details such as file
+    names, classifications, risk scores, and hash identifiers (MD5/SHA256) for all
+    known threats in the system.
+
+
+    ### Parameters
+
+    This action does not require any input parameters.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action establishes a session with the Cylance API using
+    a JWT token generated from the integration's configuration (App ID, Secret, and
+    Tenant ID).
+
+    2. **Data Retrieval**: It executes a GET request to the Cylance threats endpoint
+    to fetch the first page of threat data.
+
+    3. **Pagination Handling**: The logic identifies the total number of pages and
+    iterates through all subsequent pages to ensure a complete dataset is collected.
+
+    4. **Data Transformation**: The retrieved threat objects are flattened into a
+    simplified structure and converted into a CSV-compatible format.
+
+    5. **Output Generation**: The action populates a data table named "Cylance Threats"
+    within the Google SecOps case and provides the raw data as a JSON result for downstream
+    automation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates a data table named 'Cylance Threats' within the Google SecOps
+      action results to display the list of retrieved threats.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity and authentication
+    configuration between Google SecOps and the Cylance API. Its primary purpose is
+    to ensure that the integration can successfully establish a secure connection
+    using the provided credentials before executing other operational actions.
+
+
+    ### Parameters Description
+
+    This action does not have any action-specific parameters. It relies entirely on
+    the global integration configuration parameters:
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server Address | String | Yes | The base URL of the Cylance API instance. |
+
+    | Application ID | String | Yes | The unique identifier for the Cylance application.
+    |
+
+    | Application Secret | String | Yes | The secret key associated with the Application
+    ID. |
+
+    | Tenant Identifier | String | Yes | The unique identifier for the Cylance tenant.
+    |
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The script retrieves the connection details (Server
+    Address, App ID, App Secret, and Tenant ID) from the Cylance integration settings.
+
+    2. **Manager Initialization**: It instantiates the `CylanceManager` class.
+
+    3. **Authentication Attempt**: Upon initialization, the `CylanceManager` attempts
+    to generate a JSON Web Token (JWT) and exchange it for an OAuth2 access token
+    by making a POST request to the Cylance authentication endpoint.
+
+    4. **Connectivity Confirmation**: If the token is successfully retrieved, the
+    action concludes that the connection is valid and returns a success status.
+
+
+    ### Additional Notes
+
+    * This action does not interact with any entities or modify any data within Google
+    SecOps or Cylance.
+
+    * Per standard SOAR conventions, Ping actions are excluded from being categorized
+    as enrichment actions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
