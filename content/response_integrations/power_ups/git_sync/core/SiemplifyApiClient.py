@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -501,6 +502,14 @@ class SiemplifyApiClient:
         self.validate_response(res)
         return res.json()
 
+    def get_soc_roles(self) -> list[dict[str, Any]]:
+        """Get the SOC roles from the platform.
+
+        Returns:
+            A list of SOC roles.
+        """
+        return self.get_page_results("socroles/getSocRoles")
+
     def get_simulated_cases(self):
         res = self.session.get("attackssimulator/GetCustomCases")
         self.validate_response(res)
@@ -569,7 +578,7 @@ class SiemplifyApiClient:
                 chronicle_soar=chronicle_soar,
                 integration_identifier=integration_name,
                 instance_display_name=display_name,
-                environments=environments
+                environments=environments,
             )
         except HTTPError as e:
             if e.response and e.response.status_code == 404 and consider_404_to_none:
