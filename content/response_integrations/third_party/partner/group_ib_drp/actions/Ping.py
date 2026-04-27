@@ -9,8 +9,17 @@ from ..core.UtilsManager import GIBConnector
 
 
 @output_handler
-def main():
-    # Google Chronicle base class initialization
+def main() -> None:
+    """Verify connectivity to the Group-IB DRP API.
+
+    Initializes a SiemplifyAction, builds a configured DRP poller via
+    ``GIBConnector.init_action_poller`` (which reads the integration's
+    configuration parameters, including ``Verify SSL``) and issues a low-cost
+    GET request against the ``violation/list`` endpoint. If the call succeeds
+    the action ends with ``EXECUTION_STATE_COMPLETED`` and a success message
+    in the standard marketplace format; if it fails the exception is logged
+    and the action ends with ``EXECUTION_STATE_FAILED``.
+    """
     siemplify = SiemplifyAction()
 
     # Google Chronicle base class set up
@@ -22,21 +31,17 @@ def main():
     # # TEST
     # GIBConnector(siemplify).entity_processor()
 
-    output_message = "Connection Established."
+    output_message = "Successfully connected to the Group-IB DRP server with the provided connection parameters!"
     connectivity_result = True
     status = EXECUTION_STATE_COMPLETED
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     try:
-        result = poller.send_request(endpoint="violation/list", params={"q": None})
+        poller.send_request(endpoint="violation/list", params={"q": None})
         siemplify.LOGGER.info("Connection to API established, performing action {}".format(Config.GC_PING))
 
-        # result_json = {"granted_collections": result}
-
-        # siemplify.result.add_result_json(result_json)
-
     except Exception as e:
-        output_message = "An error occurred when trying to connect to the API: {}".format(e)
+        output_message = "Failed to connect to the Group-IB DRP server! Error is {}".format(e)
         connectivity_result = False
         siemplify.LOGGER.error("Connection to API failed, performing action {}".format(Config.GC_PING))
         siemplify.LOGGER.exception(e)
