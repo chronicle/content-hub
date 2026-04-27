@@ -121,13 +121,14 @@ class DependencyDeconstructor:
         dev_deps_to_add: list[str] = []
         placeholder_deps, placeholder_dev_deps = [], []
 
-        env_common_to_remove = False
+        env_common_originally_required = ENV_COMMON in required_modules
         if TIP_COMMON in required_modules:
             required_modules.add(ENV_COMMON)
 
         dependencies_dir: Path = self.integration_path / mp.core.constants.OUT_DEPENDENCIES_DIR
         found_packages: set[str] = set()
 
+        tip_common_requires_env_common_removal = False
         if dependencies_dir.is_dir():
             package_files = itertools.chain.from_iterable(dependencies_dir.glob(ext) for ext in PACAKGE_SUFFIXES)
             for package in package_files:
@@ -140,7 +141,7 @@ class DependencyDeconstructor:
                 dev_deps_to_add.extend(result.dependencies.dev_dependencies)
                 placeholder_deps.extend(result.placeholders.dependencies)
                 if result.env_common_to_remove:
-                    env_common_to_remove = True
+                    tip_common_requires_env_common_removal = True
 
         missing_packages: set[str] = required_modules.difference(found_packages)
         for missing_package in missing_packages:
@@ -149,7 +150,7 @@ class DependencyDeconstructor:
                 package_to_add = mp.core.constants.SDK_DEPENDENCIES_INSTALL_NAMES[package_to_add]
             deps_to_add.append(package_to_add)
 
-        if env_common_to_remove:
+        if tip_common_requires_env_common_removal and not env_common_originally_required:
             deps_to_add = [dep for dep in deps_to_add if not Path(dep).name.startswith(ENV_COMMON)]
 
         return DependencyResolutionResult(
